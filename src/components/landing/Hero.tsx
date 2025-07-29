@@ -9,7 +9,7 @@ const Hero = () => {
   const typewriterWords = ['CV', 'Cover Letter', 'Job Tracker'];
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-black via-gray-900 to-black">
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-black via-gray-900 to-black pt-32">
       {/* Enhanced Background Effects */}
       <div className="absolute inset-0">
         {/* Animated Gradient Orbs */}
@@ -75,7 +75,7 @@ const Hero = () => {
       </div>
 
       {/* Content */}
-      <div className="relative z-10 text-center px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
+      <div className="relative z-10 text-center px-4 sm:px-6 lg:px-8 w-full max-w-7xl mx-auto">
         {/* Main Heading with 3D Effect */}
         <motion.h1 
           className="text-4xl sm:text-6xl lg:text-7xl font-bold text-white mb-6"
@@ -179,9 +179,9 @@ const Hero = () => {
           </motion.button>
         </motion.div>
 
-        {/* Enhanced App Screenshot Placeholder */}
+        {/* Dashboard Interface Preview */}
         <motion.div 
-          className="relative max-w-6xl mx-auto"
+          className="relative w-full max-w-7xl mx-auto mt-12 -mb-32"
           initial={{ opacity: 0, y: 100, scale: 0.8 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 1.2, delay: 1 }}
@@ -198,39 +198,118 @@ const Hero = () => {
               perspective: '1000px'
             }}
           >
-            <div className="aspect-video bg-gradient-to-br from-gray-700 to-gray-800 rounded-2xl flex items-center justify-center relative overflow-hidden">
-              {/* Mock UI Elements */}
-              <div className="absolute inset-4 bg-gray-600/20 rounded-xl border border-white/10"></div>
-              <div className="absolute top-6 left-6 w-32 h-8 bg-lime-400/20 rounded-lg"></div>
-              <div className="absolute top-6 right-6 w-24 h-8 bg-blue-400/20 rounded-lg"></div>
-              <div className="absolute bottom-6 left-6 w-48 h-12 bg-gray-600/30 rounded-lg"></div>
-              
-              <div className="text-center relative z-10">
-                <motion.div 
-                  className="w-20 h-20 bg-gradient-to-br from-lime-400 to-lime-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-2xl"
-                  animate={{
-                    rotateY: [0, 10, 0],
-                    boxShadow: [
-                      "0 0 20px rgba(132, 204, 22, 0.3)",
-                      "0 0 40px rgba(132, 204, 22, 0.6)",
-                      "0 0 20px rgba(132, 204, 22, 0.3)"
-                    ]
-                  }}
-                  transition={{
-                    duration: 4,
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                  }}
-                  style={{
-                    transformStyle: 'preserve-3d',
-                    perspective: '1000px'
-                  }}
-                >
-                  <div className="w-10 h-10 bg-white rounded-lg shadow-lg"></div>
-                </motion.div>
-                <p className="text-white/80 text-xl font-semibold mb-2">App Interface Preview</p>
-                <p className="text-white/50 text-sm">Beautiful, intuitive CV builder with 3D effects</p>
+            <div className="relative w-full aspect-[16/10] bg-gradient-to-br from-gray-900 to-black rounded-2xl overflow-hidden border border-white/10">
+              {/* Dashboard Interface Mockup */}
+              <div className="absolute inset-0 p-6">
+                {/* Left Sidebar */}
+                <div className="absolute left-0 top-0 bottom-0 w-64 bg-black/40 backdrop-blur-sm border-r border-white/10">
+                  <div className="p-4">
+                    <div className="flex items-center gap-3 mb-8">
+                      <div className="w-8 h-8 bg-gradient-to-br from-lime-400 to-lime-500 rounded-lg flex items-center justify-center">
+                        <Sparkles size={16} className="text-black" />
+                      </div>
+                      <span className="text-white font-semibold">CVCircle</span>
+                    </div>
+                    
+                    {/* Navigation Items */}
+                    <div className="space-y-2">
+                      {[
+                        { name: 'Dashboard', icon: '🏠', active: true },
+                        { name: 'Canvas', icon: '📄', active: false },
+                        { name: 'Pipeline', icon: '💼', active: false },
+                        { name: 'InkPad', icon: '✍️', active: false },
+                        { name: 'Vault', icon: '🗄️', active: false },
+                        { name: 'QuillBox', icon: '💬', active: false }
+                      ].map((item) => (
+                        <div key={item.name} className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                          item.active 
+                            ? 'text-lime-400 bg-lime-400/10 border border-lime-400/20' 
+                            : 'text-white/60 hover:text-white hover:bg-white/5'
+                        }`}>
+                          <span className="text-sm">{item.icon}</span>
+                          <span className="text-sm font-medium">{item.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Main Content */}
+                <div className="absolute left-64 right-0 top-0 bottom-0 p-6">
+                  <div className="h-full bg-white/5 rounded-xl border border-white/10 p-4">
+                    <div className="flex items-center justify-between mb-6">
+                      <div>
+                        <h3 className="text-white font-semibold text-lg mb-1">CV Management Dashboard</h3>
+                        <p className="text-white/60 text-sm">Track your career progress and manage applications</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-lime-400/20 rounded-lg flex items-center justify-center">
+                          <span className="text-lime-400 text-xs">+</span>
+                        </div>
+                        <div className="w-8 h-8 bg-blue-400/20 rounded-lg flex items-center justify-center">
+                          <span className="text-blue-400 text-xs">⚙️</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Stats Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                      <div className="bg-gradient-to-br from-lime-400/10 to-lime-500/10 rounded-lg p-4 border border-lime-400/20">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="w-8 h-8 bg-lime-400/20 rounded-lg flex items-center justify-center">
+                            <span className="text-lime-400 text-sm">📄</span>
+                          </div>
+                          <span className="text-white/60 text-sm">CVs Created</span>
+                        </div>
+                        <div className="text-white font-bold text-2xl">3</div>
+                      </div>
+                      <div className="bg-gradient-to-br from-blue-400/10 to-blue-500/10 rounded-lg p-4 border border-blue-400/20">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="w-8 h-8 bg-blue-400/20 rounded-lg flex items-center justify-center">
+                            <span className="text-blue-400 text-sm">💼</span>
+                          </div>
+                          <span className="text-white/60 text-sm">Jobs Applied</span>
+                        </div>
+                        <div className="text-white font-bold text-2xl">5</div>
+                      </div>
+                      <div className="bg-gradient-to-br from-purple-400/10 to-purple-500/10 rounded-lg p-4 border border-purple-400/20">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="w-8 h-8 bg-purple-400/20 rounded-lg flex items-center justify-center">
+                            <span className="text-purple-400 text-sm">✍️</span>
+                          </div>
+                          <span className="text-white/60 text-sm">Cover Letters</span>
+                        </div>
+                        <div className="text-white font-bold text-2xl">2</div>
+                      </div>
+                    </div>
+                    
+                    {/* Recent Activity */}
+                    <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                      <h4 className="text-white font-medium mb-3">Recent Activity</h4>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-3 text-white/80 text-sm">
+                          <div className="w-2 h-2 bg-lime-400 rounded-full"></div>
+                          <span>Updated Senior UX Designer CV</span>
+                          <span className="text-white/40">2 hours ago</span>
+                        </div>
+                        <div className="flex items-center gap-3 text-white/80 text-sm">
+                          <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                          <span>Applied to Product Manager at Figma</span>
+                          <span className="text-white/40">1 day ago</span>
+                        </div>
+                        <div className="flex items-center gap-3 text-white/80 text-sm">
+                          <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
+                          <span>Generated cover letter for Spotify</span>
+                          <span className="text-white/40">2 days ago</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
+              
+              {/* Glow Effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-lime-400/5 via-transparent to-blue-400/5 rounded-2xl pointer-events-none"></div>
             </div>
           </motion.div>
           

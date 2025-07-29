@@ -36,7 +36,7 @@ const FloatingCTA = () => {
           className="relative flex items-center gap-2"
           whileHover={{ x: 5 }}
         >
-          <span>Upload CV</span>
+          <span>Get Started</span>
           <motion.div
             whileHover={{ rotate: 45 }}
             transition={{ duration: 0.3 }}
