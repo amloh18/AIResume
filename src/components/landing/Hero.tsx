@@ -122,8 +122,9 @@ const Hero = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, delay: 0.8 }}
         >
-          <motion.button 
-            className="group relative bg-gradient-to-r from-lime-400 to-lime-500 text-black px-10 py-5 rounded-full font-semibold text-lg shadow-2xl hover:shadow-lime-400/50 transition-all duration-300 overflow-hidden"
+          <motion.a
+            href="/cv-onboarding"
+            className="group relative inline-block bg-gradient-to-r from-lime-400 to-lime-500 text-black px-10 py-5 rounded-full font-semibold text-lg shadow-2xl hover:shadow-lime-400/50 transition-all duration-300 overflow-hidden"
             whileHover={{ 
               scale: 1.05,
               rotateY: 5,
@@ -144,7 +145,7 @@ const Hero = () => {
               whileHover={{ x: 5 }}
             >
               <Sparkles size={20} />
-              <span>Try App</span>
+              <span>Upload Your CV</span>
               <motion.div
                 whileHover={{ rotate: 45 }}
                 transition={{ duration: 0.3 }}
@@ -152,7 +153,7 @@ const Hero = () => {
                 <ArrowRight size={20} />
               </motion.div>
             </motion.div>
-          </motion.button>
+          </motion.a>
           
           <motion.button 
             className="group relative border-2 border-white/20 text-white px-10 py-5 rounded-full font-semibold text-lg hover:bg-white/10 transition-all duration-300 backdrop-blur-sm overflow-hidden"
