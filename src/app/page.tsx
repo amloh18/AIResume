@@ -1,0 +1,24 @@
+'use client';
+
+import React from 'react';
+import Navigation from '@/components/landing/Navigation';
+import Hero from '@/components/landing/Hero';
+import Features from '@/components/landing/Features';
+import Testimonials from '@/components/landing/Testimonials';
+import Pricing from '@/components/landing/Pricing';
+import Footer from '@/components/landing/Footer';
+import FloatingCTA from '@/components/ui/FloatingCTA';
+
+export default function Home() {
+  return (
+    <main className="relative">
+      <Navigation />
+      <Hero />
+      <Features />
+      <Testimonials />
+      <Pricing />
+      <Footer />
+      <FloatingCTA />
+    </main>
+  );
+} 
