@@ -4,10 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Logo from '../ui/Logo';
 import { Menu, X, ArrowRight } from 'lucide-react';
+import LoginModal from '../auth/LoginModal';
 
 const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   const navLinks = [
     { href: '#features', label: 'Features' },
@@ -33,6 +35,11 @@ const Navigation = () => {
       });
     }
     setIsMenuOpen(false);
+  };
+
+  const handleLogin = (userData: any) => {
+    // Redirect to dashboard after successful login
+    window.location.href = '/dashboard';
   };
 
   return (
@@ -87,38 +94,9 @@ const Navigation = () => {
               className="text-white/80 hover:text-white transition-colors duration-300 font-medium"
               whileHover={{ y: -2 }}
               whileTap={{ scale: 0.95 }}
+              onClick={() => setShowLoginModal(true)}
             >
               Login
-            </motion.button>
-            <motion.button 
-              className="group relative bg-gradient-to-r from-lime-400 to-lime-500 text-black px-8 py-3 rounded-full font-semibold hover:shadow-2xl hover:shadow-lime-400/25 transition-all duration-300 overflow-hidden"
-              whileHover={{ 
-                scale: 1.05,
-                rotateY: 5,
-                boxShadow: "0 20px 40px -12px rgba(132, 204, 22, 0.4)"
-              }}
-              whileTap={{ scale: 0.95 }}
-              style={{
-                transformStyle: 'preserve-3d',
-                perspective: '1000px'
-              }}
-            >
-              <motion.div
-                className="absolute inset-0 bg-gradient-to-r from-lime-300 to-lime-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                style={{ filter: 'blur(20px)' }}
-              />
-              <motion.div
-                className="relative flex items-center gap-2"
-                whileHover={{ x: 5 }}
-              >
-                <span>Create Account</span>
-                <motion.div
-                  whileHover={{ rotate: 45 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <ArrowRight size={16} />
-                </motion.div>
-              </motion.div>
             </motion.button>
           </div>
 
@@ -169,39 +147,25 @@ const Navigation = () => {
                 <motion.button 
                   className="block w-full text-left px-4 py-3 text-white/80 hover:text-white transition-colors duration-300 font-medium text-lg"
                   whileHover={{ x: 10 }}
+                  onClick={() => {
+                    setShowLoginModal(true);
+                    setIsMenuOpen(false);
+                  }}
                 >
                   Login
-                </motion.button>
-                <motion.button 
-                  className="group relative w-full mx-4 bg-gradient-to-r from-lime-400 to-lime-500 text-black px-8 py-3 rounded-full font-semibold hover:shadow-2xl hover:shadow-lime-400/25 transition-all duration-300 overflow-hidden"
-                  whileHover={{ 
-                    scale: 1.02,
-                    boxShadow: "0 20px 40px -12px rgba(132, 204, 22, 0.4)"
-                  }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <motion.div
-                    className="absolute inset-0 bg-gradient-to-r from-lime-300 to-lime-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                    style={{ filter: 'blur(20px)' }}
-                  />
-                  <motion.div
-                    className="relative flex items-center justify-center gap-2"
-                    whileHover={{ x: 5 }}
-                  >
-                    <span>Create Account</span>
-                    <motion.div
-                      whileHover={{ rotate: 45 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <ArrowRight size={16} />
-                    </motion.div>
-                  </motion.div>
                 </motion.button>
               </div>
             </div>
           </div>
         </motion.div>
       </div>
+
+      {/* Login Modal */}
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onLogin={handleLogin}
+      />
     </motion.nav>
   );
 };

@@ -15,6 +15,7 @@ const CVOnboardingPage: React.FC = () => {
   const [formData, setFormData] = useState<any>(null);
   const [showRegistration, setShowRegistration] = useState(false);
   const [userData, setUserData] = useState<any>(null);
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   // Save progress to localStorage
   useEffect(() => {
@@ -95,6 +96,16 @@ const CVOnboardingPage: React.FC = () => {
         localStorage.removeItem('cvOnboardingProgress');
         
         setCurrentStep('complete');
+        
+        // Auto-redirect to dashboard after 3 seconds
+        setTimeout(() => {
+          setIsRedirecting(true);
+          setTimeout(() => {
+            // Set flag for dashboard welcome animation
+            sessionStorage.setItem('fromOnboarding', 'true');
+            window.location.href = '/dashboard';
+          }, 1000); // 1 second loading animation
+        }, 3000); // 3 seconds on completion screen
       } else {
         console.error('Registration failed');
       }
@@ -240,17 +251,40 @@ const CVOnboardingPage: React.FC = () => {
                   <p className="text-xl text-white/60 mb-8">
                     Your CV has been created and your account is ready to use.
                   </p>
+                  {isRedirecting && (
+                    <motion.div
+                      className="mt-6 p-4 bg-gradient-to-r from-lime-400/10 to-blue-400/10 border border-lime-400/20 rounded-xl"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                    >
+                      <div className="flex items-center justify-center gap-3">
+                        <motion.div
+                          className="w-6 h-6 border-2 border-lime-400 border-t-transparent rounded-full"
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                        />
+                        <span className="text-lime-400 font-medium">Redirecting to your dashboard...</span>
+                      </div>
+                    </motion.div>
+                  )}
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <motion.a
-                    href="/dashboard"
+                  <motion.button
+                    onClick={() => {
+                      setIsRedirecting(true);
+                      sessionStorage.setItem('fromOnboarding', 'true');
+                      setTimeout(() => {
+                        window.location.href = '/dashboard';
+                      }, 500);
+                    }}
                     className="px-8 py-4 bg-gradient-to-r from-lime-400 to-lime-500 text-black font-semibold rounded-xl hover:from-lime-300 hover:to-lime-400 transition-all duration-300 shadow-2xl shadow-lime-400/25"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
+                    disabled={isRedirecting}
                   >
-                    Go to Dashboard
-                  </motion.a>
+                    {isRedirecting ? 'Redirecting...' : 'Go to Dashboard Now'}
+                  </motion.button>
                   
                   <motion.a
                     href="/"
