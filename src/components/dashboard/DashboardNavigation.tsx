@@ -3,7 +3,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { 
-  Home, 
   FileText, 
   Briefcase, 
   PenTool, 
@@ -11,9 +10,6 @@ import {
   MessageSquare, 
   BarChart3,
   Settings,
-  Bell,
-  Search,
-  Plus,
   Sparkles,
   User,
   LogOut
@@ -35,56 +31,30 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
   user
 }) => {
   const sections = [
-    { id: 'canvas', name: 'Canvas', icon: FileText, description: 'CV Studio' },
-    { id: 'pipeline', name: 'Pipeline', icon: Briefcase, description: 'Job Tracker' },
-    { id: 'inkpad', name: 'InkPad', icon: PenTool, description: 'Cover Letters' },
-    { id: 'vault', name: 'Vault', icon: Archive, description: 'Saved Forms' },
-    { id: 'quillbox', name: 'QuillBox', icon: MessageSquare, description: 'Snippets' },
-    { id: 'pulse', name: 'Pulse', icon: BarChart3, description: 'Analytics' }
+    { id: 'pulse', name: 'Analytics', icon: BarChart3, description: 'Progress Tracking' },
+    { id: 'pipeline', name: 'Job Tracker', icon: Briefcase, description: 'Track Applications' },
+    { id: 'canvas', name: 'CV Studio', icon: FileText, description: 'Create & Edit CVs' },
+    { id: 'inkpad', name: 'Cover Letters', icon: PenTool, description: 'Generate Letters' },
+    { id: 'vault', name: 'Saved Forms', icon: Archive, description: 'Store Data' },
+    { id: 'quillbox', name: 'Snippets', icon: MessageSquare, description: 'Content Library' }
   ];
 
   return (
-    <div className="w-64 bg-black/40 backdrop-blur-xl border-r border-white/10 min-h-screen sticky top-20">
-      {/* User Profile */}
+    <div className={`w-64 bg-black/40 backdrop-blur-xl border-r border-white/10 min-h-screen sticky relative z-40 ${activeSection === 'pipeline' ? 'top-0' : 'top-20'}`}>
+      {/* Logo and Title */}
       <div className="p-6 border-b border-white/10">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 bg-gradient-to-br from-lime-400 to-lime-500 rounded-xl flex items-center justify-center">
-            <Sparkles size={20} className="text-black" />
+        <div className="text-center mb-6">
+          <div className="text-3xl font-bold mb-2">
+            <span className="text-lime-400 drop-shadow-lg">CV</span>
+            <span className="text-gray-300">CIRCLE</span>
           </div>
-          <div>
-            <h2 className="text-white font-semibold">CVCircle</h2>
-            <p className="text-white/60 text-sm">Dashboard</p>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl">
-          <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-500 rounded-lg flex items-center justify-center">
-            <User size={16} className="text-white" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-white text-sm font-medium truncate">{user.name}</p>
-            <p className="text-white/60 text-xs truncate">{user.email}</p>
-          </div>
+          <h2 className="text-white/80 text-lg font-medium">Dashboard</h2>
         </div>
       </div>
 
       {/* Navigation */}
       <nav className="p-6">
         <div className="space-y-2">
-          {/* Home Link */}
-          <motion.a
-            href="/"
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 text-white/60 hover:text-white hover:bg-white/5"
-            whileHover={{ x: 5 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Home size={20} />
-            <div className="text-left">
-              <div className="font-medium">Home</div>
-              <div className="text-xs opacity-60">Back to landing</div>
-            </div>
-          </motion.a>
-
           {/* Section Navigation */}
           {sections.map((section, index) => (
             <motion.button
@@ -115,19 +85,9 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
           ))}
         </div>
 
-        {/* Quick Actions */}
-        <div className="mt-8 space-y-2">
-          <motion.button
-            className="w-full px-4 py-3 bg-gradient-to-r from-lime-400/20 to-lime-500/20 border border-lime-400/30 text-lime-400 rounded-xl font-medium hover:from-lime-400/30 hover:to-lime-500/30 transition-all duration-300 flex items-center justify-center gap-2"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <Plus size={16} />
-            New CV
-          </motion.button>
-        </div>
 
-        {/* Settings & Logout */}
+
+        {/* Settings */}
         <div className="mt-8 pt-6 border-t border-white/10 space-y-2">
           <motion.button
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 text-white/60 hover:text-white hover:bg-white/5"
@@ -140,21 +100,27 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
               <div className="text-xs opacity-60">Preferences</div>
             </div>
           </motion.button>
+        </div>
 
+        {/* User Profile & Logout */}
+        <div className="mt-6 pt-6 border-t border-white/10">
           <motion.button
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 text-white/60 hover:text-red-400 hover:bg-red-400/10"
-            whileHover={{ x: 5 }}
-            whileTap={{ scale: 0.95 }}
             onClick={() => {
               localStorage.removeItem('user');
               window.location.href = '/';
             }}
+            className="w-full flex items-center gap-3 p-3 bg-white/5 rounded-xl transition-all duration-300 hover:bg-white/10 hover:bg-red-400/10 group"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
           >
-            <LogOut size={20} />
-            <div className="text-left">
-              <div className="font-medium">Logout</div>
-              <div className="text-xs opacity-60">Sign out</div>
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-500 rounded-lg flex items-center justify-center">
+              <User size={16} className="text-white" />
             </div>
+            <div className="flex-1 min-w-0 text-left">
+              <p className="text-white text-sm font-medium truncate">{user.name}</p>
+              <p className="text-white/60 text-xs truncate group-hover:text-red-400 transition-colors">{user.email}</p>
+            </div>
+            <LogOut size={16} className="text-white/60 group-hover:text-red-400 transition-colors" />
           </motion.button>
         </div>
       </nav>

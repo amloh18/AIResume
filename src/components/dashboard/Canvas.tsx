@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FileText, 
-  Plus, 
+  Plus,
   Edit, 
   Copy, 
   Download, 
@@ -15,7 +15,6 @@ import {
   Calendar,
   Users,
   Palette,
-  Layers,
   ArrowRight,
   Sparkles,
   CheckCircle,
@@ -69,7 +68,6 @@ const Canvas: React.FC = () => {
   ]);
 
   const [selectedCV, setSelectedCV] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   const templates = [
     { id: 'modern', name: 'Modern', description: 'Clean and professional', color: 'from-lime-400 to-lime-500' },
@@ -98,27 +96,19 @@ const Canvas: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Canvas</h1>
-          <p className="text-white/60">Create, edit, and manage your CVs with professional templates</p>
+          <h1 className="text-3xl font-bold text-white mb-2">CV Studio</h1>
+          <p className="text-white/60">Create, edit, and manage your professional CVs</p>
         </div>
         
         <div className="flex items-center gap-4">
           <motion.button
-            className="p-2 text-white/60 hover:text-white transition-colors"
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
-          >
-            <Layers size={20} />
-          </motion.button>
-          
-          <motion.button
             className="px-6 py-3 bg-gradient-to-r from-lime-400 to-lime-500 text-black font-semibold rounded-xl hover:from-lime-300 hover:to-lime-400 transition-all duration-300 flex items-center gap-2"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
+            onClick={() => window.location.href = '/cv-studio'}
           >
             <Plus size={16} />
-            New CV
+            Create CV
           </motion.button>
         </div>
       </div>
@@ -204,11 +194,7 @@ const Canvas: React.FC = () => {
           </div>
         </div>
 
-        <div className={`grid gap-6 ${
-          viewMode === 'grid' 
-            ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' 
-            : 'grid-cols-1'
-        }`}>
+        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           {cvs.map((cv, index) => (
             <motion.div
               key={cv.id}
@@ -268,6 +254,7 @@ const Canvas: React.FC = () => {
                     className="flex-1 px-3 py-2 bg-gradient-to-r from-lime-400/20 to-lime-500/20 border border-lime-400/30 text-lime-400 rounded-lg text-sm font-medium hover:from-lime-400/30 hover:to-lime-500/30 transition-all duration-300 flex items-center justify-center gap-2"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
+                    onClick={() => window.location.href = `/cv-studio?cv=${cv.id}`}
                   >
                     <Edit size={14} />
                     Edit

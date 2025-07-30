@@ -1,0 +1,402 @@
+'use client';
+
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  ChevronLeft, 
+  ChevronRight, 
+  FileText, 
+  Palette, 
+  Layers,
+  Star,
+  Search,
+  Filter,
+  Grid3X3,
+  List,
+  Plus,
+  MoreVertical,
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  Briefcase,
+  Sparkles
+} from 'lucide-react';
+
+interface CVStudioSidebarProps {
+  isCollapsed: boolean;
+  onToggleCollapse: () => void;
+  activeTab: 'templates' | 'customize' | 'snippets';
+  onTabChange: (tab: 'templates' | 'customize' | 'snippets') => void;
+  userCVs: any[];
+  linkedJobs: any[];
+}
+
+const CVStudioSidebar: React.FC<CVStudioSidebarProps> = ({
+  isCollapsed,
+  onToggleCollapse,
+  activeTab,
+  onTabChange,
+  userCVs,
+  linkedJobs
+}) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+
+  const tabs = [
+    { id: 'templates', name: 'Templates', icon: FileText, description: 'Choose from professional templates' },
+    { id: 'customize', name: 'Customize', icon: Palette, description: 'Adjust styling and layout' },
+    { id: 'snippets', name: 'Snippets', icon: Layers, description: 'Add reusable content blocks' }
+  ];
+
+  // Mock data
+  const templates = [
+    { id: '1', name: 'Classic ATS', category: ['ATS-Friendly', 'Professional'], thumbnail: '/api/placeholder/200/150', isPremium: false },
+    { id: '2', name: 'Modern Sidebar', category: ['Modern', 'Two-Column'], thumbnail: '/api/placeholder/200/150', isPremium: false },
+    { id: '3', name: 'Creative Portfolio', category: ['Creative', 'Photo'], thumbnail: '/api/placeholder/200/150', isPremium: true },
+    { id: '4', name: 'Minimalist Clean', category: ['Minimalist', 'ATS-Friendly'], thumbnail: '/api/placeholder/200/150', isPremium: false },
+    { id: '5', name: 'Executive Professional', category: ['Professional', 'Single-Column'], thumbnail: '/api/placeholder/200/150', isPremium: true },
+    { id: '6', name: 'Developer Focus', category: ['Engineer', 'Modern'], thumbnail: '/api/placeholder/200/150', isPremium: false }
+  ];
+
+  const snippets = [
+    { id: '1', name: 'Standard Layouts', section: 'personal_info', thumbnail: '/api/placeholder/150/100', isPremium: false },
+    { id: '2', name: 'Photo Layouts', section: 'personal_info', thumbnail: '/api/placeholder/150/100', isPremium: false },
+    { id: '3', name: 'Timeline Experience', section: 'experience', thumbnail: '/api/placeholder/150/100', isPremium: false },
+    { id: '4', name: 'Skill Bars', section: 'skills', thumbnail: '/api/placeholder/150/100', isPremium: false },
+    { id: '5', name: 'Compact Education', section: 'education', thumbnail: '/api/placeholder/150/100', isPremium: false },
+    { id: '6', name: 'Two-Column Skills', section: 'skills', thumbnail: '/api/placeholder/150/100', isPremium: true }
+  ];
+
+  const renderTemplatesTab = () => (
+    <div className="space-y-4">
+      {/* Search and Filter */}
+      <div className="space-y-3">
+        <div className="relative">
+          <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/40" />
+          <input
+            type="text"
+            placeholder="Search templates..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+          />
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <button
+            className={`p-2 rounded-lg transition-colors ${
+              viewMode === 'grid' ? 'bg-white/20 text-white' : 'text-white/60 hover:text-white hover:bg-white/10'
+            }`}
+            onClick={() => setViewMode('grid')}
+          >
+            <Grid3X3 size={16} />
+          </button>
+          <button
+            className={`p-2 rounded-lg transition-colors ${
+              viewMode === 'list' ? 'bg-white/20 text-white' : 'text-white/60 hover:text-white hover:bg-white/10'
+            }`}
+            onClick={() => setViewMode('list')}
+          >
+            <List size={16} />
+          </button>
+        </div>
+      </div>
+
+      {/* Templates Grid */}
+      <div className={`grid gap-4 ${
+        viewMode === 'grid' ? 'grid-cols-3' : 'grid-cols-1'
+      }`}>
+        {templates.map((template) => (
+          <motion.div
+            key={template.id}
+            className="group cursor-pointer"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <div className="relative bg-white/5 border border-white/10 rounded-xl overflow-hidden hover:border-white/20 transition-all duration-300">
+              {/* Thumbnail */}
+              <div className="aspect-[4/3] bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
+                <div className="w-12 h-16 bg-white/20 rounded-lg border border-white/30 flex items-center justify-center">
+                  <FileText size={20} className="text-white/60" />
+                </div>
+              </div>
+              
+              {/* Premium Badge */}
+              {template.isPremium && (
+                <div className="absolute top-2 right-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs px-2 py-1 rounded-full">
+                  PRO
+                </div>
+              )}
+              
+              {/* Template Info */}
+              <div className="p-3">
+                <h3 className="font-medium text-white mb-1 group-hover:text-purple-400 transition-colors">
+                  {template.name}
+                </h3>
+                <div className="flex flex-wrap gap-1">
+                  {template.category.map((cat) => (
+                    <span
+                      key={cat}
+                      className="text-xs px-2 py-1 bg-white/10 text-white/60 rounded-full"
+                    >
+                      {cat}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const renderCustomizeTab = () => (
+    <div className="space-y-6">
+      {/* Typography */}
+      <div>
+        <h3 className="text-white font-semibold mb-3">Typography</h3>
+        <div className="space-y-3">
+          <div>
+            <label className="text-white/60 text-sm mb-1 block">Font Family</label>
+            <select className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50">
+              <option value="inter">Inter</option>
+              <option value="roboto">Roboto</option>
+              <option value="arial">Arial</option>
+              <option value="times">Times New Roman</option>
+            </select>
+          </div>
+          
+          <div>
+            <label className="text-white/60 text-sm mb-1 block">Font Size</label>
+            <input
+              type="range"
+              min="10"
+              max="16"
+              defaultValue="12"
+              className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer"
+            />
+          </div>
+          
+          <div>
+            <label className="text-white/60 text-sm mb-1 block">Line Height</label>
+            <input
+              type="range"
+              min="1.2"
+              max="2"
+              step="0.1"
+              defaultValue="1.5"
+              className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Colors */}
+      <div>
+        <h3 className="text-white font-semibold mb-3">Colors</h3>
+        <div className="space-y-3">
+          <div>
+            <label className="text-white/60 text-sm mb-1 block">Primary Color</label>
+            <div className="flex gap-2">
+              {['#84cc16', '#3b82f6', '#8b5cf6', '#ef4444', '#f59e0b'].map((color) => (
+                <button
+                  key={color}
+                  className="w-8 h-8 rounded-lg border-2 border-white/20 hover:border-white/40 transition-colors"
+                  style={{ backgroundColor: color }}
+                />
+              ))}
+            </div>
+          </div>
+          
+          <div>
+            <label className="text-white/60 text-sm mb-1 block">Background</label>
+            <div className="flex gap-2">
+              {['#ffffff', '#f8fafc', '#f1f5f9', '#e2e8f0'].map((color) => (
+                <button
+                  key={color}
+                  className="w-8 h-8 rounded-lg border-2 border-white/20 hover:border-white/40 transition-colors"
+                  style={{ backgroundColor: color }}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Spacing */}
+      <div>
+        <h3 className="text-white font-semibold mb-3">Spacing</h3>
+        <div className="space-y-3">
+          <div>
+            <label className="text-white/60 text-sm mb-1 block">Section Gap</label>
+            <input
+              type="range"
+              min="5"
+              max="20"
+              defaultValue="10"
+              className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer"
+            />
+          </div>
+          
+          <div>
+            <label className="text-white/60 text-sm mb-1 block">Padding</label>
+            <input
+              type="range"
+              min="20"
+              max="60"
+              defaultValue="40"
+              className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderSnippetsTab = () => (
+    <div className="space-y-4">
+      {/* Search */}
+      <div className="relative">
+        <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/40" />
+        <input
+          type="text"
+          placeholder="Search snippets..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full pl-10 pr-4 py-2 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+        />
+      </div>
+
+      {/* Snippets Grid */}
+      <div className="grid grid-cols-3 gap-3">
+        {snippets.map((snippet) => (
+          <motion.div
+            key={snippet.id}
+            className="group cursor-pointer"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <div className="relative bg-white/5 border border-white/10 rounded-lg overflow-hidden hover:border-white/20 transition-all duration-300">
+              {/* Thumbnail */}
+              <div className="aspect-[3/2] bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center">
+                <div className="w-8 h-10 bg-white/20 rounded border border-white/30 flex items-center justify-center">
+                  <Layers size={14} className="text-white/60" />
+                </div>
+              </div>
+              
+              {/* Premium Badge */}
+              {snippet.isPremium && (
+                <div className="absolute top-1 right-1 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs px-1 py-0.5 rounded text-[10px]">
+                  PRO
+                </div>
+              )}
+              
+              {/* Snippet Info */}
+              <div className="p-2">
+                <h3 className="font-medium text-white text-sm mb-1 group-hover:text-blue-400 transition-colors">
+                  {snippet.name}
+                </h3>
+                <span className="text-xs text-white/60 capitalize">
+                  {snippet.section.replace('_', ' ')}
+                </span>
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    </div>
+  );
+
+  return (
+    <motion.aside
+      className="bg-white/5 backdrop-blur-xl border-r border-white/10 flex flex-col relative z-40"
+      initial={{ width: isCollapsed ? 60 : 480 }}
+      animate={{ width: isCollapsed ? 60 : 480 }}
+      transition={{ duration: 0.3, ease: 'easeInOut' }}
+    >
+      {/* Collapse Toggle */}
+      <div className="flex items-center justify-between p-4 border-b border-white/10">
+        {!isCollapsed && (
+          <motion.h2
+            className="text-white font-semibold"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            CV Studio
+          </motion.h2>
+        )}
+        <motion.button
+          className="p-2 text-white/60 hover:text-white transition-colors rounded-lg hover:bg-white/10"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={onToggleCollapse}
+        >
+          {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+        </motion.button>
+      </div>
+
+      {/* Tab Navigation */}
+      {!isCollapsed && (
+        <div className="flex border-b border-white/10">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              className={`flex-1 flex flex-col items-center gap-1 py-3 px-2 transition-colors ${
+                activeTab === tab.id
+                  ? 'text-white bg-white/10 border-b-2 border-purple-500'
+                  : 'text-white/60 hover:text-white hover:bg-white/5'
+              }`}
+              onClick={() => onTabChange(tab.id as any)}
+            >
+              <tab.icon size={16} />
+              <span className="text-xs font-medium">{tab.name}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Tab Content */}
+      <div className="flex-1 overflow-y-auto p-4">
+        <AnimatePresence mode="wait">
+          {!isCollapsed && (
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.2 }}
+            >
+              {activeTab === 'templates' && renderTemplatesTab()}
+              {activeTab === 'customize' && renderCustomizeTab()}
+              {activeTab === 'snippets' && renderSnippetsTab()}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Collapsed Icons */}
+        {isCollapsed && (
+          <div className="space-y-2">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                className={`w-full p-3 rounded-lg transition-colors ${
+                  activeTab === tab.id
+                    ? 'text-white bg-white/10'
+                    : 'text-white/60 hover:text-white hover:bg-white/5'
+                }`}
+                onClick={() => onTabChange(tab.id as any)}
+                title={tab.name}
+              >
+                <tab.icon size={20} />
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </motion.aside>
+  );
+};
+
+export default CVStudioSidebar; 

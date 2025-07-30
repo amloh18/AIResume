@@ -7,6 +7,32 @@ import JobApplication from '@/models/JobApplication';
 // Mockup jobs data
 const mockupJobs = [
   {
+    jobTitle: 'AI/ML Engineer',
+    company: 'FutureTech Labs',
+    location: 'Seattle, WA',
+    jobUrl: 'https://futuretechlabs.com/careers/ai-ml-engineer',
+    jobDescription: 'Join our AI team to develop cutting-edge machine learning models and algorithms.',
+    salary: {
+      min: 150000,
+      max: 220000,
+      currency: 'USD',
+      period: 'yearly'
+    },
+    status: 'created',
+    priority: 'high',
+    applicationDate: null,
+    notes: 'Need to research company and prepare application materials',
+    contacts: [
+      {
+        name: 'Dr. Emily Chen',
+        role: 'AI Research Lead',
+        email: 'emily.chen@futuretechlabs.com',
+        linkedin: 'https://linkedin.com/in/emilychen'
+      }
+    ],
+    tags: ['Machine Learning', 'Python', 'TensorFlow', 'AI Research']
+  },
+  {
     jobTitle: 'Senior Frontend Developer',
     company: 'TechCorp Inc.',
     location: 'San Francisco, CA',
@@ -286,6 +312,32 @@ const mockupJobs = [
       }
     ],
     tags: ['Selenium', 'Jest', 'Test Automation', 'Quality Assurance']
+  },
+  {
+    jobTitle: 'Blockchain Developer',
+    company: 'CryptoInnovate',
+    location: 'Remote',
+    jobUrl: 'https://cryptoinnovate.com/careers/blockchain-dev',
+    jobDescription: 'Build decentralized applications and smart contracts on various blockchain platforms.',
+    salary: {
+      min: 130000,
+      max: 200000,
+      currency: 'USD',
+      period: 'yearly'
+    },
+    status: 'created',
+    priority: 'medium',
+    applicationDate: null,
+    notes: 'Interesting role in emerging technology, need to learn more about the company',
+    contacts: [
+      {
+        name: 'Alex Thompson',
+        role: 'Blockchain Lead',
+        email: 'alex.thompson@cryptoinnovate.com',
+        linkedin: 'https://linkedin.com/in/alexthompson'
+      }
+    ],
+    tags: ['Solidity', 'Ethereum', 'Smart Contracts', 'Web3']
   }
 ];
 

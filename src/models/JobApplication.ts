@@ -14,7 +14,7 @@ export interface IJobApplication extends Document {
     currency?: string;
     period?: 'hourly' | 'monthly' | 'yearly';
   };
-  status: 'applied' | 'screening' | 'interview' | 'offer' | 'rejected' | 'accepted' | 'withdrawn';
+  status: 'created' | 'applied' | 'screening' | 'interview' | 'offer' | 'rejected' | 'accepted' | 'withdrawn';
   priority: 'low' | 'medium' | 'high';
   applicationDate: Date;
   deadline?: Date;
@@ -110,8 +110,8 @@ const jobApplicationSchema = new Schema<IJobApplication>({
   },
   status: {
     type: String,
-    enum: ['applied', 'screening', 'interview', 'offer', 'rejected', 'accepted', 'withdrawn'],
-    default: 'applied',
+    enum: ['created', 'applied', 'screening', 'interview', 'offer', 'rejected', 'accepted', 'withdrawn'],
+    default: 'created',
     required: true
   },
   priority: {
@@ -121,8 +121,9 @@ const jobApplicationSchema = new Schema<IJobApplication>({
   },
   applicationDate: {
     type: Date,
-    required: true,
-    default: Date.now
+    required: function() {
+      return this.status !== 'created';
+    }
   },
   deadline: {
     type: Date,

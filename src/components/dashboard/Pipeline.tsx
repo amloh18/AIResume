@@ -61,6 +61,7 @@ import {
   Link,
   CalendarDays,
 } from 'lucide-react';
+import { v4 as uuidv4 } from 'uuid';
 
 interface Job {
   id: string;
@@ -73,8 +74,8 @@ interface Job {
     currency?: string;
     period?: string;
   };
-  status: 'applied' | 'screening' | 'interview' | 'offer' | 'rejected' | 'accepted' | 'withdrawn';
-  applicationDate?: string;
+  status: 'created' | 'applied' | 'screening' | 'interview' | 'offer' | 'rejected' | 'accepted' | 'withdrawn';
+  applicationDate?: string | null;
   deadline?: string;
   jobDescription?: string;
   jobUrl?: string;
@@ -99,9 +100,10 @@ interface SortableJobCardProps {
   onEdit: (job: Job) => void;
   onDelete: (jobId: string) => void;
   onView: (job: Job) => void;
+  isCompact?: boolean;
 }
 
-const SortableJobCard: React.FC<SortableJobCardProps> = ({ job, onEdit, onDelete, onView }) => {
+const SortableJobCard: React.FC<SortableJobCardProps> = ({ job, onEdit, onDelete, onView, isCompact = false }) => {
   const {
     attributes,
     listeners,
@@ -118,13 +120,13 @@ const SortableJobCard: React.FC<SortableJobCardProps> = ({ job, onEdit, onDelete
 
   const getStatusColor = (status: Job['status']) => {
     switch (status) {
+      case 'created': return 'bg-purple-500/20 border-purple-500/30 text-purple-400';
       case 'applied': return 'bg-blue-500/20 border-blue-500/30 text-blue-400';
       case 'screening': return 'bg-yellow-500/20 border-yellow-500/30 text-yellow-400';
       case 'interview': return 'bg-orange-500/20 border-orange-500/30 text-orange-400';
       case 'offer': return 'bg-green-500/20 border-green-500/30 text-green-400';
       case 'rejected': return 'bg-red-500/20 border-red-500/30 text-red-400';
       case 'accepted': return 'bg-green-500/20 border-green-500/30 text-green-400';
-      case 'withdrawn': return 'bg-gray-500/20 border-gray-500/30 text-gray-400';
       case 'withdrawn': return 'bg-gray-500/20 border-gray-500/30 text-gray-400';
       default: return 'bg-gray-500/20 border-gray-500/30 text-gray-400';
     }
@@ -141,15 +143,15 @@ const SortableJobCard: React.FC<SortableJobCardProps> = ({ job, onEdit, onDelete
 
   const getStatusIcon = (status: Job['status']) => {
     switch (status) {
-      case 'applied': return <BriefcaseIcon size={14} />;
-      case 'screening': return <ClockIcon size={14} />;
-      case 'interview': return <ClockIcon size={14} />;
-      case 'offer': return <CheckCircleIcon size={14} />;
-      case 'rejected': return <XCircleIcon size={14} />;
-      case 'accepted': return <CheckCircleIcon size={14} />;
-      case 'withdrawn': return <XCircleIcon size={14} />;
-      case 'withdrawn': return <XCircleIcon size={14} />;
-      default: return <BriefcaseIcon size={14} />;
+      case 'created': return <Plus size={isCompact ? 12 : 14} />;
+      case 'applied': return <BriefcaseIcon size={isCompact ? 12 : 14} />;
+      case 'screening': return <ClockIcon size={isCompact ? 12 : 14} />;
+      case 'interview': return <ClockIcon size={isCompact ? 12 : 14} />;
+      case 'offer': return <CheckCircleIcon size={isCompact ? 12 : 14} />;
+      case 'rejected': return <XCircleIcon size={isCompact ? 12 : 14} />;
+      case 'accepted': return <CheckCircleIcon size={isCompact ? 12 : 14} />;
+      case 'withdrawn': return <XCircleIcon size={isCompact ? 12 : 14} />;
+      default: return <BriefcaseIcon size={isCompact ? 12 : 14} />;
     }
   };
 
@@ -170,8 +172,12 @@ const SortableJobCard: React.FC<SortableJobCardProps> = ({ job, onEdit, onDelete
     <motion.div
       ref={setNodeRef}
       style={style}
-      className={`relative bg-white/5 border border-white/10 rounded-xl p-4 mb-4 cursor-move hover:bg-white/10 transition-all duration-200 ${
+      className={`relative bg-white/5 border border-white/10 rounded-xl cursor-move hover:bg-white/10 transition-all duration-200 ${
         isDragging ? 'opacity-50 rotate-2 scale-105' : ''
+      } ${
+        isCompact 
+          ? 'p-3 mb-3' 
+          : 'p-4 mb-4'
       }`}
       whileHover={{ y: -2, scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
@@ -179,35 +185,35 @@ const SortableJobCard: React.FC<SortableJobCardProps> = ({ job, onEdit, onDelete
       {...listeners}
     >
       {/* Drag Handle */}
-      <div className="absolute top-2 right-2 text-white/30 hover:text-white/60 transition-colors">
-        <GripVertical size={16} />
+      <div className={`absolute top-2 right-2 text-white/30 hover:text-white/60 transition-colors ${isCompact ? 'top-1 right-1' : ''}`}>
+        <GripVertical size={isCompact ? 14 : 16} />
       </div>
 
       {/* Priority Badge */}
-      <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium mb-3 ${getPriorityColor(job.priority)}`}>
+      <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium mb-2 ${getPriorityColor(job.priority)}`}>
         <div className="w-2 h-2 rounded-full bg-current"></div>
         {job.priority}
       </div>
 
       {/* Job Title */}
-      <h3 className="text-white font-semibold text-lg mb-2 line-clamp-2">{job.jobTitle}</h3>
+      <h3 className={`text-white font-semibold line-clamp-2 mb-2 ${isCompact ? 'text-sm' : 'text-lg'}`}>{job.jobTitle}</h3>
 
       {/* Company */}
       <div className="flex items-center gap-2 mb-2">
-        <Building size={14} className="text-white/60" />
-        <span className="text-white/80 text-sm">{job.company}</span>
+        <Building size={isCompact ? 12 : 14} className="text-white/60" />
+        <span className={`text-white/80 ${isCompact ? 'text-xs' : 'text-sm'}`}>{job.company}</span>
       </div>
 
-      {/* Location */}
-      {job.location && (
-        <div className="flex items-center gap-2 mb-3">
-          <MapPin size={14} className="text-white/60" />
-          <span className="text-white/60 text-sm">{job.location}</span>
+      {/* Location - Only show in compact mode if it's short */}
+      {job.location && (!isCompact || job.location.length < 20) && (
+        <div className="flex items-center gap-2 mb-2">
+          <MapPin size={isCompact ? 12 : 14} className="text-white/60" />
+          <span className={`text-white/60 ${isCompact ? 'text-xs' : 'text-sm'}`}>{job.location}</span>
         </div>
       )}
 
-      {/* Salary */}
-      {formatSalary(job.salary) && (
+      {/* Salary - Only show in normal mode */}
+      {!isCompact && formatSalary(job.salary) && (
         <div className="flex items-center gap-2 mb-3">
           <DollarSign size={14} className="text-white/60" />
           <span className="text-white/60 text-sm">{formatSalary(job.salary)}</span>
@@ -215,29 +221,37 @@ const SortableJobCard: React.FC<SortableJobCardProps> = ({ job, onEdit, onDelete
       )}
 
       {/* Status Badge */}
-      <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium mb-3 ${getStatusColor(job.status)}`}>
+      <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium mb-2 ${getStatusColor(job.status)}`}>
         {getStatusIcon(job.status)}
         {job.status.charAt(0).toUpperCase() + job.status.slice(1)}
       </div>
 
-      {/* Applied Date */}
-      {job.applicationDate && (
+      {/* Applied Date - Only show in normal mode */}
+      {!isCompact && job.applicationDate && job.status !== 'created' && (
         <div className="flex items-center gap-2 mb-3">
           <Calendar size={14} className="text-white/60" />
           <span className="text-white/60 text-xs">Applied: {new Date(job.applicationDate).toLocaleDateString()}</span>
         </div>
       )}
+      
+      {/* Created Date - Only show for created status */}
+      {!isCompact && job.status === 'created' && job.createdAt && (
+        <div className="flex items-center gap-2 mb-3">
+          <Calendar size={14} className="text-white/60" />
+          <span className="text-white/60 text-xs">Created: {new Date(job.createdAt).toLocaleDateString()}</span>
+        </div>
+      )}
 
-      {/* Deadline */}
-      {job.deadline && (
+      {/* Deadline - Only show in normal mode */}
+      {!isCompact && job.deadline && (
         <div className="flex items-center gap-2 mb-3">
           <CalendarDays size={14} className="text-white/60" />
           <span className="text-white/60 text-xs">Deadline: {new Date(job.deadline).toLocaleDateString()}</span>
         </div>
       )}
 
-      {/* Tags */}
-      {job.tags.length > 0 && (
+      {/* Tags - Only show in normal mode */}
+      {!isCompact && job.tags.length > 0 && (
         <div className="flex flex-wrap gap-1 mb-3">
           {job.tags.slice(0, 3).map((tag, index) => (
             <span
@@ -256,32 +270,32 @@ const SortableJobCard: React.FC<SortableJobCardProps> = ({ job, onEdit, onDelete
       )}
 
       {/* Action Buttons */}
-      <div className="flex items-center justify-between pt-3 border-t border-white/10">
-        <div className="flex items-center gap-2">
+      <div className={`flex items-center justify-between pt-2 border-t border-white/10 ${isCompact ? 'pt-1' : 'pt-3'}`}>
+        <div className="flex items-center gap-1">
           <motion.button
             onClick={() => onView(job)}
-            className="p-1.5 text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+            className={`text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition-colors ${isCompact ? 'p-1' : 'p-1.5'}`}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
           >
-            <Eye size={14} />
+            <Eye size={isCompact ? 12 : 14} />
           </motion.button>
           <motion.button
             onClick={() => onEdit(job)}
-            className="p-1.5 text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+            className={`text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition-colors ${isCompact ? 'p-1' : 'p-1.5'}`}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
           >
-            <Edit size={14} />
+            <Edit size={isCompact ? 12 : 14} />
           </motion.button>
         </div>
         <motion.button
           onClick={() => onDelete(job.id)}
-          className="p-1.5 text-red-400/60 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+          className={`text-red-400/60 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors ${isCompact ? 'p-1' : 'p-1.5'}`}
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
         >
-          <Trash2 size={14} />
+          <Trash2 size={isCompact ? 12 : 14} />
         </motion.button>
       </div>
     </motion.div>
@@ -307,6 +321,7 @@ const Pipeline: React.FC = () => {
   );
 
   const stages = [
+    { id: 'created', title: 'Created', color: 'bg-purple-500/20 border-purple-500/30' },
     { id: 'applied', title: 'Applied', color: 'bg-blue-500/20 border-blue-500/30' },
     { id: 'screening', title: 'Screening', color: 'bg-yellow-500/20 border-yellow-500/30' },
     { id: 'interview', title: 'Interview', color: 'bg-orange-500/20 border-orange-500/30' },
@@ -370,7 +385,9 @@ const Pipeline: React.FC = () => {
         const updatedJob = {
           ...activeJob,
           status: newStatus,
-          applicationDate: newStatus === 'applied' ? new Date().toISOString() : activeJob.applicationDate
+          applicationDate: newStatus === 'applied' ? new Date().toISOString() : 
+                         newStatus === 'created' ? null : activeJob.applicationDate,
+          createdAt: newStatus === 'created' ? new Date().toISOString() : activeJob.createdAt
         };
 
         try {
@@ -425,7 +442,8 @@ const Pipeline: React.FC = () => {
         ...editingJob,
         ...jobData,
         userId: user?.id || user?._id,
-        cvId: jobData.cvId || (userCVs[0]?.id || userCVs[0]?._id) // Use first CV if none selected
+        cvId: jobData.cvId || (userCVs[0]?.id || userCVs[0]?._id), // Use first CV if none selected
+        id: editingJob.id || uuidv4(), // Ensure id is always present
       };
 
       const response = await fetch('/api/jobs', {
@@ -437,7 +455,9 @@ const Pipeline: React.FC = () => {
       if (response.ok) {
         const result = await response.json();
         if (result.success) {
-          setJobs([...jobs, result.data]);
+          // Use backend id if present, else fallback to frontend id
+          const savedJob = { ...result.data, id: result.data.id || jobToSave.id };
+          setJobs([...jobs, savedJob]);
           setShowJobModal(false);
           setEditingJob(null);
         }
@@ -451,10 +471,11 @@ const Pipeline: React.FC = () => {
 
   const handleAddJob = () => {
     const newJob: Partial<Job> = {
+      id: uuidv4(),
       jobTitle: '',
       company: '',
       location: '',
-      status: 'applied',
+      status: 'created',
       priority: 'medium',
       tags: [],
       contacts: [],
@@ -478,11 +499,11 @@ const Pipeline: React.FC = () => {
   }
 
   return (
-    <div className="h-full">
+    <div className="h-full w-full">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Job Pipeline</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">Job Tracker</h1>
           <p className="text-white/60">Track your job applications and manage your career progress</p>
         </div>
         <motion.button
@@ -503,9 +524,10 @@ const Pipeline: React.FC = () => {
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 h-full">
+        <div className="w-full overflow-x-auto px-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8 gap-4 lg:gap-6 h-full min-w-max">
           {stages.map((stage) => (
-            <div key={stage.id} className="flex flex-col">
+            <div key={stage.id} className="flex flex-col min-w-[300px] max-w-[350px]">
               {/* Stage Header */}
               <div className={`${stage.color} border rounded-xl p-4 mb-4`}>
                 <div className="flex items-center justify-between">
@@ -517,33 +539,40 @@ const Pipeline: React.FC = () => {
               </div>
 
               {/* Job Cards */}
-              <div className="flex-1 min-h-[400px]">
+              <div className="flex-1 min-h-[400px] overflow-y-auto p-2 space-y-2">
                 <SortableContext
                   items={getJobsByStatus(stage.id as Job['status']).map(job => job.id)}
                   strategy={verticalListSortingStrategy}
                 >
                   <AnimatePresence>
-                    {getJobsByStatus(stage.id as Job['status']).map((job) => (
-                      <motion.div
-                        key={job.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <SortableJobCard
-                          job={job}
-                          onEdit={handleEdit}
-                          onDelete={handleDelete}
-                          onView={handleView}
-                        />
-                      </motion.div>
-                    ))}
+                    {getJobsByStatus(stage.id as Job['status']).map((job) => {
+                      const jobsInStage = getJobsByStatus(stage.id as Job['status']);
+                      const isCompact = jobsInStage.length > 4;
+                      
+                      return (
+                        <motion.div
+                          key={job.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -20 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <SortableJobCard
+                            job={job}
+                            onEdit={handleEdit}
+                            onDelete={handleDelete}
+                            onView={handleView}
+                            isCompact={isCompact}
+                          />
+                        </motion.div>
+                      );
+                    })}
                   </AnimatePresence>
                 </SortableContext>
               </div>
             </div>
           ))}
+          </div>
         </div>
 
         {/* Drag Overlay */}
@@ -660,9 +689,10 @@ const Pipeline: React.FC = () => {
                     <label className="block text-white/80 text-sm mb-2">Status</label>
                     <select
                       id="status"
-                      defaultValue={editingJob?.status || selectedJob?.status || 'applied'}
+                      defaultValue={editingJob?.status || selectedJob?.status || 'created'}
                       className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white"
                     >
+                      <option value="created">Created</option>
                       <option value="applied">Applied</option>
                       <option value="screening">Screening</option>
                       <option value="interview">Interview</option>
