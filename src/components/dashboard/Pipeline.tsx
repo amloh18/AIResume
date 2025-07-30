@@ -12,6 +12,7 @@ import {
   DragEndEvent,
   DragOverlay,
   DragStartEvent,
+  DragOverEvent,
 } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -22,6 +23,9 @@ import {
 import {
   useSortable,
 } from '@dnd-kit/sortable';
+import {
+  useDroppable,
+} from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import {
   Briefcase,
@@ -302,6 +306,24 @@ const SortableJobCard: React.FC<SortableJobCardProps> = ({ job, onEdit, onDelete
   );
 };
 
+// Droppable Zone Component
+const DroppableZone: React.FC<{ id: string; children: React.ReactNode }> = ({ id, children }) => {
+  const { setNodeRef, isOver } = useDroppable({
+    id: id,
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`flex-1 min-h-[400px] overflow-y-auto p-2 space-y-2 transition-colors duration-200 ${
+        isOver ? 'bg-white/5 border-2 border-dashed border-white/20 rounded-lg' : ''
+      }`}
+    >
+      {children}
+    </div>
+  );
+};
+
 const Pipeline: React.FC = () => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -345,10 +367,20 @@ const Pipeline: React.FC = () => {
 
   const loadJobs = async (userId: string) => {
     try {
+      setIsLoading(true);
       const response = await fetch(`/api/jobs?userId=${userId}`);
       const result = await response.json();
       if (result.success) {
-        setJobs(result.data);
+        // Transform the data to match the expected format
+        const transformedJobs = result.data.map((job: any) => ({
+          ...job,
+          id: job.id || job._id, // Ensure id is always present
+          applicationDate: job.applicationDate ? new Date(job.applicationDate).toISOString() : null,
+          deadline: job.deadline ? new Date(job.deadline).toISOString() : null,
+          createdAt: job.createdAt ? new Date(job.createdAt).toISOString() : null,
+          updatedAt: job.updatedAt ? new Date(job.updatedAt).toISOString() : null,
+        }));
+        setJobs(transformedJobs);
       }
     } catch (error) {
       console.error('Error loading jobs:', error);
@@ -362,7 +394,7 @@ const Pipeline: React.FC = () => {
       const response = await fetch(`/api/cvs?userId=${userId}`);
       const result = await response.json();
       if (result.success) {
-        setUserCVs(result.data);
+        setUserCVs(result.data.data || []);
       }
     } catch (error) {
       console.error('Error loading CVs:', error);
@@ -377,9 +409,13 @@ const Pipeline: React.FC = () => {
     const { active, over } = event;
     setActiveId(null);
 
+    console.log('Drag end:', { active: active.id, over: over?.id });
+
     if (over && active.id !== over.id) {
       const activeJob = jobs.find(job => job.id === active.id);
       const newStatus = over.id as Job['status'];
+      
+      console.log('Updating job:', { jobId: activeJob?.id, newStatus });
       
       if (activeJob) {
         const updatedJob = {
@@ -387,20 +423,30 @@ const Pipeline: React.FC = () => {
           status: newStatus,
           applicationDate: newStatus === 'applied' ? new Date().toISOString() : 
                          newStatus === 'created' ? null : activeJob.applicationDate,
-          createdAt: newStatus === 'created' ? new Date().toISOString() : activeJob.createdAt
         };
 
         try {
           const response = await fetch('/api/jobs', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(updatedJob)
+            body: JSON.stringify({
+              ...updatedJob,
+              id: activeJob.id
+            })
           });
 
           if (response.ok) {
-            setJobs(jobs.map(job => 
-              job.id === active.id ? updatedJob : job
-            ));
+            const result = await response.json();
+            if (result.success) {
+              console.log('Job updated successfully:', result.data);
+              setJobs(jobs.map(job => 
+                job.id === active.id ? { ...job, ...result.data, id: result.data.id || job.id } : job
+              ));
+            } else {
+              console.error('Failed to update job:', result);
+            }
+          } else {
+            console.error('HTTP error updating job:', response.status);
           }
         } catch (error) {
           console.error('Error updating job status:', error);
@@ -415,13 +461,20 @@ const Pipeline: React.FC = () => {
   };
 
   const handleDelete = async (jobId: string) => {
+    if (!confirm('Are you sure you want to delete this job application?')) {
+      return;
+    }
+
     try {
       const response = await fetch(`/api/jobs?id=${jobId}`, {
         method: 'DELETE'
       });
 
       if (response.ok) {
-        setJobs(jobs.filter(job => job.id !== jobId));
+        const result = await response.json();
+        if (result.success) {
+          setJobs(jobs.filter(job => job.id !== jobId));
+        }
       }
     } catch (error) {
       console.error('Error deleting job:', error);
@@ -442,22 +495,34 @@ const Pipeline: React.FC = () => {
         ...editingJob,
         ...jobData,
         userId: user?.id || user?._id,
-        cvId: jobData.cvId || (userCVs[0]?.id || userCVs[0]?._id), // Use first CV if none selected
-        id: editingJob.id || uuidv4(), // Ensure id is always present
+        cvId: jobData.cvId || (userCVs[0]?.id || userCVs[0]?._id),
+        applicationDate: jobData.status === 'applied' ? new Date().toISOString() : 
+                       jobData.status === 'created' ? null : editingJob.applicationDate,
       };
 
-      const response = await fetch('/api/jobs', {
-        method: 'POST',
+      const method = editingJob.id && jobs.some(job => job.id === editingJob.id) ? 'PUT' : 'POST';
+      const url = method === 'PUT' ? '/api/jobs' : '/api/jobs';
+      const body = method === 'PUT' ? { ...jobToSave, id: editingJob.id } : jobToSave;
+
+      const response = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(jobToSave)
+        body: JSON.stringify(body)
       });
 
       if (response.ok) {
         const result = await response.json();
         if (result.success) {
-          // Use backend id if present, else fallback to frontend id
-          const savedJob = { ...result.data, id: result.data.id || jobToSave.id };
-          setJobs([...jobs, savedJob]);
+          const savedJob = { ...result.data, id: result.data.id || editingJob.id };
+          
+          if (method === 'PUT') {
+            // Update existing job
+            setJobs(jobs.map(job => job.id === editingJob.id ? savedJob : job));
+          } else {
+            // Add new job
+            setJobs([...jobs, savedJob]);
+          }
+          
           setShowJobModal(false);
           setEditingJob(null);
         }
@@ -539,7 +604,7 @@ const Pipeline: React.FC = () => {
               </div>
 
               {/* Job Cards */}
-              <div className="flex-1 min-h-[400px] overflow-y-auto p-2 space-y-2">
+              <DroppableZone id={stage.id}>
                 <SortableContext
                   items={getJobsByStatus(stage.id as Job['status']).map(job => job.id)}
                   strategy={verticalListSortingStrategy}
@@ -569,7 +634,7 @@ const Pipeline: React.FC = () => {
                     })}
                   </AnimatePresence>
                 </SortableContext>
-              </div>
+              </DroppableZone>
             </div>
           ))}
           </div>

@@ -1,12 +1,41 @@
 import mongoose, { Document, Schema } from 'mongoose';
+import { ICVSection, IStyleSnippet } from './Template';
 
 export interface ICV extends Document {
   userId: mongoose.Types.ObjectId;
   title: string;
-  template: string;
+  templateId?: mongoose.Types.ObjectId; // Reference to Template model
+  templateName?: string; // Name of the template (e.g., "ATS Friendly Finance CV")
+  templateData?: {
+    display: {
+      layout: 'single-column' | 'two-column' | 'absolute';
+      padding: string;
+      fontFamily: string;
+      sectionSpacing: string;
+    };
+    sections: ICVSection[];
+    snippetStyles: IStyleSnippet[];
+  };
+  cvData: {
+    personal_info?: {
+      name?: string;
+      contact0?: string;
+      contact1?: string;
+      contact2?: string;
+      summary?: string;
+    };
+    education?: Record<string, any>;
+    experience?: Record<string, any>;
+    leadership?: Record<string, any>;
+    project?: Record<string, any>;
+    skills?: Record<string, any>;
+    [key: string]: any; // Allow for dynamic section data
+  };
   status: 'draft' | 'published' | 'archived';
   version: number;
-  sections: {
+  // Legacy fields for backward compatibility
+  template?: string;
+  sections?: {
     personalInfo: {
       firstName: string;
       lastName: string;
@@ -103,10 +132,76 @@ const cvSchema = new Schema<ICV>({
     trim: true,
     maxlength: [100, 'Title cannot exceed 100 characters']
   },
-  template: {
+  templateId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Template'
+  },
+  templateName: {
     type: String,
-    required: [true, 'Template is required'],
-    default: 'modern'
+    trim: true
+  },
+  templateData: {
+    display: {
+      layout: {
+        type: String,
+        enum: ['single-column', 'two-column', 'absolute'],
+        default: 'single-column'
+      },
+      padding: { type: String, default: '32px' },
+      fontFamily: { type: String, default: 'Segoe UI, Roboto, sans-serif' },
+      sectionSpacing: { type: String, default: '24px' }
+    },
+    sections: [{
+      id: { type: String, required: true },
+      type: { 
+        type: String, 
+        enum: ['header', 'section'], 
+        required: true 
+      },
+      title: { type: String },
+      content: {
+        name: { type: String },
+        contact: [{ type: String }],
+        summary: { type: String }
+      },
+      entries: [{
+        degree: { type: String },
+        institution: { type: String },
+        duration: { type: String },
+        details: [{ type: String }],
+        title: { type: String },
+        company: { type: String },
+        organization: { type: String }
+      }],
+      details: [{ type: String }],
+      styleSnippetId: { type: String, required: true }
+    }],
+    snippetStyles: [{
+      id: { type: String, required: true },
+      category: { type: String, required: true },
+      style: {
+        fontWeight: { type: String },
+        fontSize: { type: String },
+        color: { type: String },
+        marginBottom: { type: String },
+        titleFontSize: { type: String },
+        entrySpacing: { type: String },
+        bulletIndent: { type: String },
+        entryBorderLeft: { type: String },
+        paddingLeft: { type: String },
+        lineSpacing: { type: String },
+        entryHighlightColor: { type: String },
+        titleFontWeight: { type: String },
+        entryBackground: { type: String },
+        padding: { type: String },
+        columns: { type: Number },
+        fontStyle: { type: String }
+      }
+    }]
+  },
+  cvData: {
+    type: Schema.Types.Mixed,
+    default: {}
   },
   status: {
     type: String,
@@ -117,46 +212,51 @@ const cvSchema = new Schema<ICV>({
     type: Number,
     default: 1
   },
+  // Legacy fields for backward compatibility
+  template: {
+    type: String,
+    default: 'modern'
+  },
   sections: {
     personalInfo: {
-      firstName: { type: String, required: true, trim: true },
-      lastName: { type: String, required: true, trim: true },
-      email: { type: String, required: true, trim: true },
+      firstName: { type: String, trim: true },
+      lastName: { type: String, trim: true },
+      email: { type: String, trim: true },
       phone: { type: String, trim: true },
       location: { type: String, trim: true },
       website: { type: String, trim: true },
       linkedin: { type: String, trim: true },
       github: { type: String, trim: true },
-      summary: { type: String, required: true, trim: true, maxlength: 500 }
+      summary: { type: String, trim: true, maxlength: 500 }
     },
     experience: [{
-      company: { type: String, required: true, trim: true },
-      position: { type: String, required: true, trim: true },
+      company: { type: String, trim: true },
+      position: { type: String, trim: true },
       location: { type: String, trim: true },
-      startDate: { type: Date, required: true },
+      startDate: { type: Date },
       endDate: { type: Date },
       current: { type: Boolean, default: false },
-      description: { type: String, required: true, trim: true },
+      description: { type: String, trim: true },
       achievements: [{ type: String, trim: true }]
     }],
     education: [{
-      institution: { type: String, required: true, trim: true },
-      degree: { type: String, required: true, trim: true },
-      field: { type: String, required: true, trim: true },
+      institution: { type: String, trim: true },
+      degree: { type: String, trim: true },
+      field: { type: String, trim: true },
       location: { type: String, trim: true },
-      startDate: { type: Date, required: true },
+      startDate: { type: Date },
       endDate: { type: Date },
       current: { type: Boolean, default: false },
       gpa: { type: Number, min: 0, max: 4 },
       description: { type: String, trim: true }
     }],
     skills: [{
-      category: { type: String, required: true, trim: true },
+      category: { type: String, trim: true },
       skills: [{ type: String, trim: true }]
     }],
     projects: [{
-      title: { type: String, required: true, trim: true },
-      description: { type: String, required: true, trim: true },
+      title: { type: String, trim: true },
+      description: { type: String, trim: true },
       technologies: [{ type: String, trim: true }],
       url: { type: String, trim: true },
       github: { type: String, trim: true },
@@ -165,24 +265,23 @@ const cvSchema = new Schema<ICV>({
       current: { type: Boolean, default: false }
     }],
     certifications: [{
-      name: { type: String, required: true, trim: true },
-      issuer: { type: String, required: true, trim: true },
-      date: { type: Date, required: true },
+      name: { type: String, trim: true },
+      issuer: { type: String, trim: true },
+      date: { type: Date },
       expiryDate: { type: Date },
       url: { type: String, trim: true }
     }],
     languages: [{
-      language: { type: String, required: true, trim: true },
+      language: { type: String, trim: true },
       proficiency: {
         type: String,
-        enum: ['basic', 'intermediate', 'advanced', 'native'],
-        required: true
+        enum: ['basic', 'intermediate', 'advanced', 'native']
       }
     }],
     customSections: [{
-      title: { type: String, required: true, trim: true },
-      content: { type: String, required: true, trim: true },
-      order: { type: Number, required: true }
+      title: { type: String, trim: true },
+      content: { type: String, trim: true },
+      order: { type: Number }
     }]
   },
   styling: {
@@ -218,6 +317,7 @@ cvSchema.index({ userId: 1, status: 1 });
 cvSchema.index({ userId: 1, createdAt: -1 });
 cvSchema.index({ 'metadata.tags': 1 });
 cvSchema.index({ 'metadata.isPublic': 1, 'metadata.lastModified': -1 });
+cvSchema.index({ templateId: 1 });
 
 // Update lastModified on save
 cvSchema.pre('save', function(next) {

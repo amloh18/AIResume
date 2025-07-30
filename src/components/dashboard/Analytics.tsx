@@ -106,47 +106,15 @@ const Analytics: React.FC = () => {
   const [jobs, setJobs] = useState<any[]>([]);
   const [cvs, setCvs] = useState<any[]>([]);
   const [minimizedWidgets, setMinimizedWidgets] = useState<Set<string>>(new Set());
-
-  // Mock data for demonstration
-  const mockData = {
-    lastActivity: {
-      type: 'cv',
-      title: 'Senior UX Designer CV',
-      jobTitle: 'Product Designer at Airbnb',
-      lastEdited: '2 hours ago',
-      thumbnail: '/api/placeholder/80/60'
-    },
-    jobStats: {
-      total: 14,
-      inProgress: 4,
-      interviews: 2,
-      awaitingResponse: 3,
-      rejected: 5
-    },
-    deadlines: [
-      { jobTitle: 'Senior Frontend Developer', company: 'Google', daysLeft: 2, isUrgent: true },
-      { jobTitle: 'Product Manager', company: 'Meta', daysLeft: 5, isUrgent: false },
-      { jobTitle: 'UX Designer', company: 'Apple', daysLeft: 8, isUrgent: false }
-    ],
-    cvHealth: {
-      score: 87,
-      completeness: 95,
-      atsCompliance: 92,
-      keywordMatch: 78,
-      tailoredCvs: 8,
-      totalCvs: 12
-    },
-    aiSuggestions: [
-      'Add a short impact summary to your CV profile for 30% higher engagement',
-      'Your CV for Google UX Designer is not ready. Want to finish now?',
-      'Based on your background, this job is a great fit. Do you want to add a tailored cover letter?'
-    ],
-    recommendedJobs: [
-      { title: 'Senior Product Designer', company: 'Netflix', match: 94 },
-      { title: 'UX Research Lead', company: 'Spotify', match: 89 },
-      { title: 'Design Systems Manager', company: 'Figma', match: 85 }
-    ]
-  };
+  const [loading, setLoading] = useState(true);
+  const [cvStats, setCvStats] = useState({
+    total: 0,
+    drafts: 0,
+    published: 0,
+    archived: 0,
+    lastModified: null,
+    mostRecentCV: null
+  });
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
@@ -154,26 +122,51 @@ const Analytics: React.FC = () => {
       const parsedUser = JSON.parse(userData);
       setUser(parsedUser);
       loadData(parsedUser.id || parsedUser._id);
+    } else {
+      // For testing, use the test user ID
+      loadData('6889b151d17daa1eaee91a5c');
     }
   }, []);
 
   const loadData = async (userId: string) => {
     try {
+      setLoading(true);
+      
       // Load jobs
       const jobsResponse = await fetch(`/api/jobs?userId=${userId}`);
       const jobsResult = await jobsResponse.json();
       if (jobsResult.success) {
-        setJobs(jobsResult.data);
+        setJobs(jobsResult.data || []);
       }
 
       // Load CVs
       const cvsResponse = await fetch(`/api/cvs?userId=${userId}`);
       const cvsResult = await cvsResponse.json();
       if (cvsResult.success) {
-        setCvs(cvsResult.data);
+        const cvData = cvsResult.data.data || [];
+        setCvs(cvData);
+        
+        // Calculate CV stats
+        const stats = {
+          total: cvData.length,
+          drafts: cvData.filter((cv: any) => cv.status === 'draft').length,
+          published: cvData.filter((cv: any) => cv.status === 'published').length,
+          archived: cvData.filter((cv: any) => cv.status === 'archived').length,
+          lastModified: cvData.length > 0 ? 
+            new Date(Math.max(...cvData.map((cv: any) => new Date(cv.metadata?.lastModified || cv.updatedAt).getTime()))) : null,
+          mostRecentCV: cvData.length > 0 ? 
+            cvData.reduce((latest: any, current: any) => {
+              const latestDate = new Date(latest.metadata?.lastModified || latest.updatedAt);
+              const currentDate = new Date(current.metadata?.lastModified || current.updatedAt);
+              return currentDate > latestDate ? current : latest;
+            }) : null
+        };
+        setCvStats(stats);
       }
     } catch (error) {
       console.error('Error loading data:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -199,6 +192,48 @@ const Analytics: React.FC = () => {
       default: return 'bg-gray-500/20 text-gray-400';
     }
   };
+
+  const formatTimeAgo = (date: Date) => {
+    const now = new Date();
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+    
+    if (diffInHours < 1) return 'Just now';
+    if (diffInHours < 24) return `${diffInHours} hours ago`;
+    
+    const diffInDays = Math.floor(diffInHours / 24);
+    if (diffInDays < 7) return `${diffInDays} days ago`;
+    
+    const diffInWeeks = Math.floor(diffInDays / 7);
+    if (diffInWeeks < 4) return `${diffInWeeks} weeks ago`;
+    
+    const diffInMonths = Math.floor(diffInDays / 30);
+    return `${diffInMonths} months ago`;
+  };
+
+  const calculateCVHealthScore = () => {
+    if (cvs.length === 0) return 0;
+    
+    // Calculate based on CV completeness and status
+    const publishedCvs = cvs.filter((cv: any) => cv.status === 'published').length;
+    const recentCvs = cvs.filter((cv: any) => {
+      const lastModified = new Date(cv.metadata?.lastModified || cv.updatedAt);
+      const daysSinceModified = (new Date().getTime() - lastModified.getTime()) / (1000 * 60 * 60 * 24);
+      return daysSinceModified < 30; // CVs modified in last 30 days
+    }).length;
+    
+    const completeness = (publishedCvs / cvs.length) * 100;
+    const recency = (recentCvs / cvs.length) * 100;
+    
+    return Math.round((completeness + recency) / 2);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-lime-400"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -230,50 +265,135 @@ const Analytics: React.FC = () => {
           onToggleMinimize={() => toggleWidgetMinimize('activity')}
           className="lg:col-span-2"
         >
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-12 bg-gradient-to-br from-lime-400/20 to-lime-500/20 rounded-lg flex items-center justify-center">
-              <FileText size={20} className="text-lime-400" />
+          {cvStats.mostRecentCV ? (
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-12 bg-gradient-to-br from-lime-400/20 to-lime-500/20 rounded-lg flex items-center justify-center">
+                <FileText size={20} className="text-lime-400" />
+              </div>
+              <div className="flex-1">
+                <h4 className="text-white font-medium text-sm mb-1">{cvStats.mostRecentCV.title}</h4>
+                <p className="text-white/60 text-xs mb-1">Status: {cvStats.mostRecentCV.status}</p>
+                <p className="text-white/40 text-xs">
+                  Last edited {formatTimeAgo(new Date(cvStats.mostRecentCV.metadata?.lastModified || cvStats.mostRecentCV.updatedAt))}
+                </p>
+              </div>
+              <motion.button
+                className="px-4 py-2 bg-gradient-to-r from-lime-400 to-lime-500 text-black font-semibold rounded-lg hover:from-lime-300 hover:to-lime-400 transition-all duration-300 flex items-center gap-2 text-sm"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => window.location.href = `/cv-studio?cv=${cvStats.mostRecentCV.id}`}
+              >
+                <Edit size={14} />
+                Continue Editing
+              </motion.button>
             </div>
-            <div className="flex-1">
-              <h4 className="text-white font-medium text-sm mb-1">{mockData.lastActivity.title}</h4>
-              <p className="text-white/60 text-xs mb-1">Tailored for: {mockData.lastActivity.jobTitle}</p>
-              <p className="text-white/40 text-xs">Last edited {mockData.lastActivity.lastEdited}</p>
+          ) : (
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-12 bg-gradient-to-br from-lime-400/20 to-lime-500/20 rounded-lg flex items-center justify-center">
+                <FileText size={20} className="text-lime-400" />
+              </div>
+              <div className="flex-1">
+                <h4 className="text-white font-medium text-sm mb-1">No CVs yet</h4>
+                <p className="text-white/60 text-xs mb-1">Create your first CV to get started</p>
+              </div>
+              <motion.button
+                className="px-4 py-2 bg-gradient-to-r from-lime-400 to-lime-500 text-black font-semibold rounded-lg hover:from-lime-300 hover:to-lime-400 transition-all duration-300 flex items-center gap-2 text-sm"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => window.location.href = '/cv-studio'}
+              >
+                <Plus size={14} />
+                Create CV
+              </motion.button>
             </div>
+          )}
+        </Widget>
+
+        {/* 2. CV Statistics Widget */}
+        <Widget 
+          title="CV Portfolio Overview"
+          isMinimized={minimizedWidgets.has('cvs')}
+          onToggleMinimize={() => toggleWidgetMinimize('cvs')}
+        >
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="text-center p-3 bg-white/5 rounded-lg">
+                <div className="text-xl font-bold text-white mb-1">{cvStats.total}</div>
+                <div className="text-white/60 text-xs">Total CVs</div>
+              </div>
+              <div className="text-center p-3 bg-white/5 rounded-lg">
+                <div className="text-xl font-bold text-green-400 mb-1">{cvStats.published}</div>
+                <div className="text-white/60 text-xs">Published</div>
+              </div>
+              <div className="text-center p-3 bg-white/5 rounded-lg">
+                <div className="text-xl font-bold text-yellow-400 mb-1">{cvStats.drafts}</div>
+                <div className="text-white/60 text-xs">Drafts</div>
+              </div>
+              <div className="text-center p-3 bg-white/5 rounded-lg">
+                <div className="text-xl font-bold text-gray-400 mb-1">{cvStats.archived}</div>
+                <div className="text-white/60 text-xs">Archived</div>
+              </div>
+            </div>
+            
+            {/* Progress Bar */}
+            <div className="space-y-1">
+              <div className="flex justify-between text-white/60 text-xs">
+                <span>Portfolio Health</span>
+                <span>{cvStats.total > 0 ? Math.round((cvStats.published / cvStats.total) * 100) : 0}%</span>
+              </div>
+              <div className="w-full bg-white/10 rounded-full h-1.5">
+                <div 
+                  className="bg-gradient-to-r from-lime-400 to-lime-500 h-1.5 rounded-full transition-all duration-300"
+                  style={{ width: `${cvStats.total > 0 ? (cvStats.published / cvStats.total) * 100 : 0}%` }}
+                ></div>
+              </div>
+            </div>
+
             <motion.button
-              className="px-4 py-2 bg-gradient-to-r from-lime-400 to-lime-500 text-black font-semibold rounded-lg hover:from-lime-300 hover:to-lime-400 transition-all duration-300 flex items-center gap-2 text-sm"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => window.location.href = '/cv-studio'}
+              className="w-full px-3 py-1.5 bg-gradient-to-r from-blue-400/20 to-blue-500/20 border border-blue-400/30 text-blue-400 rounded-lg font-medium hover:from-blue-400/30 hover:to-blue-500/30 transition-all duration-300 flex items-center justify-center gap-2 text-sm"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => {
+                const url = new URL(window.location.href);
+                url.searchParams.set('section', 'canvas');
+                window.location.href = url.toString();
+              }}
             >
-              <Edit size={14} />
-              Continue Editing
+              <ArrowRight size={14} />
+              View All CVs
             </motion.button>
           </div>
         </Widget>
 
-        {/* 2. Job Tracker Summary Widget */}
+        {/* 3. Job Tracker Summary Widget */}
         <Widget 
-          title="My Application Snapshot"
+          title="Application Pipeline"
           isMinimized={minimizedWidgets.has('jobs')}
           onToggleMinimize={() => toggleWidgetMinimize('jobs')}
         >
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div className="text-center p-3 bg-white/5 rounded-lg">
-                <div className="text-xl font-bold text-white mb-1">{mockData.jobStats.total}</div>
+                <div className="text-xl font-bold text-white mb-1">{jobs.length}</div>
                 <div className="text-white/60 text-xs">Total Jobs</div>
               </div>
               <div className="text-center p-3 bg-white/5 rounded-lg">
-                <div className="text-xl font-bold text-blue-400 mb-1">{mockData.jobStats.inProgress}</div>
-                <div className="text-white/60 text-xs">In Progress</div>
+                <div className="text-xl font-bold text-blue-400 mb-1">
+                  {jobs.filter((job: any) => job.status === 'applied').length}
+                </div>
+                <div className="text-white/60 text-xs">Applied</div>
               </div>
               <div className="text-center p-3 bg-white/5 rounded-lg">
-                <div className="text-xl font-bold text-orange-400 mb-1">{mockData.jobStats.interviews}</div>
+                <div className="text-xl font-bold text-orange-400 mb-1">
+                  {jobs.filter((job: any) => job.status === 'interview').length}
+                </div>
                 <div className="text-white/60 text-xs">Interviews</div>
               </div>
               <div className="text-center p-3 bg-white/5 rounded-lg">
-                <div className="text-xl font-bold text-yellow-400 mb-1">{mockData.jobStats.awaitingResponse}</div>
-                <div className="text-white/60 text-xs">Awaiting</div>
+                <div className="text-xl font-bold text-green-400 mb-1">
+                  {jobs.filter((job: any) => job.status === 'offer').length}
+                </div>
+                <div className="text-white/60 text-xs">Offers</div>
               </div>
             </div>
             
@@ -281,12 +401,12 @@ const Analytics: React.FC = () => {
             <div className="space-y-1">
               <div className="flex justify-between text-white/60 text-xs">
                 <span>Application Progress</span>
-                <span>{Math.round((mockData.jobStats.inProgress / mockData.jobStats.total) * 100)}%</span>
+                <span>{jobs.length > 0 ? Math.round((jobs.filter((job: any) => job.status === 'applied').length / jobs.length) * 100) : 0}%</span>
               </div>
               <div className="w-full bg-white/10 rounded-full h-1.5">
                 <div 
                   className="bg-gradient-to-r from-lime-400 to-lime-500 h-1.5 rounded-full transition-all duration-300"
-                  style={{ width: `${(mockData.jobStats.inProgress / mockData.jobStats.total) * 100}%` }}
+                  style={{ width: `${jobs.length > 0 ? (jobs.filter((job: any) => job.status === 'applied').length / jobs.length) * 100 : 0}%` }}
                 ></div>
               </div>
             </div>
@@ -303,59 +423,6 @@ const Analytics: React.FC = () => {
             >
               <ArrowRight size={14} />
               View Full Tracker
-            </motion.button>
-          </div>
-        </Widget>
-
-        {/* 3. Job Deadline Radar Widget */}
-        <Widget 
-          title="Upcoming Deadlines"
-          isMinimized={minimizedWidgets.has('deadlines')}
-          onToggleMinimize={() => toggleWidgetMinimize('deadlines')}
-        >
-          <div className="space-y-3">
-            {mockData.deadlines.map((deadline, index) => (
-              <motion.div
-                key={index}
-                className={`p-3 rounded-lg border transition-all duration-300 ${
-                  deadline.isUrgent 
-                    ? 'bg-red-500/10 border-red-500/30' 
-                    : 'bg-white/5 border-white/10'
-                }`}
-                whileHover={{ scale: 1.02 }}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <h4 className="text-white font-medium text-xs">{deadline.jobTitle}</h4>
-                  <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-                    deadline.isUrgent 
-                      ? 'bg-red-500/20 text-red-400' 
-                      : 'bg-yellow-500/20 text-yellow-400'
-                  }`}>
-                    {deadline.daysLeft} days
-                  </span>
-                </div>
-                <p className="text-white/60 text-xs mb-1">{deadline.company}</p>
-                {deadline.isUrgent && (
-                  <div className="flex items-center gap-1 text-red-400 text-xs">
-                    <AlertTriangle size={10} />
-                    <span>Urgent - Apply soon!</span>
-                  </div>
-                )}
-              </motion.div>
-            ))}
-            
-            <motion.button
-              className="w-full px-3 py-1.5 bg-gradient-to-r from-orange-400/20 to-orange-500/20 border border-orange-400/30 text-orange-400 rounded-lg font-medium hover:from-orange-400/30 hover:to-orange-500/30 transition-all duration-300 flex items-center justify-center gap-2 text-sm"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => {
-                const url = new URL(window.location.href);
-                url.searchParams.set('section', 'pipeline');
-                window.location.href = url.toString();
-              }}
-            >
-              <Calendar size={14} />
-              View All Deadlines
             </motion.button>
           </div>
         </Widget>
@@ -383,7 +450,7 @@ const Analytics: React.FC = () => {
                 </div>
                 <span className="text-white font-medium text-xs">CVs</span>
               </div>
-              <p className="text-white/60 text-xs">{cvs.length} documents</p>
+              <p className="text-white/60 text-xs">{cvStats.total} documents</p>
             </motion.div>
 
             <motion.div
@@ -473,13 +540,13 @@ const Analytics: React.FC = () => {
                     strokeWidth="8"
                     fill="none"
                     strokeDasharray={`${2 * Math.PI * 40}`}
-                    strokeDashoffset={`${2 * Math.PI * 40 * (1 - mockData.cvHealth.score / 100)}`}
+                    strokeDashoffset={`${2 * Math.PI * 40 * (1 - calculateCVHealthScore() / 100)}`}
                     className="text-lime-400 transition-all duration-1000"
                     strokeLinecap="round"
                   />
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-xl font-bold text-white">{mockData.cvHealth.score}%</span>
+                  <span className="text-xl font-bold text-white">{calculateCVHealthScore()}%</span>
                 </div>
               </div>
               <p className="text-white/60 text-xs">Overall CV Health</p>
@@ -488,41 +555,43 @@ const Analytics: React.FC = () => {
             {/* Metrics */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-white/80 text-xs">Completeness</span>
+                <span className="text-white/80 text-xs">Published Rate</span>
                 <div className="flex items-center gap-2">
                   <div className="w-12 bg-white/10 rounded-full h-1.5">
                     <div 
                       className="bg-green-400 h-1.5 rounded-full"
-                      style={{ width: `${mockData.cvHealth.completeness}%` }}
+                      style={{ width: `${cvStats.total > 0 ? (cvStats.published / cvStats.total) * 100 : 0}%` }}
                     ></div>
                   </div>
-                  <span className="text-white/60 text-xs">{mockData.cvHealth.completeness}%</span>
+                  <span className="text-white/60 text-xs">{cvStats.total > 0 ? Math.round((cvStats.published / cvStats.total) * 100) : 0}%</span>
                 </div>
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-white/80 text-xs">ATS Compliance</span>
+                <span className="text-white/80 text-xs">Portfolio Size</span>
                 <div className="flex items-center gap-2">
                   <div className="w-12 bg-white/10 rounded-full h-1.5">
                     <div 
                       className="bg-blue-400 h-1.5 rounded-full"
-                      style={{ width: `${mockData.cvHealth.atsCompliance}%` }}
+                      style={{ width: `${Math.min(cvStats.total * 10, 100)}%` }}
                     ></div>
                   </div>
-                  <span className="text-white/60 text-xs">{mockData.cvHealth.atsCompliance}%</span>
+                  <span className="text-white/60 text-xs">{cvStats.total} CVs</span>
                 </div>
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-white/80 text-xs">Keyword Match</span>
+                <span className="text-white/80 text-xs">Activity Level</span>
                 <div className="flex items-center gap-2">
                   <div className="w-12 bg-white/10 rounded-full h-1.5">
                     <div 
                       className="bg-purple-400 h-1.5 rounded-full"
-                      style={{ width: `${mockData.cvHealth.keywordMatch}%` }}
+                      style={{ width: `${cvStats.lastModified ? 100 : 0}%` }}
                     ></div>
                   </div>
-                  <span className="text-white/60 text-xs">{mockData.cvHealth.keywordMatch}%</span>
+                  <span className="text-white/60 text-xs">
+                    {cvStats.lastModified ? formatTimeAgo(cvStats.lastModified) : 'No activity'}
+                  </span>
                 </div>
               </div>
             </div>
@@ -558,64 +627,82 @@ const Analytics: React.FC = () => {
                 Smart Suggestions
               </h4>
               <div className="space-y-2">
-                {mockData.aiSuggestions.map((suggestion, index) => (
-                  <motion.div
-                    key={index}
-                    className="p-2 bg-white/5 rounded-lg border border-white/10"
-                    whileHover={{ scale: 1.02 }}
-                  >
-                    <p className="text-white/80 text-xs">{suggestion}</p>
-                  </motion.div>
-                ))}
+                {cvStats.total === 0 ? (
+                  <div className="p-2 bg-white/5 rounded-lg border border-white/10">
+                    <p className="text-white/80 text-xs">Create your first CV to get personalized suggestions</p>
+                  </div>
+                ) : cvStats.drafts > 0 ? (
+                  <div className="p-2 bg-white/5 rounded-lg border border-white/10">
+                    <p className="text-white/80 text-xs">You have {cvStats.drafts} draft CV(s). Consider publishing them for better visibility.</p>
+                  </div>
+                ) : (
+                  <div className="p-2 bg-white/5 rounded-lg border border-white/10">
+                    <p className="text-white/80 text-xs">Great job! All your CVs are published and ready for applications.</p>
+                  </div>
+                )}
+                
+                {cvStats.total > 0 && (
+                  <div className="p-2 bg-white/5 rounded-lg border border-white/10">
+                    <p className="text-white/80 text-xs">Your CV portfolio is {cvStats.total > 5 ? 'comprehensive' : 'growing'}. Keep building!</p>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Recommended Jobs */}
+            {/* Quick Actions */}
             <div className="space-y-3">
               <h4 className="text-white font-medium flex items-center gap-2 text-sm">
                 <Target size={14} className="text-blue-400" />
-                Recommended Jobs
+                Quick Actions
               </h4>
               <div className="space-y-2">
-                {mockData.recommendedJobs.map((job, index) => (
-                  <motion.div
-                    key={index}
-                    className="p-2 bg-white/5 rounded-lg border border-white/10 cursor-pointer hover:bg-white/10 transition-all duration-300"
+                <motion.button
+                  className="w-full p-2 bg-white/5 rounded-lg border border-white/10 cursor-pointer hover:bg-white/10 transition-all duration-300 text-left"
+                  whileHover={{ scale: 1.02 }}
+                  onClick={() => window.location.href = '/cv-studio'}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h5 className="text-white font-medium text-xs">Create New CV</h5>
+                      <p className="text-white/60 text-xs">Start with a template</p>
+                    </div>
+                    <Plus size={14} className="text-lime-400" />
+                  </div>
+                </motion.button>
+                
+                {cvStats.mostRecentCV && (
+                  <motion.button
+                    className="w-full p-2 bg-white/5 rounded-lg border border-white/10 cursor-pointer hover:bg-white/10 transition-all duration-300 text-left"
                     whileHover={{ scale: 1.02 }}
+                    onClick={() => window.location.href = `/cv-studio?cv=${cvStats.mostRecentCV.id}`}
                   >
-                    <div className="flex items-center justify-between mb-1">
-                      <h5 className="text-white font-medium text-xs">{job.title}</h5>
-                      <span className="text-green-400 text-xs font-medium">{job.match}% match</span>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h5 className="text-white font-medium text-xs">Edit Recent CV</h5>
+                        <p className="text-white/60 text-xs">{cvStats.mostRecentCV.title}</p>
+                      </div>
+                      <Edit size={14} className="text-blue-400" />
                     </div>
-                    <p className="text-white/60 text-xs mb-1">{job.company}</p>
-                    <div className="flex items-center gap-1">
-                      <motion.button
-                        className="px-2 py-0.5 bg-gradient-to-r from-blue-400/20 to-blue-500/20 border border-blue-400/30 text-blue-400 rounded text-xs font-medium hover:from-blue-400/30 hover:to-blue-500/30 transition-all duration-300"
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => {
-                          const url = new URL(window.location.href);
-                          url.searchParams.set('section', 'pipeline');
-                          window.location.href = url.toString();
-                        }}
-                      >
-                        Apply
-                      </motion.button>
-                      <motion.button
-                        className="px-2 py-0.5 bg-gradient-to-r from-lime-400/20 to-lime-500/20 border border-lime-400/30 text-lime-400 rounded text-xs font-medium hover:from-lime-400/30 hover:to-lime-500/30 transition-all duration-300"
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => {
-                          const url = new URL(window.location.href);
-                          url.searchParams.set('section', 'canvas');
-                          window.location.href = url.toString();
-                        }}
-                      >
-                        Tailor CV
-                      </motion.button>
+                  </motion.button>
+                )}
+                
+                <motion.button
+                  className="w-full p-2 bg-white/5 rounded-lg border border-white/10 cursor-pointer hover:bg-white/10 transition-all duration-300 text-left"
+                  whileHover={{ scale: 1.02 }}
+                  onClick={() => {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('section', 'pipeline');
+                    window.location.href = url.toString();
+                  }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h5 className="text-white font-medium text-xs">Track Applications</h5>
+                      <p className="text-white/60 text-xs">{jobs.length} jobs in pipeline</p>
                     </div>
-                  </motion.div>
-                ))}
+                    <ArrowRight size={14} className="text-purple-400" />
+                  </div>
+                </motion.button>
               </div>
             </div>
           </div>

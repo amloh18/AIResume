@@ -54,48 +54,21 @@ const CVStudio: React.FC<CVStudioProps> = () => {
   const [totalPages, setTotalPages] = useState(2);
   const [currentContent, setCurrentContent] = useState<string>('');
   const [currentSection, setCurrentSection] = useState<string>('general');
-
-  // Mock data for demonstration
-  const [userCVs] = useState([
-    { id: '1', title: 'Senior UX Designer CV', lastModified: '2 hours ago', status: 'draft' },
-    { id: '2', title: 'Product Manager CV', lastModified: '1 day ago', status: 'published' },
-    { id: '3', title: 'Frontend Developer CV', lastModified: '3 days ago', status: 'draft' }
-  ]);
-
-  const [linkedJobs] = useState([
-    { 
-      id: '1', 
-      title: 'Senior UX Designer at Spotify', 
-      company: 'Spotify', 
-      status: 'applied',
-      description: 'We are looking for a Senior UX Designer to join our team and help create amazing user experiences for millions of users worldwide.'
-    },
-    { 
-      id: '2', 
-      title: 'Product Manager at Figma', 
-      company: 'Figma', 
-      status: 'interviewing',
-      description: 'Join our product team to help build the future of design tools and collaboration platforms.'
-    },
-    { 
-      id: '3', 
-      title: 'Frontend Developer at Airbnb', 
-      company: 'Airbnb', 
-      status: 'applied',
-      description: 'Help us build beautiful, responsive web applications that connect millions of travelers with unique accommodations.'
-    }
-  ]);
+  const [userId, setUserId] = useState<string>('');
 
   // Handle URL parameters for CV editing
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const cvId = urlParams.get('cv');
     
+    // Get user ID from localStorage or use test user
+    const userData = localStorage.getItem('user');
+    const currentUserId = userData ? JSON.parse(userData).id || JSON.parse(userData)._id : '6889b151d17daa1eaee91a5c';
+    setUserId(currentUserId);
+    
     if (cvId) {
       // Editing existing CV
       setSelectedCV(cvId);
-      
-      // Load CV data (in a real app, this would fetch from API)
       console.log('Loading CV with ID:', cvId);
     }
   }, []);
@@ -179,8 +152,8 @@ const CVStudio: React.FC<CVStudioProps> = () => {
             onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
             activeTab={activeTab}
             onTabChange={setActiveTab}
-            userCVs={userCVs}
-            linkedJobs={linkedJobs}
+            userCVs={[]} // This will be loaded by the header component
+            linkedJobs={[]} // This will be loaded by the header component
           />
         </div>
 
@@ -218,6 +191,8 @@ const CVStudio: React.FC<CVStudioProps> = () => {
               onPageChange={handlePageChange}
               totalPages={totalPages}
               onContentChange={handleContentChange}
+              userId={userId}
+              cvId={selectedCV || undefined}
             />
           </div>
         </div>
@@ -254,7 +229,7 @@ const CVStudio: React.FC<CVStudioProps> = () => {
                   onGenerateContent={handleGenerateContent}
                   currentSection={currentSection}
                   currentContent={currentContent}
-                  availableJobs={linkedJobs}
+                  availableJobs={[]} // This will be loaded by the header component
                   onClose={() => setShowAIAssistant(false)}
                 />
               </div>
