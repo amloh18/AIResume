@@ -145,7 +145,6 @@ userSchema.methods.comparePassword = async function(candidatePassword: string): 
 };
 
 // Index for better query performance
-userSchema.index({ email: 1 });
 userSchema.index({ 'subscription.status': 1 });
 
 export default mongoose.models.User || mongoose.model<IUser>('User', userSchema); 

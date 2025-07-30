@@ -1,5 +1,50 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
+export interface ICVSection {
+  id: string;
+  type: 'header' | 'section';
+  title?: string;
+  content?: {
+    name?: string;
+    contact?: string[];
+    summary?: string;
+  };
+  entries?: Array<{
+    degree?: string;
+    institution?: string;
+    duration?: string;
+    details?: string[];
+    title?: string;
+    company?: string;
+    organization?: string;
+  }>;
+  details?: string[];
+  styleSnippetId: string;
+}
+
+export interface IStyleSnippet {
+  id: string;
+  category: string;
+  style: {
+    fontWeight?: string;
+    fontSize?: string;
+    color?: string;
+    marginBottom?: string;
+    titleFontSize?: string;
+    entrySpacing?: string;
+    bulletIndent?: string;
+    entryBorderLeft?: string;
+    paddingLeft?: string;
+    lineSpacing?: string;
+    entryHighlightColor?: string;
+    titleFontWeight?: string;
+    entryBackground?: string;
+    padding?: string;
+    columns?: number;
+    fontStyle?: string;
+  };
+}
+
 export interface ITemplate extends Document {
   name: string;
   category: string[];
@@ -7,6 +52,14 @@ export interface ITemplate extends Document {
   thumbnail: string;
   isDefault: boolean;
   isPremium: boolean;
+  display: {
+    layout: 'single-column' | 'two-column' | 'absolute';
+    padding: string;
+    fontFamily: string;
+    sectionSpacing: string;
+  };
+  sections: ICVSection[];
+  snippetStyles: IStyleSnippet[];
   styles: {
     layout: 'single-column' | 'two-column' | 'absolute';
     paddingX: number;
@@ -68,6 +121,55 @@ export interface ITemplate extends Document {
   };
 }
 
+const cvSectionSchema = new Schema<ICVSection>({
+  id: { type: String, required: true },
+  type: { 
+    type: String, 
+    enum: ['header', 'section'], 
+    required: true 
+  },
+  title: { type: String },
+  content: {
+    name: { type: String },
+    contact: [{ type: String }],
+    summary: { type: String }
+  },
+  entries: [{
+    degree: { type: String },
+    institution: { type: String },
+    duration: { type: String },
+    details: [{ type: String }],
+    title: { type: String },
+    company: { type: String },
+    organization: { type: String }
+  }],
+  details: [{ type: String }],
+  styleSnippetId: { type: String, required: true }
+});
+
+const styleSnippetSchema = new Schema<IStyleSnippet>({
+  id: { type: String, required: true },
+  category: { type: String, required: true },
+  style: {
+    fontWeight: { type: String },
+    fontSize: { type: String },
+    color: { type: String },
+    marginBottom: { type: String },
+    titleFontSize: { type: String },
+    entrySpacing: { type: String },
+    bulletIndent: { type: String },
+    entryBorderLeft: { type: String },
+    paddingLeft: { type: String },
+    lineSpacing: { type: String },
+    entryHighlightColor: { type: String },
+    titleFontWeight: { type: String },
+    entryBackground: { type: String },
+    padding: { type: String },
+    columns: { type: Number },
+    fontStyle: { type: String }
+  }
+});
+
 const templateSchema = new Schema<ITemplate>({
   name: {
     type: String,
@@ -78,7 +180,7 @@ const templateSchema = new Schema<ITemplate>({
   category: [{
     type: String,
     required: true,
-    enum: ['ATS-Friendly', 'Professional', 'Minimalist', 'Modern', 'Two-Column', 'Photo', 'Dark', 'Timeline', 'Creative', 'Engineer', 'Single-Column', 'Sidebar', 'Colored Sidebar', 'Clean', 'Bold', 'Web Developer']
+    enum: ['ATS-Friendly', 'Professional', 'Minimalist', 'Modern', 'Two-Column', 'Photo', 'Dark', 'Timeline', 'Creative', 'Engineer', 'Single-Column', 'Sidebar', 'Colored Sidebar', 'Clean', 'Bold', 'Web Developer', 'Finance']
   }],
   description: {
     type: String,
@@ -98,6 +200,18 @@ const templateSchema = new Schema<ITemplate>({
     type: Boolean,
     default: false
   },
+  display: {
+    layout: {
+      type: String,
+      enum: ['single-column', 'two-column', 'absolute'],
+      default: 'single-column'
+    },
+    padding: { type: String, default: '32px' },
+    fontFamily: { type: String, default: 'Segoe UI, Roboto, sans-serif' },
+    sectionSpacing: { type: String, default: '24px' }
+  },
+  sections: [cvSectionSchema],
+  snippetStyles: [styleSnippetSchema],
   styles: {
     layout: {
       type: String,

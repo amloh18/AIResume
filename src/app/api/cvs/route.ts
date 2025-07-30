@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/database';
 import { CV } from '@/models';
+import { atsFinanceCVTemplate } from '@/data/templates/atsFinanceCV';
 import { createPaginationOptions, paginateQuery, createErrorResponse } from '@/lib/db-utils';
 
 // GET - List CVs for a user
@@ -31,7 +32,8 @@ export async function GET(request: NextRequest) {
         $or: [
           { title: { $regex: searchTerm, $options: 'i' } },
           { 'sections.personalInfo.firstName': { $regex: searchTerm, $options: 'i' } },
-          { 'sections.personalInfo.lastName': { $regex: searchTerm, $options: 'i' } }
+          { 'sections.personalInfo.lastName': { $regex: searchTerm, $options: 'i' } },
+          { 'cvData.personal_info.name': { $regex: searchTerm, $options: 'i' } }
         ]
       };
       query = query.find(searchFilter);
@@ -70,7 +72,14 @@ export async function POST(request: NextRequest) {
     await connectDB();
     
     const body = await request.json();
-    const { userId, title, template = 'modern' } = body;
+    const { 
+      userId, 
+      title, 
+      templateName = 'ATS Friendly Finance CV',
+      templateData,
+      cvData,
+      template = 'modern' 
+    } = body;
 
     if (!userId || !title) {
       return NextResponse.json(
@@ -82,13 +91,40 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create default CV structure
+    // Use ATS Finance template data if not provided
+    const defaultTemplateData = templateData || {
+      display: atsFinanceCVTemplate.display,
+      sections: atsFinanceCVTemplate.sections,
+      snippetStyles: atsFinanceCVTemplate.snippetStyles
+    };
+
+    // Use default CV data if not provided
+    const defaultCvData = cvData || {
+      personal_info: {
+        name: "Your Name",
+        contact0: "Phone Number",
+        contact1: "your.email@example.com",
+        contact2: "LinkedIn Profile",
+        summary: "A passionate professional with experience in..."
+      },
+      education: {},
+      experience: {},
+      leadership: {},
+      project: {},
+      skills: {}
+    };
+
+    // Create CV with new template format
     const cv = new CV({
       userId,
       title: title.trim(),
-      template,
+      templateName,
+      templateData: defaultTemplateData,
+      cvData: defaultCvData,
       status: 'draft',
       version: 1,
+      // Legacy fields for backward compatibility
+      template,
       sections: {
         personalInfo: {
           firstName: 'Your',

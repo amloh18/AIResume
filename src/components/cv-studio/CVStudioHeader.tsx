@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowLeft, 
@@ -38,19 +38,58 @@ const CVStudioHeader: React.FC<CVStudioHeaderProps> = ({
   const [isCVDropdownOpen, setIsCVDropdownOpen] = useState(false);
   const [isJobDropdownOpen, setIsJobDropdownOpen] = useState(false);
   const [isAIMenuOpen, setIsAIMenuOpen] = useState(false);
+  const [userCVs, setUserCVs] = useState<any[]>([]);
+  const [linkedJobs, setLinkedJobs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock data
-  const userCVs = [
-    { id: '1', title: 'Senior UX Designer CV', lastModified: '2 hours ago', status: 'draft' },
-    { id: '2', title: 'Product Manager CV', lastModified: '1 day ago', status: 'published' },
-    { id: '3', title: 'Frontend Developer CV', lastModified: '3 days ago', status: 'draft' }
-  ];
+  useEffect(() => {
+    loadData();
+  }, []);
 
-  const linkedJobs = [
-    { id: '1', title: 'Senior UX Designer at Spotify', company: 'Spotify', status: 'applied' },
-    { id: '2', title: 'Product Manager at Figma', company: 'Figma', status: 'interviewing' },
-    { id: '3', title: 'Frontend Developer at Airbnb', company: 'Airbnb', status: 'applied' }
-  ];
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      
+      // Get user ID from localStorage or use test user
+      const userData = localStorage.getItem('user');
+      const userId = userData ? JSON.parse(userData).id || JSON.parse(userData)._id : '6889b151d17daa1eaee91a5c';
+      
+      // Load CVs
+      const cvsResponse = await fetch(`/api/cvs?userId=${userId}`);
+      const cvsResult = await cvsResponse.json();
+      if (cvsResult.success) {
+        setUserCVs(cvsResult.data.data || []);
+      }
+
+      // Load jobs
+      const jobsResponse = await fetch(`/api/jobs?userId=${userId}`);
+      const jobsResult = await jobsResponse.json();
+      if (jobsResult.success) {
+        setLinkedJobs(jobsResult.data || []);
+      }
+    } catch (error) {
+      console.error('Error loading data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatTimeAgo = (date: Date) => {
+    const now = new Date();
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+    
+    if (diffInHours < 1) return 'Just now';
+    if (diffInHours < 24) return `${diffInHours} hours ago`;
+    
+    const diffInDays = Math.floor(diffInHours / 24);
+    if (diffInDays < 7) return `${diffInDays} days ago`;
+    
+    const diffInWeeks = Math.floor(diffInDays / 7);
+    if (diffInWeeks < 4) return `${diffInWeeks} weeks ago`;
+    
+    const diffInMonths = Math.floor(diffInDays / 30);
+    return `${diffInMonths} months ago`;
+  };
 
   const currentCV = userCVs.find(cv => cv.id === selectedCV) || userCVs[0];
 
@@ -75,8 +114,11 @@ const CVStudioHeader: React.FC<CVStudioHeaderProps> = ({
               <button
                 className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-xl hover:bg-white/20 transition-colors text-white font-medium"
                 onClick={() => setIsCVDropdownOpen(!isCVDropdownOpen)}
+                disabled={loading}
               >
-                <span className="max-w-xs truncate">{currentCV?.title || 'Untitled CV'}</span>
+                <span className="max-w-xs truncate">
+                  {loading ? 'Loading...' : (currentCV?.title || 'Untitled CV')}
+                </span>
                 <ChevronDown size={16} className={`transition-transform ${isCVDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
 
@@ -104,33 +146,41 @@ const CVStudioHeader: React.FC<CVStudioHeaderProps> = ({
                       </div>
                       
                       <div className="space-y-2">
-                        {userCVs.map((cv) => (
-                          <button
-                            key={cv.id}
-                            className={`w-full flex items-center justify-between p-3 rounded-xl transition-colors ${
-                              cv.id === selectedCV 
-                                ? 'bg-white/20 text-white' 
-                                : 'text-white/80 hover:bg-white/10 hover:text-white'
-                            }`}
-                            onClick={() => {
-                              onCVChange(cv.id);
-                              setIsCVDropdownOpen(false);
-                            }}
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className="w-2 h-2 rounded-full bg-lime-400" />
-                              <div className="text-left">
-                                <div className="font-medium truncate">{cv.title}</div>
-                                <div className="text-xs text-white/60">{cv.lastModified}</div>
+                        {userCVs.length === 0 ? (
+                          <div className="text-center py-4 text-white/60 text-sm">
+                            No CVs found. Create your first CV!
+                          </div>
+                        ) : (
+                          userCVs.map((cv) => (
+                            <button
+                              key={cv.id}
+                              className={`w-full flex items-center justify-between p-3 rounded-xl transition-colors ${
+                                cv.id === selectedCV 
+                                  ? 'bg-white/20 text-white' 
+                                  : 'text-white/80 hover:bg-white/10 hover:text-white'
+                              }`}
+                              onClick={() => {
+                                onCVChange(cv.id);
+                                setIsCVDropdownOpen(false);
+                              }}
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="w-2 h-2 rounded-full bg-lime-400" />
+                                <div className="text-left">
+                                  <div className="font-medium truncate">{cv.title}</div>
+                                  <div className="text-xs text-white/60">
+                                    {formatTimeAgo(new Date(cv.metadata?.lastModified || cv.updatedAt))}
+                                  </div>
+                                </div>
                               </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              {cv.status === 'published' && <CheckCircle size={14} className="text-green-400" />}
-                              {cv.status === 'draft' && <Clock size={14} className="text-yellow-400" />}
-                              {cv.status === 'archived' && <AlertCircle size={14} className="text-gray-400" />}
-                            </div>
-                          </button>
-                        ))}
+                              <div className="flex items-center gap-2">
+                                {cv.status === 'published' && <CheckCircle size={14} className="text-green-400" />}
+                                {cv.status === 'draft' && <Clock size={14} className="text-yellow-400" />}
+                                {cv.status === 'archived' && <AlertCircle size={14} className="text-gray-400" />}
+                              </div>
+                            </button>
+                          ))
+                        )}
                       </div>
                     </div>
                   </motion.div>
@@ -276,34 +326,40 @@ const CVStudioHeader: React.FC<CVStudioHeaderProps> = ({
               </div>
               
               <div className="space-y-2">
-                {linkedJobs.map((job) => (
-                  <button
-                    key={job.id}
-                    className={`w-full flex items-center justify-between p-3 rounded-xl transition-colors ${
-                      job.id === linkedJob?.id 
-                        ? 'bg-white/20 text-white' 
-                        : 'text-white/80 hover:bg-white/10 hover:text-white'
-                    }`}
-                    onClick={() => {
-                      onJobChange(job);
-                      setIsJobDropdownOpen(false);
-                    }}
-                  >
-                    <div className="text-left">
-                      <div className="font-medium truncate">{job.title}</div>
-                      <div className="text-xs text-white/60">{job.company}</div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`text-xs px-2 py-1 rounded-full ${
-                        job.status === 'applied' ? 'bg-blue-500/20 text-blue-400' :
-                        job.status === 'interviewing' ? 'bg-green-500/20 text-green-400' :
-                        'bg-gray-500/20 text-gray-400'
-                      }`}>
-                        {job.status}
-                      </span>
-                    </div>
-                  </button>
-                ))}
+                {linkedJobs.length === 0 ? (
+                  <div className="text-center py-4 text-white/60 text-sm">
+                    No jobs linked yet
+                  </div>
+                ) : (
+                  linkedJobs.map((job) => (
+                    <button
+                      key={job.id}
+                      className={`w-full flex items-center justify-between p-3 rounded-xl transition-colors ${
+                        job.id === linkedJob?.id 
+                          ? 'bg-white/20 text-white' 
+                          : 'text-white/80 hover:bg-white/10 hover:text-white'
+                      }`}
+                      onClick={() => {
+                        onJobChange(job);
+                        setIsJobDropdownOpen(false);
+                      }}
+                    >
+                      <div className="text-left">
+                        <div className="font-medium truncate">{job.title}</div>
+                        <div className="text-xs text-white/60">{job.company}</div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs px-2 py-1 rounded-full ${
+                          job.status === 'applied' ? 'bg-blue-500/20 text-blue-400' :
+                          job.status === 'interviewing' ? 'bg-green-500/20 text-green-400' :
+                          'bg-gray-500/20 text-gray-400'
+                        }`}>
+                          {job.status}
+                        </span>
+                      </div>
+                    </button>
+                  ))
+                )}
               </div>
             </div>
           </motion.div>
