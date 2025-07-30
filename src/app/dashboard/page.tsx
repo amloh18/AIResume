@@ -31,12 +31,13 @@ import {
 import Canvas from '@/components/dashboard/Canvas';
 import Pipeline from '@/components/dashboard/Pipeline';
 import InkPad from '@/components/dashboard/InkPad';
+import Analytics from '@/components/dashboard/Analytics';
 import DashboardNavigation from '@/components/dashboard/DashboardNavigation';
 
 interface DashboardProps {}
 
 const Dashboard: React.FC<DashboardProps> = () => {
-  const [activeSection, setActiveSection] = useState('canvas');
+  const [activeSection, setActiveSection] = useState('pulse');
   const [user, setUser] = useState({
     name: 'Amarjot',
     email: 'amarjot@example.com',
@@ -99,12 +100,12 @@ const Dashboard: React.FC<DashboardProps> = () => {
   ]);
 
   const sections = [
-    { id: 'canvas', name: 'Canvas', icon: FileText, description: 'CV Studio' },
-    { id: 'pipeline', name: 'Pipeline', icon: Briefcase, description: 'Job Tracker' },
-    { id: 'inkpad', name: 'InkPad', icon: PenTool, description: 'Cover Letters' },
-    { id: 'vault', name: 'Vault', icon: Archive, description: 'Saved Forms' },
-    { id: 'quillbox', name: 'QuillBox', icon: MessageSquare, description: 'Snippets' },
-    { id: 'pulse', name: 'Pulse', icon: BarChart3, description: 'Analytics' }
+    { id: 'pulse', name: 'Analytics', icon: BarChart3, description: 'Progress Tracking' },
+    { id: 'pipeline', name: 'Job Tracker', icon: Briefcase, description: 'Track Applications' },
+    { id: 'canvas', name: 'CV Studio', icon: FileText, description: 'Create & Edit CVs' },
+    { id: 'inkpad', name: 'Cover Letters', icon: PenTool, description: 'Generate Letters' },
+    { id: 'vault', name: 'Saved Forms', icon: Archive, description: 'Store Data' },
+    { id: 'quillbox', name: 'Snippets', icon: MessageSquare, description: 'Content Library' }
   ];
 
   const widgets = [
@@ -281,7 +282,7 @@ const Dashboard: React.FC<DashboardProps> = () => {
                     <div className="w-16 h-16 bg-gradient-to-br from-lime-400/20 to-lime-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
                       <Archive size={24} className="text-lime-400" />
                     </div>
-                    <h2 className="text-2xl font-bold text-white mb-2">Vault</h2>
+                    <h2 className="text-2xl font-bold text-white mb-2">Saved Forms</h2>
                     <p className="text-white/60">Store and manage your saved forms and reusable data</p>
                     <p className="text-white/40 text-sm mt-4">Coming soon...</p>
                   </div>
@@ -300,7 +301,7 @@ const Dashboard: React.FC<DashboardProps> = () => {
                     <div className="w-16 h-16 bg-gradient-to-br from-blue-400/20 to-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
                       <MessageSquare size={24} className="text-blue-400" />
                     </div>
-                    <h2 className="text-2xl font-bold text-white mb-2">QuillBox</h2>
+                    <h2 className="text-2xl font-bold text-white mb-2">Snippets</h2>
                     <p className="text-white/60">Save and organize your snippets and community content</p>
                     <p className="text-white/40 text-sm mt-4">Coming soon...</p>
                   </div>
@@ -315,14 +316,7 @@ const Dashboard: React.FC<DashboardProps> = () => {
                   exit={{ opacity: 0, x: -20 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <div className="text-center py-20">
-                    <div className="w-16 h-16 bg-gradient-to-br from-purple-400/20 to-purple-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <BarChart3 size={24} className="text-purple-400" />
-                    </div>
-                    <h2 className="text-2xl font-bold text-white mb-2">Pulse</h2>
-                    <p className="text-white/60">Track your career progress and application analytics</p>
-                    <p className="text-white/40 text-sm mt-4">Coming soon...</p>
-                  </div>
+                  <Analytics />
                 </motion.div>
               )}
             </AnimatePresence>

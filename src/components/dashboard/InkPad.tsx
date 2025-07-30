@@ -141,7 +141,7 @@ const InkPad: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">InkPad</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">Cover Letters</h1>
           <p className="text-white/60">Create compelling cover letters with AI-powered suggestions</p>
         </div>
         

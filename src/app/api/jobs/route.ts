@@ -61,6 +61,10 @@ export async function POST(request: NextRequest) {
     if (jobData.status === 'applied') {
       jobData.applicationDate = new Date();
     }
+    // Clear application date when status is 'created'
+    if (jobData.status === 'created') {
+      jobData.applicationDate = null;
+    }
 
     const job = new JobApplication({
       userId,
@@ -104,6 +108,10 @@ export async function PUT(request: NextRequest) {
     // Set application date when status changes to 'applied'
     if (updateData.status === 'applied' && !updateData.applicationDate) {
       updateData.applicationDate = new Date();
+    }
+    // Clear application date when status changes to 'created'
+    if (updateData.status === 'created') {
+      updateData.applicationDate = null;
     }
 
     const job = await JobApplication.findByIdAndUpdate(
