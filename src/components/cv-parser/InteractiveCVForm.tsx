@@ -757,15 +757,6 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
                 <Eye size={16} />
                 Preview
               </motion.button>
-              <motion.button
-                onClick={() => onSave(formData)}
-                className="flex items-center gap-2 px-6 py-2 bg-lime-400 text-black font-medium rounded-xl hover:bg-lime-300 transition-colors"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Save size={16} />
-                Save CV
-              </motion.button>
             </div>
           </div>
         </div>
@@ -836,20 +827,27 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
                   ))}
                 </div>
 
-                <motion.button
-                  onClick={() => setCurrentSection(Math.min(sections.length - 1, currentSection + 1))}
-                  disabled={currentSection === sections.length - 1}
-                  className={`flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all ${
-                    currentSection === sections.length - 1
-                      ? 'text-white/30 cursor-not-allowed'
-                      : 'text-white hover:bg-white/10'
-                  }`}
-                  whileHover={currentSection < sections.length - 1 ? { scale: 1.05 } : {}}
-                  whileTap={currentSection < sections.length - 1 ? { scale: 0.95 } : {}}
-                >
-                  Next
-                  <ArrowRight size={16} />
-                </motion.button>
+                {currentSection === sections.length - 1 ? (
+                  <motion.button
+                    onClick={() => onSave(formData)}
+                    className="flex items-center gap-2 px-6 py-3 bg-lime-400 text-black font-medium rounded-xl hover:bg-lime-300 transition-colors"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    Save CV
+                    <ArrowRight size={16} />
+                  </motion.button>
+                ) : (
+                  <motion.button
+                    onClick={() => setCurrentSection(Math.min(sections.length - 1, currentSection + 1))}
+                    className="flex items-center gap-2 px-6 py-3 text-white hover:bg-white/10 rounded-xl font-medium transition-all"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    Next
+                    <ArrowRight size={16} />
+                  </motion.button>
+                )}
               </div>
             </div>
           </div>
