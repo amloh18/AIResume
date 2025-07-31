@@ -7,14 +7,14 @@ import { ArrowRight } from 'lucide-react';
 const FloatingCTA = () => {
   return (
     <motion.div
-      className="fixed bottom-8 right-8 z-50"
+      className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50"
       initial={{ opacity: 0, y: 100 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.8, delay: 1 }}
     >
       <motion.a
         href="/cv-onboarding"
-        className="group relative inline-block bg-gradient-to-r from-lime-400 to-lime-500 text-black px-6 py-4 rounded-full font-semibold text-lg shadow-2xl hover:shadow-lime-400/50 transition-all duration-300"
+        className="group relative inline-block bg-gradient-to-r from-lime-400 to-lime-500 text-black px-6 py-4 rounded-full font-semibold text-lg shadow-2xl hover:shadow-lime-400/50 transition-all duration-300 whitespace-nowrap"
         whileHover={{ 
           scale: 1.05,
           rotateY: 5,
@@ -36,7 +36,7 @@ const FloatingCTA = () => {
           className="relative flex items-center gap-2"
           whileHover={{ x: 5 }}
         >
-          <span>Get Started</span>
+          <span className="whitespace-nowrap">Get Started</span>
           <motion.div
             whileHover={{ rotate: 45 }}
             transition={{ duration: 0.3 }}

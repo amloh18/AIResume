@@ -13,7 +13,11 @@ import {
   MoreVertical,
   CheckCircle,
   Clock,
-  AlertCircle
+  AlertCircle,
+  Eye,
+  EyeOff,
+  Download,
+  FileText
 } from 'lucide-react';
 
 interface CVStudioHeaderProps {
@@ -24,6 +28,9 @@ interface CVStudioHeaderProps {
   onAIAssist: (action: 'rewrite' | 'optimize' | 'suggest') => void;
   hasUnsavedChanges: boolean;
   onSave: () => void;
+  isPreviewMode?: boolean;
+  onPreviewToggle?: () => void;
+  onExport?: (format: 'pdf' | 'json') => void;
 }
 
 const CVStudioHeader: React.FC<CVStudioHeaderProps> = ({
@@ -33,7 +40,10 @@ const CVStudioHeader: React.FC<CVStudioHeaderProps> = ({
   onJobChange,
   onAIAssist,
   hasUnsavedChanges,
-  onSave
+  onSave,
+  isPreviewMode = false,
+  onPreviewToggle,
+  onExport
 }) => {
   const [isCVDropdownOpen, setIsCVDropdownOpen] = useState(false);
   const [isJobDropdownOpen, setIsJobDropdownOpen] = useState(false);
@@ -208,6 +218,23 @@ const CVStudioHeader: React.FC<CVStudioHeaderProps> = ({
 
         {/* Right Section */}
         <div className="flex items-center gap-3">
+          {/* Preview/Edit Mode Button */}
+          {onPreviewToggle && (
+            <motion.button
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all duration-300 ${
+                isPreviewMode
+                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
+                  : 'bg-white/10 text-white/80 hover:bg-white/20 hover:text-white'
+              }`}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={onPreviewToggle}
+            >
+              {isPreviewMode ? <EyeOff size={16} /> : <Eye size={16} />}
+              {isPreviewMode ? 'Edit Mode' : 'Preview Mode'}
+            </motion.button>
+          )}
+
           {/* Save Status */}
           {hasUnsavedChanges && (
             <motion.div
@@ -287,6 +314,45 @@ const CVStudioHeader: React.FC<CVStudioHeaderProps> = ({
                 </motion.div>
               )}
             </AnimatePresence>
+          </div>
+
+          {/* Export Button */}
+          <div className="relative group">
+            <motion.button
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-lime-500 to-green-500 text-white rounded-xl font-medium hover:from-lime-400 hover:to-green-400 transition-all duration-300"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Download size={16} />
+              Export
+            </motion.button>
+
+            {/* Export Menu */}
+            <div className="absolute top-full right-0 mt-2 w-48 bg-black/30 backdrop-blur-xl border border-white/30 rounded-2xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[90]">
+              <div className="p-2 space-y-1">
+                <button
+                  className="w-full flex items-center gap-3 p-3 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
+                  onClick={() => onExport?.('pdf')}
+                >
+                  <FileText size={16} />
+                  <div className="text-left">
+                    <div className="font-medium">Export as PDF</div>
+                    <div className="text-xs text-white/60">High-quality print format</div>
+                  </div>
+                </button>
+                
+                <button
+                  className="w-full flex items-center gap-3 p-3 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
+                  onClick={() => onExport?.('json')}
+                >
+                  <FileText size={16} />
+                  <div className="text-left">
+                    <div className="font-medium">Export as JSON</div>
+                    <div className="text-xs text-white/60">Data backup format</div>
+                  </div>
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Save Button */}

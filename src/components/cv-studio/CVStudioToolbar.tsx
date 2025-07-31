@@ -23,15 +23,14 @@ import {
 interface CVStudioToolbarProps {
   zoom: number;
   onZoomChange: (zoom: number) => void;
-  isPreviewMode: boolean;
-  onPreviewToggle: () => void;
-  onExport: (format: 'pdf' | 'json') => void;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  onZoomReset: () => void;
   aiSuggestions: any[];
   canUndo?: boolean;
   canRedo?: boolean;
   onUndo?: () => void;
   onRedo?: () => void;
-  onAutoFit?: () => void;
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
@@ -40,46 +39,23 @@ interface CVStudioToolbarProps {
 const CVStudioToolbar: React.FC<CVStudioToolbarProps> = ({
   zoom,
   onZoomChange,
-  isPreviewMode,
-  onPreviewToggle,
-  onExport,
+  onZoomIn,
+  onZoomOut,
+  onZoomReset,
   aiSuggestions,
   canUndo = true,
   canRedo = true,
   onUndo,
   onRedo,
-  onAutoFit,
   currentPage,
   totalPages,
   onPageChange
 }) => {
-  const handleZoomIn = () => {
-    onZoomChange(Math.min(zoom + 0.1, 2));
-  };
 
-  const handleZoomOut = () => {
-    onZoomChange(Math.max(zoom - 0.1, 0.5));
-  };
-
-  const handleZoomReset = () => {
-    onZoomChange(1);
-  };
-
-  const handlePreviousPage = () => {
-    if (currentPage > 1) {
-      onPageChange(currentPage - 1);
-    }
-  };
-
-  const handleNextPage = () => {
-    if (currentPage < totalPages) {
-      onPageChange(currentPage + 1);
-    }
-  };
 
   return (
     <motion.div
-      className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-black/20 backdrop-blur-xl border border-white/20 rounded-full px-6 py-2 z-[80]"
+      className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-black/60 backdrop-blur-xl border border-white/30 rounded-full px-6 py-2 z-[80] shadow-2xl"
       initial={{ y: 20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.3 }}
@@ -90,8 +66,8 @@ const CVStudioToolbar: React.FC<CVStudioToolbarProps> = ({
           <motion.button
             className={`p-2 rounded-full transition-colors ${
               canUndo 
-                ? 'text-white/80 hover:text-white hover:bg-white/10' 
-                : 'text-white/30 cursor-not-allowed'
+                ? 'text-white hover:text-white hover:bg-white/20' 
+                : 'text-white/40 cursor-not-allowed'
             }`}
             whileHover={canUndo ? { scale: 1.05 } : {}}
             whileTap={canUndo ? { scale: 0.95 } : {}}
@@ -104,8 +80,8 @@ const CVStudioToolbar: React.FC<CVStudioToolbarProps> = ({
           <motion.button
             className={`p-2 rounded-full transition-colors ${
               canRedo 
-                ? 'text-white/80 hover:text-white hover:bg-white/10' 
-                : 'text-white/30 cursor-not-allowed'
+                ? 'text-white hover:text-white hover:bg-white/20' 
+                : 'text-white/40 cursor-not-allowed'
             }`}
             whileHover={canRedo ? { scale: 1.05 } : {}}
             whileTap={canRedo ? { scale: 0.95 } : {}}
@@ -123,12 +99,12 @@ const CVStudioToolbar: React.FC<CVStudioToolbarProps> = ({
           <motion.button
             className={`p-2 rounded-full transition-colors ${
               currentPage > 1
-                ? 'text-white/80 hover:text-white hover:bg-white/10' 
-                : 'text-white/30 cursor-not-allowed'
+                ? 'text-white hover:text-white hover:bg-white/20' 
+                : 'text-white/40 cursor-not-allowed'
             }`}
             whileHover={currentPage > 1 ? { scale: 1.05 } : {}}
             whileTap={currentPage > 1 ? { scale: 0.95 } : {}}
-            onClick={handlePreviousPage}
+            onClick={() => currentPage > 1 && onPageChange(currentPage - 1)}
             disabled={currentPage <= 1}
           >
             <ChevronLeft size={16} />
@@ -147,12 +123,12 @@ const CVStudioToolbar: React.FC<CVStudioToolbarProps> = ({
           <motion.button
             className={`p-2 rounded-full transition-colors ${
               currentPage < totalPages
-                ? 'text-white/80 hover:text-white hover:bg-white/10' 
-                : 'text-white/30 cursor-not-allowed'
+                ? 'text-white hover:text-white hover:bg-white/20' 
+                : 'text-white/40 cursor-not-allowed'
             }`}
             whileHover={currentPage < totalPages ? { scale: 1.05 } : {}}
             whileTap={currentPage < totalPages ? { scale: 0.95 } : {}}
-            onClick={handleNextPage}
+            onClick={() => currentPage < totalPages && onPageChange(currentPage + 1)}
             disabled={currentPage >= totalPages}
           >
             <ChevronRight size={16} />
@@ -164,10 +140,10 @@ const CVStudioToolbar: React.FC<CVStudioToolbarProps> = ({
         {/* Zoom Controls */}
         <div className="flex items-center gap-2">
           <motion.button
-            className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+            className="p-2 text-white hover:text-white hover:bg-white/20 rounded-full transition-colors"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={handleZoomOut}
+            onClick={onZoomOut}
           >
             <ZoomOut size={16} />
           </motion.button>
@@ -177,56 +153,24 @@ const CVStudioToolbar: React.FC<CVStudioToolbarProps> = ({
               {Math.round(zoom * 100)}%
             </span>
             <motion.button
-              className="p-1 text-white/60 hover:text-white transition-colors"
+              className="p-1 text-white/80 hover:text-white transition-colors"
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
-              onClick={handleZoomReset}
+              onClick={onZoomReset}
             >
               <RotateCcw size={12} />
             </motion.button>
           </div>
           
           <motion.button
-            className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+            className="p-2 text-white hover:text-white hover:bg-white/20 rounded-full transition-colors"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={handleZoomIn}
+            onClick={onZoomIn}
           >
             <ZoomIn size={16} />
           </motion.button>
         </div>
-
-        <div className="w-px h-6 bg-white/20" />
-
-        {/* Auto Fit */}
-        {onAutoFit && (
-          <motion.button
-            className="flex items-center gap-2 px-3 py-1 bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/30 text-blue-400 rounded-full text-sm font-medium hover:from-blue-500/30 hover:to-purple-500/30 transition-all duration-300"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={onAutoFit}
-          >
-            <Maximize2 size={14} />
-            Auto Fit
-          </motion.button>
-        )}
-
-        <div className="w-px h-6 bg-white/20" />
-
-        {/* Preview Toggle */}
-        <motion.button
-          className={`flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-all duration-300 ${
-            isPreviewMode
-              ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
-              : 'bg-white/10 text-white/80 hover:bg-white/20 hover:text-white'
-          }`}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={onPreviewToggle}
-        >
-          {isPreviewMode ? <EyeOff size={16} /> : <Eye size={16} />}
-          {isPreviewMode ? 'Edit Mode' : 'Preview Mode'}
-        </motion.button>
 
         <div className="w-px h-6 bg-white/20" />
 
@@ -251,47 +195,6 @@ const CVStudioToolbar: React.FC<CVStudioToolbarProps> = ({
             </motion.button>
           </motion.div>
         )}
-
-        <div className="w-px h-6 bg-white/20" />
-
-        {/* Export Dropdown */}
-        <div className="relative group">
-          <motion.button
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-lime-500 to-green-500 text-white rounded-full font-medium hover:from-lime-400 hover:to-green-400 transition-all duration-300"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Download size={16} />
-            Export
-          </motion.button>
-
-          {/* Export Menu */}
-          <div className="absolute bottom-full right-0 mb-2 w-48 bg-black/30 backdrop-blur-xl border border-white/30 rounded-2xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[90]">
-            <div className="p-2 space-y-1">
-              <button
-                className="w-full flex items-center gap-3 p-3 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
-                onClick={() => onExport('pdf')}
-              >
-                <FileText size={16} />
-                <div className="text-left">
-                  <div className="font-medium">Export as PDF</div>
-                  <div className="text-xs text-white/60">High-quality print format</div>
-                </div>
-              </button>
-              
-              <button
-                className="w-full flex items-center gap-3 p-3 text-white/80 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
-                onClick={() => onExport('json')}
-              >
-                <FileText size={16} />
-                <div className="text-left">
-                  <div className="font-medium">Export as JSON</div>
-                  <div className="text-xs text-white/60">Data backup format</div>
-                </div>
-              </button>
-            </div>
-          </div>
-        </div>
 
         {/* Settings */}
         <motion.button
