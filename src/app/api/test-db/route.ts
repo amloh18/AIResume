@@ -1,27 +1,52 @@
-import { NextResponse } from 'next/server';
-import connectDB from '@/lib/database';
-import { User } from '@/models';
+import { NextRequest, NextResponse } from 'next/server';
+import connectDB, { healthCheck, isConnected, getConnectionStatus } from '@/lib/database';
+import { userService } from '@/lib/services';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    // Connect to MongoDB
+    console.log('🧪 Testing database connection...');
+    
+    // Test database connection
     await connectDB();
+    console.log('✅ Database connection successful');
     
-    // Get all users (for debugging)
-    const users = await User.find({}, { password: 0, emailVerificationToken: 0, resetPasswordToken: 0 });
+    // Test a simple query
+    const userCount = await userService.count();
+    console.log('✅ User count query successful:', userCount);
     
-    return NextResponse.json({ 
-      success: true, 
-      message: '✅ MongoDB connection successful!',
-      timestamp: new Date().toISOString(),
-      users: users
+    // Test environment variables
+    const envInfo = {
+      hasMongoUri: !!process.env.MONGODB_URI,
+      mongoUriLength: process.env.MONGODB_URI?.length || 0,
+      nodeEnv: process.env.NODE_ENV,
+      vercelEnv: process.env.VERCEL_ENV,
+      vercelUrl: process.env.VERCEL_URL
+    };
+    
+    return NextResponse.json({
+      success: true,
+      message: 'Database connection test successful',
+      data: {
+        userCount,
+        envInfo,
+        timestamp: new Date().toISOString()
+      }
     });
-  } catch (error) {
-    console.error('MongoDB connection error:', error);
-    return NextResponse.json({ 
-      success: false, 
-      message: '❌ MongoDB connection failed',
-      error: error instanceof Error ? error.message : 'Unknown error'
+    
+  } catch (error: any) {
+    console.error('❌ Database test failed:', error);
+    
+    return NextResponse.json({
+      success: false,
+      message: 'Database connection test failed',
+      error: error.message,
+      stack: error.stack,
+      envInfo: {
+        hasMongoUri: !!process.env.MONGODB_URI,
+        mongoUriLength: process.env.MONGODB_URI?.length || 0,
+        nodeEnv: process.env.NODE_ENV,
+        vercelEnv: process.env.VERCEL_ENV
+      }
     }, { status: 500 });
   }
 }
@@ -31,7 +56,7 @@ export async function POST() {
     await connectDB();
     
     // Check if user already exists
-    const existingUser = await User.findOne({ email: 'jamie@gmail.com' });
+    const existingUser = await userService.findOne({ email: 'jamie@gmail.com' });
     if (existingUser) {
       return NextResponse.json({
         success: true,
@@ -46,7 +71,7 @@ export async function POST() {
     }
     
     // Create test user
-    const testUser = new User({
+    const testUser = await userService.create({
       email: 'jamie@gmail.com',
       password: 'Jamie@123',
       firstName: 'Jamie',
@@ -88,13 +113,11 @@ export async function PUT() {
     await connectDB();
     
     // Verify all users for testing
-    const result = await User.updateMany(
+    const result = await userService.bulkUpdate(
       { isEmailVerified: false },
       { 
-        $set: { 
-          isEmailVerified: true,
-          'subscription.status': 'active'
-        } 
+        isEmailVerified: true,
+        'subscription.status': 'active'
       }
     );
     

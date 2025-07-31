@@ -56,6 +56,8 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
     setErrors({});
 
     try {
+      console.log('🔐 Attempting login for:', formData.email);
+      
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
@@ -65,6 +67,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
       });
 
       const result = await response.json();
+      console.log('📡 Login response:', { status: response.status, success: result.success });
 
       if (response.ok) {
         setLoginSuccess(true);
@@ -81,12 +84,24 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin }) => 
           setFormData({ email: '', password: '' });
         }, 2000);
       } else {
+        // Handle specific error types
+        let errorMessage = result.message || 'Login failed. Please try again.';
+        
+        if (result.error === 'DATABASE_CONNECTION_ERROR') {
+          errorMessage = 'Service temporarily unavailable. Please try again in a few minutes.';
+        } else if (response.status === 503) {
+          errorMessage = 'Service is currently unavailable. Please try again later.';
+        } else if (response.status === 429) {
+          errorMessage = 'Too many login attempts. Please wait a moment before trying again.';
+        }
+        
         setErrors({
-          general: result.message || 'Login failed. Please try again.',
-          [result.field || 'general']: result.message
+          general: errorMessage,
+          [result.field || 'general']: errorMessage
         });
       }
     } catch (error) {
+      console.error('❌ Login network error:', error);
       setErrors({
         general: 'Network error. Please check your connection and try again.'
       });

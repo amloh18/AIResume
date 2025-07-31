@@ -17,19 +17,71 @@ if (!cached) {
   cached = global.mongoose = { conn: null, promise: null };
 }
 
+// Enhanced connection options for production
+const connectionOptions = {
+  bufferCommands: false,
+  maxPoolSize: 10, // Maintain up to 10 socket connections
+  serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
+  socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
+  family: 4, // Use IPv4, skip trying IPv6
+  retryWrites: true,
+  // SSL settings for production
+  ssl: false, // Disabled for development - enable in production
+  // Connection monitoring
+  heartbeatFrequencyMS: 10000, // Send heartbeat every 10 seconds
+  // Timeout settings
+  connectTimeoutMS: 10000, // Give up initial connection after 10 seconds
+};
+
+// Connection event handlers
+const setupConnectionHandlers = () => {
+  mongoose.connection.on('connected', () => {
+    console.log('✅ MongoDB connected successfully');
+  });
+
+  mongoose.connection.on('error', (err) => {
+    console.error('❌ MongoDB connection error:', err);
+  });
+
+  mongoose.connection.on('disconnected', () => {
+    console.log('⚠️ MongoDB disconnected');
+  });
+
+  mongoose.connection.on('reconnected', () => {
+    console.log('🔄 MongoDB reconnected');
+  });
+
+  // Graceful shutdown
+  process.on('SIGINT', async () => {
+    try {
+      await mongoose.connection.close();
+      console.log('🛑 MongoDB connection closed through app termination');
+      process.exit(0);
+    } catch (err) {
+      console.error('❌ Error during MongoDB shutdown:', err);
+      process.exit(1);
+    }
+  });
+};
+
 async function connectDB() {
   if (cached.conn) {
     return cached.conn;
   }
 
   if (!cached.promise) {
-    const opts = {
-      bufferCommands: false,
-    };
+    // Setup connection event handlers
+    setupConnectionHandlers();
 
-    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
+    cached.promise = mongoose.connect(MONGODB_URI, connectionOptions).then((mongoose) => {
       console.log('✅ Connected to MongoDB successfully');
+      console.log(`📊 Database: ${mongoose.connection.db.databaseName}`);
+      console.log(`🌐 Host: ${mongoose.connection.host}:${mongoose.connection.port}`);
       return mongoose;
+    }).catch((error) => {
+      console.error('❌ MongoDB connection error:', error);
+      cached.promise = null;
+      throw error;
     });
   }
 
@@ -37,10 +89,63 @@ async function connectDB() {
     cached.conn = await cached.promise;
   } catch (e) {
     cached.promise = null;
+    console.error('❌ Failed to establish MongoDB connection:', e);
     throw e;
   }
 
   return cached.conn;
 }
+
+// Utility function to check if connected
+export const isConnected = () => {
+  return mongoose.connection.readyState === 1;
+};
+
+// Utility function to get connection status
+export const getConnectionStatus = () => {
+  const states = {
+    0: 'disconnected',
+    1: 'connected',
+    2: 'connecting',
+    3: 'disconnecting'
+  };
+  return states[mongoose.connection.readyState as keyof typeof states] || 'unknown';
+};
+
+// Utility function to close connection (useful for testing)
+export const closeConnection = async () => {
+  if (cached.conn) {
+    await mongoose.connection.close();
+    cached.conn = null;
+    cached.promise = null;
+    console.log('🔌 MongoDB connection closed');
+  }
+};
+
+// Health check function
+export const healthCheck = async () => {
+  try {
+    if (!isConnected()) {
+      return { status: 'error', message: 'Not connected to MongoDB' };
+    }
+    
+    // Test the connection with a simple operation
+    await mongoose.connection.db.admin().ping();
+    
+    return { 
+      status: 'healthy', 
+      message: 'MongoDB connection is healthy',
+      database: mongoose.connection.db.databaseName,
+      host: mongoose.connection.host,
+      port: mongoose.connection.port
+    };
+  } catch (error) {
+    return { 
+      status: 'error', 
+      message: 'MongoDB health check failed',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+};
 
 export default connectDB; 

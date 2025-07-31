@@ -25,6 +25,68 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose, 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState<any>({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+
+  // Auto-fill form data when cvData changes
+  React.useEffect(() => {
+    if (cvData?.personalInfo) {
+      setFormData((prev: any) => ({
+        ...prev,
+        firstName: cvData.personalInfo.firstName || prev.firstName,
+        lastName: cvData.personalInfo.lastName || prev.lastName,
+        email: cvData.personalInfo.email || prev.email,
+      }));
+    }
+  }, [cvData]);
+
+  // Check email availability
+  const checkEmailAvailability = async (email: string) => {
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
+    
+    setIsCheckingEmail(true);
+    try {
+      const response = await fetch('/api/auth/check-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok && result.exists) {
+        setErrors((prev: any) => ({
+          ...prev,
+          email: 'This email is already registered. Please use a different email or try logging in.'
+        }));
+      } else {
+        // Clear email error if it was previously set
+        setErrors((prev: any) => {
+          const newErrors = { ...prev };
+          delete newErrors.email;
+          return newErrors;
+        });
+      }
+    } catch (error) {
+      console.error('Error checking email:', error);
+    } finally {
+      setIsCheckingEmail(false);
+    }
+  };
+
+  // Debounced email check
+  const debouncedEmailCheck = React.useCallback(
+    React.useMemo(() => {
+      let timeoutId: NodeJS.Timeout;
+      return (email: string) => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => checkEmailAvailability(email), 500);
+      };
+    }, []),
+    []
+  );
 
   const roles = [
     {
@@ -95,20 +157,44 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose, 
     setStep('details');
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (validateForm()) {
+    if (!validateForm()) return;
+
+    setIsLoading(true);
+    setErrors({});
+
+    try {
       setStep('complete');
       
-      // Simulate registration process
-      setTimeout(() => {
-        onRegister({
-          ...formData,
-          role: selectedRole,
-          cvData
+      // Call the registration function
+      await onRegister({
+        ...formData,
+        role: selectedRole,
+        cvData
+      });
+      
+      // If successful, the parent component will handle the redirect
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      
+      // Go back to details step to show error
+      setStep('details');
+      
+      // Set error message
+      if (error.message.includes('Email already exists')) {
+        setErrors({
+          email: 'This email is already registered. Please use a different email or try logging in.',
+          general: error.message
         });
-      }, 2000);
+      } else {
+        setErrors({
+          general: error.message || 'Registration failed. Please try again.'
+        });
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -120,7 +206,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose, 
     
     // Clear error when user starts typing
     if (errors[field]) {
-      setErrors(prev => ({
+      setErrors((prev: any) => ({
         ...prev,
         [field]: ''
       }));
@@ -251,6 +337,18 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose, 
                   </div>
 
                   <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* General Error Display */}
+                    {errors.general && (
+                      <motion.div
+                        className="p-4 bg-red-400/10 border border-red-400/20 rounded-xl flex items-center gap-3 text-red-400"
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                      >
+                        <X size={20} />
+                        <span className="text-sm">{errors.general}</span>
+                      </motion.div>
+                    )}
+                    
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
                         <label className="block text-white/80 text-sm font-medium mb-2">First Name</label>
@@ -286,17 +384,35 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose, 
 
                     <div>
                       <label className="block text-white/80 text-sm font-medium mb-2">Email Address</label>
-                      <input
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => updateFormData('email', e.target.value)}
-                        className={`w-full px-4 py-3 bg-white/5 border rounded-xl text-white placeholder-white/40 focus:outline-none transition-colors ${
-                          errors.email ? 'border-red-400' : 'border-white/10 focus:border-lime-400'
-                        }`}
-                        placeholder="your.email@example.com"
-                      />
+                      <div className="relative">
+                        <input
+                          type="email"
+                          value={formData.email}
+                          onChange={(e) => {
+                            updateFormData('email', e.target.value);
+                            debouncedEmailCheck(e.target.value);
+                          }}
+                          className={`w-full px-4 py-3 bg-white/5 border rounded-xl text-white placeholder-white/40 focus:outline-none transition-colors pr-12 ${
+                            errors.email ? 'border-red-400' : 'border-white/10 focus:border-lime-400'
+                          }`}
+                          placeholder="your.email@example.com"
+                          disabled={isCheckingEmail}
+                        />
+                        {isCheckingEmail && (
+                          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                            <motion.div
+                              className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full"
+                              animate={{ rotate: 360 }}
+                              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                            />
+                          </div>
+                        )}
+                      </div>
                       {errors.email && (
                         <p className="text-red-400 text-sm mt-1">{errors.email}</p>
+                      )}
+                      {isCheckingEmail && (
+                        <p className="text-white/60 text-sm mt-1">Checking availability...</p>
                       )}
                     </div>
 
@@ -375,11 +491,23 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose, 
 
                     <motion.button
                       type="submit"
-                      className="w-full py-4 px-6 bg-gradient-to-r from-lime-400 to-lime-500 text-black font-semibold rounded-xl hover:from-lime-300 hover:to-lime-400 transition-all duration-300 shadow-2xl shadow-lime-400/25"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
+                      disabled={isLoading}
+                      className="w-full py-4 px-6 bg-gradient-to-r from-lime-400 to-lime-500 text-black font-semibold rounded-xl hover:from-lime-300 hover:to-lime-400 transition-all duration-300 shadow-2xl shadow-lime-400/25 disabled:opacity-50 disabled:cursor-not-allowed"
+                      whileHover={isLoading ? {} : { scale: 1.02 }}
+                      whileTap={isLoading ? {} : { scale: 0.98 }}
                     >
-                      Create Account
+                      {isLoading ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <motion.div
+                            className="w-5 h-5 border-2 border-black border-t-transparent rounded-full"
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                          />
+                          <span>Creating Account...</span>
+                        </div>
+                      ) : (
+                        'Create Account'
+                      )}
                     </motion.button>
                   </form>
                 </motion.div>
@@ -405,7 +533,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose, 
                   <div>
                     <h3 className="text-2xl font-bold text-white mb-2">Welcome to CVCircle!</h3>
                     <p className="text-white/60 text-lg">
-                      Your account has been created successfully. We're setting up your dashboard...
+                      Your account has been created successfully. Redirecting to your dashboard...
                     </p>
                   </div>
 

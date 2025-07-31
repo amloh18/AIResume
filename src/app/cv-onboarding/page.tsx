@@ -54,26 +54,7 @@ const CVOnboardingPage: React.FC = () => {
     setUserData(userData);
     
     try {
-      // Save CV to MongoDB
-      const cvResponse = await fetch('/api/cvs', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: 'temp-user-id', // Will be replaced with actual user ID after registration
-          title: `${userData.firstName} ${userData.lastName}'s CV`,
-          template: 'modern',
-          sections: formData
-        }),
-      });
-
-      if (cvResponse.ok) {
-        const cvResult = await cvResponse.json();
-        console.log('CV saved:', cvResult);
-      }
-
-      // Register user
+      // Register user first
       const userResponse = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
@@ -92,9 +73,32 @@ const CVOnboardingPage: React.FC = () => {
         const userResult = await userResponse.json();
         console.log('User registered:', userResult);
         
+        // Save CV to MongoDB with the actual user ID
+        const cvResponse = await fetch('/api/cvs', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: userResult.data.user._id,
+            title: `${userData.firstName} ${userData.lastName}'s CV`,
+            template: 'modern',
+            sections: formData
+          }),
+        });
+
+        if (cvResponse.ok) {
+          const cvResult = await cvResponse.json();
+          console.log('CV saved:', cvResult);
+        }
+        
         // Clear progress from localStorage
         localStorage.removeItem('cvOnboardingProgress');
         
+        // Close registration modal
+        setShowRegistration(false);
+        
+        // Set completion step
         setCurrentStep('complete');
         
         // Auto-redirect to dashboard after 3 seconds
@@ -103,14 +107,27 @@ const CVOnboardingPage: React.FC = () => {
           setTimeout(() => {
             // Set flag for dashboard welcome animation
             sessionStorage.setItem('fromOnboarding', 'true');
+            // Store user data for login
+            localStorage.setItem('user', JSON.stringify(userResult.data.user));
             window.location.href = '/dashboard';
           }, 1000); // 1 second loading animation
         }, 3000); // 3 seconds on completion screen
       } else {
-        console.error('Registration failed');
+        const errorResult = await userResponse.json();
+        console.error('Registration failed:', errorResult);
+        
+        // Handle specific errors
+        if (userResponse.status === 409) {
+          // Email already exists
+          throw new Error('Email already exists. Please use a different email or try logging in.');
+        } else {
+          throw new Error(errorResult.message || 'Registration failed. Please try again.');
+        }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error during registration:', error);
+      // Re-throw error to be handled by RegistrationModal
+      throw error;
     }
   };
 

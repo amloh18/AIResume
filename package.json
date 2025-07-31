@@ -8,7 +8,17 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test-deployment": "node scripts/test-deployment.js",
+    "generate-secrets": "node scripts/generate-secrets.js",
+    "migrate-mongodb": "node scripts/migrate-mongodb.js",
+    "update-env": "node scripts/update-env.js",
+    "setup-mongodb": "node scripts/setup-mongodb.js",
+    "test-mongoose": "node scripts/test-mongoose.js",
+    "fix-mongodb-uri": "node scripts/fix-mongodb-uri.js",
+    "setup-cluster": "node scripts/setup-mongodb-cluster.js",
+    "populate-mongodb": "node scripts/populate-mongodb.js",
+    "populate-simple": "node scripts/populate-mongodb-simple.js"
   },
   "keywords": [
     "cv",
@@ -28,6 +38,7 @@
     "@types/react": "^18.3.12",
     "@types/react-dnd": "^2.0.36",
     "@types/react-dom": "^18.3.1",
+    "@vercel/analytics": "^1.5.0",
     "bcryptjs": "^3.0.2",
     "dotenv": "^17.2.1",
     "framer-motion": "^12.23.11",
