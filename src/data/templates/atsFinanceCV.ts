@@ -9,8 +9,8 @@ export const atsFinanceCVTemplate: Partial<ITemplate> = {
   isPremium: false,
   display: {
     layout: "single-column",
-    padding: "32px",
-    fontFamily: "Segoe UI, Roboto, sans-serif",
+    padding: "96px", // 1-inch margins (96px = 1 inch at 96 DPI)
+    fontFamily: "Arial, sans-serif",
     sectionSpacing: "24px"
   },
   sections: [
@@ -132,6 +132,7 @@ export const atsFinanceCVTemplate: Partial<ITemplate> = {
       entries: [
         {
           title: "Kellogg's Company Analysis using top-down approach / Equity Valuation",
+          company: "University of Edinburgh",
           duration: "Feb 2023 – Apr 2023",
           details: [
             "Conducted a comprehensive equity valuation using DCF and P/E ratios.",
@@ -145,10 +146,29 @@ export const atsFinanceCVTemplate: Partial<ITemplate> = {
       id: "skills",
       type: "section",
       title: "SKILLS & QUALIFICATIONS",
-      details: [
-        "Languages: Fluent in English, French, Vietnamese; proficient in Mandarin Chinese.",
-        "IT: Microsoft Office Suite (Excel, Word, PowerPoint, Visio), Statistical analysis software (STATA17).",
-        "Certificates: Finance Accelerator Simulator Experience (AmplifyME), Stock Valuation with Comparable Company Analysis (Coursera), Analysing Company Performance using Ratios (Coursera)."
+      entries: [
+        {
+          title: "Languages",
+          details: [
+            "Fluent in English, French, Vietnamese; proficient in Mandarin Chinese."
+          ]
+        },
+        {
+          title: "IT Skills",
+          details: [
+            "Microsoft Office Suite (Excel, Word, PowerPoint, Visio)",
+            "Statistical analysis software (STATA17)"
+          ]
+        },
+        {
+          title: "Certificates",
+          company: "Various Institutions",
+          details: [
+            "Finance Accelerator Simulator Experience (AmplifyME)",
+            "Stock Valuation with Comparable Company Analysis (Coursera)",
+            "Analysing Company Performance using Ratios (Coursera)"
+          ]
+        }
       ],
       styleSnippetId: "snippet_section_skills"
     }
@@ -159,52 +179,63 @@ export const atsFinanceCVTemplate: Partial<ITemplate> = {
       category: "Header",
       style: {
         fontWeight: "bold",
-        fontSize: "22px",
+        fontSize: "20px", // 18-22pt for name (20pt = 18pt at 96 DPI)
         color: "#1a1a1a",
-        marginBottom: "12px"
+        marginBottom: "12px",
+        lineHeight: "1.0" // 1.0 line spacing
       }
     },
     {
       id: "snippet_section_education",
       category: "Education",
       style: {
-        titleFontSize: "18px",
+        titleFontSize: "15px", // 14-16pt for section headings (15pt = 14pt at 96 DPI)
         entrySpacing: "10px",
-        bulletIndent: "16px"
+        bulletIndent: "16px",
+        fontSize: "11px", // 10-12pt body text (11pt = 10pt at 96 DPI)
+        lineHeight: "1.0" // 1.0 line spacing
       }
     },
     {
       id: "snippet_section_experience",
       category: "Experience",
       style: {
+        titleFontSize: "15px", // 14-16pt for section headings
+        fontSize: "11px", // 10-12pt body text
         entryBorderLeft: "2px solid #512c90",
         paddingLeft: "12px",
-        lineSpacing: "1.6"
+        lineHeight: "1.0", // 1.0 line spacing
+        lineSpacing: "1.0"
       }
     },
     {
       id: "snippet_section_leadership",
       category: "Leadership",
       style: {
+        titleFontSize: "15px", // 14-16pt for section headings
+        fontSize: "11px", // 10-12pt body text
         entryHighlightColor: "#f8f8f8",
-        titleFontWeight: "bold"
+        titleFontWeight: "bold",
+        lineHeight: "1.0" // 1.0 line spacing
       }
     },
     {
       id: "snippet_section_project",
       category: "Projects",
       style: {
-        entryBackground: "#f5f5f5",
-        padding: "10px",
-        fontSize: "14px"
+        titleFontSize: "15px", // 14-16pt for section headings
+        fontSize: "11px", // 10-12pt body text
+        lineHeight: "1.0" // 1.0 line spacing
       }
     },
     {
       id: "snippet_section_skills",
       category: "Skills",
       style: {
-        columns: 2,
-        fontStyle: "italic"
+        titleFontSize: "15px", // 14-16pt for section headings
+        fontSize: "11px", // 10-12pt body text
+        columns: 1,
+        lineHeight: "1.0" // 1.0 line spacing
       }
     }
   ],

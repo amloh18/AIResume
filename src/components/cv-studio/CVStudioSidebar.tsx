@@ -29,6 +29,28 @@ interface CVStudioSidebarProps {
   onTabChange: (tab: 'templates' | 'customize' | 'snippets') => void;
   userCVs: any[];
   linkedJobs: any[];
+  // Styling props
+  styling?: {
+    fontFamily: string;
+    bodyFontSize: number;
+    sectionTitleFontSize: number;
+    nameFontSize: number;
+    lineHeight: number;
+    margins: number;
+    sectionGap: number;
+    itemSpacing: number;
+    bulletSpacing: number;
+  };
+  onFontFamilyChange?: (fontFamily: string) => void;
+  onBodyFontSizeChange?: (size: number) => void;
+  onSectionTitleFontSizeChange?: (size: number) => void;
+  onNameFontSizeChange?: (size: number) => void;
+  onLineHeightChange?: (height: number) => void;
+  onMarginsChange?: (margins: number) => void;
+  onSectionGapChange?: (gap: number) => void;
+  onItemSpacingChange?: (spacing: number) => void;
+  onBulletSpacingChange?: (spacing: number) => void;
+  onAutoFit?: () => void;
 }
 
 const CVStudioSidebar: React.FC<CVStudioSidebarProps> = ({
@@ -37,7 +59,28 @@ const CVStudioSidebar: React.FC<CVStudioSidebarProps> = ({
   activeTab,
   onTabChange,
   userCVs,
-  linkedJobs
+  linkedJobs,
+  styling = {
+    fontFamily: 'Arial, sans-serif',
+    bodyFontSize: 11,
+    sectionTitleFontSize: 15,
+    nameFontSize: 20,
+    lineHeight: 1.0,
+    margins: 96,
+    sectionGap: 10,
+    itemSpacing: 2,
+    bulletSpacing: 4
+  },
+  onFontFamilyChange,
+  onBodyFontSizeChange,
+  onSectionTitleFontSizeChange,
+  onNameFontSizeChange,
+  onLineHeightChange,
+  onMarginsChange,
+  onSectionGapChange,
+  onItemSpacingChange,
+  onBulletSpacingChange,
+  onAutoFit
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -156,36 +199,86 @@ const CVStudioSidebar: React.FC<CVStudioSidebarProps> = ({
       {/* Typography */}
       <div>
         <h3 className="text-white font-semibold mb-3">Typography</h3>
-        <div className="space-y-3">
+        <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="text-white/60 text-sm mb-1 block">Font Family</label>
-            <select className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50">
-              <option value="inter">Inter</option>
-              <option value="roboto">Roboto</option>
-              <option value="arial">Arial</option>
-              <option value="times">Times New Roman</option>
+            <select 
+              value={styling.fontFamily}
+              onChange={(e) => onFontFamilyChange?.(e.target.value)}
+              className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+            >
+              <option value="Arial, sans-serif">Arial</option>
+              <option value="Times New Roman, serif">Times New Roman</option>
+              <option value="Calibri, sans-serif">Calibri</option>
+              <option value="Georgia, serif">Georgia</option>
             </select>
           </div>
           
           <div>
-            <label className="text-white/60 text-sm mb-1 block">Font Size</label>
+            <label className="text-white/60 text-sm mb-1 block">Body Text Size (10-12pt)</label>
+            <div className="flex items-center justify-between text-xs text-white/60 mb-1">
+              <span>10pt</span>
+              <span>11pt</span>
+              <span>12pt</span>
+            </div>
             <input
               type="range"
               min="10"
-              max="16"
-              defaultValue="12"
+              max="12"
+              value={styling.bodyFontSize}
+              onChange={(e) => onBodyFontSizeChange?.(parseInt(e.target.value))}
               className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer"
             />
           </div>
           
           <div>
-            <label className="text-white/60 text-sm mb-1 block">Line Height</label>
+            <label className="text-white/60 text-sm mb-1 block">Section Headings (14-16pt)</label>
+            <div className="flex items-center justify-between text-xs text-white/60 mb-1">
+              <span>14pt</span>
+              <span>15pt</span>
+              <span>16pt</span>
+            </div>
             <input
               type="range"
-              min="1.2"
-              max="2"
-              step="0.1"
-              defaultValue="1.5"
+              min="14"
+              max="16"
+              value={styling.sectionTitleFontSize}
+              onChange={(e) => onSectionTitleFontSizeChange?.(parseInt(e.target.value))}
+              className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer"
+            />
+          </div>
+          
+          <div>
+            <label className="text-white/60 text-sm mb-1 block">Name Size (18-22pt)</label>
+            <div className="flex items-center justify-between text-xs text-white/60 mb-1">
+              <span>18pt</span>
+              <span>20pt</span>
+              <span>22pt</span>
+            </div>
+            <input
+              type="range"
+              min="18"
+              max="22"
+              value={styling.nameFontSize}
+              onChange={(e) => onNameFontSizeChange?.(parseInt(e.target.value))}
+              className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer"
+            />
+          </div>
+          
+          <div>
+            <label className="text-white/60 text-sm mb-1 block">Line Spacing</label>
+            <div className="flex items-center justify-between text-xs text-white/60 mb-1">
+              <span>1.0</span>
+              <span>1.15</span>
+              <span>1.2</span>
+            </div>
+            <input
+              type="range"
+              min="1.0"
+              max="1.2"
+              step="0.05"
+              value={styling.lineHeight}
+              onChange={(e) => onLineHeightChange?.(parseFloat(e.target.value))}
               className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer"
             />
           </div>
@@ -227,27 +320,69 @@ const CVStudioSidebar: React.FC<CVStudioSidebarProps> = ({
       {/* Spacing */}
       <div>
         <h3 className="text-white font-semibold mb-3">Spacing</h3>
-        <div className="space-y-3">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-white/60 text-sm mb-1 block">Margins (1-inch standard)</label>
+            <div className="flex items-center justify-between text-xs text-white/60 mb-1">
+              <span>0.5"</span>
+              <span>1.0"</span>
+              <span>1.5"</span>
+            </div>
+            <input
+              type="range"
+              min="48"
+              max="144"
+              step="24"
+              value={styling.margins}
+              onChange={(e) => onMarginsChange?.(parseInt(e.target.value))}
+              className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer"
+            />
+          </div>
+          
           <div>
             <label className="text-white/60 text-sm mb-1 block">Section Gap</label>
             <input
               type="range"
               min="5"
               max="20"
-              defaultValue="10"
+              value={styling.sectionGap}
+              onChange={(e) => onSectionGapChange?.(parseInt(e.target.value))}
               className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer"
             />
           </div>
           
           <div>
-            <label className="text-white/60 text-sm mb-1 block">Padding</label>
+            <label className="text-white/60 text-sm mb-1 block">Item Spacing</label>
             <input
               type="range"
-              min="20"
-              max="60"
-              defaultValue="40"
+              min="1"
+              max="5"
+              value={styling.itemSpacing}
+              onChange={(e) => onItemSpacingChange?.(parseInt(e.target.value))}
               className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer"
             />
+          </div>
+          
+          <div>
+            <label className="text-white/60 text-sm mb-1 block">Bullet Point Spacing</label>
+            <input
+              type="range"
+              min="2"
+              max="8"
+              value={styling.bulletSpacing}
+              onChange={(e) => onBulletSpacingChange?.(parseInt(e.target.value))}
+              className="w-full h-2 bg-white/20 rounded-lg appearance-none cursor-pointer"
+            />
+          </div>
+          
+          <div>
+            <label className="text-white/60 text-sm mb-1 block">Auto Fit</label>
+            <button
+              onClick={() => onAutoFit?.()}
+              className="w-full px-3 py-2 bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/30 text-blue-400 rounded-lg text-sm font-medium hover:from-blue-500/30 hover:to-purple-500/30 transition-all duration-300"
+            >
+              Auto Fit
+            </button>
           </div>
         </div>
       </div>

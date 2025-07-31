@@ -17,6 +17,18 @@ interface CVStudioEditorProps {
   onContentChange?: (content: string, section?: string) => void;
   userId?: string;
   cvId?: string;
+  // Styling props
+  styling?: {
+    fontFamily: string;
+    bodyFontSize: number;
+    sectionTitleFontSize: number;
+    nameFontSize: number;
+    lineHeight: number;
+    margins: number;
+    sectionGap: number;
+    itemSpacing: number;
+    bulletSpacing: number;
+  };
 }
 
 // Mock CV data structure
@@ -283,13 +295,39 @@ const CVStudioEditor: React.FC<CVStudioEditorProps> = ({
   onPageChange,
   totalPages,
   userId,
-  cvId
+  cvId,
+  styling = {
+    fontFamily: 'Arial, sans-serif',
+    bodyFontSize: 11,
+    sectionTitleFontSize: 15,
+    nameFontSize: 20,
+    lineHeight: 1.0,
+    margins: 96,
+    sectionGap: 10,
+    itemSpacing: 2,
+    bulletSpacing: 4
+  }
 }) => {
   const [cvData, setCVData] = useState(defaultCVData);
   const [templateData, setTemplateData] = useState({
-    display: atsFinanceCVTemplate.display!,
+    display: {
+      ...atsFinanceCVTemplate.display!,
+      fontFamily: styling.fontFamily,
+      padding: `${styling.margins}px`,
+      sectionSpacing: `${styling.sectionGap}px`
+    },
     sections: atsFinanceCVTemplate.sections!,
-    snippetStyles: atsFinanceCVTemplate.snippetStyles!
+    snippetStyles: atsFinanceCVTemplate.snippetStyles!.map(snippet => ({
+      ...snippet,
+      style: {
+        ...snippet.style,
+        fontSize: snippet.id.includes('header') ? `${styling.nameFontSize}px` : `${styling.bodyFontSize}px`,
+        titleFontSize: `${styling.sectionTitleFontSize}px`,
+        lineHeight: styling.lineHeight.toString(),
+        marginBottom: snippet.id.includes('header') ? '12px' : `${styling.sectionGap}px`,
+        entrySpacing: `${styling.itemSpacing}px`
+      }
+    }))
   });
   const [history, setHistory] = useState<any[]>([defaultCVData]);
   const [historyIndex, setHistoryIndex] = useState(0);
@@ -303,6 +341,32 @@ const CVStudioEditor: React.FC<CVStudioEditorProps> = ({
       loadCVData();
     }
   }, [cvId, userId]);
+
+  // Update template data when styling changes
+  useEffect(() => {
+    setTemplateData(prev => ({
+      ...prev,
+      display: {
+        ...prev.display,
+        fontFamily: styling.fontFamily,
+        padding: `${styling.margins}px`,
+        sectionSpacing: `${styling.sectionGap}px`
+      },
+      snippetStyles: prev.snippetStyles.map(snippet => ({
+        ...snippet,
+        style: {
+          ...snippet.style,
+          fontSize: snippet.id.includes('header') ? `${styling.nameFontSize}px` : `${styling.bodyFontSize}px`,
+          titleFontSize: `${styling.sectionTitleFontSize}px`,
+          lineHeight: styling.lineHeight.toString(),
+          marginBottom: snippet.id.includes('header') ? '12px' : `${styling.sectionGap}px`,
+          entrySpacing: `${styling.itemSpacing}px`,
+          bodyFontSize: `${styling.bodyFontSize}px`, // Add body font size for contact details and summary
+          bulletSpacing: `${styling.bulletSpacing}px` // Add bullet spacing
+        }
+      }))
+    }));
+  }, [styling]);
 
   const loadCVData = async () => {
     try {
@@ -423,6 +487,8 @@ const CVStudioEditor: React.FC<CVStudioEditorProps> = ({
           cvData={cvData}
           zoom={zoom}
           isPreviewMode={isPreviewMode}
+          currentPage={currentPage}
+          totalPages={totalPages}
           onDataChange={handleTemplateDataChange}
         />
       </div>

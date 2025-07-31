@@ -334,9 +334,9 @@ const cvDataSchema = new Schema<ICVData>({
       enum: ['single-column', 'two-column', 'absolute'],
       required: true
     },
-    paddingX: { type: Number, default: 50 },
-    paddingY: { type: Number, default: 45 },
-    lineHeight: { type: Number, default: 1.35 },
+    paddingX: { type: Number, default: 96 }, // 1-inch margins (96px = 1 inch at 96 DPI)
+    paddingY: { type: Number, default: 96 }, // 1-inch margins
+    lineHeight: { type: Number, default: 1.0 }, // 1.0 line spacing for better readability
     sectionGap: { type: Number, default: 10 },
     subsectionGap: { type: Number, default: 5 },
     itemSpacing: { type: Number, default: 2 },
@@ -348,8 +348,10 @@ const cvDataSchema = new Schema<ICVData>({
       enum: ['A4', 'US Letter'],
       default: 'A4'
     },
-    fontFamily: { type: String, default: 'Arial' },
-    baseFontSize: { type: Number, default: 11.5 },
+    fontFamily: { type: String, default: 'Arial, sans-serif' },
+    baseFontSize: { type: Number, default: 11 }, // 10-12pt body text (11pt = 10pt at 96 DPI)
+    nameFontSize: { type: Number, default: 20 }, // 18-22pt for name (20pt = 18pt at 96 DPI)
+    sectionTitleFontSize: { type: Number, default: 15 }, // 14-16pt for section headings (15pt = 14pt at 96 DPI)
     contactAlignment: {
       type: String,
       enum: ['left', 'center', 'right'],

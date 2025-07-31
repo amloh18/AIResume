@@ -62,14 +62,17 @@ export interface ITemplate extends Document {
   snippetStyles: IStyleSnippet[];
   styles: {
     layout: 'single-column' | 'two-column' | 'absolute';
-    paddingX: number;
-    paddingY: number;
-    lineHeight: number;
+    paddingX: number; // 96px = 1 inch at 96 DPI
+    paddingY: number; // 96px = 1 inch at 96 DPI
+    lineHeight: number; // 1.0 for standard line spacing
     sectionGap: number;
     subsectionGap: number;
     itemSpacing: number;
     titleBottomMargin: number;
     highlightColor: string;
+    baseFontSize: number; // 10-12pt body text (11pt = 10pt at 96 DPI)
+    nameFontSize: number; // 18-22pt for name (20pt = 18pt at 96 DPI)
+    sectionTitleFontSize: number; // 14-16pt for section headings (15pt = 14pt at 96 DPI)
     showSectionLine: boolean;
     paperSize: 'A4' | 'US Letter';
     fontFamily: string;
@@ -218,14 +221,17 @@ const templateSchema = new Schema<ITemplate>({
       enum: ['single-column', 'two-column', 'absolute'],
       required: true
     },
-    paddingX: { type: Number, default: 50 },
-    paddingY: { type: Number, default: 45 },
-    lineHeight: { type: Number, default: 1.35 },
+    paddingX: { type: Number, default: 96 }, // 1-inch margins (96px = 1 inch at 96 DPI)
+    paddingY: { type: Number, default: 96 }, // 1-inch margins
+    lineHeight: { type: Number, default: 1.0 }, // 1.0 line spacing for better readability
     sectionGap: { type: Number, default: 10 },
     subsectionGap: { type: Number, default: 5 },
     itemSpacing: { type: Number, default: 2 },
     titleBottomMargin: { type: Number, default: 4 },
     highlightColor: { type: String, default: '#171717' },
+    baseFontSize: { type: Number, default: 11 }, // 10-12pt body text (11pt = 10pt at 96 DPI)
+    nameFontSize: { type: Number, default: 20 }, // 18-22pt for name (20pt = 18pt at 96 DPI)
+    sectionTitleFontSize: { type: Number, default: 15 }, // 14-16pt for section headings (15pt = 14pt at 96 DPI)
     showSectionLine: { type: Boolean, default: true },
     paperSize: {
       type: String,

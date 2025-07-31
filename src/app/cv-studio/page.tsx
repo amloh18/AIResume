@@ -56,6 +56,24 @@ const CVStudio: React.FC<CVStudioProps> = () => {
   const [currentSection, setCurrentSection] = useState<string>('general');
   const [userId, setUserId] = useState<string>('');
 
+  // Zoom constraints
+  const MIN_ZOOM = 0.25;
+  const MAX_ZOOM = 3.0;
+  const ZOOM_STEP = 0.25;
+
+  // Styling state management
+  const [styling, setStyling] = useState({
+    fontFamily: 'Arial, sans-serif',
+    bodyFontSize: 11, // 10-12pt body text
+    sectionTitleFontSize: 15, // 14-16pt section headings
+    nameFontSize: 20, // 18-22pt for name
+    lineHeight: 1.0, // 1.0 line spacing
+    margins: 96, // 1-inch margins (96px)
+    sectionGap: 10,
+    itemSpacing: 2,
+    bulletSpacing: 4 // Space between bullet points
+  });
+
   // Handle URL parameters for CV editing
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -78,10 +96,154 @@ const CVStudio: React.FC<CVStudioProps> = () => {
     setHasUnsavedChanges(false);
   }, []);
 
-  const handleExport = useCallback((format: 'pdf' | 'json') => {
-    // Export logic here
-    console.log(`Exporting as ${format}`);
-  }, []);
+  const handleExport = useCallback(async (format: 'pdf' | 'json') => {
+    try {
+      if (format === 'pdf') {
+        // PDF export logic
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+          // Get the CV content
+          const cvContent = document.querySelector('.cv-content');
+          if (cvContent) {
+            printWindow.document.write(`
+              <!DOCTYPE html>
+              <html>
+                <head>
+                  <title>CV Export</title>
+                  <style>
+                    body { 
+                      margin: 0; 
+                      padding: 20px; 
+                      font-family: Arial, sans-serif;
+                      background: white;
+                    }
+                    .cv-page {
+                      width: 794px;
+                      height: 1123px;
+                      margin: 0 auto;
+                      background: white;
+                      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+                      padding: 96px;
+                      box-sizing: border-box;
+                    }
+                    @media print {
+                      body { padding: 0; }
+                      .cv-page { 
+                        box-shadow: none; 
+                        margin: 0;
+                        page-break-after: always;
+                      }
+                    }
+                  </style>
+                </head>
+                <body>
+                  <div class="cv-page">
+                    ${cvContent.innerHTML}
+                  </div>
+                </body>
+              </html>
+            `);
+            printWindow.document.close();
+            printWindow.focus();
+            
+            // Wait for content to load then print
+            setTimeout(() => {
+              printWindow.print();
+              printWindow.close();
+            }, 500);
+          }
+        }
+      } else if (format === 'json') {
+        // JSON export logic
+        const exportData = {
+          cvData: {
+            personal_info: {
+              name: "LE HOANG NHI",
+              contact0: "(44) 77 026 9598",
+              contact1: "nhilhto@gmail.com",
+              contact2: "www.linkedin.com/in/hoangnhile141000/",
+              summary: "Ambitious MSc Finance graduate from the University of Edinburgh, with previous internships in financial services, fluent in English, French & Vietnamese. Strong skills in leveraging data analytics, performing statistical analysis and using AI to perform deep-dive research. Demonstrated excellent written, verbal skills through passion projects outside of academic & corporate experience. Seeking an entry-level opportunity in Finance."
+            },
+            education: {
+              education_0_title: "Master of Science in Finance (Merit)",
+              education_0_company: "The University of Edinburgh",
+              education_0_duration: "Sep 2022 – Nov 2023",
+              education_0_detail_0: "Dissertation (Grade: Distinction): \"Unpacking ESG-Financial Performance Relationship: A Banking-Sector Study\".",
+              education_0_detail_1: "Relevant Modules: Financial Markets and Investment, Corporate Finance, Sustainable Finance, Blockchain Governance and Policy, Financial Statement Analysis.",
+              education_1_title: "BSc in Law, Economics and Management (2.1)",
+              education_1_company: "University of Lyon",
+              education_1_duration: "Sep 2018 – June 2022",
+              education_1_detail_0: "Relevant Modules: Macroeconomics, Mathematics for Quantitative Economics, Financial Analysis, Probability and Statistics.",
+              education_1_detail_1: "Extra-curricular activities: Student Representative of the Faculty of Economics and Management.",
+              education_2_title: "Bachelor of Business (International Business)",
+              education_2_company: "RMIT University",
+              education_2_duration: "Oct 2020 – Apr 2022",
+              education_2_detail_0: "Relevant Modules: International Trade, Commercial Law, Business Statistics, Political Economy for International Business."
+            },
+            experience: {
+              experience_0_title: "Global Trade and Customs Consultant Intern",
+              experience_0_company: "Ernst & Young",
+              experience_0_duration: "May 2024 – Aug 2024",
+              experience_0_detail_0: "Provided strategic advisory services such as customs valuation optimisation, classification analysis for imported/exported goods, risk assessment and mitigation, to over 10 multinational clients.",
+              experience_0_detail_1: "Enhanced client response accuracy by conducting in-depth research on customs laws, regulations, and precedent cases.",
+              experience_0_detail_2: "Contributed to successful engagements for clients like Samsung Electronics and Louis Vuitton.",
+              experience_1_title: "Insight Days",
+              experience_1_company: "Bank of America",
+              experience_1_duration: "May 2023",
+              experience_1_detail_0: "Attended a 3-day summit hosted by BoA, presenting on the state of AI and ESG in the Banking & Finance industry.",
+              experience_1_detail_1: "Received good feedback from BoA senior management.",
+              experience_2_title: "Transfer Pricing Intern",
+              experience_2_company: "Ernst & Young",
+              experience_2_duration: "May 2020 – Aug 2020",
+              experience_2_detail_0: "Compiled financial reports and devised key metrics like profitability and solvency ratios.",
+              experience_2_detail_1: "Benchmarked pricing analysis for ~15 companies, calculating arm's length prices."
+            },
+            leadership: {
+              leadership_0_title: "Social Media Manager",
+              leadership_0_company: "Account with 210K followers (210K on TikTok, 12.5K on Instagram)",
+              leadership_0_duration: "May 2020 – Present",
+              leadership_0_detail_0: "Achieved 30M+ total views by creating content targeting students in UK, France & Scotland.",
+              leadership_0_detail_1: "Used Advanced Analytics to review metrics and adapt strategy.",
+              leadership_0_detail_2: "Conducted research across industries: fashion, beauty, F&B, education, directed videos, and achieved 100% deliverable success.",
+              leadership_1_title: "Executive Secretary",
+              leadership_1_company: "Association of Vietnamese Students in Lyon",
+              leadership_1_duration: "Oct 2019 – Oct 2020",
+              leadership_1_detail_0: "Organised major cultural and academic workshops.",
+              leadership_1_detail_1: "Delivered 15%+ cost savings managing ~€5000 in budget."
+            },
+            project: {
+              project_0_title: "Kellogg's Company Analysis using top-down approach / Equity Valuation",
+              project_0_duration: "Feb 2023 – Apr 2023",
+              project_0_detail_0: "Conducted a comprehensive equity valuation using DCF and P/E ratios.",
+              project_0_detail_1: "Used Refinitiv & Damodaran data to forecast cash flows, WACC, and terminal value."
+            },
+            skills: {
+              skills_detail_0: "Languages: Fluent in English, French, Vietnamese; proficient in Mandarin Chinese.",
+              skills_detail_1: "IT: Microsoft Office Suite (Excel, Word, PowerPoint, Visio), Statistical analysis software (STATA17).",
+              skills_detail_2: "Certificates: Finance Accelerator Simulator Experience (AmplifyME), Stock Valuation with Comparable Company Analysis (Coursera), Analysing Company Performance using Ratios (Coursera)."
+            }
+          },
+          styling: styling,
+          exportDate: new Date().toISOString(),
+          version: "1.0"
+        };
+        
+        // Create and download JSON file
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `cv-export-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+    } catch (error) {
+      console.error('Export failed:', error);
+      alert('Export failed. Please try again.');
+    }
+  }, [styling]);
 
   const handleAIAssist = useCallback((action: 'rewrite' | 'optimize' | 'suggest') => {
     // AI assistance logic here
@@ -101,6 +263,26 @@ const CVStudio: React.FC<CVStudioProps> = () => {
     console.log('Generated content:', type, content);
     setCurrentContent(content);
     // Here you would update the specific section of the CV with the generated content
+  }, []);
+
+  const handleZoomIn = useCallback(() => {
+    setZoom(prev => {
+      const newZoom = Math.min(prev + ZOOM_STEP, MAX_ZOOM);
+      console.log('Zoom in:', prev, '->', newZoom);
+      return newZoom;
+    });
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    setZoom(prev => {
+      const newZoom = Math.max(prev - ZOOM_STEP, MIN_ZOOM);
+      console.log('Zoom out:', prev, '->', newZoom);
+      return newZoom;
+    });
+  }, []);
+
+  const handleZoomReset = useCallback(() => {
+    setZoom(1);
   }, []);
 
   const handleAutoFit = useCallback(() => {
@@ -128,6 +310,51 @@ const CVStudio: React.FC<CVStudioProps> = () => {
     }
   }, []);
 
+  // Styling update handlers
+  const handleStylingUpdate = useCallback((property: string, value: any) => {
+    setStyling(prev => ({
+      ...prev,
+      [property]: value
+    }));
+    setHasUnsavedChanges(true);
+  }, []);
+
+  const handleFontFamilyChange = useCallback((fontFamily: string) => {
+    handleStylingUpdate('fontFamily', fontFamily);
+  }, [handleStylingUpdate]);
+
+  const handleBodyFontSizeChange = useCallback((size: number) => {
+    handleStylingUpdate('bodyFontSize', size);
+  }, [handleStylingUpdate]);
+
+  const handleSectionTitleFontSizeChange = useCallback((size: number) => {
+    handleStylingUpdate('sectionTitleFontSize', size);
+  }, [handleStylingUpdate]);
+
+  const handleNameFontSizeChange = useCallback((size: number) => {
+    handleStylingUpdate('nameFontSize', size);
+  }, [handleStylingUpdate]);
+
+  const handleLineHeightChange = useCallback((height: number) => {
+    handleStylingUpdate('lineHeight', height);
+  }, [handleStylingUpdate]);
+
+  const handleMarginsChange = useCallback((margins: number) => {
+    handleStylingUpdate('margins', margins);
+  }, [handleStylingUpdate]);
+
+  const handleSectionGapChange = useCallback((gap: number) => {
+    handleStylingUpdate('sectionGap', gap);
+  }, [handleStylingUpdate]);
+
+  const handleItemSpacingChange = useCallback((spacing: number) => {
+    handleStylingUpdate('itemSpacing', spacing);
+  }, [handleStylingUpdate]);
+
+  const handleBulletSpacingChange = useCallback((spacing: number) => {
+    handleStylingUpdate('bulletSpacing', spacing);
+  }, [handleStylingUpdate]);
+
   return (
     <div className="h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex flex-col">
       {/* Header - Highest z-index */}
@@ -140,6 +367,9 @@ const CVStudio: React.FC<CVStudioProps> = () => {
           onAIAssist={handleAIAssist}
           hasUnsavedChanges={hasUnsavedChanges}
           onSave={handleSave}
+          isPreviewMode={isPreviewMode}
+          onPreviewToggle={() => setIsPreviewMode(!isPreviewMode)}
+          onExport={handleExport}
         />
       </div>
 
@@ -154,6 +384,17 @@ const CVStudio: React.FC<CVStudioProps> = () => {
             onTabChange={setActiveTab}
             userCVs={[]} // This will be loaded by the header component
             linkedJobs={[]} // This will be loaded by the header component
+            styling={styling}
+            onFontFamilyChange={handleFontFamilyChange}
+            onBodyFontSizeChange={handleBodyFontSizeChange}
+            onSectionTitleFontSizeChange={handleSectionTitleFontSizeChange}
+            onNameFontSizeChange={handleNameFontSizeChange}
+            onLineHeightChange={handleLineHeightChange}
+            onMarginsChange={handleMarginsChange}
+            onSectionGapChange={handleSectionGapChange}
+            onItemSpacingChange={handleItemSpacingChange}
+            onBulletSpacingChange={handleBulletSpacingChange}
+            onAutoFit={handleAutoFit}
           />
         </div>
 
@@ -164,15 +405,14 @@ const CVStudio: React.FC<CVStudioProps> = () => {
             <CVStudioToolbar
               zoom={zoom}
               onZoomChange={setZoom}
-              isPreviewMode={isPreviewMode}
-              onPreviewToggle={() => setIsPreviewMode(!isPreviewMode)}
-              onExport={handleExport}
+              onZoomIn={handleZoomIn}
+              onZoomOut={handleZoomOut}
+              onZoomReset={handleZoomReset}
               aiSuggestions={aiSuggestions}
               canUndo={true}
               canRedo={true}
               onUndo={handleUndo}
               onRedo={handleRedo}
-              onAutoFit={handleAutoFit}
               currentPage={currentPage}
               totalPages={totalPages}
               onPageChange={handlePageChange}
@@ -193,6 +433,7 @@ const CVStudio: React.FC<CVStudioProps> = () => {
               onContentChange={handleContentChange}
               userId={userId}
               cvId={selectedCV || undefined}
+              styling={styling}
             />
           </div>
         </div>
