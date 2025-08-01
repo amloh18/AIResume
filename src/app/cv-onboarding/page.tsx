@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Home, User, CheckCircle, Users } from 'lucide-react';
+import { ArrowLeft, Home, User, CheckCircle, Users, X, Eye } from 'lucide-react';
 import CVUpload from '@/components/cv-parser/CVUpload';
 import InteractiveCVForm from '@/components/cv-parser/InteractiveCVForm';
 import RegistrationModal from '@/components/auth/RegistrationModal';
@@ -154,19 +154,23 @@ const CVOnboardingPage: React.FC = () => {
     }
   };
 
-  const handleBack = () => {
-    switch (currentStep) {
-      case 'form':
-        setCurrentStep('upload');
-        break;
-      case 'registration':
-        setShowRegistration(false);
-        break;
-      case 'role':
+  const handleStepClick = (stepId: OnboardingStep) => {
+    // Only allow navigation to completed steps or current step
+    const stepIndex = steps.findIndex(s => s.id === stepId);
+    const currentStepIndex = steps.findIndex(s => s.id === currentStep);
+    
+    if (stepIndex <= currentStepIndex) {
+      setCurrentStep(stepId);
+      
+      // Handle modal states
+      if (stepId === 'role') {
+        setShowRoleSelection(true);
+      } else if (stepId === 'registration') {
+        setShowRegistration(true);
+      } else {
         setShowRoleSelection(false);
-        break;
-      default:
-        break;
+        setShowRegistration(false);
+      }
     }
   };
 
@@ -178,6 +182,15 @@ const CVOnboardingPage: React.FC = () => {
     setCurrentStep('upload');
     setShowRegistration(false);
     setShowRoleSelection(false);
+  };
+
+  const handlePreview = () => {
+    // Navigate to CV studio with current data
+    if (formData) {
+      // Store data temporarily for CV studio
+      sessionStorage.setItem('previewCVData', JSON.stringify(formData));
+      window.open('/cv-studio', '_blank');
+    }
   };
 
   const steps = [
@@ -197,18 +210,24 @@ const CVOnboardingPage: React.FC = () => {
             <div className="flex items-center gap-4">
               <motion.a
                 href="/"
-                className="flex items-center gap-2 text-white/60 hover:text-white transition-colors"
-                whileHover={{ x: -5 }}
+                className="flex items-center justify-center w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 transition-all duration-300 group"
+                whileHover={{ 
+                  scale: 1.1,
+                  rotateY: 15,
+                  rotateX: 15,
+                  boxShadow: "0 20px 40px rgba(255,255,255,0.1)"
+                }}
+                whileTap={{ scale: 0.95 }}
               >
-                <ArrowLeft size={20} />
-                Back to Home
+                <X size={20} className="text-white/60 group-hover:text-white transition-colors" />
               </motion.a>
               
               {currentStep !== 'upload' && (
                 <motion.button
                   onClick={handleStartOver}
-                  className="text-white/60 hover:text-white transition-colors"
+                  className="px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white font-medium rounded-lg hover:from-red-600 hover:to-red-700 transition-all duration-300 shadow-lg shadow-red-500/25"
                   whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                 >
                   Start Over
                 </motion.button>
@@ -217,23 +236,51 @@ const CVOnboardingPage: React.FC = () => {
 
             {/* Progress Steps */}
             <div className="hidden md:flex items-center gap-4">
-              {steps.map((step, index) => (
-                <div key={step.id} className="flex items-center gap-2">
-                  <div className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-all ${
-                    currentStep === step.id
-                      ? 'bg-lime-400 text-black'
-                      : index < steps.findIndex(s => s.id === currentStep)
-                      ? 'bg-green-500/20 text-green-400'
-                      : 'bg-white/10 text-white/40'
-                  }`}>
-                    <step.icon size={16} />
-                    <span className="text-sm font-medium">{step.title}</span>
+              {steps.map((step, index) => {
+                const stepIndex = steps.findIndex(s => s.id === step.id);
+                const currentStepIndex = steps.findIndex(s => s.id === currentStep);
+                const isCompleted = stepIndex < currentStepIndex;
+                const isCurrent = currentStep === step.id;
+                const isClickable = stepIndex <= currentStepIndex;
+                
+                return (
+                  <div key={step.id} className="flex items-center gap-2">
+                    <motion.button
+                      onClick={() => isClickable && handleStepClick(step.id as OnboardingStep)}
+                      disabled={!isClickable}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-all ${
+                        isCurrent
+                          ? 'bg-lime-400 text-black'
+                          : isCompleted
+                          ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30 cursor-pointer'
+                          : 'bg-white/10 text-white/40'
+                      } ${isClickable ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+                      whileHover={isClickable ? { scale: 1.05 } : {}}
+                      whileTap={isClickable ? { scale: 0.95 } : {}}
+                    >
+                      <step.icon size={16} />
+                      <span className="text-sm font-medium">{step.title}</span>
+                    </motion.button>
+                    
+                    {/* Preview button after Edit CV step */}
+                    {step.id === 'form' && formData && (
+                      <motion.button
+                        onClick={handlePreview}
+                        className="flex items-center gap-2 px-3 py-2 bg-blue-500/20 text-blue-400 rounded-xl hover:bg-blue-500/30 transition-all"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <Eye size={16} />
+                        <span className="text-sm font-medium">Preview</span>
+                      </motion.button>
+                    )}
+                    
+                    {index < steps.length - 1 && (
+                      <div className="w-8 h-px bg-white/20" />
+                    )}
                   </div>
-                  {index < steps.length - 1 && (
-                    <div className="w-8 h-px bg-white/20" />
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
@@ -267,7 +314,6 @@ const CVOnboardingPage: React.FC = () => {
               <InteractiveCVForm
                 initialData={cvData}
                 onSave={handleFormSave}
-                onBack={handleBack}
               />
             </motion.div>
           )}

@@ -3,7 +3,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CVTemplateRenderer from './CVTemplateRenderer';
-import { atsFinanceCVTemplate } from '@/data/templates/atsFinanceCV';
 
 interface CVStudioEditorProps {
   zoom: number;
@@ -311,23 +310,86 @@ const CVStudioEditor: React.FC<CVStudioEditorProps> = ({
   const [cvData, setCVData] = useState(defaultCVData);
   const [templateData, setTemplateData] = useState({
     display: {
-      ...atsFinanceCVTemplate.display!,
-      fontFamily: styling.fontFamily,
+      layout: "single-column",
       padding: `${styling.margins}px`,
+      fontFamily: styling.fontFamily,
       sectionSpacing: `${styling.sectionGap}px`
     },
-    sections: atsFinanceCVTemplate.sections!,
-    snippetStyles: atsFinanceCVTemplate.snippetStyles!.map(snippet => ({
-      ...snippet,
-      style: {
-        ...snippet.style,
-        fontSize: snippet.id.includes('header') ? `${styling.nameFontSize}px` : `${styling.bodyFontSize}px`,
-        titleFontSize: `${styling.sectionTitleFontSize}px`,
-        lineHeight: styling.lineHeight.toString(),
-        marginBottom: snippet.id.includes('header') ? '12px' : `${styling.sectionGap}px`,
-        entrySpacing: `${styling.itemSpacing}px`
+    sections: [
+      {
+        id: "personal_info",
+        type: "header",
+        content: {
+          name: "",
+          contact: ["", "", ""],
+          summary: ""
+        },
+        styleSnippetId: "snippet_header"
+      },
+      {
+        id: "experience",
+        type: "section",
+        title: "Work Experience",
+        entries: [],
+        styleSnippetId: "snippet_experience"
+      },
+      {
+        id: "education",
+        type: "section",
+        title: "Education",
+        entries: [],
+        styleSnippetId: "snippet_education"
+      },
+      {
+        id: "skills",
+        type: "section",
+        title: "Skills",
+        details: [],
+        styleSnippetId: "snippet_skills"
       }
-    }))
+    ],
+    snippetStyles: [
+      {
+        id: "snippet_header",
+        category: "Header",
+        style: {
+          fontWeight: "bold",
+          fontSize: `${styling.nameFontSize}px`,
+          color: "#1a1a1a",
+          marginBottom: "12px",
+          lineHeight: styling.lineHeight.toString()
+        }
+      },
+      {
+        id: "snippet_experience",
+        category: "Experience",
+        style: {
+          titleFontSize: `${styling.sectionTitleFontSize}px`,
+          fontSize: `${styling.bodyFontSize}px`,
+          lineHeight: styling.lineHeight.toString(),
+          entrySpacing: `${styling.itemSpacing}px`
+        }
+      },
+      {
+        id: "snippet_education",
+        category: "Education",
+        style: {
+          titleFontSize: `${styling.sectionTitleFontSize}px`,
+          fontSize: `${styling.bodyFontSize}px`,
+          lineHeight: styling.lineHeight.toString(),
+          entrySpacing: `${styling.itemSpacing}px`
+        }
+      },
+      {
+        id: "snippet_skills",
+        category: "Skills",
+        style: {
+          titleFontSize: `${styling.sectionTitleFontSize}px`,
+          fontSize: `${styling.bodyFontSize}px`,
+          lineHeight: styling.lineHeight.toString()
+        }
+      }
+    ]
   });
   const [history, setHistory] = useState<any[]>([defaultCVData]);
   const [historyIndex, setHistoryIndex] = useState(0);

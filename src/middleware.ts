@@ -5,6 +5,10 @@ export default withAuth(
   function middleware(req) {
     // Allow access to public routes
     if (req.nextUrl.pathname.startsWith('/api/auth') ||
+        req.nextUrl.pathname.startsWith('/api/parse-job') ||
+        req.nextUrl.pathname.startsWith('/api/jobs/parsed') ||
+        req.nextUrl.pathname.startsWith('/api/templates') ||
+        req.nextUrl.pathname.startsWith('/api/health') ||
         req.nextUrl.pathname === '/' ||
         req.nextUrl.pathname.startsWith('/cv-onboarding') ||
         req.nextUrl.pathname.startsWith('/auth/') ||
@@ -25,6 +29,10 @@ export default withAuth(
       authorized: ({ token, req }) => {
         // Allow access to public routes without authentication
         if (req.nextUrl.pathname.startsWith('/api/auth') ||
+            req.nextUrl.pathname.startsWith('/api/parse-job') ||
+            req.nextUrl.pathname.startsWith('/api/jobs/parsed') ||
+            req.nextUrl.pathname.startsWith('/api/templates') ||
+            req.nextUrl.pathname.startsWith('/api/health') ||
             req.nextUrl.pathname === '/' ||
             req.nextUrl.pathname.startsWith('/cv-onboarding') ||
             req.nextUrl.pathname.startsWith('/auth/') ||

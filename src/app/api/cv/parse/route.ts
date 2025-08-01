@@ -59,6 +59,24 @@ interface CVData {
   projects: Project[];
 }
 
+// Add GET method for testing
+export async function GET() {
+  console.log('CV Parse API test endpoint called');
+  
+  const testData = getEmptyStructure();
+  testData.personalInfo.firstName = 'Test';
+  testData.personalInfo.lastName = 'User';
+  testData.personalInfo.email = 'test@example.com';
+  testData.personalInfo.summary = 'This is a test CV structure to verify the API is working.';
+  
+  return NextResponse.json({
+    ...testData,
+    _test: true,
+    _message: 'CV Parse API is working correctly',
+    _timestamp: new Date().toISOString()
+  });
+}
+
 export async function POST(request: NextRequest) {
   try {
     console.log('CV Parse API called');
@@ -109,7 +127,14 @@ export async function POST(request: NextRequest) {
     console.log('Parsed CV data:', JSON.stringify(parsedData, null, 2));
     console.log('Returning parsed data to client');
     
-    return NextResponse.json(parsedData);
+    // Ensure we always return a valid structure
+    const responseData = {
+      ...parsedData,
+      _parsed: true, // Flag to indicate this was parsed
+      _timestamp: new Date().toISOString()
+    };
+    
+    return NextResponse.json(responseData);
   } catch (error) {
     console.error('CV parsing API error:', error);
     console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
@@ -118,7 +143,15 @@ export async function POST(request: NextRequest) {
     const fallbackData = getEmptyStructure();
     fallbackData.personalInfo.summary = 'An error occurred during CV parsing. Please enter your information manually.';
     
-    return NextResponse.json(fallbackData, { status: 200 }); // Return 200 with empty data instead of 500
+    // Add error info to help with debugging
+    const responseData = {
+      ...fallbackData,
+      _error: error instanceof Error ? error.message : 'Unknown error',
+      _parsed: false,
+      _timestamp: new Date().toISOString()
+    };
+    
+    return NextResponse.json(responseData, { status: 200 }); // Return 200 with empty data instead of 500
   }
 }
 

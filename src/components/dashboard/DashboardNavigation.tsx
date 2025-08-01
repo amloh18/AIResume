@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FileText, 
   Briefcase, 
@@ -12,7 +12,12 @@ import {
   Settings,
   Sparkles,
   User,
-  LogOut
+  LogOut,
+  ChevronDown,
+  UserCircle,
+  Bell,
+  Shield,
+  HelpCircle
 } from 'lucide-react';
 
 interface DashboardNavigationProps {
@@ -30,6 +35,8 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
   onSectionChange,
   user
 }) => {
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
+
   const sections = [
     { id: 'pulse', name: 'Analytics', icon: BarChart3, description: 'Progress Tracking' },
     { id: 'pipeline', name: 'Job Tracker', icon: Briefcase, description: 'Track Applications' },
@@ -38,6 +45,20 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
     { id: 'vault', name: 'Saved Forms', icon: Archive, description: 'Store Data' },
     { id: 'quillbox', name: 'Snippets', icon: MessageSquare, description: 'Content Library' }
   ];
+
+  const getUserInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(word => word.charAt(0))
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    window.location.href = '/';
+  };
 
   return (
     <div className={`w-64 bg-black/40 backdrop-blur-xl border-r border-white/10 min-h-screen sticky relative z-40 ${activeSection === 'pipeline' ? 'top-0' : 'top-20'}`}>
@@ -85,8 +106,6 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
           ))}
         </div>
 
-
-
         {/* Settings */}
         <div className="mt-8 pt-6 border-t border-white/10 space-y-2">
           <motion.button
@@ -102,26 +121,102 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
           </motion.button>
         </div>
 
-        {/* User Profile & Logout */}
-        <div className="mt-6 pt-6 border-t border-white/10">
+        {/* User Profile Dropdown */}
+        <div className="mt-6 pt-6 border-t border-white/10 relative">
           <motion.button
-            onClick={() => {
-              localStorage.removeItem('user');
-              window.location.href = '/';
-            }}
-            className="w-full flex items-center gap-3 p-3 bg-white/5 rounded-xl transition-all duration-300 hover:bg-white/10 hover:bg-red-400/10 group"
+            onClick={() => setShowUserDropdown(!showUserDropdown)}
+            className="w-full flex items-center gap-3 p-3 bg-white/5 rounded-xl transition-all duration-300 hover:bg-white/10 group"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-500 rounded-lg flex items-center justify-center">
-              <User size={16} className="text-white" />
+            {/* User Avatar */}
+            <div className="w-10 h-10 bg-gradient-to-br from-lime-400 to-lime-500 rounded-lg flex items-center justify-center text-black font-semibold text-sm">
+              {getUserInitials(user.name)}
             </div>
+            
+            {/* User Info */}
             <div className="flex-1 min-w-0 text-left">
               <p className="text-white text-sm font-medium truncate">{user.name}</p>
-              <p className="text-white/60 text-xs truncate group-hover:text-red-400 transition-colors">{user.email}</p>
+              <p className="text-white/60 text-xs truncate">{user.email}</p>
             </div>
-            <LogOut size={16} className="text-white/60 group-hover:text-red-400 transition-colors" />
+            
+            {/* Dropdown Arrow */}
+            <motion.div
+              animate={{ rotate: showUserDropdown ? 180 : 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <ChevronDown size={16} className="text-white/60 group-hover:text-white transition-colors" />
+            </motion.div>
           </motion.button>
+
+          {/* Dropdown Menu */}
+          <AnimatePresence>
+            {showUserDropdown && (
+              <motion.div
+                className="absolute bottom-full left-0 right-0 mb-2 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl overflow-hidden"
+                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                transition={{ duration: 0.2 }}
+              >
+                <div className="p-2 space-y-1">
+                  {/* Profile */}
+                  <motion.button
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 text-sm"
+                    whileHover={{ x: 3 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <UserCircle size={16} />
+                    <span>Profile</span>
+                  </motion.button>
+
+                  {/* Notifications */}
+                  <motion.button
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 text-sm"
+                    whileHover={{ x: 3 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <Bell size={16} />
+                    <span>Notifications</span>
+                  </motion.button>
+
+                  {/* Security */}
+                  <motion.button
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 text-sm"
+                    whileHover={{ x: 3 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <Shield size={16} />
+                    <span>Security</span>
+                  </motion.button>
+
+                  {/* Help */}
+                  <motion.button
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 text-sm"
+                    whileHover={{ x: 3 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <HelpCircle size={16} />
+                    <span>Help & Support</span>
+                  </motion.button>
+
+                  {/* Divider */}
+                  <div className="border-t border-white/10 my-1"></div>
+
+                  {/* Logout */}
+                  <motion.button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-400/10 transition-all duration-200 text-sm"
+                    whileHover={{ x: 3 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <LogOut size={16} />
+                    <span>Sign Out</span>
+                  </motion.button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </nav>
     </div>

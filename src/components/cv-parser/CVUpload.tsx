@@ -76,72 +76,102 @@ const CVUpload: React.FC<CVUploadProps> = ({ onCVParsed, onClose }) => {
   const parseCVFile = async (file: File): Promise<any> => {
     return new Promise(async (resolve, reject) => {
       try {
+        console.log('Starting CV file parsing for:', file.name, 'Type:', file.type, 'Size:', file.size);
+        
         // Create FormData to send file to parsing API
         const formData = new FormData();
         formData.append('file', file);
 
+        console.log('Sending file to parsing API...');
+        
         // Call the CV parsing API
         const response = await fetch('/api/cv/parse', {
           method: 'POST',
           body: formData,
         });
 
+        console.log('API response status:', response.status);
+        console.log('API response headers:', Object.fromEntries(response.headers.entries()));
+
         if (!response.ok) {
-          throw new Error(`Parsing failed: ${response.statusText}`);
+          const errorText = await response.text();
+          console.error('API response error:', errorText);
+          throw new Error(`Parsing failed: ${response.status} ${response.statusText} - ${errorText}`);
         }
 
         const parsedData = await response.json();
         
         // Add debugging to see what we received
         console.log('CVUpload received parsed data:', parsedData);
+        console.log('Parsed data keys:', Object.keys(parsedData));
         
-        // If parsing was successful but returned empty data, provide a basic structure
-        if (!parsedData || Object.keys(parsedData).length === 0) {
-          const basicStructure = {
-            personalInfo: {
-              firstName: '',
-              lastName: '',
-              email: '',
-              phone: '',
-              location: '',
-              linkedin: '',
-              summary: ''
-            },
-            education: [],
-            experience: [],
-            skills: [],
-            projects: []
-          };
-          resolve(basicStructure);
-        } else {
-          resolve(parsedData);
+        // Check if we have a valid structure
+        if (!parsedData || typeof parsedData !== 'object') {
+          console.warn('Invalid parsed data structure, using fallback');
+          resolve(getEmptyStructure());
+          return;
         }
+        
+        // Ensure we have the required structure
+        const validatedData = validateAndFixDataStructure(parsedData);
+        console.log('Validated data structure:', validatedData);
+        
+        resolve(validatedData);
       } catch (error) {
         console.error('CV parsing error:', error);
         
         // Fallback: provide empty structure for manual entry
-        const emptyStructure = {
-          personalInfo: {
-            firstName: '',
-            lastName: '',
-            email: '',
-            phone: '',
-            location: '',
-            linkedin: '',
-            summary: ''
-          },
-          education: [],
-          experience: [],
-          skills: [],
-          projects: []
-        };
-        
-        // For now, resolve with empty structure instead of rejecting
-        // This allows users to manually enter their information
+        const emptyStructure = getEmptyStructure();
+        console.log('Using fallback empty structure');
         resolve(emptyStructure);
       }
     });
   };
+
+  // Helper function to validate and fix data structure
+  const validateAndFixDataStructure = (data: any) => {
+    const defaultStructure = getEmptyStructure();
+    
+    // Ensure all required sections exist
+    const validatedData = {
+      personalInfo: {
+        ...defaultStructure.personalInfo,
+        ...(data.personalInfo || {})
+      },
+      education: Array.isArray(data.education) ? data.education : [],
+      experience: Array.isArray(data.experience) ? data.experience : [],
+      skills: Array.isArray(data.skills) ? data.skills : [],
+      projects: Array.isArray(data.projects) ? data.projects : []
+    };
+    
+    // Add any additional fields from the parsed data
+    Object.keys(data).forEach(key => {
+      if (!['personalInfo', 'education', 'experience', 'skills', 'projects'].includes(key)) {
+        validatedData[key] = data[key];
+      }
+    });
+    
+    return validatedData;
+  };
+
+  // Helper function to get empty structure
+  const getEmptyStructure = () => ({
+    personalInfo: {
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      location: '',
+      website: '',
+      linkedin: '',
+      github: '',
+      summary: ''
+    },
+    education: [],
+    experience: [],
+    skills: [],
+    projects: []
+  });
 
   return (
     <motion.div
