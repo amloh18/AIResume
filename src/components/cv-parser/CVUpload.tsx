@@ -44,6 +44,9 @@ const CVUpload: React.FC<CVUploadProps> = ({ onCVParsed, onClose }) => {
       setUploadProgress(100);
       setUploadStatus('success');
 
+      // Add debugging before passing to form
+      console.log('CVUpload passing data to form:', parsedData);
+      
       // Simulate success delay
       setTimeout(() => {
         onCVParsed(parsedData);
@@ -71,84 +74,72 @@ const CVUpload: React.FC<CVUploadProps> = ({ onCVParsed, onClose }) => {
   });
 
   const parseCVFile = async (file: File): Promise<any> => {
-    // This is a mock implementation - in production, you'd use actual parsing libraries
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        // Mock parsed data based on the CV image provided
-        const mockParsedData = {
-          personalInfo: {
-            firstName: 'Le Hoang',
-            lastName: 'Nhi',
-            email: 'nhilhto@gmail.com',
-            phone: '+84 123 456 789',
-            location: 'Ho Chi Minh City, Vietnam',
-            linkedin: 'linkedin.com/in/lehoangnhi',
-            summary: 'Passionate student with strong academic background in Finance, Law, and Business Management. Seeking opportunities to apply knowledge and develop professional skills.'
-          },
-          education: [
-            {
-              institution: 'University of Economics and Law',
-              degree: 'MSc Finance',
-              field: 'Finance',
-              startDate: '2023',
-              endDate: '2025',
-              current: true,
-              description: 'Advanced studies in financial management and analysis'
-            },
-            {
-              institution: 'University of Economics and Law',
-              degree: 'BSc in Law, Economics and Management',
-              field: 'Law, Economics, Management',
-              startDate: '2020',
-              endDate: '2024',
-              current: false,
-              description: 'Comprehensive study of legal, economic, and management principles'
-            }
-          ],
-          experience: [
-            {
-              company: 'Ernst & Young',
-              position: 'Intern',
-              location: 'Ho Chi Minh City, Vietnam',
-              startDate: '2024',
-              endDate: '2024',
-              current: false,
-              description: 'Gained practical experience in professional services and consulting',
-              achievements: [
-                'Assisted with financial analysis and reporting',
-                'Participated in client meetings and presentations',
-                'Developed understanding of audit and consulting processes'
-              ]
-            }
-          ],
-          skills: [
-            {
-              category: 'Technical Skills',
-              skills: ['Financial Analysis', 'Microsoft Excel', 'PowerPoint', 'Data Analysis']
-            },
-            {
-              category: 'Soft Skills',
-              skills: ['Communication', 'Teamwork', 'Problem Solving', 'Leadership']
-            },
-            {
-              category: 'Languages',
-              skills: ['Vietnamese (Native)', 'English (Fluent)', 'Chinese (Basic)']
-            }
-          ],
-          projects: [
-            {
-              title: 'Financial Analysis Project',
-              description: 'Comprehensive analysis of market trends and investment opportunities',
-              technologies: ['Excel', 'Financial Modeling'],
-              startDate: '2024',
-              endDate: '2024',
-              current: false
-            }
-          ]
-        };
+    return new Promise(async (resolve, reject) => {
+      try {
+        // Create FormData to send file to parsing API
+        const formData = new FormData();
+        formData.append('file', file);
 
-        resolve(mockParsedData);
-      }, 2000); // Simulate parsing time
+        // Call the CV parsing API
+        const response = await fetch('/api/cv/parse', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Parsing failed: ${response.statusText}`);
+        }
+
+        const parsedData = await response.json();
+        
+        // Add debugging to see what we received
+        console.log('CVUpload received parsed data:', parsedData);
+        
+        // If parsing was successful but returned empty data, provide a basic structure
+        if (!parsedData || Object.keys(parsedData).length === 0) {
+          const basicStructure = {
+            personalInfo: {
+              firstName: '',
+              lastName: '',
+              email: '',
+              phone: '',
+              location: '',
+              linkedin: '',
+              summary: ''
+            },
+            education: [],
+            experience: [],
+            skills: [],
+            projects: []
+          };
+          resolve(basicStructure);
+        } else {
+          resolve(parsedData);
+        }
+      } catch (error) {
+        console.error('CV parsing error:', error);
+        
+        // Fallback: provide empty structure for manual entry
+        const emptyStructure = {
+          personalInfo: {
+            firstName: '',
+            lastName: '',
+            email: '',
+            phone: '',
+            location: '',
+            linkedin: '',
+            summary: ''
+          },
+          education: [],
+          experience: [],
+          skills: [],
+          projects: []
+        };
+        
+        // For now, resolve with empty structure instead of rejecting
+        // This allows users to manually enter their information
+        resolve(emptyStructure);
+      }
     });
   };
 

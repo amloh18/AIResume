@@ -164,7 +164,10 @@ const Navigation = () => {
       <LoginModal
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
-        onLogin={handleLogin}
+        onSwitchToRegister={() => {
+          setShowLoginModal(false);
+          window.location.href = '/cv-onboarding';
+        }}
       />
     </motion.nav>
   );

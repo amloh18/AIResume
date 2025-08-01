@@ -1,6 +1,30 @@
 import mongoose from 'mongoose';
+import fs from 'fs';
+import path from 'path';
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/cvcircle';
+// Load environment variables manually if not already loaded
+let MONGODB_URI = process.env.MONGODB_URI;
+
+if (!MONGODB_URI) {
+  try {
+    const envPath = path.join(process.cwd(), '.env.local');
+    if (fs.existsSync(envPath)) {
+      const envContent = fs.readFileSync(envPath, 'utf8');
+      const uriMatch = envContent.match(/MONGODB_URI=(.+)/);
+      if (uriMatch) {
+        MONGODB_URI = uriMatch[1].trim();
+        console.log('✅ Loaded MONGODB_URI from .env.local');
+      }
+    }
+  } catch (error) {
+    console.error('❌ Error loading .env.local:', error);
+  }
+}
+
+// Fallback to default if still not found
+MONGODB_URI = MONGODB_URI || 'mongodb://localhost:27017/cvcircle';
+
+console.log('🔍 Current MONGODB_URI:', MONGODB_URI ? MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@') : 'undefined');
 
 if (!MONGODB_URI) {
   throw new Error('Please define the MONGODB_URI environment variable inside .env.local');
@@ -21,16 +45,16 @@ if (!cached) {
 const connectionOptions = {
   bufferCommands: false,
   maxPoolSize: 10, // Maintain up to 10 socket connections
-  serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
+  serverSelectionTimeoutMS: 30000, // Increase timeout for Atlas
   socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
   family: 4, // Use IPv4, skip trying IPv6
   retryWrites: true,
-  // SSL settings for production
-  ssl: false, // Disabled for development - enable in production
+  // SSL settings - required for MongoDB Atlas
+  ssl: true, // Enable SSL for Atlas connections
   // Connection monitoring
   heartbeatFrequencyMS: 10000, // Send heartbeat every 10 seconds
   // Timeout settings
-  connectTimeoutMS: 10000, // Give up initial connection after 10 seconds
+  connectTimeoutMS: 30000, // Increase timeout for Atlas connections
 };
 
 // Connection event handlers

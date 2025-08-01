@@ -89,10 +89,51 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
 
   useEffect(() => {
     if (initialData) {
-      setFormData(prev => ({
-        ...prev,
-        ...initialData
-      }));
+      console.log('InteractiveCVForm received initialData:', initialData);
+      
+      // Handle the data structure properly
+      const updatedFormData = { ...formData };
+      
+      // Handle personal info
+      if (initialData.personalInfo) {
+        updatedFormData.personalInfo = {
+          ...updatedFormData.personalInfo,
+          ...initialData.personalInfo,
+          // Add missing fields that the form expects but API doesn't provide
+          website: initialData.personalInfo.website || '',
+          github: initialData.personalInfo.github || ''
+        };
+      }
+      
+      // Handle education - add missing fields
+      if (initialData.education && Array.isArray(initialData.education)) {
+        updatedFormData.education = initialData.education.map(edu => ({
+          ...edu,
+          location: edu.location || '',
+          gpa: edu.gpa || ''
+        }));
+      }
+      
+      // Handle experience - structure is compatible
+      if (initialData.experience && Array.isArray(initialData.experience)) {
+        updatedFormData.experience = initialData.experience;
+      }
+      
+      // Handle skills - structure is compatible
+      if (initialData.skills && Array.isArray(initialData.skills)) {
+        updatedFormData.skills = initialData.skills;
+      }
+      
+      // Handle projects - add missing fields
+      if (initialData.projects && Array.isArray(initialData.projects)) {
+        updatedFormData.projects = initialData.projects.map(project => ({
+          ...project,
+          technologies: project.technologies || []
+        }));
+      }
+      
+      console.log('InteractiveCVForm setting formData to:', updatedFormData);
+      setFormData(updatedFormData);
     }
   }, [initialData]);
 
