@@ -55,6 +55,7 @@ const CVStudio: React.FC<CVStudioProps> = () => {
   const [currentContent, setCurrentContent] = useState<string>('');
   const [currentSection, setCurrentSection] = useState<string>('general');
   const [userId, setUserId] = useState<string>('');
+  const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
 
   // Zoom constraints
   const MIN_ZOOM = 0.25;
@@ -355,6 +356,12 @@ const CVStudio: React.FC<CVStudioProps> = () => {
     handleStylingUpdate('bulletSpacing', spacing);
   }, [handleStylingUpdate]);
 
+  const handleTemplateSelect = useCallback((template: any) => {
+    setSelectedTemplate(template);
+    console.log('Template selected:', template.name);
+    // You can add logic here to apply the template to the CV editor
+  }, []);
+
   return (
     <div className="h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex flex-col">
       {/* Header - Highest z-index */}
@@ -384,6 +391,8 @@ const CVStudio: React.FC<CVStudioProps> = () => {
             onTabChange={setActiveTab}
             userCVs={[]} // This will be loaded by the header component
             linkedJobs={[]} // This will be loaded by the header component
+            onTemplateSelect={handleTemplateSelect}
+            selectedTemplate={selectedTemplate}
             styling={styling}
             onFontFamilyChange={handleFontFamilyChange}
             onBodyFontSizeChange={handleBodyFontSizeChange}

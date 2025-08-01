@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/database';
 import { CV } from '@/models';
-import { atsFinanceCVTemplate } from '@/data/templates/atsFinanceCV';
+import Template from '@/models/Template';
 import { createPaginationOptions, paginateQuery, createErrorResponse } from '@/lib/db-utils';
 
 // GET - List CVs for a user
@@ -91,12 +91,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Use ATS Finance template data if not provided
-    const defaultTemplateData = templateData || {
-      display: atsFinanceCVTemplate.display,
-      sections: atsFinanceCVTemplate.sections,
-      snippetStyles: atsFinanceCVTemplate.snippetStyles
-    };
+    // Get default template from database if not provided
+    let defaultTemplateData = templateData;
+    if (!templateData) {
+      const defaultTemplate = await Template.findOne({ isDefault: true });
+      if (defaultTemplate) {
+        defaultTemplateData = {
+          display: defaultTemplate.display,
+          sections: defaultTemplate.sections || [],
+          snippetStyles: defaultTemplate.snippetStyles || []
+        };
+      }
+    }
 
     // Use default CV data if not provided
     const defaultCvData = cvData || {

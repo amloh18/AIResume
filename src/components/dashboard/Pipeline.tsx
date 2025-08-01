@@ -66,6 +66,7 @@ import {
   CalendarDays,
 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
+import JobParser from './JobParser';
 
 interface Job {
   id: string;
@@ -329,6 +330,7 @@ const Pipeline: React.FC = () => {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [showJobModal, setShowJobModal] = useState(false);
+  const [showJobParser, setShowJobParser] = useState(false);
   const [editingJob, setEditingJob] = useState<Job | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
@@ -551,6 +553,27 @@ const Pipeline: React.FC = () => {
     setShowJobModal(true);
   };
 
+  const handleJobParsed = (parsedJob: any) => {
+    const newJob: Partial<Job> = {
+      id: uuidv4(),
+      jobTitle: parsedJob.title,
+      company: parsedJob.company,
+      location: '',
+      salary: parsedJob.salary || { min: 0, max: 0, currency: 'USD', period: 'yearly' },
+      status: 'created',
+      priority: 'medium',
+      jobDescription: parsedJob.description,
+      jobUrl: parsedJob.sourceUrl,
+      notes: `Parsed from Indeed. Sponsorship: ${parsedJob.sponsorship ? 'Available' : 'Not available'}`,
+      tags: [],
+      contacts: [],
+      userId: user?.id || user?._id,
+      cvId: '' // Will be set when saving
+    };
+    setEditingJob(newJob as Job);
+    setShowJobModal(true);
+  };
+
   const getJobsByStatus = (status: Job['status']) => {
     return jobs.filter(job => job.status === status);
   };
@@ -570,16 +593,31 @@ const Pipeline: React.FC = () => {
         <div>
           <h1 className="text-3xl font-bold text-white mb-2">Job Tracker</h1>
           <p className="text-white/60">Track your job applications and manage your career progress</p>
+          <p className="text-white/40 text-sm mt-1 flex items-center gap-1">
+            <Link size={14} />
+            Works with Indeed URLs only
+          </p>
         </div>
-        <motion.button
-          onClick={handleAddJob}
-          className="px-6 py-3 bg-gradient-to-r from-lime-400 to-lime-500 text-black font-semibold rounded-xl hover:from-lime-300 hover:to-lime-400 transition-all duration-300 flex items-center gap-2"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <Plus size={20} />
-          Add Job
-        </motion.button>
+        <div className="flex gap-3">
+          <motion.button
+            onClick={() => setShowJobParser(true)}
+            className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-300 flex items-center gap-2"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Link size={20} />
+            Parse Job
+          </motion.button>
+          <motion.button
+            onClick={handleAddJob}
+            className="px-6 py-3 bg-gradient-to-r from-lime-400 to-lime-500 text-black font-semibold rounded-xl hover:from-lime-300 hover:to-lime-400 transition-all duration-300 flex items-center gap-2"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <Plus size={20} />
+            Add Job
+          </motion.button>
+        </div>
       </div>
 
       {/* Kanban Board */}
@@ -835,6 +873,13 @@ const Pipeline: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Job Parser Modal */}
+      <JobParser
+        isOpen={showJobParser}
+        onClose={() => setShowJobParser(false)}
+        onJobParsed={handleJobParsed}
+      />
     </div>
   );
 };

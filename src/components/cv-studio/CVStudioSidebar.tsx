@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ChevronLeft, 
@@ -19,8 +19,24 @@ import {
   Clock,
   AlertCircle,
   Briefcase,
-  Sparkles
+  Sparkles,
+  Loader2
 } from 'lucide-react';
+
+interface CVTemplate {
+  _id: string;
+  name: string;
+  category: string[];
+  thumbnail: string;
+  isPremium: boolean;
+  isDefault: boolean;
+  description: string;
+  metadata: {
+    rating: number;
+    usageCount: number;
+    tags: string[];
+  };
+}
 
 interface CVStudioSidebarProps {
   isCollapsed: boolean;
@@ -29,6 +45,8 @@ interface CVStudioSidebarProps {
   onTabChange: (tab: 'templates' | 'customize' | 'snippets') => void;
   userCVs: any[];
   linkedJobs: any[];
+  onTemplateSelect?: (template: CVTemplate) => void;
+  selectedTemplate?: CVTemplate;
   // Styling props
   styling?: {
     fontFamily: string;
@@ -60,6 +78,8 @@ const CVStudioSidebar: React.FC<CVStudioSidebarProps> = ({
   onTabChange,
   userCVs,
   linkedJobs,
+  onTemplateSelect,
+  selectedTemplate,
   styling = {
     fontFamily: 'Arial, sans-serif',
     bodyFontSize: 11,
@@ -84,6 +104,9 @@ const CVStudioSidebar: React.FC<CVStudioSidebarProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [templates, setTemplates] = useState<CVTemplate[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const tabs = [
     { id: 'templates', name: 'Templates', icon: FileText, description: 'Choose from professional templates' },
@@ -91,15 +114,39 @@ const CVStudioSidebar: React.FC<CVStudioSidebarProps> = ({
     { id: 'snippets', name: 'Snippets', icon: Layers, description: 'Add reusable content blocks' }
   ];
 
-  // Mock data
-  const templates = [
-    { id: '1', name: 'Classic ATS', category: ['ATS-Friendly', 'Professional'], thumbnail: '/api/placeholder/200/150', isPremium: false },
-    { id: '2', name: 'Modern Sidebar', category: ['Modern', 'Two-Column'], thumbnail: '/api/placeholder/200/150', isPremium: false },
-    { id: '3', name: 'Creative Portfolio', category: ['Creative', 'Photo'], thumbnail: '/api/placeholder/200/150', isPremium: true },
-    { id: '4', name: 'Minimalist Clean', category: ['Minimalist', 'ATS-Friendly'], thumbnail: '/api/placeholder/200/150', isPremium: false },
-    { id: '5', name: 'Executive Professional', category: ['Professional', 'Single-Column'], thumbnail: '/api/placeholder/200/150', isPremium: true },
-    { id: '6', name: 'Developer Focus', category: ['Engineer', 'Modern'], thumbnail: '/api/placeholder/200/150', isPremium: false }
-  ];
+  // Fetch templates from API
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      try {
+        setLoading(true);
+        console.log('Fetching templates from API...');
+        const response = await fetch('/api/templates');
+        const data = await response.json();
+        
+        if (data.success) {
+          console.log(`Loaded ${data.data.length} templates:`, data.data.map((t: any) => t.name));
+          setTemplates(data.data);
+        } else {
+          console.error('Failed to load templates:', data);
+          setError('Failed to load templates');
+        }
+      } catch (err) {
+        console.error('Error fetching templates:', err);
+        setError('Failed to load templates');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTemplates();
+  }, []);
+
+  // Filter templates based on search
+  const filteredTemplates = templates.filter(template => 
+    template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    template.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    template.category.some(cat => cat.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
 
   const snippets = [
     { id: '1', name: 'Standard Layouts', section: 'personal_info', thumbnail: '/api/placeholder/150/100', isPremium: false },
@@ -145,52 +192,115 @@ const CVStudioSidebar: React.FC<CVStudioSidebarProps> = ({
         </div>
       </div>
 
-      {/* Templates Grid */}
-      <div className={`grid gap-4 ${
-        viewMode === 'grid' ? 'grid-cols-3' : 'grid-cols-1'
-      }`}>
-        {templates.map((template) => (
-          <motion.div
-            key={template.id}
-            className="group cursor-pointer"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+      {/* Loading State */}
+      {loading && (
+        <div className="flex items-center justify-center py-8">
+          <div className="flex items-center gap-3">
+            <Loader2 className="animate-spin text-purple-400" size={20} />
+            <span className="text-white/60">Loading templates...</span>
+          </div>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <div className="text-center py-8">
+          <AlertCircle className="mx-auto text-red-400 mb-2" size={24} />
+          <p className="text-red-400 text-sm mb-2">{error}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="text-purple-400 hover:text-purple-300 text-sm"
           >
-            <div className="relative bg-white/5 border border-white/10 rounded-xl overflow-hidden hover:border-white/20 transition-all duration-300">
-              {/* Thumbnail */}
-              <div className="aspect-[4/3] bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
-                <div className="w-12 h-16 bg-white/20 rounded-lg border border-white/30 flex items-center justify-center">
-                  <FileText size={20} className="text-white/60" />
+            Try again
+          </button>
+        </div>
+      )}
+
+      {/* Templates Grid */}
+      {!loading && !error && (
+        <div className={`grid gap-4 ${
+          viewMode === 'grid' ? 'grid-cols-3' : 'grid-cols-1'
+        }`}>
+          {filteredTemplates.map((template) => (
+            <motion.div
+              key={template._id}
+              className="group cursor-pointer"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => onTemplateSelect?.(template)}
+            >
+              <div className={`relative bg-white/5 border rounded-xl overflow-hidden hover:border-white/20 transition-all duration-300 ${
+                selectedTemplate?._id === template._id 
+                  ? 'border-purple-500 bg-purple-500/10' 
+                  : 'border-white/10'
+              }`}>
+                {/* Thumbnail */}
+                <div className="aspect-[4/3] bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
+                  <div className="w-12 h-16 bg-white/20 rounded-lg border border-white/30 flex items-center justify-center">
+                    <FileText size={20} className="text-white/60" />
+                  </div>
                 </div>
-              </div>
-              
-              {/* Premium Badge */}
-              {template.isPremium && (
-                <div className="absolute top-2 right-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs px-2 py-1 rounded-full">
-                  PRO
-                </div>
-              )}
-              
-              {/* Template Info */}
-              <div className="p-3">
-                <h3 className="font-medium text-white mb-1 group-hover:text-purple-400 transition-colors">
-                  {template.name}
-                </h3>
-                <div className="flex flex-wrap gap-1">
-                  {template.category.map((cat) => (
-                    <span
-                      key={cat}
-                      className="text-xs px-2 py-1 bg-white/10 text-white/60 rounded-full"
-                    >
-                      {cat}
+                
+                {/* Premium Badge */}
+                {template.isPremium && (
+                  <div className="absolute top-2 right-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs px-2 py-1 rounded-full">
+                    PRO
+                  </div>
+                )}
+
+                {/* Default Badge */}
+                {template.isDefault && (
+                  <div className="absolute top-2 left-2 bg-gradient-to-r from-green-500 to-blue-500 text-white text-xs px-2 py-1 rounded-full">
+                    DEFAULT
+                  </div>
+                )}
+                
+                {/* Template Info */}
+                <div className="p-3">
+                  <h3 className="font-medium text-white mb-1 group-hover:text-purple-400 transition-colors">
+                    {template.name}
+                  </h3>
+                  <p className="text-xs text-white/60 mb-2 line-clamp-2">
+                    {template.description}
+                  </p>
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    {template.category.slice(0, 2).map((cat) => (
+                      <span
+                        key={cat}
+                        className="text-xs px-2 py-1 bg-white/10 text-white/60 rounded-full"
+                      >
+                        {cat}
+                      </span>
+                    ))}
+                    {template.category.length > 2 && (
+                      <span className="text-xs px-2 py-1 bg-white/10 text-white/60 rounded-full">
+                        +{template.category.length - 2}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1">
+                      <Star className="w-3 h-3 text-yellow-400 fill-current" />
+                      <span className="text-xs text-white/60">{template.metadata.rating}</span>
+                    </div>
+                    <span className="text-xs text-white/40">
+                      {template.metadata.usageCount} uses
                     </span>
-                  ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          </motion.div>
-        ))}
-      </div>
+            </motion.div>
+          ))}
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!loading && !error && filteredTemplates.length === 0 && (
+        <div className="text-center py-8">
+          <FileText className="mx-auto text-white/40 mb-2" size={32} />
+          <p className="text-white/60 text-sm">No templates found</p>
+        </div>
+      )}
     </div>
   );
 

@@ -255,6 +255,97 @@ const Analytics: React.FC = () => {
         </div>
       </div>
 
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <motion.div
+          className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-lime-400/20 to-lime-500/20 rounded-xl flex items-center justify-center">
+              <FileText size={24} className="text-lime-400" />
+            </div>
+            <div>
+              <p className="text-white/60 text-sm">Total CVs</p>
+              <p className="text-2xl font-bold text-white">{cvStats.total}</p>
+            </div>
+          </div>
+          {cvStats.total === 0 && (
+            <div className="mt-3 p-3 bg-lime-400/10 border border-lime-400/20 rounded-lg">
+              <p className="text-lime-400 text-xs">Create your first CV to get started!</p>
+            </div>
+          )}
+        </motion.div>
+
+        <motion.div
+          className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-400/20 to-blue-500/20 rounded-xl flex items-center justify-center">
+              <Eye size={24} className="text-blue-400" />
+            </div>
+            <div>
+              <p className="text-white/60 text-sm">Total Views</p>
+              <p className="text-2xl font-bold text-white">{cvs.reduce((sum, cv) => sum + cv.views, 0)}</p>
+            </div>
+          </div>
+          {cvs.reduce((sum, cv) => sum + cv.views, 0) === 0 && (
+            <div className="mt-3 p-3 bg-blue-400/10 border border-blue-400/20 rounded-lg">
+              <p className="text-blue-400 text-xs">Publish your CVs to start getting views!</p>
+            </div>
+          )}
+        </motion.div>
+
+        <motion.div
+          className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-purple-400/20 to-purple-500/20 rounded-xl flex items-center justify-center">
+              <Star size={24} className="text-purple-400" />
+            </div>
+            <div>
+              <p className="text-white/60 text-sm">Starred</p>
+              <p className="text-2xl font-bold text-white">{cvs.filter(cv => cv.isStarred).length}</p>
+            </div>
+          </div>
+          {cvs.filter(cv => cv.isStarred).length === 0 && (
+            <div className="mt-3 p-3 bg-purple-400/10 border border-purple-400/20 rounded-lg">
+              <p className="text-purple-400 text-xs">Star your favorite CVs for quick access!</p>
+            </div>
+          )}
+        </motion.div>
+
+        <motion.div
+          className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+        >
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-green-400/20 to-green-500/20 rounded-xl flex items-center justify-center">
+              <CheckCircle size={24} className="text-green-400" />
+            </div>
+            <div>
+              <p className="text-white/60 text-sm">Published</p>
+              <p className="text-2xl font-bold text-white">{cvs.filter(cv => cv.status === 'published').length}</p>
+            </div>
+          </div>
+          {cvs.filter(cv => cv.status === 'published').length === 0 && cvStats.total > 0 && (
+            <div className="mt-3 p-3 bg-yellow-400/10 border border-yellow-400/20 rounded-lg">
+              <p className="text-yellow-400 text-xs">No published CVs yet. Click 'Edit' to publish!</p>
+            </div>
+          )}
+        </motion.div>
+      </div>
+
       {/* Widgets Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         
@@ -263,7 +354,6 @@ const Analytics: React.FC = () => {
           title="Continue Where You Left Off"
           isMinimized={minimizedWidgets.has('activity')}
           onToggleMinimize={() => toggleWidgetMinimize('activity')}
-          className="lg:col-span-2"
         >
           {cvStats.mostRecentCV ? (
             <div className="flex items-center gap-4">
@@ -307,6 +397,97 @@ const Analytics: React.FC = () => {
               </motion.button>
             </div>
           )}
+        </Widget>
+
+        {/* 6. AI Job Assistant Widget */}
+        <Widget 
+          title="AI Job Whisperer"
+          isMinimized={minimizedWidgets.has('ai')}
+          onToggleMinimize={() => toggleWidgetMinimize('ai')}
+        >
+          <div className="space-y-3">
+            {/* AI Suggestions */}
+            <div className="space-y-2">
+              <h4 className="text-white font-medium flex items-center gap-2 text-sm">
+                <Bot size={14} className="text-lime-400" />
+                Smart Suggestions
+              </h4>
+              {cvStats.total === 0 ? (
+                <div className="p-2 bg-white/5 rounded-lg border border-white/10">
+                  <p className="text-white/80 text-xs">Create your first CV to get personalized suggestions</p>
+                </div>
+              ) : cvStats.drafts > 0 ? (
+                <div className="p-2 bg-white/5 rounded-lg border border-white/10">
+                  <p className="text-white/80 text-xs">You have {cvStats.drafts} draft CV(s). Consider publishing them for better visibility.</p>
+                </div>
+              ) : (
+                <div className="p-2 bg-white/5 rounded-lg border border-white/10">
+                  <p className="text-white/80 text-xs">Great job! All your CVs are published and ready for applications.</p>
+                </div>
+              )}
+              
+              {cvStats.total > 0 && (
+                <div className="p-2 bg-white/5 rounded-lg border border-white/10">
+                  <p className="text-white/80 text-xs">Your CV portfolio is {cvStats.total > 5 ? 'comprehensive' : 'growing'}. Keep building!</p>
+                </div>
+              )}
+            </div>
+
+            {/* Quick Actions */}
+            <div className="space-y-2">
+              <h4 className="text-white font-medium flex items-center gap-2 text-sm">
+                <Target size={14} className="text-blue-400" />
+                Quick Actions
+              </h4>
+              <motion.button
+                className="w-full p-2 bg-white/5 rounded-lg border border-white/10 cursor-pointer hover:bg-white/10 transition-all duration-300 text-left"
+                whileHover={{ scale: 1.02 }}
+                onClick={() => window.location.href = '/cv-studio'}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h5 className="text-white font-medium text-xs">Create New CV</h5>
+                    <p className="text-white/60 text-xs">Start with a template</p>
+                  </div>
+                  <Plus size={14} className="text-lime-400" />
+                </div>
+              </motion.button>
+              
+              {cvStats.mostRecentCV && (
+                <motion.button
+                  className="w-full p-2 bg-white/5 rounded-lg border border-white/10 cursor-pointer hover:bg-white/10 transition-all duration-300 text-left"
+                  whileHover={{ scale: 1.02 }}
+                  onClick={() => window.location.href = `/cv-studio?cv=${cvStats.mostRecentCV.id}`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h5 className="text-white font-medium text-xs">Edit Recent CV</h5>
+                      <p className="text-white/60 text-xs">{cvStats.mostRecentCV.title}</p>
+                    </div>
+                    <Edit size={14} className="text-blue-400" />
+                  </div>
+                </motion.button>
+              )}
+              
+              <motion.button
+                className="w-full p-2 bg-white/5 rounded-lg border border-white/10 cursor-pointer hover:bg-white/10 transition-all duration-300 text-left"
+                whileHover={{ scale: 1.02 }}
+                onClick={() => {
+                  const url = new URL(window.location.href);
+                  url.searchParams.set('section', 'pipeline');
+                  window.location.href = url.toString();
+                }}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h5 className="text-white font-medium text-xs">Track Applications</h5>
+                    <p className="text-white/60 text-xs">{jobs.length} jobs in pipeline</p>
+                  </div>
+                  <ArrowRight size={14} className="text-purple-400" />
+                </div>
+              </motion.button>
+            </div>
+          </div>
         </Widget>
 
         {/* 2. CV Statistics Widget */}
@@ -609,102 +790,6 @@ const Analytics: React.FC = () => {
               <Sparkles size={14} />
               Optimize Your CV
             </motion.button>
-          </div>
-        </Widget>
-
-        {/* 6. AI Job Assistant Widget */}
-        <Widget 
-          title="AI Job Whisperer"
-          isMinimized={minimizedWidgets.has('ai')}
-          onToggleMinimize={() => toggleWidgetMinimize('ai')}
-          className="lg:col-span-2"
-        >
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* AI Suggestions */}
-            <div className="space-y-3">
-              <h4 className="text-white font-medium flex items-center gap-2 text-sm">
-                <Bot size={14} className="text-lime-400" />
-                Smart Suggestions
-              </h4>
-              <div className="space-y-2">
-                {cvStats.total === 0 ? (
-                  <div className="p-2 bg-white/5 rounded-lg border border-white/10">
-                    <p className="text-white/80 text-xs">Create your first CV to get personalized suggestions</p>
-                  </div>
-                ) : cvStats.drafts > 0 ? (
-                  <div className="p-2 bg-white/5 rounded-lg border border-white/10">
-                    <p className="text-white/80 text-xs">You have {cvStats.drafts} draft CV(s). Consider publishing them for better visibility.</p>
-                  </div>
-                ) : (
-                  <div className="p-2 bg-white/5 rounded-lg border border-white/10">
-                    <p className="text-white/80 text-xs">Great job! All your CVs are published and ready for applications.</p>
-                  </div>
-                )}
-                
-                {cvStats.total > 0 && (
-                  <div className="p-2 bg-white/5 rounded-lg border border-white/10">
-                    <p className="text-white/80 text-xs">Your CV portfolio is {cvStats.total > 5 ? 'comprehensive' : 'growing'}. Keep building!</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="space-y-3">
-              <h4 className="text-white font-medium flex items-center gap-2 text-sm">
-                <Target size={14} className="text-blue-400" />
-                Quick Actions
-              </h4>
-              <div className="space-y-2">
-                <motion.button
-                  className="w-full p-2 bg-white/5 rounded-lg border border-white/10 cursor-pointer hover:bg-white/10 transition-all duration-300 text-left"
-                  whileHover={{ scale: 1.02 }}
-                  onClick={() => window.location.href = '/cv-studio'}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h5 className="text-white font-medium text-xs">Create New CV</h5>
-                      <p className="text-white/60 text-xs">Start with a template</p>
-                    </div>
-                    <Plus size={14} className="text-lime-400" />
-                  </div>
-                </motion.button>
-                
-                {cvStats.mostRecentCV && (
-                  <motion.button
-                    className="w-full p-2 bg-white/5 rounded-lg border border-white/10 cursor-pointer hover:bg-white/10 transition-all duration-300 text-left"
-                    whileHover={{ scale: 1.02 }}
-                    onClick={() => window.location.href = `/cv-studio?cv=${cvStats.mostRecentCV.id}`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h5 className="text-white font-medium text-xs">Edit Recent CV</h5>
-                        <p className="text-white/60 text-xs">{cvStats.mostRecentCV.title}</p>
-                      </div>
-                      <Edit size={14} className="text-blue-400" />
-                    </div>
-                  </motion.button>
-                )}
-                
-                <motion.button
-                  className="w-full p-2 bg-white/5 rounded-lg border border-white/10 cursor-pointer hover:bg-white/10 transition-all duration-300 text-left"
-                  whileHover={{ scale: 1.02 }}
-                  onClick={() => {
-                    const url = new URL(window.location.href);
-                    url.searchParams.set('section', 'pipeline');
-                    window.location.href = url.toString();
-                  }}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h5 className="text-white font-medium text-xs">Track Applications</h5>
-                      <p className="text-white/60 text-xs">{jobs.length} jobs in pipeline</p>
-                    </div>
-                    <ArrowRight size={14} className="text-purple-400" />
-                  </div>
-                </motion.button>
-              </div>
-            </div>
           </div>
         </Widget>
       </div>

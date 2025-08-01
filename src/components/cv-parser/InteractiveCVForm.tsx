@@ -56,7 +56,7 @@ interface CVFormData {
 interface InteractiveCVFormProps {
   initialData?: Partial<CVFormData>;
   onSave: (data: CVFormData) => void;
-  onBack: () => void;
+  onBack?: () => void;
 }
 
 const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSave, onBack }) => {
@@ -90,12 +90,15 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
   useEffect(() => {
     if (initialData) {
       console.log('InteractiveCVForm received initialData:', initialData);
+      console.log('InitialData type:', typeof initialData);
+      console.log('InitialData keys:', Object.keys(initialData));
       
       // Handle the data structure properly
       const updatedFormData = { ...formData };
       
       // Handle personal info
-      if (initialData.personalInfo) {
+      if (initialData.personalInfo && typeof initialData.personalInfo === 'object') {
+        console.log('Processing personal info:', initialData.personalInfo);
         updatedFormData.personalInfo = {
           ...updatedFormData.personalInfo,
           ...initialData.personalInfo,
@@ -107,33 +110,63 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
       
       // Handle education - add missing fields
       if (initialData.education && Array.isArray(initialData.education)) {
+        console.log('Processing education:', initialData.education);
         updatedFormData.education = initialData.education.map(edu => ({
-          ...edu,
+          institution: edu.institution || '',
+          degree: edu.degree || '',
+          field: edu.field || '',
           location: edu.location || '',
-          gpa: edu.gpa || ''
+          startDate: edu.startDate || '',
+          endDate: edu.endDate || '',
+          current: edu.current || false,
+          gpa: edu.gpa || '',
+          description: edu.description || ''
         }));
       }
       
       // Handle experience - structure is compatible
       if (initialData.experience && Array.isArray(initialData.experience)) {
-        updatedFormData.experience = initialData.experience;
+        console.log('Processing experience:', initialData.experience);
+        updatedFormData.experience = initialData.experience.map(exp => ({
+          company: exp.company || '',
+          position: exp.position || '',
+          location: exp.location || '',
+          startDate: exp.startDate || '',
+          endDate: exp.endDate || '',
+          current: exp.current || false,
+          description: exp.description || '',
+          achievements: Array.isArray(exp.achievements) ? exp.achievements : []
+        }));
       }
       
       // Handle skills - structure is compatible
       if (initialData.skills && Array.isArray(initialData.skills)) {
-        updatedFormData.skills = initialData.skills;
+        console.log('Processing skills:', initialData.skills);
+        updatedFormData.skills = initialData.skills.map(skill => ({
+          category: skill.category || 'Skills',
+          skills: Array.isArray(skill.skills) ? skill.skills : []
+        }));
       }
       
       // Handle projects - add missing fields
       if (initialData.projects && Array.isArray(initialData.projects)) {
+        console.log('Processing projects:', initialData.projects);
         updatedFormData.projects = initialData.projects.map(project => ({
-          ...project,
-          technologies: project.technologies || []
+          title: project.title || '',
+          description: project.description || '',
+          technologies: Array.isArray(project.technologies) ? project.technologies : [],
+          url: project.url || '',
+          github: project.github || '',
+          startDate: project.startDate || '',
+          endDate: project.endDate || '',
+          current: project.current || false
         }));
       }
       
       console.log('InteractiveCVForm setting formData to:', updatedFormData);
       setFormData(updatedFormData);
+    } else {
+      console.log('No initialData provided to InteractiveCVForm');
     }
   }, [initialData]);
 
@@ -777,32 +810,6 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black">
-      {/* Header */}
-      <div className="sticky top-0 z-40 bg-black/80 backdrop-blur-xl border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-20">
-            <motion.button
-              onClick={onBack}
-              className="flex items-center gap-2 text-white/60 hover:text-white transition-colors"
-              whileHover={{ x: -5 }}
-            >
-              <ArrowLeft size={20} />
-              Back
-            </motion.button>
-
-            <div className="flex items-center gap-4">
-              <motion.button
-                className="flex items-center gap-2 px-4 py-2 text-white/60 hover:text-white transition-colors"
-                whileHover={{ scale: 1.05 }}
-              >
-                <Eye size={16} />
-                Preview
-              </motion.button>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Sidebar Navigation */}

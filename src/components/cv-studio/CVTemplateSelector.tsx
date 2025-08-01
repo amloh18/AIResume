@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FileText, 
@@ -10,19 +10,24 @@ import {
   Palette,
   Settings,
   CheckCircle,
-  Sparkles
+  Sparkles,
+  Loader2
 } from 'lucide-react';
 
 interface CVTemplate {
-  id: string;
+  _id: string;
+  id?: string;
   name: string;
   category: string[];
   thumbnail: string;
   isPremium: boolean;
+  isDefault: boolean;
   description: string;
-  features: string[];
-  rating: number;
-  downloads: number;
+  metadata: {
+    rating: number;
+    usageCount: number;
+    tags: string[];
+  };
 }
 
 interface CVTemplateSelectorProps {
@@ -37,93 +42,101 @@ const CVTemplateSelector: React.FC<CVTemplateSelectorProps> = ({
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
+  const [templates, setTemplates] = useState<CVTemplate[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const categories = [
-    { id: 'all', name: 'All Templates', count: 12 },
-    { id: 'ats-friendly', name: 'ATS-Friendly', count: 6 },
-    { id: 'modern', name: 'Modern', count: 4 },
-    { id: 'creative', name: 'Creative', count: 3 },
-    { id: 'minimalist', name: 'Minimalist', count: 3 },
-    { id: 'professional', name: 'Professional', count: 5 }
-  ];
+  // Fetch templates from API
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/templates');
+        const data = await response.json();
+        
+        if (data.success) {
+          setTemplates(data.data);
+        } else {
+          setError('Failed to load templates');
+        }
+      } catch (err) {
+        setError('Failed to load templates');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const templates: CVTemplate[] = [
-    {
-      id: '1',
-      name: 'Classic ATS',
-      category: ['ATS-Friendly', 'Professional'],
-      thumbnail: '/api/placeholder/300/400',
-      isPremium: false,
-      description: 'Optimized for Applicant Tracking Systems with clean, structured layout.',
-      features: ['ATS Optimized', 'Clean Layout', 'Professional', 'Single Column'],
-      rating: 4.8,
-      downloads: 15420
-    },
-    {
-      id: '2',
-      name: 'Modern Sidebar',
-      category: ['Modern', 'Two-Column'],
-      thumbnail: '/api/placeholder/300/400',
-      isPremium: false,
-      description: 'Contemporary design with sidebar layout for better visual hierarchy.',
-      features: ['Modern Design', 'Sidebar Layout', 'Visual Hierarchy', 'Two Column'],
-      rating: 4.6,
-      downloads: 8920
-    },
-    {
-      id: '3',
-      name: 'Creative Portfolio',
-      category: ['Creative', 'Portfolio'],
-      thumbnail: '/api/placeholder/300/400',
-      isPremium: true,
-      description: 'Perfect for creative professionals showcasing their work and skills.',
-      features: ['Creative Design', 'Portfolio Focus', 'Visual Elements', 'Premium'],
-      rating: 4.9,
-      downloads: 5670
-    },
-    {
-      id: '4',
-      name: 'Minimalist Clean',
-      category: ['Minimalist', 'ATS-Friendly'],
-      thumbnail: '/api/placeholder/300/400',
-      isPremium: false,
-      description: 'Clean and minimal design that focuses on content over decoration.',
-      features: ['Minimalist', 'Clean Design', 'Content Focus', 'ATS Friendly'],
-      rating: 4.7,
-      downloads: 12340
-    },
-    {
-      id: '5',
-      name: 'Executive Professional',
-      category: ['Professional', 'Executive'],
-      thumbnail: '/api/placeholder/300/400',
-      isPremium: true,
-      description: 'Sophisticated design for senior-level professionals and executives.',
-      features: ['Executive Level', 'Professional', 'Sophisticated', 'Premium'],
-      rating: 4.9,
-      downloads: 3450
-    },
-    {
-      id: '6',
-      name: 'Developer Focus',
-      category: ['Modern', 'Technical'],
-      thumbnail: '/api/placeholder/300/400',
-      isPremium: false,
-      description: 'Designed specifically for software developers and technical professionals.',
-      features: ['Developer Focus', 'Technical', 'Modern', 'Code Highlighting'],
-      rating: 4.5,
-      downloads: 7890
-    }
-  ];
+    fetchTemplates();
+  }, []);
 
-  const filteredTemplates = templates.filter(template => {
-    const matchesCategory = activeCategory === 'all' || template.category.some(cat => 
-      cat.toLowerCase().includes(activeCategory.toLowerCase())
+  // Generate categories from templates
+  const categories = React.useMemo(() => {
+    const categoryCounts: Record<string, number> = {};
+    templates.forEach(template => {
+      template.category.forEach(cat => {
+        categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+      });
+    });
+
+    const categoryList = [
+      { id: 'all', name: 'All Templates', count: templates.length },
+      ...Object.entries(categoryCounts).map(([id, count]) => ({
+        id: id.toLowerCase(),
+        name: id,
+        count
+      }))
+    ];
+
+    return categoryList;
+  }, [templates]);
+
+  // Filter templates based on category and search
+  const filteredTemplates = React.useMemo(() => {
+    return templates.filter(template => {
+      const matchesCategory = activeCategory === 'all' || 
+        template.category.some(cat => cat.toLowerCase() === activeCategory);
+      
+      const matchesSearch = searchQuery === '' || 
+        template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        template.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        template.category.some(cat => cat.toLowerCase().includes(searchQuery.toLowerCase()));
+      
+      return matchesCategory && matchesSearch;
+    });
+  }, [templates, activeCategory, searchQuery]);
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="bg-white rounded-2xl shadow-xl p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="flex items-center gap-3">
+            <Loader2 className="animate-spin text-blue-500" size={24} />
+            <span className="text-gray-600">Loading templates...</span>
+          </div>
+        </div>
+      </div>
     );
-    const matchesSearch = template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         template.description.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="bg-white rounded-2xl shadow-xl p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <p className="text-red-500 mb-2">{error}</p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="text-blue-500 hover:text-blue-600"
+            >
+              Try again
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-2xl shadow-xl p-6">
@@ -197,7 +210,7 @@ const CVTemplateSelector: React.FC<CVTemplateSelectorProps> = ({
         <AnimatePresence>
           {filteredTemplates.map((template) => (
             <motion.div
-              key={template.id}
+              key={template._id}
               layout
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -208,7 +221,7 @@ const CVTemplateSelector: React.FC<CVTemplateSelectorProps> = ({
               }`}
             >
               <div className={`bg-white border-2 rounded-xl overflow-hidden transition-all duration-300 hover:shadow-lg ${
-                selectedTemplate?.id === template.id 
+                selectedTemplate?._id === template._id 
                   ? 'border-blue-500 shadow-lg' 
                   : 'border-gray-200 hover:border-gray-300'
               }`}>
@@ -252,7 +265,7 @@ const CVTemplateSelector: React.FC<CVTemplateSelectorProps> = ({
                     </h3>
                     <div className="flex items-center gap-1">
                       <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                      <span className="text-sm text-gray-600">{template.rating}</span>
+                      <span className="text-sm text-gray-600">{template.metadata.rating}</span>
                     </div>
                   </div>
                   
@@ -278,12 +291,12 @@ const CVTemplateSelector: React.FC<CVTemplateSelectorProps> = ({
                   
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-500">
-                      {template.downloads.toLocaleString()} downloads
+                      {template.metadata.usageCount.toLocaleString()} uses
                     </span>
                     <button
                       onClick={() => onTemplateSelect(template)}
                       className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        selectedTemplate?.id === template.id
+                        selectedTemplate?._id === template._id
                           ? 'bg-blue-600 text-white'
                           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                       }`}
