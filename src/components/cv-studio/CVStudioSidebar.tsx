@@ -41,8 +41,8 @@ interface CVTemplate {
 interface CVStudioSidebarProps {
   isCollapsed: boolean;
   onToggleCollapse: () => void;
-  activeTab: 'templates' | 'customize' | 'snippets';
-  onTabChange: (tab: 'templates' | 'customize' | 'snippets') => void;
+  activeTab: 'templates' | 'customize';
+  onTabChange: (tab: 'templates' | 'customize') => void;
   userCVs: any[];
   linkedJobs: any[];
   onTemplateSelect?: (template: CVTemplate) => void;
@@ -110,8 +110,7 @@ const CVStudioSidebar: React.FC<CVStudioSidebarProps> = ({
 
   const tabs = [
     { id: 'templates', name: 'Templates', icon: FileText, description: 'Choose from professional templates' },
-    { id: 'customize', name: 'Customize', icon: Palette, description: 'Adjust styling and layout' },
-    { id: 'snippets', name: 'Snippets', icon: Layers, description: 'Add reusable content blocks' }
+    { id: 'customize', name: 'Customize', icon: Palette, description: 'Adjust styling and layout' }
   ];
 
   // Fetch templates from API
@@ -615,7 +614,6 @@ const CVStudioSidebar: React.FC<CVStudioSidebarProps> = ({
             >
               {activeTab === 'templates' && renderTemplatesTab()}
               {activeTab === 'customize' && renderCustomizeTab()}
-              {activeTab === 'snippets' && renderSnippetsTab()}
             </motion.div>
           )}
         </AnimatePresence>
