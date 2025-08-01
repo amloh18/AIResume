@@ -2,19 +2,22 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Home, User, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Home, User, CheckCircle, Users } from 'lucide-react';
 import CVUpload from '@/components/cv-parser/CVUpload';
 import InteractiveCVForm from '@/components/cv-parser/InteractiveCVForm';
 import RegistrationModal from '@/components/auth/RegistrationModal';
+import RoleSelection from '@/components/auth/RoleSelection';
 
-type OnboardingStep = 'upload' | 'form' | 'registration' | 'complete';
+type OnboardingStep = 'upload' | 'form' | 'registration' | 'role' | 'complete';
 
 const CVOnboardingPage: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('upload');
   const [cvData, setCvData] = useState<any>(null);
   const [formData, setFormData] = useState<any>(null);
   const [showRegistration, setShowRegistration] = useState(false);
+  const [showRoleSelection, setShowRoleSelection] = useState(false);
   const [userData, setUserData] = useState<any>(null);
+  const [selectedRole, setSelectedRole] = useState<'student' | 'professional' | 'recruiter' | null>(null);
   const [isRedirecting, setIsRedirecting] = useState(false);
 
   // Save progress to localStorage
@@ -25,6 +28,18 @@ const CVOnboardingPage: React.FC = () => {
       setCvData(progress.cvData || null);
       setFormData(progress.formData || null);
       setCurrentStep(progress.step || 'upload');
+      
+      setSelectedRole(progress.selectedRole || null);
+      
+      // If the saved step is 'registration', show the registration modal
+      if (progress.step === 'registration') {
+        setShowRegistration(true);
+      }
+      
+      // If the saved step is 'role', show the role selection modal
+      if (progress.step === 'role') {
+        setShowRoleSelection(true);
+      }
     }
   }, []);
 
@@ -33,6 +48,7 @@ const CVOnboardingPage: React.FC = () => {
       step,
       cvData: data?.cvData || cvData,
       formData: data?.formData || formData,
+      selectedRole: data?.selectedRole || selectedRole,
       timestamp: new Date().toISOString()
     };
     localStorage.setItem('cvOnboardingProgress', JSON.stringify(progress));
@@ -46,8 +62,15 @@ const CVOnboardingPage: React.FC = () => {
 
   const handleFormSave = (formData: any) => {
     setFormData(formData);
+    setShowRoleSelection(true);
+    saveProgress('role', { cvData, formData });
+  };
+
+  const handleRoleSelect = (role: 'student' | 'professional' | 'recruiter') => {
+    setSelectedRole(role);
+    setShowRoleSelection(false);
     setShowRegistration(true);
-    saveProgress('registration', { cvData, formData });
+    saveProgress('registration', { cvData, formData, selectedRole: role });
   };
 
   const handleRegistration = async (userData: any) => {
@@ -65,7 +88,7 @@ const CVOnboardingPage: React.FC = () => {
           password: userData.password,
           firstName: userData.firstName,
           lastName: userData.lastName,
-          role: userData.role
+          role: selectedRole || 'user'
         }),
       });
 
@@ -139,6 +162,9 @@ const CVOnboardingPage: React.FC = () => {
       case 'registration':
         setShowRegistration(false);
         break;
+      case 'role':
+        setShowRoleSelection(false);
+        break;
       default:
         break;
     }
@@ -148,13 +174,16 @@ const CVOnboardingPage: React.FC = () => {
     localStorage.removeItem('cvOnboardingProgress');
     setCvData(null);
     setFormData(null);
+    setSelectedRole(null);
     setCurrentStep('upload');
     setShowRegistration(false);
+    setShowRoleSelection(false);
   };
 
   const steps = [
     { id: 'upload', title: 'Upload CV', icon: User },
     { id: 'form', title: 'Edit CV', icon: CheckCircle },
+    { id: 'role', title: 'Choose Role', icon: Users },
     { id: 'registration', title: 'Create Account', icon: User },
     { id: 'complete', title: 'Complete', icon: CheckCircle }
   ];
@@ -340,12 +369,23 @@ const CVOnboardingPage: React.FC = () => {
         </AnimatePresence>
       </div>
 
+      {/* Role Selection Modal */}
+      <RoleSelection
+        isOpen={showRoleSelection}
+        onRoleSelect={handleRoleSelect}
+        onBack={() => {
+          setShowRoleSelection(false);
+          setCurrentStep('form');
+        }}
+      />
+
       {/* Registration Modal */}
       <RegistrationModal
         isOpen={showRegistration}
         onClose={() => setShowRegistration(false)}
         onRegister={handleRegistration}
         cvData={formData}
+        selectedRole={selectedRole || undefined}
       />
     </div>
   );

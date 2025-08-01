@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FileText, 
@@ -37,6 +39,8 @@ import DashboardNavigation from '@/components/dashboard/DashboardNavigation';
 interface DashboardProps {}
 
 const Dashboard: React.FC<DashboardProps> = () => {
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const [activeSection, setActiveSection] = useState('pulse');
   const [user, setUser] = useState({
     name: 'Amarjot',
@@ -66,15 +70,20 @@ const Dashboard: React.FC<DashboardProps> = () => {
 
   const [showWelcomeAnimation, setShowWelcomeAnimation] = useState(false);
 
-  // Check if user is logged in and coming from onboarding
+  // Check authentication and handle onboarding flow
   useEffect(() => {
-    const user = localStorage.getItem('user');
-    if (!user) {
-      // Redirect to login if not authenticated
-      window.location.href = '/';
-      return;
+    if (status === 'loading') return; // Still loading
+
+    if (status === 'unauthenticated') {
+      // Check localStorage as fallback
+      const localUser = localStorage.getItem('user');
+      if (!localUser) {
+        router.push('/');
+        return;
+      }
     }
 
+    // Handle welcome animation from onboarding
     const isFromOnboarding = sessionStorage.getItem('fromOnboarding');
     if (isFromOnboarding) {
       setShowWelcomeAnimation(true);
@@ -85,7 +94,33 @@ const Dashboard: React.FC<DashboardProps> = () => {
         setShowWelcomeAnimation(false);
       }, 5000);
     }
-  }, []);
+  }, [status, router]);
+
+  // Update user data from session or localStorage
+  useEffect(() => {
+    if (session?.user) {
+      setUser(prev => ({
+        ...prev,
+        name: session.user.firstName || session.user.name || 'User',
+        email: session.user.email || prev.email
+      }));
+    } else {
+      // Fallback to localStorage
+      const userData = localStorage.getItem('user');
+      if (userData) {
+        try {
+          const parsedUser = JSON.parse(userData);
+          setUser(prev => ({
+            ...prev,
+            name: parsedUser.firstName || parsedUser.name || 'User',
+            email: parsedUser.email || prev.email
+          }));
+        } catch (error) {
+          console.error('Error parsing user data:', error);
+        }
+      }
+    }
+  }, [session]);
 
   const [recentFiles, setRecentFiles] = useState([
     { id: 1, name: 'Senior UX Designer CV', type: 'cv', lastOpened: '2 hours ago' },

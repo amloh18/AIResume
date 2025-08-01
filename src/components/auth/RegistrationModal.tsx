@@ -1,500 +1,414 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { signIn } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, User, GraduationCap, Briefcase, Building, ArrowRight, CheckCircle, Eye, EyeOff } from 'lucide-react';
+import { X, User, Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
 
 interface RegistrationModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onRegister: (userData: any) => void;
+  onSwitchToLogin?: () => void;
+  onRegister?: (userData: any) => void;
   cvData?: any;
+  selectedRole?: 'student' | 'professional' | 'recruiter';
 }
 
-const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose, onRegister, cvData }) => {
-  const [step, setStep] = useState<'role' | 'details' | 'complete'>('role');
-  const [selectedRole, setSelectedRole] = useState<'student' | 'professional' | 'recruiter' | null>(null);
+export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, onRegister, cvData, selectedRole }: RegistrationModalProps) {
   const [formData, setFormData] = useState({
-    firstName: cvData?.personalInfo?.firstName || '',
-    lastName: cvData?.personalInfo?.lastName || '',
-    email: cvData?.personalInfo?.email || '',
+    firstName: '',
+    lastName: '',
+    email: '',
     password: '',
-    confirmPassword: '',
-    agreeToTerms: false
+    confirmPassword: ''
   });
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [errors, setErrors] = useState<any>({});
-  const [isLoading, setIsLoading] = useState(false);
-  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const router = useRouter();
 
-  // Auto-fill form data when cvData changes
-  React.useEffect(() => {
-    if (cvData?.personalInfo) {
-      setFormData((prev: any) => ({
-        ...prev,
-        firstName: cvData.personalInfo.firstName || prev.firstName,
-        lastName: cvData.personalInfo.lastName || prev.lastName,
-        email: cvData.personalInfo.email || prev.email,
-      }));
-    }
-  }, [cvData]);
+  // Check if OAuth providers are available
+  const hasGoogleCredentials = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && process.env.NEXT_PUBLIC_GOOGLE_CLIENT_SECRET;
+  const hasAppleCredentials = process.env.NEXT_PUBLIC_APPLE_ID && process.env.NEXT_PUBLIC_APPLE_SECRET;
 
-  // Check email availability
-  const checkEmailAvailability = async (email: string) => {
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
-    
-    setIsCheckingEmail(true);
-    try {
-      const response = await fetch('/api/auth/check-email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email }),
-      });
-      
-      const result = await response.json();
-      
-      if (response.ok && result.exists) {
-        setErrors((prev: any) => ({
-          ...prev,
-          email: 'This email is already registered. Please use a different email or try logging in.'
-        }));
-      } else {
-        // Clear email error if it was previously set
-        setErrors((prev: any) => {
-          const newErrors = { ...prev };
-          delete newErrors.email;
-          return newErrors;
-        });
-      }
-    } catch (error) {
-      console.error('Error checking email:', error);
-    } finally {
-      setIsCheckingEmail(false);
-    }
-  };
-
-  // Debounced email check
-  const debouncedEmailCheck = React.useCallback(
-    React.useMemo(() => {
-      let timeoutId: NodeJS.Timeout;
-      return (email: string) => {
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(() => checkEmailAvailability(email), 500);
-      };
-    }, []),
-    []
-  );
-
-  const roles = [
-    {
-      id: 'student',
-      title: 'Student',
-      description: 'I\'m a student looking to build my professional profile',
-      icon: GraduationCap,
-      color: 'from-blue-400 to-blue-600',
-      features: ['Free CV templates', 'Student discounts', 'Career guidance']
-    },
-    {
-      id: 'professional',
-      title: 'Professional',
-      description: 'I\'m a working professional looking to advance my career',
-      icon: Briefcase,
-      color: 'from-green-400 to-green-600',
-      features: ['Advanced templates', 'Premium features', 'Priority support']
-    },
-    {
-      id: 'recruiter',
-      title: 'Recruiter',
-      description: 'I\'m a recruiter looking to find and manage talent',
-      icon: Building,
-      color: 'from-purple-400 to-purple-600',
-      features: ['Talent search', 'Candidate management', 'Analytics dashboard']
-    }
-  ];
-
-  const validateForm = () => {
-    const newErrors: any = {};
-
-    if (!formData.firstName.trim()) {
-      newErrors.firstName = 'First name is required';
-    }
-
-    if (!formData.lastName.trim()) {
-      newErrors.lastName = 'Last name is required';
-    }
-
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
-    }
-
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    } else if (formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters long';
-    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
-      newErrors.password = 'Password must contain uppercase, lowercase, and number';
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
-    }
-
-    if (!formData.agreeToTerms) {
-      newErrors.agreeToTerms = 'You must agree to the terms and conditions';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleRoleSelect = (role: 'student' | 'professional' | 'recruiter') => {
-    setSelectedRole(role);
-    setStep('details');
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    if (error) setError('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!validateForm()) return;
-
     setIsLoading(true);
-    setErrors({});
+    setError('');
 
-    try {
-      setStep('complete');
-      
-      // Call the registration function
-      await onRegister({
-        ...formData,
-        role: selectedRole,
-        cvData
-      });
-      
-      // If successful, the parent component will handle the redirect
-    } catch (error: any) {
-      console.error('Registration error:', error);
-      
-      // Go back to details step to show error
-      setStep('details');
-      
-      // Set error message
-      if (error.message.includes('Email already exists')) {
-        setErrors({
-          email: 'This email is already registered. Please use a different email or try logging in.',
-          general: error.message
-        });
-      } else {
-        setErrors({
-          general: error.message || 'Registration failed. Please try again.'
-        });
+    // Validation
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
+      setIsLoading(false);
+      return;
+    }
+
+    if (formData.password.length < 8) {
+      setError('Password must be at least 8 characters long');
+      setIsLoading(false);
+      return;
+    }
+
+    // If this is the onboarding flow, use the onRegister callback
+    if (onRegister) {
+      try {
+        const userData = {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          password: formData.password,
+          role: selectedRole || 'user' // Use selected role or default to 'user'
+        };
+        
+        await onRegister(userData);
+      } catch (error: any) {
+        setError(error.message || 'Registration failed. Please try again.');
+      } finally {
+        setIsLoading(false);
       }
+      return;
+    }
+
+    // Regular registration flow
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        setRegistrationSuccess(true);
+        
+        // Auto-login after successful registration
+        const signInResult = await signIn('credentials', {
+          email: formData.email,
+          password: formData.password,
+          redirect: false,
+        });
+
+        if (signInResult?.error) {
+          setError('Registration successful but login failed. Please try logging in.');
+          setRegistrationSuccess(false);
+        } else {
+          // Close modal and redirect after success animation
+          setTimeout(() => {
+            onClose();
+            router.push('/dashboard');
+          }, 2000);
+        }
+      } else {
+        setError(result.message || 'Registration failed. Please try again.');
+      }
+    } catch (error) {
+      setError('An error occurred. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const updateFormData = (field: string, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-    
-    // Clear error when user starts typing
-    if (errors[field]) {
-      setErrors((prev: any) => ({
-        ...prev,
-        [field]: ''
-      }));
+  const handleOAuthSignIn = async (provider: 'google' | 'apple') => {
+    setIsLoading(true);
+    setError('');
+
+    try {
+      await signIn(provider, { callbackUrl: '/dashboard' });
+    } catch (error) {
+      setError(`Failed to sign in with ${provider}. Please try again.`);
+      setIsLoading(false);
     }
   };
 
-  if (!isOpen) return null;
+  const handleClose = () => {
+    if (!isLoading) {
+      onClose();
+      setFormData({
+        firstName: '',
+        lastName: '',
+        email: '',
+        password: '',
+        confirmPassword: ''
+      });
+      setError('');
+      setRegistrationSuccess(false);
+    }
+  };
 
   return (
     <AnimatePresence>
-      <motion.div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xl"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-      >
+      {isOpen && (
         <motion.div
-          className="relative w-full max-w-4xl mx-4 bg-gradient-to-br from-gray-900/95 to-black/95 rounded-3xl border border-white/10 shadow-2xl overflow-hidden"
-          initial={{ scale: 0.8, y: 50 }}
-          animate={{ scale: 1, y: 0 }}
-          exit={{ scale: 0.8, y: 50 }}
-          transition={{ type: "spring", damping: 25, stiffness: 300 }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-hidden"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
         >
-          {/* Header */}
-          <div className="relative p-8 border-b border-white/10">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-3xl font-bold text-white mb-2">
-                  {step === 'role' && 'Choose Your Role'}
-                  {step === 'details' && 'Create Your Account'}
-                  {step === 'complete' && 'Welcome to CVCircle!'}
-                </h2>
-                <p className="text-white/60 text-lg">
-                  {step === 'role' && 'Tell us about yourself to personalize your experience'}
-                  {step === 'details' && 'Complete your account setup to get started'}
-                  {step === 'complete' && 'Your account has been created successfully'}
-                </p>
-              </div>
-              <motion.button
-                onClick={onClose}
-                className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors duration-300"
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-              >
-                <X size={24} className="text-white" />
-              </motion.button>
-            </div>
-          </div>
+          {/* Backdrop */}
+          <motion.div
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={handleClose}
+          />
 
-          {/* Content */}
-          <div className="p-8">
-            <AnimatePresence mode="wait">
-              {step === 'role' && (
+          {/* Modal */}
+          <motion.div
+            className="relative w-full max-w-lg bg-gradient-to-br from-gray-900 to-black border border-white/10 rounded-2xl p-8 shadow-2xl overflow-y-auto max-h-[90vh]"
+            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            style={{ position: 'relative' }}
+          >
+            {/* Close Button */}
+            <motion.button
+              onClick={handleClose}
+              className="absolute top-4 right-4 p-2 text-white/60 hover:text-white transition-colors z-10"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              disabled={isLoading}
+            >
+              <X size={20} />
+            </motion.button>
+
+            {/* Success State */}
+            <AnimatePresence>
+              {registrationSuccess ? (
                 <motion.div
-                  key="role-selection"
-                  initial={{ opacity: 0, x: 50 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -50 }}
-                  className="space-y-6"
+                  className="text-center space-y-6"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
                 >
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {roles.map((role) => (
-                      <motion.div
-                        key={role.id}
-                        className="group cursor-pointer"
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => handleRoleSelect(role.id as any)}
-                      >
-                        <div className="relative p-6 bg-white/5 border border-white/10 rounded-2xl hover:border-lime-400/50 transition-all duration-300">
-                          <div className={`w-16 h-16 bg-gradient-to-br ${role.color} rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
-                            <role.icon size={32} className="text-white" />
-                          </div>
-                          
-                          <h3 className="text-xl font-bold text-white mb-2">{role.title}</h3>
-                          <p className="text-white/60 text-sm mb-4">{role.description}</p>
-                          
-                          <ul className="space-y-2">
-                            {role.features.map((feature, index) => (
-                              <li key={index} className="flex items-center gap-2 text-white/80 text-sm">
-                                <CheckCircle size={16} className="text-lime-400" />
-                                {feature}
-                              </li>
-                            ))}
-                          </ul>
-                          
-                          <motion.div
-                            className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                            whileHover={{ rotate: 45 }}
-                          >
-                            <ArrowRight size={20} className="text-lime-400" />
-                          </motion.div>
-                        </div>
-                      </motion.div>
-                    ))}
+                  <motion.div
+                    className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-green-400 to-green-500 flex items-center justify-center"
+                    initial={{ scale: 0, rotate: -180 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{ delay: 0.2, type: "spring" }}
+                  >
+                    <CheckCircle size={32} className="text-white" />
+                  </motion.div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-white mb-2">Welcome to CVCircle!</h2>
+                    <p className="text-white/60">Account created successfully. Redirecting to dashboard...</p>
                   </div>
                 </motion.div>
-              )}
-
-              {step === 'details' && (
+              ) : (
                 <motion.div
-                  key="registration-form"
-                  initial={{ opacity: 0, x: 50 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -50 }}
-                  className="space-y-6"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
                 >
-                  {/* Selected Role Display */}
-                  <div className="flex items-center gap-4 p-4 bg-white/5 border border-white/10 rounded-2xl">
-                    {selectedRole && (
-                      <>
-                        <div className={`w-12 h-12 bg-gradient-to-br ${roles.find(r => r.id === selectedRole)?.color} rounded-xl flex items-center justify-center`}>
-                          {React.createElement(roles.find(r => r.id === selectedRole)?.icon || User, { size: 24, className: "text-white" })}
-                        </div>
-                        <div>
-                          <h4 className="text-white font-medium">{roles.find(r => r.id === selectedRole)?.title}</h4>
-                          <p className="text-white/60 text-sm">{roles.find(r => r.id === selectedRole)?.description}</p>
-                        </div>
-                        <motion.button
-                          onClick={() => setStep('role')}
-                          className="ml-auto text-white/60 hover:text-white transition-colors"
-                          whileHover={{ scale: 1.1 }}
-                        >
-                          Change
-                        </motion.button>
-                      </>
-                    )}
+                  {/* Header */}
+                  <div className="text-center mb-8">
+                    <h2 className="text-3xl font-bold text-white mb-2">Create Account</h2>
+                    <p className="text-white/60">Join CVCircle and build your professional profile</p>
                   </div>
 
+                  {/* OAuth Buttons - Only show if credentials are configured */}
+                  {(hasGoogleCredentials || hasAppleCredentials) && (
+                    <>
+                      <div className="space-y-3 mb-6">
+                        {hasGoogleCredentials && (
+                          <motion.button
+                            onClick={() => handleOAuthSignIn('google')}
+                            disabled={isLoading}
+                            className="w-full flex items-center justify-center px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-lime-400/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+                            whileHover={{ scale: isLoading ? 1 : 1.02 }}
+                            whileTap={{ scale: isLoading ? 1 : 0.98 }}
+                          >
+                            <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
+                              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                            </svg>
+                            Continue with Google
+                          </motion.button>
+                        )}
+
+                        {hasAppleCredentials && (
+                          <motion.button
+                            onClick={() => handleOAuthSignIn('apple')}
+                            disabled={isLoading}
+                            className="w-full flex items-center justify-center px-4 py-3 bg-black border border-white/20 rounded-xl text-white hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-lime-400/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+                            whileHover={{ scale: isLoading ? 1 : 1.02 }}
+                            whileTap={{ scale: isLoading ? 1 : 0.98 }}
+                          >
+                            <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
+                            </svg>
+                            Continue with Apple
+                          </motion.button>
+                        )}
+                      </div>
+
+                      {/* Divider */}
+                      <div className="relative mb-6">
+                        <div className="absolute inset-0 flex items-center">
+                          <div className="w-full border-t border-white/20" />
+                        </div>
+                        <div className="relative flex justify-center text-sm">
+                          <span className="px-2 bg-gray-900 text-white/60">Or sign up with email</span>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Registration Form */}
                   <form onSubmit={handleSubmit} className="space-y-6">
-                    {/* General Error Display */}
-                    {errors.general && (
+                    {error && (
                       <motion.div
                         className="p-4 bg-red-400/10 border border-red-400/20 rounded-xl flex items-center gap-3 text-red-400"
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
                       >
-                        <X size={20} />
-                        <span className="text-sm">{errors.general}</span>
+                        <AlertCircle size={20} />
+                        <span className="text-sm">{error}</span>
                       </motion.div>
                     )}
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                    {/* Name Fields */}
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-white/80 text-sm font-medium mb-2">First Name</label>
-                        <input
-                          type="text"
-                          value={formData.firstName}
-                          onChange={(e) => updateFormData('firstName', e.target.value)}
-                          className={`w-full px-4 py-3 bg-white/5 border rounded-xl text-white placeholder-white/40 focus:outline-none transition-colors ${
-                            errors.firstName ? 'border-red-400' : 'border-white/10 focus:border-lime-400'
-                          }`}
-                          placeholder="Enter your first name"
-                        />
-                        {errors.firstName && (
-                          <p className="text-red-400 text-sm mt-1">{errors.firstName}</p>
-                        )}
+                        <label className="block text-white/80 text-sm font-medium mb-2">
+                          First Name
+                        </label>
+                        <div className="relative">
+                          <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/40 z-10" size={20} />
+                          <input
+                            type="text"
+                            value={formData.firstName}
+                            onChange={(e) => handleInputChange('firstName', e.target.value)}
+                            required
+                            className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300 [&:-webkit-autofill]:bg-white/10 [&:-webkit-autofill]:text-white [&:-webkit-autofill]:shadow-[0_0_0_30px_rgba(255,255,255,0.1)_inset] [&:-webkit-autofill]:border-lime-400/50"
+                            placeholder="First name"
+                            disabled={isLoading}
+                          />
+                        </div>
                       </div>
                       <div>
-                        <label className="block text-white/80 text-sm font-medium mb-2">Last Name</label>
-                        <input
-                          type="text"
-                          value={formData.lastName}
-                          onChange={(e) => updateFormData('lastName', e.target.value)}
-                          className={`w-full px-4 py-3 bg-white/5 border rounded-xl text-white placeholder-white/40 focus:outline-none transition-colors ${
-                            errors.lastName ? 'border-red-400' : 'border-white/10 focus:border-lime-400'
-                          }`}
-                          placeholder="Enter your last name"
-                        />
-                        {errors.lastName && (
-                          <p className="text-red-400 text-sm mt-1">{errors.lastName}</p>
-                        )}
+                        <label className="block text-white/80 text-sm font-medium mb-2">
+                          Last Name
+                        </label>
+                        <div className="relative">
+                          <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/40 z-10" size={20} />
+                          <input
+                            type="text"
+                            value={formData.lastName}
+                            onChange={(e) => handleInputChange('lastName', e.target.value)}
+                            required
+                            className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300 [&:-webkit-autofill]:bg-white/10 [&:-webkit-autofill]:text-white [&:-webkit-autofill]:shadow-[0_0_0_30px_rgba(255,255,255,0.1)_inset] [&:-webkit-autofill]:border-lime-400/50"
+                            placeholder="Last name"
+                            disabled={isLoading}
+                          />
+                        </div>
                       </div>
                     </div>
 
+                    {/* Email Field */}
                     <div>
-                      <label className="block text-white/80 text-sm font-medium mb-2">Email Address</label>
+                      <label className="block text-white/80 text-sm font-medium mb-2">
+                        Email Address
+                      </label>
                       <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/40 z-10" size={20} />
                         <input
                           type="email"
                           value={formData.email}
-                          onChange={(e) => {
-                            updateFormData('email', e.target.value);
-                            debouncedEmailCheck(e.target.value);
-                          }}
-                          className={`w-full px-4 py-3 bg-white/5 border rounded-xl text-white placeholder-white/40 focus:outline-none transition-colors pr-12 ${
-                            errors.email ? 'border-red-400' : 'border-white/10 focus:border-lime-400'
-                          }`}
-                          placeholder="your.email@example.com"
-                          disabled={isCheckingEmail}
+                          onChange={(e) => handleInputChange('email', e.target.value)}
+                          required
+                          className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300 [&:-webkit-autofill]:bg-white/10 [&:-webkit-autofill]:text-white [&:-webkit-autofill]:shadow-[0_0_0_30px_rgba(255,255,255,0.1)_inset] [&:-webkit-autofill]:border-lime-400/50"
+                          placeholder="Enter your email"
+                          disabled={isLoading}
                         />
-                        {isCheckingEmail && (
-                          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                            <motion.div
-                              className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full"
-                              animate={{ rotate: 360 }}
-                              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                            />
-                          </div>
-                        )}
                       </div>
-                      {errors.email && (
-                        <p className="text-red-400 text-sm mt-1">{errors.email}</p>
-                      )}
-                      {isCheckingEmail && (
-                        <p className="text-white/60 text-sm mt-1">Checking availability...</p>
-                      )}
                     </div>
 
+                    {/* Password Field */}
                     <div>
-                      <label className="block text-white/80 text-sm font-medium mb-2">Password</label>
+                      <label className="block text-white/80 text-sm font-medium mb-2">
+                        Password
+                      </label>
                       <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/40 z-10" size={20} />
                         <input
                           type={showPassword ? 'text' : 'password'}
                           value={formData.password}
-                          onChange={(e) => updateFormData('password', e.target.value)}
-                          className={`w-full px-4 py-3 bg-white/5 border rounded-xl text-white placeholder-white/40 focus:outline-none transition-colors pr-12 ${
-                            errors.password ? 'border-red-400' : 'border-white/10 focus:border-lime-400'
-                          }`}
-                          placeholder="Create a strong password"
+                          onChange={(e) => handleInputChange('password', e.target.value)}
+                          required
+                          className="w-full pl-10 pr-12 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300 [&:-webkit-autofill]:bg-white/10 [&:-webkit-autofill]:text-white [&:-webkit-autofill]:shadow-[0_0_0_30px_rgba(255,255,255,0.1)_inset] [&:-webkit-autofill]:border-lime-400/50"
+                          placeholder="Create a password"
+                          disabled={isLoading}
                         />
-                        <button
+                        <motion.button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/60 hover:text-white transition-colors"
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/40 hover:text-white transition-colors z-10"
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          disabled={isLoading}
                         >
                           {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                        </button>
+                        </motion.button>
                       </div>
-                      {errors.password && (
-                        <p className="text-red-400 text-sm mt-1">{errors.password}</p>
-                      )}
                     </div>
 
+                    {/* Confirm Password Field */}
                     <div>
-                      <label className="block text-white/80 text-sm font-medium mb-2">Confirm Password</label>
+                      <label className="block text-white/80 text-sm font-medium mb-2">
+                        Confirm Password
+                      </label>
                       <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/40 z-10" size={20} />
                         <input
                           type={showConfirmPassword ? 'text' : 'password'}
                           value={formData.confirmPassword}
-                          onChange={(e) => updateFormData('confirmPassword', e.target.value)}
-                          className={`w-full px-4 py-3 bg-white/5 border rounded-xl text-white placeholder-white/40 focus:outline-none transition-colors pr-12 ${
-                            errors.confirmPassword ? 'border-red-400' : 'border-white/10 focus:border-lime-400'
-                          }`}
+                          onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                          required
+                          className="w-full pl-10 pr-12 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300 [&:-webkit-autofill]:bg-white/10 [&:-webkit-autofill]:text-white [&:-webkit-autofill]:shadow-[0_0_0_30px_rgba(255,255,255,0.1)_inset] [&:-webkit-autofill]:border-lime-400/50"
                           placeholder="Confirm your password"
+                          disabled={isLoading}
                         />
-                        <button
+                        <motion.button
                           type="button"
                           onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/60 hover:text-white transition-colors"
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/40 hover:text-white transition-colors z-10"
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          disabled={isLoading}
                         >
                           {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                        </button>
+                        </motion.button>
                       </div>
-                      {errors.confirmPassword && (
-                        <p className="text-red-400 text-sm mt-1">{errors.confirmPassword}</p>
-                      )}
                     </div>
 
-                    <div className="flex items-start gap-3">
-                      <input
-                        type="checkbox"
-                        id="agreeToTerms"
-                        checked={formData.agreeToTerms}
-                        onChange={(e) => updateFormData('agreeToTerms', e.target.checked)}
-                        className="mt-1 w-4 h-4 text-lime-400 bg-white/5 border-white/10 rounded focus:ring-lime-400 focus:ring-2"
-                      />
-                      <label htmlFor="agreeToTerms" className="text-white/80 text-sm">
-                        I agree to the{' '}
-                        <a href="#" className="text-lime-400 hover:text-lime-300 underline">
-                          Terms of Service
-                        </a>{' '}
-                        and{' '}
-                        <a href="#" className="text-lime-400 hover:text-lime-300 underline">
-                          Privacy Policy
-                        </a>
-                      </label>
-                    </div>
-                    {errors.agreeToTerms && (
-                      <p className="text-red-400 text-sm">{errors.agreeToTerms}</p>
-                    )}
-
+                    {/* Submit Button */}
                     <motion.button
                       type="submit"
                       disabled={isLoading}
-                      className="w-full py-4 px-6 bg-gradient-to-r from-lime-400 to-lime-500 text-black font-semibold rounded-xl hover:from-lime-300 hover:to-lime-400 transition-all duration-300 shadow-2xl shadow-lime-400/25 disabled:opacity-50 disabled:cursor-not-allowed"
-                      whileHover={isLoading ? {} : { scale: 1.02 }}
-                      whileTap={isLoading ? {} : { scale: 0.98 }}
+                      className="w-full bg-gradient-to-r from-lime-400 to-lime-500 text-black font-semibold py-3 rounded-xl hover:from-lime-300 hover:to-lime-400 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                      whileHover={{ scale: isLoading ? 1 : 1.02 }}
+                      whileTap={{ scale: isLoading ? 1 : 0.98 }}
                     >
                       {isLoading ? (
                         <div className="flex items-center justify-center gap-2">
@@ -510,53 +424,29 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, onClose, 
                       )}
                     </motion.button>
                   </form>
-                </motion.div>
-              )}
 
-              {step === 'complete' && (
-                <motion.div
-                  key="completion"
-                  initial={{ opacity: 0, x: 50 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -50 }}
-                  className="text-center space-y-6"
-                >
-                  <motion.div
-                    className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-green-400 to-green-500 flex items-center justify-center"
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ type: "spring", damping: 15, stiffness: 300 }}
-                  >
-                    <CheckCircle size={48} className="text-white" />
-                  </motion.div>
-                  
-                  <div>
-                    <h3 className="text-2xl font-bold text-white mb-2">Welcome to CVCircle!</h3>
-                    <p className="text-white/60 text-lg">
-                      Your account has been created successfully. Redirecting to your dashboard...
-                    </p>
-                  </div>
-
-                  <div className="flex justify-center">
-                    <div className="flex space-x-2">
-                      {[0, 1, 2].map((i) => (
-                        <motion.div
-                          key={i}
-                          className="w-2 h-2 bg-lime-400 rounded-full"
-                          animate={{ scale: [1, 1.5, 1] }}
-                          transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
-                        />
-                      ))}
+                  {/* Switch to Login - Only show if onSwitchToLogin is provided */}
+                  {onSwitchToLogin && (
+                    <div className="mt-8 text-center">
+                      <p className="text-white/60 text-sm">
+                        Already have an account?{' '}
+                        <motion.button
+                          onClick={onSwitchToLogin}
+                          className="text-lime-400 hover:text-lime-300 font-medium transition-colors"
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                        >
+                          Sign in
+                        </motion.button>
+                      </p>
                     </div>
-                  </div>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
-          </div>
+          </motion.div>
         </motion.div>
-      </motion.div>
+      )}
     </AnimatePresence>
   );
-};
-
-export default RegistrationModal; 
+} 

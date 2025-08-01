@@ -8,9 +8,7 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   // Vercel-specific optimizations
-  experimental: {
-    serverComponentsExternalPackages: ['mongoose'],
-  },
+  serverExternalPackages: ['mongoose'],
   // Handle API routes properly
   async headers() {
     return [
@@ -27,6 +25,7 @@ const nextConfig: NextConfig = {
   // Environment variables for Vercel
   env: {
     CUSTOM_KEY: process.env.CUSTOM_KEY,
+    MONGODB_URI: process.env.MONGODB_URI,
   },
 }
 
