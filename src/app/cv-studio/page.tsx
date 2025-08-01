@@ -34,28 +34,36 @@ import {
 } from 'lucide-react';
 import CVStudioEditor from '@/components/cv-studio/CVStudioEditor';
 import CVStudioSidebar from '@/components/cv-studio/CVStudioSidebar';
-import CVStudioToolbar from '@/components/cv-studio/CVStudioToolbar';
 import CVStudioHeader from '@/components/cv-studio/CVStudioHeader';
-import CVAIAssistant from '@/components/cv-studio/CVAIAssistant';
+import EnhancedTemplateSelector from '@/components/cv-studio/EnhancedTemplateSelector';
+import EnhancedAIAssistant from '@/components/cv-studio/EnhancedAIAssistant';
+import EnhancedToolbar from '@/components/cv-studio/EnhancedToolbar';
+import OnboardingTips from '@/components/cv-studio/OnboardingTips';
+import AutoSaveIndicator from '@/components/cv-studio/AutoSaveIndicator';
 
 interface CVStudioProps {}
 
 const CVStudio: React.FC<CVStudioProps> = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [activeTab, setActiveTab] = useState<'templates' | 'customize' | 'snippets'>('templates');
+  const [activeTab, setActiveTab] = useState<'templates' | 'customize'>('templates');
   const [zoom, setZoom] = useState(1);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [selectedCV, setSelectedCV] = useState<string | null>(null);
   const [linkedJob, setLinkedJob] = useState<any>(null);
   const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [showAIAssistant, setShowAIAssistant] = useState(false);
+  const [showAIAssistant, setShowAIAssistant] = useState(true); // Open by default
+  const [isAIAssistantCollapsed, setIsAIAssistantCollapsed] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(2);
   const [currentContent, setCurrentContent] = useState<string>('');
   const [currentSection, setCurrentSection] = useState<string>('general');
   const [userId, setUserId] = useState<string>('');
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
+  const [showTemplateSelector, setShowTemplateSelector] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error' | 'unsaved'>('saved');
+  const [lastSaved, setLastSaved] = useState<Date>(new Date());
 
   // Zoom constraints
   const MIN_ZOOM = 0.25;
@@ -94,7 +102,12 @@ const CVStudio: React.FC<CVStudioProps> = () => {
 
   const handleSave = useCallback(() => {
     // Save logic here
-    setHasUnsavedChanges(false);
+    setSaveStatus('saving');
+    setTimeout(() => {
+      setSaveStatus('saved');
+      setLastSaved(new Date());
+      setHasUnsavedChanges(false);
+    }, 1000);
   }, []);
 
   const handleExport = useCallback(async (format: 'pdf' | 'json') => {
@@ -309,6 +322,7 @@ const CVStudio: React.FC<CVStudioProps> = () => {
     if (section) {
       setCurrentSection(section);
     }
+    setSaveStatus('unsaved');
   }, []);
 
   // Styling update handlers
@@ -359,7 +373,37 @@ const CVStudio: React.FC<CVStudioProps> = () => {
   const handleTemplateSelect = useCallback((template: any) => {
     setSelectedTemplate(template);
     console.log('Template selected:', template.name);
+    setShowTemplateSelector(false);
     // You can add logic here to apply the template to the CV editor
+  }, []);
+
+  const handleApplySnippet = useCallback((snippet: any) => {
+    console.log('Applying snippet:', snippet);
+    // Apply snippet logic here
+    setCurrentContent(snippet.content);
+  }, []);
+
+  const handleAddSection = useCallback((sectionType: string) => {
+    console.log('Adding section:', sectionType);
+    // Add section logic here
+  }, []);
+
+  const handleTemplateButtonClick = useCallback(() => {
+    setShowTemplateSelector(true);
+  }, []);
+
+  const handleOnboardingComplete = useCallback(() => {
+    setShowOnboarding(false);
+    // Save to localStorage that user has seen onboarding
+    localStorage.setItem('cv-studio-onboarding-completed', 'true');
+  }, []);
+
+  // Check if user is first time and show onboarding
+  useEffect(() => {
+    const hasSeenOnboarding = localStorage.getItem('cv-studio-onboarding-completed');
+    if (!hasSeenOnboarding) {
+      setShowOnboarding(true);
+    }
   }, []);
 
   return (
@@ -379,6 +423,8 @@ const CVStudio: React.FC<CVStudioProps> = () => {
           onExport={handleExport}
         />
       </div>
+
+
 
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden relative z-10">
@@ -411,13 +457,13 @@ const CVStudio: React.FC<CVStudioProps> = () => {
         <div className="flex-1 flex flex-col relative z-20">
           {/* Toolbar - High z-index but below header */}
           <div className="relative z-30">
-            <CVStudioToolbar
+            <EnhancedToolbar
               zoom={zoom}
               onZoomChange={setZoom}
               onZoomIn={handleZoomIn}
               onZoomOut={handleZoomOut}
               onZoomReset={handleZoomReset}
-              aiSuggestions={aiSuggestions}
+              onAutoFit={handleAutoFit}
               canUndo={true}
               canRedo={true}
               onUndo={handleUndo}
@@ -425,6 +471,12 @@ const CVStudio: React.FC<CVStudioProps> = () => {
               currentPage={currentPage}
               totalPages={totalPages}
               onPageChange={handlePageChange}
+              onAddSection={handleAddSection}
+              isPreviewMode={isPreviewMode}
+              onPreviewToggle={() => setIsPreviewMode(!isPreviewMode)}
+              onSave={handleSave}
+              onExport={handleExport}
+              hasUnsavedChanges={hasUnsavedChanges}
             />
           </div>
 
@@ -447,46 +499,61 @@ const CVStudio: React.FC<CVStudioProps> = () => {
           </div>
         </div>
 
-        {/* Right Sidebar - AI Assistant Only */}
+        {/* Right Sidebar - Enhanced AI Assistant */}
         <AnimatePresence>
           {showAIAssistant && (
-            <motion.aside
-              className="w-96 bg-white shadow-2xl border-l border-gray-200 flex flex-col relative z-50"
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 384, opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              transition={{ duration: 0.3, ease: 'easeInOut' }}
-            >
-              {/* Close Button */}
-              <div className="flex items-center justify-between p-4 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">AI Assistant</h3>
-                <button
-                  onClick={() => {
-                    setShowAIAssistant(false);
-                  }}
-                  className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-
-              {/* Content */}
-              <div className="flex-1 overflow-y-auto">
-                <CVAIAssistant
-                  onApplySuggestion={handleApplyAISuggestion}
-                  onGenerateContent={handleGenerateContent}
-                  currentSection={currentSection}
-                  currentContent={currentContent}
-                  availableJobs={[]} // This will be loaded by the header component
-                  onClose={() => setShowAIAssistant(false)}
-                />
-              </div>
-            </motion.aside>
+            <EnhancedAIAssistant
+              onApplySuggestion={handleApplyAISuggestion}
+              onGenerateContent={handleGenerateContent}
+              onApplySnippet={handleApplySnippet}
+              currentSection={currentSection}
+              currentContent={currentContent}
+              availableJobs={[]} // This will be loaded by the header component
+              onClose={() => setShowAIAssistant(false)}
+              isCollapsed={isAIAssistantCollapsed}
+              onToggleCollapse={() => setIsAIAssistantCollapsed(!isAIAssistantCollapsed)}
+            />
           )}
         </AnimatePresence>
       </div>
+
+      {/* Template Selector Modal */}
+      <AnimatePresence>
+        {showTemplateSelector && (
+          <motion.div
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowTemplateSelector(false)}
+          >
+            <motion.div
+              className="w-full max-w-4xl max-h-[80vh] overflow-hidden"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <EnhancedTemplateSelector
+                onTemplateSelect={handleTemplateSelect}
+                selectedTemplate={selectedTemplate}
+                onClose={() => setShowTemplateSelector(false)}
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Onboarding Tips */}
+      <AnimatePresence>
+        {showOnboarding && (
+          <OnboardingTips
+            isVisible={showOnboarding}
+            onClose={() => setShowOnboarding(false)}
+            onComplete={handleOnboardingComplete}
+          />
+        )}
+      </AnimatePresence>
 
       {/* AI Suggestions Indicator */}
       {aiSuggestions.length > 0 && (
@@ -512,6 +579,12 @@ const CVStudio: React.FC<CVStudioProps> = () => {
           </div>
         </motion.div>
       )}
+
+      {/* Auto-save Indicator */}
+      <AutoSaveIndicator
+        status={saveStatus}
+        lastSaved={lastSaved}
+      />
 
       {/* Template Selection Prompt - Removed since we have templates in sidebar */}
     </div>
