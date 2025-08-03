@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { FileText, Mail, BarChart3, Palette, Users, ArrowRight } from 'lucide-react';
+import { FileText, Mail, BarChart3, Palette, Users, Brain, ArrowRight } from 'lucide-react';
 
 const Features = () => {
   const features = [
@@ -45,7 +45,7 @@ const Features = () => {
       number: '06',
       title: 'AI Career Assistant',
       description: 'Leverage cutting-edge AI to accelerate your career growth. Our intelligent assistant provides personalized career advice, suggests skill improvements, identifies trending job markets, and offers strategic guidance based on your career goals and industry insights.',
-      icon: ArrowRight,
+      icon: Brain,
       color: 'from-orange-400 to-orange-500'
     }
   ];
@@ -55,8 +55,8 @@ const Features = () => {
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.2,
-        delayChildren: 0.1
+        staggerChildren: 0.1,
+        delayChildren: 0.05
       }
     }
   };
@@ -64,9 +64,9 @@ const Features = () => {
   const cardVariants = {
     hidden: {
       opacity: 0,
-      y: 100,
-      rotateX: -15,
-      scale: 0.8
+      y: 50,
+      rotateX: -10,
+      scale: 0.9
     },
     visible: {
       opacity: 1,
@@ -150,37 +150,40 @@ const Features = () => {
                       style={{ filter: 'blur(20px)' }}
                     />
                     
-                    {/* Number with 3D Effect */}
-                    <motion.div 
-                      className="text-7xl font-bold text-white/5 mb-6"
-                      whileHover={{ 
-                        scale: 1.1,
-                        rotateY: 10,
-                        textShadow: "0 0 30px rgba(255, 255, 255, 0.3)"
-                      }}
-                      style={{
-                        transformStyle: 'preserve-3d',
-                        perspective: '1000px'
-                      }}
-                    >
-                      {feature.number}
-                    </motion.div>
-                    
-                    {/* Icon with Gradient */}
-                    <motion.div 
-                      className={`w-16 h-16 bg-gradient-to-br ${feature.color} rounded-2xl flex items-center justify-center mb-6 shadow-2xl`}
-                      whileHover={{ 
-                        scale: 1.1,
-                        rotateY: 15,
-                        boxShadow: "0 20px 40px -12px rgba(0, 0, 0, 0.5)"
-                      }}
-                      style={{
-                        transformStyle: 'preserve-3d',
-                        perspective: '1000px'
-                      }}
-                    >
-                      <IconComponent size={32} className="text-white" />
-                    </motion.div>
+                    {/* Number and Icon Row */}
+                    <div className="flex justify-between items-start mb-6">
+                      {/* Number with 3D Effect */}
+                      <motion.div 
+                        className="text-7xl font-bold text-white/5"
+                        whileHover={{ 
+                          scale: 1.1,
+                          rotateY: 10,
+                          textShadow: "0 0 30px rgba(255, 255, 255, 0.3)"
+                        }}
+                        style={{
+                          transformStyle: 'preserve-3d',
+                          perspective: '1000px'
+                        }}
+                      >
+                        {feature.number}
+                      </motion.div>
+                      
+                      {/* Icon with Gradient */}
+                      <motion.div 
+                        className={`w-16 h-16 bg-gradient-to-br ${feature.color} rounded-2xl flex items-center justify-center shadow-2xl`}
+                        whileHover={{ 
+                          scale: 1.1,
+                          rotateY: 15,
+                          boxShadow: "0 20px 40px -12px rgba(0, 0, 0, 0.5)"
+                        }}
+                        style={{
+                          transformStyle: 'preserve-3d',
+                          perspective: '1000px'
+                        }}
+                      >
+                        <IconComponent size={32} className="text-white" />
+                      </motion.div>
+                    </div>
                     
                     {/* Title */}
                     <h3 className="text-2xl font-bold text-white mb-4 group-hover:text-lime-400 transition-colors duration-300">
@@ -188,7 +191,7 @@ const Features = () => {
                     </h3>
                     
                     {/* Description */}
-                    <p className="text-white/70 leading-relaxed mb-6">
+                    <p className="text-white/70 leading-relaxed mb-6 text-sm">
                       {feature.description}
                     </p>
                     
@@ -197,7 +200,10 @@ const Features = () => {
                       className="absolute bottom-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                       whileHover={{ x: 5, rotate: 45 }}
                     >
-                      <ArrowRight size={24} className="text-lime-400" />
+                      <ArrowRight 
+                        size={24} 
+                        className="text-lime-400 drop-shadow-[0_0_8px_rgba(132,204,22,0.8)]" 
+                      />
                     </motion.div>
                     
                     {/* Border Glow on Hover */}

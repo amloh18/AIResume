@@ -29,15 +29,6 @@ const Testimonials = () => {
     }
   ];
 
-  const companies = [
-    { name: "Google", logo: "🔍", color: "from-blue-500 to-blue-600" },
-    { name: "Microsoft", logo: "🪟", color: "from-green-500 to-green-600" },
-    { name: "Amazon", logo: "📦", color: "from-orange-500 to-orange-600" },
-    { name: "Apple", logo: "🍎", color: "from-gray-500 to-gray-600" },
-    { name: "Meta", logo: "📘", color: "from-blue-600 to-blue-700" },
-    { name: "Netflix", logo: "📺", color: "from-red-500 to-red-600" }
-  ];
-
   const stats = [
     { number: "50K+", label: "Active Users", icon: Users },
     { number: "95%", label: "Success Rate", icon: TrendingUp },
@@ -49,8 +40,8 @@ const Testimonials = () => {
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.2,
-        delayChildren: 0.1
+        staggerChildren: 0.1,
+        delayChildren: 0.05
       }
     }
   };
@@ -58,28 +49,49 @@ const Testimonials = () => {
   const cardVariants = {
     hidden: { 
       opacity: 0, 
-      y: 100, 
-      rotateX: -15,
-      scale: 0.8
+      y: 50, 
+      rotateX: -10,
+      scale: 0.9
     },
     visible: { 
       opacity: 1, 
       y: 0, 
       rotateX: 0,
-      scale: 1,
-      transition: {
-        duration: 0.8,
-        ease: "easeOut"
-      }
+      scale: 1
     }
   };
 
   return (
     <section id="testimonials" className="relative py-32 bg-gradient-to-b from-gray-900 to-black overflow-hidden">
-      {/* Enhanced Background Effects */}
+      {/* Grid Pattern Background */}
       <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-lime-400/5 to-blue-400/5"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-lime-400/3 to-blue-400/3 rounded-full blur-3xl"></div>
+        {/* Grid Lines */}
+        <div 
+          className="absolute inset-0 opacity-10"
+          style={{
+            backgroundImage: `
+              linear-gradient(rgba(132, 204, 22, 0.3) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(132, 204, 22, 0.3) 1px, transparent 1px)
+            `,
+            backgroundSize: '50px 50px'
+          }}
+        />
+        
+        {/* Grid Dots */}
+        <div 
+          className="absolute inset-0 opacity-20"
+          style={{
+            backgroundImage: `
+              radial-gradient(circle, rgba(132, 204, 22, 0.4) 2px, transparent 2px)
+            `,
+            backgroundSize: '50px 50px',
+            backgroundPosition: '25px 25px'
+          }}
+        />
+        
+        {/* Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-900/80 to-black/80"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-lime-400/5 to-blue-400/5 rounded-full blur-3xl"></div>
       </div>
       
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -208,59 +220,6 @@ const Testimonials = () => {
               </motion.div>
             </motion.div>
           ))}
-        </motion.div>
-
-        {/* Enhanced Company Logos */}
-        <motion.div 
-          className="text-center mb-20"
-          initial={{ opacity: 0, y: 50 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.3 }}
-          viewport={{ once: true }}
-        >
-          <h3 className="text-3xl font-bold text-white/80 mb-12">
-            Where our users work
-          </h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 items-center">
-            {companies.map((company, index) => (
-              <motion.div
-                key={index}
-                className="group cursor-pointer"
-                whileHover={{ 
-                  scale: 1.1,
-                  y: -10,
-                  rotateY: 10
-                }}
-                whileTap={{ scale: 0.95 }}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                viewport={{ once: true }}
-                style={{
-                  transformStyle: 'preserve-3d',
-                  perspective: '1000px'
-                }}
-              >
-                <motion.div 
-                  className={`w-16 h-16 bg-gradient-to-br ${company.color} rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-2xl`}
-                  whileHover={{ 
-                    scale: 1.2,
-                    rotateY: 15,
-                    boxShadow: "0 20px 40px -12px rgba(0, 0, 0, 0.5)"
-                  }}
-                  style={{
-                    transformStyle: 'preserve-3d',
-                    perspective: '1000px'
-                  }}
-                >
-                  <span className="text-2xl">{company.logo}</span>
-                </motion.div>
-                <div className="text-white/60 text-sm font-medium group-hover:text-lime-400 transition-colors duration-300">
-                  {company.name}
-                </div>
-              </motion.div>
-            ))}
-          </div>
         </motion.div>
 
         {/* Enhanced Stats */}

@@ -159,7 +159,7 @@ export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, on
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
+          transition={{ duration: 0.2 }}
         >
           {/* Backdrop */}
           <motion.div
@@ -167,17 +167,16 @@ export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, on
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={handleClose}
+            transition={{ duration: 0.2 }}
           />
 
           {/* Modal */}
           <motion.div
-            className="relative w-full max-w-lg bg-gradient-to-br from-gray-900 to-black border border-white/10 rounded-2xl p-8 shadow-2xl overflow-y-auto max-h-[90vh]"
-            initial={{ scale: 0.9, opacity: 0, y: 20 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.9, opacity: 0, y: 20 }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            style={{ position: 'relative' }}
+            className="relative w-full max-w-md bg-gradient-to-br from-gray-900 to-black border border-white/10 rounded-3xl p-8 shadow-2xl overflow-y-auto max-h-[90vh]"
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
           >
             {/* Close Button */}
             <motion.button

@@ -7,7 +7,6 @@ import Features from '@/components/landing/Features';
 import Testimonials from '@/components/landing/Testimonials';
 import Pricing from '@/components/landing/Pricing';
 import Footer from '@/components/landing/Footer';
-import FloatingCTA from '@/components/ui/FloatingCTA';
 
 export default function Home() {
   return (
@@ -18,7 +17,6 @@ export default function Home() {
       <Testimonials />
       <Pricing />
       <Footer />
-      <FloatingCTA />
     </main>
   );
 } 
