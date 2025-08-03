@@ -9,37 +9,44 @@ const Features = () => {
     {
       number: '01',
       title: 'CV Studio',
-      description: 'CV making was never easier. Inline editing, beautiful templates.',
+      description: 'Transform your career story with our intuitive CV builder. Features real-time inline editing, professional templates, and AI-powered content suggestions. Create stunning resumes that stand out with drag-and-drop sections, custom styling, and industry-specific formatting that gets you noticed by recruiters.',
       icon: FileText,
       color: 'from-lime-400 to-lime-500'
     },
     {
       number: '02',
       title: 'Cover Letter Creator',
-      description: 'Generate personalized cover letters instantly after creating your CV and adding the job URL.',
+      description: 'Generate compelling, personalized cover letters in seconds. Simply paste a job URL and our AI analyzes the requirements, matching them with your CV data to create tailored letters. Each letter is uniquely crafted to highlight your relevant skills and experience for maximum impact.',
       icon: Mail,
       color: 'from-blue-400 to-blue-500'
     },
     {
       number: '03',
       title: 'Job Tracker',
-      description: 'Smart job tracking with URL-based job fetching, plus Kanban view to manage your progress effortlessly.',
+      description: 'Master your job search with intelligent tracking and organization. Our smart system fetches job details from URLs, categorizes applications, and provides a visual Kanban board to track your progress from application to offer. Never lose track of opportunities again.',
       icon: BarChart3,
       color: 'from-purple-400 to-purple-500'
     },
     {
       number: '04',
-      title: 'Snippets',
-      description: 'Use our pre-made style snippets to tailor your CV with personality and precision.',
+      title: 'Style Snippets',
+      description: 'Personalize your CV with our curated collection of professional style snippets. Choose from industry-specific designs, color schemes, and formatting options. Each snippet is crafted by design experts to ensure your CV maintains professional standards while reflecting your unique personality.',
       icon: Palette,
       color: 'from-pink-400 to-pink-500'
     },
     {
       number: '05',
       title: 'Community Support',
-      description: 'Get connected with HRs and industry experts to review your resume and guide your job search.',
+      description: 'Connect with industry professionals, HR experts, and career coaches in our vibrant community. Get personalized feedback on your resume, participate in mock interviews, and access exclusive job opportunities shared by our network of recruiters and hiring managers.',
       icon: Users,
       color: 'from-cyan-400 to-cyan-500'
+    },
+    {
+      number: '06',
+      title: 'AI Career Assistant',
+      description: 'Leverage cutting-edge AI to accelerate your career growth. Our intelligent assistant provides personalized career advice, suggests skill improvements, identifies trending job markets, and offers strategic guidance based on your career goals and industry insights.',
+      icon: ArrowRight,
+      color: 'from-orange-400 to-orange-500'
     }
   ];
 
@@ -55,21 +62,17 @@ const Features = () => {
   };
 
   const cardVariants = {
-    hidden: { 
-      opacity: 0, 
-      y: 100, 
+    hidden: {
+      opacity: 0,
+      y: 100,
       rotateX: -15,
       scale: 0.8
     },
-    visible: { 
-      opacity: 1, 
-      y: 0, 
+    visible: {
+      opacity: 1,
+      y: 0,
       rotateX: 0,
-      scale: 1,
-      transition: {
-        duration: 0.8,
-        ease: "easeOut"
-      }
+      scale: 1
     }
   };
 
@@ -117,6 +120,10 @@ const Features = () => {
                   key={index}
                   className="group relative"
                   variants={cardVariants}
+                  transition={{
+                    duration: 0.8,
+                    ease: "easeOut"
+                  }}
                   style={{
                     zIndex: features.length - index,
                     transform: `translateY(${index * 15}px) translateX(${index % 2 === 0 ? -10 : 10}px)`
@@ -209,45 +216,6 @@ const Features = () => {
           </div>
         </motion.div>
 
-        {/* Enhanced Bottom CTA */}
-        <motion.div 
-          className="text-center mt-20"
-          initial={{ opacity: 0, y: 50 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.5 }}
-          viewport={{ once: true }}
-        >
-          <motion.button 
-            className="group relative bg-gradient-to-r from-lime-400 to-lime-500 text-black px-12 py-5 rounded-full font-semibold text-lg shadow-2xl hover:shadow-lime-400/50 transition-all duration-300 overflow-hidden"
-            whileHover={{ 
-              scale: 1.05,
-              rotateY: 5,
-              boxShadow: "0 25px 50px -12px rgba(132, 204, 22, 0.4)"
-            }}
-            whileTap={{ scale: 0.95 }}
-            style={{
-              transformStyle: 'preserve-3d',
-              perspective: '1000px'
-            }}
-          >
-            <motion.div
-              className="absolute inset-0 bg-gradient-to-r from-lime-300 to-lime-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-              style={{ filter: 'blur(20px)' }}
-            />
-            <motion.div
-              className="relative flex items-center gap-3"
-              whileHover={{ x: 5 }}
-            >
-              <span>Start Building Your CV</span>
-              <motion.div
-                whileHover={{ rotate: 45 }}
-                transition={{ duration: 0.3 }}
-              >
-                <ArrowRight size={20} />
-              </motion.div>
-            </motion.div>
-          </motion.button>
-        </motion.div>
       </div>
     </section>
   );
