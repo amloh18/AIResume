@@ -293,9 +293,10 @@ const CVOnboardingPage: React.FC = () => {
           {currentStep === 'upload' && (
             <motion.div
               key="upload"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
               className="min-h-screen flex items-center justify-center"
             >
               <CVUpload
@@ -308,9 +309,10 @@ const CVOnboardingPage: React.FC = () => {
           {currentStep === 'form' && (
             <motion.div
               key="form"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
             >
               {console.log('CVOnboarding: Rendering form with cvData:', cvData)}
               <InteractiveCVForm
@@ -324,9 +326,10 @@ const CVOnboardingPage: React.FC = () => {
           {currentStep === 'complete' && (
             <motion.div
               key="complete"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
               className="min-h-screen flex items-center justify-center"
             >
               <div className="text-center space-y-8">
@@ -334,12 +337,16 @@ const CVOnboardingPage: React.FC = () => {
                   className="w-32 h-32 mx-auto rounded-full bg-gradient-to-br from-green-400 to-green-500 flex items-center justify-center"
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  transition={{ type: "spring", damping: 15, stiffness: 300 }}
+                  transition={{ duration: 0.4, ease: "easeOut" }}
                 >
                   <CheckCircle size={64} className="text-white" />
                 </motion.div>
                 
-                <div>
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.3, delay: 0.2, ease: "easeOut" }}
+                >
                   <h1 className="text-4xl font-bold text-white mb-4">
                     Welcome to CVCircle!
                   </h1>
@@ -349,8 +356,9 @@ const CVOnboardingPage: React.FC = () => {
                   {isRedirecting && (
                     <motion.div
                       className="mt-6 p-4 bg-gradient-to-r from-lime-400/10 to-blue-400/10 border border-lime-400/20 rounded-xl"
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.3, ease: "easeOut" }}
                     >
                       <div className="flex items-center justify-center gap-3">
                         <motion.div
@@ -362,7 +370,7 @@ const CVOnboardingPage: React.FC = () => {
                       </div>
                     </motion.div>
                   )}
-                </div>
+                </motion.div>
 
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <motion.button

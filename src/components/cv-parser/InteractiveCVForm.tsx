@@ -809,8 +809,13 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <motion.div
+      className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black py-8"
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.3, ease: "easeOut" }}
+    >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Sidebar Navigation */}
           <div className="lg:col-span-1">
@@ -901,7 +906,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 

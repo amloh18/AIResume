@@ -177,7 +177,7 @@ const Footer = () => {
                     style={{ filter: 'blur(20px)' }}
                   />
                   <motion.div
-                    className="relative flex items-center gap-2"
+                    className="relative flex items-center justify-center gap-2"
                     whileHover={{ x: 5 }}
                   >
                     <Mail size={18} />
@@ -210,7 +210,7 @@ const Footer = () => {
             className="text-white/60 text-sm flex items-center gap-2"
             whileHover={{ scale: 1.05 }}
           >
-            <span>© 2024 CVCircle. All rights reserved.</span>
+            <span>© 2025 CVCircle. All rights reserved.</span>
             <motion.div
               animate={{ scale: [1, 1.2, 1] }}
               transition={{ duration: 2, repeat: Infinity }}

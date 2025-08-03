@@ -12,6 +12,7 @@ const Navigation = () => {
   const [showLoginModal, setShowLoginModal] = useState(false);
 
   const navLinks = [
+    { href: '#hero', label: 'Home' },
     { href: '#features', label: 'Features' },
     { href: '#testimonials', label: 'Testimonials' },
     { href: '#pricing', label: 'Pricing' },
@@ -48,16 +49,16 @@ const Navigation = () => {
       <motion.nav
         className={`fixed top-4 left-4 right-4 z-50 transition-all duration-500 max-w-7xl mx-auto ${
           scrolled
-            ? 'bg-black/90 backdrop-blur-xl shadow-2xl shadow-black/50'
-            : 'bg-black/60 backdrop-blur-md'
+            ? 'bg-black/40 backdrop-blur-xl shadow-2xl shadow-black/30'
+            : 'bg-black/20 backdrop-blur-md'
         }`}
         style={{
           borderRadius: '50px',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
+          border: '1px solid rgba(255, 255, 255, 0.05)',
         }}
-        initial={{ y: -100, opacity: 0 }}
+        initial={{ y: -50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.8 }}
+        transition={{ duration: 0.4 }}
         whileHover={{ scale: 1.01 }}
       >
         <div className="px-8 py-4">
@@ -86,9 +87,9 @@ const Navigation = () => {
                     y: -2,
                     backgroundColor: 'rgba(132, 204, 22, 0.1)'
                   }}
-                  initial={{ opacity: 0, y: -20 }}
+                  initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
+                  transition={{ delay: index * 0.05 }}
                 >
                   {link.label}
                 </motion.a>
@@ -139,7 +140,7 @@ const Navigation = () => {
           y: isMenuOpen ? 0 : -20,
           pointerEvents: isMenuOpen ? 'auto' : 'none'
         }}
-        transition={{ duration: 0.3, ease: "easeInOut" }}
+        transition={{ duration: 0.2, ease: "easeInOut" }}
       >
         <div className="bg-black/95 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-2xl">
           <div className="space-y-4">
@@ -152,9 +153,9 @@ const Navigation = () => {
                   scrollToSection(link.href);
                 }}
                 className="block px-4 py-3 text-white/80 hover:text-lime-400 transition-colors duration-300 font-medium text-lg rounded-2xl hover:bg-white/5"
-                initial={{ opacity: 0, x: -20 }}
+                initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.1 }}
+                transition={{ delay: index * 0.05 }}
                 whileHover={{ x: 5 }}
               >
                 {link.label}

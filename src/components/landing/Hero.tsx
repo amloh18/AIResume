@@ -16,7 +16,7 @@ const Hero = () => {
   }, []);
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-black via-gray-900 to-black pt-32">
+    <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-black via-gray-900 to-black pt-32">
       {/* Enhanced Background Effects */}
       <div className="absolute inset-0">
         {/* Animated Gradient Orbs */}
@@ -43,32 +43,33 @@ const Hero = () => {
             y: [0, 40, 0],
           }}
           transition={{
-            duration: 10,
+            duration: 8,
             repeat: Infinity,
             ease: "easeInOut",
-            delay: 2
+            delay: 1
           }}
         />
         
-        {/* Floating Particles */}
+        {/* Raining Particles */}
         <div className="absolute inset-0">
-          {[...Array(20)].map((_, i) => (
+          {[...Array(80)].map((_, i) => (
             <motion.div
               key={i}
               className="absolute w-1 h-1 bg-lime-400/60 rounded-full"
               style={{
                 left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
+                top: `${Math.random() * 20}%`, // Start only in top 20%
               }}
               animate={{
-                y: [0, -100, 0],
-                opacity: [0, 1, 0],
-                scale: [0, 1, 0],
+                y: [0, 800], // Stop at 80% height to avoid bottom 20%
+                opacity: [0, 1, 0.3, 0], // Fade out more gradually
+                scale: [0, 1, 0.8, 0], // Scale down as it falls
               }}
               transition={{
                 duration: 3 + Math.random() * 2,
                 repeat: Infinity,
-                delay: Math.random() * 2,
+                delay: Math.random() * 3,
+                ease: "linear"
               }}
             />
           ))}
@@ -86,9 +87,9 @@ const Hero = () => {
         {/* Main Heading with 3D Effect */}
         <motion.h1 
           className="text-4xl sm:text-6xl lg:text-7xl font-bold text-white mb-6"
-          initial={{ opacity: 0, y: 50 }}
+          initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, delay: 0.2 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
           style={{
             textShadow: '0 0 30px rgba(132, 204, 22, 0.3)',
             transformStyle: 'preserve-3d',
@@ -152,7 +153,7 @@ const Hero = () => {
               whileHover={{ x: 5 }}
             >
               <Sparkles size={20} />
-              <span>Upload Your CV</span>
+              <span>Get Started</span>
               <motion.div
                 whileHover={{ rotate: 45 }}
                 transition={{ duration: 0.3 }}
@@ -188,7 +189,7 @@ const Hero = () => {
 
         {/* Hero Image Preview */}
         <motion.div
-          className="relative w-full max-w-7xl mx-auto mt-12 -mb-32"
+          className="relative w-full mx-auto mt-12 -mb-32"
           initial={{ opacity: 0, y: 100, scale: 0.8 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 1.2, delay: 1 }}
