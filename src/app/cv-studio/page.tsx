@@ -64,6 +64,7 @@ const CVStudio: React.FC<CVStudioProps> = () => {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error' | 'unsaved'>('saved');
   const [lastSaved, setLastSaved] = useState<Date>(new Date());
+  const [linkedJobs, setLinkedJobs] = useState<any[]>([]);
 
   // Zoom constraints
   const MIN_ZOOM = 0.25;
@@ -83,6 +84,22 @@ const CVStudio: React.FC<CVStudioProps> = () => {
     bulletSpacing: 4 // Space between bullet points
   });
 
+  // Load jobs data
+  const loadJobsData = async () => {
+    try {
+      const userData = localStorage.getItem('user');
+      const userId = userData ? JSON.parse(userData).id || JSON.parse(userData)._id : '6889b151d17daa1eaee91a5c';
+      
+      const jobsResponse = await fetch(`/api/jobs?userId=${userId}`);
+      const jobsResult = await jobsResponse.json();
+      if (jobsResult.success) {
+        setLinkedJobs(jobsResult.data || []);
+      }
+    } catch (error) {
+      console.error('Error loading jobs:', error);
+    }
+  };
+
   // Handle URL parameters for CV editing
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -98,6 +115,9 @@ const CVStudio: React.FC<CVStudioProps> = () => {
       setSelectedCV(cvId);
       console.log('Loading CV with ID:', cvId);
     }
+    
+    // Load jobs data
+    loadJobsData();
   }, []);
 
   const handleSave = useCallback(() => {
@@ -436,8 +456,9 @@ const CVStudio: React.FC<CVStudioProps> = () => {
             activeTab={activeTab}
             onTabChange={setActiveTab}
             userCVs={[]} // This will be loaded by the header component
-            linkedJobs={[]} // This will be loaded by the header component
+            linkedJobs={linkedJobs}
             onTemplateSelect={handleTemplateSelect}
+            onJobSelect={setLinkedJob}
             selectedTemplate={selectedTemplate}
             styling={styling}
             onFontFamilyChange={handleFontFamilyChange}

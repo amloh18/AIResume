@@ -1,4 +1,4 @@
-import { MongooseService, mongooseUtils } from '../mongoose-utils';
+import { MongooseService, mongooseUtils } from '../mongoose-utils.ts';
 import User, { IUser } from '../../models/User';
 import CV, { ICV } from '../../models/CV';
 import JobApplication, { IJobApplication } from '../../models/JobApplication';

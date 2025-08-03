@@ -297,7 +297,7 @@ const CVUpload: React.FC<CVUploadProps> = ({ onCVParsed, onClose }) => {
                   className="w-full py-4 px-6 bg-white/5 border border-white/10 rounded-2xl text-white font-medium hover:bg-white/10 transition-colors duration-300"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => onCVParsed({})}
+                  onClick={() => onCVParsed(getEmptyStructure())}
                 >
                   Start with empty CV
                 </motion.button>

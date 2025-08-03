@@ -41,11 +41,12 @@ interface CVTemplate {
 interface CVStudioSidebarProps {
   isCollapsed: boolean;
   onToggleCollapse: () => void;
-  activeTab: 'templates' | 'customize';
-  onTabChange: (tab: 'templates' | 'customize') => void;
+  activeTab: 'templates' | 'jobs' | 'customize';
+  onTabChange: (tab: 'templates' | 'jobs' | 'customize') => void;
   userCVs: any[];
   linkedJobs: any[];
   onTemplateSelect?: (template: CVTemplate) => void;
+  onJobSelect?: (job: any) => void;
   selectedTemplate?: CVTemplate;
   // Styling props
   styling?: {
@@ -79,6 +80,7 @@ const CVStudioSidebar: React.FC<CVStudioSidebarProps> = ({
   userCVs,
   linkedJobs,
   onTemplateSelect,
+  onJobSelect,
   selectedTemplate,
   styling = {
     fontFamily: 'Arial, sans-serif',
@@ -110,6 +112,7 @@ const CVStudioSidebar: React.FC<CVStudioSidebarProps> = ({
 
   const tabs = [
     { id: 'templates', name: 'Templates', icon: FileText, description: 'Choose from professional templates' },
+    { id: 'jobs', name: 'Jobs', icon: Briefcase, description: 'Link jobs to your CV' },
     { id: 'customize', name: 'Customize', icon: Palette, description: 'Adjust styling and layout' }
   ];
 
@@ -552,6 +555,65 @@ const CVStudioSidebar: React.FC<CVStudioSidebarProps> = ({
     </div>
   );
 
+  const renderJobsTab = () => (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h3 className="text-white font-semibold">Linked Jobs</h3>
+        <button className="p-2 text-white/60 hover:text-white transition-colors rounded-lg hover:bg-white/10">
+          <Plus size={16} />
+        </button>
+      </div>
+
+      {/* Jobs List */}
+      <div className="space-y-2">
+        {linkedJobs.length === 0 ? (
+          <div className="text-center py-8">
+            <Briefcase size={48} className="mx-auto text-blue-400 mb-4" />
+            <h3 className="text-white font-semibold mb-2">No Jobs Linked</h3>
+            <p className="text-white/60 text-sm mb-4">
+              Link a job to optimize your CV for specific positions.
+            </p>
+            <button className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg hover:from-blue-400 hover:to-purple-400 transition-all duration-300">
+              Add Job
+            </button>
+          </div>
+        ) : (
+          linkedJobs.map((job) => (
+            <div
+              key={job._id || job.id}
+              className="p-3 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+              onClick={() => onJobSelect?.(job)}
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-white font-medium truncate">{job.jobTitle || job.title}</h4>
+                  <p className="text-white/60 text-sm truncate">{job.company}</p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className={`text-xs px-2 py-1 rounded-full ${
+                      job.status === 'applied' ? 'bg-blue-500/20 text-blue-400' :
+                      job.status === 'interviewing' ? 'bg-green-500/20 text-green-400' :
+                      job.status === 'screening' ? 'bg-yellow-500/20 text-yellow-400' :
+                      'bg-gray-500/20 text-gray-400'
+                    }`}>
+                      {job.status}
+                    </span>
+                    {job.location && (
+                      <span className="text-xs text-white/40">{job.location}</span>
+                    )}
+                  </div>
+                </div>
+                <button className="p-1 text-white/60 hover:text-white transition-colors ml-2">
+                  <MoreVertical size={14} />
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <motion.aside
       className="bg-white/5 backdrop-blur-xl border-r border-white/10 flex flex-col relative z-40"
@@ -613,6 +675,7 @@ const CVStudioSidebar: React.FC<CVStudioSidebarProps> = ({
               transition={{ duration: 0.2 }}
             >
               {activeTab === 'templates' && renderTemplatesTab()}
+              {activeTab === 'jobs' && renderJobsTab()}
               {activeTab === 'customize' && renderCustomizeTab()}
             </motion.div>
           )}

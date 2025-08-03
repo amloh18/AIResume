@@ -55,6 +55,7 @@ const CVOnboardingPage: React.FC = () => {
   };
 
   const handleCVParsed = (parsedData: any) => {
+    console.log('CVOnboarding: handleCVParsed called with:', parsedData);
     setCvData(parsedData);
     setCurrentStep('form');
     saveProgress('form', { cvData: parsedData });
@@ -311,9 +312,11 @@ const CVOnboardingPage: React.FC = () => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
             >
+              {console.log('CVOnboarding: Rendering form with cvData:', cvData)}
               <InteractiveCVForm
                 initialData={cvData}
                 onSave={handleFormSave}
+                key={JSON.stringify(cvData)} // Force re-render when cvData changes
               />
             </motion.div>
           )}

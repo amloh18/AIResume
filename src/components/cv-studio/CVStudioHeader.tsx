@@ -199,19 +199,27 @@ const CVStudioHeader: React.FC<CVStudioHeaderProps> = ({
             </div>
 
             {/* Linked Job */}
-            {linkedJob && (
-              <div className="flex items-center gap-2 px-3 py-1 bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/30 rounded-lg">
-                <Briefcase size={14} className="text-blue-400" />
-                <span className="text-sm text-white/80 truncate max-w-xs">
-                  {linkedJob.title}
+            {linkedJob ? (
+              <div className="flex items-center gap-1.5 px-2 py-0.5 bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/30 rounded-md">
+                <Briefcase size={12} className="text-blue-400" />
+                <span className="text-xs text-white/80 truncate max-w-32">
+                  {linkedJob.jobTitle || linkedJob.title}
                 </span>
                 <button
-                  className="p-1 text-white/60 hover:text-white transition-colors"
+                  className="p-0.5 text-white/60 hover:text-white transition-colors"
                   onClick={() => setIsJobDropdownOpen(!isJobDropdownOpen)}
                 >
-                  <ChevronDown size={12} className={`transition-transform ${isJobDropdownOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown size={10} className={`transition-transform ${isJobDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
               </div>
+            ) : (
+              <button
+                className="flex items-center gap-1.5 px-2 py-0.5 bg-white/10 hover:bg-white/20 border border-white/20 rounded-md text-xs text-white/80 hover:text-white transition-colors"
+                onClick={() => setIsJobDropdownOpen(!isJobDropdownOpen)}
+              >
+                <Briefcase size={12} />
+                <span>Link Job</span>
+              </button>
             )}
           </div>
         </div>
@@ -399,9 +407,9 @@ const CVStudioHeader: React.FC<CVStudioHeaderProps> = ({
                 ) : (
                   linkedJobs.map((job) => (
                     <button
-                      key={job.id}
+                      key={job._id || job.id}
                       className={`w-full flex items-center justify-between p-3 rounded-xl transition-colors ${
-                        job.id === linkedJob?.id 
+                        (job._id || job.id) === (linkedJob?._id || linkedJob?.id)
                           ? 'bg-white/20 text-white' 
                           : 'text-white/80 hover:bg-white/10 hover:text-white'
                       }`}
@@ -411,13 +419,14 @@ const CVStudioHeader: React.FC<CVStudioHeaderProps> = ({
                       }}
                     >
                       <div className="text-left">
-                        <div className="font-medium truncate">{job.title}</div>
+                        <div className="font-medium truncate">{job.jobTitle || job.title}</div>
                         <div className="text-xs text-white/60">{job.company}</div>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className={`text-xs px-2 py-1 rounded-full ${
                           job.status === 'applied' ? 'bg-blue-500/20 text-blue-400' :
                           job.status === 'interviewing' ? 'bg-green-500/20 text-green-400' :
+                          job.status === 'screening' ? 'bg-yellow-500/20 text-yellow-400' :
                           'bg-gray-500/20 text-gray-400'
                         }`}>
                           {job.status}
