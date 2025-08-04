@@ -6,17 +6,17 @@ import { toObjectId, createErrorResponse } from '@/lib/db-utils';
 // POST - Save CV data during editing
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
     
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
     const { 
       userId, 
       cvData, 
-      templateData, 
+      template, 
       title,
       status = 'draft'
     } = body;
@@ -51,8 +51,8 @@ export async function POST(
       cv.cvData = { ...cv.cvData, ...cvData };
     }
     
-    if (templateData) {
-      cv.templateData = templateData;
+    if (template) {
+      cv.templateData = template;
     }
     
     if (title) {
@@ -91,12 +91,12 @@ export async function POST(
 // GET - Get CV data for editing
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
     
-    const { id } = params;
+    const { id } = await params;
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
 
@@ -130,9 +130,7 @@ export async function GET(
       success: true,
       message: 'CV data retrieved successfully',
       data: {
-        cv: cvResponse,
-        templateData: cv.templateData,
-        cvData: cv.cvData
+        cv: cvResponse
       }
     });
 
