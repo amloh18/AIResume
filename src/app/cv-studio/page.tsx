@@ -36,7 +36,7 @@ import CVStudioEditor from '@/components/cv-studio/CVStudioEditor';
 import CVStudioSidebar from '@/components/cv-studio/CVStudioSidebar';
 import CVStudioHeader from '@/components/cv-studio/CVStudioHeader';
 import EnhancedTemplateSelector from '@/components/cv-studio/EnhancedTemplateSelector';
-import EnhancedAIAssistant from '@/components/cv-studio/EnhancedAIAssistant';
+import AIAssistantPanel from '@/components/cv-studio/AIAssistantPanel';
 import EnhancedToolbar from '@/components/cv-studio/EnhancedToolbar';
 import OnboardingTips from '@/components/cv-studio/OnboardingTips';
 import AutoSaveIndicator from '@/components/cv-studio/AutoSaveIndicator';
@@ -45,11 +45,10 @@ interface CVStudioProps {}
 
 const CVStudio: React.FC<CVStudioProps> = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [activeTab, setActiveTab] = useState<'templates' | 'customize'>('templates');
+  const [activeTab, setActiveTab] = useState<'templates' | 'customize' | 'snippets'>('templates');
   const [zoom, setZoom] = useState(1);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [selectedCV, setSelectedCV] = useState<string | null>(null);
-  const [linkedJob, setLinkedJob] = useState<any>(null);
   const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showAIAssistant, setShowAIAssistant] = useState(true); // Open by default
@@ -64,7 +63,13 @@ const CVStudio: React.FC<CVStudioProps> = () => {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error' | 'unsaved'>('saved');
   const [lastSaved, setLastSaved] = useState<Date>(new Date());
-  const [linkedJobs, setLinkedJobs] = useState<any[]>([]);
+  
+  // Content selection state for AI Assistant
+  const [selectedContent, setSelectedContent] = useState<string>('');
+  const [selectedSection, setSelectedSection] = useState<string>('');
+  const [selectedElementType, setSelectedElementType] = useState<string>('');
+  const [cvData, setCvData] = useState<any>(null);
+  const [selectedJob, setSelectedJob] = useState<any>(null);
 
   // Zoom constraints
   const MIN_ZOOM = 0.25;
@@ -86,18 +91,7 @@ const CVStudio: React.FC<CVStudioProps> = () => {
 
   // Load jobs data
   const loadJobsData = async () => {
-    try {
-      const userData = localStorage.getItem('user');
-      const userId = userData ? JSON.parse(userData).id || JSON.parse(userData)._id : '6889b151d17daa1eaee91a5c';
-      
-      const jobsResponse = await fetch(`/api/jobs?userId=${userId}`);
-      const jobsResult = await jobsResponse.json();
-      if (jobsResult.success) {
-        setLinkedJobs(jobsResult.data || []);
-      }
-    } catch (error) {
-      console.error('Error loading jobs:', error);
-    }
+    // Removed job loading functionality
   };
 
   // Handle URL parameters for CV editing
@@ -115,9 +109,6 @@ const CVStudio: React.FC<CVStudioProps> = () => {
       setSelectedCV(cvId);
       console.log('Loading CV with ID:', cvId);
     }
-    
-    // Load jobs data
-    loadJobsData();
   }, []);
 
   const handleSave = useCallback(() => {
@@ -286,10 +277,8 @@ const CVStudio: React.FC<CVStudioProps> = () => {
   }, []);
 
   const handleApplyAISuggestion = useCallback((suggestion: any) => {
-    // Apply AI suggestion logic here
     console.log('Applying AI suggestion:', suggestion);
-    // Here you would update the CV content with the AI suggestion
-    setCurrentContent(suggestion.content);
+    setAiSuggestions(prev => prev.filter(s => s.id !== suggestion.id));
   }, []);
 
   const handleGenerateContent = useCallback((type: string, content: string) => {
@@ -394,13 +383,43 @@ const CVStudio: React.FC<CVStudioProps> = () => {
     setSelectedTemplate(template);
     console.log('Template selected:', template.name);
     setShowTemplateSelector(false);
-    // You can add logic here to apply the template to the CV editor
-  }, []);
+    
+    // Apply template to the CV editor
+    if (template && template.styles) {
+      // Update styling based on template
+      handleStylingUpdate('fontFamily', template.styles.fontFamily || 'Arial, sans-serif');
+      handleStylingUpdate('bodyFontSize', template.styles.baseFontSize || 11);
+      handleStylingUpdate('sectionTitleFontSize', template.styles.sectionTitleFontSize || 15);
+      handleStylingUpdate('nameFontSize', template.styles.nameFontSize || 20);
+      handleStylingUpdate('lineHeight', template.styles.lineHeight || 1.0);
+      handleStylingUpdate('margins', template.styles.paddingX || 96);
+      handleStylingUpdate('sectionGap', template.styles.sectionGap || 10);
+      handleStylingUpdate('itemSpacing', template.styles.itemSpacing || 2);
+      handleStylingUpdate('bulletSpacing', template.styles.subsectionGap || 4);
+      
+      // Show success notification
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('saved'), 2000);
+    }
+  }, [handleStylingUpdate]);
 
   const handleApplySnippet = useCallback((snippet: any) => {
     console.log('Applying snippet:', snippet);
-    // Apply snippet logic here
-    setCurrentContent(snippet.content);
+    // TODO: Implement snippet application logic
+  }, []);
+
+  const handleContentSelect = useCallback((content: string, section: string, elementType: string) => {
+    console.log('Content selected:', { content, section, elementType });
+    setSelectedContent(content);
+    setSelectedSection(section);
+    setSelectedElementType(elementType);
+    setCurrentContent(content);
+    setCurrentSection(section);
+  }, []);
+
+  const handleJobSelect = useCallback((job: any) => {
+    console.log('Job selected:', job);
+    setSelectedJob(job);
   }, []);
 
   const handleAddSection = useCallback((sectionType: string) => {
@@ -432,9 +451,9 @@ const CVStudio: React.FC<CVStudioProps> = () => {
       <div className="relative z-50">
         <CVStudioHeader
           selectedCV={selectedCV}
-          linkedJob={linkedJob}
+          linkedJob={null} // Removed linkedJob prop
           onCVChange={setSelectedCV}
-          onJobChange={setLinkedJob}
+          onJobChange={() => {}} // Removed onJobChange prop
           onAIAssist={handleAIAssist}
           hasUnsavedChanges={hasUnsavedChanges}
           onSave={handleSave}
@@ -456,21 +475,22 @@ const CVStudio: React.FC<CVStudioProps> = () => {
             activeTab={activeTab}
             onTabChange={setActiveTab}
             userCVs={[]} // This will be loaded by the header component
-            linkedJobs={linkedJobs}
+            linkedJobs={[]} // This will be loaded by the header component
             onTemplateSelect={handleTemplateSelect}
-            onJobSelect={setLinkedJob}
+            onJobSelect={() => {}} // Removed onJobSelect prop
             selectedTemplate={selectedTemplate}
             styling={styling}
-            onFontFamilyChange={handleFontFamilyChange}
-            onBodyFontSizeChange={handleBodyFontSizeChange}
-            onSectionTitleFontSizeChange={handleSectionTitleFontSizeChange}
-            onNameFontSizeChange={handleNameFontSizeChange}
-            onLineHeightChange={handleLineHeightChange}
-            onMarginsChange={handleMarginsChange}
-            onSectionGapChange={handleSectionGapChange}
-            onItemSpacingChange={handleItemSpacingChange}
-            onBulletSpacingChange={handleBulletSpacingChange}
+            onFontFamilyChange={(fontFamily) => setStyling(prev => ({ ...prev, fontFamily }))}
+            onBodyFontSizeChange={(size) => setStyling(prev => ({ ...prev, bodyFontSize: size }))}
+            onSectionTitleFontSizeChange={(size) => setStyling(prev => ({ ...prev, sectionTitleFontSize: size }))}
+            onNameFontSizeChange={(size) => setStyling(prev => ({ ...prev, nameFontSize: size }))}
+            onLineHeightChange={(height) => setStyling(prev => ({ ...prev, lineHeight: height }))}
+            onMarginsChange={(margins) => setStyling(prev => ({ ...prev, margins }))}
+            onSectionGapChange={(gap) => setStyling(prev => ({ ...prev, sectionGap: gap }))}
+            onItemSpacingChange={(spacing) => setStyling(prev => ({ ...prev, itemSpacing: spacing }))}
+            onBulletSpacingChange={(spacing) => setStyling(prev => ({ ...prev, bulletSpacing: spacing }))}
             onAutoFit={handleAutoFit}
+            onApplySnippet={handleApplySnippet}
           />
         </div>
 
@@ -507,14 +527,30 @@ const CVStudio: React.FC<CVStudioProps> = () => {
               zoom={zoom}
               isPreviewMode={isPreviewMode}
               selectedCV={selectedCV}
-              linkedJob={linkedJob}
+              linkedJob={null} // Removed linkedJob prop
               onDataChange={() => setHasUnsavedChanges(true)}
               currentPage={currentPage}
-              onPageChange={handlePageChange}
+              onPageChange={setCurrentPage}
               totalPages={totalPages}
-              onContentChange={handleContentChange}
+              onContentChange={(content, section) => {
+                setCurrentContent(content);
+                if (section) setCurrentSection(section);
+                // Handle CV data updates
+                if (section === 'cv-data') {
+                  try {
+                    const parsedData = JSON.parse(content);
+                    setCvData(parsedData);
+                  } catch (error) {
+                    console.error('Error parsing CV data:', error);
+                  }
+                }
+              }}
               userId={userId}
               cvId={selectedCV || undefined}
+              selectedTemplate={selectedTemplate}
+              onContentSelect={handleContentSelect}
+              selectedContent={selectedContent}
+              selectedSection={selectedSection}
               styling={styling}
             />
           </div>
@@ -523,16 +559,41 @@ const CVStudio: React.FC<CVStudioProps> = () => {
         {/* Right Sidebar - Enhanced AI Assistant */}
         <AnimatePresence>
           {showAIAssistant && (
-            <EnhancedAIAssistant
+            <AIAssistantPanel
               onApplySuggestion={handleApplyAISuggestion}
               onGenerateContent={handleGenerateContent}
               onApplySnippet={handleApplySnippet}
               currentSection={currentSection}
               currentContent={currentContent}
-              availableJobs={[]} // This will be loaded by the header component
+              availableJobs={[
+                {
+                  id: '1',
+                  title: 'Senior Software Engineer',
+                  company: 'Tech Corp',
+                  description: 'Leading development of scalable web applications using React, Node.js, and cloud technologies. Experience with microservices architecture, CI/CD pipelines, and agile methodologies required.',
+                  status: 'active'
+                },
+                {
+                  id: '2',
+                  title: 'Full Stack Developer',
+                  company: 'Startup Inc',
+                  description: 'Building React/Node.js applications from scratch. Must have experience with MongoDB, AWS, and modern JavaScript frameworks. Knowledge of machine learning and data analysis is a plus.',
+                  status: 'active'
+                },
+                {
+                  id: '3',
+                  title: 'Backend Engineer',
+                  company: 'Enterprise Solutions',
+                  description: 'Designing and implementing microservices architecture. Strong experience with Java, Spring Boot, Docker, and Kubernetes. Knowledge of financial systems and compliance is preferred.',
+                  status: 'active'
+                }
+              ]}
               onClose={() => setShowAIAssistant(false)}
               isCollapsed={isAIAssistantCollapsed}
               onToggleCollapse={() => setIsAIAssistantCollapsed(!isAIAssistantCollapsed)}
+              cvData={cvData}
+              selectedJob={selectedJob}
+              onJobSelect={handleJobSelect}
             />
           )}
         </AnimatePresence>

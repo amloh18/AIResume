@@ -2,195 +2,176 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --foreground: #ffffff;
-  --background: #000000;
+/* Custom scrollbar styles */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
 
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
-}
-
-html {
-  scroll-behavior: smooth;
-}
-
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  overflow-x: hidden;
-}
-
-/* Custom scrollbar styling */
-::-webkit-scrollbar {
+.scrollbar-thin::-webkit-scrollbar {
   width: 6px;
 }
 
-::-webkit-scrollbar-track {
+.scrollbar-thin::-webkit-scrollbar-track {
   background: transparent;
 }
 
-::-webkit-scrollbar-thumb {
-  background: rgba(156, 163, 175, 0.3);
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2);
   border-radius: 3px;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(156, 163, 175, 0.5);
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.3);
 }
 
-/* Firefox scrollbar */
-* {
+/* Template preview scrollbar */
+.template-preview-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
+  scrollbar-color: rgba(139, 92, 246, 0.3) transparent;
 }
 
-/* Selection styling */
-::selection {
-  background: rgba(132, 204, 22, 0.3);
-  color: white;
+.template-preview-scrollbar::-webkit-scrollbar {
+  width: 8px;
 }
 
-/* Focus styles */
-*:focus {
-  outline: 2px solid #84cc16;
-  outline-offset: 2px;
+.template-preview-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-/* Smooth transitions for all elements */
+.template-preview-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(139, 92, 246, 0.3);
+  border-radius: 4px;
+}
+
+.template-preview-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(139, 92, 246, 0.5);
+}
+
+/* Smooth transitions */
 * {
-  transition: color 0.3s ease, background-color 0.3s ease, border-color 0.3s ease, transform 0.3s ease;
-}
-
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
-  
-  /* 3D Transform utilities */
-  .preserve-3d {
-    transform-style: preserve-3d;
-  }
-  
-  .perspective-1000 {
-    perspective: 1000px;
-  }
-  
-  .perspective-2000 {
-    perspective: 2000px;
-  }
-  
-  /* Glassmorphism effects */
-  .glass {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-  }
-  
-  .glass-dark {
-    background: rgba(0, 0, 0, 0.3);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-  }
-  
-  /* Gradient text utilities */
-  .gradient-text {
-    background: linear-gradient(135deg, #84cc16, #22c55e);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-  
-  .gradient-text-lime {
-    background: linear-gradient(135deg, #84cc16, #65a30d);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-  
-  /* Glow effects */
-  .glow-lime {
-    box-shadow: 0 0 20px rgba(132, 204, 22, 0.3);
-  }
-  
-  .glow-lime-strong {
-    box-shadow: 0 0 40px rgba(132, 204, 22, 0.5);
-  }
-  
-  /* Animation utilities */
-  .animate-float {
-    animation: float 6s ease-in-out infinite;
-  }
-  
-  .animate-pulse-slow {
-    animation: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  }
-  
-  .animate-bounce-slow {
-    animation: bounce 3s infinite;
-  }
+  transition: all 0.2s ease-in-out;
 }
 
 /* Custom animations */
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0px);
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+/* Template selection animation */
+@keyframes templateSelect {
+  0% {
+    transform: scale(1);
+    border-color: rgba(255, 255, 255, 0.1);
   }
   50% {
-    transform: translateY(-20px);
-  }
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
+    transform: scale(1.05);
+    border-color: rgb(168, 85, 247);
   }
   100% {
-    background-position: 200% 0;
+    transform: scale(1);
+    border-color: rgb(168, 85, 247);
   }
 }
 
-.animate-shimmer {
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-  background-size: 200% 100%;
-  animation: shimmer 2s infinite;
+.template-selected {
+  animation: templateSelect 0.3s ease-out;
 }
 
-/* Responsive typography */
-@media (max-width: 640px) {
-  html {
-    font-size: 14px;
-  }
+/* Tiptap Editor Styles */
+.tiptap-editor {
+  outline: none;
+  border: none;
+  background: transparent;
 }
 
-@media (min-width: 1024px) {
-  html {
-    font-size: 16px;
-  }
+.tiptap-editor:focus {
+  outline: none;
 }
 
-/* High contrast mode support */
-@media (prefers-contrast: high) {
-  :root {
-    --foreground: #ffffff;
-    --background: #000000;
-  }
+.tiptap-editor p {
+  margin: 0;
+  padding: 0;
 }
 
-/* Reduced motion support */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
+.tiptap-editor ul,
+.tiptap-editor ol {
+  margin: 0;
+  padding-left: 1.5em;
+}
+
+.tiptap-editor li {
+  margin: 0;
+}
+
+/* Template-specific styles */
+.desc-modern-professional {
+  font-size: 14px;
+  color: #444;
+  line-height: 1.6;
+}
+
+.name-modern-professional {
+  font-weight: 700;
+  font-size: 24px;
+  color: #1a1a1a;
+}
+
+.title-modern-professional {
+  font-weight: 600;
+  font-size: 16px;
+  color: #1a1a1a;
+}
+
+.desc-classic-elegant {
+  font-size: 13px;
+  color: #555;
+  line-height: 1.5;
+  font-style: italic;
+}
+
+.name-classic-elegant {
+  font-weight: 600;
+  font-size: 22px;
+  color: #2c2c2c;
+  font-family: 'Times New Roman', serif;
+}
+
+.title-classic-elegant {
+  font-weight: 500;
+  font-size: 15px;
+  color: #2c2c2c;
+}
+
+.desc-minimalist-clean {
+  font-size: 12px;
+  color: #666;
+  line-height: 1.4;
+  font-weight: 300;
+}
+
+.name-minimalist-clean {
+  font-weight: 400;
+  font-size: 20px;
+  color: #333;
+  letter-spacing: 0.5px;
+}
+
+.title-minimalist-clean {
+  font-weight: 500;
+  font-size: 14px;
+  color: #333;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 } 

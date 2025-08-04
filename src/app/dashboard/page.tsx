@@ -34,6 +34,7 @@ import Canvas from '@/components/dashboard/Canvas';
 import Pipeline from '@/components/dashboard/Pipeline';
 import InkPad from '@/components/dashboard/InkPad';
 import Analytics from '@/components/dashboard/Analytics';
+import Snippets from '@/components/dashboard/Snippets';
 import DashboardNavigation from '@/components/dashboard/DashboardNavigation';
 
 interface DashboardProps {}
@@ -332,14 +333,7 @@ const Dashboard: React.FC<DashboardProps> = () => {
                   exit={{ opacity: 0, x: -20 }}
                   transition={{ duration: 0.3 }}
                 >
-                  <div className="text-center py-20">
-                    <div className="w-16 h-16 bg-gradient-to-br from-blue-400/20 to-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <MessageSquare size={24} className="text-blue-400" />
-                    </div>
-                    <h2 className="text-2xl font-bold text-white mb-2">Snippets</h2>
-                    <p className="text-white/60">Save and organize your snippets and community content</p>
-                    <p className="text-white/40 text-sm mt-4">Coming soon...</p>
-                  </div>
+                  <Snippets userAccessLevel="pro" />
                 </motion.div>
               )}
 

@@ -22,6 +22,7 @@ import {
   Sparkles,
   Loader2
 } from 'lucide-react';
+import TemplatePreview from './TemplatePreview';
 
 interface CVTemplate {
   _id: string;
@@ -41,8 +42,8 @@ interface CVTemplate {
 interface CVStudioSidebarProps {
   isCollapsed: boolean;
   onToggleCollapse: () => void;
-  activeTab: 'templates' | 'jobs' | 'customize';
-  onTabChange: (tab: 'templates' | 'jobs' | 'customize') => void;
+  activeTab: 'templates' | 'customize' | 'snippets';
+  onTabChange: (tab: 'templates' | 'customize' | 'snippets') => void;
   userCVs: any[];
   linkedJobs: any[];
   onTemplateSelect?: (template: CVTemplate) => void;
@@ -70,6 +71,7 @@ interface CVStudioSidebarProps {
   onItemSpacingChange?: (spacing: number) => void;
   onBulletSpacingChange?: (spacing: number) => void;
   onAutoFit?: () => void;
+  onApplySnippet?: (snippet: any) => void;
 }
 
 const CVStudioSidebar: React.FC<CVStudioSidebarProps> = ({
@@ -102,17 +104,21 @@ const CVStudioSidebar: React.FC<CVStudioSidebarProps> = ({
   onSectionGapChange,
   onItemSpacingChange,
   onBulletSpacingChange,
-  onAutoFit
+  onAutoFit,
+  onApplySnippet
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [templates, setTemplates] = useState<CVTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [snippets, setSnippets] = useState<any[]>([]);
+  const [snippetsLoading, setSnippetsLoading] = useState(false);
+  const [snippetsError, setSnippetsError] = useState<string | null>(null);
 
   const tabs = [
     { id: 'templates', name: 'Templates', icon: FileText, description: 'Choose from professional templates' },
-    { id: 'jobs', name: 'Jobs', icon: Briefcase, description: 'Link jobs to your CV' },
+    { id: 'snippets', name: 'Snippets', icon: Layers, description: 'CV section designs' },
     { id: 'customize', name: 'Customize', icon: Palette, description: 'Adjust styling and layout' }
   ];
 
@@ -143,6 +149,33 @@ const CVStudioSidebar: React.FC<CVStudioSidebarProps> = ({
     fetchTemplates();
   }, []);
 
+  // Fetch snippets from API
+  useEffect(() => {
+    const fetchSnippets = async () => {
+      try {
+        setSnippetsLoading(true);
+        console.log('Fetching snippets from API...');
+        const response = await fetch('/api/snippets?limit=20');
+        const data = await response.json();
+        
+        if (data.success) {
+          console.log(`Loaded ${data.data.length} snippets:`, data.data.map((s: any) => s.name));
+          setSnippets(data.data);
+        } else {
+          console.error('Failed to load snippets:', data);
+          setSnippetsError('Failed to load snippets');
+        }
+      } catch (err) {
+        console.error('Error fetching snippets:', err);
+        setSnippetsError('Failed to load snippets');
+      } finally {
+        setSnippetsLoading(false);
+      }
+    };
+
+    fetchSnippets();
+  }, []);
+
   // Filter templates based on search
   const filteredTemplates = templates.filter(template => 
     template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -150,14 +183,12 @@ const CVStudioSidebar: React.FC<CVStudioSidebarProps> = ({
     template.category.some(cat => cat.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  const snippets = [
-    { id: '1', name: 'Standard Layouts', section: 'personal_info', thumbnail: '/api/placeholder/150/100', isPremium: false },
-    { id: '2', name: 'Photo Layouts', section: 'personal_info', thumbnail: '/api/placeholder/150/100', isPremium: false },
-    { id: '3', name: 'Timeline Experience', section: 'experience', thumbnail: '/api/placeholder/150/100', isPremium: false },
-    { id: '4', name: 'Skill Bars', section: 'skills', thumbnail: '/api/placeholder/150/100', isPremium: false },
-    { id: '5', name: 'Compact Education', section: 'education', thumbnail: '/api/placeholder/150/100', isPremium: false },
-    { id: '6', name: 'Two-Column Skills', section: 'skills', thumbnail: '/api/placeholder/150/100', isPremium: true }
-  ];
+  // Filter snippets based on search
+  const filteredSnippets = snippets.filter(snippet => 
+    snippet.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    snippet.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    snippet.sectionType.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const renderTemplatesTab = () => (
     <div className="space-y-4">
@@ -220,78 +251,14 @@ const CVStudioSidebar: React.FC<CVStudioSidebarProps> = ({
 
       {/* Templates Grid */}
       {!loading && !error && (
-        <div className={`grid gap-4 ${
-          viewMode === 'grid' ? 'grid-cols-3' : 'grid-cols-1'
-        }`}>
+        <div className="grid grid-cols-2 gap-3">
           {filteredTemplates.map((template) => (
-            <motion.div
+            <TemplatePreview
               key={template._id}
-              className="group cursor-pointer"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              template={template}
+              isSelected={selectedTemplate?._id === template._id}
               onClick={() => onTemplateSelect?.(template)}
-            >
-              <div className={`relative bg-white/5 border rounded-xl overflow-hidden hover:border-white/20 transition-all duration-300 ${
-                selectedTemplate?._id === template._id 
-                  ? 'border-purple-500 bg-purple-500/10' 
-                  : 'border-white/10'
-              }`}>
-                {/* Thumbnail */}
-                <div className="aspect-[4/3] bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
-                  <div className="w-12 h-16 bg-white/20 rounded-lg border border-white/30 flex items-center justify-center">
-                    <FileText size={20} className="text-white/60" />
-                  </div>
-                </div>
-                
-                {/* Premium Badge */}
-                {template.isPremium && (
-                  <div className="absolute top-2 right-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs px-2 py-1 rounded-full">
-                    PRO
-                  </div>
-                )}
-
-                {/* Default Badge */}
-                {template.isDefault && (
-                  <div className="absolute top-2 left-2 bg-gradient-to-r from-green-500 to-blue-500 text-white text-xs px-2 py-1 rounded-full">
-                    DEFAULT
-                  </div>
-                )}
-                
-                {/* Template Info */}
-                <div className="p-3">
-                  <h3 className="font-medium text-white mb-1 group-hover:text-purple-400 transition-colors">
-                    {template.name}
-                  </h3>
-                  <p className="text-xs text-white/60 mb-2 line-clamp-2">
-                    {template.description}
-                  </p>
-                  <div className="flex flex-wrap gap-1 mb-2">
-                    {template.category.slice(0, 2).map((cat) => (
-                      <span
-                        key={cat}
-                        className="text-xs px-2 py-1 bg-white/10 text-white/60 rounded-full"
-                      >
-                        {cat}
-                      </span>
-                    ))}
-                    {template.category.length > 2 && (
-                      <span className="text-xs px-2 py-1 bg-white/10 text-white/60 rounded-full">
-                        +{template.category.length - 2}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1">
-                      <Star className="w-3 h-3 text-yellow-400 fill-current" />
-                      <span className="text-xs text-white/60">{template.metadata.rating}</span>
-                    </div>
-                    <span className="text-xs text-white/40">
-                      {template.metadata.usageCount} uses
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
+            />
           ))}
         </div>
       )}
@@ -503,6 +470,14 @@ const CVStudioSidebar: React.FC<CVStudioSidebarProps> = ({
 
   const renderSnippetsTab = () => (
     <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h3 className="text-white font-semibold">Snippets</h3>
+        <button className="p-2 text-white/60 hover:text-white transition-colors rounded-lg hover:bg-white/10">
+          <Plus size={16} />
+        </button>
+      </div>
+
       {/* Search */}
       <div className="relative">
         <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/40" />
@@ -516,90 +491,42 @@ const CVStudioSidebar: React.FC<CVStudioSidebarProps> = ({
       </div>
 
       {/* Snippets Grid */}
-      <div className="grid grid-cols-3 gap-3">
-        {snippets.map((snippet) => (
-          <motion.div
-            key={snippet.id}
-            className="group cursor-pointer"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <div className="relative bg-white/5 border border-white/10 rounded-lg overflow-hidden hover:border-white/20 transition-all duration-300">
-              {/* Thumbnail */}
-              <div className="aspect-[3/2] bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center">
-                <div className="w-8 h-10 bg-white/20 rounded border border-white/30 flex items-center justify-center">
-                  <Layers size={14} className="text-white/60" />
-                </div>
-              </div>
-              
-              {/* Premium Badge */}
-              {snippet.isPremium && (
-                <div className="absolute top-1 right-1 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs px-1 py-0.5 rounded text-[10px]">
-                  PRO
-                </div>
-              )}
-              
-              {/* Snippet Info */}
-              <div className="p-2">
-                <h3 className="font-medium text-white text-sm mb-1 group-hover:text-blue-400 transition-colors">
-                  {snippet.name}
-                </h3>
-                <span className="text-xs text-white/60 capitalize">
-                  {snippet.section.replace('_', ' ')}
-                </span>
-              </div>
-            </div>
-          </motion.div>
-        ))}
-      </div>
-    </div>
-  );
-
-  const renderJobsTab = () => (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h3 className="text-white font-semibold">Linked Jobs</h3>
-        <button className="p-2 text-white/60 hover:text-white transition-colors rounded-lg hover:bg-white/10">
-          <Plus size={16} />
-        </button>
-      </div>
-
-      {/* Jobs List */}
-      <div className="space-y-2">
-        {linkedJobs.length === 0 ? (
-          <div className="text-center py-8">
-            <Briefcase size={48} className="mx-auto text-blue-400 mb-4" />
-            <h3 className="text-white font-semibold mb-2">No Jobs Linked</h3>
-            <p className="text-white/60 text-sm mb-4">
-              Link a job to optimize your CV for specific positions.
-            </p>
-            <button className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-lg hover:from-blue-400 hover:to-purple-400 transition-all duration-300">
-              Add Job
-            </button>
-          </div>
-        ) : (
-          linkedJobs.map((job) => (
+      {snippetsLoading ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 size={24} className="text-white/60 animate-spin" />
+        </div>
+      ) : snippetsError ? (
+        <div className="text-center py-8">
+          <AlertCircle size={48} className="mx-auto text-red-400 mb-4" />
+          <h3 className="text-white font-semibold mb-2">Error Loading Snippets</h3>
+          <p className="text-white/60 text-sm">{snippetsError}</p>
+        </div>
+      ) : filteredSnippets.length === 0 ? (
+        <div className="text-center py-8">
+          <Layers size={48} className="mx-auto text-blue-400 mb-4" />
+          <h3 className="text-white font-semibold mb-2">No Snippets Found</h3>
+          <p className="text-white/60 text-sm">
+            {searchQuery ? 'Try adjusting your search terms.' : 'No snippets available yet.'}
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-3">
+          {filteredSnippets.map((snippet) => (
             <div
-              key={job._id || job.id}
+              key={snippet._id || snippet.id}
               className="p-3 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
-              onClick={() => onJobSelect?.(job)}
+              onClick={() => onApplySnippet?.(snippet)}
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1 min-w-0">
-                  <h4 className="text-white font-medium truncate">{job.jobTitle || job.title}</h4>
-                  <p className="text-white/60 text-sm truncate">{job.company}</p>
+                  <h4 className="text-white font-medium truncate">{snippet.name}</h4>
+                  <p className="text-white/60 text-sm truncate">{snippet.description}</p>
                   <div className="flex items-center gap-2 mt-2">
-                    <span className={`text-xs px-2 py-1 rounded-full ${
-                      job.status === 'applied' ? 'bg-blue-500/20 text-blue-400' :
-                      job.status === 'interviewing' ? 'bg-green-500/20 text-green-400' :
-                      job.status === 'screening' ? 'bg-yellow-500/20 text-yellow-400' :
-                      'bg-gray-500/20 text-gray-400'
-                    }`}>
-                      {job.status}
+                    <span className="text-xs px-2 py-1 rounded-full bg-purple-500/20 text-purple-400">
+                      {snippet.sectionType}
                     </span>
-                    {job.location && (
-                      <span className="text-xs text-white/40">{job.location}</span>
+                    {snippet.isPremium && (
+                      <Star size={12} className="text-yellow-400" />
                     )}
                   </div>
                 </div>
@@ -608,44 +535,22 @@ const CVStudioSidebar: React.FC<CVStudioSidebarProps> = ({
                 </button>
               </div>
             </div>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 
   return (
     <motion.aside
-      className="bg-white/5 backdrop-blur-xl border-r border-white/10 flex flex-col relative z-40"
+      className="bg-white/5 backdrop-blur-xl border-r border-white/10 flex flex-col relative z-40 h-screen sticky top-0"
       initial={{ width: isCollapsed ? 60 : 480 }}
       animate={{ width: isCollapsed ? 60 : 480 }}
       transition={{ duration: 0.3, ease: 'easeInOut' }}
     >
-      {/* Collapse Toggle */}
-      <div className="flex items-center justify-between p-4 border-b border-white/10">
-        {!isCollapsed && (
-          <motion.h2
-            className="text-white font-semibold"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            CV Studio
-          </motion.h2>
-        )}
-        <motion.button
-          className="p-2 text-white/60 hover:text-white transition-colors rounded-lg hover:bg-white/10"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={onToggleCollapse}
-        >
-          {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-        </motion.button>
-      </div>
-
       {/* Tab Navigation */}
       {!isCollapsed && (
-        <div className="flex border-b border-white/10">
+        <div className="flex border-b border-white/10 flex-shrink-0">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -664,7 +569,7 @@ const CVStudioSidebar: React.FC<CVStudioSidebarProps> = ({
       )}
 
       {/* Tab Content */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 overflow-y-auto p-4 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
         <AnimatePresence mode="wait">
           {!isCollapsed && (
             <motion.div
@@ -675,8 +580,8 @@ const CVStudioSidebar: React.FC<CVStudioSidebarProps> = ({
               transition={{ duration: 0.2 }}
             >
               {activeTab === 'templates' && renderTemplatesTab()}
-              {activeTab === 'jobs' && renderJobsTab()}
               {activeTab === 'customize' && renderCustomizeTab()}
+              {activeTab === 'snippets' && renderSnippetsTab()}
             </motion.div>
           )}
         </AnimatePresence>
