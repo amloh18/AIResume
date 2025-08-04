@@ -8,6 +8,7 @@ export default withAuth(
         req.nextUrl.pathname.startsWith('/api/parse-job') ||
         req.nextUrl.pathname.startsWith('/api/jobs/parsed') ||
         req.nextUrl.pathname.startsWith('/api/templates') ||
+        req.nextUrl.pathname.startsWith('/api/snippets') ||
         req.nextUrl.pathname.startsWith('/api/health') ||
         req.nextUrl.pathname.startsWith('/api/cv/parse') ||
         req.nextUrl.pathname.startsWith('/api/test-file-upload') ||
@@ -15,6 +16,7 @@ export default withAuth(
         req.nextUrl.pathname === '/' ||
         req.nextUrl.pathname.startsWith('/cv-onboarding') ||
         req.nextUrl.pathname.startsWith('/test-cv-parsing') ||
+        req.nextUrl.pathname.startsWith('/test-snippets') ||
         req.nextUrl.pathname.startsWith('/auth/') ||
         req.nextUrl.pathname.startsWith('/_next') ||
         req.nextUrl.pathname.startsWith('/public')) {
@@ -36,6 +38,7 @@ export default withAuth(
             req.nextUrl.pathname.startsWith('/api/parse-job') ||
             req.nextUrl.pathname.startsWith('/api/jobs/parsed') ||
             req.nextUrl.pathname.startsWith('/api/templates') ||
+            req.nextUrl.pathname.startsWith('/api/snippets') ||
             req.nextUrl.pathname.startsWith('/api/health') ||
             req.nextUrl.pathname.startsWith('/api/cv/parse') ||
             req.nextUrl.pathname.startsWith('/api/test-file-upload') ||
@@ -43,6 +46,7 @@ export default withAuth(
             req.nextUrl.pathname === '/' ||
             req.nextUrl.pathname.startsWith('/cv-onboarding') ||
             req.nextUrl.pathname.startsWith('/test-cv-parsing') ||
+            req.nextUrl.pathname.startsWith('/test-snippets') ||
             req.nextUrl.pathname.startsWith('/auth/') ||
             req.nextUrl.pathname.startsWith('/_next') ||
             req.nextUrl.pathname.startsWith('/public')) {

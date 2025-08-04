@@ -6,12 +6,12 @@ import { toObjectId, createErrorResponse } from '@/lib/db-utils';
 // GET - Get a specific CV by ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
     
-    const { id } = params;
+    const { id } = await params;
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
 
@@ -69,12 +69,12 @@ export async function GET(
 // PUT - Update a CV
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
     
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
     const { userId, ...updateData } = body;
 
@@ -103,22 +103,17 @@ export async function PUT(
       );
     }
 
-    // Update CV data
+    // Update CV with new data
     Object.assign(cv, updateData);
+    cv.metadata.updatedAt = new Date();
     
-    // Update metadata
-    cv.metadata.lastModified = new Date();
-    cv.version += 1;
-
     await cv.save();
-
-    const cvResponse = cv.toJSON();
 
     return NextResponse.json({
       success: true,
       message: 'CV updated successfully',
       data: {
-        cv: cvResponse
+        cv: cv.toJSON()
       }
     });
 
@@ -136,12 +131,12 @@ export async function PUT(
 // DELETE - Delete a CV
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
     
-    const { id } = params;
+    const { id } = await params;
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
 
