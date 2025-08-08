@@ -118,8 +118,8 @@ const Pricing = () => {
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.05
+        staggerChildren: 0.05,
+        delayChildren: 0.02
       }
     }
   };
@@ -127,14 +127,12 @@ const Pricing = () => {
   const cardVariants = {
     hidden: { 
       opacity: 0, 
-      y: 50, 
-      rotateX: -10,
-      scale: 0.9
+      y: 20, 
+      scale: 0.98
     },
     visible: { 
       opacity: 1, 
       y: 0, 
-      rotateX: 0,
       scale: 1
     }
   };

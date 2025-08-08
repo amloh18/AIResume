@@ -7,6 +7,11 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  // Performance optimizations
+  experimental: {
+    optimizeCss: true,
+    optimizePackageImports: ['framer-motion', 'lucide-react'],
+  },
   // Vercel-specific optimizations
   serverExternalPackages: ['mongoose'],
   // Handle API routes properly
@@ -27,6 +32,14 @@ const nextConfig: NextConfig = {
     CUSTOM_KEY: process.env.CUSTOM_KEY,
     MONGODB_URI: process.env.MONGODB_URI,
   },
+  // Performance optimizations
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production',
+  },
+  compress: true,
+  poweredByHeader: false,
+  generateEtags: false,
+  reactStrictMode: true,
 }
 
 export default nextConfig 

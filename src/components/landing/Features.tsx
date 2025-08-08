@@ -9,7 +9,7 @@ const Features = () => {
     {
       number: '01',
       title: 'CV Studio',
-      description: 'Transform your career story with our intuitive CV builder. Features real-time inline editing, professional templates, and AI-powered content suggestions. Create stunning resumes that stand out with drag-and-drop sections, custom styling, and industry-specific formatting that gets you noticed by recruiters.',
+      description: 'Transform your career story with our intuitive CV builder. Features real-time inline editing and AI-powered content suggestions. Create stunning resumes that stand out with drag-and-drop sections, custom styling, and industry-specific formatting that gets you noticed by recruiters.',
       icon: FileText,
       color: 'from-lime-400 to-lime-500'
     },
@@ -56,7 +56,7 @@ const Features = () => {
       opacity: 1,
       transition: {
         staggerChildren: 0.1,
-        delayChildren: 0.05
+        delayChildren: 0.2
       }
     }
   };
@@ -64,14 +64,12 @@ const Features = () => {
   const cardVariants = {
     hidden: {
       opacity: 0,
-      y: 50,
-      rotateX: -10,
-      scale: 0.9
+      y: 30,
+      scale: 0.95
     },
     visible: {
       opacity: 1,
       y: 0,
-      rotateX: 0,
       scale: 1
     }
   };
@@ -86,12 +84,12 @@ const Features = () => {
       
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <motion.div 
+        <motion.div
           className="text-center mb-20"
-          initial={{ opacity: 0, y: 50 }}
+          initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          viewport={{ once: true }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          viewport={{ once: true, margin: "-50px" }}
         >
           <h2 className="text-4xl sm:text-6xl font-bold text-white mb-8">
             Everything you need to{' '}
@@ -121,28 +119,24 @@ const Features = () => {
                   className="group relative"
                   variants={cardVariants}
                   transition={{
-                    duration: 0.8,
+                    duration: 0.6,
                     ease: "easeOut"
                   }}
                   style={{
                     zIndex: features.length - index,
-                    transform: `translateY(${index * 15}px) translateX(${index % 2 === 0 ? -10 : 10}px)`
+                    willChange: 'transform, opacity'
                   }}
                 >
                   <motion.div
-                    className="relative bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-xl border border-white/10 rounded-3xl p-8 h-full"
-                    whileHover={{ 
-                      scale: 1.05,
-                      rotateY: 5,
-                      rotateX: 5,
-                      y: -10,
-                      boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.8)"
+                    className="relative bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-xl border border-white/10 rounded-3xl p-8 h-full card-hover"
+                    whileHover={{
+                      scale: 1.01,
+                      y: -3,
+                      boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.2)"
                     }}
-                    whileTap={{ scale: 0.98 }}
-                    style={{
-                      transformStyle: 'preserve-3d',
-                      perspective: '1000px'
-                    }}
+                    whileTap={{ scale: 0.99 }}
+                    style={{ willChange: 'transform' }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
                   >
                     {/* Glow Effect */}
                     <motion.div
@@ -186,7 +180,7 @@ const Features = () => {
                     </div>
                     
                     {/* Title */}
-                    <h3 className="text-2xl font-bold text-white mb-4 group-hover:text-lime-400 transition-colors duration-300">
+                    <h3 className="text-2xl font-bold text-white mb-4 group-hover:text-lime-400 transition-colors">
                       {feature.title}
                     </h3>
                     
@@ -197,7 +191,7 @@ const Features = () => {
                     
                     {/* Arrow Indicator */}
                     <motion.div
-                      className="absolute bottom-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                      className="absolute bottom-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity"
                       whileHover={{ x: 5, rotate: 45 }}
                     >
                       <ArrowRight 
@@ -208,7 +202,7 @@ const Features = () => {
                     
                     {/* Border Glow on Hover */}
                     <motion.div
-                      className="absolute inset-0 rounded-3xl border-2 border-transparent group-hover:border-lime-400/30 transition-all duration-500"
+                      className="absolute inset-0 rounded-3xl border-2 border-transparent group-hover:border-lime-400/30 transition-all"
                       style={{
                         background: 'linear-gradient(45deg, transparent, transparent)',
                         mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',

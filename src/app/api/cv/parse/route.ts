@@ -740,9 +740,9 @@ export function extractSkills(text: string): Skills[] {
     }
     
     // Also check for all caps section headers
-    if (originalLine === 'SKILLS' || originalLine === 'TECHNICAL SKILLS' || originalLine === 'COMPETENCIES') {
+    if (line === 'SKILLS' || line === 'TECHNICAL SKILLS' || line === 'COMPETENCIES') {
       inSkillsSection = true;
-      console.log('Entering skills section (all caps):', originalLine);
+      console.log('Entering skills section (all caps):', line);
       continue;
     }
     

@@ -1,36 +1,10 @@
 import mongoose, { Document, Schema } from 'mongoose';
-import { ICVSection, IStyleSnippet } from './Template';
+import { CVDataStructure } from '@/types/cv';
 
 export interface ICV extends Document {
   userId: mongoose.Types.ObjectId;
   title: string;
-  templateId?: mongoose.Types.ObjectId; // Reference to Template model
-  templateName?: string; // Name of the template (e.g., "ATS Friendly Finance CV")
-  templateData?: {
-    display: {
-      layout: 'single-column' | 'two-column' | 'absolute';
-      padding: string;
-      fontFamily: string;
-      sectionSpacing: string;
-    };
-    sections: ICVSection[];
-    snippetStyles: IStyleSnippet[];
-  };
-  cvData: {
-    personal_info?: {
-      name?: string;
-      contact0?: string;
-      contact1?: string;
-      contact2?: string;
-      summary?: string;
-    };
-    education?: Record<string, any>;
-    experience?: Record<string, any>;
-    leadership?: Record<string, any>;
-    project?: Record<string, any>;
-    skills?: Record<string, any>;
-    [key: string]: any; // Allow for dynamic section data
-  };
+  cvData: CVDataStructure;
   status: 'draft' | 'published' | 'archived';
   version: number;
   // Legacy fields for backward compatibility
@@ -200,8 +174,99 @@ const cvSchema = new Schema<ICV>({
     }]
   },
   cvData: {
-    type: Schema.Types.Mixed,
-    default: {}
+    basics: {
+      name: { type: String, default: '' },
+      label: { type: String, default: '' },
+      image: { type: String, default: '' },
+      email: { type: String, default: '' },
+      phone: { type: String, default: '' },
+      url: { type: String, default: '' },
+      summary: { type: String, default: '' },
+      location: {
+        address: { type: String, default: '' },
+        postalCode: { type: String, default: '' },
+        city: { type: String, default: '' },
+        countryCode: { type: String, default: '' },
+        region: { type: String, default: '' }
+      },
+      profiles: [{
+        network: { type: String },
+        username: { type: String },
+        url: { type: String }
+      }]
+    },
+    work: [{
+      name: { type: String },
+      position: { type: String },
+      url: { type: String },
+      startDate: { type: String },
+      endDate: { type: String },
+      summary: { type: String },
+      highlights: [{ type: String }]
+    }],
+    volunteer: [{
+      organization: { type: String },
+      position: { type: String },
+      url: { type: String },
+      startDate: { type: String },
+      endDate: { type: String },
+      summary: { type: String },
+      highlights: [{ type: String }]
+    }],
+    education: [{
+      institution: { type: String },
+      url: { type: String },
+      area: { type: String },
+      studyType: { type: String },
+      startDate: { type: String },
+      endDate: { type: String },
+      score: { type: String },
+      courses: [{ type: String }]
+    }],
+    awards: [{
+      title: { type: String },
+      date: { type: String },
+      awarder: { type: String },
+      summary: { type: String }
+    }],
+    certificates: [{
+      name: { type: String },
+      date: { type: String },
+      issuer: { type: String },
+      url: { type: String }
+    }],
+    publications: [{
+      name: { type: String },
+      publisher: { type: String },
+      releaseDate: { type: String },
+      url: { type: String },
+      summary: { type: String }
+    }],
+    skills: [{
+      name: { type: String },
+      level: { type: String },
+      keywords: [{ type: String }]
+    }],
+    languages: [{
+      language: { type: String },
+      fluency: { type: String }
+    }],
+    interests: [{
+      name: { type: String },
+      keywords: [{ type: String }]
+    }],
+    references: [{
+      name: { type: String },
+      reference: { type: String }
+    }],
+    projects: [{
+      name: { type: String },
+      startDate: { type: String },
+      endDate: { type: String },
+      description: { type: String },
+      highlights: [{ type: String }],
+      url: { type: String }
+    }]
   },
   status: {
     type: String,
