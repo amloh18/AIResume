@@ -40,7 +40,6 @@ import {
 interface CV {
   id: string;
   title: string;
-  template: string;
   lastModified: string;
   status: 'draft' | 'published' | 'archived';
   views: number;
@@ -99,7 +98,6 @@ const Canvas: React.FC = () => {
         const enrichedCVs = cvData.map((cv: any) => ({
           id: cv._id,
           title: cv.title || 'Untitled CV',
-          template: cv.template || 'Modern',
           lastModified: formatTimeAgo(new Date(cv.updatedAt)),
           status: cv.status || 'draft',
           views: cv.views || 0,
@@ -137,7 +135,6 @@ const Canvas: React.FC = () => {
     {
       id: '1',
       title: 'Senior UX Designer CV',
-      template: 'Modern',
       lastModified: '2 hours ago',
       status: 'published',
       views: 12,
@@ -189,7 +186,6 @@ const Canvas: React.FC = () => {
     {
       id: '2',
       title: 'Product Manager CV',
-      template: 'Classic',
       lastModified: '1 day ago',
       status: 'draft',
       views: 0,
@@ -203,7 +199,6 @@ const Canvas: React.FC = () => {
     {
       id: '3',
       title: 'Frontend Developer CV',
-      template: 'Creative',
       lastModified: '3 days ago',
       status: 'published',
       views: 8,
@@ -253,12 +248,7 @@ const Canvas: React.FC = () => {
     return `${diffInMonths} months ago`;
   };
 
-  const templates = [
-    { id: 'modern', name: 'Modern', description: 'Clean and professional', color: 'from-lime-400 to-lime-500' },
-    { id: 'classic', name: 'Classic', description: 'Traditional and elegant', color: 'from-blue-400 to-blue-500' },
-    { id: 'creative', name: 'Creative', description: 'Bold and innovative', color: 'from-purple-400 to-purple-500' },
-    { id: 'minimal', name: 'Minimal', description: 'Simple and focused', color: 'from-gray-400 to-gray-500' }
-  ];
+
 
   const toggleStar = (id: string) => {
     setCvs(cvs.map(cv => 
@@ -352,7 +342,7 @@ const Canvas: React.FC = () => {
             className="px-6 py-3 bg-gradient-to-r from-lime-400 to-lime-500 text-black font-semibold rounded-xl hover:from-lime-300 hover:to-lime-400 transition-all duration-300 flex items-center gap-2"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => window.location.href = '/cv-studio'}
+            onClick={() => window.location.href = '/studio'}
           >
             <Plus size={16} />
             Create CV
@@ -575,7 +565,7 @@ const Canvas: React.FC = () => {
                         </motion.button>
                       </div>
                     )}
-                    <p className="text-white/60 text-sm">{cv.template} Template</p>
+
                     {cv.description && (
                       <p className="text-white/40 text-xs mt-1 line-clamp-2">{cv.description}</p>
                     )}
@@ -619,7 +609,8 @@ const Canvas: React.FC = () => {
                     whileTap={{ scale: 0.98 }}
                     onClick={(e) => {
                       e.stopPropagation();
-                      window.location.href = `/cv-studio?cv=${cv.id}`;
+                      // TODO: Link to new editor when built
+                      console.log('Edit CV:', cv.id);
                     }}
                   >
                     <Edit size={14} />
@@ -654,41 +645,7 @@ const Canvas: React.FC = () => {
         </div>
       </div>
 
-      {/* Templates Section */}
-      <div className="space-y-6">
-        <h2 className="text-xl font-semibold text-white">Templates</h2>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {templates.map((template, index) => (
-            <motion.div
-              key={template.id}
-              className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-all duration-300 cursor-pointer group"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6 + index * 0.1 }}
-              whileHover={{ y: -5, scale: 1.02 }}
-            >
-              <div className={`w-12 h-16 bg-gradient-to-br ${template.color} rounded-lg mb-4 flex items-center justify-center`}>
-                <FileText size={20} className="text-white" />
-              </div>
-              
-              <h3 className="font-semibold text-white mb-2 group-hover:text-lime-400 transition-colors">
-                {template.name}
-              </h3>
-              <p className="text-white/60 text-sm mb-4">{template.description}</p>
-              
-              <motion.button
-                className="w-full px-4 py-2 bg-gradient-to-r from-lime-400/20 to-lime-500/20 border border-lime-400/30 text-lime-400 rounded-lg text-sm font-medium hover:from-lime-400/30 hover:to-lime-500/30 transition-all duration-300 flex items-center justify-center gap-2"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Plus size={14} />
-                Use Template
-              </motion.button>
-            </motion.div>
-          ))}
-        </div>
-      </div>
+
 
       {/* CV Details Modal */}
       <AnimatePresence>
@@ -710,7 +667,7 @@ const Canvas: React.FC = () => {
               <div className="flex items-center justify-between p-6 border-b border-white/10">
                 <div>
                   <h2 className="text-2xl font-bold text-white mb-1">{selectedCV.title}</h2>
-                  <p className="text-white/60">{selectedCV.template} Template • {selectedCV.status}</p>
+                  <p className="text-white/60">{selectedCV.status}</p>
                 </div>
                 <motion.button
                   onClick={() => setShowModal(false)}
@@ -743,7 +700,7 @@ const Canvas: React.FC = () => {
                         
                         <div className="space-y-2">
                           <h4 className="font-semibold text-white text-sm">{selectedCV.title}</h4>
-                          <p className="text-white/60 text-xs">{selectedCV.template} Template</p>
+
                           <div className={`inline-block px-2 py-1 rounded-lg text-xs font-medium ${getStatusColor(selectedCV.status)}`}>
                             {selectedCV.status}
                           </div>
@@ -762,7 +719,7 @@ const Canvas: React.FC = () => {
                           whileTap={{ scale: 0.98 }}
                           onClick={() => {
                             setShowModal(false);
-                            window.location.href = `/cv-studio?cv=${selectedCV.id}`;
+                            window.location.href = `/studio?cvId=${selectedCV.id}`;
                           }}
                         >
                           <Edit size={14} />

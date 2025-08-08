@@ -7,7 +7,7 @@ import { Quote, Star, TrendingUp, Users, Award } from 'lucide-react';
 const Testimonials = () => {
   const testimonials = [
     {
-      quote: "CVCircle helped me land my dream job at Google. The CV builder is incredibly intuitive and the templates are professional.",
+      quote: "CVCircle helped me land my dream job at Google. The CV builder is incredibly intuitive and professional.",
       author: "Sarah Chen",
       role: "Software Engineer",
       company: "Google",
@@ -40,8 +40,8 @@ const Testimonials = () => {
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.05
+        staggerChildren: 0.05,
+        delayChildren: 0.02
       }
     }
   };
@@ -49,14 +49,12 @@ const Testimonials = () => {
   const cardVariants = {
     hidden: { 
       opacity: 0, 
-      y: 50, 
-      rotateX: -10,
-      scale: 0.9
+      y: 20, 
+      scale: 0.98
     },
     visible: { 
       opacity: 1, 
       y: 0, 
-      rotateX: 0,
       scale: 1
     }
   };
@@ -128,21 +126,16 @@ const Testimonials = () => {
               className="group relative"
               variants={cardVariants}
             >
-              <motion.div
-                className="relative bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-xl border border-white/10 rounded-3xl p-8 h-full"
-                whileHover={{ 
-                  scale: 1.05,
-                  rotateY: 5,
-                  rotateX: 5,
-                  y: -10,
-                  boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.8)"
-                }}
-                whileTap={{ scale: 0.98 }}
-                style={{
-                  transformStyle: 'preserve-3d',
-                  perspective: '1000px'
-                }}
-              >
+                              <motion.div
+                  className="relative bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-xl border border-white/10 rounded-3xl p-8 h-full card-hover"
+                  whileHover={{ 
+                    scale: 1.02,
+                    y: -5,
+                    boxShadow: "0 15px 30px -5px rgba(0, 0, 0, 0.3)"
+                  }}
+                  whileTap={{ scale: 0.98 }}
+                  style={{ willChange: 'transform' }}
+                >
                 {/* Glow Effect */}
                 <motion.div
                   className="absolute inset-0 rounded-3xl bg-gradient-to-br from-lime-400/10 to-blue-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"

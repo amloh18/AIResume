@@ -10,9 +10,10 @@ interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSwitchToRegister: () => void;
+  onLogin?: (userData: any) => void;
 }
 
-export default function LoginModal({ isOpen, onClose, onSwitchToRegister }: LoginModalProps) {
+export default function LoginModal({ isOpen, onClose, onSwitchToRegister, onLogin }: LoginModalProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -53,8 +54,13 @@ export default function LoginModal({ isOpen, onClose, onSwitchToRegister }: Logi
           };
           localStorage.setItem('user', JSON.stringify(userData));
           
-          onClose();
-          router.push('/dashboard');
+          // If onLogin callback is provided, use it instead of direct redirect
+          if (onLogin) {
+            onLogin(userData);
+          } else {
+            onClose();
+            router.push('/dashboard');
+          }
         } else {
           setError('Failed to establish session. Please try again.');
         }
@@ -91,8 +97,13 @@ export default function LoginModal({ isOpen, onClose, onSwitchToRegister }: Logi
           };
           localStorage.setItem('user', JSON.stringify(userData));
           
-          onClose();
-          router.push('/dashboard');
+          // If onLogin callback is provided, use it instead of direct redirect
+          if (onLogin) {
+            onLogin(userData);
+          } else {
+            onClose();
+            router.push('/dashboard');
+          }
         }
       } else if (result?.error) {
         setError(`Failed to sign in with ${provider}. Please try again.`);
@@ -124,22 +135,23 @@ export default function LoginModal({ isOpen, onClose, onSwitchToRegister }: Logi
           style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
         >
           {/* Backdrop */}
-          <motion.div
-            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={handleClose}
-          />
+                  <motion.div
+          className="absolute inset-0 bg-black/80 backdrop-blur-sm backdrop-optimized"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={handleClose}
+          style={{ willChange: 'opacity' }}
+        />
 
-          {/* Modal */}
+          {/* Modal - Optimized */}
           <motion.div
-            className="relative w-full max-w-md bg-gradient-to-br from-gray-900 to-black border border-white/10 rounded-2xl p-8 shadow-2xl overflow-y-auto max-h-[90vh]"
-            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+            className="relative w-full max-w-md bg-gradient-to-br from-gray-900 to-black border border-white/10 rounded-2xl p-8 shadow-2xl overflow-y-auto max-h-[90vh] modal-content-optimized"
+            initial={{ scale: 0.95, opacity: 0, y: 10 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.9, opacity: 0, y: 20 }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            style={{ position: 'relative' }}
+            exit={{ scale: 0.95, opacity: 0, y: 10 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            style={{ position: 'relative', willChange: 'transform, opacity' }}
           >
             {/* Close Button */}
             <motion.button

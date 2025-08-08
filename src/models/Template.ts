@@ -1,301 +1,199 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
-export interface ICVSection {
-  id: string;
-  type: 'header' | 'section';
-  title?: string;
-  content?: {
-    name?: string;
-    contact?: string[];
-    summary?: string;
-  };
-  entries?: Array<{
-    degree?: string;
-    institution?: string;
-    duration?: string;
-    details?: string[];
-    title?: string;
-    company?: string;
-    organization?: string;
-  }>;
-  details?: string[];
-  styleSnippetId: string;
+// Defines a single "building block" that a user can add to their document
+export interface ISectionBlueprint {
+  key: string; // Unique key for this section type, e.g., "text_section" or "experience_list"
+  displayName: string; // Name shown to user in UI, e.g., "Professional Summary"
+  componentName: string; // Frontend React component to use for rendering, e.g., "ExperienceSection"
+  isList: boolean; // If true, can contain multiple items; if false, single content block
+  defaultItemContent: any; // Default JSON structure for new items in this section
+  description?: string; // Optional description for the UI
+  icon?: string; // Optional icon identifier for the UI
+  category?: string; // Optional category for grouping in UI
+  maxItems?: number; // Optional maximum number of items allowed
+  minItems?: number; // Optional minimum number of items required
 }
 
-export interface IStyleSnippet {
-  id: string;
-  category: string;
-  style: {
-    fontWeight?: string;
-    fontSize?: string;
-    color?: string;
-    marginBottom?: string;
-    titleFontSize?: string;
-    entrySpacing?: string;
-    bulletIndent?: string;
-    entryBorderLeft?: string;
-    paddingLeft?: string;
-    lineSpacing?: string;
-    entryHighlightColor?: string;
-    titleFontWeight?: string;
-    entryBackground?: string;
-    padding?: string;
-    columns?: number;
-    fontStyle?: string;
-  };
-}
-
+// Template interface
 export interface ITemplate extends Document {
   name: string;
-  category: string[];
-  description: string;
-  thumbnail: string;
+  description?: string;
+  thumbnail?: string;
+  category: 'cv' | 'portfolio' | 'cover-letter' | 'resume' | 'custom';
+  categories?: string[]; // Multiple categories like 'Creative', 'Professional', 'Modern'
+  tier: 'free' | 'premium';
+  globalStyles: {
+    fontFamily: string;
+    primaryColor: string;
+    secondaryColor: string;
+    backgroundColor: string;
+    fontSize: string;
+    lineHeight: string;
+    spacing: string;
+    borderRadius: string;
+    boxShadow: string;
+    customCSS?: string;
+  };
+  availableSections: ISectionBlueprint[];
+  templateData?: any; // Sample data for preview
+  isActive: boolean;
   isDefault: boolean;
-  isPremium: boolean;
-  display: {
-    layout: 'single-column' | 'two-column' | 'absolute';
-    padding: string;
-    fontFamily: string;
-    sectionSpacing: string;
-  };
-  sections: ICVSection[];
-  snippetStyles: IStyleSnippet[];
-  styles: {
-    layout: 'single-column' | 'two-column' | 'absolute';
-    paddingX: number; // 96px = 1 inch at 96 DPI
-    paddingY: number; // 96px = 1 inch at 96 DPI
-    lineHeight: number; // 1.0 for standard line spacing
-    sectionGap: number;
-    subsectionGap: number;
-    itemSpacing: number;
-    titleBottomMargin: number;
-    highlightColor: string;
-    baseFontSize: number; // 10-12pt body text (11pt = 10pt at 96 DPI)
-    nameFontSize: number; // 18-22pt for name (20pt = 18pt at 96 DPI)
-    sectionTitleFontSize: number; // 14-16pt for section headings (15pt = 14pt at 96 DPI)
-    showSectionLine: boolean;
-    paperSize: 'A4' | 'US Letter';
-    fontFamily: string;
-    baseFontSize: number;
-    contactAlignment: 'left' | 'center' | 'right';
-    showProfilePicture: boolean;
-    itemStyle: string;
-    sectionTitleStyle?: object;
-    leftColumnWidth?: number;
-    leftColumnSections?: string[];
-    rightColumnSections?: string[];
-    sections?: Array<{
-      key: string;
-      box: { x: number; y: number; w: number; h: number };
-      zIndex: number;
-      mask?: string;
-      styles?: object;
-    }>;
-    elements?: Array<{
-      type: string;
-      x?: number;
-      y?: number;
-      w?: number;
-      h?: number;
-      x1?: number;
-      y1?: number;
-      x2?: number;
-      y2?: number;
-      fill?: string;
-      strokeWidth?: number;
-      color?: string;
-      zIndex: number;
-      content?: string;
-      fontSize?: number;
-      fontWeight?: string;
-      src?: string;
-      opacity?: number;
-      radius?: number;
-      rotation?: number;
-    }>;
-  };
-  sectionTitles: Record<string, string>;
-  metadata: {
-    usageCount: number;
-    rating: number;
-    tags: string[];
-    createdAt: Date;
-    updatedAt: Date;
-  };
+  isPublished: boolean;
+  globalAccess: boolean; // Whether template is available to all users
+  version: number;
+  createdBy?: mongoose.Types.ObjectId;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-const cvSectionSchema = new Schema<ICVSection>({
-  id: { type: String, required: true },
-  type: { 
+// Section Blueprint Schema
+const SectionBlueprintSchema = new Schema<ISectionBlueprint>({
+  key: { 
     type: String, 
-    enum: ['header', 'section'], 
-    required: true 
+    required: true,
+    trim: true
   },
-  title: { type: String },
-  content: {
-    name: { type: String },
-    contact: [{ type: String }],
-    summary: { type: String }
+  displayName: { 
+    type: String, 
+    required: true,
+    trim: true
   },
-  entries: [{
-    degree: { type: String },
-    institution: { type: String },
-    duration: { type: String },
-    details: [{ type: String }],
-    title: { type: String },
-    company: { type: String },
-    organization: { type: String }
-  }],
-  details: [{ type: String }],
-  styleSnippetId: { type: String, required: true }
-});
-
-const styleSnippetSchema = new Schema<IStyleSnippet>({
-  id: { type: String, required: true },
-  category: { type: String, required: true },
-  style: {
-    fontWeight: { type: String },
-    fontSize: { type: String },
-    color: { type: String },
-    marginBottom: { type: String },
-    titleFontSize: { type: String },
-    entrySpacing: { type: String },
-    bulletIndent: { type: String },
-    entryBorderLeft: { type: String },
-    paddingLeft: { type: String },
-    lineSpacing: { type: String },
-    entryHighlightColor: { type: String },
-    titleFontWeight: { type: String },
-    entryBackground: { type: String },
-    padding: { type: String },
-    columns: { type: Number },
-    fontStyle: { type: String }
+  componentName: { 
+    type: String, 
+    required: true,
+    trim: true
+  },
+  isList: { 
+    type: Boolean, 
+    default: false 
+  },
+  defaultItemContent: { 
+    type: Schema.Types.Mixed, 
+    default: {} 
+  },
+  description: { 
+    type: String, 
+    trim: true 
+  },
+  icon: { 
+    type: String, 
+    trim: true 
+  },
+  category: { 
+    type: String, 
+    trim: true 
+  },
+  maxItems: { 
+    type: Number, 
+    min: 1 
+  },
+  minItems: { 
+    type: Number, 
+    min: 0 
   }
 });
 
+// Template Schema
 const templateSchema = new Schema<ITemplate>({
-  name: {
-    type: String,
-    required: [true, 'Template name is required'],
+  name: { 
+    type: String, 
+    required: true,
     trim: true,
-    maxlength: [100, 'Name cannot exceed 100 characters']
+    maxlength: [100, 'Template name cannot exceed 100 characters']
   },
-  category: [{
-    type: String,
-    required: true,
-    enum: ['ATS-Friendly', 'Professional', 'Minimalist', 'Modern', 'Two-Column', 'Photo', 'Dark', 'Timeline', 'Creative', 'Engineer', 'Single-Column', 'Sidebar', 'Colored Sidebar', 'Clean', 'Bold', 'Web Developer', 'Finance']
-  }],
-  description: {
-    type: String,
-    required: true,
+  description: { 
+    type: String, 
     trim: true,
     maxlength: [500, 'Description cannot exceed 500 characters']
   },
-  thumbnail: {
+  thumbnail: { 
+    type: String, 
+    trim: true 
+  },
+  category: { 
+    type: String, 
+    enum: ['cv', 'portfolio', 'cover-letter', 'resume', 'custom'],
+    default: 'cv'
+  },
+  categories: [{
     type: String,
-    required: true
+    enum: ['Creative', 'Professional', 'Modern']
+  }],
+  tier: {
+    type: String,
+    enum: ['free', 'premium'],
+    default: 'free'
   },
-  isDefault: {
-    type: Boolean,
-    default: false
-  },
-  isPremium: {
-    type: Boolean,
-    default: false
-  },
-  display: {
-    layout: {
-      type: String,
-      enum: ['single-column', 'two-column', 'absolute'],
-      default: 'single-column'
+  globalStyles: {
+    fontFamily: { 
+      type: String, 
+      default: 'Inter, system-ui, sans-serif' 
     },
-    padding: { type: String, default: '32px' },
-    fontFamily: { type: String, default: 'Segoe UI, Roboto, sans-serif' },
-    sectionSpacing: { type: String, default: '24px' }
+    primaryColor: { 
+      type: String, 
+      default: '#2563eb' 
+    },
+    secondaryColor: { 
+      type: String, 
+      default: '#64748b' 
+    },
+    backgroundColor: { 
+      type: String, 
+      default: '#ffffff' 
+    },
+    fontSize: { 
+      type: String, 
+      default: '14px' 
+    },
+    lineHeight: { 
+      type: String, 
+      default: '1.6' 
+    },
+    spacing: { 
+      type: String, 
+      default: '24px' 
+    },
+    borderRadius: { 
+      type: String, 
+      default: '8px' 
+    },
+    boxShadow: { 
+      type: String, 
+      default: '0 1px 3px 0 rgba(0, 0, 0, 0.1)' 
+    },
+    customCSS: { 
+      type: String, 
+      trim: true 
+    }
   },
-  sections: [cvSectionSchema],
-  snippetStyles: [styleSnippetSchema],
-  styles: {
-    layout: {
-      type: String,
-      enum: ['single-column', 'two-column', 'absolute'],
-      required: true
-    },
-    paddingX: { type: Number, default: 96 }, // 1-inch margins (96px = 1 inch at 96 DPI)
-    paddingY: { type: Number, default: 96 }, // 1-inch margins
-    lineHeight: { type: Number, default: 1.0 }, // 1.0 line spacing for better readability
-    sectionGap: { type: Number, default: 10 },
-    subsectionGap: { type: Number, default: 5 },
-    itemSpacing: { type: Number, default: 2 },
-    titleBottomMargin: { type: Number, default: 4 },
-    highlightColor: { type: String, default: '#171717' },
-    baseFontSize: { type: Number, default: 11 }, // 10-12pt body text (11pt = 10pt at 96 DPI)
-    nameFontSize: { type: Number, default: 20 }, // 18-22pt for name (20pt = 18pt at 96 DPI)
-    sectionTitleFontSize: { type: Number, default: 15 }, // 14-16pt for section headings (15pt = 14pt at 96 DPI)
-    showSectionLine: { type: Boolean, default: true },
-    paperSize: {
-      type: String,
-      enum: ['A4', 'US Letter'],
-      default: 'A4'
-    },
-    fontFamily: { type: String, default: 'Arial' },
-    baseFontSize: { type: Number, default: 11.5 },
-    contactAlignment: {
-      type: String,
-      enum: ['left', 'center', 'right'],
-      default: 'left'
-    },
-    showProfilePicture: { type: Boolean, default: false },
-    itemStyle: { type: String, default: 'simple-list' },
-    sectionTitleStyle: { type: Schema.Types.Mixed },
-    leftColumnWidth: { type: Number },
-    leftColumnSections: [{ type: String }],
-    rightColumnSections: [{ type: String }],
-    sections: [{
-      key: { type: String, required: true },
-      box: {
-        x: { type: Number, required: true },
-        y: { type: Number, required: true },
-        w: { type: Number, required: true },
-        h: { type: Number, required: true }
-      },
-      zIndex: { type: Number, required: true },
-      mask: { type: String },
-      styles: { type: Schema.Types.Mixed }
-    }],
-    elements: [{
-      type: { type: String, required: true },
-      x: { type: Number },
-      y: { type: Number },
-      w: { type: Number },
-      h: { type: Number },
-      x1: { type: Number },
-      y1: { type: Number },
-      x2: { type: Number },
-      y2: { type: Number },
-      fill: { type: String },
-      strokeWidth: { type: Number },
-      color: { type: String },
-      zIndex: { type: Number, required: true },
-      content: { type: String },
-      fontSize: { type: Number },
-      fontWeight: { type: String },
-      src: { type: String },
-      opacity: { type: Number },
-      radius: { type: Number },
-      rotation: { type: Number }
-    }]
-  },
-  sectionTitles: {
+  availableSections: [SectionBlueprintSchema],
+  templateData: {
     type: Schema.Types.Mixed,
-    required: true
+    default: {}
   },
-  metadata: {
-    usageCount: { type: Number, default: 0 },
-    rating: { type: Number, default: 0, min: 0, max: 5 },
-    tags: [{ type: String, trim: true }],
-    createdAt: { type: Date, default: Date.now },
-    updatedAt: { type: Date, default: Date.now }
+  isActive: { 
+    type: Boolean, 
+    default: true 
+  },
+  isDefault: { 
+    type: Boolean, 
+    default: false 
+  },
+  isPublished: {
+    type: Boolean,
+    default: false
+  },
+  globalAccess: {
+    type: Boolean,
+    default: true
+  },
+  version: { 
+    type: Number, 
+    default: 1 
+  },
+  createdBy: { 
+    type: Schema.Types.ObjectId, 
+    ref: 'User' 
   }
 }, {
   timestamps: true,
@@ -310,15 +208,22 @@ const templateSchema = new Schema<ITemplate>({
 });
 
 // Indexes for better query performance
-templateSchema.index({ category: 1 });
+templateSchema.index({ category: 1, isActive: 1 });
 templateSchema.index({ isDefault: 1 });
-templateSchema.index({ isPremium: 1 });
-templateSchema.index({ 'metadata.usageCount': -1 });
-templateSchema.index({ 'metadata.rating': -1 });
+templateSchema.index({ createdBy: 1 });
+templateSchema.index({ 'availableSections.key': 1 });
 
-// Update metadata on save
-templateSchema.pre('save', function(next) {
-  this.metadata.updatedAt = new Date();
+// Ensure only one default template per category
+templateSchema.pre('save', async function(next) {
+  if (this.isDefault) {
+    await mongoose.model('Template').updateMany(
+      { 
+        category: this.category, 
+        _id: { $ne: this._id } 
+      },
+      { isDefault: false }
+    );
+  }
   next();
 });
 

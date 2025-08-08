@@ -141,7 +141,8 @@ export function createDateRangeFilter(
  * Sanitize and validate email
  */
 export function validateEmail(email: string): string {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  // More permissive email regex that handles edge cases
+  const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
   if (!emailRegex.test(email)) {
     throw new ValidationError('Invalid email format', 'email');
   }

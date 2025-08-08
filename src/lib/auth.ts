@@ -79,6 +79,7 @@ export const authOptions: NextAuthOptions = {
             name: `${user.firstName} ${user.lastName}`,
             firstName: user.firstName,
             lastName: user.lastName,
+            role: user.role,
             image: user.avatar,
           };
         } catch (error) {
@@ -94,6 +95,7 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id;
         token.firstName = user.firstName;
         token.lastName = user.lastName;
+        token.role = user.role;
       }
       return token;
     },
@@ -102,6 +104,7 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id as string;
         session.user.firstName = token.firstName as string;
         session.user.lastName = token.lastName as string;
+        session.user.role = token.role as string;
       }
       return session;
     },

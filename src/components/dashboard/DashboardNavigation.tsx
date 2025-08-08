@@ -13,29 +13,31 @@ import {
   Sparkles,
   User,
   LogOut,
-  ChevronDown,
-  UserCircle,
-  Bell,
-  Shield,
-  HelpCircle
+  Crown
 } from 'lucide-react';
 
 interface DashboardNavigationProps {
   activeSection: string;
   onSectionChange: (section: string) => void;
+  onMembershipClick: () => void;
   user: {
     name: string;
     email: string;
     progress: number;
+    subscription?: {
+      planName: string;
+      status: string;
+      credits: number;
+    };
   };
 }
 
 const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
   activeSection,
   onSectionChange,
+  onMembershipClick,
   user
 }) => {
-  const [showUserDropdown, setShowUserDropdown] = useState(false);
 
   const sections = [
     { id: 'pulse', name: 'Analytics', icon: BarChart3, description: 'Progress Tracking' },
@@ -74,7 +76,7 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
       </div>
 
       {/* Navigation */}
-      <nav className="p-6">
+      <nav className="p-6 pb-32">
         <div className="space-y-2">
           {/* Section Navigation */}
           {sections.map((section, index) => (
@@ -109,6 +111,7 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
         {/* Settings */}
         <div className="mt-8 pt-6 border-t border-white/10 space-y-2">
           <motion.button
+            onClick={() => window.location.href = '/dashboard/settings'}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 text-white/60 hover:text-white hover:bg-white/5"
             whileHover={{ x: 5 }}
             whileTap={{ scale: 0.95 }}
@@ -121,102 +124,47 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
           </motion.button>
         </div>
 
-        {/* User Profile Dropdown */}
-        <div className="mt-6 pt-6 border-t border-white/10 relative">
-          <motion.button
-            onClick={() => setShowUserDropdown(!showUserDropdown)}
-            className="w-full flex items-center gap-3 p-3 bg-white/5 rounded-xl transition-all duration-300 hover:bg-white/10 group"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
+        {/* Membership Status */}
+        <div className="w-full px-4 py-3 mb-4 bg-gradient-to-r from-blue-400/20 to-blue-500/20 border border-blue-400/30 rounded-xl">
+          <div className="flex items-center gap-3">
+            <Crown size={20} className="text-blue-400" />
+            <div className="flex-1">
+              <span className="font-medium text-blue-400">
+                {user.subscription?.planName || 'Free Plan'}
+              </span>
+              <div className="text-xs text-blue-300/70">
+                {user.subscription?.credits || 20} credits left
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* User Profile - Fixed at Bottom */}
+        <div className="absolute bottom-0 left-0 right-0 p-6">
+          {/* User Info */}
+          <div className="flex items-center gap-3 mb-3">
             {/* User Avatar */}
             <div className="w-10 h-10 bg-gradient-to-br from-lime-400 to-lime-500 rounded-lg flex items-center justify-center text-black font-semibold text-sm">
               {getUserInitials(user.name)}
             </div>
             
             {/* User Info */}
-            <div className="flex-1 min-w-0 text-left">
+            <div className="flex-1 min-w-0">
               <p className="text-white text-sm font-medium truncate">{user.name}</p>
               <p className="text-white/60 text-xs truncate">{user.email}</p>
             </div>
-            
-            {/* Dropdown Arrow */}
-            <motion.div
-              animate={{ rotate: showUserDropdown ? 180 : 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              <ChevronDown size={16} className="text-white/60 group-hover:text-white transition-colors" />
-            </motion.div>
+          </div>
+
+          {/* Logout Button */}
+          <motion.button
+            onClick={handleLogout}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded-lg transition-all duration-200 text-sm font-medium"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <LogOut size={16} />
+            <span>Sign Out</span>
           </motion.button>
-
-          {/* Dropdown Menu */}
-          <AnimatePresence>
-            {showUserDropdown && (
-              <motion.div
-                className="absolute bottom-full left-0 right-0 mb-2 bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl overflow-hidden"
-                initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                transition={{ duration: 0.2 }}
-              >
-                <div className="p-2 space-y-1">
-                  {/* Profile */}
-                  <motion.button
-                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 text-sm"
-                    whileHover={{ x: 3 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <UserCircle size={16} />
-                    <span>Profile</span>
-                  </motion.button>
-
-                  {/* Notifications */}
-                  <motion.button
-                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 text-sm"
-                    whileHover={{ x: 3 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <Bell size={16} />
-                    <span>Notifications</span>
-                  </motion.button>
-
-                  {/* Security */}
-                  <motion.button
-                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 text-sm"
-                    whileHover={{ x: 3 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <Shield size={16} />
-                    <span>Security</span>
-                  </motion.button>
-
-                  {/* Help */}
-                  <motion.button
-                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 text-sm"
-                    whileHover={{ x: 3 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <HelpCircle size={16} />
-                    <span>Help & Support</span>
-                  </motion.button>
-
-                  {/* Divider */}
-                  <div className="border-t border-white/10 my-1"></div>
-
-                  {/* Logout */}
-                  <motion.button
-                    onClick={handleLogout}
-                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-400/10 transition-all duration-200 text-sm"
-                    whileHover={{ x: 3 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <LogOut size={16} />
-                    <span>Sign Out</span>
-                  </motion.button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
       </nav>
     </div>

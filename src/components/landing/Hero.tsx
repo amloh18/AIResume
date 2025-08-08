@@ -10,8 +10,17 @@ const Hero = () => {
   const [scrollY, setScrollY] = useState(0);
 
   useEffect(() => {
-    const handleScroll = () => setScrollY(window.scrollY);
-    window.addEventListener('scroll', handleScroll);
+    let ticking = false;
+    const handleScroll = () => {
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          setScrollY(window.scrollY);
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -19,56 +28,59 @@ const Hero = () => {
     <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-black via-gray-900 to-black pt-32">
       {/* Enhanced Background Effects */}
       <div className="absolute inset-0">
-        {/* Animated Gradient Orbs */}
+        {/* Animated Gradient Orbs - Optimized */}
         <motion.div 
-          className="absolute top-1/4 left-1/4 w-96 h-96 bg-lime-400/10 rounded-full blur-3xl"
+          className="absolute top-1/4 left-1/4 w-96 h-96 bg-lime-400/10 rounded-full blur-3xl gpu-accelerated"
           animate={{
-            scale: [1, 1.2, 1],
-            opacity: [0.3, 0.6, 0.3],
-            x: [0, 50, 0],
-            y: [0, -30, 0],
+            scale: [1, 1.1, 1],
+            opacity: [0.2, 0.4, 0.2],
+            x: [0, 20, 0],
+            y: [0, -15, 0],
           }}
           transition={{
-            duration: 8,
+            duration: 12,
             repeat: Infinity,
             ease: "easeInOut"
           }}
+          style={{ willChange: 'transform, opacity' }}
         />
         <motion.div 
-          className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl"
+          className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl gpu-accelerated"
           animate={{
-            scale: [1.2, 1, 1.2],
-            opacity: [0.4, 0.7, 0.4],
-            x: [0, -40, 0],
-            y: [0, 40, 0],
+            scale: [1.1, 1, 1.1],
+            opacity: [0.3, 0.5, 0.3],
+            x: [0, -20, 0],
+            y: [0, 20, 0],
           }}
           transition={{
-            duration: 8,
+            duration: 12,
             repeat: Infinity,
             ease: "easeInOut",
-            delay: 1
+            delay: 3
           }}
+          style={{ willChange: 'transform, opacity' }}
         />
         
-        {/* Raining Particles */}
+        {/* Reduced Raining Particles for Performance */}
         <div className="absolute inset-0">
-          {[...Array(80)].map((_, i) => (
+          {[...Array(40)].map((_, i) => (
             <motion.div
               key={i}
-              className="absolute w-1 h-1 bg-lime-400/60 rounded-full"
+              className="absolute w-1 h-1 bg-lime-400/40 rounded-full"
               style={{
                 left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 20}%`, // Start only in top 20%
+                top: `${Math.random() * 20}%`,
+                willChange: 'transform, opacity'
               }}
               animate={{
-                y: [0, 800], // Stop at 80% height to avoid bottom 20%
-                opacity: [0, 1, 0.3, 0], // Fade out more gradually
-                scale: [0, 1, 0.8, 0], // Scale down as it falls
+                y: [0, 600],
+                opacity: [0, 0.8, 0.2, 0],
+                scale: [0, 1, 0.6, 0],
               }}
               transition={{
-                duration: 3 + Math.random() * 2,
+                duration: 4 + Math.random() * 2,
                 repeat: Infinity,
-                delay: Math.random() * 3,
+                delay: Math.random() * 4,
                 ease: "linear"
               }}
             />
@@ -84,27 +96,26 @@ const Hero = () => {
 
       {/* Content */}
       <div className="relative z-10 text-center px-4 sm:px-6 lg:px-8 w-full max-w-7xl mx-auto pt-20">
-        {/* Main Heading with 3D Effect */}
-        <motion.h1 
-          className="text-4xl sm:text-6xl lg:text-7xl font-bold text-white mb-6"
-          initial={{ opacity: 0, y: 30 }}
+        {/* Main Heading with 3D Effect - Optimized */}
+        <motion.h1
+          className="text-4xl sm:text-6xl lg:text-7xl font-bold text-white mb-6 gpu-accelerated"
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
+          transition={{ duration: 0.6, ease: "easeOut", delay: 0.1 }}
           style={{
-            textShadow: '0 0 30px rgba(132, 204, 22, 0.3)',
-            transformStyle: 'preserve-3d',
-            perspective: '1000px'
+            textShadow: '0 0 20px rgba(132, 204, 22, 0.2)',
+            willChange: 'transform, opacity'
           }}
         >
           Create{' '}
           <motion.span
             className="inline-block"
             whileHover={{ 
-              rotateY: 10,
-              scale: 1.05,
-              textShadow: '0 0 50px rgba(132, 204, 22, 0.5)'
+              scale: 1.02,
+              textShadow: '0 0 30px rgba(132, 204, 22, 0.4)'
             }}
-            transition={{ duration: 0.3 }}
+            transition={{ duration: 0.2 }}
+            style={{ willChange: 'transform' }}
           >
             <Typewriter 
               words={typewriterWords} 
@@ -113,39 +124,37 @@ const Hero = () => {
           </motion.span>
         </motion.h1>
 
-        {/* Subheading */}
-        <motion.p 
+        {/* Subheading - Optimized */}
+        <motion.p
           className="text-xl sm:text-2xl text-white/80 mb-12 max-w-3xl mx-auto leading-relaxed"
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, delay: 0.5 }}
+          transition={{ duration: 0.6, delay: 0.3, ease: "easeOut" }}
+          style={{ willChange: 'transform, opacity' }}
         >
           Your one-stop platform for job seekers. Smart, fast, beautiful.
         </motion.p>
 
-        {/* Enhanced CTA Buttons */}
-        <motion.div 
+        {/* Enhanced CTA Buttons - Optimized */}
+        <motion.div
           className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-16"
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, delay: 0.8 }}
+          transition={{ duration: 0.6, delay: 0.5, ease: "easeOut" }}
+          style={{ willChange: 'transform, opacity' }}
         >
           <motion.a
-            href="/cv-onboarding"
-            className="group relative inline-block bg-gradient-to-r from-lime-400 to-lime-500 text-black px-10 py-5 rounded-full font-semibold text-lg shadow-2xl hover:shadow-lime-400/50 transition-all duration-300 overflow-hidden"
+            href="/onboarding"
+            className="group relative inline-block bg-gradient-to-r from-lime-400 to-lime-500 text-black px-10 py-5 rounded-full font-semibold text-lg shadow-2xl hover:shadow-lime-400/50 transition-all overflow-hidden btn-hover"
             whileHover={{ 
-              scale: 1.05,
-              rotateY: 5,
-              boxShadow: "0 25px 50px -12px rgba(132, 204, 22, 0.4)"
+              scale: 1.02,
+              boxShadow: "0 15px 30px -5px rgba(132, 204, 22, 0.3)"
             }}
-            whileTap={{ scale: 0.95 }}
-            style={{
-              transformStyle: 'preserve-3d',
-              perspective: '1000px'
-            }}
+            whileTap={{ scale: 0.98 }}
+            style={{ willChange: 'transform' }}
           >
             <motion.div
-              className="absolute inset-0 bg-gradient-to-r from-lime-300 to-lime-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+              className="absolute inset-0 bg-gradient-to-r from-lime-300 to-lime-400 opacity-0 group-hover:opacity-100 transition-opacity"
               style={{ filter: 'blur(20px)' }}
             />
             <motion.div
@@ -163,8 +172,8 @@ const Hero = () => {
             </motion.div>
           </motion.a>
           
-          <motion.button 
-            className="group relative border-2 border-white/20 text-white px-10 py-5 rounded-full font-semibold text-lg hover:bg-white/10 transition-all duration-300 backdrop-blur-sm overflow-hidden"
+          <motion.button
+            className="group relative border-2 border-white/20 text-white px-10 py-5 rounded-full font-semibold text-lg hover:bg-white/10 transition-all backdrop-blur-sm overflow-hidden"
             whileHover={{ 
               scale: 1.05,
               rotateY: -5,
@@ -177,7 +186,7 @@ const Hero = () => {
             }}
           >
             <motion.div
-              className="absolute inset-0 bg-gradient-to-r from-lime-400/10 to-blue-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+              className="absolute inset-0 bg-gradient-to-r from-lime-400/10 to-blue-400/10 opacity-0 group-hover:opacity-100 transition-opacity"
               style={{ filter: 'blur(20px)' }}
             />
             <div className="relative flex items-center gap-3">
@@ -190,22 +199,23 @@ const Hero = () => {
         {/* Hero Image Preview */}
         <motion.div
           className="relative w-full mx-auto mt-12 -mb-32"
-          initial={{ opacity: 0, y: 100, scale: 0.8 }}
+          initial={{ opacity: 0, y: 40, scale: 0.9 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 1.2, delay: 1 }}
+          transition={{ duration: 0.8, delay: 0.7, ease: "easeOut" }}
+          style={{ willChange: 'transform, opacity' }}
         >
           <motion.div
-            // Remove background, border, blur, and padding, but keep shadow
             className="relative shadow-2xl"
             whileHover={{
-              scale: 1.02,
-              rotateY: 2,
-              boxShadow: "0 50px 100px -20px rgba(0, 0, 0, 0.8)"
+              scale: 1.01,
+              rotateY: 1,
+              boxShadow: "0 30px 60px -20px rgba(0, 0, 0, 0.6)"
             }}
             style={{
               transformStyle: 'preserve-3d',
               perspective: '1000px',
-              transform: `translateY(${scrollY * 0.3}px)`,
+              transform: `translateY(${Math.min(scrollY * 0.15, 100)}px)`,
+              willChange: 'transform'
             }}
           >
             <div className="relative w-full aspect-[16/10] rounded-2xl overflow-hidden">

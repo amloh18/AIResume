@@ -67,37 +67,13 @@ import {
 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import JobParser from './JobParser';
+import { useSession } from 'next-auth/react';
+import { IJobApplication } from '@/models/JobApplication';
 
-interface Job {
+interface Job extends Omit<IJobApplication, '_id' | 'userId' | 'cvId'> {
   id: string;
-  jobTitle: string;
-  company: string;
-  location?: string;
-  salary?: {
-    min?: number;
-    max?: number;
-    currency?: string;
-    period?: string;
-  };
-  status: 'created' | 'applied' | 'screening' | 'interview' | 'offer' | 'rejected' | 'accepted' | 'withdrawn';
-  applicationDate?: string | null;
-  deadline?: string;
-  jobDescription?: string;
-  jobUrl?: string;
-  notes?: string;
-  priority: 'low' | 'medium' | 'high';
-  tags: string[];
-  contacts: Array<{
-    name: string;
-    role?: string;
-    email?: string;
-    phone?: string;
-    linkedin?: string;
-  }>;
   userId: string;
   cvId: string;
-  createdAt: string;
-  updatedAt: string;
 }
 
 interface SortableJobCardProps {
@@ -355,17 +331,19 @@ const Pipeline: React.FC = () => {
     { id: 'withdrawn', title: 'Withdrawn', color: 'bg-gray-500/20 border-gray-500/30' }
   ];
 
+  const { data: session, status } = useSession();
+
   // Load user and jobs on component mount
   useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      const parsedUser = JSON.parse(userData);
-      setUser(parsedUser);
-      const userId = parsedUser.id || parsedUser._id;
-      loadJobs(userId);
-      loadUserCVs(userId);
+    if (session?.user) {
+      setUser(session.user);
+      const userId = session.user.id || session.user._id;
+      if (userId) {
+        loadJobs(userId);
+        loadUserCVs(userId);
+      }
     }
-  }, []);
+  }, [session]);
 
   const loadJobs = async (userId: string) => {
     try {
@@ -496,10 +474,14 @@ const Pipeline: React.FC = () => {
       const jobToSave = {
         ...editingJob,
         ...jobData,
-        userId: user?.id || user?._id,
+        userId: session?.user?.id || session?.user?._id || user?.id || user?._id,
         cvId: jobData.cvId || (userCVs[0]?.id || userCVs[0]?._id),
         applicationDate: jobData.status === 'applied' ? new Date().toISOString() : 
                        jobData.status === 'created' ? null : editingJob.applicationDate,
+        interviews: jobData.interviews || [],
+        followUps: jobData.followUps || [],
+        attachments: jobData.attachments || [],
+        isArchived: jobData.isArchived || false,
       };
 
       const method = editingJob.id && jobs.some(job => job.id === editingJob.id) ? 'PUT' : 'POST';
@@ -546,7 +528,11 @@ const Pipeline: React.FC = () => {
       priority: 'medium',
       tags: [],
       contacts: [],
-      userId: user?.id || user?._id,
+      interviews: [],
+      followUps: [],
+      attachments: [],
+      isArchived: false,
+      userId: session?.user?.id || session?.user?._id || user?.id || user?._id,
       cvId: '' // Will be set when saving
     };
     setEditingJob(newJob as Job);
@@ -558,16 +544,20 @@ const Pipeline: React.FC = () => {
       id: uuidv4(),
       jobTitle: parsedJob.title,
       company: parsedJob.company,
-      location: '',
+      location: parsedJob.location || '',
       salary: parsedJob.salary || { min: 0, max: 0, currency: 'USD', period: 'yearly' },
       status: 'created',
       priority: 'medium',
       jobDescription: parsedJob.description,
       jobUrl: parsedJob.sourceUrl,
-      notes: `Parsed from Indeed. Sponsorship: ${parsedJob.sponsorship ? 'Available' : 'Not available'}`,
-      tags: [],
+      notes: `Parsed from job URL. Sponsorship: ${parsedJob.sponsorship ? 'Available' : 'Not available'}. ${parsedJob.requirements ? `Requirements: ${parsedJob.requirements.join(', ')}` : ''}`,
+      tags: parsedJob.skills || [],
       contacts: [],
-      userId: user?.id || user?._id,
+      interviews: [],
+      followUps: [],
+      attachments: [],
+      isArchived: false,
+      userId: session?.user?.id || session?.user?._id || user?.id || user?._id,
       cvId: '' // Will be set when saving
     };
     setEditingJob(newJob as Job);
@@ -578,10 +568,20 @@ const Pipeline: React.FC = () => {
     return jobs.filter(job => job.status === status);
   };
 
-  if (isLoading) {
+  if (status === 'loading' || isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-white">Loading jobs...</div>
+        <div className="text-white">
+          {status === 'loading' ? 'Loading session...' : 'Loading jobs...'}
+        </div>
+      </div>
+    );
+  }
+
+  if (status === 'unauthenticated') {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-white">Please log in to view your job tracker.</div>
       </div>
     );
   }
@@ -595,7 +595,7 @@ const Pipeline: React.FC = () => {
           <p className="text-white/60">Track your job applications and manage your career progress</p>
           <p className="text-white/40 text-sm mt-1 flex items-center gap-1">
             <Link size={14} />
-            Works with Indeed URLs only
+            Works with any job posting URL
           </p>
         </div>
         <div className="flex gap-3">

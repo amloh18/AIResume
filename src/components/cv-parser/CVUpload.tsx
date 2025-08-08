@@ -3,6 +3,7 @@
 import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDropzone } from 'react-dropzone';
+import { AICVParser } from '@/lib/services/aiCVParser';
 import { Upload, FileText, Image, File, X, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface CVUploadProps {
@@ -46,10 +47,24 @@ const CVUpload: React.FC<CVUploadProps> = ({ onCVParsed, onClose }) => {
 
       // Add debugging before passing to form
       console.log('CVUpload passing data to form:', parsedData);
+      console.log('Data structure validation:', {
+        hasPersonalInfo: !!parsedData.personalInfo,
+        personalInfoKeys: parsedData.personalInfo ? Object.keys(parsedData.personalInfo) : [],
+        educationLength: parsedData.education?.length || 0,
+        experienceLength: parsedData.experience?.length || 0,
+        skillsLength: parsedData.skills?.length || 0,
+        projectsLength: parsedData.projects?.length || 0
+      });
       
       // Simulate success delay
       setTimeout(() => {
-        onCVParsed(parsedData);
+        try {
+          onCVParsed(parsedData);
+        } catch (error) {
+          console.error('Error in onCVParsed callback:', error);
+          setUploadStatus('error');
+          setErrorMessage('Failed to process parsed data');
+        }
       }, 1000);
 
     } catch (error) {
@@ -74,84 +89,245 @@ const CVUpload: React.FC<CVUploadProps> = ({ onCVParsed, onClose }) => {
   });
 
   const parseCVFile = async (file: File): Promise<any> => {
-    return new Promise(async (resolve, reject) => {
-      try {
-        console.log('Starting CV file parsing for:', file.name, 'Type:', file.type, 'Size:', file.size);
-        
-        // Create FormData to send file to parsing API
-        const formData = new FormData();
-        formData.append('file', file);
-
-        console.log('Sending file to parsing API...');
-        
-        // Call the CV parsing API
-        const response = await fetch('/api/cv/parse', {
-          method: 'POST',
-          body: formData,
-        });
-
-        console.log('API response status:', response.status);
-        console.log('API response headers:', Object.fromEntries(response.headers.entries()));
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('API response error:', errorText);
-          throw new Error(`Parsing failed: ${response.status} ${response.statusText} - ${errorText}`);
-        }
-
-        const parsedData = await response.json();
-        
-        // Add debugging to see what we received
-        console.log('CVUpload received parsed data:', parsedData);
-        console.log('Parsed data keys:', Object.keys(parsedData));
-        
-        // Check if we have a valid structure
-        if (!parsedData || typeof parsedData !== 'object') {
-          console.warn('Invalid parsed data structure, using fallback');
-          resolve(getEmptyStructure());
-          return;
-        }
-        
-        // Ensure we have the required structure
-        const validatedData = validateAndFixDataStructure(parsedData);
-        console.log('Validated data structure:', validatedData);
-        
-        resolve(validatedData);
-      } catch (error) {
-        console.error('CV parsing error:', error);
-        
-        // Fallback: provide empty structure for manual entry
-        const emptyStructure = getEmptyStructure();
-        console.log('Using fallback empty structure');
-        resolve(emptyStructure);
+    try {
+      console.log('Starting CV file parsing for:', file.name, 'Type:', file.type, 'Size:', file.size);
+      // Use unified AI parser (server-side extraction + AI + normalization)
+      const result = await AICVParser.parseCV(file);
+      if (!result.success || !result.data) {
+        throw new Error(result.error || 'Failed to parse CV');
       }
-    });
+
+      console.log('Raw parsed data:', result.data);
+
+      // Map universal schema to form schema and normalize dates
+      const mapped = mapUniversalToForm(result.data);
+      
+      console.log('Mapped form data:', mapped);
+      
+      // Validate the mapped data structure
+      const validationErrors = validateFormData(mapped);
+      if (validationErrors.length > 0) {
+        console.warn('Form data validation warnings:', validationErrors);
+      }
+      
+      return mapped;
+    } catch (error) {
+      console.error('CV parsing error:', error);
+      return getEmptyStructure();
+    }
+  };
+
+  // Helper function to validate form data structure
+  const validateFormData = (data: any): string[] => {
+    const errors: string[] = [];
+    
+    if (!data.personalInfo) {
+      errors.push('Missing personalInfo section');
+    } else {
+      if (typeof data.personalInfo.email !== 'string') {
+        errors.push('Invalid email format in personalInfo');
+      }
+      if (data.personalInfo.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.personalInfo.email)) {
+        errors.push('Invalid email pattern in personalInfo');
+      }
+    }
+    
+    if (!Array.isArray(data.education)) {
+      errors.push('Education must be an array');
+    }
+    
+    if (!Array.isArray(data.experience)) {
+      errors.push('Experience must be an array');
+    }
+    
+    if (!Array.isArray(data.skills)) {
+      errors.push('Skills must be an array');
+    }
+    
+    if (!Array.isArray(data.projects)) {
+      errors.push('Projects must be an array');
+    }
+    
+    return errors;
   };
 
   // Helper function to validate and fix data structure
-  const validateAndFixDataStructure = (data: any) => {
-    const defaultStructure = getEmptyStructure();
+  const asMonth = (value: any): string => {
+    if (!value || typeof value !== 'string') return '';
+    const trimmed = value.trim();
+    // Accept YYYY-MM, YYYY-MM-DD, YYYY
+    const yyyyMm = trimmed.match(/^\d{4}-(0[1-9]|1[0-2])$/);
+    if (yyyyMm) return yyyyMm[0];
+    const yyyyMmDd = trimmed.match(/^(\d{4})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/);
+    if (yyyyMmDd) return `${yyyyMmDd[1]}-${yyyyMmDd[2]}`;
+    const yyyy = trimmed.match(/^(\d{4})$/);
+    if (yyyy) return `${yyyy[1]}-01`;
+    return '';
+  };
+
+  const splitName = (fullName: string): { firstName: string; lastName: string } => {
+    if (!fullName) return { firstName: '', lastName: '' };
+    const parts = fullName.trim().split(/\s+/);
+    if (parts.length === 1) return { firstName: parts[0], lastName: '' };
+    return { firstName: parts.slice(0, -1).join(' '), lastName: parts.slice(-1).join('') };
+  };
+
+  const mapUniversalToForm = (data: any) => {
+    const empty = getEmptyStructure();
     
-    // Ensure all required sections exist
-    const validatedData = {
+    // Handle both direct form data and universal CV schema
+    if (data.personalInfo) {
+      // Data is already in form format, just validate and clean
+      return validateAndCleanFormData(data);
+    }
+    
+    // Map from universal CV schema to form schema
+    const basics = data.basics || {};
+    const profiles: Array<any> = Array.isArray(basics.profiles) ? basics.profiles : [];
+    const linkedIn = profiles.find(p => String(p.network || '').toLowerCase().includes('linkedin'))?.url || '';
+    const github = profiles.find(p => String(p.network || '').toLowerCase().includes('github'))?.url || '';
+    const name = splitName(basics.name || '');
+
+    // Map education with proper field mapping
+    const education = Array.isArray(data.education) ? data.education.map((e: any) => ({
+      institution: sanitizeString(e?.institution || ''),
+      degree: sanitizeString(e?.studyType || ''), // studyType -> degree
+      field: sanitizeString(e?.area || ''), // area -> field
+      location: sanitizeString(''), // Not available in CV schema
+      startDate: asMonth(e?.startDate),
+      endDate: asMonth(e?.endDate),
+      current: !e?.endDate || e?.endDate === '', // current if no end date
+      gpa: sanitizeString(e?.score || ''), // score -> gpa
+      description: sanitizeString('')
+    })) : [];
+
+    // Map work experience with proper field mapping
+    const experience = Array.isArray(data.work) ? data.work.map((w: any) => ({
+      company: sanitizeString(w?.name || ''), // name -> company
+      position: sanitizeString(w?.position || ''),
+      location: sanitizeString(''), // Not available in CV schema
+      startDate: asMonth(w?.startDate),
+      endDate: asMonth(w?.endDate),
+      current: !w?.endDate || w?.endDate === '', // current if no end date
+      description: sanitizeString(w?.summary || ''), // summary -> description
+      achievements: Array.isArray(w?.highlights) ? w.highlights.map(sanitizeString).filter(Boolean) : []
+    })) : [];
+
+    // Map skills with proper field mapping
+    const skills = Array.isArray(data.skills) ? data.skills.map((s: any) => ({
+      category: sanitizeString(s?.name || 'Skills'), // name -> category
+      skills: Array.isArray(s?.keywords) ? s.keywords.map(sanitizeString).filter(Boolean) : [] // keywords -> skills
+    })).filter(skill => skill.category && skill.skills.length > 0) : [];
+
+    // Map projects with proper field mapping
+    const projects = Array.isArray(data.projects) ? data.projects.map((p: any) => ({
+      title: sanitizeString(p?.name || ''), // name -> title
+      description: sanitizeString(p?.description || ''),
+      technologies: Array.isArray(p?.highlights) ? p.highlights.map(sanitizeString).filter(Boolean) : [], // highlights -> technologies
+      url: sanitizeString(p?.url || ''),
+      github: sanitizeString(''), // Not available in CV schema
+      startDate: asMonth(p?.startDate),
+      endDate: asMonth(p?.endDate),
+      current: !p?.endDate || p?.endDate === '' // current if no end date
+    })).filter(project => project.title) : [];
+
+    // Ensure all string fields are properly sanitized to prevent validation errors
+    function sanitizeString(str: any): string {
+      if (typeof str !== 'string') return '';
+      return str.trim().substring(0, 1000); // Limit length to prevent validation issues
+    }
+
+    // Build location string from CV location object
+    const locationParts = [];
+    if (basics.location?.city) locationParts.push(basics.location.city);
+    if (basics.location?.region) locationParts.push(basics.location.region);
+    const locationString = locationParts.join(', ');
+
+    const formData = {
       personalInfo: {
-        ...defaultStructure.personalInfo,
-        ...(data.personalInfo || {})
+        firstName: sanitizeString(name.firstName) || empty.personalInfo.firstName,
+        lastName: sanitizeString(name.lastName) || empty.personalInfo.lastName,
+        email: sanitizeString(basics.email) || empty.personalInfo.email,
+        phone: sanitizeString(basics.phone) || empty.personalInfo.phone,
+        location: sanitizeString(locationString) || empty.personalInfo.location,
+        website: sanitizeString(basics.url) || empty.personalInfo.website,
+        linkedin: sanitizeString(linkedIn) || empty.personalInfo.linkedin,
+        github: sanitizeString(github) || empty.personalInfo.github,
+        summary: sanitizeString(basics.summary) || empty.personalInfo.summary
       },
-      education: Array.isArray(data.education) ? data.education : [],
-      experience: Array.isArray(data.experience) ? data.experience : [],
-      skills: Array.isArray(data.skills) ? data.skills : [],
-      projects: Array.isArray(data.projects) ? data.projects : []
+      education,
+      experience,
+      skills,
+      projects
     };
+
+    return validateAndCleanFormData(formData);
+  };
+
+  // Helper function to validate and clean form data
+  const validateAndCleanFormData = (data: any) => {
+    const empty = getEmptyStructure();
     
-    // Add any additional fields from the parsed data
-    Object.keys(data).forEach(key => {
-      if (!['personalInfo', 'education', 'experience', 'skills', 'projects'].includes(key)) {
-        validatedData[key] = data[key];
-      }
-    });
-    
-    return validatedData;
+    // Ensure all required fields exist with proper types
+    const cleanData = {
+      personalInfo: {
+        firstName: sanitizeString(data.personalInfo?.firstName) || empty.personalInfo.firstName,
+        lastName: sanitizeString(data.personalInfo?.lastName) || empty.personalInfo.lastName,
+        email: sanitizeString(data.personalInfo?.email) || empty.personalInfo.email,
+        phone: sanitizeString(data.personalInfo?.phone) || empty.personalInfo.phone,
+        location: sanitizeString(data.personalInfo?.location) || empty.personalInfo.location,
+        website: sanitizeString(data.personalInfo?.website) || empty.personalInfo.website,
+        linkedin: sanitizeString(data.personalInfo?.linkedin) || empty.personalInfo.linkedin,
+        github: sanitizeString(data.personalInfo?.github) || empty.personalInfo.github,
+        summary: sanitizeString(data.personalInfo?.summary) || empty.personalInfo.summary
+      },
+      education: Array.isArray(data.education) ? data.education.map((edu: any) => ({
+        institution: sanitizeString(edu.institution) || '',
+        degree: sanitizeString(edu.degree) || '',
+        field: sanitizeString(edu.field) || '',
+        location: sanitizeString(edu.location) || '',
+        startDate: asMonth(edu.startDate),
+        endDate: asMonth(edu.endDate),
+        current: Boolean(edu.current),
+        gpa: sanitizeString(edu.gpa) || '',
+        description: sanitizeString(edu.description) || ''
+      })) : [],
+      experience: Array.isArray(data.experience) ? data.experience.map((exp: any) => ({
+        company: sanitizeString(exp.company) || '',
+        position: sanitizeString(exp.position) || '',
+        location: sanitizeString(exp.location) || '',
+        startDate: asMonth(exp.startDate),
+        endDate: asMonth(exp.endDate),
+        current: Boolean(exp.current),
+        description: sanitizeString(exp.description) || '',
+        achievements: Array.isArray(exp.achievements) ? exp.achievements.map(sanitizeString).filter(Boolean) : []
+      })) : [],
+      skills: Array.isArray(data.skills) ? data.skills.map((skill: any) => ({
+        category: sanitizeString(skill.category) || 'Skills',
+        skills: Array.isArray(skill.skills) ? skill.skills.map(sanitizeString).filter(Boolean) : []
+      })).filter(skill => skill.category && skill.skills.length > 0) : [],
+      projects: Array.isArray(data.projects) ? data.projects.map((proj: any) => ({
+        title: sanitizeString(proj.title) || '',
+        description: sanitizeString(proj.description) || '',
+        technologies: Array.isArray(proj.technologies) ? proj.technologies.map(sanitizeString).filter(Boolean) : [],
+        url: sanitizeString(proj.url) || '',
+        github: sanitizeString(proj.github) || '',
+        startDate: asMonth(proj.startDate),
+        endDate: asMonth(proj.endDate),
+        current: Boolean(proj.current)
+      })).filter(project => project.title) : []
+    };
+
+    // Helper function to sanitize strings
+    function sanitizeString(str: any): string {
+      if (typeof str !== 'string') return '';
+      // Remove any characters that might cause validation issues
+      return str.trim()
+        .replace(/[^\w\s@.\-+()]/g, '') // Keep only alphanumeric, spaces, and common symbols
+        .substring(0, 1000); // Limit length
+    }
+
+    return cleanData;
   };
 
   // Helper function to get empty structure

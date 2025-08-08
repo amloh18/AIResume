@@ -7,6 +7,7 @@ export interface IUser extends Document {
   firstName: string;
   lastName: string;
   avatar?: string;
+  role: 'user' | 'admin';
   isEmailVerified: boolean;
   emailVerificationToken?: string;
   emailVerificationExpires?: Date;
@@ -38,8 +39,7 @@ const userSchema = new Schema<IUser>({
     required: [true, 'Email is required'],
     unique: true,
     lowercase: true,
-    trim: true,
-    match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email']
+    trim: true
   },
   password: {
     type: String,
@@ -61,6 +61,11 @@ const userSchema = new Schema<IUser>({
   avatar: {
     type: String,
     default: null
+  },
+  role: {
+    type: String,
+    enum: ['user', 'admin'],
+    default: 'user'
   },
   isEmailVerified: {
     type: Boolean,

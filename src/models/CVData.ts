@@ -3,7 +3,6 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface ICVData extends Document {
   userId: mongoose.Types.ObjectId;
   title: string;
-  templateId: mongoose.Types.ObjectId;
   linkedJobId?: mongoose.Types.ObjectId;
   status: 'draft' | 'published' | 'archived';
   version: number;
@@ -106,64 +105,12 @@ export interface ICVData extends Document {
     achievements: string[];
   }>;
   
-  // Layout and Styling
-  sectionsOrder: string[];
-  sectionStyles: Record<string, {
-    snippetName: string;
-    layout: string;
-  }>;
-  
-  // Template Styles (copied from template for versioning)
-  templateStyles: {
-    layout: 'single-column' | 'two-column' | 'absolute';
-    paddingX: number;
-    paddingY: number;
-    lineHeight: number;
-    sectionGap: number;
-    subsectionGap: number;
-    itemSpacing: number;
-    titleBottomMargin: number;
-    highlightColor: string;
-    showSectionLine: boolean;
-    paperSize: 'A4' | 'US Letter';
+  // Basic styling
+  styling: {
     fontFamily: string;
-    baseFontSize: number;
-    contactAlignment: 'left' | 'center' | 'right';
-    showProfilePicture: boolean;
-    itemStyle: string;
-    sectionTitleStyle?: object;
-    leftColumnWidth?: number;
-    leftColumnSections?: string[];
-    rightColumnSections?: string[];
-    sections?: Array<{
-      key: string;
-      box: { x: number; y: number; w: number; h: number };
-      zIndex: number;
-      mask?: string;
-      styles?: object;
-    }>;
-    elements?: Array<{
-      type: string;
-      x?: number;
-      y?: number;
-      w?: number;
-      h?: number;
-      x1?: number;
-      y1?: number;
-      x2?: number;
-      y2?: number;
-      fill?: string;
-      strokeWidth?: number;
-      color?: string;
-      zIndex: number;
-      content?: string;
-      fontSize?: number;
-      fontWeight?: string;
-      src?: string;
-      opacity?: number;
-      radius?: number;
-      rotation?: number;
-    }>;
+    fontSize: number;
+    lineHeight: number;
+    color: string;
   };
   
   // Metadata
