@@ -8,12 +8,6 @@ import {
   CheckCircle, 
   XCircle, 
   AlertCircle,
-  ExternalLink,
-  Building,
-  Calendar,
-  DollarSign,
-  MapPin,
-  Briefcase,
   Info
 } from 'lucide-react';
 
@@ -23,37 +17,18 @@ interface JobParserProps {
   isOpen: boolean;
 }
 
-interface ParsedJob {
-  jobid: string;
-  title: string;
-  company: string;
-  description: string;
-  sourceUrl: string;
-  salary?: {
-    min?: number;
-    max?: number;
-    currency?: string;
-    period?: string;
-  };
-  sponsorship: boolean;
-  createdAt: string;
-}
+
 
 const JobParser: React.FC<JobParserProps> = ({ onJobParsed, onClose, isOpen }) => {
   const [url, setUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [parsedJob, setParsedJob] = useState<ParsedJob | null>(null);
+  const [parsedJob, setParsedJob] = useState<any | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const handleParseJob = async (demoMode = false) => {
-    if (!demoMode && !url.trim()) {
+  const handleParseJob = async () => {
+    if (!url.trim()) {
       setError('Please enter a job URL');
-      return;
-    }
-
-    if (!demoMode && !url.includes('indeed.com')) {
-      setError('Only Indeed URLs are supported');
       return;
     }
 
@@ -63,9 +38,7 @@ const JobParser: React.FC<JobParserProps> = ({ onJobParsed, onClose, isOpen }) =
     setParsedJob(null);
 
     try {
-      const requestBody = demoMode 
-        ? { url: 'https://demo.indeed.com/job', demo: true }
-        : { url: url.trim() };
+      const requestBody = { url: url.trim() };
 
       const response = await fetch('/api/parse-job', {
         method: 'POST',
@@ -79,21 +52,53 @@ const JobParser: React.FC<JobParserProps> = ({ onJobParsed, onClose, isOpen }) =
 
       if (data.success) {
         setParsedJob(data.data);
-        setSuccess(demoMode ? 'Demo job parsed successfully!' : data.message);
+        setSuccess('Job parsed successfully! Opening job form...');
+        
+        // Call the onJobParsed callback to populate the add job form
         if (onJobParsed) {
           onJobParsed(data.data);
         }
+        
+        // Close the parser modal after a short delay
+        setTimeout(() => {
+          if (onClose) {
+            onClose();
+          }
+        }, 1500);
       } else {
         // Handle specific error cases
         if (data.message.includes('blocking automated requests') || 
-            data.message.includes('Unable to access')) {
-          setError(`Indeed is currently blocking automated requests. 
+            data.message.includes('Unable to access') ||
+            data.message.includes('anti-bot protection')) {
+          setError(`The job site is currently blocking automated requests. 
 
 This is a common issue with job sites. You can:
 • Try again in a few minutes
 • Copy the job details manually and use "Add Job" instead
-• Check if the job posting is still active
-• Try the demo mode to see how it works`);
+• Check if the job posting is still active`);
+        } else if (data.message.includes('timeout')) {
+          setError(`The job page took too long to load. 
+
+This might be because:
+• The job site is slow or overloaded
+• The URL is not accessible
+• The page has complex content
+
+You can:
+• Try again in a few minutes
+• Check if the URL is correct and accessible`);
+        } else if (data.message.includes('not a job posting')) {
+          setError(`Unable to extract job information from this URL. 
+
+This might be because:
+• The URL is not a job posting page
+• The page has a different structure
+• The job posting has been removed
+
+You can:
+• Verify the URL is a job posting page
+• Try a different job URL
+• Copy the job details manually and use "Add Job" instead`);
         } else {
           setError(data.message || 'Failed to parse job');
         }
@@ -115,23 +120,7 @@ This is a common issue with job sites. You can:
     }
   };
 
-  const formatSalary = (salary?: ParsedJob['salary']) => {
-    if (!salary) return 'Not specified';
-    const { min, max, currency = 'USD', period = 'yearly' } = salary;
-    if (min && max) {
-      return `${currency} ${min.toLocaleString()} - ${max.toLocaleString()}/${period}`;
-    } else if (min) {
-      return `${currency} ${min.toLocaleString()}/${period}`;
-    } else if (max) {
-      return `${currency} ${max.toLocaleString()}/${period}`;
-    }
-    return 'Not specified';
-  };
 
-  const truncateDescription = (description: string, maxLength: number = 200) => {
-    if (description.length <= maxLength) return description;
-    return description.substring(0, maxLength) + '...';
-  };
 
   return (
     <AnimatePresence>
@@ -157,7 +146,7 @@ This is a common issue with job sites. You can:
                 </div>
                 <div>
                   <h2 className="text-xl font-bold text-white">Job Parser</h2>
-                  <p className="text-white/60 text-sm">Parse Indeed job postings</p>
+                  <p className="text-white/60 text-sm">Parse any job posting URL</p>
                 </div>
               </div>
               <button
@@ -171,19 +160,19 @@ This is a common issue with job sites. You can:
             {/* URL Input */}
             <div className="mb-6">
               <label className="block text-white/80 text-sm font-medium mb-2">
-                Indeed Job URL
+                Job Posting URL
               </label>
               <div className="flex gap-2">
                 <input
                   type="url"
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
-                  placeholder="https://www.indeed.com/viewjob?jk=..."
+                  placeholder="https://www.indeed.com/viewjob?jk=... or any job posting URL"
                   className="flex-1 bg-white/10 border border-white/20 rounded-lg px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:border-transparent"
                   disabled={isLoading}
                 />
                 <motion.button
-                  onClick={() => handleParseJob(false)}
+                  onClick={handleParseJob}
                   disabled={isLoading || !url.trim()}
                   className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   whileHover={{ scale: 1.02 }}
@@ -195,20 +184,10 @@ This is a common issue with job sites. You can:
                     'Parse Job'
                   )}
                 </motion.button>
-                <motion.button
-                  onClick={() => handleParseJob(true)}
-                  disabled={isLoading}
-                  className="bg-gradient-to-r from-green-500 to-green-600 text-white px-4 py-3 rounded-lg font-medium hover:from-green-600 hover:to-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  title="Try demo mode to see how job parsing works"
-                >
-                  Demo
-                </motion.button>
               </div>
               <p className="text-white/40 text-xs mt-2 flex items-center gap-1">
                 <Info size={12} />
-                Works with Indeed URLs only. Note: Some job postings may be blocked by Indeed's anti-bot measures.
+                Works with any job posting URL. Supports Indeed, LinkedIn, Glassdoor, and other job sites.
               </p>
             </div>
 
@@ -242,87 +221,7 @@ This is a common issue with job sites. You can:
               )}
             </AnimatePresence>
 
-            {/* Parsed Job Display */}
-            <AnimatePresence>
-              {parsedJob && (
-                <motion.div
-                  className="bg-white/5 border border-white/10 rounded-xl p-6"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 20 }}
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <h3 className="text-lg font-semibold text-white mb-1">
-                        {parsedJob.title}
-                      </h3>
-                      <div className="flex items-center gap-4 text-white/60 text-sm">
-                        <div className="flex items-center gap-1">
-                          <Building size={14} />
-                          {parsedJob.company}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Calendar size={14} />
-                          {new Date(parsedJob.createdAt).toLocaleDateString()}
-                        </div>
-                      </div>
-                    </div>
-                    <a
-                      href={parsedJob.sourceUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-400 hover:text-blue-300 transition-colors"
-                    >
-                      <ExternalLink size={20} />
-                    </a>
-                  </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                    <div className="flex items-center gap-2 text-white/80">
-                      <DollarSign size={16} />
-                      <span className="text-sm">{formatSalary(parsedJob.salary)}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-white/80">
-                      <Briefcase size={16} />
-                      <span className="text-sm">
-                        {parsedJob.sponsorship ? 'Visa Sponsorship Available' : 'No Visa Sponsorship'}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="mb-4">
-                    <h4 className="text-white/80 font-medium mb-2">Description</h4>
-                    <p className="text-white/60 text-sm leading-relaxed">
-                      {truncateDescription(parsedJob.description)}
-                    </p>
-                  </div>
-
-                  <div className="flex gap-3">
-                    <motion.button
-                      onClick={handleClose}
-                      className="flex-1 bg-white/10 text-white py-2 px-4 rounded-lg hover:bg-white/20 transition-colors"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      Close
-                    </motion.button>
-                    <motion.button
-                      onClick={() => {
-                        if (onJobParsed) {
-                          onJobParsed(parsedJob);
-                        }
-                        handleClose();
-                      }}
-                      className="flex-1 bg-gradient-to-r from-green-500 to-green-600 text-white py-2 px-4 rounded-lg hover:from-green-600 hover:to-green-700 transition-all"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      Add to Tracker
-                    </motion.button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
           </motion.div>
         </motion.div>
       )}

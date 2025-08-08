@@ -3,6 +3,8 @@ import { Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 import SessionProvider from '@/components/providers/SessionProvider'
+import { ThemeProvider } from '@/lib/contexts/ThemeContext'
+import PerformanceMonitor from '@/components/ui/PerformanceMonitor'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -19,10 +21,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <SessionProvider>
-          {children}
-        </SessionProvider>
+        <ThemeProvider>
+          <SessionProvider>
+            {children}
+          </SessionProvider>
+        </ThemeProvider>
         <Analytics />
+        <PerformanceMonitor />
       </body>
     </html>
   )

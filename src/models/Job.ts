@@ -4,6 +4,7 @@ export interface IJob extends Document {
   jobid: string;
   title: string;
   company: string;
+  location?: string;
   description: string;
   sourceUrl: string;
   createdAt: Date;
@@ -14,6 +15,12 @@ export interface IJob extends Document {
     currency?: string;
     period?: string;
   };
+  requirements?: string[];
+  skills?: string[];
+  jobType?: string;
+  experience?: string;
+  education?: string;
+  postedDate?: string;
   sponsorship: boolean;
   userId?: mongoose.Types.ObjectId;
 }
@@ -35,6 +42,11 @@ const jobSchema = new Schema<IJob>({
     required: true,
     trim: true,
     maxlength: [100, 'Company name cannot exceed 100 characters']
+  },
+  location: {
+    type: String,
+    trim: true,
+    maxlength: [200, 'Location cannot exceed 200 characters']
   },
   description: {
     type: String,
@@ -72,6 +84,33 @@ const jobSchema = new Schema<IJob>({
       enum: ['hourly', 'monthly', 'yearly'],
       default: 'yearly'
     }
+  },
+  requirements: [{
+    type: String,
+    trim: true
+  }],
+  skills: [{
+    type: String,
+    trim: true
+  }],
+  jobType: {
+    type: String,
+    trim: true,
+    maxlength: [50, 'Job type cannot exceed 50 characters']
+  },
+  experience: {
+    type: String,
+    trim: true,
+    maxlength: [100, 'Experience cannot exceed 100 characters']
+  },
+  education: {
+    type: String,
+    trim: true,
+    maxlength: [200, 'Education cannot exceed 200 characters']
+  },
+  postedDate: {
+    type: String,
+    trim: true
   },
   sponsorship: {
     type: Boolean,

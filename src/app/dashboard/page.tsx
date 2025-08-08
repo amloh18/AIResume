@@ -9,7 +9,6 @@ import {
   Briefcase, 
   PenTool, 
   Archive, 
-  MessageSquare, 
   BarChart3,
   Settings,
   Bell,
@@ -34,8 +33,8 @@ import Canvas from '@/components/dashboard/Canvas';
 import Pipeline from '@/components/dashboard/Pipeline';
 import InkPad from '@/components/dashboard/InkPad';
 import Analytics from '@/components/dashboard/Analytics';
-import Snippets from '@/components/dashboard/Snippets';
 import DashboardNavigation from '@/components/dashboard/DashboardNavigation';
+
 
 interface DashboardProps {}
 
@@ -43,16 +42,22 @@ const Dashboard: React.FC<DashboardProps> = () => {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [activeSection, setActiveSection] = useState('pulse');
+
   const [user, setUser] = useState({
     name: 'Amarjot',
     email: 'amarjot@example.com',
     progress: 60,
     cvsCreated: 3,
     jobsApplied: 2,
-    coverLetters: 1
+    coverLetters: 1,
+    subscription: {
+      planName: 'Free Plan',
+      status: 'active',
+      credits: 20
+    }
   });
 
-  // Load user data from localStorage
+  // Load user data from localStorage and fetch subscription
   useEffect(() => {
     const userData = localStorage.getItem('user');
     if (userData) {
@@ -67,6 +72,24 @@ const Dashboard: React.FC<DashboardProps> = () => {
         console.error('Error parsing user data:', error);
       }
     }
+
+    // Fetch user subscription data
+    const fetchUserSubscription = async () => {
+      try {
+        const response = await fetch('/api/user/subscription');
+        const data = await response.json();
+        if (data.success) {
+          setUser(prev => ({
+            ...prev,
+            subscription: data.subscription
+          }));
+        }
+      } catch (error) {
+        console.error('Error fetching user subscription:', error);
+      }
+    };
+
+    fetchUserSubscription();
   }, []);
 
   const [showWelcomeAnimation, setShowWelcomeAnimation] = useState(false);
@@ -84,11 +107,14 @@ const Dashboard: React.FC<DashboardProps> = () => {
       }
     }
 
-    // Handle welcome animation from onboarding
-    const isFromOnboarding = sessionStorage.getItem('fromOnboarding');
-    if (isFromOnboarding) {
+    // Handle welcome animation from registration or login
+    const isFromRegistration = sessionStorage.getItem('fromRegistration');
+    const isFromLogin = sessionStorage.getItem('fromLogin');
+    
+    if (isFromRegistration || isFromLogin) {
       setShowWelcomeAnimation(true);
-      sessionStorage.removeItem('fromOnboarding');
+      sessionStorage.removeItem('fromRegistration');
+      sessionStorage.removeItem('fromLogin');
       
       // Hide welcome animation after 5 seconds
       setTimeout(() => {
@@ -140,8 +166,7 @@ const Dashboard: React.FC<DashboardProps> = () => {
     { id: 'pipeline', name: 'Job Tracker', icon: Briefcase, description: 'Track Applications' },
     { id: 'canvas', name: 'CV Studio', icon: FileText, description: 'Create & Edit CVs' },
     { id: 'inkpad', name: 'Cover Letters', icon: PenTool, description: 'Generate Letters' },
-    { id: 'vault', name: 'Saved Forms', icon: Archive, description: 'Store Data' },
-    { id: 'quillbox', name: 'Snippets', icon: MessageSquare, description: 'Content Library' }
+    { id: 'vault', name: 'Saved Forms', icon: Archive, description: 'Store Data' }
   ];
 
   const widgets = [
@@ -183,18 +208,20 @@ const Dashboard: React.FC<DashboardProps> = () => {
       <AnimatePresence>
         {showWelcomeAnimation && (
           <motion.div
-            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xl flex items-center justify-center"
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xl flex items-center justify-center backdrop-optimized"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.5 }}
+            transition={{ duration: 0.3 }}
+            style={{ willChange: 'opacity' }}
           >
             <motion.div
               className="text-center space-y-8 p-8"
-              initial={{ scale: 0.8, y: 50 }}
+              initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.8, y: 50 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
+              exit={{ scale: 0.9, y: 20 }}
+              transition={{ duration: 0.3, delay: 0.1 }}
+              style={{ willChange: 'transform' }}
             >
               <motion.div
                 className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-lime-400 to-lime-500 flex items-center justify-center"
@@ -255,15 +282,17 @@ const Dashboard: React.FC<DashboardProps> = () => {
       <div className="flex">
         {/* Sidebar */}
         <motion.aside 
-          initial={{ opacity: 0, x: -20 }}
+          initial={{ opacity: 0, x: -10 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.5 }}
+          transition={{ delay: 0.2, duration: 0.3 }}
+          style={{ willChange: 'transform, opacity' }}
         >
-          <DashboardNavigation
-            activeSection={activeSection}
-            onSectionChange={setActiveSection}
-            user={user}
-          />
+                  <DashboardNavigation
+          activeSection={activeSection}
+          onSectionChange={setActiveSection}
+          onMembershipClick={() => {}}
+          user={user}
+        />
         </motion.aside>
 
         {/* Main Dashboard Area */}
@@ -273,10 +302,11 @@ const Dashboard: React.FC<DashboardProps> = () => {
               {activeSection === 'canvas' && (
                 <motion.div
                   key="canvas"
-                  initial={{ opacity: 0, x: 20 }}
+                  initial={{ opacity: 0, x: 10 }}
                   animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.3 }}
+                  exit={{ opacity: 0, x: -10 }}
+                  transition={{ duration: 0.2 }}
+                  style={{ willChange: 'transform, opacity' }}
                 >
                   <Canvas />
                 </motion.div>
@@ -325,17 +355,7 @@ const Dashboard: React.FC<DashboardProps> = () => {
                 </motion.div>
               )}
 
-              {activeSection === 'quillbox' && (
-                <motion.div
-                  key="quillbox"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <Snippets userAccessLevel="pro" />
-                </motion.div>
-              )}
+
 
               {activeSection === 'pulse' && (
                 <motion.div
@@ -352,6 +372,9 @@ const Dashboard: React.FC<DashboardProps> = () => {
           </div>
         </main>
       </div>
+
+      {/* Membership Sidebar */}
+      
     </div>
   );
 };

@@ -105,8 +105,7 @@ const CVOnboardingPage: React.FC = () => {
           },
           body: JSON.stringify({
             userId: userResult.data.user._id,
-            title: `${userData.firstName} ${userData.lastName}'s CV`,
-            template: 'modern',
+                        title: `${userData.firstName} ${userData.lastName}'s CV`,
             sections: formData
           }),
         });
@@ -186,11 +185,11 @@ const CVOnboardingPage: React.FC = () => {
   };
 
   const handlePreview = () => {
-    // Navigate to CV studio with current data
+    // TODO: Navigate to new editor when built
     if (formData) {
-      // Store data temporarily for CV studio
+      // Store data temporarily for new editor
       sessionStorage.setItem('previewCVData', JSON.stringify(formData));
-      window.open('/cv-studio', '_blank');
+      console.log('Preview CV data:', formData);
     }
   };
 
@@ -314,7 +313,7 @@ const CVOnboardingPage: React.FC = () => {
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.3, ease: "easeOut" }}
             >
-              {console.log('CVOnboarding: Rendering form with cvData:', cvData)}
+
               <InteractiveCVForm
                 initialData={cvData}
                 onSave={handleFormSave}
@@ -404,7 +403,7 @@ const CVOnboardingPage: React.FC = () => {
                   <ul className="space-y-2 text-white/60 text-sm">
                     <li className="flex items-center gap-2">
                       <CheckCircle size={16} className="text-lime-400" />
-                      Customize your CV with different templates
+                      Customize your CV with different styles
                     </li>
                     <li className="flex items-center gap-2">
                       <CheckCircle size={16} className="text-lime-400" />

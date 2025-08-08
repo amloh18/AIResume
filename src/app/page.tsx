@@ -5,7 +5,7 @@ import Navigation from '@/components/landing/Navigation';
 import Hero from '@/components/landing/Hero';
 import Features from '@/components/landing/Features';
 import Testimonials from '@/components/landing/Testimonials';
-import Pricing from '@/components/landing/Pricing';
+import DynamicPricing from '@/components/pricing/DynamicPricing';
 import Footer from '@/components/landing/Footer';
 
 export default function Home() {
@@ -15,7 +15,7 @@ export default function Home() {
       <Hero />
       <Features />
       <Testimonials />
-      <Pricing />
+      <DynamicPricing />
       <Footer />
     </main>
   );
