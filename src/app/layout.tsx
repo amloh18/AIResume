@@ -5,6 +5,7 @@ import './globals.css'
 import SessionProvider from '@/components/providers/SessionProvider'
 import { ThemeProvider } from '@/lib/contexts/ThemeContext'
 import PerformanceMonitor from '@/components/ui/PerformanceMonitor'
+import SessionManagerProvider from '@/components/providers/SessionManagerProvider'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -23,7 +24,9 @@ export default function RootLayout({
       <body className={inter.className}>
         <ThemeProvider>
           <SessionProvider>
-            {children}
+            <SessionManagerProvider>
+              {children}
+            </SessionManagerProvider>
           </SessionProvider>
         </ThemeProvider>
         <Analytics />

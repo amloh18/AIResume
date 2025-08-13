@@ -7,16 +7,19 @@ import Features from '@/components/landing/Features';
 import Testimonials from '@/components/landing/Testimonials';
 import DynamicPricing from '@/components/pricing/DynamicPricing';
 import Footer from '@/components/landing/Footer';
+import RouteGuard from '@/components/auth/RouteGuard';
 
 export default function Home() {
   return (
-    <main className="relative">
-      <Navigation />
-      <Hero />
-      <Features />
-      <Testimonials />
-      <DynamicPricing />
-      <Footer />
-    </main>
+    <RouteGuard requireAuth={false}>
+      <main className="relative">
+        <Navigation />
+        <Hero />
+        <Features />
+        <Testimonials />
+        <DynamicPricing />
+        <Footer />
+      </main>
+    </RouteGuard>
   );
 } 

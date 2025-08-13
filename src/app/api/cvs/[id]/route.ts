@@ -140,6 +140,8 @@ export async function DELETE(
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
 
+    console.log('DELETE CV request - id:', id, 'userId:', userId);
+
     if (!userId) {
       return NextResponse.json(
         {
@@ -150,12 +152,43 @@ export async function DELETE(
       );
     }
 
-    const cvId = toObjectId(id);
+    let cvId, userObjectId;
+    
+    try {
+      cvId = toObjectId(id);
+      console.log('CV ID converted successfully:', cvId);
+    } catch (error) {
+      console.error('Invalid CV ID format:', id);
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Invalid CV ID format'
+        },
+        { status: 400 }
+      );
+    }
+    
+    try {
+      userObjectId = toObjectId(userId);
+      console.log('User ID converted successfully:', userObjectId);
+    } catch (error) {
+      console.error('Invalid User ID format:', userId);
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Invalid User ID format'
+        },
+        { status: 400 }
+      );
+    }
+    
+    console.log('Converted IDs - cvId:', cvId, 'userObjectId:', userObjectId);
     
     // Find CV and ensure user owns it
-    const cv = await CV.findOne({ _id: cvId, userId });
+    const cv = await CV.findOne({ _id: cvId, userId: userObjectId });
     
     if (!cv) {
+      console.log('CV not found for user');
       return NextResponse.json(
         {
           success: false,
@@ -165,6 +198,7 @@ export async function DELETE(
       );
     }
 
+    console.log('CV found, deleting...');
     await CV.deleteOne({ _id: cvId });
 
     return NextResponse.json({

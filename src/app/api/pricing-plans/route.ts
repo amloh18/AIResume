@@ -24,14 +24,14 @@ export async function GET(request: NextRequest) {
       .sort({ sortOrder: 1, price: 1 })
       .lean();
 
-    return NextResponse.json({
-      success: true,
-      plans: plans.map(plan => ({
-        ...plan,
-        maxCVs: plan.maxCVs === -1 ? 'Unlimited' : plan.maxCVs,
-        maxExports: plan.maxExports === -1 ? 'Unlimited' : plan.maxExports
-      }))
-    });
+    return NextResponse.json(plans.map(plan => ({
+      ...plan,
+      maxCVs: plan.maxCVs === -1 ? 'Unlimited' : plan.maxCVs,
+      maxExports: plan.maxExports === -1 ? 'Unlimited' : plan.maxExports,
+      // Add computed fields for backward compatibility
+      price: plan.price_monthly || plan.price_one_time || 0,
+      billingCycle: plan.billingCycle
+    })));
   } catch (error) {
     console.error('Error fetching pricing plans:', error);
     return NextResponse.json(

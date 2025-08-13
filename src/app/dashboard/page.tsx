@@ -34,6 +34,7 @@ import Pipeline from '@/components/dashboard/Pipeline';
 import InkPad from '@/components/dashboard/InkPad';
 import Analytics from '@/components/dashboard/Analytics';
 import DashboardNavigation from '@/components/dashboard/DashboardNavigation';
+import RouteGuard from '@/components/auth/RouteGuard';
 
 
 interface DashboardProps {}
@@ -203,7 +204,8 @@ const Dashboard: React.FC<DashboardProps> = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black">
+    <RouteGuard requireAuth={true}>
+      <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black">
       {/* Welcome Animation Overlay */}
       <AnimatePresence>
         {showWelcomeAnimation && (
@@ -296,7 +298,7 @@ const Dashboard: React.FC<DashboardProps> = () => {
         </motion.aside>
 
         {/* Main Dashboard Area */}
-                    <main className="flex-1 p-8 pt-8">
+                    <main className="flex-1 p-6 pt-8">
               <div className="max-w-7xl mx-auto">
             <AnimatePresence mode="wait">
               {activeSection === 'canvas' && (
@@ -375,7 +377,8 @@ const Dashboard: React.FC<DashboardProps> = () => {
 
       {/* Membership Sidebar */}
       
-    </div>
+      </div>
+    </RouteGuard>
   );
 };
 

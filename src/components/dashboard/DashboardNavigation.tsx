@@ -63,7 +63,7 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
   };
 
   return (
-    <div className="w-64 bg-black/40 backdrop-blur-xl border-r border-white/10 min-h-screen sticky top-0 z-40">
+    <div className="w-56 bg-black/40 backdrop-blur-xl border-r border-white/10 min-h-screen sticky top-0 z-40">
       {/* Logo and Title */}
       <div className="p-6 border-b border-white/10">
         <div className="text-center mb-6">

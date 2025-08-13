@@ -1,75 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import connectDB from '@/lib/database';
-import { User, CV, Job } from '@/models';
+import { connectToDatabase } from '@/lib/database';
+import User from '@/models/User';
 
 export async function GET(request: NextRequest) {
   try {
-    // Check authentication and admin role
     const session = await getServerSession(authOptions);
+    
     if (!session || session.user?.role !== 'admin') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    await connectDB();
+    await connectToDatabase();
 
-    // Get users with their CV and job counts
-    const users = await User.aggregate([
-      {
-        $lookup: {
-          from: 'cvs',
-          localField: '_id',
-          foreignField: 'userId',
-          as: 'cvs'
-        }
-      },
-      {
-        $lookup: {
-          from: 'jobs',
-          localField: '_id',
-          foreignField: 'userId',
-          as: 'jobs'
-        }
-      },
-      {
-        $addFields: {
-          cvsCount: { $size: '$cvs' },
-          jobsCount: { $size: '$jobs' }
-        }
-      },
-      {
-        $project: {
-          _id: 1,
-          email: 1,
-          firstName: 1,
-          lastName: 1,
-          role: 1,
-          isEmailVerified: 1,
-          createdAt: 1,
-          lastLogin: 1,
-          cvsCount: 1,
-          jobsCount: 1,
-          status: {
-            $cond: {
-              if: { $eq: ['$isEmailVerified', true] },
-              then: 'active',
-              else: 'inactive'
-            }
-          }
-        }
-      },
-      {
-        $sort: { createdAt: -1 }
-      }
-    ]);
+    const users = await User.find({})
+      .select('firstName lastName email role currentPlanKey subscription createdAt lastLogin region')
+      .lean();
 
-    return NextResponse.json(users);
+    // Transform the data to match the expected format
+    const transformedUsers = users.map(user => ({
+      _id: user._id,
+      firstName: user.firstName || '',
+      lastName: user.lastName || '',
+      email: user.email,
+      role: user.role || 'user',
+      currentPlanKey: user.currentPlanKey || 'free',
+      subscription: {
+        status: user.subscription?.status || 'inactive',
+        provider: user.subscription?.provider || 'none',
+        currentPeriodEnd: user.subscription?.currentPeriodEnd,
+        interval: user.subscription?.interval || 'monthly'
+      },
+      createdAt: user.createdAt,
+      lastLogin: user.lastLogin,
+      region: user.region || 'Unknown'
+    }));
+
+    return NextResponse.json({ users: transformedUsers });
   } catch (error) {
     console.error('Error fetching users:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch users' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 } 

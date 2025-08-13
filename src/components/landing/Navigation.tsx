@@ -3,13 +3,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Logo from '../ui/Logo';
-import { Menu, X, ArrowRight } from 'lucide-react';
-
+import { Menu, X } from 'lucide-react';
+import LoginModal from '../auth/LoginModal';
 
 const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [navbarHeight, setNavbarHeight] = useState(80);
   const [scrolled, setScrolled] = useState(false);
-
 
   const navLinks = [
     { href: '#hero', label: 'Home' },
@@ -18,9 +19,26 @@ const Navigation = () => {
     { href: '#pricing', label: 'Pricing' },
   ];
 
+  // Measure navbar height and set CSS variable
+  useEffect(() => {
+    const updateNavbarHeight = () => {
+      const navbar = document.querySelector('nav');
+      if (navbar) {
+        const height = navbar.offsetHeight;
+        setNavbarHeight(height);
+        document.documentElement.style.setProperty('--navbar-height', `${height}px`);
+      }
+    };
+
+    updateNavbarHeight();
+    window.addEventListener('resize', updateNavbarHeight);
+    return () => window.removeEventListener('resize', updateNavbarHeight);
+  }, []);
+
+  // Add scroll effect for navbar opacity
   useEffect(() => {
     const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
+      setScrolled(window.scrollY > 50);
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -38,102 +56,97 @@ const Navigation = () => {
     setIsMenuOpen(false);
   };
 
+  const handleLoginClick = () => {
+    setIsLoginModalOpen(true);
+    setIsMenuOpen(false);
+  };
 
+  const handleLoginSuccess = (userData: any) => {
+    setIsLoginModalOpen(false);
+    window.location.href = '/dashboard';
+  };
 
   return (
     <>
-      {/* Floating Pill Navbar */}
-      <motion.nav
-        className={`fixed left-4 right-4 z-50 transition-all duration-300 max-w-7xl mx-auto nav-optimized ${
-          scrolled ? 'scrolled' : ''
-        }`}
-        style={{
-          position: 'fixed',
-          top: scrolled ? '0.5rem' : '2rem',
-          borderRadius: '50px',
-          border: scrolled ? '1px solid rgba(255, 255, 255, 0.2)' : '1px solid rgba(255, 255, 255, 0.1)',
-          willChange: 'transform, opacity, background-color',
-          transform: 'translateZ(0)',
-        }}
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.4, ease: "easeOut" }}
-        whileHover={{ scale: scrolled ? 1.005 : 1.01 }}
-      >
-        <div className="px-8 py-4">
-          <div className="flex items-center justify-between">
-            {/* Logo */}
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="flex-shrink-0"
-            >
-              <Logo size="sm" className="text-white" />
-            </motion.div>
-
-            {/* Desktop Navigation Links */}
-            <div className="hidden md:flex items-center space-x-6">
-              {navLinks.map((link, index) => (
-                <motion.a
-                  key={link.href}
-                  href={link.href}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    scrollToSection(link.href);
-                  }}
-                  className="relative text-white/80 hover:text-lime-400 transition-colors font-medium text-sm group px-3 py-2 rounded-full"
-                  whileHover={{
-                    y: -2,
-                    backgroundColor: 'rgba(132, 204, 22, 0.1)'
-                  }}
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                >
-                  {link.label}
-                </motion.a>
-              ))}
-            </div>
-
-            {/* Desktop Login Button */}
-            <div className="hidden md:flex items-center">
-              <motion.button
-                className="bg-gradient-to-r from-lime-400 to-lime-500 text-black px-4 py-2 rounded-full font-medium text-sm hover:shadow-lg hover:shadow-lime-400/25 transition-all"
-                whileHover={{
-                  scale: 1.05,
-                  boxShadow: "0 10px 25px -5px rgba(132, 204, 22, 0.4)"
-                }}
+      {/* Transparent Navbar - Part of Hero Banner */}
+      <nav className="sticky top-0 z-[1000] px-4 py-2">
+        <div className="max-w-7xl mx-auto">
+          <div className={`transition-all duration-300 rounded-full px-8 py-4 ${
+            scrolled 
+              ? 'bg-black/30 backdrop-blur-lg shadow-lg' 
+              : 'bg-transparent'
+          }`}>
+            <div className="flex items-center justify-between">
+              {/* Logo */}
+              <motion.div
+                whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => window.location.href = '/onboarding'}
+                className="flex-shrink-0"
               >
-                Login
-              </motion.button>
-            </div>
+                <Logo size="sm" className="text-white" />
+              </motion.div>
 
-            {/* Mobile menu button */}
-            <div className="md:hidden">
-              <motion.button
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="text-white p-2 rounded-full hover:bg-white/10 transition-colors"
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-              >
-                {isMenuOpen ? (
-                  <X size={20} className="text-white" />
-                ) : (
-                  <Menu size={20} className="text-white" />
-                )}
-              </motion.button>
+              {/* Desktop Navigation Links */}
+              <div className="hidden md:flex items-center space-x-6">
+                {navLinks.map((link, index) => (
+                  <motion.a
+                    key={link.href}
+                    href={link.href}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      scrollToSection(link.href);
+                    }}
+                    className="relative text-white/90 hover:text-lime-400 transition-colors font-medium text-base group px-3 py-2 rounded-full"
+                    whileHover={{
+                      y: -2,
+                      backgroundColor: 'rgba(132, 204, 22, 0.1)'
+                    }}
+                    transition={{ delay: index * 0.05 }}
+                  >
+                    {link.label}
+                  </motion.a>
+                ))}
+              </div>
+
+              {/* Desktop Login Button */}
+              <div className="hidden md:flex items-center">
+                <motion.button
+                  className="bg-gradient-to-r from-lime-400 to-lime-500 text-black px-6 py-3 rounded-full font-medium text-base hover:shadow-lg hover:shadow-lime-400/25 transition-all"
+                  whileHover={{
+                    scale: 1.05,
+                    boxShadow: "0 10px 25px -5px rgba(132, 204, 22, 0.4)"
+                  }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleLoginClick}
+                >
+                  Login
+                </motion.button>
+              </div>
+
+              {/* Mobile menu button */}
+              <div className="md:hidden">
+                <motion.button
+                  onClick={() => setIsMenuOpen(!isMenuOpen)}
+                  className="text-white p-2 rounded-full hover:bg-white/10 transition-colors"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                >
+                  {isMenuOpen ? (
+                    <X size={24} className="text-white" />
+                  ) : (
+                    <Menu size={24} className="text-white" />
+                  )}
+                </motion.button>
+              </div>
             </div>
           </div>
         </div>
+      </nav>
 
-      </motion.nav>
-
-      {/* Mobile Navigation Dropdown - Optimized */}
+      {/* Mobile Navigation Dropdown */}
       <motion.div
-        className="md:hidden fixed left-1/2 transform -translate-x-1/2 z-40 w-80 max-w-[90vw]"
-        style={{ top: scrolled ? '4.5rem' : '6rem' }}
+        className="md:hidden fixed left-1/2 transform -translate-x-1/2 z-[999] w-80 max-w-[90vw]"
+        style={{ top: `${navbarHeight + 16}px` }}
         initial={false}
         animate={{
           opacity: isMenuOpen ? 1 : 0,
@@ -153,8 +166,6 @@ const Navigation = () => {
                   scrollToSection(link.href);
                 }}
                 className="block px-4 py-3 text-white/80 hover:text-lime-400 transition-colors font-medium text-lg rounded-2xl hover:bg-white/5"
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.05 }}
                 whileHover={{ x: 5 }}
               >
@@ -167,7 +178,7 @@ const Navigation = () => {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => {
-                  window.location.href = '/onboarding';
+                  handleLoginClick();
                   setIsMenuOpen(false);
                 }}
               >
@@ -177,6 +188,16 @@ const Navigation = () => {
           </div>
         </div>
       </motion.div>
+
+      {/* Login Modal */}
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        onSwitchToRegister={() => {
+          setIsLoginModalOpen(false);
+        }}
+        onLogin={handleLoginSuccess}
+      />
     </>
   );
 };

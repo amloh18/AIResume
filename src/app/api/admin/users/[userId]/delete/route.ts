@@ -6,7 +6,7 @@ import { User, CV, Job, JobApplication, CoverLetter, Subscription } from '@/mode
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { userId: string } }
 ) {
   try {
     // Check authentication and admin role
@@ -18,14 +18,14 @@ export async function DELETE(
     await connectDB();
 
     // Prevent admin from deleting themselves
-    if (params.id === session.user?.id) {
+    if (params.userId === session.user?.id) {
       return NextResponse.json(
         { error: 'Cannot delete your own account' },
         { status: 400 }
       );
     }
 
-    const user = await User.findById(params.id);
+    const user = await User.findById(params.userId);
     
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -45,20 +45,20 @@ export async function DELETE(
     try {
       await session_db.withTransaction(async () => {
         // Delete user's CVs
-        await CV.deleteMany({ userId: params.id }, { session: session_db });
+        await CV.deleteMany({ userId: params.userId }, { session: session_db });
         
         // Delete user's jobs
-        await Job.deleteMany({ userId: params.id }, { session: session_db });
+        await Job.deleteMany({ userId: params.userId }, { session: session_db });
         
         // Delete user's job applications
-        await JobApplication.deleteMany({ userId: params.id }, { session: session_db });
+        await JobApplication.deleteMany({ userId: params.userId }, { session: session_db });
         
         // Delete user's cover letters
-        await CoverLetter.deleteMany({ userId: params.id }, { session: session_db });
+        await CoverLetter.deleteMany({ userId: params.userId }, { session: session_db });
         
         // Cancel user's subscriptions
         await Subscription.updateMany(
-          { userId: params.id, status: 'active' },
+          { userId: params.userId, status: 'active' },
           { 
             status: 'cancelled',
             cancelledAt: new Date(),
@@ -68,7 +68,7 @@ export async function DELETE(
         );
         
         // Finally delete the user
-        await User.findByIdAndDelete(params.id, { session: session_db });
+        await User.findByIdAndDelete(params.userId, { session: session_db });
       });
     } finally {
       await session_db.endSession();
@@ -76,7 +76,7 @@ export async function DELETE(
 
     return NextResponse.json({ 
       message: 'User and all associated data deleted successfully',
-      deletedUserId: params.id
+      deletedUserId: params.userId
     });
   } catch (error) {
     console.error('Error deleting user:', error);
