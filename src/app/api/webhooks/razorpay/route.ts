@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { razorpay } from '@/lib/payment/razorpay';
-import { connectDB } from '@/lib/database';
+import connectDB from '@/lib/database';
 import User from '@/models/User';
 import PricingPlan from '@/models/PricingPlan';
 import Invoice from '@/models/Invoice';
