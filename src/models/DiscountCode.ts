@@ -22,7 +22,6 @@ const discountCodeSchema = new Schema<IDiscountCode>({
   code: {
     type: String,
     required: [true, 'Discount code is required'],
-    unique: true,
     trim: true,
     uppercase: true,
     maxlength: [20, 'Discount code cannot exceed 20 characters']

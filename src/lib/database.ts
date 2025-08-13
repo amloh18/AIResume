@@ -172,4 +172,6 @@ export const healthCheck = async () => {
   }
 };
 
+// Export both as default and named export for compatibility
+export { connectDB as connectToDatabase };
 export default connectDB; 

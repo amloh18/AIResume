@@ -1,9 +1,15 @@
 import Razorpay from 'razorpay';
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID!,
-  key_secret: process.env.RAZORPAY_KEY_SECRET!,
-});
+// Only create Razorpay instance if API keys are available
+const razorpay = (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET)
+  ? new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET,
+    })
+  : null;
+
+// Export the razorpay instance for direct access
+export { razorpay };
 
 export interface CreateOrderParams {
   amount: number;
@@ -28,6 +34,13 @@ export interface CreateSubscriptionParams {
 export class RazorpayService {
   // Create an order for one-time payments
   static async createOrder(params: CreateOrderParams) {
+    if (!razorpay) {
+      return {
+        success: false,
+        error: 'Razorpay is not configured',
+      };
+    }
+    
     try {
       const order = await razorpay.orders.create({
         amount: Math.round(params.amount * 100), // Convert to paise

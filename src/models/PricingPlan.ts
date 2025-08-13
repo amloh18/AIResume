@@ -36,8 +36,7 @@ const pricingPlanSchema = new Schema<IPricingPlan>({
   key: {
     type: String,
     required: [true, 'Plan key is required'],
-    enum: ['free', 'day_pass', 'pro_monthly', 'pro_quarterly', 'pro_yearly'],
-    unique: true
+    enum: ['free', 'day_pass', 'pro_monthly', 'pro_quarterly', 'pro_yearly']
   },
   name: {
     type: String,

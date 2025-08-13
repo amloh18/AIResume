@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { connectDB } from '@/lib/database';
+import connectDB from '@/lib/database';
 import PricingPlan from '@/models/PricingPlan';
 import User from '@/models/User';
 import { stripe } from '@/lib/payment/stripe';
