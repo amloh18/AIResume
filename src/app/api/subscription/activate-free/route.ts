@@ -1,85 +1,68 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import connectDB from '@/lib/database';
-import { User } from '@/models';
+import { connectDB } from '@/lib/database';
+import User from '@/models/User';
+import PricingPlan from '@/models/PricingPlan';
 
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
-      return NextResponse.json(
-        { success: false, error: 'Authentication required' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     await connectDB();
 
+    const body = await request.json();
+    const { planKey } = body;
+
+    // Validate plan key
+    if (planKey !== 'free') {
+      return NextResponse.json({ error: 'Only free plans can be activated without payment' }, { status: 400 });
+    }
+
+    // Get the plan from database
+    const plan = await PricingPlan.findOne({ key: planKey, status: 'active' });
+    if (!plan) {
+      return NextResponse.json({ error: 'Plan not found' }, { status: 404 });
+    }
+
     // Get user
     const user = await User.findOne({ email: session.user.email });
     if (!user) {
-      return NextResponse.json(
-        { success: false, error: 'User not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Check if user already has an active subscription
-    if (user.subscription && user.subscription.status === 'active') {
-      return NextResponse.json(
-        { success: false, error: 'User already has an active subscription' },
-        { status: 400 }
-      );
-    }
-
-    // Update user subscription to free plan
-    const updateResult = await User.findByIdAndUpdate(
+    // Update user's current plan and subscription
+    const updatedUser = await User.findByIdAndUpdate(
       user._id,
       {
-        $set: {
-          'subscription.plan': 'Free Plan',
-          'subscription.status': 'active',
-          'subscription.startDate': new Date(),
-          'subscription.endDate': new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year
-          'subscription.billingCycle': 'one-time',
-          'subscription.amount': 0,
-          'subscription.currency': 'EUR',
-          'subscription.paymentMethod': 'free',
-          'subscription.paymentProviderId': 'free_plan',
-          'subscription.finalAmount': 0,
-          'subscription.metadata': {
-            activatedAt: new Date(),
-            source: 'free_activation'
-          }
+        currentPlanKey: planKey,
+        subscription: {
+          planKey: planKey,
+          status: 'active',
+          startDate: new Date(),
+          provider: 'none',
+          interval: 'one-time',
+          seats: plan.maxCVs === -1 ? 1 : plan.maxCVs,
+          storageUsed: 0
         }
       },
       { new: true }
     );
 
-    if (!updateResult) {
-      return NextResponse.json(
-        { success: false, error: 'Failed to activate free plan' },
-        { status: 500 }
-      );
-    }
-
     return NextResponse.json({
       success: true,
       message: 'Free plan activated successfully',
-      subscription: {
-        plan: 'Free Plan',
-        status: 'active',
-        startDate: updateResult.subscription?.startDate,
-        endDate: updateResult.subscription?.endDate
+      user: {
+        currentPlanKey: updatedUser.currentPlanKey,
+        subscription: updatedUser.subscription
       }
     });
 
   } catch (error) {
-    console.error('Error activating free plan:', error);
-    return NextResponse.json(
-      { success: false, error: 'Internal server error' },
-      { status: 500 }
-    );
+    console.error('Free plan activation error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

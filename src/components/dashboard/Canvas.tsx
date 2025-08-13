@@ -34,7 +34,9 @@ import {
   BookOpen,
   Pencil,
   Save,
-  Check
+  Check,
+  Lightbulb,
+  Activity
 } from 'lucide-react';
 
 interface CV {
@@ -78,6 +80,7 @@ const Canvas: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [editingCVId, setEditingCVId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
+  const [deletingCVId, setDeletingCVId] = useState<string | null>(null);
 
   // Load CVs from API
   useEffect(() => {
@@ -90,24 +93,30 @@ const Canvas: React.FC = () => {
       const userData = localStorage.getItem('user');
       const userId = userData ? JSON.parse(userData).id || JSON.parse(userData)._id : '6889b151d17daa1eaee91a5c';
       
+      console.log('Loading CVs for user:', userId);
+      
       const response = await fetch(`/api/cvs?userId=${userId}`);
       const result = await response.json();
       
       if (result.success) {
         const cvData = result.data.data || [];
-        const enrichedCVs = cvData.map((cv: any) => ({
-          id: cv._id,
-          title: cv.title || 'Untitled CV',
-          lastModified: formatTimeAgo(new Date(cv.updatedAt)),
-          status: cv.status || 'draft',
-          views: cv.views || 0,
-          isStarred: cv.isStarred || false,
-          thumbnail: cv.thumbnail || '/api/placeholder/300/200',
-          description: cv.description || 'No description available',
-          connectedJobs: cv.connectedJobs || [],
-          connectedCoverLetters: cv.connectedCoverLetters || [],
-          completionPercentage: calculateCompletionPercentage(cv)
-        }));
+        console.log('CV data received:', cvData);
+        const enrichedCVs = cvData.map((cv: any) => {
+          console.log('Processing CV:', cv.id || cv._id, 'Type:', typeof (cv.id || cv._id));
+          return {
+            id: cv.id || cv._id,
+            title: cv.title || 'Untitled CV',
+            lastModified: formatTimeAgo(new Date(cv.updatedAt)),
+            status: cv.status || 'draft',
+            views: cv.views || 0,
+            isStarred: cv.isStarred || false,
+            thumbnail: cv.thumbnail || '/api/placeholder/300/200',
+            description: cv.description || 'No description available',
+            connectedJobs: cv.connectedJobs || [],
+            connectedCoverLetters: cv.connectedCoverLetters || [],
+            completionPercentage: calculateCompletionPercentage(cv)
+          };
+        });
         setCvs(enrichedCVs);
       } else {
         // Fallback to mock data
@@ -122,18 +131,166 @@ const Canvas: React.FC = () => {
   };
 
   const calculateCompletionPercentage = (cv: any): number => {
-    // Mock completion calculation - in real app, this would be based on CV sections completion
+    // If CV is published, it's considered complete
     if (cv.status === 'published') return 100;
-    if (cv.status === 'draft') {
-      // Random completion between 30-90% for drafts
-      return Math.floor(Math.random() * 60) + 30;
+    
+    // If CV is archived, return 0
+    if (cv.status === 'archived') return 0;
+    
+    // Calculate completion based on CV sections
+    let totalScore = 0;
+    let maxScore = 0;
+    
+    // Section weights (total = 100)
+    const sectionWeights = {
+      personalInfo: 25,    // Name, email, phone, location, summary
+      experience: 30,      // Work experience entries
+      education: 20,       // Education entries
+      skills: 15,          // Skills and competencies
+      projects: 10         // Projects and achievements
+    };
+    
+    // Check personal info section
+    if (cv.cvData?.basics) {
+      const basics = cv.cvData.basics;
+      const personalInfoScore = calculatePersonalInfoScore(basics);
+      totalScore += (personalInfoScore * sectionWeights.personalInfo) / 100;
     }
-    return 0;
+    maxScore += sectionWeights.personalInfo;
+    
+    // Check experience section
+    if (cv.cvData?.work) {
+      const experienceScore = calculateExperienceScore(cv.cvData.work);
+      totalScore += (experienceScore * sectionWeights.experience) / 100;
+    }
+    maxScore += sectionWeights.experience;
+    
+    // Check education section
+    if (cv.cvData?.education) {
+      const educationScore = calculateEducationScore(cv.cvData.education);
+      totalScore += (educationScore * sectionWeights.education) / 100;
+    }
+    maxScore += sectionWeights.education;
+    
+    // Check skills section
+    if (cv.cvData?.skills) {
+      const skillsScore = calculateSkillsScore(cv.cvData.skills);
+      totalScore += (skillsScore * sectionWeights.skills) / 100;
+    }
+    maxScore += sectionWeights.skills;
+    
+    // Check projects section
+    if (cv.cvData?.projects) {
+      const projectsScore = calculateProjectsScore(cv.cvData.projects);
+      totalScore += (projectsScore * sectionWeights.projects) / 100;
+    }
+    maxScore += sectionWeights.projects;
+    
+    // Calculate final percentage
+    const completionPercentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
+    
+    // Ensure percentage is between 0 and 100
+    return Math.max(0, Math.min(100, completionPercentage));
+  };
+  
+  // Helper functions to calculate section scores
+  const calculatePersonalInfoScore = (basics: any): number => {
+    let score = 0;
+    let maxScore = 5;
+    
+    if (basics.name && basics.name.trim()) score += 1;
+    if (basics.email && basics.email.trim()) score += 1;
+    if (basics.phone && basics.phone.trim()) score += 1;
+    if (basics.location && (basics.location.city || basics.location.address)) score += 1;
+    if (basics.summary && basics.summary.trim()) score += 1;
+    
+    return (score / maxScore) * 100;
+  };
+  
+  const calculateExperienceScore = (work: any[]): number => {
+    if (!Array.isArray(work) || work.length === 0) return 0;
+    
+    let totalScore = 0;
+    const maxEntries = 3; // Consider up to 3 most recent experiences
+    
+    work.slice(0, maxEntries).forEach(entry => {
+      let entryScore = 0;
+      let maxEntryScore = 4;
+      
+      if (entry.name && entry.name.trim()) entryScore += 1;
+      if (entry.position && entry.position.trim()) entryScore += 1;
+      if (entry.startDate && entry.startDate.trim()) entryScore += 1;
+      if (entry.summary && entry.summary.trim()) entryScore += 1;
+      
+      totalScore += (entryScore / maxEntryScore) * 100;
+    });
+    
+    return Math.min(100, totalScore / Math.min(work.length, maxEntries));
+  };
+  
+  const calculateEducationScore = (education: any[]): number => {
+    if (!Array.isArray(education) || education.length === 0) return 0;
+    
+    let totalScore = 0;
+    const maxEntries = 2; // Consider up to 2 most recent education entries
+    
+    education.slice(0, maxEntries).forEach(entry => {
+      let entryScore = 0;
+      let maxEntryScore = 4;
+      
+      if (entry.institution && entry.institution.trim()) entryScore += 1;
+      if (entry.area && entry.area.trim()) entryScore += 1;
+      if (entry.studyType && entry.studyType.trim()) entryScore += 1;
+      if (entry.startDate && entry.startDate.trim()) entryScore += 1;
+      
+      totalScore += (entryScore / maxEntryScore) * 100;
+    });
+    
+    return Math.min(100, totalScore / Math.min(education.length, maxEntries));
+  };
+  
+  const calculateSkillsScore = (skills: any[]): number => {
+    if (!Array.isArray(skills) || skills.length === 0) return 0;
+    
+    let totalScore = 0;
+    const maxSkills = 5; // Consider up to 5 skill categories
+    
+    skills.slice(0, maxSkills).forEach(skill => {
+      let skillScore = 0;
+      let maxSkillScore = 2;
+      
+      if (skill.name && skill.name.trim()) skillScore += 1;
+      if (skill.keywords && Array.isArray(skill.keywords) && skill.keywords.length > 0) skillScore += 1;
+      
+      totalScore += (skillScore / maxSkillScore) * 100;
+    });
+    
+    return Math.min(100, totalScore / Math.min(skills.length, maxSkills));
+  };
+  
+  const calculateProjectsScore = (projects: any[]): number => {
+    if (!Array.isArray(projects) || projects.length === 0) return 0;
+    
+    let totalScore = 0;
+    const maxProjects = 2; // Consider up to 2 most recent projects
+    
+    projects.slice(0, maxProjects).forEach(project => {
+      let projectScore = 0;
+      let maxProjectScore = 3;
+      
+      if (project.name && project.name.trim()) projectScore += 1;
+      if (project.description && project.description.trim()) projectScore += 1;
+      if (project.url && project.url.trim()) projectScore += 1;
+      
+      totalScore += (projectScore / maxProjectScore) * 100;
+    });
+    
+    return Math.min(100, totalScore / Math.min(projects.length, maxProjects));
   };
 
   const getMockCVs = (): CV[] => [
     {
-      id: '1',
+      id: '507f1f77bcf86cd799439011',
       title: 'Senior UX Designer CV',
       lastModified: '2 hours ago',
       status: 'published',
@@ -184,7 +341,7 @@ const Canvas: React.FC = () => {
       ]
     },
     {
-      id: '2',
+      id: '507f1f77bcf86cd799439012',
       title: 'Product Manager CV',
       lastModified: '1 day ago',
       status: 'draft',
@@ -197,7 +354,7 @@ const Canvas: React.FC = () => {
       connectedCoverLetters: []
     },
     {
-      id: '3',
+      id: '507f1f77bcf86cd799439013',
       title: 'Frontend Developer CV',
       lastModified: '3 days ago',
       status: 'published',
@@ -313,11 +470,127 @@ const Canvas: React.FC = () => {
     setEditingTitle('');
   };
 
+  const deleteCV = async (cvId: string) => {
+    try {
+      setDeletingCVId(cvId);
+      const userData = localStorage.getItem('user');
+      const userId = userData ? JSON.parse(userData).id || JSON.parse(userData)._id : '6889b151d17daa1eaee91a5c';
+      
+      console.log('Deleting CV:', cvId, 'Type:', typeof cvId, 'for user:', userId);
+      
+      // Check if this is a mock CV (for demo purposes)
+      const mockCVIds = ['507f1f77bcf86cd799439011', '507f1f77bcf86cd799439012', '507f1f77bcf86cd799439013'];
+      if (mockCVIds.includes(cvId)) {
+        // For mock CVs, just remove from local state
+        setCvs(cvs.filter(cv => cv.id !== cvId));
+        return;
+      }
+      
+      // Check if CV ID is a valid ObjectId format
+      const objectIdRegex = /^[0-9a-fA-F]{24}$/;
+      if (!objectIdRegex.test(cvId)) {
+        console.error('Invalid CV ID format:', cvId);
+        alert('Invalid CV ID format. Cannot delete this CV.');
+        return;
+      }
+      
+      const response = await fetch(`/api/cvs/${cvId}?userId=${userId}`, {
+        method: 'DELETE',
+      });
+      
+      console.log('Delete response status:', response.status);
+      
+      const result = await response.json();
+      console.log('Delete response:', result);
+      
+      if (result.success) {
+        // Remove the CV from the local state
+        setCvs(cvs.filter(cv => cv.id !== cvId));
+      } else {
+        console.error('Failed to delete CV:', result.message);
+        alert(`Failed to delete CV: ${result.message}`);
+      }
+    } catch (error) {
+      console.error('Error deleting CV:', error);
+      alert('Error deleting CV. Please try again.');
+    } finally {
+      setDeletingCVId(null);
+    }
+  };
+
   const getCompletionColor = (percentage: number) => {
     if (percentage >= 80) return 'from-green-400 to-green-500';
     if (percentage >= 60) return 'from-yellow-400 to-yellow-500';
     if (percentage >= 40) return 'from-orange-400 to-orange-500';
     return 'from-red-400 to-red-500';
+  };
+  
+  const getCompletionFeedback = (cv: any): string[] => {
+    const feedback: string[] = [];
+    
+    // Check personal info
+    if (!cv.cvData?.basics?.name?.trim()) feedback.push('Add your full name');
+    if (!cv.cvData?.basics?.email?.trim()) feedback.push('Add your email address');
+    if (!cv.cvData?.basics?.phone?.trim()) feedback.push('Add your phone number');
+    if (!cv.cvData?.basics?.summary?.trim()) feedback.push('Add a professional summary');
+    
+    // Check experience
+    if (!cv.cvData?.work || cv.cvData.work.length === 0) {
+      feedback.push('Add work experience');
+    } else {
+      const work = cv.cvData.work[0];
+      if (!work.position?.trim()) feedback.push('Add job titles to experience');
+      if (!work.summary?.trim()) feedback.push('Add descriptions to work experience');
+    }
+    
+    // Check education
+    if (!cv.cvData?.education || cv.cvData.education.length === 0) {
+      feedback.push('Add education history');
+    }
+    
+    // Check skills
+    if (!cv.cvData?.skills || cv.cvData.skills.length === 0) {
+      feedback.push('Add skills and competencies');
+    }
+    
+    // Check projects
+    if (!cv.cvData?.projects || cv.cvData.projects.length === 0) {
+      feedback.push('Add projects or achievements');
+    }
+    
+    return feedback.slice(0, 3); // Return top 3 suggestions
+  };
+  
+  const getSectionCompletion = (cv: any) => {
+    const sections = {
+      personalInfo: {
+        name: 'Personal Info',
+        completed: !!(cv.cvData?.basics?.name?.trim() && cv.cvData?.basics?.email?.trim()),
+        icon: '👤'
+      },
+      experience: {
+        name: 'Experience',
+        completed: !!(cv.cvData?.work && cv.cvData.work.length > 0),
+        icon: '💼'
+      },
+      education: {
+        name: 'Education',
+        completed: !!(cv.cvData?.education && cv.cvData.education.length > 0),
+        icon: '🎓'
+      },
+      skills: {
+        name: 'Skills',
+        completed: !!(cv.cvData?.skills && cv.cvData.skills.length > 0),
+        icon: '⚡'
+      },
+      projects: {
+        name: 'Projects',
+        completed: !!(cv.cvData?.projects && cv.cvData.projects.length > 0),
+        icon: '🚀'
+      }
+    };
+    
+    return sections;
   };
 
   if (loading) {
@@ -329,7 +602,7 @@ const Canvas: React.FC = () => {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="max-w-6xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -350,92 +623,96 @@ const Canvas: React.FC = () => {
         </div>
       </div>
 
+      {/* Main Grid Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column - Main Content */}
+        <div className="lg:col-span-2 space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <motion.div
-          className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6"
+          className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-4"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-lime-400/20 to-lime-500/20 rounded-xl flex items-center justify-center">
-              <FileText size={24} className="text-lime-400" />
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-lime-400/20 to-lime-500/20 rounded-lg flex items-center justify-center">
+              <FileText size={16} className="text-lime-400" />
             </div>
             <div>
-              <p className="text-white/60 text-sm">Total CVs</p>
-              <p className="text-2xl font-bold text-white">{cvs.length}</p>
+              <p className="text-white/60 text-xs">Total CVs</p>
+              <p className="text-lg font-bold text-white">{cvs.length}</p>
             </div>
           </div>
           {cvs.length === 0 && (
-            <div className="mt-3 p-3 bg-lime-400/10 border border-lime-400/20 rounded-lg">
-              <p className="text-lime-400 text-xs">Create your first CV to get started!</p>
+            <div className="mt-2 p-2 bg-lime-400/10 border border-lime-400/20 rounded-lg">
+              <p className="text-lime-400 text-xs">Create your first CV!</p>
             </div>
           )}
         </motion.div>
 
         <motion.div
-          className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6"
+          className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-4"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-400/20 to-blue-500/20 rounded-xl flex items-center justify-center">
-              <Eye size={24} className="text-blue-400" />
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-400/20 to-blue-500/20 rounded-lg flex items-center justify-center">
+              <Eye size={16} className="text-blue-400" />
             </div>
             <div>
-              <p className="text-white/60 text-sm">Total Views</p>
-              <p className="text-2xl font-bold text-white">{cvs.reduce((sum, cv) => sum + cv.views, 0)}</p>
+              <p className="text-white/60 text-xs">Total Views</p>
+              <p className="text-lg font-bold text-white">{cvs.reduce((sum, cv) => sum + cv.views, 0)}</p>
             </div>
           </div>
           {cvs.reduce((sum, cv) => sum + cv.views, 0) === 0 && (
-            <div className="mt-3 p-3 bg-blue-400/10 border border-blue-400/20 rounded-lg">
-              <p className="text-blue-400 text-xs">Publish your CVs to start getting views!</p>
+            <div className="mt-2 p-2 bg-blue-400/10 border border-blue-400/20 rounded-lg">
+              <p className="text-blue-400 text-xs">Publish to get views!</p>
             </div>
           )}
         </motion.div>
 
         <motion.div
-          className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6"
+          className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-4"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
         >
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-purple-400/20 to-purple-500/20 rounded-xl flex items-center justify-center">
-              <Star size={24} className="text-purple-400" />
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-purple-400/20 to-purple-500/20 rounded-lg flex items-center justify-center">
+              <Star size={16} className="text-purple-400" />
             </div>
             <div>
-              <p className="text-white/60 text-sm">Starred</p>
-              <p className="text-2xl font-bold text-white">{cvs.filter(cv => cv.isStarred).length}</p>
+              <p className="text-white/60 text-xs">Starred</p>
+              <p className="text-lg font-bold text-white">{cvs.filter(cv => cv.isStarred).length}</p>
             </div>
           </div>
           {cvs.filter(cv => cv.isStarred).length === 0 && (
-            <div className="mt-3 p-3 bg-purple-400/10 border border-purple-400/20 rounded-lg">
-              <p className="text-purple-400 text-xs">Star your favorite CVs for quick access!</p>
+            <div className="mt-2 p-2 bg-purple-400/10 border border-purple-400/20 rounded-lg">
+              <p className="text-purple-400 text-xs">Star your favorites!</p>
             </div>
           )}
         </motion.div>
 
         <motion.div
-          className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6"
+          className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-4"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
         >
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-green-400/20 to-green-500/20 rounded-xl flex items-center justify-center">
-              <CheckCircle size={24} className="text-green-400" />
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gradient-to-br from-green-400/20 to-green-500/20 rounded-lg flex items-center justify-center">
+              <CheckCircle size={16} className="text-green-400" />
             </div>
             <div>
-              <p className="text-white/60 text-sm">Published</p>
-              <p className="text-2xl font-bold text-white">{cvs.filter(cv => cv.status === 'published').length}</p>
+              <p className="text-white/60 text-xs">Published</p>
+              <p className="text-lg font-bold text-white">{cvs.filter(cv => cv.status === 'published').length}</p>
             </div>
           </div>
           {cvs.filter(cv => cv.status === 'published').length === 0 && cvs.length > 0 && (
-            <div className="mt-3 p-3 bg-yellow-400/10 border border-yellow-400/20 rounded-lg">
-              <p className="text-yellow-400 text-xs">No published CVs yet. Click 'Edit' to publish!</p>
+            <div className="mt-2 p-2 bg-yellow-400/10 border border-yellow-400/20 rounded-lg">
+              <p className="text-yellow-400 text-xs">Click 'Edit' to publish!</p>
             </div>
           )}
         </motion.div>
@@ -451,7 +728,60 @@ const Canvas: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
+          {/* Create CV Card - Show when no CVs exist */}
+          {cvs.length === 0 && (
+            <motion.div
+              className="bg-gradient-to-br from-lime-400/10 to-blue-400/10 border-2 border-dashed border-lime-400/30 rounded-2xl p-8 flex flex-col items-center justify-center text-center hover:border-lime-400/50 hover:from-lime-400/15 hover:to-blue-400/15 transition-all duration-300 cursor-pointer group"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              whileHover={{ y: -5, scale: 1.02 }}
+              onClick={() => window.location.href = '/studio'}
+            >
+              <div className="w-20 h-20 bg-gradient-to-br from-lime-400/20 to-lime-500/20 rounded-full flex items-center justify-center mb-6 group-hover:from-lime-400/30 group-hover:to-lime-500/30 transition-all duration-300">
+                <Plus size={32} className="text-lime-400" />
+              </div>
+              
+              <h3 className="text-xl font-bold text-white mb-3">Create Your First CV</h3>
+              <p className="text-white/60 mb-6 max-w-sm">
+                Start building your professional CV with our intuitive editor. Choose from beautiful templates and customize every detail.
+              </p>
+              
+              <div className="flex items-center gap-4 text-white/40 text-sm mb-6">
+                <div className="flex items-center gap-2">
+                  <CheckCircle size={16} className="text-lime-400" />
+                  <span>Professional Templates</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle size={16} className="text-lime-400" />
+                  <span>Easy Customization</span>
+                </div>
+              </div>
+              
+              <motion.button
+                className="px-8 py-3 bg-gradient-to-r from-lime-400 to-lime-500 text-black font-semibold rounded-xl hover:from-lime-300 hover:to-lime-400 transition-all duration-300 flex items-center gap-3 group-hover:scale-105"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.location.href = '/studio';
+                }}
+              >
+                <Plus size={20} />
+                Start Creating
+                <ArrowRight size={16} />
+              </motion.button>
+              
+              <div className="mt-6 p-4 bg-white/5 rounded-lg border border-white/10">
+                <div className="flex items-center gap-3 text-white/60 text-sm">
+                  <Sparkles size={16} className="text-lime-400" />
+                  <span>AI-powered suggestions to help you create the perfect CV</span>
+                </div>
+              </div>
+            </motion.div>
+          )}
+          
           {cvs.map((cv, index) => (
             <motion.div
               key={cv.id}
@@ -579,13 +909,56 @@ const Canvas: React.FC = () => {
                       <span>Completion</span>
                       <span>{cv.completionPercentage}%</span>
                     </div>
-                    <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden">
-                      <motion.div
-                        className={`h-full bg-gradient-to-r ${getCompletionColor(cv.completionPercentage)} rounded-full`}
-                        initial={{ width: 0 }}
-                        animate={{ width: `${cv.completionPercentage}%` }}
-                        transition={{ duration: 1, delay: 0.5 + index * 0.1 }}
-                      />
+                    <div className="relative group">
+                      <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden cursor-help">
+                        <motion.div
+                          className={`h-full bg-gradient-to-r ${getCompletionColor(cv.completionPercentage)} rounded-full`}
+                          initial={{ width: 0 }}
+                          animate={{ width: `${cv.completionPercentage}%` }}
+                          transition={{ duration: 1, delay: 0.5 + index * 0.1 }}
+                        />
+                      </div>
+                      
+                      {/* Tooltip with completion feedback */}
+                      {cv.completionPercentage < 100 && (
+                        <div className="absolute bottom-full left-0 mb-2 p-3 bg-gray-900/95 backdrop-blur-xl border border-white/20 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 min-w-80">
+                          <div className="text-white text-xs font-medium mb-3">CV Completion Breakdown:</div>
+                          
+                          {/* Section completion indicators */}
+                          <div className="grid grid-cols-2 gap-2 mb-3">
+                            {Object.entries(getSectionCompletion(cv)).map(([key, section]) => (
+                              <div key={key} className="flex items-center gap-2 text-xs">
+                                <span className="text-lg">{section.icon}</span>
+                                <span className={`${section.completed ? 'text-green-400' : 'text-white/40'}`}>
+                                  {section.name}
+                                </span>
+                                {section.completed && (
+                                  <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                          
+                          <div className="border-t border-white/10 pt-2">
+                            <div className="text-white text-xs font-medium mb-2">Next steps:</div>
+                            <ul className="space-y-1">
+                              {getCompletionFeedback(cv).map((feedback, idx) => (
+                                <li key={idx} className="text-white/70 text-xs flex items-center gap-2">
+                                  <div className="w-1.5 h-1.5 bg-lime-400 rounded-full"></div>
+                                  {feedback}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                          
+                          {cv.completionPercentage < 50 && (
+                            <div className="mt-2 pt-2 border-t border-white/10">
+                              <div className="text-lime-400 text-xs font-medium">💡 Quick tip:</div>
+                              <div className="text-white/60 text-xs">Focus on adding your name, email, and at least one work experience to get started.</div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -638,83 +1011,179 @@ const Canvas: React.FC = () => {
                   >
                     <Download size={16} />
                   </motion.button>
+                  
+                  <motion.button
+                    className="p-2 text-red-400/60 hover:text-red-400 transition-colors"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm('Are you sure you want to delete this CV? This action cannot be undone.')) {
+                        deleteCV(cv.id);
+                      }
+                    }}
+                    disabled={deletingCVId === cv.id}
+                  >
+                    {deletingCVId === cv.id ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-400"></div>
+                    ) : (
+                      <Trash2 size={16} />
+                    )}
+                  </motion.button>
                 </div>
               </div>
             </motion.div>
           ))}
         </div>
+        </div>
       </div>
 
+        {/* Right Column - Sidebar */}
+        <div className="space-y-6">
+          {/* Quick Actions */}
+          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+            <h3 className="text-white font-medium text-sm mb-4 flex items-center gap-2">
+              <Sparkles size={14} className="text-lime-400" />
+              Quick Actions
+            </h3>
+            <div className="space-y-3">
+              <motion.button
+                className="w-full p-3 bg-white/10 rounded-lg text-white/80 text-sm hover:bg-white/20 transition-all duration-300 flex items-center gap-3"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => window.location.href = '/studio'}
+              >
+                <Plus size={16} />
+                Create New CV
+              </motion.button>
+              <motion.button
+                className="w-full p-3 bg-white/10 rounded-lg text-white/80 text-sm hover:bg-white/20 transition-all duration-300 flex items-center gap-3"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Download size={16} />
+                Import CV
+              </motion.button>
+              <motion.button
+                className="w-full p-3 bg-white/10 rounded-lg text-white/80 text-sm hover:bg-white/20 transition-all duration-300 flex items-center gap-3"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Share2 size={16} />
+                Share All CVs
+              </motion.button>
+            </div>
+          </div>
 
+          {/* CV Tips */}
+          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+            <h3 className="text-white font-medium text-sm mb-4 flex items-center gap-2">
+              <Lightbulb size={14} className="text-yellow-400" />
+              CV Tips
+            </h3>
+            <div className="space-y-3">
+              <div className="p-3 bg-yellow-400/10 border border-yellow-400/20 rounded-lg">
+                <p className="text-yellow-400 text-xs font-medium mb-1">Keep it concise</p>
+                <p className="text-white/60 text-xs">Limit your CV to 1-2 pages for better readability</p>
+              </div>
+              <div className="p-3 bg-blue-400/10 border border-blue-400/20 rounded-lg">
+                <p className="text-blue-400 text-xs font-medium mb-1">Use action verbs</p>
+                <p className="text-white/60 text-xs">Start bullet points with strong action verbs</p>
+              </div>
+              <div className="p-3 bg-green-400/10 border border-green-400/20 rounded-lg">
+                <p className="text-green-400 text-xs font-medium mb-1">Quantify achievements</p>
+                <p className="text-white/60 text-xs">Include specific numbers and metrics when possible</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Recent Activity */}
+          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+            <h3 className="text-white font-medium text-sm mb-4 flex items-center gap-2">
+              <Activity size={14} className="text-blue-400" />
+              Recent Activity
+            </h3>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 text-white/60 text-xs">
+                <div className="w-2 h-2 bg-lime-400 rounded-full"></div>
+                <span>Created Product Manager CV</span>
+              </div>
+              <div className="flex items-center gap-3 text-white/60 text-xs">
+                <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                <span>Updated Software Engineer CV</span>
+              </div>
+              <div className="flex items-center gap-3 text-white/60 text-xs">
+                <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
+                <span>Published Designer CV</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* CV Details Modal */}
       <AnimatePresence>
         {showModal && selectedCV && (
           <motion.div
-            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xl flex items-center justify-center p-4"
+            className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            onClick={(e) => e.target === e.currentTarget && setShowModal(false)}
           >
             <motion.div
-              className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl max-w-6xl w-full max-h-[90vh] overflow-hidden"
-              initial={{ scale: 0.8, y: 50 }}
+              className="bg-gray-900/95 backdrop-blur-xl border border-white/20 rounded-lg w-full max-w-[960px] max-h-[80vh] overflow-hidden"
+              initial={{ scale: 0.95, y: 20 }}
               animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.8, y: 50 }}
+              exit={{ scale: 0.95, y: 20 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="modal-title"
             >
               {/* Modal Header */}
               <div className="flex items-center justify-between p-6 border-b border-white/10">
                 <div>
-                  <h2 className="text-2xl font-bold text-white mb-1">{selectedCV.title}</h2>
-                  <p className="text-white/60">{selectedCV.status}</p>
+                  <h2 id="modal-title" className="text-xl font-bold text-white">CV — {selectedCV.title}</h2>
                 </div>
                 <motion.button
                   onClick={() => setShowModal(false)}
                   className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
+                  aria-label="Close modal"
                 >
                   <X size={20} className="text-white" />
                 </motion.button>
               </div>
 
-              {/* Modal Content */}
-              <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* CV Preview - Left Side */}
-                  <div className="lg:col-span-1">
+              {/* Modal Body */}
+              <div className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Left Column: CV Preview */}
                     <div className="space-y-4">
                       <h3 className="text-lg font-semibold text-white flex items-center gap-2">
                         <FileText size={20} className="text-lime-400" />
                         CV Preview
                       </h3>
                       
-                      {/* CV Preview Card */}
+                    {/* CV Preview - Clean, no redundant info */}
                       <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-                        <div className="aspect-[3/4] bg-gradient-to-br from-lime-400/10 to-blue-400/10 rounded-lg border border-white/20 flex items-center justify-center mb-4">
-                          <div className="w-12 h-16 bg-white/20 rounded-lg border border-white/30 flex items-center justify-center">
-                            <FileText size={24} className="text-white/60" />
+                      <div className="aspect-[1/1.4142] bg-gradient-to-br from-lime-400/10 to-blue-400/10 rounded-lg border border-white/20 flex items-center justify-center">
+                        <div className="w-16 h-20 bg-white/20 rounded-lg border border-white/30 flex items-center justify-center">
+                          <FileText size={32} className="text-white/60" />
+                          </div>
+                        </div>
                           </div>
                         </div>
                         
-                        <div className="space-y-2">
-                          <h4 className="font-semibold text-white text-sm">{selectedCV.title}</h4>
-
-                          <div className={`inline-block px-2 py-1 rounded-lg text-xs font-medium ${getStatusColor(selectedCV.status)}`}>
-                            {selectedCV.status}
-                          </div>
-                        </div>
-                        
-                        {selectedCV.description && (
-                          <p className="text-white/40 text-xs mt-3 line-clamp-3">{selectedCV.description}</p>
-                        )}
-                      </div>
-
-                      {/* CV Actions */}
-                      <div className="space-y-2">
+                  {/* Right Column: Actions and Metadata */}
+                  <div className="space-y-6">
+                    {/* Primary Actions */}
+                    <div className="space-y-3">
+                      <div className="flex flex-wrap gap-2">
                         <motion.button
-                          className="w-full px-4 py-2 bg-gradient-to-r from-lime-400 to-lime-500 text-black font-semibold rounded-lg hover:from-lime-300 hover:to-lime-400 transition-all duration-300 flex items-center justify-center gap-2 text-sm"
+                          className="px-4 py-2 bg-gradient-to-r from-lime-400 to-lime-500 text-black font-semibold rounded-lg hover:from-lime-300 hover:to-lime-400 transition-all duration-300 flex items-center gap-2 text-sm"
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                           onClick={() => {
@@ -726,236 +1195,113 @@ const Canvas: React.FC = () => {
                           Edit CV
                         </motion.button>
                         
+                        <div className="relative group">
                         <motion.button
-                          className="w-full px-4 py-2 bg-white/10 border border-white/20 text-white font-medium rounded-lg hover:bg-white/20 transition-all duration-300 flex items-center justify-center gap-2 text-sm"
+                            className="px-4 py-2 bg-white/10 border border-white/20 text-white font-medium rounded-lg hover:bg-white/20 transition-all duration-300 flex items-center gap-2 text-sm"
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                         >
                           <Download size={14} />
-                          Download PDF
+                            Download
                         </motion.button>
+                          <div className="absolute top-full left-0 mt-1 bg-gray-900 border border-white/20 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
+                            <div className="p-1">
+                              <button className="w-full px-3 py-2 text-left text-white/80 hover:text-white hover:bg-white/10 rounded text-sm flex items-center gap-2">
+                                <FileText size={12} />
+                                Download CV (PDF)
+                              </button>
+                              <button className="w-full px-3 py-2 text-left text-white/40 hover:text-white hover:bg-white/10 rounded text-sm flex items-center gap-2" disabled>
+                                <PenTool size={12} />
+                                Download Cover Letter (PDF)
+                              </button>
+                            </div>
+                          </div>
+                        </div>
                         
                         <motion.button
-                          className="w-full px-4 py-2 bg-white/10 border border-white/20 text-white font-medium rounded-lg hover:bg-white/20 transition-all duration-300 flex items-center justify-center gap-2 text-sm"
+                          className="px-4 py-2 bg-white/10 border border-white/20 text-white font-medium rounded-lg hover:bg-white/20 transition-all duration-300 flex items-center gap-2 text-sm"
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                         >
                           <Share2 size={14} />
                           Share CV
                         </motion.button>
-                      </div>
                     </div>
                   </div>
 
-                  {/* Connected Jobs & Cover Letters - Right Side */}
-                  <div className="lg:col-span-2 space-y-6">
-                    {/* Connected Jobs Section */}
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Briefcase size={20} className="text-blue-400" />
-                          <h3 className="text-lg font-semibold text-white">Connected Jobs</h3>
-                          <span className="px-2 py-1 bg-blue-400/20 text-blue-400 text-xs rounded-lg">
-                            {selectedCV.connectedJobs?.length || 0}
-                          </span>
+                    {/* Connected Jobs */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <label className="text-white/80 text-sm font-medium">Connected Job:</label>
+                        <div className="flex-1 min-w-0">
+                          <select className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:border-lime-400/50">
+                            <option value="">Select a job...</option>
+                            <option value="job1">Software Engineer at Google</option>
+                            <option value="job2">Product Manager at Microsoft</option>
+                          </select>
                         </div>
-                        
                         <motion.button
-                          className="px-4 py-2 bg-blue-400/20 text-blue-400 rounded-lg text-sm hover:bg-blue-400/30 transition-colors flex items-center gap-2"
+                          className="p-2 bg-lime-400/20 text-lime-400 rounded-lg hover:bg-lime-400/30 transition-colors"
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
+                          title="Link job to CV"
                         >
-                          <Plus size={14} />
-                          Add Job
+                          <Link size={14} />
                         </motion.button>
                       </div>
-
-                      {selectedCV.connectedJobs && selectedCV.connectedJobs.length > 0 ? (
-                        <div className="space-y-3">
-                          {/* Jobs List - One Line Each */}
-                          {selectedCV.connectedJobs.map((job, index) => (
-                            <motion.div
-                              key={job.id}
-                              className="bg-white/5 border border-white/10 rounded-xl p-4 hover:bg-white/10 transition-all duration-300"
-                              initial={{ opacity: 0, x: 20 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ delay: index * 0.1 }}
-                            >
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3 flex-1">
-                                  <div className="w-8 h-8 bg-blue-400/20 rounded-lg flex items-center justify-center">
-                                    <span className="text-blue-400 text-xs font-medium">{index + 1}</span>
-                                  </div>
-                                  
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <h4 className="font-semibold text-white text-sm truncate">{job.title}</h4>
-                                      <span className="text-white/40 text-xs">at</span>
-                                      <span className="text-white/60 text-sm font-medium">{job.company}</span>
-                                    </div>
-                                    
-                                    <div className="flex items-center gap-4 text-white/40 text-xs">
-                                      <div className="flex items-center gap-1">
-                                        <MapPin size={12} />
-                                        <span>{job.location}</span>
-                                      </div>
-                                      <div className="flex items-center gap-1">
-                                        <CalendarDays size={12} />
-                                        <span>{new Date(job.appliedDate).toLocaleDateString()}</span>
-                                      </div>
-                                      {job.salary && (
-                                        <div className="flex items-center gap-1">
-                                          <span>💰</span>
-                                          <span>{job.salary}</span>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                                
-                                <div className="flex items-center gap-2">
-                                  <div className={`px-2 py-1 rounded-lg text-xs font-medium ${getJobStatusColor(job.status)}`}>
-                                    {job.status}
-                                  </div>
-                                  
-                                  <motion.button
-                                    className="p-2 text-white/60 hover:text-white transition-colors"
-                                    whileHover={{ scale: 1.1 }}
-                                    whileTap={{ scale: 0.9 }}
-                                  >
-                                    <ExternalLink size={14} />
-                                  </motion.button>
-                                </div>
-                              </div>
-                            </motion.div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-center py-8">
-                          <div className="w-16 h-16 bg-blue-400/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <Briefcase size={24} className="text-blue-400" />
-                          </div>
-                          <p className="text-white/60 text-sm mb-4">No jobs connected to this CV yet</p>
-                          <motion.button
-                            className="px-4 py-2 bg-blue-400/20 text-blue-400 rounded-lg text-sm hover:bg-blue-400/30 transition-colors"
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                          >
-                            Connect a Job
-                          </motion.button>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Cover Letters Section */}
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <PenTool size={20} className="text-purple-400" />
-                          <h3 className="text-lg font-semibold text-white">Cover Letters</h3>
-                          <span className="px-2 py-1 bg-purple-400/20 text-purple-400 text-xs rounded-lg">
-                            {selectedCV.connectedCoverLetters?.length || 0}
-                          </span>
-                        </div>
-                        
-                        {selectedCV.connectedJobs && selectedCV.connectedJobs.length > 0 ? (
-                          <motion.button
-                            className="px-4 py-2 bg-purple-400/20 text-purple-400 rounded-lg text-sm hover:bg-purple-400/30 transition-colors flex items-center gap-2"
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => {
-                              setShowModal(false);
-                              // Navigate to cover letter editor (future update)
-                              window.location.href = `/cover-letter-editor?cv=${selectedCV.id}`;
-                            }}
-                          >
-                            <Plus size={14} />
-                            Create Cover Letter
-                          </motion.button>
-                        ) : (
-                          <div className="px-4 py-2 bg-gray-400/20 text-gray-400 rounded-lg text-sm flex items-center gap-2">
-                            <span>Connect a job first</span>
-                          </div>
-                        )}
                       </div>
 
-                      {selectedCV.connectedCoverLetters && selectedCV.connectedCoverLetters.length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {selectedCV.connectedCoverLetters.map((coverLetter, index) => (
-                            <motion.div
-                              key={coverLetter.id}
-                              className="bg-white/5 border border-white/10 rounded-xl p-4 hover:bg-white/10 transition-all duration-300 cursor-pointer"
-                              initial={{ opacity: 0, y: 20 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ delay: index * 0.1 }}
-                              whileHover={{ scale: 1.02 }}
-                              onClick={() => {
-                                setShowModal(false);
-                                // Navigate to cover letter editor (future update)
-                                window.location.href = `/cover-letter-editor?id=${coverLetter.id}`;
-                              }}
-                            >
-                              {/* Cover Letter Thumbnail */}
-                              <div className="aspect-[3/4] bg-gradient-to-br from-purple-400/10 to-pink-400/10 rounded-lg border border-white/20 flex items-center justify-center mb-3">
-                                <div className="w-8 h-10 bg-white/20 rounded-lg border border-white/30 flex items-center justify-center">
-                                  <PenTool size={16} className="text-white/60" />
-                                </div>
-                              </div>
-                              
-                              <div className="space-y-2">
-                                <div className="flex items-start justify-between">
+                    {/* Cover Letters */}
+                        <div className="space-y-3">
+                      <h4 className="text-white font-medium text-sm">Cover Letters</h4>
+                      
+                      {/* Cover Letter Previews */}
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 p-3 bg-white/5 border border-white/10 rounded-lg">
+                          <div className="w-12 h-8 bg-purple-400/20 rounded border border-purple-400/30 flex items-center justify-center">
+                            <PenTool size={12} className="text-purple-400" />
+                          </div>
                                   <div className="flex-1 min-w-0">
-                                    <h4 className="font-semibold text-white text-sm truncate">{coverLetter.title}</h4>
-                                    <p className="text-white/60 text-xs">{coverLetter.jobTitle} at {coverLetter.company}</p>
-                                  </div>
-                                  <div className={`px-2 py-1 rounded-lg text-xs font-medium ${getCoverLetterStatusColor(coverLetter.status)}`}>
-                                    {coverLetter.status}
+                            <p className="text-white text-sm truncate">Software Engineer Cover Letter</p>
+                            <p className="text-white/60 text-xs">Google • Updated 2 days ago</p>
+                                    </div>
+                                      <div className="flex items-center gap-1">
+                            <button className="p-1 text-white/60 hover:text-white transition-colors">
+                              <Eye size={12} />
+                            </button>
+                            <button className="p-1 text-white/60 hover:text-white transition-colors">
+                              <Download size={12} />
+                            </button>
+                                      </div>
                                   </div>
                                 </div>
                                 
-                                <div className="flex items-center gap-2 text-white/40 text-xs">
-                                  <CalendarDays size={12} />
-                                  <span>{new Date(coverLetter.createdDate).toLocaleDateString()}</span>
-                                </div>
-                              </div>
-                            </motion.div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-center py-8">
-                          <div className="w-16 h-16 bg-purple-400/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <PenTool size={24} className="text-purple-400" />
-                          </div>
-                          <p className="text-white/60 text-sm mb-4">
-                            {selectedCV.connectedJobs && selectedCV.connectedJobs.length > 0 
-                              ? "No cover letters created yet" 
-                              : "Connect a job first to create cover letters"
-                            }
-                          </p>
-                          {selectedCV.connectedJobs && selectedCV.connectedJobs.length > 0 ? (
-                            <motion.button
-                              className="px-4 py-2 bg-purple-400/20 text-purple-400 rounded-lg text-sm hover:bg-purple-400/30 transition-colors"
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
+                      {/* Cover Letter Actions */}
+                      <div className="flex flex-wrap gap-2">
+                                  <motion.button
+                          className="px-3 py-2 bg-purple-400/20 text-purple-400 rounded-lg text-sm hover:bg-purple-400/30 transition-colors flex items-center gap-2"
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          disabled
+                          title="Select a job first"
+                        >
+                          <Sparkles size={12} />
+                          Generate Cover Letter
+                                  </motion.button>
+                        
+                          <motion.button
+                          className="px-3 py-2 text-white/60 hover:text-white transition-colors text-sm flex items-center gap-2"
+                              whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
                               onClick={() => {
                                 setShowModal(false);
-                                // Navigate to cover letter editor (future update)
-                                window.location.href = `/cover-letter-editor?cv=${selectedCV.id}`;
-                              }}
-                            >
-                              Create Cover Letter
+                            window.location.href = `/studio/cover-letter?cvId=${selectedCV.id}`;
+                          }}
+                        >
+                          <Plus size={12} />
+                          Create New Cover Letter
                             </motion.button>
-                          ) : (
-                            <motion.button
-                              className="px-4 py-2 bg-blue-400/20 text-blue-400 rounded-lg text-sm hover:bg-blue-400/30 transition-colors"
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
-                            >
-                              Connect a Job First
-                            </motion.button>
-                          )}
                         </div>
-                      )}
                     </div>
                   </div>
                 </div>
