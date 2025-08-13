@@ -43,20 +43,9 @@ export default function LoginModal({ isOpen, onClose, onSwitchToRegister, onLogi
         // Get the session to access user data
         const session = await getSession();
         if (session?.user) {
-          // Store user data in localStorage for dashboard compatibility
-          const userData = {
-            id: session.user.id,
-            email: session.user.email,
-            name: session.user.name,
-            firstName: session.user.firstName,
-            lastName: session.user.lastName,
-            image: session.user.image
-          };
-          localStorage.setItem('user', JSON.stringify(userData));
-          
           // If onLogin callback is provided, use it instead of direct redirect
           if (onLogin) {
-            onLogin(userData);
+            onLogin(session.user);
           } else {
             onClose();
             router.push('/dashboard');
@@ -86,20 +75,9 @@ export default function LoginModal({ isOpen, onClose, onSwitchToRegister, onLogi
         // Get the session to access user data
         const session = await getSession();
         if (session?.user) {
-          // Store user data in localStorage for dashboard compatibility
-          const userData = {
-            id: session.user.id,
-            email: session.user.email,
-            name: session.user.name,
-            firstName: session.user.firstName,
-            lastName: session.user.lastName,
-            image: session.user.image
-          };
-          localStorage.setItem('user', JSON.stringify(userData));
-          
           // If onLogin callback is provided, use it instead of direct redirect
           if (onLogin) {
-            onLogin(userData);
+            onLogin(session.user);
           } else {
             onClose();
             router.push('/dashboard');

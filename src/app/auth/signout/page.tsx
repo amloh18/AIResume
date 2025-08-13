@@ -9,6 +9,11 @@ export default function SignOut() {
 
   useEffect(() => {
     const performSignOut = async () => {
+      // Clear localStorage
+      localStorage.removeItem('user');
+      // Clear sessionStorage
+      sessionStorage.clear();
+      // Sign out from NextAuth
       await signOut({ redirect: false });
       router.push('/');
     };

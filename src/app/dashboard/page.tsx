@@ -58,23 +58,8 @@ const Dashboard: React.FC<DashboardProps> = () => {
     }
   });
 
-  // Load user data from localStorage and fetch subscription
+  // Fetch user subscription data
   useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      try {
-        const parsedUser = JSON.parse(userData);
-        setUser(prev => ({
-          ...prev,
-          name: parsedUser.firstName || parsedUser.name || 'User',
-          email: parsedUser.email || prev.email
-        }));
-      } catch (error) {
-        console.error('Error parsing user data:', error);
-      }
-    }
-
-    // Fetch user subscription data
     const fetchUserSubscription = async () => {
       try {
         const response = await fetch('/api/user/subscription');
@@ -100,12 +85,9 @@ const Dashboard: React.FC<DashboardProps> = () => {
     if (status === 'loading') return; // Still loading
 
     if (status === 'unauthenticated') {
-      // Check localStorage as fallback
-      const localUser = localStorage.getItem('user');
-      if (!localUser) {
-        router.push('/');
-        return;
-      }
+      // If user is not authenticated, redirect to home page
+      router.push('/');
+      return;
     }
 
     // Handle welcome animation from registration or login
@@ -124,7 +106,7 @@ const Dashboard: React.FC<DashboardProps> = () => {
     }
   }, [status, router]);
 
-  // Update user data from session or localStorage
+  // Update user data from session
   useEffect(() => {
     if (session?.user) {
       setUser(prev => ({
@@ -132,21 +114,6 @@ const Dashboard: React.FC<DashboardProps> = () => {
         name: session.user.firstName || session.user.name || 'User',
         email: session.user.email || prev.email
       }));
-    } else {
-      // Fallback to localStorage
-      const userData = localStorage.getItem('user');
-      if (userData) {
-        try {
-          const parsedUser = JSON.parse(userData);
-          setUser(prev => ({
-            ...prev,
-            name: parsedUser.firstName || parsedUser.name || 'User',
-            email: parsedUser.email || prev.email
-          }));
-        } catch (error) {
-          console.error('Error parsing user data:', error);
-        }
-      }
     }
   }, [session]);
 
