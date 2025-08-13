@@ -342,8 +342,13 @@ const Sidebar = ({
     setActiveTab: (tab: string) => void;
     user: User;
 }) => {
-    const handleLogout = () => {
-        signOut({ callbackUrl: '/' });
+    const handleLogout = async () => {
+        // Clear localStorage
+        localStorage.removeItem('user');
+        // Clear sessionStorage
+        sessionStorage.clear();
+        // Sign out from NextAuth
+        await signOut({ callbackUrl: '/' });
     };
 
     const navigationItems = [

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { signOut } from 'next-auth/react';
 import { 
   FileText, 
   Briefcase, 
@@ -57,9 +58,16 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
       .slice(0, 2);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // Clear localStorage
     localStorage.removeItem('user');
-    window.location.href = '/';
+    // Clear sessionStorage
+    sessionStorage.clear();
+    // Sign out from NextAuth
+    await signOut({ 
+      redirect: true,
+      callbackUrl: '/'
+    });
   };
 
   return (
