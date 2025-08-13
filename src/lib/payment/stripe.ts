@@ -1,8 +1,14 @@
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-12-18.acacia',
-});
+// Only create Stripe instance if API key is available
+const stripe = process.env.STRIPE_SECRET_KEY 
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: '2024-12-18.acacia',
+    })
+  : null;
+
+// Export the stripe instance for direct access
+export { stripe };
 
 export interface CreatePaymentIntentParams {
   amount: number;
@@ -27,6 +33,13 @@ export interface CreateSubscriptionParams {
 export class StripeService {
   // Create a payment intent for one-time payments
   static async createPaymentIntent(params: CreatePaymentIntentParams) {
+    if (!stripe) {
+      return {
+        success: false,
+        error: 'Stripe is not configured',
+      };
+    }
+    
     try {
       const paymentIntent = await stripe.paymentIntents.create({
         amount: Math.round(params.amount * 100), // Convert to cents
@@ -57,6 +70,13 @@ export class StripeService {
 
   // Create a customer
   static async createCustomer(params: CreateCustomerParams) {
+    if (!stripe) {
+      return {
+        success: false,
+        error: 'Stripe is not configured',
+      };
+    }
+    
     try {
       const customer = await stripe.customers.create({
         email: params.email,
@@ -80,6 +100,13 @@ export class StripeService {
 
   // Create a subscription
   static async createSubscription(params: CreateSubscriptionParams) {
+    if (!stripe) {
+      return {
+        success: false,
+        error: 'Stripe is not configured',
+      };
+    }
+    
     try {
       const subscription = await stripe.subscriptions.create({
         customer: params.customerId,
@@ -107,6 +134,13 @@ export class StripeService {
 
   // Cancel a subscription
   static async cancelSubscription(subscriptionId: string) {
+    if (!stripe) {
+      return {
+        success: false,
+        error: 'Stripe is not configured',
+      };
+    }
+    
     try {
       const subscription = await stripe.subscriptions.cancel(subscriptionId);
       return {
@@ -124,6 +158,13 @@ export class StripeService {
 
   // Get subscription details
   static async getSubscription(subscriptionId: string) {
+    if (!stripe) {
+      return {
+        success: false,
+        error: 'Stripe is not configured',
+      };
+    }
+    
     try {
       const subscription = await stripe.subscriptions.retrieve(subscriptionId);
       return {
@@ -149,6 +190,13 @@ export class StripeService {
       intervalCount?: number;
     };
   }) {
+    if (!stripe) {
+      return {
+        success: false,
+        error: 'Stripe is not configured',
+      };
+    }
+    
     try {
       const price = await stripe.prices.create({
         product: params.productId,
@@ -177,6 +225,13 @@ export class StripeService {
     description?: string;
     metadata?: Record<string, string>;
   }) {
+    if (!stripe) {
+      return {
+        success: false,
+        error: 'Stripe is not configured',
+      };
+    }
+    
     try {
       const product = await stripe.products.create({
         name: params.name,
@@ -200,6 +255,13 @@ export class StripeService {
 
   // Verify webhook signature
   static verifyWebhookSignature(payload: string, signature: string) {
+    if (!stripe) {
+      return {
+        success: false,
+        error: 'Stripe is not configured',
+      };
+    }
+    
     try {
       const event = stripe.webhooks.constructEvent(
         payload,

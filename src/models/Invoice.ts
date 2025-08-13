@@ -29,7 +29,6 @@ const invoiceSchema = new Schema<IInvoice>({
   invoiceNumber: {
     type: String,
     required: [true, 'Invoice number is required'],
-    unique: true,
     trim: true
   },
   amount: {

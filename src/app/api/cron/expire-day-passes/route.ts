@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectDB } from '@/lib/database';
+import connectDB from '@/lib/database';
 import User from '@/models/User';
 
 // This endpoint should be called by a cron job service (e.g., Vercel Cron, GitHub Actions, etc.)
