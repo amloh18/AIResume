@@ -13,11 +13,18 @@ export interface IUser extends Document {
   emailVerificationExpires?: Date;
   resetPasswordToken?: string;
   resetPasswordExpires?: Date;
+  currentPlanKey: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly';
   subscription: {
-    plan: 'basic' | 'pro' | 'unlimited';
-    status: 'active' | 'inactive' | 'cancelled';
+    planKey: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly';
+    status: 'active' | 'inactive' | 'cancelled' | 'expired';
     startDate: Date;
     endDate?: Date;
+    currentPeriodStart?: Date;
+    currentPeriodEnd?: Date;
+    provider: 'stripe' | 'razorpay';
+    providerSubscriptionId?: string;
+    providerCustomerId?: string;
+    interval: 'one-time' | 'monthly' | 'quarterly' | 'yearly';
     seats: number;
     storageUsed: number;
   };
@@ -75,15 +82,20 @@ const userSchema = new Schema<IUser>({
   emailVerificationExpires: Date,
   resetPasswordToken: String,
   resetPasswordExpires: Date,
+  currentPlanKey: {
+    type: String,
+    enum: ['free', 'day_pass', 'pro_monthly', 'pro_quarterly', 'pro_yearly'],
+    default: 'free'
+  },
   subscription: {
-    plan: {
+    planKey: {
       type: String,
-      enum: ['basic', 'pro', 'unlimited'],
-      default: 'basic'
+      enum: ['free', 'day_pass', 'pro_monthly', 'pro_quarterly', 'pro_yearly'],
+      default: 'free'
     },
     status: {
       type: String,
-      enum: ['active', 'inactive', 'cancelled'],
+      enum: ['active', 'inactive', 'cancelled', 'expired'],
       default: 'inactive'
     },
     startDate: {
@@ -91,6 +103,20 @@ const userSchema = new Schema<IUser>({
       default: Date.now
     },
     endDate: Date,
+    currentPeriodStart: Date,
+    currentPeriodEnd: Date,
+    provider: {
+      type: String,
+      enum: ['stripe', 'razorpay'],
+      default: 'stripe'
+    },
+    providerSubscriptionId: String,
+    providerCustomerId: String,
+    interval: {
+      type: String,
+      enum: ['one-time', 'monthly', 'quarterly', 'yearly'],
+      default: 'monthly'
+    },
     seats: {
       type: Number,
       default: 3

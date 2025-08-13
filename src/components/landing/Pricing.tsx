@@ -90,7 +90,7 @@ const Pricing = () => {
       icon: Users
     },
     {
-      name: 'Annual Pro',
+              name: 'Yearly Pro',
       price: '€120',
       period: 'per year',
       description: 'Long-term career builders or professionals',

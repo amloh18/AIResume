@@ -3,29 +3,44 @@ import { NextResponse } from "next/server";
 
 export default withAuth(
   function middleware(req) {
-    // Allow access to public routes
-    if (req.nextUrl.pathname.startsWith('/api/auth') ||
-        req.nextUrl.pathname.startsWith('/api/parse-job') ||
-        req.nextUrl.pathname.startsWith('/api/jobs/parsed') ||
-        req.nextUrl.pathname.startsWith('/api/templates') ||
-        req.nextUrl.pathname.startsWith('/api/snippets') ||
-        req.nextUrl.pathname.startsWith('/api/health') ||
-        req.nextUrl.pathname.startsWith('/api/cv/parse') ||
-        req.nextUrl.pathname.startsWith('/api/test-file-upload') ||
-        req.nextUrl.pathname.startsWith('/api/test-parsing') ||
-        req.nextUrl.pathname === '/' ||
-        req.nextUrl.pathname.startsWith('/cv-onboarding') ||
-        req.nextUrl.pathname.startsWith('/test-cv-parsing') ||
-        req.nextUrl.pathname.startsWith('/test-snippets') ||
-        req.nextUrl.pathname.startsWith('/auth/') ||
-        req.nextUrl.pathname.startsWith('/_next') ||
-        req.nextUrl.pathname.startsWith('/public')) {
+    const { pathname } = req.nextUrl;
+    const token = req.nextauth.token;
+
+    // Define route categories
+    const publicRoutes = ['/', '/auth/signin', '/auth/signup', '/cv-onboarding'];
+    const protectedRoutes = ['/dashboard', '/studio'];
+    const apiRoutes = [
+      '/api/auth',
+      '/api/parse-job',
+      '/api/jobs/parsed',
+      '/api/templates',
+      '/api/snippets',
+      '/api/health',
+      '/api/cv/parse',
+      '/api/test-file-upload',
+      '/api/test-parsing'
+    ];
+
+    // Allow all API routes
+    if (apiRoutes.some(route => pathname.startsWith(route))) {
       return NextResponse.next();
     }
 
-    // Redirect to home if not authenticated and trying to access protected routes
-    if (!req.nextauth.token && req.nextUrl.pathname.startsWith('/dashboard')) {
-      return NextResponse.redirect(new URL('/', req.url));
+    // Allow static assets
+    if (pathname.startsWith('/_next') || pathname.startsWith('/public')) {
+      return NextResponse.next();
+    }
+
+    // Handle authenticated users trying to access landing page
+    if (token && pathname === '/') {
+      // Redirect authenticated users away from landing page
+      return NextResponse.redirect(new URL('/dashboard', req.url));
+    }
+
+    // Handle unauthenticated users trying to access protected routes
+    if (!token && protectedRoutes.some(route => pathname.startsWith(route))) {
+      const callbackUrl = encodeURIComponent(pathname);
+      return NextResponse.redirect(new URL(`/auth/signin?callbackUrl=${callbackUrl}`, req.url));
     }
 
     return NextResponse.next();
@@ -33,28 +48,44 @@ export default withAuth(
   {
     callbacks: {
       authorized: ({ token, req }) => {
-        // Allow access to public routes without authentication
-        if (req.nextUrl.pathname.startsWith('/api/auth') ||
-            req.nextUrl.pathname.startsWith('/api/parse-job') ||
-            req.nextUrl.pathname.startsWith('/api/jobs/parsed') ||
-            req.nextUrl.pathname.startsWith('/api/templates') ||
-            req.nextUrl.pathname.startsWith('/api/snippets') ||
-            req.nextUrl.pathname.startsWith('/api/health') ||
-            req.nextUrl.pathname.startsWith('/api/cv/parse') ||
-            req.nextUrl.pathname.startsWith('/api/test-file-upload') ||
-            req.nextUrl.pathname.startsWith('/api/test-parsing') ||
-            req.nextUrl.pathname === '/' ||
-            req.nextUrl.pathname.startsWith('/cv-onboarding') ||
-            req.nextUrl.pathname.startsWith('/test-cv-parsing') ||
-            req.nextUrl.pathname.startsWith('/test-snippets') ||
-            req.nextUrl.pathname.startsWith('/auth/') ||
-            req.nextUrl.pathname.startsWith('/_next') ||
-            req.nextUrl.pathname.startsWith('/public')) {
+        const { pathname } = req.nextUrl;
+
+        // Define route categories
+        const publicRoutes = ['/', '/auth/signin', '/auth/signup', '/cv-onboarding'];
+        const protectedRoutes = ['/dashboard', '/studio'];
+        const apiRoutes = [
+          '/api/auth',
+          '/api/parse-job',
+          '/api/jobs/parsed',
+          '/api/templates',
+          '/api/snippets',
+          '/api/health',
+          '/api/cv/parse',
+          '/api/test-file-upload',
+          '/api/test-parsing'
+        ];
+
+        // Allow all API routes
+        if (apiRoutes.some(route => pathname.startsWith(route))) {
           return true;
         }
 
-        // Require authentication for dashboard and other protected routes
-        return !!token;
+        // Allow static assets
+        if (pathname.startsWith('/_next') || pathname.startsWith('/public')) {
+          return true;
+        }
+
+        // Allow public routes
+        if (publicRoutes.includes(pathname) || publicRoutes.some(route => pathname.startsWith(route))) {
+          return true;
+        }
+
+        // Require authentication for protected routes
+        if (protectedRoutes.some(route => pathname.startsWith(route))) {
+          return !!token;
+        }
+
+        return true;
       },
     },
   }

@@ -123,7 +123,7 @@ const InkPad: React.FC = () => {
 
   const toggleStar = (id: string) => {
     setCoverLetters(coverLetters.map(letter => 
-      letter.id === id ? { ...letter, isStarred: !letter.isStarred } : letter
+      (letter.id === id || letter._id === id) ? { ...letter, isStarred: !letter.isStarred } : letter
     ));
   };
 
@@ -137,7 +137,7 @@ const InkPad: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="max-w-6xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -155,13 +155,17 @@ const InkPad: React.FC = () => {
         </motion.button>
       </div>
 
-      {/* AI Generation Section */}
-      <motion.div 
-        className="bg-gradient-to-r from-purple-400/10 to-pink-400/10 border border-purple-400/20 rounded-2xl p-6 backdrop-blur-xl"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-      >
+      {/* Main Grid Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column - Main Content */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* AI Generation Section */}
+          <motion.div 
+            className="bg-gradient-to-r from-purple-400/10 to-pink-400/10 border border-purple-400/20 rounded-2xl p-6 backdrop-blur-xl"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+          >
         <div className="flex items-center gap-4 mb-6">
           <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-purple-500 rounded-xl flex items-center justify-center">
             <Zap size={24} className="text-white" />
@@ -201,9 +205,9 @@ const InkPad: React.FC = () => {
                   exit={{ opacity: 0, y: -10 }}
                 >
                   {jobs.length > 0 ? (
-                    jobs.map((job) => (
+                    jobs.map((job, index) => (
                       <motion.button
-                        key={job.id}
+                        key={job.id || job._id || `job-${index}`}
                         onClick={() => {
                           setSelectedJob(job);
                           setShowJobSelector(false);
@@ -278,8 +282,8 @@ const InkPad: React.FC = () => {
         </motion.button>
       </motion.div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <motion.div
           className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6"
           initial={{ opacity: 0, y: 20 }}
@@ -364,7 +368,7 @@ const InkPad: React.FC = () => {
         <div className="grid gap-6">
           {coverLetters.map((letter, index) => (
             <motion.div
-              key={letter.id}
+              key={letter.id || letter._id || `letter-${index}`}
               className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-all duration-300 group"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -430,7 +434,7 @@ const InkPad: React.FC = () => {
                     className="p-2 text-white/60 hover:text-yellow-400 transition-colors"
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
-                    onClick={() => toggleStar(letter.id)}
+                    onClick={() => toggleStar(letter.id || letter._id || `letter-${index}`)}
                   >
                     <Star size={16} className={letter.isStarred ? 'fill-yellow-400 text-yellow-400' : ''} />
                   </motion.button>
@@ -479,40 +483,108 @@ const InkPad: React.FC = () => {
           ))}
         </div>
       </div>
+        </div>
 
-      {/* Templates Section */}
-      <div className="space-y-6">
-        <h2 className="text-xl font-semibold text-white">Tone Templates</h2>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {tones.map((tone, index) => (
-            <motion.div
-              key={tone.id}
-              className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-all duration-300 cursor-pointer group"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.7 + index * 0.1 }}
-              whileHover={{ y: -5, scale: 1.02 }}
-            >
-              <div className={`w-12 h-12 bg-gradient-to-br ${tone.color} rounded-xl mb-4 flex items-center justify-center`}>
-                <MessageSquare size={20} className="text-white" />
-              </div>
-              
-              <h3 className="font-semibold text-white mb-2 group-hover:text-lime-400 transition-colors">
-                {tone.name}
-              </h3>
-              <p className="text-white/60 text-sm mb-4">{tone.description}</p>
-              
+        {/* Right Column - Sidebar */}
+        <div className="space-y-6">
+          {/* Quick Actions */}
+          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+            <h3 className="text-white font-medium text-sm mb-4 flex items-center gap-2">
+              <Sparkles size={14} className="text-purple-400" />
+              Quick Actions
+            </h3>
+            <div className="space-y-3">
               <motion.button
-                className="w-full px-4 py-2 bg-gradient-to-r from-lime-400/20 to-lime-500/20 border border-lime-400/30 text-lime-400 rounded-lg text-sm font-medium hover:from-lime-400/30 hover:to-lime-500/30 transition-all duration-300 flex items-center justify-center gap-2"
+                className="w-full p-3 bg-white/10 rounded-lg text-white/80 text-sm hover:bg-white/20 transition-all duration-300 flex items-center gap-3"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
-                <Plus size={14} />
-                Use Template
+                <Plus size={16} />
+                Create New Letter
               </motion.button>
-            </motion.div>
-          ))}
+              <motion.button
+                className="w-full p-3 bg-white/10 rounded-lg text-white/80 text-sm hover:bg-white/20 transition-all duration-300 flex items-center gap-3"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Download size={16} />
+                Import Template
+              </motion.button>
+              <motion.button
+                className="w-full p-3 bg-white/10 rounded-lg text-white/80 text-sm hover:bg-white/20 transition-all duration-300 flex items-center gap-3"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Share2 size={16} />
+                Share Letters
+              </motion.button>
+            </div>
+          </div>
+
+          {/* Writing Tips */}
+          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+            <h3 className="text-white font-medium text-sm mb-4 flex items-center gap-2">
+              <Lightbulb size={14} className="text-yellow-400" />
+              Writing Tips
+            </h3>
+            <div className="space-y-3">
+              <div className="p-3 bg-yellow-400/10 border border-yellow-400/20 rounded-lg">
+                <p className="text-yellow-400 text-xs font-medium mb-1">Be specific</p>
+                <p className="text-white/60 text-xs">Mention specific achievements and experiences</p>
+              </div>
+              <div className="p-3 bg-blue-400/10 border border-blue-400/20 rounded-lg">
+                <p className="text-blue-400 text-xs font-medium mb-1">Show enthusiasm</p>
+                <p className="text-white/60 text-xs">Express genuine interest in the role and company</p>
+              </div>
+              <div className="p-3 bg-green-400/10 border border-green-400/20 rounded-lg">
+                <p className="text-green-400 text-xs font-medium mb-1">Keep it concise</p>
+                <p className="text-white/60 text-xs">Aim for 250-350 words for optimal impact</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Tone Templates */}
+          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+            <h3 className="text-white font-medium text-sm mb-4 flex items-center gap-2">
+              <MessageSquare size={14} className="text-purple-400" />
+              Tone Templates
+            </h3>
+            <div className="space-y-3">
+              {tones.map((tone) => (
+                <motion.button
+                  key={tone.id}
+                  className="w-full p-3 bg-white/10 rounded-lg text-white/80 text-sm hover:bg-white/20 transition-all duration-300 flex items-center gap-3"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <div className={`w-3 h-3 rounded-full bg-gradient-to-r ${tone.color}`}></div>
+                  {tone.name}
+                </motion.button>
+              ))}
+            </div>
+          </div>
+
+          {/* Recent Activity */}
+          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+            <h3 className="text-white font-medium text-sm mb-4 flex items-center gap-2">
+              <Activity size={14} className="text-blue-400" />
+              Recent Activity
+            </h3>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 text-white/60 text-xs">
+                <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
+                <span>Created Software Engineer letter</span>
+              </div>
+              <div className="flex items-center gap-3 text-white/60 text-xs">
+                <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                <span>Updated Product Manager letter</span>
+              </div>
+              <div className="flex items-center gap-3 text-white/60 text-xs">
+                <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                <span>Sent Designer letter</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

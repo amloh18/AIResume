@@ -4,93 +4,55 @@ import React, { useState, useEffect } from 'react';
 import { 
   Plus, 
   Edit, 
-  Trash2, 
-  Save, 
-  X, 
   Eye, 
-  EyeOff,
-  Star,
+  Link, 
+  ToggleLeft, 
+  ToggleRight,
+  CreditCard,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  ExternalLink,
+  Copy,
+  Settings
 } from 'lucide-react';
-import PricingPlanCard from './PricingPlanCard';
-import DiscountCodeManager from './DiscountCodeManager';
+import MembershipModal from '@/components/payment/MembershipModal';
 
 interface PricingPlan {
   _id: string;
+  key: string;
   name: string;
   description: string;
-  price: number;
+  price_monthly?: number;
+  price_quarterly?: number;
+  price_yearly?: number;
+  price_one_time?: number;
   currency: string;
-  billingCycle: 'monthly' | 'yearly' | 'one-time';
-  features: {
-    maxCVs: number;
-    maxExports: number;
-    aiAssistant: boolean;
-    coverLetterGenerator: boolean;
-    jobTracker: boolean;
-    communityAccess: boolean;
-    prioritySupport: boolean;
-    customTemplates: boolean;
-    storageLimit: number;
-  };
-  isActive: boolean;
+  billingCycle: string;
+  maxCVs: number;
+  maxExports: number;
+  storageLimit: number;
+  features: string[];
+  status: 'active' | 'inactive';
   isPopular: boolean;
+  isBestValue: boolean;
   sortOrder: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface PricingPlanFormData {
-  name: string;
-  description: string;
-  price: number;
-  currency: string;
-  billingCycle: 'monthly' | 'yearly' | 'one-time';
-  features: {
-    maxCVs: number;
-    maxExports: number;
-    aiAssistant: boolean;
-    coverLetterGenerator: boolean;
-    jobTracker: boolean;
-    communityAccess: boolean;
-    prioritySupport: boolean;
-    customTemplates: boolean;
-    storageLimit: number;
-  };
-  isActive: boolean;
-  isPopular: boolean;
-  sortOrder: number;
+  stripePriceId_monthly?: string;
+  stripePriceId_quarterly?: string;
+  stripePriceId_yearly?: string;
+  stripePriceId_one_time?: string;
+  razorpayPlanId_monthly?: string;
+  razorpayPlanId_quarterly?: string;
+  razorpayPlanId_yearly?: string;
+  dayPassDuration?: number;
 }
 
 const PricingPlanManager: React.FC = () => {
   const [plans, setPlans] = useState<PricingPlan[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [editingPlan, setEditingPlan] = useState<PricingPlan | null>(null);
-  const [showInactive, setShowInactive] = useState(false);
-  const [activeTab, setActiveTab] = useState<'plans' | 'discounts'>('plans');
-  const [formData, setFormData] = useState<PricingPlanFormData>({
-    name: '',
-    description: '',
-    price: 0,
-    currency: 'EUR',
-    billingCycle: 'monthly',
-    features: {
-      maxCVs: 3,
-      maxExports: 1,
-      aiAssistant: false,
-      coverLetterGenerator: false,
-      jobTracker: false,
-      communityAccess: false,
-      prioritySupport: false,
-      customTemplates: false,
-      storageLimit: 100
-    },
-    isActive: true,
-    isPopular: false,
-    sortOrder: 0
-  });
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const [selectedPlanForPreview, setSelectedPlanForPreview] = useState<PricingPlan | null>(null);
+  const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
+  const [selectedPlanForCheckout, setSelectedPlanForCheckout] = useState<PricingPlan | null>(null);
 
   useEffect(() => {
     fetchPlans();
@@ -98,8 +60,7 @@ const PricingPlanManager: React.FC = () => {
 
   const fetchPlans = async () => {
     try {
-      setLoading(true);
-      const response = await fetch('/api/admin/pricing-plans');
+      const response = await fetch('/api/pricing-plans');
       if (response.ok) {
         const data = await response.json();
         setPlans(data);
@@ -111,107 +72,100 @@ const PricingPlanManager: React.FC = () => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const handleToggleActive = async (planId: string, currentStatus: string) => {
     try {
-      const url = editingPlan 
-        ? `/api/admin/pricing-plans/${editingPlan._id}`
-        : '/api/admin/pricing-plans';
-      
-      const method = editingPlan ? 'PUT' : 'POST';
-      
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
+      const response = await fetch(`/api/admin/plans/${planId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          status: currentStatus === 'active' ? 'inactive' : 'active' 
+        })
       });
 
       if (response.ok) {
-        await fetchPlans();
-        resetForm();
-      } else {
-        const error = await response.json();
-        alert(error.error || 'Failed to save plan');
+        fetchPlans(); // Refresh plans
       }
     } catch (error) {
-      console.error('Error saving plan:', error);
-      alert('Failed to save plan');
+      console.error('Error toggling plan status:', error);
     }
   };
 
-  const handleEdit = (plan: PricingPlan) => {
-    setEditingPlan(plan);
-    setFormData({
-      name: plan.name,
-      description: plan.description,
-      price: plan.price,
-      currency: plan.currency,
-      billingCycle: plan.billingCycle,
-      features: plan.features,
-      isActive: plan.isActive,
-      isPopular: plan.isPopular,
-      sortOrder: plan.sortOrder
-    });
-    setShowForm(true);
+  const handlePreviewPlan = (plan: PricingPlan) => {
+    setSelectedPlanForPreview(plan);
+    setIsPreviewModalOpen(true);
   };
 
-  const handleDelete = async (planId: string) => {
-    if (!confirm('Are you sure you want to delete this plan?')) return;
-
+  const handleGenerateCheckoutLink = async (plan: PricingPlan) => {
     try {
-      const response = await fetch(`/api/admin/pricing-plans/${planId}`, {
-        method: 'DELETE',
+      const response = await fetch(`/api/admin/plans/${plan.key}/checkout-link`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planKey: plan.key })
       });
 
       if (response.ok) {
-        await fetchPlans();
-      } else {
-        const error = await response.json();
-        alert(error.error || 'Failed to delete plan');
+        const data = await response.json();
+        // Copy to clipboard
+        navigator.clipboard.writeText(data.checkoutUrl);
+        alert('Checkout link copied to clipboard!');
       }
     } catch (error) {
-      console.error('Error deleting plan:', error);
-      alert('Failed to delete plan');
+      console.error('Error generating checkout link:', error);
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      description: '',
-      price: 0,
-      currency: 'EUR',
-      billingCycle: 'monthly',
-      features: {
-        maxCVs: 3,
-        maxExports: 1,
-        aiAssistant: false,
-        coverLetterGenerator: false,
-        jobTracker: false,
-        communityAccess: false,
-        prioritySupport: false,
-        customTemplates: false,
-        storageLimit: 100
-      },
-      isActive: true,
-      isPopular: false,
-      sortOrder: 0
-    });
-    setEditingPlan(null);
-    setShowForm(false);
+  const handleEditPlan = (plan: PricingPlan) => {
+    // TODO: Implement edit plan modal
+    console.log('Edit plan:', plan);
   };
 
-  const updateFeature = (feature: keyof typeof formData.features, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      features: {
-        ...prev.features,
-        [feature]: value
-      }
-    }));
+  const getPlanPrice = (plan: PricingPlan) => {
+    if (plan.key === 'free') return 0;
+    if (plan.key === 'day_pass') return plan.price_one_time || 0;
+    if (plan.key === 'pro_monthly') return plan.price_monthly || 0;
+    if (plan.key === 'pro_quarterly') return plan.price_quarterly || 0;
+    if (plan.key === 'pro_yearly') return plan.price_yearly || 0;
+    return 0;
+  };
+
+  const getProviderReadiness = (plan: PricingPlan) => {
+    const readiness = {
+      stripe: false,
+      razorpay: false,
+      stripeDetails: '',
+      razorpayDetails: ''
+    };
+
+    if (plan.key === 'free') {
+      readiness.stripe = true;
+      readiness.razorpay = true;
+      readiness.stripeDetails = 'Free plan';
+      readiness.razorpayDetails = 'Free plan';
+    } else if (plan.key === 'day_pass') {
+      readiness.stripe = !!plan.stripePriceId_one_time;
+      readiness.razorpay = true; // Uses Order
+      readiness.stripeDetails = plan.stripePriceId_one_time || 'Missing one-time price ID';
+      readiness.razorpayDetails = 'Uses Order (no plan ID needed)';
+    } else {
+      // Pro plans
+      readiness.stripe = !!(plan.stripePriceId_monthly || plan.stripePriceId_quarterly || plan.stripePriceId_yearly);
+      readiness.razorpay = !!(plan.razorpayPlanId_monthly || plan.razorpayPlanId_quarterly || plan.razorpayPlanId_yearly);
+      
+      const stripeIds = [];
+      if (plan.stripePriceId_monthly) stripeIds.push('Monthly');
+      if (plan.stripePriceId_quarterly) stripeIds.push('Quarterly');
+      if (plan.stripePriceId_yearly) stripeIds.push('Yearly');
+      
+      const razorpayIds = [];
+      if (plan.razorpayPlanId_monthly) razorpayIds.push('Monthly');
+      if (plan.razorpayPlanId_quarterly) razorpayIds.push('Quarterly');
+      if (plan.razorpayPlanId_yearly) razorpayIds.push('Yearly');
+      
+      readiness.stripeDetails = stripeIds.length > 0 ? stripeIds.join(', ') : 'No price IDs';
+      readiness.razorpayDetails = razorpayIds.length > 0 ? razorpayIds.join(', ') : 'No plan IDs';
+    }
+
+    return readiness;
   };
 
   if (loading) {
@@ -227,318 +181,155 @@ const PricingPlanManager: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Pricing & Discounts</h2>
-          <p className="text-gray-600 dark:text-gray-400">Manage subscription plans and promotional codes</p>
+          <h1 className="text-2xl font-bold text-gray-900">Pricing Plans</h1>
+          <p className="text-gray-600">Manage subscription plans and pricing</p>
         </div>
-        {activeTab === 'plans' && (
-          <button
-            onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <Plus size={16} />
-            Add Plan
-          </button>
-        )}
+        <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2">
+          <Plus size={16} />
+          Add Plan
+        </button>
       </div>
 
-      {/* Tab Navigation */}
-      <div className="border-b border-gray-200 dark:border-gray-700">
-        <nav className="-mb-px flex space-x-8">
-          <button
-            onClick={() => setActiveTab('plans')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'plans'
-                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-            }`}
-          >
-            Pricing Plans
-          </button>
-          <button
-            onClick={() => setActiveTab('discounts')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'discounts'
-                ? 'border-green-500 text-green-600 dark:text-green-400'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-            }`}
-          >
-            Discount Codes
-          </button>
-        </nav>
-      </div>
-
-      {/* Content based on active tab */}
-      {activeTab === 'plans' ? (
-        <>
-          {/* Summary Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-              <div className="text-2xl font-bold text-gray-900 dark:text-white">{plans.length}</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Total Plans</div>
-            </div>
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-              <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                {plans.filter(p => p.isActive).length}
+      {/* Plans Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {plans.map((plan) => {
+          const readiness = getProviderReadiness(plan);
+          const price = getPlanPrice(plan);
+          
+          return (
+            <div key={plan._id} className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
+              {/* Plan Header */}
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">{plan.name}</h3>
+                  <p className="text-sm text-gray-600">{plan.description}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {plan.isPopular && (
+                    <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                      Popular
+                    </span>
+                  )}
+                  {plan.isBestValue && (
+                    <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
+                      Best Value
+                    </span>
+                  )}
+                </div>
               </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Active Plans</div>
-            </div>
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-              <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
-                {plans.filter(p => p.isPopular).length}
+
+              {/* Pricing */}
+              <div className="mb-4">
+                <div className="text-2xl font-bold text-gray-900">
+                  {plan.key === 'free' ? 'Free' : `€${price}`}
+                </div>
+                <div className="text-sm text-gray-600">
+                  {plan.key === 'free' ? 'No cost' : 
+                   plan.key === 'day_pass' ? 'One-time' :
+                   plan.key === 'pro_monthly' ? 'Per month' :
+                   plan.key === 'pro_quarterly' ? 'Per quarter' :
+                   'Per year'}
+                </div>
               </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Popular Plans</div>
-            </div>
-            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                €{plans.reduce((sum, plan) => sum + plan.price, 0).toFixed(2)}
+
+              {/* Features */}
+              <div className="mb-4">
+                <div className="text-sm text-gray-600 mb-2">Features:</div>
+                <div className="space-y-1">
+                  {plan.features.slice(0, 3).map((feature, index) => (
+                    <div key={index} className="text-xs text-gray-700">• {feature}</div>
+                  ))}
+                  {plan.features.length > 3 && (
+                    <div className="text-xs text-gray-500">+{plan.features.length - 3} more</div>
+                  )}
+                </div>
               </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Total Value</div>
-            </div>
-          </div>
 
-          {/* Filter Controls */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={showInactive}
-                  onChange={(e) => setShowInactive(e.target.checked)}
-                  className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
-                />
-                <span className="text-sm text-gray-700 dark:text-gray-300">Show inactive plans</span>
-              </label>
-            </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              Showing {plans.filter(p => showInactive || p.isActive).length} of {plans.length} plans
-            </div>
-          </div>
+              {/* Provider Readiness */}
+              <div className="mb-4">
+                <div className="text-sm text-gray-600 mb-2">Provider Readiness:</div>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <CreditCard size={14} className="text-blue-600" />
+                    <span className="text-xs font-medium">Stripe:</span>
+                    {readiness.stripe ? (
+                      <CheckCircle size={14} className="text-green-500" />
+                    ) : (
+                      <AlertCircle size={14} className="text-red-500" />
+                    )}
+                    <span className="text-xs text-gray-600">{readiness.stripeDetails}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <ExternalLink size={14} className="text-orange-600" />
+                    <span className="text-xs font-medium">Razorpay:</span>
+                    {readiness.razorpay ? (
+                      <CheckCircle size={14} className="text-green-500" />
+                    ) : (
+                      <AlertCircle size={14} className="text-red-500" />
+                    )}
+                    <span className="text-xs text-gray-600">{readiness.razorpayDetails}</span>
+                  </div>
+                </div>
+              </div>
 
-          {/* Plans Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {plans.filter(plan => showInactive || plan.isActive).map((plan) => (
-              <PricingPlanCard
-                key={plan._id}
-                plan={plan}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-              />
-            ))}
-          </div>
-        </>
-      ) : (
-        <DiscountCodeManager />
-      )}
-
-      {/* Form Modal */}
-      {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                  {editingPlan ? 'Edit Plan' : 'Add New Plan'}
-                </h3>
+              {/* Status */}
+              <div className="flex items-center justify-between mb-4">
+                <span className={`text-xs px-2 py-1 rounded-full ${
+                  plan.status === 'active' 
+                    ? 'bg-green-100 text-green-800' 
+                    : 'bg-red-100 text-red-800'
+                }`}>
+                  {plan.status === 'active' ? 'Active' : 'Inactive'}
+                </span>
                 <button
-                  onClick={resetForm}
-                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  onClick={() => handleToggleActive(plan._id, plan.status)}
+                  className="flex items-center gap-1 text-xs text-gray-600 hover:text-gray-800"
                 >
-                  <X size={20} />
+                  {plan.status === 'active' ? <ToggleRight size={14} /> : <ToggleLeft size={14} />}
+                  Toggle
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Basic Information */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Plan Name
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.name}
-                      onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Price
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={formData.price}
-                      onChange={(e) => setFormData(prev => ({ ...prev, price: parseFloat(e.target.value) }))}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Description
-                  </label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                    required
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Currency
-                    </label>
-                    <select
-                      value={formData.currency}
-                      onChange={(e) => setFormData(prev => ({ ...prev, currency: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                    >
-                      <option value="EUR">EUR</option>
-                      <option value="USD">USD</option>
-                      <option value="INR">INR</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Billing Cycle
-                    </label>
-                    <select
-                      value={formData.billingCycle}
-                      onChange={(e) => setFormData(prev => ({ ...prev, billingCycle: e.target.value as any }))}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                    >
-                      <option value="monthly">Monthly</option>
-                      <option value="yearly">Yearly</option>
-                      <option value="one-time">One-time</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Sort Order
-                    </label>
-                    <input
-                      type="number"
-                      value={formData.sortOrder}
-                      onChange={(e) => setFormData(prev => ({ ...prev, sortOrder: parseInt(e.target.value) }))}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                    />
-                  </div>
-                </div>
-
-                {/* Features */}
-                <div className="border-t pt-6">
-                  <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Features</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Max CVs
-                      </label>
-                      <input
-                        type="number"
-                        value={formData.features.maxCVs}
-                        onChange={(e) => updateFeature('maxCVs', parseInt(e.target.value))}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Max Exports
-                      </label>
-                      <input
-                        type="number"
-                        value={formData.features.maxExports}
-                        onChange={(e) => updateFeature('maxExports', parseInt(e.target.value))}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Storage Limit (MB)
-                      </label>
-                      <input
-                        type="number"
-                        value={formData.features.storageLimit}
-                        onChange={(e) => updateFeature('storageLimit', parseInt(e.target.value))}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-4 space-y-3">
-                    {Object.entries({
-                      aiAssistant: 'AI Assistant',
-                      coverLetterGenerator: 'Cover Letter Generator',
-                      jobTracker: 'Job Tracker',
-                      communityAccess: 'Community Access',
-                      prioritySupport: 'Priority Support',
-                      customTemplates: 'Custom Templates'
-                    }).map(([key, label]) => (
-                      <label key={key} className="flex items-center gap-3">
-                        <input
-                          type="checkbox"
-                          checked={formData.features[key as keyof typeof formData.features] as boolean}
-                          onChange={(e) => updateFeature(key as keyof typeof formData.features, e.target.checked)}
-                          className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
-                        />
-                        <span className="text-sm text-gray-700 dark:text-gray-300">{label}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Settings */}
-                <div className="border-t pt-6">
-                  <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Settings</h4>
-                  <div className="space-y-3">
-                    <label className="flex items-center gap-3">
-                      <input
-                        type="checkbox"
-                        checked={formData.isActive}
-                        onChange={(e) => setFormData(prev => ({ ...prev, isActive: e.target.checked }))}
-                        className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
-                      />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">Active</span>
-                    </label>
-                    <label className="flex items-center gap-3">
-                      <input
-                        type="checkbox"
-                        checked={formData.isPopular}
-                        onChange={(e) => setFormData(prev => ({ ...prev, isPopular: e.target.checked }))}
-                        className="rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
-                      />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">Popular Plan</span>
-                    </label>
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex items-center justify-end gap-3 pt-6 border-t">
-                  <button
-                    type="button"
-                    onClick={resetForm}
-                    className="px-4 py-2 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                  >
-                    <Save size={16} />
-                    {editingPlan ? 'Update Plan' : 'Create Plan'}
-                  </button>
-                </div>
-              </form>
+              {/* Actions */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handlePreviewPlan(plan)}
+                  className="flex-1 bg-gray-100 text-gray-700 px-3 py-2 rounded text-sm hover:bg-gray-200 flex items-center justify-center gap-1"
+                >
+                  <Eye size={14} />
+                  Preview
+                </button>
+                <button
+                  onClick={() => handleGenerateCheckoutLink(plan)}
+                  className="flex-1 bg-blue-100 text-blue-700 px-3 py-2 rounded text-sm hover:bg-blue-200 flex items-center justify-center gap-1"
+                >
+                  <Link size={14} />
+                  Checkout Link
+                </button>
+                <button
+                  onClick={() => handleEditPlan(plan)}
+                  className="flex-1 bg-green-100 text-green-700 px-3 py-2 rounded text-sm hover:bg-green-200 flex items-center justify-center gap-1"
+                >
+                  <Edit size={14} />
+                  Edit
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
+          );
+        })}
+      </div>
+
+      {/* Preview Modal */}
+      {selectedPlanForPreview && (
+        <MembershipModal
+          isOpen={isPreviewModalOpen}
+          onClose={() => setIsPreviewModalOpen(false)}
+          currentPlanKey="free"
+          preselectedPlanKey={selectedPlanForPreview.key}
+          onSuccess={() => setIsPreviewModalOpen(false)}
+          adminMode={true}
+          previewMode={true}
+        />
       )}
     </div>
   );

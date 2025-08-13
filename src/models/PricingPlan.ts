@@ -1,23 +1,44 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IPricingPlan extends Document {
+  key: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly';
   name: string;
   description: string;
-  price: number;
+  price_monthly?: number;
+  price_quarterly?: number;
+  price_yearly?: number;
+  price_one_time?: number;
   currency: string;
-  billingCycle: 'monthly' | 'yearly' | 'one-time';
+  billingCycle: 'one-time' | 'monthly' | 'quarterly' | 'yearly';
   maxCVs: number;
   maxExports: number;
   storageLimit: number; // in MB
   features: string[];
   status: 'active' | 'inactive';
   isPopular: boolean;
+  isBestValue: boolean;
   sortOrder: number;
+  // Provider IDs
+  stripePriceId_monthly?: string;
+  stripePriceId_quarterly?: string;
+  stripePriceId_yearly?: string;
+  stripePriceId_one_time?: string;
+  razorpayPlanId_monthly?: string;
+  razorpayPlanId_quarterly?: string;
+  razorpayPlanId_yearly?: string;
+  // Day Pass specific
+  dayPassDuration?: number; // in hours
   createdAt: Date;
   updatedAt: Date;
 }
 
 const pricingPlanSchema = new Schema<IPricingPlan>({
+  key: {
+    type: String,
+    required: [true, 'Plan key is required'],
+    enum: ['free', 'day_pass', 'pro_monthly', 'pro_quarterly', 'pro_yearly'],
+    unique: true
+  },
   name: {
     type: String,
     required: [true, 'Plan name is required'],
@@ -30,9 +51,20 @@ const pricingPlanSchema = new Schema<IPricingPlan>({
     trim: true,
     maxlength: [500, 'Plan description cannot exceed 500 characters']
   },
-  price: {
+  price_monthly: {
     type: Number,
-    required: [true, 'Plan price is required'],
+    min: [0, 'Price cannot be negative']
+  },
+  price_quarterly: {
+    type: Number,
+    min: [0, 'Price cannot be negative']
+  },
+  price_yearly: {
+    type: Number,
+    min: [0, 'Price cannot be negative']
+  },
+  price_one_time: {
+    type: Number,
     min: [0, 'Price cannot be negative']
   },
   currency: {
@@ -44,7 +76,7 @@ const pricingPlanSchema = new Schema<IPricingPlan>({
   billingCycle: {
     type: String,
     required: [true, 'Billing cycle is required'],
-    enum: ['monthly', 'yearly', 'one-time'],
+    enum: ['one-time', 'monthly', 'quarterly', 'yearly'],
     default: 'monthly'
   },
   maxCVs: {
@@ -77,15 +109,34 @@ const pricingPlanSchema = new Schema<IPricingPlan>({
     type: Boolean,
     default: false
   },
+  isBestValue: {
+    type: Boolean,
+    default: false
+  },
   sortOrder: {
     type: Number,
     default: 0
+  },
+  // Provider IDs
+  stripePriceId_monthly: String,
+  stripePriceId_quarterly: String,
+  stripePriceId_yearly: String,
+  stripePriceId_one_time: String,
+  razorpayPlanId_monthly: String,
+  razorpayPlanId_quarterly: String,
+  razorpayPlanId_yearly: String,
+  // Day Pass specific
+  dayPassDuration: {
+    type: Number,
+    default: 24, // 24 hours default
+    min: [1, 'Day pass duration must be at least 1 hour']
   }
 }, {
   timestamps: true
 });
 
 // Index for better query performance
+pricingPlanSchema.index({ key: 1 }, { unique: true });
 pricingPlanSchema.index({ status: 1, sortOrder: 1 });
 pricingPlanSchema.index({ billingCycle: 1, currency: 1 });
 

@@ -9,4 +9,6 @@ export { default as Document, type IDocument, type ISectionContent } from './Doc
 export { default as AIUsageLog, type IAIUsageLog } from './AIUsageLog';
 export { default as PricingPlan, type IPricingPlan } from './PricingPlan';
 export { default as DiscountCode, type IDiscountCode } from './DiscountCode';
-export { default as Subscription, type ISubscription } from './Subscription'; 
+export { default as Subscription, type ISubscription } from './Subscription';
+export { default as PaymentMethod, type IPaymentMethod } from './PaymentMethod';
+export { default as Invoice, type IInvoice } from './Invoice'; 
