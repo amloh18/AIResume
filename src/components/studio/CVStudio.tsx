@@ -1,17 +1,19 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import CVFormPanel from './CVFormPanel';
-import CVPreviewPanel from './CVPreviewPanel';
-import CVSidePanel from './CVSidePanel';
-import { PDFService } from '@/lib/services/pdfService';
+import { useSession } from 'next-auth/react';
+import StudioTopBar from './StudioTopBar';
+import StructurePanel from './StructurePanel';
+import PreviewPanel from './PreviewPanel';
+import AIAssistantPanel from './AIAssistantPanel';
 import { useCVStore } from '@/lib/stores/cvStore';
 import { useTemplateStore } from '@/lib/stores/templateStore';
 import { useJobStore } from '@/lib/stores/jobStore';
 import { CVService } from '@/lib/services/cvService';
 import { TemplateService } from '@/lib/services/templateService';
 import { JobService } from '@/lib/services/jobService';
+import { debounce } from 'lodash';
 
 interface CVStudioProps {
   jobId?: string | null;
@@ -21,8 +23,18 @@ interface CVStudioProps {
 
 const CVStudio: React.FC<CVStudioProps> = ({ jobId, cvId, userId }) => {
   const router = useRouter();
+  const { data: session } = useSession();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved');
+  const [documentType, setDocumentType] = useState<'cv' | 'cover-letter'>('cv');
+  const [panelStates, setPanelStates] = useState({
+    left: true,
+    right: true
+  });
+  const [zoom, setZoom] = useState(1);
+  const [paperSize, setPaperSize] = useState<'A4' | 'Letter'>('A4');
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(jobId);
   
   // Store hooks
   const { 
@@ -46,6 +58,38 @@ const CVStudio: React.FC<CVStudioProps> = ({ jobId, cvId, userId }) => {
     setCurrentJob 
   } = useJobStore();
 
+  // Debounced autosave
+  const debouncedSave = useCallback(
+    debounce(async (data: any) => {
+      try {
+        setSaveStatus('saving');
+        if (cvId) {
+          await CVService.updateCV(cvId, { ...data, jobId: selectedJobId });
+        } else {
+          const newCV = await CVService.createCV({
+            ...data,
+            jobId: selectedJobId || jobId || undefined,
+            templateId: selectedTemplate?.id
+          });
+          // Update URL with new CV ID
+          router.replace(`/studio?jobId=${selectedJobId || jobId}&cvId=${newCV.id}`);
+        }
+        setSaveStatus('saved');
+      } catch (err) {
+        console.error('Error saving CV:', err);
+        setSaveStatus('error');
+      }
+    }, 1000),
+    [cvId, jobId, selectedJobId, selectedTemplate, router]
+  );
+
+  // Autosave on any change
+  useEffect(() => {
+    if (cvData && !isLoading) {
+      debouncedSave(cvData);
+    }
+  }, [cvData, debouncedSave, isLoading]);
+
   // Load initial data
   useEffect(() => {
     const loadInitialData = async () => {
@@ -67,6 +111,7 @@ const CVStudio: React.FC<CVStudioProps> = ({ jobId, cvId, userId }) => {
         if (jobId) {
           const jobData = await JobService.getJob(jobId);
           setCurrentJob(jobData);
+          setSelectedJobId(jobId);
         }
 
         // Load CV data
@@ -74,6 +119,11 @@ const CVStudio: React.FC<CVStudioProps> = ({ jobId, cvId, userId }) => {
           // Load existing CV
           const cvData = await CVService.getCV(cvId);
           setCVData(cvData);
+          if (cvData.jobId) {
+            setSelectedJobId(cvData.jobId);
+            const jobData = await JobService.getJob(cvData.jobId);
+            setCurrentJob(jobData);
+          }
         } else {
           // Create new CV with default data
           const defaultCVData = {
@@ -110,47 +160,45 @@ const CVStudio: React.FC<CVStudioProps> = ({ jobId, cvId, userId }) => {
     loadInitialData();
   }, [jobId, cvId, userId]);
 
-  const handleSave = async () => {
+  const handleExport = async (format: 'pdf' | 'docx' | 'json') => {
     try {
-      if (cvId) {
-        await CVService.updateCV(cvId, cvData);
-      } else {
-        const newCV = await CVService.createCV({
-          ...cvData,
-          jobId: jobId || undefined,
-          templateId: selectedTemplate?.id
-        });
-        // Update URL with new CV ID
-        router.replace(`/studio?jobId=${jobId}&cvId=${newCV.id}`);
-      }
+      setSaveStatus('saving');
+      // Implementation for export functionality
+      console.log(`Exporting as ${format}`);
+      setSaveStatus('saved');
     } catch (err) {
-      console.error('Error saving CV:', err);
-      setError('Failed to save CV. Please try again.');
+      console.error('Error exporting:', err);
+      setSaveStatus('error');
     }
   };
 
-  const handleDownloadPDF = async () => {
-    if (!selectedTemplate) {
-      setError('Please select a template first');
-      return;
-    }
-    
-    try {
-      const blob = await PDFService.generatePDF(cvData, selectedTemplate);
-      const filename = `${cvData.personalInfo.firstName}_${cvData.personalInfo.lastName}_CV.pdf`;
-      PDFService.downloadPDF(blob, filename);
-    } catch (err) {
-      console.error('Error downloading PDF:', err);
-      setError('Failed to download PDF. Please try again.');
+  const togglePanel = (panel: 'left' | 'right') => {
+    setPanelStates(prev => ({
+      ...prev,
+      [panel]: !prev[panel]
+    }));
+  };
+
+  const handleJobSelection = async (jobId: string | null) => {
+    setSelectedJobId(jobId);
+    if (jobId) {
+      try {
+        const jobData = await JobService.getJob(jobId);
+        setCurrentJob(jobData);
+      } catch (err) {
+        console.error('Error loading job data:', err);
+      }
+    } else {
+      setCurrentJob(null);
     }
   };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gray-900">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading CV Studio...</p>
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-lime-500 mx-auto mb-4"></div>
+          <p className="text-gray-300">Loading Studio...</p>
         </div>
       </div>
     );
@@ -158,12 +206,12 @@ const CVStudio: React.FC<CVStudioProps> = ({ jobId, cvId, userId }) => {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gray-900">
         <div className="text-center">
-          <div className="text-red-600 mb-4">{error}</div>
+          <div className="text-red-400 mb-4">{error}</div>
           <button 
             onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            className="px-4 py-2 bg-lime-600 text-white rounded-lg hover:bg-lime-700 transition-colors"
           >
             Retry
           </button>
@@ -173,73 +221,69 @@ const CVStudio: React.FC<CVStudioProps> = ({ jobId, cvId, userId }) => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={() => router.push('/dashboard')}
-              className="text-gray-600 hover:text-gray-900"
-            >
-              ← Back to Dashboard
-            </button>
-            <h1 className="text-2xl font-bold text-gray-900">CV Studio</h1>
-            {currentJob && (
-              <span className="text-sm text-gray-500">
-                Tailoring for: {currentJob.title} at {currentJob.company}
-              </span>
-            )}
-          </div>
-          
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={handleSave}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Save CV
-            </button>
-            <button
-              onClick={handleDownloadPDF}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-            >
-              Download PDF
-            </button>
-          </div>
-        </div>
-      </div>
+    <div className="h-screen flex flex-col bg-gray-900 overflow-hidden">
+      {/* Top App Bar */}
+      <StudioTopBar
+        documentType={documentType}
+        setDocumentType={setDocumentType}
+        saveStatus={saveStatus}
+        onExport={handleExport}
+        onBack={() => router.push('/dashboard')}
+        panelStates={panelStates}
+        onTogglePanel={togglePanel}
+      />
 
-      {/* Main Content */}
-      <div className="flex-1 flex">
-        {/* Left Panel - CV Form */}
-        <div className="w-1/3 bg-white border-r border-gray-200 overflow-y-auto">
-          <CVFormPanel 
+      {/* Main Content Area */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left Panel - Structure */}
+        <div className={`
+          transition-all duration-300 ease-out
+          ${panelStates.left ? 'w-96' : 'w-16'}
+          bg-gray-800 border-r border-gray-700
+          flex-shrink-0 relative
+        `}>
+          <StructurePanel
             cvData={cvData}
             onUpdateField={updateCVField}
             onAddSection={addSection}
             onRemoveSection={removeSection}
             selectedTemplate={selectedTemplate}
+            isCollapsed={!panelStates.left}
+            onTogglePanel={() => togglePanel('left')}
           />
         </div>
 
-        {/* Center Panel - Live Preview */}
-        <div className="flex-1 bg-gray-50 overflow-y-auto">
-          <CVPreviewPanel 
+        {/* Center Panel - Preview */}
+        <div className="flex-1 bg-gray-900 relative">
+          <PreviewPanel
             cvData={cvData}
             template={selectedTemplate}
             jobData={currentJob}
+            zoom={zoom}
+            setZoom={setZoom}
+            paperSize={paperSize}
+            setPaperSize={setPaperSize}
+            documentType={documentType}
           />
         </div>
 
-        {/* Right Panel - Templates & AI */}
-        <div className="w-1/3 bg-white border-l border-gray-200 overflow-y-auto">
-          <CVSidePanel 
-            templates={templates}
-            selectedTemplate={selectedTemplate}
-            onTemplateChange={setSelectedTemplate}
+        {/* Right Panel - AI Assistant */}
+        <div className={`
+          transition-all duration-300 ease-out
+          ${panelStates.right ? 'w-96' : 'w-16'}
+          bg-gray-800 border-l border-gray-700
+          flex-shrink-0 relative
+        `}>
+          <AIAssistantPanel
             cvData={cvData}
             jobData={currentJob}
             onUpdateField={updateCVField}
+            isCollapsed={!panelStates.right}
+            documentType={documentType}
+            selectedJobId={selectedJobId}
+            onJobSelection={handleJobSelection}
+            onTogglePanel={() => togglePanel('right')}
+            cvId={cvId}
           />
         </div>
       </div>

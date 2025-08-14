@@ -19,7 +19,7 @@ function StudioPageContent() {
         <CVStudio 
           jobId={jobId} 
           cvId={cvId}
-          userId={session?.user?.id}
+          userId={session?.user?.id || ''}
         />
       </div>
     </RouteGuard>
