@@ -1,69 +1,121 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/database';
-import { User, CV, Job, CoverLetter } from '@/models';
+import { createErrorResponse } from '@/lib/db-utils';
+
+// Create a simple activity model for this endpoint
+interface Activity {
+  userId: string;
+  type: string;
+  description: string;
+  metadata?: any;
+  createdAt: Date;
+}
+
+// In-memory storage for activities (in production, use a proper database)
+let activities: Activity[] = [];
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
+    const types = searchParams.getAll('types');
+    const limit = searchParams.get('limit');
+    const since = searchParams.get('since');
 
     if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+      return NextResponse.json(
+        { success: false, message: 'User ID is required' },
+        { status: 400 }
+      );
     }
 
-    await connectDB();
+    // Filter activities by user
+    let filteredActivities = activities.filter(activity => activity.userId === userId);
 
-    // Get recent activity from all user data
-    const [cvs, jobs, coverLetters] = await Promise.all([
-      CV.find({ userId }).sort({ updatedAt: -1 }).limit(10).lean(),
-      Job.find({ userId }).sort({ updatedAt: -1 }).limit(10).lean(),
-      CoverLetter.find({ userId }).sort({ updatedAt: -1 }).limit(10).lean()
-    ]);
+    // Filter by types if specified
+    if (types.length > 0) {
+      filteredActivities = filteredActivities.filter(activity => 
+        types.includes(activity.type)
+      );
+    }
 
-    // Combine and sort all activities
-    const activities = [
-      ...cvs.map(cv => ({
-        id: cv._id,
-        type: 'cv',
-        action: cv.status === 'published' ? 'published' : 'updated',
-        title: cv.title || 'Untitled CV',
-        timestamp: cv.updatedAt,
-        description: cv.status === 'published' ? 'Published CV' : 'Updated CV'
-      })),
-      ...jobs.map(job => ({
-        id: job._id,
-        type: 'job',
-        action: 'added',
-        title: `${job.jobTitle} at ${job.company}`,
-        timestamp: job.createdAt,
-        description: 'Added new job'
-      })),
-      ...coverLetters.map(letter => ({
-        id: letter._id,
-        type: 'cover_letter',
-        action: letter.status === 'sent' ? 'sent' : 'created',
-        title: letter.title || 'Untitled Cover Letter',
-        timestamp: letter.updatedAt,
-        description: letter.status === 'sent' ? 'Sent cover letter' : 'Created cover letter'
-      }))
-    ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-    .slice(0, 10);
+    // Filter by date if specified
+    if (since) {
+      const sinceDate = new Date(since);
+      filteredActivities = filteredActivities.filter(activity => 
+        activity.createdAt >= sinceDate
+      );
+    }
 
-    // Get notes count (placeholder for now)
-    const notesCount = Math.floor((cvs.length + jobs.length + coverLetters.length) * 0.3);
+    // Sort by creation date (newest first)
+    filteredActivities.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+    // Apply limit if specified
+    if (limit) {
+      filteredActivities = filteredActivities.slice(0, parseInt(limit));
+    }
 
     return NextResponse.json({
       success: true,
       data: {
-        activities,
-        notesCount
+        activities: filteredActivities
       }
     });
-  } catch (error) {
-    console.error('Error fetching activity:', error);
+
+  } catch (error: any) {
+    console.error('Get activities error:', error);
+    const errorResponse = createErrorResponse(error);
+    
     return NextResponse.json(
-      { error: 'Failed to fetch activity' },
-      { status: 500 }
+      errorResponse,
+      { status: errorResponse.statusCode || 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { userId, type, description, metadata } = body;
+
+    if (!userId || !type || !description) {
+      return NextResponse.json(
+        { success: false, message: 'User ID, type, and description are required' },
+        { status: 400 }
+      );
+    }
+
+    const activity: Activity = {
+      userId,
+      type,
+      description,
+      metadata,
+      createdAt: new Date()
+    };
+
+    // Add to in-memory storage
+    activities.push(activity);
+
+    // Keep only the last 1000 activities to prevent memory issues
+    if (activities.length > 1000) {
+      activities = activities.slice(-1000);
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Activity logged successfully',
+      data: {
+        activity
+      }
+    }, { status: 201 });
+
+  } catch (error: any) {
+    console.error('Log activity error:', error);
+    const errorResponse = createErrorResponse(error);
+    
+    return NextResponse.json(
+      errorResponse,
+      { status: errorResponse.statusCode || 500 }
     );
   }
 }
