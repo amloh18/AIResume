@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { 
@@ -1867,8 +1867,8 @@ const MainContent = ({
     );
 };
 
-// --- MAIN COMPONENT ---
-export default function SettingsPage() {
+// Settings Content Component (uses useSearchParams)
+function SettingsContent() {
   const { data: session } = useSession();
   const searchParams = useSearchParams();
   const [theme, setTheme] = useState('light');
@@ -2043,5 +2043,26 @@ export default function SettingsPage() {
         onSuccess={handleMembershipSuccess}
       />
     </RouteGuard>
+  );
+}
+
+// Loading fallback component
+function SettingsLoading() {
+  return (
+    <div className="bg-gradient-to-br from-black via-gray-900 to-black min-h-screen font-sans flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lime-500 mx-auto mb-4"></div>
+        <p className="text-gray-400">Loading settings...</p>
+      </div>
+    </div>
+  );
+}
+
+// --- MAIN COMPONENT ---
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={<SettingsLoading />}>
+      <SettingsContent />
+    </Suspense>
   );
 }
