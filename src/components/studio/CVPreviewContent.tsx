@@ -8,12 +8,14 @@ interface CVPreviewContentProps {
   cvData: CVDataStructure | null;
   theme?: 'light' | 'dark';
   showBadge?: boolean;
+  sectionOrder?: string[];
 }
 
 const CVPreviewContent: React.FC<CVPreviewContentProps> = ({ 
   cvData, 
   theme = 'light', 
-  showBadge = true 
+  showBadge = true,
+  sectionOrder = ['basics', 'experience', 'education', 'skills', 'projects', 'certificates', 'languages']
 }) => {
   const isDark = theme === 'dark';
   
@@ -185,8 +187,8 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
             </div>
           )}
 
-          {/* Skills - only if work has 2 or fewer entries */}
-          {cvData.work.length <= 2 && cvData.skills.length > 0 && (
+          {/* Skills */}
+          {cvData.skills.length > 0 && (
             <div className="mb-6">
               <h5 className={`text-xl font-semibold ${themeClasses.text.primary} mb-4 border-b ${themeClasses.border} pb-1`}>
                 Skills
@@ -195,6 +197,60 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
                 {cvData.skills.map((skill, index) => (
                   <div key={index} className={`${isDark ? 'bg-lime-400/20 text-lime-400' : 'bg-blue-100 text-blue-700'} px-3 py-2 rounded-full text-sm font-medium`}>
                     {skill.name}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Certifications */}
+          {cvData.certificates && cvData.certificates.length > 0 && (
+            <div className="mb-6">
+              <h5 className={`text-xl font-semibold ${themeClasses.text.primary} mb-4 border-b ${themeClasses.border} pb-1`}>
+                Certifications
+              </h5>
+              <div className="space-y-3">
+                {cvData.certificates.map((certificate, index) => (
+                  <div key={index} className={`border-l-4 ${themeClasses.accent} pl-4`}>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h6 className={`font-semibold ${themeClasses.text.primary} text-base`}>
+                          {certificate.name}
+                        </h6>
+                        <p className={`${themeClasses.text.accent} text-sm`}>
+                          {certificate.issuer}
+                        </p>
+                      </div>
+                      <span className={`${themeClasses.text.muted} text-sm`}>
+                        {certificate.date}
+                      </span>
+                    </div>
+                    {certificate.url && (
+                      <p className={`${themeClasses.text.accent} text-xs mt-1`}>
+                        <a href={certificate.url} target="_blank" rel="noopener noreferrer">
+                          View Certificate
+                        </a>
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Languages */}
+          {cvData.languages && cvData.languages.length > 0 && (
+            <div className="mb-6">
+              <h5 className={`text-xl font-semibold ${themeClasses.text.primary} mb-4 border-b ${themeClasses.border} pb-1`}>
+                Languages
+              </h5>
+              <div className="flex flex-wrap gap-3">
+                {cvData.languages.map((language, index) => (
+                  <div key={index} className={`${isDark ? 'bg-gray-700 text-white' : 'bg-gray-100 text-gray-700'} px-3 py-2 rounded-lg text-sm`}>
+                    <span className="font-medium">{language.language}</span>
+                    <span className={`${themeClasses.text.muted} ml-2`}>
+                      ({language.fluency})
+                    </span>
                   </div>
                 ))}
               </div>

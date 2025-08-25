@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { signOut } from 'next-auth/react';
+import { signOut, useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { 
   FileText, 
   Briefcase, 
@@ -14,7 +15,8 @@ import {
   Sparkles,
   User,
   LogOut,
-  Crown
+  Crown,
+  Shield
 } from 'lucide-react';
 
 interface DashboardNavigationProps {
@@ -39,6 +41,11 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
   onMembershipClick,
   user
 }) => {
+  const { data: session } = useSession();
+  const router = useRouter();
+  
+  // Check if user is admin
+  const isAdmin = session?.user?.role === 'admin';
 
   const sections = [
     { id: 'pulse', name: 'Analytics', icon: BarChart3, description: 'Progress Tracking' },
@@ -130,6 +137,25 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
               <div className="text-xs opacity-60">Preferences</div>
             </div>
           </motion.button>
+          
+          {/* Admin Dashboard Button - Only show for admin users */}
+          {isAdmin && (
+            <motion.button
+              onClick={() => router.push('/admin')}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 border border-purple-500/20"
+              whileHover={{ x: 5 }}
+              whileTap={{ scale: 0.95 }}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <Shield size={20} />
+              <div className="text-left">
+                <div className="font-medium">Admin Dashboard</div>
+                <div className="text-xs opacity-60">System Management</div>
+              </div>
+            </motion.button>
+          )}
         </div>
 
         {/* Membership Status */}

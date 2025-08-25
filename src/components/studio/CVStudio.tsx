@@ -436,7 +436,7 @@ const CVStudio: React.FC<CVStudioProps> = ({ jobId, cvId, userId }) => {
         {/* Left Panel - Structure */}
         <div className={`
           transition-all duration-300 ease-out
-          ${panelStates.left ? 'w-96' : 'w-16'}
+          ${panelStates.left ? 'w-[500px]' : 'w-12'}
           bg-gray-800 border-r border-gray-700
           flex-shrink-0 relative
         `}>
@@ -461,6 +461,7 @@ const CVStudio: React.FC<CVStudioProps> = ({ jobId, cvId, userId }) => {
             paperSize={paperSize}
             setPaperSize={setPaperSize}
             documentType={documentType}
+            sectionOrder={['basics', 'experience', 'education', 'skills', 'projects', 'certificates', 'languages']}
           />
         </div>
 

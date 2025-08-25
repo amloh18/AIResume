@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   User, 
@@ -14,12 +14,19 @@ import {
   ChevronRight,
   ChevronLeft,
   ArrowRight,
-  ArrowLeft
+  ArrowLeft,
+  Palette,
+  FileText,
+  Settings
 } from 'lucide-react';
 import { CVDataStructure } from '@/types/cv';
 import PersonalInfoStep from '@/components/onboarding/PersonalInfoStep';
 import ExperienceStep from '@/components/onboarding/ExperienceStep';
 import EducationStep from '@/components/onboarding/EducationStep';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface OnboardingFormPanelProps {
   cvData: CVDataStructure | null;
@@ -30,6 +37,62 @@ interface OnboardingFormPanelProps {
   onTogglePanel: () => void;
 }
 
+// Sortable Section Icon Component
+const SortableSectionIcon = ({ section, isActive, onClick }: { 
+  section: any; 
+  isActive: boolean; 
+  onClick: () => void;
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: section.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const Icon = section.icon;
+
+  const handleClick = (e: React.MouseEvent) => {
+    // Prevent click when dragging
+    if (isDragging) {
+      e.preventDefault();
+      return;
+    }
+    onClick();
+  };
+
+  return (
+    <div className="relative">
+      <button
+        ref={setNodeRef}
+        style={style}
+        {...attributes}
+        {...listeners}
+        onClick={handleClick}
+        className={`p-2 rounded-lg transition-all duration-200 cursor-grab active:cursor-grabbing hover:scale-105 ${
+          isActive
+            ? 'bg-blue-600 text-white shadow-lg'
+            : 'text-gray-400 hover:text-white hover:bg-gray-700'
+        } ${isDragging ? 'z-50' : ''}`}
+        title={`${section.label} (Drag to reorder)`}
+      >
+        <Icon size={18} />
+      </button>
+      {isDragging && (
+        <div className="absolute inset-0 bg-blue-600/20 rounded-lg border-2 border-blue-400 border-dashed"></div>
+      )}
+    </div>
+  );
+};
+
 const OnboardingFormPanel: React.FC<OnboardingFormPanelProps> = ({
   cvData,
   onUpdateField,
@@ -38,14 +101,38 @@ const OnboardingFormPanel: React.FC<OnboardingFormPanelProps> = ({
   isCollapsed,
   onTogglePanel
 }) => {
+  const [activeTab, setActiveTab] = useState<'structure' | 'design' | 'template'>('structure');
   const [activeSection, setActiveSection] = useState<'basics' | 'experience' | 'education' | 'skills' | 'projects' | 'certificates' | 'languages'>('basics');
+  const [sectionOrder, setSectionOrder] = useState([
+    'basics',
+    'experience', 
+    'education',
+    'skills',
+    'projects',
+    'certificates',
+    'languages'
+  ]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   // Debug logging
   console.log('🔍 OnboardingFormPanel received cvData:', cvData);
   console.log('🔍 cvData type:', typeof cvData);
   console.log('🔍 cvData.basics:', cvData?.basics);
   console.log('🔍 cvData.work:', cvData?.work);
+  console.log('🔍 Active tab:', activeTab);
   console.log('🔍 Active section:', activeSection);
+  console.log('🔍 Section order:', sectionOrder);
+
+  // Monitor section order changes
+  useEffect(() => {
+    console.log('🔍 Section order updated:', sectionOrder);
+  }, [sectionOrder]);
 
   const sections = [
     { id: 'basics', label: 'Personal Info', icon: User },
@@ -56,6 +143,50 @@ const OnboardingFormPanel: React.FC<OnboardingFormPanelProps> = ({
     { id: 'certificates', label: 'Certifications', icon: Award },
     { id: 'languages', label: 'Languages', icon: Globe },
   ];
+
+  // Sort sections based on the order
+  const orderedSections = sectionOrder.map(id => 
+    sections.find(section => section.id === id)
+  ).filter(Boolean);
+
+  const handleDragEnd = (event: any) => {
+    const { active, over } = event;
+    
+    console.log('🔍 Drag end event:', { active, over });
+
+    if (active.id !== over.id) {
+      console.log('🔍 Reordering sections:', { from: active.id, to: over.id });
+      
+      setSectionOrder((items) => {
+        const oldIndex = items.indexOf(active.id);
+        const newIndex = items.indexOf(over.id);
+        
+        console.log('🔍 Current section order:', items);
+        console.log('🔍 Indices:', { oldIndex, newIndex });
+        
+        if (oldIndex === -1 || newIndex === -1) {
+          console.warn('Invalid section indices:', { oldIndex, newIndex, activeId: active.id, overId: over.id });
+          return items;
+        }
+        
+        const newOrder = arrayMove(items, oldIndex, newIndex);
+        console.log('🔍 New section order:', newOrder);
+        
+        // Here you could also update the CV data structure to reflect the new order
+        // For example, you might want to store the section order in the CV data
+        if (cvData) {
+          // You could add a sectionOrder field to the CV data structure
+          // onUpdateField('sectionOrder', newOrder);
+        }
+        
+        return newOrder;
+      });
+    }
+  };
+
+  const handleDragStart = (event: any) => {
+    console.log('🔍 Drag start event:', event);
+  };
 
   // Create a mock onboarding context that works with the Studio's data
   const createMockOnboardingContext = () => ({
@@ -203,6 +334,30 @@ const OnboardingFormPanel: React.FC<OnboardingFormPanelProps> = ({
             />
           </div>
         );
+      case 'certificates':
+        return (
+          <div className="p-4">
+            <CertificatesStepContent 
+              cvData={cvData}
+              onUpdateField={onUpdateField}
+              onAddSection={onAddSection}
+              onRemoveSection={onRemoveSection}
+              mockContext={mockContext}
+            />
+          </div>
+        );
+      case 'languages':
+        return (
+          <div className="p-4">
+            <LanguagesStepContent 
+              cvData={cvData}
+              onUpdateField={onUpdateField}
+              onAddSection={onAddSection}
+              onRemoveSection={onRemoveSection}
+              mockContext={mockContext}
+            />
+          </div>
+        );
       default:
         return (
           <div className="p-4 text-gray-400">
@@ -212,9 +367,106 @@ const OnboardingFormPanel: React.FC<OnboardingFormPanelProps> = ({
     }
   };
 
+  const renderDesignTab = () => {
+    return (
+      <div className="p-4">
+        <h3 className="text-lg font-semibold text-white mb-4">Design Settings</h3>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Header Font Size</label>
+            <input
+              type="range"
+              min="12"
+              max="48"
+              defaultValue="24"
+              className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+            />
+            <div className="text-xs text-gray-400 mt-1">24px</div>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Body Font Size</label>
+            <input
+              type="range"
+              min="10"
+              max="20"
+              defaultValue="14"
+              className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+            />
+            <div className="text-xs text-gray-400 mt-1">14px</div>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Section Title Font Size</label>
+            <input
+              type="range"
+              min="14"
+              max="32"
+              defaultValue="18"
+              className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+            />
+            <div className="text-xs text-gray-400 mt-1">18px</div>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Line Spacing</label>
+            <input
+              type="range"
+              min="1"
+              max="2"
+              step="0.1"
+              defaultValue="1.2"
+              className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+            />
+            <div className="text-xs text-gray-400 mt-1">1.2</div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderTemplateTab = () => {
+    const templates = [
+      { id: '1', name: 'Modern Professional', image: '/api/templates/1/image', selected: true },
+      { id: '2', name: 'Classic Elegant', image: '/api/templates/2/image', selected: false },
+      { id: '3', name: 'Creative Portfolio', image: '/api/templates/3/image', selected: false },
+      { id: '4', name: 'Minimal Clean', image: '/api/templates/4/image', selected: false },
+      { id: '5', name: 'Executive Summary', image: '/api/templates/5/image', selected: false },
+      { id: '6', name: 'Tech Specialist', image: '/api/templates/6/image', selected: false },
+    ];
+
+    return (
+      <div className="p-4">
+        <h3 className="text-lg font-semibold text-white mb-4">Choose Template</h3>
+        <div className="grid grid-cols-2 gap-3">
+          {templates.map((template) => (
+            <div
+              key={template.id}
+              className={`relative cursor-pointer rounded-lg border-2 transition-all ${
+                template.selected
+                  ? 'border-blue-500 bg-blue-500/10'
+                  : 'border-gray-600 bg-gray-800 hover:border-gray-500'
+              }`}
+            >
+              <div className="aspect-[3/4] bg-gray-700 rounded-t-lg flex items-center justify-center">
+                <FileText className="h-8 w-8 text-gray-400" />
+              </div>
+              <div className="p-2">
+                <p className="text-xs text-gray-300 text-center">{template.name}</p>
+              </div>
+              {template.selected && (
+                <div className="absolute top-1 right-1 w-3 h-3 bg-blue-500 rounded-full"></div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   if (isCollapsed) {
     return (
-      <div className="w-16 bg-gray-900 border-r border-gray-700 flex flex-col items-center py-4">
+      <div className="w-12 bg-gray-900 border-r border-gray-700 flex flex-col items-center py-4">
         <button
           onClick={onTogglePanel}
           className="p-2 text-gray-400 hover:text-white transition-colors"
@@ -226,11 +478,11 @@ const OnboardingFormPanel: React.FC<OnboardingFormPanelProps> = ({
   }
 
   return (
-    <div className="w-96 bg-gray-900 border-r border-gray-700 flex flex-col h-full">
+    <div className="w-[500px] bg-gray-900 border-r border-gray-700 flex flex-col h-full">
       {/* Header */}
       <div className="p-4 border-b border-gray-700">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-white">CV Builder</h2>
+          <h2 className="text-lg font-semibold text-white">CV Studio</h2>
           <button
             onClick={onTogglePanel}
             className="p-1 text-gray-400 hover:text-white transition-colors"
@@ -240,66 +492,98 @@ const OnboardingFormPanel: React.FC<OnboardingFormPanelProps> = ({
         </div>
       </div>
 
+      {/* Tab Navigation */}
+      <div className="flex border-b border-gray-700">
+        <button
+          onClick={() => setActiveTab('structure')}
+          className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
+            activeTab === 'structure'
+              ? 'text-blue-400 border-b-2 border-blue-400'
+              : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          Structure
+        </button>
+        <button
+          onClick={() => setActiveTab('design')}
+          className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
+            activeTab === 'design'
+              ? 'text-blue-400 border-b-2 border-blue-400'
+              : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          Design
+        </button>
+        <button
+          onClick={() => setActiveTab('template')}
+          className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
+            activeTab === 'template'
+              ? 'text-blue-400 border-b-2 border-blue-400'
+              : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          Template
+        </button>
+      </div>
+
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Sidebar - Section Icons */}
-        <div className="w-16 bg-gray-800 border-r border-gray-700 flex flex-col items-center py-4">
-          <div className="space-y-4">
-            {sections.map((section) => {
-              const Icon = section.icon;
-              return (
-                <button
-                  key={section.id}
-                  onClick={() => setActiveSection(section.id as any)}
-                  className={`p-3 rounded-lg transition-all duration-200 ${
-                    activeSection === section.id
-                      ? 'bg-blue-600 text-white shadow-lg'
-                      : 'text-gray-400 hover:text-white hover:bg-gray-700'
-                  }`}
-                  title={section.label}
-                >
-                  <Icon size={20} />
-                </button>
-              );
-            })}
+        {/* Left Sidebar - Section Icons (only for Structure tab) */}
+        {activeTab === 'structure' && (
+          <div className="w-12 bg-gray-800 border-r border-gray-700 flex flex-col items-center py-4">
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={orderedSections.map(s => s?.id).filter((id): id is string => Boolean(id))}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="flex flex-col items-center space-y-3">
+                  {orderedSections.map((section, index) => (
+                    section && (
+                      <SortableSectionIcon
+                        key={section.id}
+                        section={section}
+                        isActive={activeSection === section.id}
+                        onClick={() => setActiveSection(section.id as any)}
+                      />
+                    )
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
           </div>
-        </div>
+        )}
 
         {/* Right Content - Section Details */}
         <div className="flex-1 overflow-y-auto">
-          {/* Section Header */}
-          <div className="p-4 border-b border-gray-700">
-            <div className="flex items-center gap-3">
-              {(() => {
-                const Icon = sections.find(s => s.id === activeSection)?.icon || User;
-                return <Icon size={24} className="text-blue-400" />;
-              })()}
-              <div className="flex-1">
-                <h3 className="text-xl font-semibold text-white">
-                  {sections.find(s => s.id === activeSection)?.label}
-                </h3>
-                {cvData && (
-                  <div className="text-xs text-gray-400 mt-1">
-                    {(() => {
-                      const sectionData = cvData[activeSection as keyof CVDataStructure];
-                      if (Array.isArray(sectionData)) {
-                        return `${sectionData.length} item${sectionData.length !== 1 ? 's' : ''}`;
-                      } else if (typeof sectionData === 'object' && sectionData !== null) {
-                        const filledFields = Object.values(sectionData).filter(v => v && v !== '').length;
-                        return `${filledFields} field${filledFields !== 1 ? 's' : ''} filled`;
-                      }
-                      return 'No data';
-                    })()}
-                  </div>
-                )}
+          {activeTab === 'structure' && (
+            <>
+              {/* Section Header */}
+              <div className="p-4 border-b border-gray-700">
+                <div className="flex items-center gap-3">
+                  {(() => {
+                    const Icon = sections.find(s => s.id === activeSection)?.icon || User;
+                    return <Icon size={24} className="text-blue-400" />;
+                  })()}
+                  <h3 className="text-xl font-semibold text-white">
+                    {sections.find(s => s.id === activeSection)?.label}
+                  </h3>
+                </div>
               </div>
-            </div>
-          </div>
 
-          {/* Section Content */}
-          <div className="p-4">
-            {renderSection()}
-          </div>
+              {/* Section Content */}
+              <div className="p-4">
+                {renderSection()}
+              </div>
+            </>
+          )}
+          
+          {activeTab === 'design' && renderDesignTab()}
+          {activeTab === 'template' && renderTemplateTab()}
         </div>
       </div>
     </div>
@@ -339,7 +623,6 @@ const PersonalInfoStepContent: React.FC<{
           className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder="John Doe"
         />
-        <div className="text-xs text-gray-500 mt-1">Current value: "{cvData.basics?.name || 'empty'}"</div>
       </div>
 
       <div>
@@ -351,7 +634,6 @@ const PersonalInfoStepContent: React.FC<{
           className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder="Software Engineer"
         />
-        <div className="text-xs text-gray-500 mt-1">Current value: "{cvData.basics?.label || 'empty'}"</div>
       </div>
 
       <div>
@@ -363,7 +645,6 @@ const PersonalInfoStepContent: React.FC<{
           className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder="john@example.com"
         />
-        <div className="text-xs text-gray-500 mt-1">Current value: "{cvData.basics?.email || 'empty'}"</div>
       </div>
 
       <div>
@@ -375,7 +656,6 @@ const PersonalInfoStepContent: React.FC<{
           className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder="+1 (555) 123-4567"
         />
-        <div className="text-xs text-gray-500 mt-1">Current value: "{cvData.basics?.phone || 'empty'}"</div>
       </div>
 
       <div>
@@ -387,7 +667,6 @@ const PersonalInfoStepContent: React.FC<{
           className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder="San Francisco"
         />
-        <div className="text-xs text-gray-500 mt-1">Current value: "{cvData.basics?.location?.city || 'empty'}"</div>
       </div>
 
       <div>
@@ -399,7 +678,6 @@ const PersonalInfoStepContent: React.FC<{
           className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder="California"
         />
-        <div className="text-xs text-gray-500 mt-1">Current value: "{cvData.basics?.location?.region || 'empty'}"</div>
       </div>
 
       <div>
@@ -411,7 +689,6 @@ const PersonalInfoStepContent: React.FC<{
           className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder="https://johndoe.com"
         />
-        <div className="text-xs text-gray-500 mt-1">Current value: "{cvData.basics?.url || 'empty'}"</div>
       </div>
 
       <div>
@@ -423,7 +700,6 @@ const PersonalInfoStepContent: React.FC<{
           className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder="Experienced software engineer with 5+ years..."
         />
-        <div className="text-xs text-gray-500 mt-1">Current value: "{cvData.basics?.summary || 'empty'}"</div>
       </div>
     </div>
   );
@@ -891,6 +1167,193 @@ const ProjectsStepContent: React.FC<{
                 className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Implemented new feature, improved performance"
               />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// Adapted CertificatesStep content for Studio
+const CertificatesStepContent: React.FC<{
+  cvData: CVDataStructure;
+  onUpdateField: (path: string, value: any) => void;
+  onAddSection: (sectionType: keyof CVDataStructure, item?: any) => void;
+  onRemoveSection: (sectionType: keyof CVDataStructure, id: string) => void;
+  mockContext: any;
+}> = ({ cvData, onUpdateField, onAddSection, onRemoveSection, mockContext }) => {
+  const addCertificate = () => {
+    const newCertificate = {
+      name: '',
+      date: '',
+      issuer: '',
+      url: ''
+    };
+    onAddSection('certificates', newCertificate);
+  };
+
+  const updateCertificate = (index: number, field: string, value: any) => {
+    const updatedCertificates = [...(cvData.certificates || [])];
+    updatedCertificates[index] = { ...updatedCertificates[index], [field]: value };
+    onUpdateField('certificates', updatedCertificates);
+  };
+
+  const removeCertificate = (index: number) => {
+    const updatedCertificates = (cvData.certificates || []).filter((_, i) => i !== index);
+    onUpdateField('certificates', updatedCertificates);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <button
+          onClick={addCertificate}
+          className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+        >
+          <Plus size={16} />
+          <span className="text-sm">Add Certificate</span>
+        </button>
+      </div>
+
+      {(cvData.certificates || []).map((certificate, index) => (
+        <div key={index} className="p-4 bg-gray-800 rounded-lg border border-gray-700">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="font-medium text-white">Certificate #{index + 1}</h4>
+            <button
+              onClick={() => removeCertificate(index)}
+              className="text-red-400 hover:text-red-300"
+            >
+              Remove
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">Certificate Name</label>
+              <input
+                type="text"
+                value={certificate.name || ''}
+                onChange={(e) => updateCertificate(index, 'name', e.target.value)}
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="AWS Certified Developer"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">Issuer</label>
+              <input
+                type="text"
+                value={certificate.issuer || ''}
+                onChange={(e) => updateCertificate(index, 'issuer', e.target.value)}
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Amazon Web Services"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">Date</label>
+              <input
+                type="text"
+                value={certificate.date || ''}
+                onChange={(e) => updateCertificate(index, 'date', e.target.value)}
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="2022-01-01"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">URL</label>
+              <input
+                type="url"
+                value={certificate.url || ''}
+                onChange={(e) => updateCertificate(index, 'url', e.target.value)}
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="https://example.com/credentials/ABC123XYZ"
+              />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// Adapted LanguagesStep content for Studio
+const LanguagesStepContent: React.FC<{
+  cvData: CVDataStructure;
+  onUpdateField: (path: string, value: any) => void;
+  onAddSection: (sectionType: keyof CVDataStructure, item?: any) => void;
+  onRemoveSection: (sectionType: keyof CVDataStructure, id: string) => void;
+  mockContext: any;
+}> = ({ cvData, onUpdateField, onAddSection, onRemoveSection, mockContext }) => {
+  const addLanguage = () => {
+    const newLanguage = {
+      language: '',
+      fluency: 'Beginner'
+    };
+    onAddSection('languages', newLanguage);
+  };
+
+  const updateLanguage = (index: number, field: string, value: any) => {
+    const updatedLanguages = [...(cvData.languages || [])];
+    updatedLanguages[index] = { ...updatedLanguages[index], [field]: value };
+    onUpdateField('languages', updatedLanguages);
+  };
+
+  const removeLanguage = (index: number) => {
+    const updatedLanguages = (cvData.languages || []).filter((_, i) => i !== index);
+    onUpdateField('languages', updatedLanguages);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <button
+          onClick={addLanguage}
+          className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+        >
+          <Plus size={16} />
+          <span className="text-sm">Add Language</span>
+        </button>
+      </div>
+
+      {(cvData.languages || []).map((language, index) => (
+        <div key={index} className="p-4 bg-gray-800 rounded-lg border border-gray-700">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="font-medium text-white">Language #{index + 1}</h4>
+            <button
+              onClick={() => removeLanguage(index)}
+              className="text-red-400 hover:text-red-300"
+            >
+              Remove
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">Language</label>
+              <input
+                type="text"
+                value={language.language || ''}
+                onChange={(e) => updateLanguage(index, 'language', e.target.value)}
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="English"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">Fluency</label>
+              <select
+                value={language.fluency || 'Beginner'}
+                onChange={(e) => updateLanguage(index, 'fluency', e.target.value)}
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="Beginner">Beginner</option>
+                <option value="Intermediate">Intermediate</option>
+                <option value="Advanced">Advanced</option>
+                <option value="Native">Native</option>
+              </select>
             </div>
           </div>
         </div>
