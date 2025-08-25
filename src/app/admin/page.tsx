@@ -19,7 +19,9 @@ import {
   ExternalLink,
   Database,
   Cloud,
-  Server
+  Server,
+  CreditCard,
+  Wallet
 } from 'lucide-react';
 import AdminKPIs from '@/components/admin/AdminKPIs';
 import TemplateManager from '@/components/admin/TemplateManager';
@@ -219,13 +221,23 @@ const AdminPage: React.FC<AdminPageProps> = () => {
               <ExternalLink size={14} className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
             </a>
             <a
-              href="https://appwrite.io"
+              href="https://dashboard.stripe.com"
               target="_blank"
               rel="noopener noreferrer"
               className="w-full flex items-center px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white rounded-lg transition-colors group"
             >
-              <Server size={18} className="mr-3 text-purple-500" />
-              <span>AppWrite</span>
+              <CreditCard size={18} className="mr-3 text-blue-600" />
+              <span>Stripe Dashboard</span>
+              <ExternalLink size={14} className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+            </a>
+            <a
+              href="https://dashboard.razorpay.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full flex items-center px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white rounded-lg transition-colors group"
+            >
+              <Wallet size={18} className="mr-3 text-indigo-600" />
+              <span>Razorpay Dashboard</span>
               <ExternalLink size={14} className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
             </a>
           </div>
