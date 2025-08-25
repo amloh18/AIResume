@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useAIStore } from '@/lib/stores/aiStore';
-import { useCVStore } from '@/lib/stores/cvStore';
 import { useJobStore } from '@/lib/stores/jobStore';
 import { AIAssistantService } from '@/lib/services/aiAssistantService';
 import { debounce } from 'lodash';
+import { CVDataStructure } from '@/types/cv';
 
-export const useAIAssistant = (cvId: string | null, documentType: 'cv' | 'cover-letter' = 'cv') => {
+export const useAIAssistant = (
+  cvId: string | null, 
+  cvData: CVDataStructure | null,
+  documentType: 'cv' | 'cover-letter' = 'cv'
+) => {
   const {
     ats,
     sections,
@@ -25,12 +29,11 @@ export const useAIAssistant = (cvId: string | null, documentType: 'cv' | 'cover-
     setLoadingBySection
   } = useAIStore();
 
-  const { cvData } = useCVStore();
   const { currentJob } = useJobStore();
   
   const debouncedATSCalculation = useRef(
-    debounce(async (cvData: any, jobData: any) => {
-      if (!cvId) return;
+    debounce(async (cvData: CVDataStructure | null, jobData: any) => {
+      if (!cvId || !cvData) return;
       
       try {
         setATSUpdating(true);

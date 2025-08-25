@@ -1,8 +1,13 @@
 'use client';
 
 import React, { useState } from 'react';
-import { CustomSection } from '@/lib/stores/cvStore';
 import { Trash2, Plus, ChevronDown, ChevronUp } from 'lucide-react';
+
+interface CustomSection {
+  id: string;
+  title: string;
+  content: string;
+}
 
 interface CustomSectionsFormProps {
   customSections: CustomSection[];

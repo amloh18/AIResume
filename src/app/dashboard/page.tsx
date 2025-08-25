@@ -35,6 +35,7 @@ import InkPad from '@/components/dashboard/InkPad';
 import Analytics from '@/components/dashboard/Analytics';
 import DashboardNavigation from '@/components/dashboard/DashboardNavigation';
 import RouteGuard from '@/components/auth/RouteGuard';
+import { useCVSetup } from '@/lib/hooks/useCVSetup';
 
 
 interface DashboardProps {}
@@ -42,7 +43,8 @@ interface DashboardProps {}
 const Dashboard: React.FC<DashboardProps> = () => {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [activeSection, setActiveSection] = useState('pulse');
+  const [activeSection, setActiveSection] = useState('canvas'); // Default to CV Studio
+  const { hasCV, isChecking } = useCVSetup();
 
   const [user, setUser] = useState({
     name: 'Amarjot',
@@ -82,7 +84,7 @@ const Dashboard: React.FC<DashboardProps> = () => {
 
   // Check authentication and handle onboarding flow
   useEffect(() => {
-    if (status === 'loading') return; // Still loading
+    if (status === 'loading' || isChecking) return; // Still loading
 
     if (status === 'unauthenticated') {
       // If user is not authenticated, redirect to home page
@@ -90,21 +92,34 @@ const Dashboard: React.FC<DashboardProps> = () => {
       return;
     }
 
-    // Handle welcome animation from registration or login
+    // Check if user just completed onboarding
+    const fromOnboarding = sessionStorage.getItem('fromOnboarding') === 'true';
+    
+    // If user just completed onboarding, don't redirect back
+    if (fromOnboarding) {
+      console.log('🎉 User completed onboarding, staying on dashboard');
+      return;
+    }
+    
+    // Check if user has CVs - if not, redirect to onboarding
+    if (status === 'authenticated' && !hasCV && !isChecking) {
+      console.log('🔄 No CVs found, redirecting to onboarding');
+      router.push('/onboarding');
+      return;
+    }
+
+    // Handle welcome animation from registration, login, or onboarding
     const isFromRegistration = sessionStorage.getItem('fromRegistration');
     const isFromLogin = sessionStorage.getItem('fromLogin');
+    const isFromOnboarding = sessionStorage.getItem('fromOnboarding');
     
-    if (isFromRegistration || isFromLogin) {
+    if (isFromRegistration || isFromLogin || isFromOnboarding) {
       setShowWelcomeAnimation(true);
       sessionStorage.removeItem('fromRegistration');
       sessionStorage.removeItem('fromLogin');
-      
-      // Hide welcome animation after 5 seconds
-      setTimeout(() => {
-        setShowWelcomeAnimation(false);
-      }, 5000);
+      sessionStorage.removeItem('fromOnboarding');
     }
-  }, [status, router]);
+  }, [status, hasCV, isChecking, router]);
 
   // Update user data from session
   useEffect(() => {

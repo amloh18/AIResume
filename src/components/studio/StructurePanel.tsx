@@ -20,7 +20,7 @@ import {
   Layout,
   ChevronLeft as ChevronLeftIcon
 } from 'lucide-react';
-import { CVData, PersonalInfo, Experience, Education, Skill, Project, Certification, Language, CustomSection } from '@/lib/stores/cvStore';
+import { CVDataStructure } from '@/types/cv';
 import { Template } from '@/lib/stores/templateStore';
 import PersonalInfoForm from './forms/PersonalInfoForm';
 import ExperienceForm from './forms/ExperienceForm';
@@ -32,10 +32,10 @@ import LanguagesForm from './forms/LanguagesForm';
 import CustomSectionsForm from './forms/CustomSectionsForm';
 
 interface StructurePanelProps {
-  cvData: CVData;
+  cvData: CVDataStructure | null;
   onUpdateField: (path: string, value: any) => void;
-  onAddSection: (sectionType: keyof CVData, item?: any) => void;
-  onRemoveSection: (sectionType: keyof CVData, id: string) => void;
+  onAddSection: (sectionType: keyof CVDataStructure, item?: any) => void;
+  onRemoveSection: (sectionType: keyof CVDataStructure, id: string) => void;
   selectedTemplate: Template | null;
   isCollapsed: boolean;
   onTogglePanel: () => void;
@@ -50,44 +50,77 @@ const StructurePanel: React.FC<StructurePanelProps> = ({
   isCollapsed,
   onTogglePanel
 }) => {
+  console.log('StructurePanel received cvData:', cvData);
+  
   const [activeTab, setActiveTab] = useState<'structure' | 'design'>('structure');
   const [activeDesignSubTab, setActiveDesignSubTab] = useState<'templates' | 'styling' | 'snippets'>('templates');
   const [showAddSectionModal, setShowAddSectionModal] = useState(false);
 
   const sections = [
-    { id: 'personal-info', label: 'Personal Info', icon: User, type: 'personalInfo' as keyof CVData },
-    { id: 'experience', label: 'Experience', icon: Briefcase, type: 'experience' as keyof CVData },
-    { id: 'education', label: 'Education', icon: GraduationCap, type: 'education' as keyof CVData },
-    { id: 'skills', label: 'Skills', icon: Zap, type: 'skills' as keyof CVData },
-    { id: 'projects', label: 'Projects', icon: Rocket, type: 'projects' as keyof CVData },
-    { id: 'certifications', label: 'Certifications', icon: Award, type: 'certifications' as keyof CVData },
-    { id: 'languages', label: 'Languages', icon: Globe, type: 'languages' as keyof CVData },
-    { id: 'customSections', label: 'Custom Sections', icon: FileText, type: 'customSections' as keyof CVData },
+    { id: 'basics', label: 'Personal Info', icon: User, type: 'basics' as keyof CVDataStructure },
+    { id: 'work', label: 'Experience', icon: Briefcase, type: 'work' as keyof CVDataStructure },
+    { id: 'education', label: 'Education', icon: GraduationCap, type: 'education' as keyof CVDataStructure },
+    { id: 'skills', label: 'Skills', icon: Zap, type: 'skills' as keyof CVDataStructure },
+    { id: 'projects', label: 'Projects', icon: Rocket, type: 'projects' as keyof CVDataStructure },
+    { id: 'certificates', label: 'Certifications', icon: Award, type: 'certificates' as keyof CVDataStructure },
+    { id: 'languages', label: 'Languages', icon: Globe, type: 'languages' as keyof CVDataStructure },
   ];
 
+  // Default values for when cvData is null
+  const defaultBasics = {
+    name: '',
+    label: '',
+    image: '',
+    email: '',
+    phone: '',
+    url: '',
+    summary: '',
+    location: {
+      address: '',
+      postalCode: '',
+      city: '',
+      countryCode: '',
+      region: ''
+    },
+    profiles: []
+  };
+
   const renderSection = (sectionId: string) => {
+    // If cvData is null, show loading or default state
+    if (!cvData) {
+      return (
+        <div className="p-4 text-gray-400">
+          <div className="animate-pulse">
+            <div className="h-4 bg-gray-700 rounded mb-2"></div>
+            <div className="h-4 bg-gray-700 rounded mb-2"></div>
+            <div className="h-4 bg-gray-700 rounded"></div>
+          </div>
+        </div>
+      );
+    }
+
     switch (sectionId) {
-      case 'personal-info':
+      case 'basics':
         return (
           <PersonalInfoForm
-            personalInfo={cvData.personalInfo}
-            onUpdate={(field: keyof PersonalInfo, value: any) => 
-              onUpdateField(`personalInfo.${field}`, value)
+            personalInfo={cvData.basics || defaultBasics}
+            onUpdate={(field: keyof typeof defaultBasics, value: any) => 
+              onUpdateField(`basics.${field}`, value)
             }
           />
         );
       
-      case 'experience':
+      case 'work':
         return (
           <ExperienceForm
-            experience={cvData.experience}
-            onAdd={() => onAddSection('experience')}
-            onRemove={(id: string) => onRemoveSection('experience', id)}
-            onUpdate={(id: string, updates: Partial<Experience>) => {
-              const index = cvData.experience.findIndex(exp => exp.id === id);
+            experience={cvData.work || []}
+            onAdd={() => onAddSection('work')}
+            onRemove={(id: string) => onRemoveSection('work', id)}
+            onUpdate={(id: string, updates: any) => {
+              const index = (cvData.work || []).findIndex(exp => exp.name === id);
               if (index !== -1) {
-                const updatedExp = { ...cvData.experience[index], ...updates };
-                onUpdateField(`experience.${index}`, updatedExp);
+                const updatedExp = { ...cvData.work[index], ...updates };
+                onUpdateField(`work.${index}`, updatedExp);
               }
             }}
           />
@@ -96,11 +129,11 @@ const StructurePanel: React.FC<StructurePanelProps> = ({
       case 'education':
         return (
           <EducationForm
-            education={cvData.education}
+            education={cvData.education || []}
             onAdd={() => onAddSection('education')}
             onRemove={(id: string) => onRemoveSection('education', id)}
-            onUpdate={(id: string, updates: Partial<Education>) => {
-              const index = cvData.education.findIndex(edu => edu.id === id);
+            onUpdate={(id: string, updates: any) => {
+              const index = (cvData.education || []).findIndex(edu => edu.institution === id);
               if (index !== -1) {
                 const updatedEdu = { ...cvData.education[index], ...updates };
                 onUpdateField(`education.${index}`, updatedEdu);
@@ -112,11 +145,11 @@ const StructurePanel: React.FC<StructurePanelProps> = ({
       case 'skills':
         return (
           <SkillsForm
-            skills={cvData.skills}
+            skills={cvData.skills || []}
             onAdd={() => onAddSection('skills')}
             onRemove={(id: string) => onRemoveSection('skills', id)}
-            onUpdate={(id: string, updates: Partial<Skill>) => {
-              const index = cvData.skills.findIndex(skill => skill.id === id);
+            onUpdate={(id: string, updates: any) => {
+              const index = (cvData.skills || []).findIndex(skill => skill.name === id);
               if (index !== -1) {
                 const updatedSkill = { ...cvData.skills[index], ...updates };
                 onUpdateField(`skills.${index}`, updatedSkill);
@@ -128,11 +161,11 @@ const StructurePanel: React.FC<StructurePanelProps> = ({
       case 'projects':
         return (
           <ProjectsForm
-            projects={cvData.projects}
+            projects={cvData.projects || []}
             onAdd={() => onAddSection('projects')}
             onRemove={(id: string) => onRemoveSection('projects', id)}
-            onUpdate={(id: string, updates: Partial<Project>) => {
-              const index = cvData.projects.findIndex(proj => proj.id === id);
+            onUpdate={(id: string, updates: any) => {
+              const index = (cvData.projects || []).findIndex(proj => proj.name === id);
               if (index !== -1) {
                 const updatedProj = { ...cvData.projects[index], ...updates };
                 onUpdateField(`projects.${index}`, updatedProj);
@@ -141,17 +174,17 @@ const StructurePanel: React.FC<StructurePanelProps> = ({
           />
         );
       
-      case 'certifications':
+      case 'certificates':
         return (
           <CertificationsForm
-            certifications={cvData.certifications}
-            onAdd={() => onAddSection('certifications')}
-            onRemove={(id: string) => onRemoveSection('certifications', id)}
-            onUpdate={(id: string, updates: Partial<Certification>) => {
-              const index = cvData.certifications.findIndex(cert => cert.id === id);
+            certifications={cvData.certificates || []}
+            onAdd={() => onAddSection('certificates')}
+            onRemove={(id: string) => onRemoveSection('certificates', id)}
+            onUpdate={(id: string, updates: any) => {
+              const index = (cvData.certificates || []).findIndex(cert => cert.name === id);
               if (index !== -1) {
-                const updatedCert = { ...cvData.certifications[index], ...updates };
-                onUpdateField(`certifications.${index}`, updatedCert);
+                const updatedCert = { ...cvData.certificates[index], ...updates };
+                onUpdateField(`certificates.${index}`, updatedCert);
               }
             }}
           />
@@ -160,11 +193,11 @@ const StructurePanel: React.FC<StructurePanelProps> = ({
       case 'languages':
         return (
           <LanguagesForm
-            languages={cvData.languages}
+            languages={cvData.languages || []}
             onAdd={() => onAddSection('languages')}
             onRemove={(id: string) => onRemoveSection('languages', id)}
-            onUpdate={(id: string, updates: Partial<Language>) => {
-              const index = cvData.languages.findIndex(lang => lang.id === id);
+            onUpdate={(id: string, updates: any) => {
+              const index = (cvData.languages || []).findIndex(lang => lang.language === id);
               if (index !== -1) {
                 const updatedLang = { ...cvData.languages[index], ...updates };
                 onUpdateField(`languages.${index}`, updatedLang);
@@ -173,24 +206,12 @@ const StructurePanel: React.FC<StructurePanelProps> = ({
           />
         );
       
-      case 'customSections':
-        return (
-          <CustomSectionsForm
-            customSections={cvData.customSections}
-            onAdd={() => onAddSection('customSections')}
-            onRemove={(id: string) => onRemoveSection('customSections', id)}
-            onUpdate={(id: string, updates: any) => {
-              const index = cvData.customSections.findIndex(section => section.id === id);
-              if (index !== -1) {
-                const updatedSection = { ...cvData.customSections[index], ...updates };
-                onUpdateField(`customSections.${index}`, updatedSection);
-              }
-            }}
-          />
-        );
-      
       default:
-        return <div className="p-4 text-gray-400">Select a section</div>;
+        return (
+          <div className="p-4 text-gray-400">
+            <p>Section not implemented yet.</p>
+          </div>
+        );
     }
   };
 

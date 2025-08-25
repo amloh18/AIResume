@@ -1,12 +1,13 @@
 import mongoose from 'mongoose';
-import fs from 'fs';
-import path from 'path';
 
 // Load environment variables manually if not already loaded
 let MONGODB_URI = process.env.MONGODB_URI;
 
-if (!MONGODB_URI) {
+if (!MONGODB_URI && typeof window === 'undefined') {
+  // Only try to load from file system on server side
   try {
+    const fs = require('fs');
+    const path = require('path');
     const envPath = path.join(process.cwd(), '.env.local');
     if (fs.existsSync(envPath)) {
       const envContent = fs.readFileSync(envPath, 'utf8');
@@ -89,6 +90,11 @@ const setupConnectionHandlers = () => {
 };
 
 async function connectDB() {
+  // Don't attempt database connection on client side
+  if (typeof window !== 'undefined') {
+    throw new Error('Database connection cannot be established on client side');
+  }
+
   if (cached.conn) {
     return cached.conn;
   }

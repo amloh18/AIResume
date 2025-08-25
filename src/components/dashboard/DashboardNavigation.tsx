@@ -73,8 +73,8 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
   return (
     <div className="w-56 bg-black/40 backdrop-blur-xl border-r border-white/10 min-h-screen sticky top-0 z-40">
       {/* Logo and Title */}
-      <div className="p-6 border-b border-white/10">
-        <div className="text-center mb-6">
+      <div className="p-4 border-b border-white/10">
+        <div className="text-center mb-4">
           <div className="text-3xl font-bold mb-2">
             <span className="text-lime-400 drop-shadow-lg">CV</span>
             <span className="text-gray-300">CIRCLE</span>
@@ -166,8 +166,8 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
           {/* Logout Button */}
           <motion.button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded-lg transition-all duration-200 text-sm font-medium"
-            whileHover={{ scale: 1.02 }}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg transition-all duration-200 text-sm font-medium shadow-lg hover:shadow-red-500/25"
+            whileHover={{ scale: 1.02, boxShadow: "0 10px 25px -5px rgba(239, 68, 68, 0.4)" }}
             whileTap={{ scale: 0.98 }}
           >
             <LogOut size={16} />

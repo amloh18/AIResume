@@ -8,14 +8,17 @@ import {
   FileText, 
   ChevronLeft, 
   ChevronRight,
-  RotateCcw
+  RotateCcw,
+  Sun,
+  Moon
 } from 'lucide-react';
-import { CVData } from '@/lib/stores/cvStore';
+import { CVDataStructure } from '@/types/cv';
 import { Template } from '@/lib/stores/templateStore';
 import { Job } from '@/lib/stores/jobStore';
+import CVPreviewContent from './CVPreviewContent';
 
 interface PreviewPanelProps {
-  cvData: CVData;
+  cvData: CVDataStructure | null;
   template: Template | null;
   jobData: Job | null;
   zoom: number;
@@ -35,10 +38,15 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
   setPaperSize,
   documentType
 }) => {
+  console.log('PreviewPanel received cvData:', cvData);
+  
   const [currentPage, setCurrentPage] = useState(1);
   const [fitMode, setFitMode] = useState<'fit-height' | 'custom'>('fit-height');
+  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+  const [totalPages, setTotalPages] = useState(1);
   const previewRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   // Paper dimensions in pixels (assuming 96 DPI)
   const paperDimensions = {
@@ -47,6 +55,21 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
   };
 
   const currentDimensions = paperDimensions[paperSize];
+
+  // Calculate total pages based on content height
+  useEffect(() => {
+    if (contentRef.current) {
+      const contentHeight = contentRef.current.scrollHeight;
+      const pageHeight = currentDimensions.height - 64; // Account for padding
+      const pages = Math.ceil(contentHeight / pageHeight);
+      setTotalPages(Math.max(1, pages));
+      
+      // Reset to page 1 if current page exceeds total pages
+      if (currentPage > pages) {
+        setCurrentPage(1);
+      }
+    }
+  }, [cvData, currentDimensions.height, currentPage]);
 
   // Auto-fit to container height
   useEffect(() => {
@@ -80,147 +103,24 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
   };
 
   const handleNextPage = () => {
-    // For now, assume single page - extend this for multi-page support
-    setCurrentPage(currentPage + 1);
+    setCurrentPage(Math.min(totalPages, currentPage + 1));
   };
 
   const renderCVPreview = () => {
-    if (!template) {
-      return (
-        <div className="flex items-center justify-center h-full text-gray-400">
-          <div className="text-center">
-            <FileText className="h-16 w-16 mx-auto mb-4 opacity-50" />
-            <p>Select a template to preview</p>
-          </div>
-        </div>
-      );
-    }
-
+    // Always show our enhanced preview regardless of template
     return (
       <div 
-        className="bg-white shadow-lg mx-auto"
+        className={`${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-100'} min-h-full p-8`}
         style={{
-          width: currentDimensions.width * zoom,
-          height: currentDimensions.height * zoom,
           transform: `scale(${zoom})`,
           transformOrigin: 'top center'
         }}
       >
-        {/* CV Content */}
-        <div className="p-8 h-full">
-          {/* Header */}
-          <div className="text-center mb-6">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">
-              {cvData.personalInfo.firstName} {cvData.personalInfo.lastName}
-            </h1>
-            <p className="text-gray-600">{cvData.personalInfo.email}</p>
-            <p className="text-gray-600">{cvData.personalInfo.phone}</p>
-            <p className="text-gray-600">{cvData.personalInfo.location}</p>
-          </div>
-
-          {/* Summary */}
-          {cvData.personalInfo.summary && (
-            <div className="mb-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-2">Professional Summary</h2>
-              <p className="text-gray-700">{cvData.personalInfo.summary}</p>
-            </div>
-          )}
-
-          {/* Experience */}
-          {cvData.experience.length > 0 && (
-            <div className="mb-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-3">Experience</h2>
-              {cvData.experience.map((exp, index) => (
-                <div key={exp.id} className="mb-4">
-                  <div className="flex justify-between items-start mb-1">
-                    <h3 className="font-medium text-gray-900">{exp.jobTitle}</h3>
-                    <span className="text-sm text-gray-600">
-                      {exp.startDate} - {exp.current ? 'Present' : exp.endDate}
-                    </span>
-                  </div>
-                  <p className="text-gray-700 mb-2">{exp.company}, {exp.location}</p>
-                  <p className="text-gray-600 text-sm">{exp.description}</p>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Education */}
-          {cvData.education.length > 0 && (
-            <div className="mb-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-3">Education</h2>
-              {cvData.education.map((edu, index) => (
-                <div key={edu.id} className="mb-4">
-                  <div className="flex justify-between items-start mb-1">
-                    <h3 className="font-medium text-gray-900">{edu.degree}</h3>
-                    <span className="text-sm text-gray-600">
-                      {edu.startDate} - {edu.current ? 'Present' : edu.endDate}
-                    </span>
-                  </div>
-                  <p className="text-gray-700 mb-2">{edu.institution}, {edu.location}</p>
-                  <p className="text-gray-600 text-sm">{edu.field}</p>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Skills */}
-          {cvData.skills.length > 0 && (
-            <div className="mb-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-3">Skills</h2>
-              {cvData.skills.map((skill, index) => (
-                <div key={skill.id} className="mb-3">
-                  <h3 className="font-medium text-gray-900 mb-1">{skill.category}</h3>
-                  <p className="text-gray-600 text-sm">{skill.skills.join(', ')}</p>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Projects */}
-          {cvData.projects.length > 0 && (
-            <div className="mb-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-3">Projects</h2>
-              {cvData.projects.map((project, index) => (
-                <div key={project.id} className="mb-4">
-                  <h3 className="font-medium text-gray-900 mb-1">{project.title}</h3>
-                  <p className="text-gray-600 text-sm mb-2">{project.description}</p>
-                  <p className="text-gray-500 text-xs">Technologies: {project.technologies.join(', ')}</p>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Certifications */}
-          {cvData.certifications.length > 0 && (
-            <div className="mb-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-3">Certifications</h2>
-              {cvData.certifications.map((cert, index) => (
-                <div key={cert.id} className="mb-2">
-                  <div className="flex justify-between items-start">
-                    <h3 className="font-medium text-gray-900">{cert.name}</h3>
-                    <span className="text-sm text-gray-600">{cert.date}</span>
-                  </div>
-                  <p className="text-gray-600 text-sm">{cert.issuer}</p>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Languages */}
-          {cvData.languages.length > 0 && (
-            <div className="mb-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-3">Languages</h2>
-              <div className="flex flex-wrap gap-2">
-                {cvData.languages.map((lang, index) => (
-                  <span key={lang.id} className="text-sm text-gray-600">
-                    {lang.language} ({lang.proficiency})
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+        <CVPreviewContent 
+          cvData={cvData} 
+          theme={theme}
+          showBadge={false}
+        />
       </div>
     );
   };
@@ -238,14 +138,14 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
       >
         <div className="p-8 h-full">
           <div className="mb-6">
-            <p className="text-gray-600 mb-4">
-              {cvData.personalInfo.firstName} {cvData.personalInfo.lastName}<br />
-              {cvData.personalInfo.email}<br />
-              {cvData.personalInfo.phone}<br />
-              {cvData.personalInfo.location}
+            <p className="text-sm text-gray-600 mb-4">
+              {cvData?.basics.name}<br />
+              {cvData?.basics.email}<br />
+              {cvData?.basics.phone}<br />
+              {cvData?.basics.location.city}
             </p>
             
-            <p className="text-gray-600 mb-4">
+            <p className="text-sm text-gray-600 mb-4">
               {jobData ? (
                 <>
                   Hiring Manager<br />
@@ -263,28 +163,28 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
           </div>
 
           <div className="mb-4">
-            <p className="text-gray-600 mb-4">Dear Hiring Manager,</p>
+            <p className="text-sm text-gray-600 mb-4">Dear Hiring Manager,</p>
             
-            <p className="text-gray-700 mb-4">
+            <p className="text-sm text-gray-700 mb-4">
               [Your cover letter content will appear here. Use the AI Assistant to generate tailored content.]
             </p>
             
-            <p className="text-gray-700 mb-4">
+            <p className="text-sm text-gray-700 mb-4">
               I am writing to express my interest in the [Position] role at [Company]. With my background in [relevant experience], I am confident in my ability to contribute effectively to your team.
             </p>
             
-            <p className="text-gray-700 mb-4">
+            <p className="text-sm text-gray-700 mb-4">
               [Additional paragraphs with specific examples and achievements...]
             </p>
             
-            <p className="text-gray-700 mb-4">
+            <p className="text-sm text-gray-700 mb-4">
               Thank you for considering my application. I look forward to discussing how my skills and experience can benefit [Company].
             </p>
           </div>
 
           <div>
-            <p className="text-gray-600 mb-2">Sincerely,</p>
-            <p className="text-gray-600">{cvData.personalInfo.firstName} {cvData.personalInfo.lastName}</p>
+            <p className="text-sm text-gray-600 mb-2">Sincerely,</p>
+            <p className="text-sm text-gray-600">{cvData?.basics.name}</p>
           </div>
         </div>
       </div>
@@ -351,12 +251,13 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
           </button>
           
           <span className="text-sm text-gray-300 min-w-[3rem] text-center">
-            {currentPage}
+            {currentPage} / {totalPages}
           </span>
           
           <button
             onClick={handleNextPage}
-            className="p-2 text-gray-400 hover:text-white transition-colors rounded hover:bg-gray-700 focus:ring-2 focus:ring-lime-500 focus:ring-offset-2 focus:ring-offset-gray-800"
+            disabled={currentPage === totalPages}
+            className="p-2 text-gray-400 hover:text-white transition-colors rounded hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-lime-500 focus:ring-offset-2 focus:ring-offset-gray-800"
             title="Next Page"
           >
             <ChevronRight className="h-4 w-4" />
@@ -384,6 +285,34 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
             }`}
           >
             Letter
+          </button>
+        </div>
+
+        {/* Theme Toggle */}
+        <div className="flex items-center space-x-1 bg-gray-700 rounded p-1">
+          <button
+            onClick={() => setTheme('dark')}
+            className={`px-2 py-1 text-xs rounded transition-colors flex items-center gap-1 ${
+              theme === 'dark'
+                ? 'bg-gray-800 text-lime-400'
+                : 'text-gray-400 hover:text-white'
+            }`}
+            title="Dark Theme"
+          >
+            <Moon className="h-3 w-3" />
+            Dark
+          </button>
+          <button
+            onClick={() => setTheme('light')}
+            className={`px-2 py-1 text-xs rounded transition-colors flex items-center gap-1 ${
+              theme === 'light'
+                ? 'bg-gray-800 text-lime-400'
+                : 'text-gray-400 hover:text-white'
+            }`}
+            title="Light Theme"
+          >
+            <Sun className="h-3 w-3" />
+            Light
           </button>
         </div>
 

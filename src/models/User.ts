@@ -3,7 +3,8 @@ import bcrypt from 'bcryptjs';
 
 export interface IUser extends Document {
   email: string;
-  password: string;
+  password?: string;
+  firebaseUid?: string;
   firstName: string;
   lastName: string;
   avatar?: string;
@@ -50,8 +51,15 @@ const userSchema = new Schema<IUser>({
   },
   password: {
     type: String,
-    required: [true, 'Password is required'],
+    required: function(this: any) {
+      return !this.firebaseUid; // Password is required only if not using Firebase
+    },
     minlength: [8, 'Password must be at least 8 characters long']
+  },
+  firebaseUid: {
+    type: String,
+    unique: true,
+    sparse: true // Allows multiple null values
   },
   firstName: {
     type: String,
@@ -157,9 +165,9 @@ const userSchema = new Schema<IUser>({
   }
 });
 
-// Hash password before saving
+// Hash password before saving (only for non-Firebase users)
 userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next();
+  if (!this.isModified('password') || !this.password) return next();
   
   try {
     const salt = await bcrypt.genSalt(12);
@@ -170,8 +178,9 @@ userSchema.pre('save', async function(next) {
   }
 });
 
-// Compare password method
+// Compare password method (only for non-Firebase users)
 userSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
+  if (!this.password) return false; // Firebase users don't have passwords
   return bcrypt.compare(candidatePassword, this.password);
 };
 

@@ -100,7 +100,17 @@ body {
 .modal-exit-active {
   opacity: 0;
   transform: scale(0.9) translateY(-20px);
-  transition: opacity 0.15s ease-in, transform 0.15s ease-in;
+  transition: opacity 0.2s ease-in, transform 0.2s ease-in;
+}
+
+/* 3D Card Flip Styles */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 /* Optimize page transitions */
@@ -863,6 +873,23 @@ nav {
 
 .ai-panel-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #9ca3af;
+}
+
+/* 3D Card Flip Animation */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.transform-style-preserve-3d {
+  transform-style: preserve-3d;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+}
+
+.rotate-y-180 {
+  transform: rotateY(180deg);
 }
 
  

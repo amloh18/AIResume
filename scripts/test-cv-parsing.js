@@ -1,90 +1,100 @@
 const fs = require('fs');
 const path = require('path');
 
+// Test CV parsing with a simple text file
 async function testCVParsing() {
   console.log('🧪 Testing CV Parsing API...\n');
 
-  try {
-    // Test 1: Check if API endpoint is accessible
-    console.log('1. Testing API endpoint accessibility...');
-    const testResponse = await fetch('http://localhost:3000/api/cv/parse');
-    
-    if (testResponse.ok) {
-      const testData = await testResponse.json();
-      console.log('✅ API endpoint is accessible');
-      console.log('Test response:', testData);
-    } else {
-      console.log('❌ API endpoint is not accessible');
-      console.log('Status:', testResponse.status);
-    }
-
-    // Test 2: Test with a simple text file
-    console.log('\n2. Testing with a simple text file...');
-    
-    // Create a simple test CV content
-    const testCVContent = `
+  // Create a simple test CV content
+  const testCVContent = `
 John Doe
 Software Engineer
 john.doe@email.com
 +1 (555) 123-4567
-San Francisco, CA
+LinkedIn: linkedin.com/in/johndoe
+
+SUMMARY
+Experienced software engineer with 5+ years in web development, specializing in React, Node.js, and cloud technologies.
+
+WORK EXPERIENCE
+Senior Software Engineer | TechCorp | 2022-01 - Present
+- Led development of microservices architecture
+- Mentored junior developers
+- Improved system performance by 40%
+
+Software Engineer | StartupXYZ | 2020-03 - 2021-12
+- Built RESTful APIs using Node.js
+- Implemented CI/CD pipelines
+- Collaborated with cross-functional teams
 
 EDUCATION
-Bachelor of Science in Computer Science
-Stanford University
-2018-2022
-
-EXPERIENCE
-Software Engineer
-Tech Company Inc.
-2022-Present
-- Developed web applications using React and Node.js
-- Collaborated with cross-functional teams
-- Improved application performance by 30%
+Bachelor of Science in Computer Science | University of Technology | 2016-09 - 2020-05
+GPA: 3.8/4.0
 
 SKILLS
-JavaScript, React, Node.js, Python, SQL
-    `;
+Programming Languages: JavaScript, TypeScript, Python, Java
+Frameworks: React, Node.js, Express, Django
+Databases: MongoDB, PostgreSQL, Redis
+Tools: Git, Docker, AWS, Jenkins
+  `;
 
-    // Create a temporary test file
-    const testFilePath = path.join(__dirname, 'test-cv.txt');
-    fs.writeFileSync(testFilePath, testCVContent);
-
-    // Read the file and create FormData
-    const fileBuffer = fs.readFileSync(testFilePath);
-    const formData = new FormData();
-    const blob = new Blob([fileBuffer], { type: 'text/plain' });
-    formData.append('file', blob, 'test-cv.txt');
-
-    const parseResponse = await fetch('http://localhost:3000/api/cv/parse', {
+  try {
+    // Test the API endpoint
+    const response = await fetch('http://localhost:3001/api/ai/parse-cv', {
       method: 'POST',
-      body: formData
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        plainText: testCVContent
+      })
     });
 
-    if (parseResponse.ok) {
-      const parsedData = await parseResponse.json();
-      console.log('✅ File parsing successful');
-      console.log('Parsed data:', JSON.stringify(parsedData, null, 2));
+    const result = await response.json();
+
+    if (result.success) {
+      console.log('✅ CV Parsing Test PASSED');
+      console.log('📄 Parsed CV Data:');
+      console.log(JSON.stringify(result.data, null, 2));
     } else {
-      console.log('❌ File parsing failed');
-      console.log('Status:', parseResponse.status);
-      const errorText = await parseResponse.text();
-      console.log('Error:', errorText);
+      console.log('❌ CV Parsing Test FAILED');
+      console.log('Error:', result.error);
     }
-
-    // Clean up test file
-    fs.unlinkSync(testFilePath);
-
   } catch (error) {
-    console.error('❌ Test failed with error:', error);
+    console.log('❌ CV Parsing Test FAILED');
+    console.log('Network Error:', error.message);
   }
 }
 
-// Run the test
-testCVParsing().then(() => {
-  console.log('\n🏁 CV parsing test completed');
-  process.exit(0);
-}).catch(error => {
-  console.error('💥 Test failed:', error);
-  process.exit(1);
-}); 
+// Test library availability
+async function testLibraries() {
+  console.log('📚 Testing Library Availability...\n');
+
+  const libraries = [
+    { name: 'pdf-parse', import: () => import('pdf-parse') },
+    { name: 'mammoth', import: () => import('mammoth') },
+    { name: 'tesseract.js', import: () => import('tesseract.js') }
+  ];
+
+  for (const lib of libraries) {
+    try {
+      const module = await lib.import();
+      console.log(`✅ ${lib.name} - Available`);
+    } catch (error) {
+      console.log(`❌ ${lib.name} - Not available: ${error.message}`);
+    }
+  }
+}
+
+// Run tests
+async function runTests() {
+  console.log('🚀 Starting CV Parsing Tests...\n');
+  
+  await testLibraries();
+  console.log('\n' + '='.repeat(50) + '\n');
+  await testCVParsing();
+  
+  console.log('\n✨ Tests completed!');
+}
+
+runTests().catch(console.error); 

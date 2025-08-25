@@ -1,20 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Dynamic imports to avoid build issues
-let pdfParse: any;
-let mammoth: any;
+// Import libraries with proper error handling
+let pdfParse: any = null;
+let mammoth: any = null;
 
-try {
-  pdfParse = require('pdf-parse');
-} catch (error) {
-  console.warn('pdf-parse not available:', error);
-}
-
-try {
-  mammoth = require('mammoth');
-} catch (error) {
-  console.warn('mammoth not available:', error);
-}
+// Initialize libraries safely
+const initLibraries = async () => {
+  if (!pdfParse) {
+    try {
+      const pdfParseModule = await import('pdf-parse');
+      pdfParse = pdfParseModule.default || pdfParseModule;
+    } catch (error) {
+      console.warn('pdf-parse not available:', error);
+    }
+  }
+  
+  if (!mammoth) {
+    try {
+      const mammothModule = await import('mammoth');
+      mammoth = mammothModule.default || mammothModule;
+    } catch (error) {
+      console.warn('mammoth not available:', error);
+    }
+  }
+};
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent';
@@ -67,14 +76,82 @@ Date formatting rules: Prefer YYYY-MM. If only a year is known use YYYY. If date
   return cleaned;
 }
 
-async function extractFromPDF(buffer: Buffer) {
-  const result = await pdfParse(buffer);
-  return result.text || '';
+async function extractFromPDF(buffer: Buffer): Promise<string> {
+  // Initialize libraries
+  await initLibraries();
+  
+  // Try pdf-parse first
+  if (pdfParse) {
+    try {
+      const result = await pdfParse(buffer);
+      return result.text || '';
+    } catch (error) {
+      console.warn('pdf-parse failed:', error);
+    }
+  }
+  
+  // If no PDF libraries are available, return a helpful message
+  throw new Error('PDF parsing libraries are not available. Please try uploading a text file or copy-paste your CV content.');
 }
 
-async function extractFromDocx(buffer: Buffer) {
-  const result = await mammoth.extractRawText({ buffer });
-  return result.value || '';
+async function extractFromDocx(buffer: Buffer): Promise<string> {
+  // Initialize libraries
+  await initLibraries();
+  
+  if (!mammoth) {
+    throw new Error('DOCX parsing library not available');
+  }
+  
+  try {
+    const result = await mammoth.extractRawText({ buffer });
+    return result.value || '';
+  } catch (error) {
+    console.error('DOCX parsing error:', error);
+    throw new Error('Failed to parse DOCX file');
+  }
+}
+
+async function extractFromImage(buffer: Buffer): Promise<string> {
+  // OCR is not directly available in this version, so we'll return an error
+  throw new Error('OCR functionality is not available in this version.');
+}
+
+async function extractTextFromBuffer(buffer: Buffer, fileType: string): Promise<string> {
+  const lowerFileType = fileType.toLowerCase();
+  
+  // PDF files
+  if (lowerFileType.includes('pdf') || lowerFileType === 'application/pdf') {
+    return await extractFromPDF(buffer);
+  }
+  
+  // Word documents
+  if (lowerFileType.includes('wordprocessingml') || 
+      lowerFileType.includes('docx') || 
+      lowerFileType.includes('msword') ||
+      lowerFileType.includes('application/vnd.openxmlformats-officedocument.wordprocessingml.document')) {
+    return await extractFromDocx(buffer);
+  }
+  
+  // Image files (PNG, JPG, JPEG, etc.)
+  if (lowerFileType.includes('image/') || 
+      lowerFileType.includes('png') || 
+      lowerFileType.includes('jpg') || 
+      lowerFileType.includes('jpeg') ||
+      lowerFileType.includes('gif') ||
+      lowerFileType.includes('bmp') ||
+      lowerFileType.includes('tiff')) {
+    return await extractFromImage(buffer);
+  }
+  
+  // Plain text files
+  if (lowerFileType.includes('text/') || 
+      lowerFileType.includes('txt') || 
+      lowerFileType.includes('plain')) {
+    return buffer.toString('utf-8');
+  }
+  
+  // Default: try to parse as text
+  return buffer.toString('utf-8');
 }
 
 export async function POST(req: NextRequest) {
@@ -86,18 +163,48 @@ export async function POST(req: NextRequest) {
       let text = plainText || '';
 
       if (!text && fileBase64 && fileType) {
-        const buffer = Buffer.from(fileBase64, 'base64');
-        if (fileType.includes('pdf')) text = await extractFromPDF(buffer);
-        else if (fileType.includes('wordprocessingml') || fileType.includes('docx')) text = await extractFromDocx(buffer);
-        else if (fileType.includes('msword')) text = await extractFromDocx(buffer);
-        else text = buffer.toString('utf8');
+        try {
+          const buffer = Buffer.from(fileBase64, 'base64');
+          text = await extractTextFromBuffer(buffer, fileType);
+        } catch (error) {
+          console.error('Text extraction error:', error);
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          
+          // Provide specific guidance based on error type
+          if (errorMessage.includes('PDF parsing libraries are not available')) {
+            return NextResponse.json({ 
+              success: false, 
+              error: 'PDF parsing is currently unavailable. Please copy and paste your CV content as text instead.',
+              suggestion: 'Try copying your CV content and pasting it directly into the text field.'
+            }, { status: 400 });
+          }
+          
+          return NextResponse.json({ 
+            success: false, 
+            error: `Failed to extract text: ${errorMessage}`,
+            suggestion: 'Try copying and pasting your CV content as text instead.'
+          }, { status: 400 });
+        }
       }
 
       if (!text || text.trim().length < 20) {
-        return NextResponse.json({ success: false, error: 'Unable to extract text from file' }, { status: 400 });
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Unable to extract sufficient text from file. Please ensure the file contains readable text.' 
+        }, { status: 400 });
       }
 
-      const aiText = await callAI(text);
+      // Call AI to parse the extracted text
+      let aiText;
+      try {
+        aiText = await callAI(text);
+      } catch (error) {
+        console.error('AI parsing error:', error);
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Failed to parse CV with AI. Please try again or check your file format.' 
+        }, { status: 500 });
+      }
 
       // Extract JSON object robustly
       const parseRobustJson = (input: string) => {
@@ -118,7 +225,10 @@ export async function POST(req: NextRequest) {
 
       const raw = parseRobustJson(aiText);
       if (!raw) {
-        return NextResponse.json({ success: false, error: 'AI returned invalid JSON' }, { status: 502 });
+        return NextResponse.json({ 
+          success: false, 
+          error: 'AI returned invalid JSON. Please try again with a different file.' 
+        }, { status: 502 });
       }
 
       // Normalize to schema and coerce types
@@ -229,6 +339,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: 'Unsupported content type' }, { status: 415 });
   } catch (e: any) {
     console.error('parse-cv error:', e);
-    return NextResponse.json({ success: false, error: e.message || 'Server error' }, { status: 500 });
+    return NextResponse.json({ 
+      success: false, 
+      error: e.message || 'Server error occurred while parsing CV' 
+    }, { status: 500 });
   }
+}
+
+// Type declarations for modules without types
+declare module 'pdf-parse' {
+  function pdfParse(buffer: Buffer): Promise<{ text: string }>;
+  export default pdfParse;
 }

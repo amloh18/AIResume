@@ -1,14 +1,18 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Certification } from '@/lib/stores/cvStore';
 import { Trash2, Plus, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface CertificationsFormProps {
-  certifications: Certification[];
+  certifications: Array<{
+    name: string;
+    date: string;
+    issuer: string;
+    url: string;
+  }>;
   onAdd: () => void;
   onRemove: (id: string) => void;
-  onUpdate: (id: string, updates: Partial<Certification>) => void;
+  onUpdate: (id: string, updates: any) => void;
 }
 
 const CertificationsForm: React.FC<CertificationsFormProps> = ({
@@ -50,24 +54,24 @@ const CertificationsForm: React.FC<CertificationsFormProps> = ({
       ) : (
         <div className="space-y-4">
           {certifications.map((cert, index) => (
-            <div key={cert.id} className="border border-gray-200 rounded-lg p-4">
+            <div key={cert.name} className="border border-gray-200 rounded-lg p-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-medium text-gray-900">
                   Certification #{index + 1}
                 </h3>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => toggleExpanded(cert.id)}
+                    onClick={() => toggleExpanded(cert.name)}
                     className="p-1 hover:bg-gray-100 rounded"
                   >
-                    {expandedItems.has(cert.id) ? (
+                    {expandedItems.has(cert.name) ? (
                       <ChevronUp size={16} />
                     ) : (
                       <ChevronDown size={16} />
                     )}
                   </button>
                   <button
-                    onClick={() => onRemove(cert.id)}
+                    onClick={() => onRemove(cert.name)}
                     className="p-1 text-red-600 hover:bg-red-50 rounded"
                     title="Remove certification"
                   >
@@ -76,7 +80,7 @@ const CertificationsForm: React.FC<CertificationsFormProps> = ({
                 </div>
               </div>
 
-              {expandedItems.has(cert.id) && (
+              {expandedItems.has(cert.name) && (
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -85,47 +89,36 @@ const CertificationsForm: React.FC<CertificationsFormProps> = ({
                     <input
                       type="text"
                       value={cert.name}
-                      onChange={(e) => onUpdate(cert.id, { name: e.target.value })}
+                      onChange={(e) => onUpdate(cert.name, { name: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="AWS Certified Solutions Architect"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Issuing Organization *
-                    </label>
-                    <input
-                      type="text"
-                      value={cert.issuer}
-                      onChange={(e) => onUpdate(cert.id, { issuer: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Amazon Web Services"
                     />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Issue Date
+                        Issuing Organization *
                       </label>
                       <input
-                        type="date"
-                        value={cert.date}
-                        onChange={(e) => onUpdate(cert.id, { date: e.target.value })}
+                        type="text"
+                        value={cert.issuer}
+                        onChange={(e) => onUpdate(cert.name, { issuer: e.target.value })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Amazon Web Services"
                       />
                     </div>
                     
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Expiry Date
+                        Date Earned
                       </label>
                       <input
-                        type="date"
-                        value={cert.expiryDate}
-                        onChange={(e) => onUpdate(cert.id, { expiryDate: e.target.value })}
+                        type="text"
+                        value={cert.date}
+                        onChange={(e) => onUpdate(cert.name, { date: e.target.value })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Dec 2023"
                       />
                     </div>
                   </div>
@@ -137,9 +130,9 @@ const CertificationsForm: React.FC<CertificationsFormProps> = ({
                     <input
                       type="url"
                       value={cert.url}
-                      onChange={(e) => onUpdate(cert.id, { url: e.target.value })}
+                      onChange={(e) => onUpdate(cert.name, { url: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="https://verify.aws.com/certificate/..."
+                      placeholder="https://credly.com/badges/..."
                     />
                   </div>
                 </div>
