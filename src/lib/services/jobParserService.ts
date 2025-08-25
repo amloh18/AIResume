@@ -1,4 +1,12 @@
-import puppeteer, { Browser, Page } from 'puppeteer';
+import { Browser, Page } from 'puppeteer';
+
+// Try to import puppeteer, but don't fail if it's not available
+let puppeteer: any = null;
+try {
+  puppeteer = require('puppeteer');
+} catch (error) {
+  console.warn('Puppeteer not available:', error);
+}
 
 export interface JobDetails {
   title: string;
@@ -26,6 +34,10 @@ export class JobParserService {
   private browser: Browser | null = null;
 
   private async getBrowser(): Promise<Browser> {
+    if (!puppeteer) {
+      throw new Error('Puppeteer is not available. Job parsing functionality is disabled.');
+    }
+    
     if (!this.browser) {
       this.browser = await puppeteer.launch({
         headless: true,
