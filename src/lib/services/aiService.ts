@@ -1,4 +1,4 @@
-import { CVData } from '@/lib/stores/cvStore';
+import { CVDataStructure } from '@/types/cv';
 import { Job } from '@/lib/stores/jobStore';
 
 export interface ATSAnalysis {
@@ -15,7 +15,7 @@ export interface AIImprovement {
 
 export class AIService {
   // Mock ATS score calculation
-  static async calculateATSScore(cvData: CVData, jobData: Job | null): Promise<ATSAnalysis> {
+  static async calculateATSScore(cvData: CVDataStructure, jobData: Job | null): Promise<ATSAnalysis> {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 1000));
     
@@ -25,32 +25,32 @@ export class AIService {
     const recommendations: string[] = [];
     
     // Basic field validation
-    if (!cvData.personalInfo.firstName || !cvData.personalInfo.lastName) {
+    if (!cvData.basics.name) {
       score -= 20;
       recommendations.push('Add your full name');
     }
     
-    if (!cvData.personalInfo.email) {
+    if (!cvData.basics.email) {
       score -= 15;
       recommendations.push('Add your email address');
     }
     
-    if (!cvData.personalInfo.summary) {
+    if (!cvData.basics.summary) {
       score -= 10;
       recommendations.push('Add a professional summary');
     }
     
-    if (cvData.experience.length === 0) {
+    if (!cvData.work || cvData.work.length === 0) {
       score -= 25;
       recommendations.push('Add work experience');
     }
     
-    if (cvData.education.length === 0) {
+    if (!cvData.education || cvData.education.length === 0) {
       score -= 15;
       recommendations.push('Add education information');
     }
     
-    if (cvData.skills.length === 0) {
+    if (!cvData.skills || cvData.skills.length === 0) {
       score -= 15;
       recommendations.push('Add relevant skills');
     }
@@ -89,7 +89,7 @@ export class AIService {
   static async improveDescription(
     currentText: string, 
     jobData: Job | null, 
-    cvData: CVData
+    cvData: CVDataStructure
   ): Promise<AIImprovement> {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 2000));
@@ -145,28 +145,28 @@ export class AIService {
   }
   
   // Mock CV text extraction
-  private static extractCVText(cvData: CVData): string {
+  private static extractCVText(cvData: CVDataStructure): string {
     let text = '';
     
     // Personal info
-    text += `${cvData.personalInfo.firstName} ${cvData.personalInfo.lastName} `;
-    text += cvData.personalInfo.summary || '';
+    text += `${cvData.basics.name} `;
+    text += cvData.basics.summary || '';
     
     // Experience
-    cvData.experience.forEach(exp => {
-      text += `${exp.jobTitle} ${exp.company} ${exp.description || ''} `;
+    cvData.work?.forEach(exp => {
+      text += `${exp.position} ${exp.company} ${exp.description || ''} `;
       exp.achievements?.forEach(achievement => {
         text += achievement + ' ';
       });
     });
     
     // Skills
-    cvData.skills.forEach(skill => {
+    cvData.skills?.forEach(skill => {
       text += skill.skills.join(' ') + ' ';
     });
     
     // Projects
-    cvData.projects.forEach(project => {
+    cvData.projects?.forEach(project => {
       text += `${project.title} ${project.description || ''} `;
       text += project.technologies?.join(' ') || '';
     });

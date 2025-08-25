@@ -108,4 +108,5 @@ export interface UserRole {
   description: string;
   icon: string;
   color: string;
+  available?: boolean;
 }

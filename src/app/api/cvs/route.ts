@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/database';
 import { CV } from '@/models';
 import { createPaginationOptions, paginateQuery, createErrorResponse } from '@/lib/db-utils';
+import mongoose from 'mongoose';
 
 // GET - List CVs for a user with comprehensive filtering
 export async function GET(request: NextRequest) {
@@ -104,7 +105,7 @@ export async function GET(request: NextRequest) {
       CV.countDocuments({ userId, 'metadata.starred': true })
     ]);
 
-    const [total, drafts, published, archived, starred] = counts;
+    const [total, drafts, publishedCount, archived, starredCount] = counts;
 
     // Transform data for response
     const transformedCvs = cvs.map(cv => ({
@@ -135,9 +136,9 @@ export async function GET(request: NextRequest) {
         counts: {
           total,
           drafts,
-          published,
+          published: publishedCount,
           archived,
-          starred
+          starred: starredCount
         }
       }
     });
@@ -156,9 +157,15 @@ export async function GET(request: NextRequest) {
 // POST - Create a new CV
 export async function POST(request: NextRequest) {
   try {
+    console.log('🚀 Starting CV creation...');
+    
+    // Connect to database
     await connectDB();
+    console.log('✅ Database connected for CV creation');
     
     const body = await request.json();
+    console.log('📄 Request body received:', JSON.stringify(body, null, 2));
+    
     const { 
       userId, 
       title, 
@@ -168,11 +175,35 @@ export async function POST(request: NextRequest) {
       type = 'cv'
     } = body;
 
+    console.log('🔍 Parsed data:', { userId, title, hasData: !!cvData, type });
+
     if (!userId || !title) {
+      console.log('❌ Missing required fields:', { userId: !!userId, title: !!title });
       return NextResponse.json(
         {
           success: false,
-          message: 'User ID and title are required'
+          message: 'User ID and title are required',
+          debug: { userId: !!userId, title: !!title }
+        },
+        { status: 400 }
+      );
+    }
+
+    // Convert userId to ObjectId if it's a string
+    let objectIdUserId;
+    try {
+      console.log('🔍 Attempting to convert userId:', userId, 'Type:', typeof userId);
+      objectIdUserId = new mongoose.Types.ObjectId(userId);
+      console.log('✅ Converted userId to ObjectId:', objectIdUserId);
+      console.log('✅ ObjectId string representation:', objectIdUserId.toString());
+    } catch (error) {
+      console.error('❌ Invalid userId format:', userId);
+      console.error('❌ Error details:', error.message);
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Invalid user ID format',
+          debug: { userId, error: error.message }
         },
         { status: 400 }
       );
@@ -257,8 +288,15 @@ export async function POST(request: NextRequest) {
     };
 
     // Create CV with new universal structure
+    console.log('📝 Creating CV with data:', { 
+      userId: objectIdUserId, 
+      title: title.trim(), 
+      hasData: !!defaultCvData,
+      type 
+    });
+    
     const cv = new CV({
-      userId,
+      userId: objectIdUserId,
       title: title.trim(),
       cvData: defaultCvData,
       status: 'draft',
@@ -283,14 +321,16 @@ export async function POST(request: NextRequest) {
       }
     });
 
+    console.log('💾 Saving CV to database...');
     await cv.save();
+    console.log('✅ CV saved successfully!');
 
     const cvResponse = cv.toJSON();
 
     // Log activity
     try {
       const { ActivityService } = await import('@/lib/services/activityService');
-      await ActivityService.logCVCreated(userId, cvResponse.id, title);
+      await ActivityService.logCVCreated(objectIdUserId.toString(), cvResponse.id, title);
     } catch (activityError) {
       console.error('Failed to log CV creation activity:', activityError);
     }

@@ -5,10 +5,12 @@ import { motion } from 'framer-motion';
 import Logo from '../ui/Logo';
 import { Menu, X } from 'lucide-react';
 import LoginModal from '../auth/LoginModal';
+import SignupModal from '../onboarding/AuthModal';
 
 const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
   const [navbarHeight, setNavbarHeight] = useState(80);
   const [scrolled, setScrolled] = useState(false);
 
@@ -63,6 +65,29 @@ const Navigation = () => {
 
   const handleLoginSuccess = (userData: any) => {
     setIsLoginModalOpen(false);
+    
+    // Set flag for new user CV setup (in case they haven't completed onboarding)
+    sessionStorage.setItem('needsCVSetup', 'true');
+    
+    window.location.href = '/dashboard';
+  };
+
+  const handleSwitchToSignup = () => {
+    setIsLoginModalOpen(false);
+    setIsSignupModalOpen(true);
+  };
+
+  const handleSwitchToLogin = () => {
+    setIsSignupModalOpen(false);
+    setIsLoginModalOpen(true);
+  };
+
+  const handleSignupSuccess = (userData: any) => {
+    setIsSignupModalOpen(false);
+    
+    // Set flag for new user CV setup
+    sessionStorage.setItem('needsCVSetup', 'true');
+    
     window.location.href = '/dashboard';
   };
 
@@ -193,10 +218,16 @@ const Navigation = () => {
       <LoginModal
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
-        onSwitchToRegister={() => {
-          setIsLoginModalOpen(false);
-        }}
+        onSwitchToRegister={handleSwitchToSignup}
         onLogin={handleLoginSuccess}
+      />
+
+      {/* Signup Modal */}
+      <SignupModal
+        isOpen={isSignupModalOpen}
+        onClose={() => setIsSignupModalOpen(false)}
+        onSuccess={handleSignupSuccess}
+        onSwitchToLogin={handleSwitchToLogin}
       />
     </>
   );

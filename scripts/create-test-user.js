@@ -3,69 +3,67 @@
 /**
  * Create Test User Script
  * 
- * This script creates a test user with a known password for testing login functionality.
+ * This script creates a test user with a known password for testing authentication.
  */
 
 const fs = require('fs');
 const path = require('path');
-const bcrypt = require('bcryptjs');
 
 async function createTestUser() {
-  console.log('🚀 Creating test user for login testing...\n');
+  console.log('🧪 Creating Test User...\n');
   
   try {
-    // Set environment variable
+    // Set environment variables
     const envPath = path.join(__dirname, '../.env.local');
     if (fs.existsSync(envPath)) {
       const envContent = fs.readFileSync(envPath, 'utf8');
-      const uriMatch = envContent.match(/MONGODB_URI=(.+)/);
-      if (uriMatch) {
-        process.env.MONGODB_URI = uriMatch[1].trim();
-        console.log('✅ Loaded MongoDB URI from .env.local');
-      }
+      const lines = envContent.split('\n');
+      
+      lines.forEach(line => {
+        const [key, ...valueParts] = line.split('=');
+        if (key && valueParts.length > 0) {
+          const value = valueParts.join('=').trim();
+          if (value && !process.env[key]) {
+            process.env[key] = value;
+          }
+        }
+      });
+      
+      console.log('✅ Loaded environment variables from .env.local');
     }
     
-    // Connect to MongoDB directly
-    const { MongoClient } = require('mongodb');
-    const client = new MongoClient(process.env.MONGODB_URI);
+    // Import after setting env vars
+    const connectDB = require('../src/lib/database.ts').default;
+    const User = require('../src/models/User.ts').default;
     
-    console.log('🔗 Connecting to MongoDB...');
-    await client.connect();
+    console.log('\n🔗 Connecting to MongoDB...');
+    await connectDB();
     console.log('✅ Connected to MongoDB\n');
-    
-    const db = client.db();
     
     // Test user credentials
     const testEmail = 'test@example.com';
     const testPassword = 'password123';
     
-    // Hash the password
-    const salt = await bcrypt.genSalt(12);
-    const hashedPassword = await bcrypt.hash(testPassword, salt);
+    console.log(`🔍 Creating test user: ${testEmail}`);
+    console.log(`🔐 Password: ${testPassword}`);
     
     // Check if user already exists
-    const existingUser = await db.collection('users').findOne({ email: testEmail });
+    const existingUser = await User.findOne({ email: testEmail });
     
     if (existingUser) {
-      console.log('⚠️ Test user already exists, updating password...');
-      await db.collection('users').updateOne(
-        { email: testEmail },
-        { 
-          $set: { 
-            password: hashedPassword,
-            updatedAt: new Date()
-          }
-        }
-      );
+      console.log('⚠️ User already exists, updating password...');
+      existingUser.password = testPassword;
+      await existingUser.save();
+      console.log('✅ Password updated successfully');
     } else {
-      console.log('👤 Creating new test user...');
-      
-      const testUser = {
+      // Create new test user
+      const newUser = new User({
         email: testEmail,
-        password: hashedPassword,
         firstName: 'Test',
         lastName: 'User',
+        password: testPassword,
         isEmailVerified: true,
+        role: 'user',
         subscription: {
           plan: 'basic',
           status: 'active',
@@ -79,33 +77,33 @@ async function createTestUser() {
             email: true,
             push: true
           }
-        },
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
+        }
+      });
       
-      await db.collection('users').insertOne(testUser);
+      await newUser.save();
+      console.log('✅ Test user created successfully');
     }
     
-    console.log('✅ Test user created/updated successfully!');
-    console.log('\n📋 Test Credentials:');
-    console.log(`   Email: ${testEmail}`);
-    console.log(`   Password: ${testPassword}`);
-    console.log('\n🔗 You can now test login with these credentials');
+    // Verify the user was created/updated
+    const user = await User.findOne({ email: testEmail });
+    console.log('\n📋 User details:');
+    console.log('- Email:', user.email);
+    console.log('- Name:', `${user.firstName} ${user.lastName}`);
+    console.log('- Role:', user.role);
+    console.log('- Verified:', user.isEmailVerified);
+    console.log('- Has password:', !!user.password);
     
-    await client.close();
+    // Test password
+    const isPasswordValid = await user.comparePassword(testPassword);
+    console.log('- Password valid:', isPasswordValid);
+    
+    console.log('\n🎉 Test user is ready for authentication testing!');
+    console.log('📧 Email: test@example.com');
+    console.log('🔐 Password: password123');
     
   } catch (error) {
     console.error('❌ Error creating test user:', error.message);
-    
-    if (error.message.includes('Could not connect to any servers')) {
-      console.log('\n🔧 Troubleshooting:');
-      console.log('1. Check your MongoDB Atlas IP whitelist');
-      console.log('2. Verify your MongoDB URI is correct');
-      console.log('3. Ensure your MongoDB cluster is running');
-      console.log('\n📚 For IP whitelisting, visit:');
-      console.log('   https://www.mongodb.com/docs/atlas/security-whitelist/');
-    }
+    console.error('📋 Stack trace:', error.stack);
   }
 }
 

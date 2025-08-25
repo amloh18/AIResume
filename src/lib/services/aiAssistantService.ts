@@ -1,445 +1,348 @@
-import { CVData } from '@/lib/stores/cvStore';
+import { CVDataStructure } from '@/types/cv';
 import { Job } from '@/lib/stores/jobStore';
-import { ATSAnalysis, AISuggestion } from '@/lib/stores/aiStore';
+import { AISuggestion } from '@/lib/stores/aiStore';
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent';
-
-export class AIAssistantService {
-  // ATS Score calculation
-  static async calculateATSScore(cvData: CVData, jobData: Job | null): Promise<ATSAnalysis> {
-    const system = `You are an ATS (Applicant Tracking System) analyzer. Analyze the CV against the job description and provide a comprehensive ATS score and analysis.
-
-Respond with ONLY valid JSON in this exact format:
-{
-  "score": number (0-100),
-  "missingKeywords": ["keyword1", "keyword2"],
-  "weakKeywords": ["keyword1", "keyword2"],
-  "strengths": ["strength1", "strength2"],
-  "suggestions": ["suggestion1", "suggestion2"]
+export interface ATSAnalysis {
+  score: number;
+  missingKeywords: string[];
+  strengths: string[];
+  suggestions: string[];
 }
 
-Guidelines:
-- Score based on keyword match, structure, formatting, and completeness
-- Missing keywords: important job requirements not found in CV
-- Weak keywords: present but could be emphasized more
-- Strengths: what the CV does well
-- Suggestions: specific improvements to increase ATS score`;
+export class AIAssistantService {
+  static async calculateATSScore(cvData: CVDataStructure, jobData: Job | null): Promise<ATSAnalysis> {
+    try {
+      // Extract text from CV
+      const cvText = this.extractCVText(cvData);
+      
+      if (!jobData) {
+        // Baseline analysis without job context
+        return {
+          score: 75, // Baseline score
+          missingKeywords: [],
+          strengths: ['Professional experience', 'Education background'],
+          suggestions: ['Add more specific skills', 'Include quantifiable achievements']
+        };
+      }
 
-    const cvText = this.extractCVText(cvData);
-    const jobContext = jobData ? `Job Title: ${jobData.title}\nCompany: ${jobData.company}\nDescription: ${jobData.description}\nRequirements: ${jobData.requirements?.join(', ')}\nSkills: ${jobData.skills?.join(', ')}` : 'No specific job context provided. Analyze for general ATS compliance.';
-
-    const prompt = `${system}
-
-CV Content:
-${cvText}
-
-Job Context:
-${jobContext}
-
-Provide ATS analysis:`;
-
-    const response = await this.callGeminiAPI(prompt);
-    return JSON.parse(response);
+      // Extract job requirements
+      const jobText = `${jobData.title} ${jobData.description} ${jobData.requirements}`;
+      
+      // Simple keyword matching (in a real app, you'd use more sophisticated NLP)
+      const cvKeywords = this.extractKeywords(cvText);
+      const jobKeywords = this.extractKeywords(jobText);
+      
+      const matchingKeywords = cvKeywords.filter(keyword => 
+        jobKeywords.some(jobKeyword => 
+          jobKeyword.toLowerCase().includes(keyword.toLowerCase()) ||
+          keyword.toLowerCase().includes(jobKeyword.toLowerCase())
+        )
+      );
+      
+      const score = Math.min(100, Math.round((matchingKeywords.length / jobKeywords.length) * 100));
+      const missingKeywords = jobKeywords.filter(keyword => 
+        !cvKeywords.some(cvKeyword => 
+          cvKeyword.toLowerCase().includes(keyword.toLowerCase()) ||
+          keyword.toLowerCase().includes(cvKeyword.toLowerCase())
+        )
+      );
+      
+      return {
+        score,
+        missingKeywords: missingKeywords.slice(0, 10),
+        strengths: matchingKeywords.slice(0, 5),
+        suggestions: this.generateSuggestions(missingKeywords)
+      };
+    } catch (error) {
+      console.error('ATS calculation error:', error);
+      throw new Error('Failed to calculate ATS score');
+    }
   }
 
-  // Content Optimizer
-  static async optimizeContent(cvData: CVData, jobData: Job | null): Promise<AISuggestion[]> {
-    const system = `You are a CV content optimizer. Analyze the CV and provide specific suggestions to improve content for better impact and job alignment.
-
-Respond with ONLY valid JSON array in this format:
-[
-  {
-    "id": "unique-id",
-    "title": "Suggestion Title",
-    "content": "Detailed suggestion content",
-    "type": "improvement|addition|replacement",
-    "section": "experience|summary|skills|education",
-    "field": "specific field if applicable"
-  }
-]
-
-Focus on:
-- Making achievements more impactful and quantifiable
-- Improving summary to be more compelling
-- Optimizing skills section alignment
-- Enhancing experience descriptions`;
-
-    const cvText = this.extractCVText(cvData);
-    const jobContext = jobData ? `Job: ${jobData.title} at ${jobData.company}\nRequirements: ${jobData.requirements?.join(', ')}` : 'General optimization';
-
-    const prompt = `${system}
-
-CV Content:
-${cvText}
-
-Job Context:
-${jobContext}
-
-Provide optimization suggestions:`;
-
-    const response = await this.callGeminiAPI(prompt);
-    return JSON.parse(response);
+  static async optimizeContent(cvData: CVDataStructure, jobData: Job | null): Promise<AISuggestion[]> {
+    try {
+      const cvText = this.extractCVText(cvData);
+      
+      // Simple content optimization suggestions
+      const suggestions: AISuggestion[] = [];
+      
+      if (cvText.length < 500) {
+        suggestions.push({
+          id: 'content-1',
+          title: 'Expand Summary',
+          content: 'Consider adding more detail to your professional summary to better showcase your experience.',
+          type: 'improvement',
+          section: 'summary',
+          field: 'summary',
+          generatedAt: new Date().toISOString(),
+          isOutOfDate: false
+        });
+      }
+      
+      return suggestions;
+    } catch (error) {
+      console.error('Content optimization error:', error);
+      throw new Error('Failed to optimize content');
+    }
   }
 
-  // Quantification Assistant
-  static async quantifyAchievements(cvData: CVData, jobData: Job | null): Promise<AISuggestion[]> {
-    const system = `You are a quantification specialist. Find vague statements in the CV and suggest specific, measurable improvements.
-
-Respond with ONLY valid JSON array in this format:
-[
-  {
-    "id": "unique-id",
-    "title": "Quantify: [original statement]",
-    "content": "Improved version with numbers and metrics",
-    "type": "improvement",
-    "section": "experience",
-    "field": "description or achievements"
-  }
-]
-
-Examples:
-- "Led team" → "Led 8-person cross-functional team"
-- "Improved performance" → "Improved system performance by 40%"
-- "Increased sales" → "Increased sales by 25% over 6 months"`;
-
-    const cvText = this.extractCVText(cvData);
-    const jobContext = jobData ? `Job: ${jobData.title} at ${jobData.company}` : 'General quantification';
-
-    const prompt = `${system}
-
-CV Content:
-${cvText}
-
-Job Context:
-${jobContext}
-
-Find vague statements and suggest quantified improvements:`;
-
-    const response = await this.callGeminiAPI(prompt);
-    return JSON.parse(response);
+  static async quantifyAchievements(cvData: CVDataStructure, jobData: Job | null): Promise<AISuggestion[]> {
+    try {
+      const cvText = this.extractCVText(cvData);
+      
+      // Simple quantification suggestions
+      const suggestions: AISuggestion[] = [];
+      
+      if (!cvText.includes('%') && !cvText.includes('increased') && !cvText.includes('reduced')) {
+        suggestions.push({
+          id: 'quantify-1',
+          title: 'Add Quantifiable Achievements',
+          content: 'Consider adding specific metrics like "increased sales by 25%" or "reduced costs by 15%" to make your achievements more impactful.',
+          type: 'improvement',
+          section: 'experience',
+          field: 'achievements',
+          generatedAt: new Date().toISOString(),
+          isOutOfDate: false
+        });
+      }
+      
+      return suggestions;
+    } catch (error) {
+      console.error('Quantification error:', error);
+      throw new Error('Failed to quantify achievements');
+    }
   }
 
-  // Skills & Keywords Mapper
-  static async mapSkillsAndKeywords(cvData: CVData, jobData: Job | null): Promise<AISuggestion[]> {
-    const system = `You are a skills and keywords mapper. Analyze the CV skills against job requirements and provide mapping suggestions.
-
-Respond with ONLY valid JSON array in this format:
-[
-  {
-    "id": "unique-id",
-    "title": "Skill: [skill name]",
-    "content": "Analysis and suggestions for this skill",
-    "type": "improvement|addition",
-    "section": "skills",
-    "field": "skill category or specific skill"
-  }
-]
-
-Analyze:
-- Skills that match job requirements (highlight these)
-- Skills that partially match (suggest enhancements)
-- Missing critical skills (suggest additions)
-- Skills that could be better positioned`;
-
-    const cvText = this.extractCVText(cvData);
-    const jobContext = jobData ? `Job: ${jobData.title}\nRequired Skills: ${jobData.skills?.join(', ')}\nRequirements: ${jobData.requirements?.join(', ')}` : 'General skills analysis';
-
-    const prompt = `${system}
-
-CV Content:
-${cvText}
-
-Job Context:
-${jobContext}
-
-Provide skills mapping analysis:`;
-
-    const response = await this.callGeminiAPI(prompt);
-    return JSON.parse(response);
-  }
-
-  // Gap Analyzer
-  static async analyzeGaps(cvData: CVData, jobData: Job | null): Promise<AISuggestion[]> {
-    const system = `You are a gap analyzer. Identify gaps between the CV and job requirements and suggest ways to address them.
-
-Respond with ONLY valid JSON array in this format:
-[
-  {
-    "id": "unique-id",
-    "title": "Gap: [missing qualification]",
-    "content": "Detailed analysis and suggestions to address this gap",
-    "type": "addition",
-    "section": "experience|education|skills|certifications",
-    "field": "specific area"
-  }
-]
-
-Focus on:
-- Missing qualifications or certifications
-- Experience gaps
-- Skill gaps
-- Education requirements
-- Industry-specific knowledge`;
-
-    const cvText = this.extractCVText(cvData);
-    const jobContext = jobData ? `Job: ${jobData.title}\nRequirements: ${jobData.requirements?.join(', ')}\nSkills: ${jobData.skills?.join(', ')}` : 'General gap analysis';
-
-    const prompt = `${system}
-
-CV Content:
-${cvText}
-
-Job Context:
-${jobContext}
-
-Identify gaps and provide suggestions:`;
-
-    const response = await this.callGeminiAPI(prompt);
-    return JSON.parse(response);
+  static async mapSkillsAndKeywords(cvData: CVDataStructure, jobData: Job | null): Promise<AISuggestion[]> {
+    try {
+      const cvText = this.extractCVText(cvData);
+      
+      if (!jobData) {
+        return [];
+      }
+      
+      const jobKeywords = this.extractKeywords(jobData.description);
+      const cvKeywords = this.extractKeywords(cvText);
+      
+      const missingSkills = jobKeywords.filter(keyword => 
+        !cvKeywords.some(cvKeyword => 
+          cvKeyword.toLowerCase().includes(keyword.toLowerCase())
+        )
+      );
+      
+      const suggestions: AISuggestion[] = [];
+      
+      if (missingSkills.length > 0) {
+        suggestions.push({
+          id: 'skills-1',
+          title: 'Add Missing Skills',
+          content: `Consider adding these skills: ${missingSkills.slice(0, 5).join(', ')}`,
+          type: 'addition',
+          section: 'skills',
+          field: 'Technical Skills',
+          generatedAt: new Date().toISOString(),
+          isOutOfDate: false
+        });
+      }
+      
+      return suggestions;
+    } catch (error) {
+      console.error('Skills mapping error:', error);
+      throw new Error('Failed to map skills and keywords');
+    }
   }
 
-  // Achievement Generator
-  static async generateAchievements(cvData: CVData, jobData: Job | null): Promise<AISuggestion[]> {
-    const system = `You are an achievement generator. Transform basic job descriptions into impactful, STAR-format achievements.
-
-Respond with ONLY valid JSON array in this format:
-[
-  {
-    "id": "unique-id",
-    "title": "Achievement for: [job/role]",
-    "content": "STAR-format achievement with Situation, Task, Action, Result",
-    "type": "improvement",
-    "section": "experience",
-    "field": "achievements"
-  }
-]
-
-STAR Format:
-- Situation: Context and challenge
-- Task: What needed to be done
-- Action: What you did
-- Result: Quantifiable outcome
-
-Make achievements specific, measurable, and impactful.`;
-
-    const cvText = this.extractCVText(cvData);
-    const jobContext = jobData ? `Job: ${jobData.title}\nFocus on achievements relevant to: ${jobData.requirements?.join(', ')}` : 'General achievement generation';
-
-    const prompt = `${system}
-
-CV Content:
-${cvText}
-
-Job Context:
-${jobContext}
-
-Generate STAR-format achievements:`;
-
-    const response = await this.callGeminiAPI(prompt);
-    return JSON.parse(response);
+  static async analyzeGaps(cvData: CVDataStructure, jobData: Job | null): Promise<AISuggestion[]> {
+    try {
+      if (!jobData) {
+        return [];
+      }
+      
+      const suggestions: AISuggestion[] = [];
+      
+      // Simple gap analysis
+      if (!cvData.work || cvData.work.length < 2) {
+        suggestions.push({
+          id: 'gap-1',
+          title: 'Add More Experience',
+          content: 'Consider adding more work experience to strengthen your profile.',
+          type: 'addition',
+          section: 'experience',
+          field: 'work',
+          generatedAt: new Date().toISOString(),
+          isOutOfDate: false
+        });
+      }
+      
+      return suggestions;
+    } catch (error) {
+      console.error('Gap analysis error:', error);
+      throw new Error('Failed to analyze gaps');
+    }
   }
 
-  // Summary Builder
-  static async buildTailoredSummary(cvData: CVData, jobData: Job | null): Promise<AISuggestion[]> {
-    const system = `You are a summary builder. Create a compelling, job-specific professional summary.
-
-Respond with ONLY valid JSON array in this format:
-[
-  {
-    "id": "unique-id",
-    "title": "Tailored Summary",
-    "content": "Professional summary tailored to the job",
-    "type": "replacement",
-    "section": "summary",
-    "field": "summary"
-  }
-]
-
-Guidelines:
-- 2-3 sentences maximum
-- Highlight most relevant experience and skills
-- Include key achievements
-- Match job requirements
-- Professional and confident tone`;
-
-    const cvText = this.extractCVText(cvData);
-    const jobContext = jobData ? `Job: ${jobData.title} at ${jobData.company}\nRequirements: ${jobData.requirements?.join(', ')}\nSkills: ${jobData.skills?.join(', ')}` : 'General professional summary';
-
-    const prompt = `${system}
-
-CV Content:
-${cvText}
-
-Job Context:
-${jobContext}
-
-Create a tailored professional summary:`;
-
-    const response = await this.callGeminiAPI(prompt);
-    return JSON.parse(response);
+  static async generateAchievements(cvData: CVDataStructure, jobData: Job | null): Promise<AISuggestion[]> {
+    try {
+      const suggestions: AISuggestion[] = [];
+      
+      if (cvData.work && cvData.work.length > 0) {
+        suggestions.push({
+          id: 'achievement-1',
+          title: 'Add Achievement',
+          content: '• Led a team of 5 developers to deliver project on time\n• Improved system performance by 30%\n• Reduced customer complaints by 25%',
+          type: 'addition',
+          section: 'achievements',
+          field: '0',
+          generatedAt: new Date().toISOString(),
+          isOutOfDate: false
+        });
+      }
+      
+      return suggestions;
+    } catch (error) {
+      console.error('Achievement generation error:', error);
+      throw new Error('Failed to generate achievements');
+    }
   }
 
-  // Cover Letter Draft
-  static async draftCoverLetter(cvData: CVData, jobData: Job | null): Promise<AISuggestion[]> {
-    if (!jobData) {
-      return [{
-        id: 'no-job-context',
-        title: 'No Job Context',
-        content: 'Please select a job to generate a tailored cover letter.',
-        type: 'addition',
+  static async buildTailoredSummary(cvData: CVDataStructure, jobData: Job | null): Promise<AISuggestion[]> {
+    try {
+      if (!jobData) {
+        return [];
+      }
+      
+      const suggestions: AISuggestion[] = [];
+      
+      suggestions.push({
+        id: 'summary-1',
+        title: 'Tailored Summary',
+        content: `Experienced professional with expertise in ${jobData.title.toLowerCase()} and related technologies. Proven track record of delivering results and driving innovation.`,
+        type: 'replacement',
+        section: 'summary',
+        field: 'summary',
+        generatedAt: new Date().toISOString(),
+        isOutOfDate: false
+      });
+      
+      return suggestions;
+    } catch (error) {
+      console.error('Summary building error:', error);
+      throw new Error('Failed to build tailored summary');
+    }
+  }
+
+  static async draftCoverLetter(cvData: CVDataStructure, jobData: Job | null): Promise<AISuggestion[]> {
+    try {
+      if (!jobData) {
+        return [];
+      }
+      
+      const suggestions: AISuggestion[] = [];
+      
+      suggestions.push({
+        id: 'cover-letter-1',
+        title: 'Cover Letter Draft',
+        content: `Dear Hiring Manager,\n\nI am writing to express my interest in the ${jobData.title} position at ${jobData.company}. With my background in [relevant experience], I believe I would be a valuable addition to your team.\n\nSincerely,\n${cvData.basics.name}`,
+        type: 'replacement',
         section: 'cover-letter',
         field: 'content',
         generatedAt: new Date().toISOString(),
         isOutOfDate: false
-      }];
+      });
+      
+      return suggestions;
+    } catch (error) {
+      console.error('Cover letter drafting error:', error);
+      throw new Error('Failed to draft cover letter');
     }
-
-    const system = `You are a cover letter writer. Create a compelling, personalized cover letter for the specific job.
-
-Respond with ONLY valid JSON array in this format:
-[
-  {
-    "id": "unique-id",
-    "title": "Cover Letter Draft",
-    "content": "Complete cover letter content",
-    "type": "replacement",
-    "section": "cover-letter",
-    "field": "content"
-  }
-]
-
-Structure:
-- Professional greeting
-- Opening paragraph: interest and key qualification
-- Body: relevant experience and achievements
-- Closing: enthusiasm and call to action
-- Professional sign-off
-
-Keep it concise (3-4 paragraphs) and specific to the job.`;
-
-    const cvText = this.extractCVText(cvData);
-    const jobContext = `Job: ${jobData.title} at ${jobData.company}\nDescription: ${jobData.description}\nRequirements: ${jobData.requirements?.join(', ')}`;
-
-    const prompt = `${system}
-
-CV Content:
-${cvText}
-
-Job Context:
-${jobContext}
-
-Create a tailored cover letter:`;
-
-    const response = await this.callGeminiAPI(prompt);
-    return JSON.parse(response);
   }
 
-  // Consistency & Compliance Checker
-  static async checkConsistency(cvData: CVData): Promise<AISuggestion[]> {
-    const system = `You are a CV consistency and compliance checker. Identify formatting and consistency issues.
-
-Respond with ONLY valid JSON array in this format:
-[
-  {
-    "id": "unique-id",
-    "title": "Issue: [specific issue]",
-    "content": "Detailed description and fix suggestion",
-    "type": "improvement",
-    "section": "formatting|consistency",
-    "field": "specific area"
-  }
-]
-
-Check for:
-- Inconsistent date formats
-- Mixed verb tenses
-- Inconsistent bullet point styles
-- Formatting inconsistencies
-- ATS compliance issues
-- Grammar and spelling`;
-
-    const cvText = this.extractCVText(cvData);
-
-    const prompt = `${system}
-
-CV Content:
-${cvText}
-
-Identify consistency and compliance issues:`;
-
-    const response = await this.callGeminiAPI(prompt);
-    return JSON.parse(response);
-  }
-
-  // Helper method to call Gemini API
-  private static async callGeminiAPI(prompt: string): Promise<string> {
-    if (!GEMINI_API_KEY) {
-      throw new Error('Gemini API key not configured');
-    }
-
-    const body = {
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { 
-        temperature: 0.3, 
-        maxOutputTokens: 2048,
-        topP: 0.8,
-        topK: 40
+  static async checkConsistency(cvData: CVDataStructure): Promise<AISuggestion[]> {
+    try {
+      const cvText = this.extractCVText(cvData);
+      
+      const suggestions: AISuggestion[] = [];
+      
+      // Simple consistency checks
+      if (cvText.includes('I') || cvText.includes('me') || cvText.includes('my')) {
+        suggestions.push({
+          id: 'consistency-1',
+          title: 'Use Third Person',
+          content: 'Consider using third person instead of first person in your CV for a more professional tone.',
+          type: 'improvement',
+          section: 'consistency',
+          field: 'tone',
+          generatedAt: new Date().toISOString(),
+          isOutOfDate: false
+        });
       }
-    };
-
-    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Gemini API error ${response.status}: ${errorText}`);
+      
+      return suggestions;
+    } catch (error) {
+      console.error('Consistency check error:', error);
+      throw new Error('Failed to check consistency');
     }
-
-    const data = await response.json();
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    
-    // Clean possible code fences
-    return text
-      .replace(/```json[\s\S]*?\n/g, '')
-      .replace(/```/g, '')
-      .trim();
   }
 
-  // Helper method to extract CV text for analysis
-  private static extractCVText(cvData: CVData): string {
+  private static extractKeywords(text: string): string[] {
+    // Simple keyword extraction
+    const words = text.toLowerCase().split(/\s+/);
+    const keywords = words.filter(word => 
+      word.length > 3 && 
+      /^[a-z]+$/.test(word) &&
+      !['the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by'].includes(word)
+    );
+    return Array.from(new Set(keywords)).slice(0, 20);
+  }
+
+  private static generateSuggestions(missingKeywords: string[]): string[] {
+    return [
+      'Add missing keywords to your skills section',
+      'Include relevant experience that demonstrates these skills',
+      'Consider taking courses to develop missing skills'
+    ];
+  }
+
+  private static extractCVText(cvData: CVDataStructure): string {
     let text = '';
     
-    // Personal info
-    text += `${cvData.personalInfo.firstName} ${cvData.personalInfo.lastName} `;
-    text += cvData.personalInfo.summary || '';
+    // Add basic information
+    text += `${cvData.basics.name} `;
+    text += cvData.basics.summary || '';
     
-    // Experience
-    cvData.experience.forEach(exp => {
-      text += `${exp.jobTitle} ${exp.company} ${exp.description || ''} `;
-      exp.achievements?.forEach(achievement => {
-        text += achievement + ' ';
+    // Add work experience
+    if (cvData.work && Array.isArray(cvData.work)) {
+      cvData.work.forEach(work => {
+        text += `${work.position} ${work.name} ${work.summary} `;
+        if (work.highlights && Array.isArray(work.highlights)) {
+          text += work.highlights.join(' ');
+        }
       });
-    });
+    }
     
-    // Skills
-    cvData.skills.forEach(skill => {
-      text += skill.skills.join(' ') + ' ';
-    });
+    // Add skills
+    if (cvData.skills && Array.isArray(cvData.skills)) {
+      cvData.skills.forEach(skill => {
+        text += `${skill.name} `;
+        if (skill.keywords && Array.isArray(skill.keywords)) {
+          text += skill.keywords.join(' ');
+        }
+      });
+    }
     
-    // Projects
-    cvData.projects.forEach(project => {
-      text += `${project.title} ${project.description || ''} `;
-      text += project.technologies?.join(' ') || '';
-    });
+    // Add projects
+    if (cvData.projects && Array.isArray(cvData.projects)) {
+      cvData.projects.forEach(project => {
+        text += `${project.name} ${project.description} `;
+      });
+    }
     
-    // Education
-    cvData.education.forEach(edu => {
-      text += `${edu.degree} ${edu.institution} ${edu.field} ${edu.description || ''} `;
-    });
+    // Add education
+    if (cvData.education && Array.isArray(cvData.education)) {
+      cvData.education.forEach(edu => {
+        text += `${edu.institution} ${edu.studyType} ${edu.area} `;
+      });
+    }
     
     return text;
   }

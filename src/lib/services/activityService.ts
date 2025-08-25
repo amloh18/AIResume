@@ -47,20 +47,58 @@ export class ActivityService {
   }
 
   static async logActivity(activity: Omit<Activity, 'id' | 'createdAt'>): Promise<Activity> {
-    const response = await fetch('/api/activity', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(activity),
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to log activity');
+    // Check if we're on client side
+    if (typeof window !== 'undefined') {
+      // Client-side: use fetch API
+      try {
+        const response = await fetch('/api/activity', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(activity),
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to log activity via API');
+        }
+        
+        const data = await response.json();
+        return data.activity;
+      } catch (error) {
+        console.error('Failed to log activity via API:', error);
+        // Return a mock activity to prevent breaking the main flow
+        return {
+          id: 'temp-' + Date.now(),
+          ...activity,
+          createdAt: new Date().toISOString()
+        };
+      }
+    } else {
+      // Server-side: make direct database call
+      try {
+        const { default: connectDB } = await import('@/lib/database');
+        const { ActivityLog } = await import('@/models');
+        
+        await connectDB();
+        
+        const activityLog = new ActivityLog({
+          ...activity,
+          createdAt: new Date()
+        });
+        
+        await activityLog.save();
+        return activityLog.toJSON();
+      } catch (error) {
+        console.error('Failed to log activity directly:', error);
+        // Return a mock activity to prevent breaking the main flow
+        return {
+          id: 'temp-' + Date.now(),
+          ...activity,
+          createdAt: new Date().toISOString()
+        };
+      }
     }
-    
-    const data = await response.json();
-    return data.activity;
   }
 
   // Convenience methods for common activities

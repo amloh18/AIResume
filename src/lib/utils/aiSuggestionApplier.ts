@@ -1,4 +1,4 @@
-import { CVData } from '@/lib/stores/cvStore';
+import { CVDataStructure } from '@/types/cv';
 import { AISuggestion } from '@/lib/stores/aiStore';
 
 export interface SuggestionApplicationResult {
@@ -13,7 +13,7 @@ export class AISuggestionApplier {
    */
   static applySuggestion(
     suggestion: AISuggestion, 
-    cvData: CVData, 
+    cvData: CVDataStructure, 
     onUpdateField: (path: string, value: any) => void
   ): SuggestionApplicationResult {
     try {
@@ -22,8 +22,8 @@ export class AISuggestionApplier {
       switch (suggestion.section) {
         case 'summary':
           if (suggestion.field === 'summary') {
-            onUpdateField('personalInfo.summary', suggestion.content);
-            updatedFields.push('personalInfo.summary');
+            onUpdateField('basics.summary', suggestion.content);
+            updatedFields.push('basics.summary');
           }
           break;
 
@@ -75,42 +75,51 @@ export class AISuggestionApplier {
    */
   private static applySkillsSuggestion(
     suggestion: AISuggestion,
-    cvData: CVData,
+    cvData: CVDataStructure,
     onUpdateField: (path: string, value: any) => void,
     updatedFields: string[]
   ) {
     if (suggestion.type === 'addition') {
       // Add new skills to existing category or create new category
-      const category = suggestion.field || 'Technical Skills';
-      const existingCategory = cvData.skills.find(s => s.category === category);
+      const categoryName = suggestion.field || 'Technical Skills';
+      const existingCategory = cvData.skills.find(s => s.name === categoryName);
       
       if (existingCategory) {
         // Extract skills from suggestion content
         const newSkills = this.extractSkillsFromText(suggestion.content);
-        const updatedSkills = [...existingCategory.skills, ...newSkills.filter(skill => !existingCategory.skills.includes(skill))];
-        onUpdateField(`skills.${existingCategory.id}.skills`, updatedSkills);
-        updatedFields.push(`skills.${existingCategory.id}.skills`);
+        const updatedKeywords = [...existingCategory.keywords, ...newSkills.filter(skill => !existingCategory.keywords.includes(skill))];
+        const categoryIndex = cvData.skills.findIndex(s => s.name === categoryName);
+        onUpdateField(`skills.${categoryIndex}.keywords`, updatedKeywords);
+        updatedFields.push(`skills.${categoryIndex}.keywords`);
       } else {
         // Create new skills category
         const newSkills = this.extractSkillsFromText(suggestion.content);
         const newCategory = {
-          id: Date.now().toString(),
-          category,
-          skills: newSkills
+          name: categoryName,
+          level: '',
+          keywords: newSkills
         };
         onUpdateField('skills', [...cvData.skills, newCategory]);
         updatedFields.push('skills');
       }
-    } else if (suggestion.type === 'improvement') {
-      // Improve existing skills section
-      const category = suggestion.field;
-      if (category) {
-        const existingCategory = cvData.skills.find(s => s.category === category);
-        if (existingCategory) {
-          const improvedSkills = this.extractSkillsFromText(suggestion.content);
-          onUpdateField(`skills.${existingCategory.id}.skills`, improvedSkills);
-          updatedFields.push(`skills.${existingCategory.id}.skills`);
-        }
+    } else if (suggestion.type === 'replacement') {
+      // Replace existing skills with new ones
+      const newSkills = this.extractSkillsFromText(suggestion.content);
+      const categoryName = suggestion.field || 'Technical Skills';
+      const existingCategoryIndex = cvData.skills.findIndex(s => s.name === categoryName);
+      
+      if (existingCategoryIndex !== -1) {
+        onUpdateField(`skills.${existingCategoryIndex}.keywords`, newSkills);
+        updatedFields.push(`skills.${existingCategoryIndex}.keywords`);
+      } else {
+        // Create new category if it doesn't exist
+        const newCategory = {
+          name: categoryName,
+          level: '',
+          keywords: newSkills
+        };
+        onUpdateField('skills', [...cvData.skills, newCategory]);
+        updatedFields.push('skills');
       }
     }
   }
@@ -120,28 +129,22 @@ export class AISuggestionApplier {
    */
   private static applyExperienceSuggestion(
     suggestion: AISuggestion,
-    cvData: CVData,
+    cvData: CVDataStructure,
     onUpdateField: (path: string, value: any) => void,
     updatedFields: string[]
   ) {
-    if (suggestion.type === 'improvement' && suggestion.field) {
-      // Find the experience entry to update
-      const experienceIndex = cvData.experience.findIndex(exp => 
-        exp.jobTitle.toLowerCase().includes(suggestion.field!.toLowerCase()) ||
-        exp.company.toLowerCase().includes(suggestion.field!.toLowerCase())
-      );
-
-      if (experienceIndex !== -1) {
-        const experience = cvData.experience[experienceIndex];
-        if (suggestion.content.includes('description')) {
-          onUpdateField(`experience.${experienceIndex}.description`, suggestion.content);
-          updatedFields.push(`experience.${experienceIndex}.description`);
-        } else if (suggestion.content.includes('achievement')) {
-          // Add as new achievement
-          const newAchievements = [...experience.achievements, suggestion.content];
-          onUpdateField(`experience.${experienceIndex}.achievements`, newAchievements);
-          updatedFields.push(`experience.${experienceIndex}.achievements`);
-        }
+    if (suggestion.type === 'addition') {
+      // Add new work experience
+      const newWork = this.parseWorkExperience(suggestion.content);
+      onUpdateField('work', [...cvData.work, newWork]);
+      updatedFields.push('work');
+    } else if (suggestion.type === 'replacement') {
+      // Replace specific work experience
+      const workIndex = parseInt(suggestion.field || '0');
+      if (workIndex >= 0 && workIndex < cvData.work.length) {
+        const updatedWork = this.parseWorkExperience(suggestion.content);
+        onUpdateField(`work.${workIndex}`, updatedWork);
+        updatedFields.push(`work.${workIndex}`);
       }
     }
   }
@@ -151,22 +154,19 @@ export class AISuggestionApplier {
    */
   private static applyAchievementSuggestion(
     suggestion: AISuggestion,
-    cvData: CVData,
+    cvData: CVDataStructure,
     onUpdateField: (path: string, value: any) => void,
     updatedFields: string[]
   ) {
-    if (suggestion.type === 'improvement' && suggestion.field) {
-      // Find the experience entry to add achievement to
-      const experienceIndex = cvData.experience.findIndex(exp => 
-        exp.jobTitle.toLowerCase().includes(suggestion.field!.toLowerCase()) ||
-        exp.company.toLowerCase().includes(suggestion.field!.toLowerCase())
-      );
-
-      if (experienceIndex !== -1) {
-        const experience = cvData.experience[experienceIndex];
-        const newAchievements = [...experience.achievements, suggestion.content];
-        onUpdateField(`experience.${experienceIndex}.achievements`, newAchievements);
-        updatedFields.push(`experience.${experienceIndex}.achievements`);
+    if (suggestion.type === 'addition') {
+      // Add achievements to specific work experience
+      const workIndex = parseInt(suggestion.field || '0');
+      if (workIndex >= 0 && workIndex < cvData.work.length) {
+        const newAchievements = this.extractAchievementsFromText(suggestion.content);
+        const currentWork = cvData.work[workIndex];
+        const updatedHighlights = [...(currentWork.highlights || []), ...newAchievements];
+        onUpdateField(`work.${workIndex}.highlights`, updatedHighlights);
+        updatedFields.push(`work.${workIndex}.highlights`);
       }
     }
   }
@@ -174,52 +174,61 @@ export class AISuggestionApplier {
   /**
    * Extract skills from text content
    */
-  private static extractSkillsFromText(text: string): string[] {
-    // Common skill patterns
-    const skillPatterns = [
-      /\b[A-Z][a-z]+(?:\.[A-Z][a-z]+)*\b/g, // Capitalized words
-      /\b[A-Z]{2,}\b/g, // Acronyms
-      /\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b/g // Multi-word skills
-    ];
-
-    const skills = new Set<string>();
+  private static extractSkillsFromText(content: string): string[] {
+    // Simple extraction - in a real app, you'd use more sophisticated NLP
+    const lines = content.split('\n').filter(line => line.trim());
+    const skills: string[] = [];
     
-    skillPatterns.forEach(pattern => {
-      const matches = text.match(pattern) || [];
-      matches.forEach(match => {
-        // Filter out common non-skill words
-        const nonSkills = ['the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'from', 'up', 'out', 'off', 'over', 'under', 'again', 'further', 'then', 'once', 'here', 'there', 'when', 'where', 'why', 'how', 'all', 'any', 'both', 'each', 'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very', 'can', 'will', 'just', 'should', 'now'];
-        if (!nonSkills.includes(match.toLowerCase()) && match.length > 2) {
-          skills.add(match);
+    for (const line of lines) {
+      // Look for bullet points or comma-separated skills
+      const skillMatch = line.match(/[•\-\*]\s*([^,]+)|([^,]+)/);
+      if (skillMatch) {
+        const skill = skillMatch[1] || skillMatch[2];
+        if (skill && skill.trim().length > 0) {
+          skills.push(skill.trim());
         }
-      });
-    });
-
-    return Array.from(skills);
+      }
+    }
+    
+    return skills.length > 0 ? skills : [content.trim()];
   }
 
   /**
-   * Validate if a suggestion can be applied
+   * Parse work experience from text
    */
-  static canApplySuggestion(suggestion: AISuggestion, cvData: CVData): boolean {
-    switch (suggestion.section) {
-      case 'summary':
-        return true; // Always can apply to summary
-      
-      case 'skills':
-        return true; // Always can apply to skills
-      
-      case 'experience':
-        return cvData.experience.length > 0;
-      
-      case 'achievements':
-        return cvData.experience.length > 0;
-      
-      case 'cover-letter':
-        return true; // Always can apply to cover letter
-      
-      default:
-        return false;
+  private static parseWorkExperience(content: string) {
+    // Simple parsing - in a real app, you'd use more sophisticated NLP
+    const lines = content.split('\n').filter(line => line.trim());
+    
+    return {
+      name: 'Company Name',
+      position: 'Job Title',
+      url: '',
+      startDate: '',
+      endDate: '',
+      summary: content,
+      highlights: []
+    };
+  }
+
+  /**
+   * Extract achievements from text
+   */
+  private static extractAchievementsFromText(content: string): string[] {
+    // Simple extraction - in a real app, you'd use more sophisticated NLP
+    const lines = content.split('\n').filter(line => line.trim());
+    const achievements: string[] = [];
+    
+    for (const line of lines) {
+      // Look for bullet points
+      const achievementMatch = line.match(/[•\-\*]\s*(.+)/);
+      if (achievementMatch) {
+        achievements.push(achievementMatch[1].trim());
+      } else if (line.trim().length > 0) {
+        achievements.push(line.trim());
+      }
     }
+    
+    return achievements.length > 0 ? achievements : [content.trim()];
   }
 }

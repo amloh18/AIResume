@@ -1,14 +1,22 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Education } from '@/lib/stores/cvStore';
 import { Trash2, Plus, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface EducationFormProps {
-  education: Education[];
+  education: Array<{
+    institution: string;
+    url: string;
+    area: string;
+    studyType: string;
+    startDate: string;
+    endDate: string;
+    score: string;
+    courses: string[];
+  }>;
   onAdd: () => void;
   onRemove: (id: string) => void;
-  onUpdate: (id: string, updates: Partial<Education>) => void;
+  onUpdate: (id: string, updates: any) => void;
 }
 
 const EducationForm: React.FC<EducationFormProps> = ({
@@ -50,24 +58,24 @@ const EducationForm: React.FC<EducationFormProps> = ({
       ) : (
         <div className="space-y-4">
           {education.map((edu, index) => (
-            <div key={edu.id} className="border border-gray-200 rounded-lg p-4">
+            <div key={edu.institution} className="border border-gray-200 rounded-lg p-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-medium text-gray-900">
                   Education #{index + 1}
                 </h3>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => toggleExpanded(edu.id)}
+                    onClick={() => toggleExpanded(edu.institution)}
                     className="p-1 hover:bg-gray-100 rounded"
                   >
-                    {expandedItems.has(edu.id) ? (
+                    {expandedItems.has(edu.institution) ? (
                       <ChevronUp size={16} />
                     ) : (
                       <ChevronDown size={16} />
                     )}
                   </button>
                   <button
-                    onClick={() => onRemove(edu.id)}
+                    onClick={() => onRemove(edu.institution)}
                     className="p-1 text-red-600 hover:bg-red-50 rounded"
                     title="Remove education"
                   >
@@ -76,7 +84,7 @@ const EducationForm: React.FC<EducationFormProps> = ({
                 </div>
               </div>
 
-              {expandedItems.has(edu.id) && (
+              {expandedItems.has(edu.institution) && (
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -85,8 +93,8 @@ const EducationForm: React.FC<EducationFormProps> = ({
                       </label>
                       <input
                         type="text"
-                        value={edu.degree}
-                        onChange={(e) => onUpdate(edu.id, { degree: e.target.value })}
+                        value={edu.studyType}
+                        onChange={(e) => onUpdate(edu.institution, { studyType: e.target.value })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="Bachelor of Science"
                       />
@@ -99,7 +107,7 @@ const EducationForm: React.FC<EducationFormProps> = ({
                       <input
                         type="text"
                         value={edu.institution}
-                        onChange={(e) => onUpdate(edu.id, { institution: e.target.value })}
+                        onChange={(e) => onUpdate(edu.institution, { institution: e.target.value })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="University of California"
                       />
@@ -109,12 +117,12 @@ const EducationForm: React.FC<EducationFormProps> = ({
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Field of Study
+                        Field of Study *
                       </label>
                       <input
                         type="text"
-                        value={edu.field}
-                        onChange={(e) => onUpdate(edu.id, { field: e.target.value })}
+                        value={edu.area}
+                        onChange={(e) => onUpdate(edu.institution, { area: e.target.value })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="Computer Science"
                       />
@@ -122,14 +130,14 @@ const EducationForm: React.FC<EducationFormProps> = ({
                     
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Location
+                        GPA/Score
                       </label>
                       <input
                         type="text"
-                        value={edu.location}
-                        onChange={(e) => onUpdate(edu.id, { location: e.target.value })}
+                        value={edu.score}
+                        onChange={(e) => onUpdate(edu.institution, { score: e.target.value })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Berkeley, CA"
+                        placeholder="3.8"
                       />
                     </div>
                   </div>
@@ -140,10 +148,11 @@ const EducationForm: React.FC<EducationFormProps> = ({
                         Start Date
                       </label>
                       <input
-                        type="month"
+                        type="text"
                         value={edu.startDate}
-                        onChange={(e) => onUpdate(edu.id, { startDate: e.target.value })}
+                        onChange={(e) => onUpdate(edu.institution, { startDate: e.target.value })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Sep 2018"
                       />
                     </div>
                     
@@ -151,50 +160,26 @@ const EducationForm: React.FC<EducationFormProps> = ({
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         End Date
                       </label>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="month"
-                          value={edu.endDate}
-                          onChange={(e) => onUpdate(edu.id, { endDate: e.target.value })}
-                          disabled={edu.current}
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-                        />
-                        <label className="flex items-center gap-2 text-sm">
-                          <input
-                            type="checkbox"
-                            checked={edu.current}
-                            onChange={(e) => onUpdate(edu.id, { current: e.target.checked })}
-                            className="rounded"
-                          />
-                          Current
-                        </label>
-                      </div>
+                      <input
+                        type="text"
+                        value={edu.endDate}
+                        onChange={(e) => onUpdate(edu.institution, { endDate: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="May 2022"
+                      />
                     </div>
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      GPA
+                      Institution URL
                     </label>
                     <input
-                      type="text"
-                      value={edu.gpa}
-                      onChange={(e) => onUpdate(edu.id, { gpa: e.target.value })}
+                      type="url"
+                      value={edu.url}
+                      onChange={(e) => onUpdate(edu.institution, { url: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="3.8/4.0"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Description
-                    </label>
-                    <textarea
-                      value={edu.description}
-                      onChange={(e) => onUpdate(edu.id, { description: e.target.value })}
-                      rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Describe your academic achievements, relevant coursework, or honors..."
+                      placeholder="https://university.edu"
                     />
                   </div>
                 </div>

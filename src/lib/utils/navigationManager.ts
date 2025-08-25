@@ -2,7 +2,7 @@ class NavigationManager {
   private static instance: NavigationManager;
   private isAuthenticated: boolean = false;
   private protectedRoutes: string[] = ['/dashboard', '/studio'];
-  private publicRoutes: string[] = ['/', '/auth/signin', '/auth/signup', '/cv-onboarding'];
+  private publicRoutes: string[] = ['/', '/auth/signin', '/auth/signup'];
 
   private constructor() {
     this.setupHistoryListener();
