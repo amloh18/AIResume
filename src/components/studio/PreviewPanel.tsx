@@ -26,6 +26,7 @@ interface PreviewPanelProps {
   paperSize: 'A4' | 'Letter';
   setPaperSize: (size: 'A4' | 'Letter') => void;
   documentType: 'cv' | 'cover-letter';
+  sectionOrder?: string[];
 }
 
 const PreviewPanel: React.FC<PreviewPanelProps> = ({
@@ -36,7 +37,8 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
   setZoom,
   paperSize,
   setPaperSize,
-  documentType
+  documentType,
+  sectionOrder = ['basics', 'experience', 'education', 'skills', 'projects', 'certificates', 'languages']
 }) => {
   console.log('PreviewPanel received cvData:', cvData);
   
@@ -76,22 +78,22 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
     if (!containerRef.current || fitMode !== 'fit-height') return;
 
     const container = containerRef.current;
-    const containerHeight = container.clientHeight - 32; // Account for padding
+    const containerHeight = container.clientHeight - 64; // Account for padding and controls
     const scale = containerHeight / currentDimensions.height;
     
-    // Cap zoom between 0.5x and 2x
-    const clampedScale = Math.max(0.5, Math.min(scale, 2));
+    // Cap zoom between 0.3x and 1.5x for better fit
+    const clampedScale = Math.max(0.3, Math.min(scale, 1.5));
     setZoom(clampedScale);
   }, [fitMode, paperSize, currentDimensions.height, setZoom]);
 
   const handleZoomIn = () => {
     setFitMode('custom');
-    setZoom(Math.min(zoom + 0.1, 2));
+    setZoom(Math.min(zoom + 0.1, 1.5));
   };
 
   const handleZoomOut = () => {
     setFitMode('custom');
-    setZoom(Math.max(zoom - 0.1, 0.5));
+    setZoom(Math.max(zoom - 0.1, 0.3));
   };
 
   const handleResetZoom = () => {
@@ -110,17 +112,24 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
     // Always show our enhanced preview regardless of template
     return (
       <div 
-        className={`${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-100'} min-h-full p-8`}
+        className="relative"
         style={{
+          width: currentDimensions.width * zoom,
+          minHeight: currentDimensions.height * zoom,
           transform: `scale(${zoom})`,
-          transformOrigin: 'top center'
+          transformOrigin: 'top center',
+          marginTop: '0',
+          marginBottom: '0'
         }}
       >
-        <CVPreviewContent 
-          cvData={cvData} 
-          theme={theme}
-          showBadge={false}
-        />
+        <div className={`${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-100'} mx-auto shadow-lg`}>
+          <CVPreviewContent 
+            cvData={cvData} 
+            theme={theme}
+            showBadge={false}
+            sectionOrder={sectionOrder}
+          />
+        </div>
       </div>
     );
   };
@@ -196,9 +205,14 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
       {/* Preview Area */}
       <div 
         ref={containerRef}
-        className="flex-1 flex items-center justify-center overflow-auto p-8"
+        className="flex-1 flex items-start justify-center overflow-auto p-4"
+        style={{ 
+          minHeight: 0,
+          paddingTop: '1rem',
+          paddingBottom: '6rem' // Extra space for controls
+        }}
       >
-        <div ref={previewRef}>
+        <div ref={previewRef} className="flex items-start justify-center w-full">
           {documentType === 'cv' ? renderCVPreview() : renderCoverLetterPreview()}
         </div>
       </div>
@@ -218,8 +232,8 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
           <div className="w-20">
             <input
               type="range"
-              min="0.5"
-              max="2"
+              min="0.3"
+              max="1.5"
               step="0.1"
               value={zoom}
               onChange={(e) => {
