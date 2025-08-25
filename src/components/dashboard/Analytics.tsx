@@ -64,6 +64,7 @@ import {
   MapPin
 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
+import { useCreateCV } from '@/lib/utils/cvCreationUtils';
 
 // KPI Widget Component
 const KPIWidget: React.FC<{ 
@@ -477,6 +478,20 @@ const AIGoal: React.FC<{ goal: string; metrics: any }> = ({ goal, metrics }) => 
       className="w-full px-3 py-2 bg-gradient-to-r from-blue-400/20 to-blue-500/20 border border-blue-400/30 text-blue-400 rounded-lg font-medium hover:from-blue-400/30 hover:to-blue-500/30 transition-all duration-300 flex items-center justify-center gap-2 text-sm"
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
+      onClick={async () => {
+        try {
+          const userId = user?.id || user?._id || session?.user?.id;
+          if (userId) {
+            await createCV({
+              userId,
+              title: 'My Professional CV',
+              type: 'cv'
+            });
+          }
+        } catch (error) {
+          console.error('Error creating CV:', error);
+        }
+      }}
     >
       <Play size={12} />
       Start now
@@ -531,6 +546,7 @@ const KeywordsAnalysis: React.FC<{ strengths: string[]; gaps: string[] }> = ({ s
 
 const Analytics: React.FC = () => {
   const { data: session } = useSession();
+  const { createCV } = useCreateCV();
   const [user, setUser] = useState<any>(null);
   const [jobs, setJobs] = useState<any[]>([]);
   const [cvs, setCvs] = useState<any[]>([]);
@@ -985,6 +1001,20 @@ const Analytics: React.FC = () => {
                   className="px-6 py-3 bg-gradient-to-r from-lime-400 to-lime-500 text-black font-semibold rounded-xl hover:from-lime-300 hover:to-lime-400 transition-all duration-300 flex items-center gap-2 mx-auto"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
+                  onClick={async () => {
+                    try {
+                      const userId = user?.id || user?._id || session?.user?.id;
+                      if (userId) {
+                        await createCV({
+                          userId,
+                          title: 'My Professional CV',
+                          type: 'cv'
+                        });
+                      }
+                    } catch (error) {
+                      console.error('Error creating CV:', error);
+                    }
+                  }}
                 >
                   <Plus size={20} />
                   Create CV

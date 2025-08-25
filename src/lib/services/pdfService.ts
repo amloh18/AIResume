@@ -1,8 +1,8 @@
-import { CVData } from '@/lib/stores/cvStore';
+import { CVDataStructure } from '@/types/cv';
 import { Template } from '@/lib/stores/templateStore';
 
 export class PDFService {
-  static async generatePDF(cvData: CVData, template: Template): Promise<Blob> {
+  static async generatePDF(cvData: CVDataStructure, template: Template): Promise<Blob> {
     // For now, we'll create a simple PDF using jsPDF
     // In a real implementation, you would use @react-pdf/renderer
     
@@ -15,27 +15,27 @@ export class PDFService {
     // Header
     doc.setFontSize(24);
     doc.setTextColor(37, 99, 235); // Blue color
-    doc.text(`${cvData.personalInfo.firstName} ${cvData.personalInfo.lastName}`, 20, 30);
+    doc.text(cvData.basics.name, 20, 30);
     
     // Contact info
     doc.setFontSize(12);
     doc.setTextColor(100, 100, 100);
     let yPos = 40;
-    if (cvData.personalInfo.email) {
-      doc.text(cvData.personalInfo.email, 20, yPos);
+    if (cvData.basics.email) {
+      doc.text(cvData.basics.email, 20, yPos);
       yPos += 7;
     }
-    if (cvData.personalInfo.phone) {
-      doc.text(cvData.personalInfo.phone, 20, yPos);
+    if (cvData.basics.phone) {
+      doc.text(cvData.basics.phone, 20, yPos);
       yPos += 7;
     }
-    if (cvData.personalInfo.location) {
-      doc.text(cvData.personalInfo.location, 20, yPos);
+    if (cvData.basics.location?.city) {
+      doc.text(cvData.basics.location.city, 20, yPos);
       yPos += 7;
     }
     
     // Summary
-    if (cvData.personalInfo.summary) {
+    if (cvData.basics.summary) {
       yPos += 10;
       doc.setFontSize(16);
       doc.setTextColor(37, 99, 235);
@@ -43,19 +43,19 @@ export class PDFService {
       yPos += 10;
       doc.setFontSize(12);
       doc.setTextColor(50, 50, 50);
-      const summaryLines = doc.splitTextToSize(cvData.personalInfo.summary, 170);
+      const summaryLines = doc.splitTextToSize(cvData.basics.summary, 170);
       doc.text(summaryLines, 20, yPos);
       yPos += summaryLines.length * 7 + 10;
     }
     
     // Experience
-    if (cvData.experience.length > 0) {
+    if (cvData.work && cvData.work.length > 0) {
       doc.setFontSize(16);
       doc.setTextColor(37, 99, 235);
       doc.text('Work Experience', 20, yPos);
       yPos += 10;
       
-      cvData.experience.forEach((exp, index) => {
+      cvData.work.forEach((exp, index) => {
         if (yPos > 250) {
           doc.addPage();
           yPos = 20;
@@ -63,16 +63,16 @@ export class PDFService {
         
         doc.setFontSize(14);
         doc.setTextColor(50, 50, 50);
-        doc.text(exp.jobTitle, 20, yPos);
+        doc.text(exp.position, 20, yPos);
         yPos += 7;
         
         doc.setFontSize(12);
         doc.setTextColor(100, 100, 100);
-        doc.text(`${exp.company} | ${exp.startDate} - ${exp.current ? 'Present' : exp.endDate}`, 20, yPos);
+        doc.text(`${exp.name} | ${exp.startDate} - ${exp.endDate || 'Present'}`, 20, yPos);
         yPos += 7;
         
-        if (exp.description) {
-          const descLines = doc.splitTextToSize(exp.description, 170);
+        if (exp.summary) {
+          const descLines = doc.splitTextToSize(exp.summary, 170);
           doc.text(descLines, 20, yPos);
           yPos += descLines.length * 7;
         }
@@ -82,7 +82,7 @@ export class PDFService {
     }
     
     // Education
-    if (cvData.education.length > 0) {
+    if (cvData.education && cvData.education.length > 0) {
       if (yPos > 250) {
         doc.addPage();
         yPos = 20;
@@ -106,7 +106,7 @@ export class PDFService {
         
         doc.setFontSize(12);
         doc.setTextColor(100, 100, 100);
-        doc.text(`${edu.institution} | ${edu.startDate} - ${edu.current ? 'Present' : edu.endDate}`, 20, yPos);
+        doc.text(`${edu.institution} | ${edu.startDate} - ${edu.endDate || 'Present'}`, 20, yPos);
         yPos += 10;
       });
     }

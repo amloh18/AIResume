@@ -1,14 +1,21 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Experience } from '@/lib/stores/cvStore';
 import { Trash2, Plus, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface ExperienceFormProps {
-  experience: Experience[];
+  experience: Array<{
+    name: string;
+    position: string;
+    url: string;
+    startDate: string;
+    endDate: string;
+    summary: string;
+    highlights: string[];
+  }>;
   onAdd: () => void;
   onRemove: (id: string) => void;
-  onUpdate: (id: string, updates: Partial<Experience>) => void;
+  onUpdate: (id: string, updates: any) => void;
 }
 
 const ExperienceForm: React.FC<ExperienceFormProps> = ({
@@ -30,28 +37,28 @@ const ExperienceForm: React.FC<ExperienceFormProps> = ({
   };
 
   const addAchievement = (id: string) => {
-    const item = experience.find(exp => exp.id === id);
+    const item = experience.find(exp => exp.name === id);
     if (item) {
       onUpdate(id, {
-        achievements: [...item.achievements, '']
+        highlights: [...item.highlights, '']
       });
     }
   };
 
   const updateAchievement = (id: string, index: number, value: string) => {
-    const item = experience.find(exp => exp.id === id);
+    const item = experience.find(exp => exp.name === id);
     if (item) {
-      const newAchievements = [...item.achievements];
-      newAchievements[index] = value;
-      onUpdate(id, { achievements: newAchievements });
+      const newHighlights = [...item.highlights];
+      newHighlights[index] = value;
+      onUpdate(id, { highlights: newHighlights });
     }
   };
 
   const removeAchievement = (id: string, index: number) => {
-    const item = experience.find(exp => exp.id === id);
+    const item = experience.find(exp => exp.name === id);
     if (item) {
-      const newAchievements = item.achievements.filter((_, i) => i !== index);
-      onUpdate(id, { achievements: newAchievements });
+      const newHighlights = item.highlights.filter((_, i) => i !== index);
+      onUpdate(id, { highlights: newHighlights });
     }
   };
 
@@ -76,24 +83,24 @@ const ExperienceForm: React.FC<ExperienceFormProps> = ({
       ) : (
         <div className="space-y-4">
           {experience.map((exp, index) => (
-            <div key={exp.id} className="border border-gray-200 rounded-lg p-4">
+            <div key={exp.name} className="border border-gray-200 rounded-lg p-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-medium text-gray-900">
                   Experience #{index + 1}
                 </h3>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => toggleExpanded(exp.id)}
+                    onClick={() => toggleExpanded(exp.name)}
                     className="p-1 hover:bg-gray-100 rounded"
                   >
-                    {expandedItems.has(exp.id) ? (
+                    {expandedItems.has(exp.name) ? (
                       <ChevronUp size={16} />
                     ) : (
                       <ChevronDown size={16} />
                     )}
                   </button>
                   <button
-                    onClick={() => onRemove(exp.id)}
+                    onClick={() => onRemove(exp.name)}
                     className="p-1 text-red-600 hover:bg-red-50 rounded"
                     title="Remove experience"
                   >
@@ -102,135 +109,125 @@ const ExperienceForm: React.FC<ExperienceFormProps> = ({
                 </div>
               </div>
 
-              {expandedItems.has(exp.id) && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Job Title *
-                      </label>
-                      <input
-                        type="text"
-                        value={exp.jobTitle}
-                        onChange={(e) => onUpdate(exp.id, { jobTitle: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Software Engineer"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Company *
-                      </label>
-                      <input
-                        type="text"
-                        value={exp.company}
-                        onChange={(e) => onUpdate(exp.id, { company: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Tech Corp"
-                      />
-                    </div>
-                  </div>
-
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Location
+                      Job Title *
                     </label>
                     <input
                       type="text"
-                      value={exp.location}
-                      onChange={(e) => onUpdate(exp.id, { location: e.target.value })}
+                      value={exp.position}
+                      onChange={(e) => onUpdate(exp.name, { position: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="San Francisco, CA"
+                      placeholder="Software Engineer"
                     />
                   </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Start Date
-                      </label>
-                      <input
-                        type="month"
-                        value={exp.startDate}
-                        onChange={(e) => onUpdate(exp.id, { startDate: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        End Date
-                      </label>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="month"
-                          value={exp.endDate}
-                          onChange={(e) => onUpdate(exp.id, { endDate: e.target.value })}
-                          disabled={exp.current}
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-                        />
-                        <label className="flex items-center gap-2 text-sm">
-                          <input
-                            type="checkbox"
-                            checked={exp.current}
-                            onChange={(e) => onUpdate(exp.id, { current: e.target.checked })}
-                            className="rounded"
-                          />
-                          Current
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Description
+                      Company *
                     </label>
-                    <textarea
-                      value={exp.description}
-                      onChange={(e) => onUpdate(exp.id, { description: e.target.value })}
-                      rows={3}
+                    <input
+                      type="text"
+                      value={exp.name}
+                      onChange={(e) => onUpdate(exp.name, { name: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Describe your role and responsibilities..."
+                      placeholder="Google"
                     />
                   </div>
+                </div>
 
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="block text-sm font-medium text-gray-700">
-                        Achievements
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Start Date
+                    </label>
+                    <input
+                      type="text"
+                      value={exp.startDate}
+                      onChange={(e) => onUpdate(exp.name, { startDate: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Jan 2020"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      End Date
+                    </label>
+                    <input
+                      type="text"
+                      value={exp.endDate}
+                      onChange={(e) => onUpdate(exp.name, { endDate: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Present"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Company URL
+                  </label>
+                  <input
+                    type="url"
+                    value={exp.url}
+                    onChange={(e) => onUpdate(exp.name, { url: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="https://company.com"
+                  />
+                </div>
+
+                {expandedItems.has(exp.name) && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Job Description
                       </label>
-                      <button
-                        onClick={() => addAchievement(exp.id)}
-                        className="text-sm text-blue-600 hover:text-blue-700"
-                      >
-                        + Add Achievement
-                      </button>
+                      <textarea
+                        value={exp.summary}
+                        onChange={(e) => onUpdate(exp.name, { summary: e.target.value })}
+                        rows={3}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Describe your role and responsibilities..."
+                      />
                     </div>
-                    
-                    <div className="space-y-2">
-                      {exp.achievements.map((achievement, achievementIndex) => (
-                        <div key={achievementIndex} className="flex items-center gap-2">
+
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-sm font-medium text-gray-700">
+                          Key Achievements
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => addAchievement(exp.name)}
+                          className="text-sm text-blue-600 hover:text-blue-700"
+                        >
+                          + Add Achievement
+                        </button>
+                      </div>
+                      
+                      {exp.highlights.map((achievement, achievementIndex) => (
+                        <div key={achievementIndex} className="flex items-center gap-2 mb-2">
                           <input
                             type="text"
                             value={achievement}
-                            onChange={(e) => updateAchievement(exp.id, achievementIndex, e.target.value)}
+                            onChange={(e) => updateAchievement(exp.name, achievementIndex, e.target.value)}
                             className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            placeholder="Describe an achievement..."
+                            placeholder="Describe a key achievement..."
                           />
                           <button
-                            onClick={() => removeAchievement(exp.id, achievementIndex)}
-                            className="p-1 text-red-600 hover:bg-red-50 rounded"
+                            type="button"
+                            onClick={() => removeAchievement(exp.name, achievementIndex)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded"
                           >
                             <Trash2 size={14} />
                           </button>
                         </div>
                       ))}
                     </div>
-                  </div>
-                </div>
-              )}
+                  </>
+                )}
+              </div>
             </div>
           ))}
         </div>

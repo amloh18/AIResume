@@ -1,95 +1,58 @@
-import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
 
-export default withAuth(
-  function middleware(req) {
-    const { pathname } = req.nextUrl;
-    const token = req.nextauth.token;
+export default async function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+  
+  // Define route categories
+  const publicRoutes = ['/', '/auth/signin', '/auth/signup'];
+  const protectedRoutes = ['/dashboard', '/studio'];
+  const apiRoutes = [
+    '/api/auth',
+    '/api/parse-job',
+    '/api/jobs/parsed',
+    '/api/templates',
+    '/api/snippets',
+    '/api/health',
+    '/api/cv/parse',
+    '/api/test-file-upload',
+    '/api/test-parsing'
+  ];
 
-    // Define route categories
-    const publicRoutes = ['/', '/auth/signin', '/auth/signup', '/cv-onboarding'];
-    const protectedRoutes = ['/dashboard', '/studio'];
-    const apiRoutes = [
-      '/api/auth',
-      '/api/parse-job',
-      '/api/jobs/parsed',
-      '/api/templates',
-      '/api/snippets',
-      '/api/health',
-      '/api/cv/parse',
-      '/api/test-file-upload',
-      '/api/test-parsing'
-    ];
+  // Allow all API routes
+  if (apiRoutes.some(route => pathname.startsWith(route))) {
+    return NextResponse.next();
+  }
 
-    // Allow all API routes
-    if (apiRoutes.some(route => pathname.startsWith(route))) {
-      return NextResponse.next();
-    }
+  // Allow static assets
+  if (pathname.startsWith('/_next') || pathname.startsWith('/public')) {
+    return NextResponse.next();
+  }
 
-    // Allow static assets
-    if (pathname.startsWith('/_next') || pathname.startsWith('/public')) {
-      return NextResponse.next();
-    }
+  // Allow public routes
+  if (publicRoutes.includes(pathname) || publicRoutes.some(route => pathname.startsWith(route))) {
+    return NextResponse.next();
+  }
 
-    // Handle authenticated users trying to access landing page
-    if (token && pathname === '/') {
-      // Redirect authenticated users away from landing page
-      return NextResponse.redirect(new URL('/dashboard', req.url));
-    }
-
-    // Handle unauthenticated users trying to access protected routes
-    if (!token && protectedRoutes.some(route => pathname.startsWith(route))) {
+  // Check authentication for protected routes
+  if (protectedRoutes.some(route => pathname.startsWith(route))) {
+    try {
+      const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+      
+      if (!token) {
+        const callbackUrl = encodeURIComponent(pathname);
+        return NextResponse.redirect(new URL(`/auth/signin?callbackUrl=${callbackUrl}`, req.url));
+      }
+    } catch (error) {
+      console.error('Middleware auth error:', error);
       const callbackUrl = encodeURIComponent(pathname);
       return NextResponse.redirect(new URL(`/auth/signin?callbackUrl=${callbackUrl}`, req.url));
     }
-
-    return NextResponse.next();
-  },
-  {
-    callbacks: {
-      authorized: ({ token, req }) => {
-        const { pathname } = req.nextUrl;
-
-        // Define route categories
-        const publicRoutes = ['/', '/auth/signin', '/auth/signup', '/cv-onboarding'];
-        const protectedRoutes = ['/dashboard', '/studio'];
-        const apiRoutes = [
-          '/api/auth',
-          '/api/parse-job',
-          '/api/jobs/parsed',
-          '/api/templates',
-          '/api/snippets',
-          '/api/health',
-          '/api/cv/parse',
-          '/api/test-file-upload',
-          '/api/test-parsing'
-        ];
-
-        // Allow all API routes
-        if (apiRoutes.some(route => pathname.startsWith(route))) {
-          return true;
-        }
-
-        // Allow static assets
-        if (pathname.startsWith('/_next') || pathname.startsWith('/public')) {
-          return true;
-        }
-
-        // Allow public routes
-        if (publicRoutes.includes(pathname) || publicRoutes.some(route => pathname.startsWith(route))) {
-          return true;
-        }
-
-        // Require authentication for protected routes
-        if (protectedRoutes.some(route => pathname.startsWith(route))) {
-          return !!token;
-        }
-
-        return true;
-      },
-    },
   }
-);
+
+  return NextResponse.next();
+}
 
 export const config = {
   matcher: [

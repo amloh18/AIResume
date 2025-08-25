@@ -4,16 +4,18 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import StudioTopBar from './StudioTopBar';
-import StructurePanel from './StructurePanel';
+import OnboardingFormPanel from './OnboardingFormPanel';
 import PreviewPanel from './PreviewPanel';
 import AIAssistantPanel from './AIAssistantPanel';
-import { useCVStore } from '@/lib/stores/cvStore';
+import { CVDataStructure } from '@/types/cv';
 import { useTemplateStore } from '@/lib/stores/templateStore';
 import { useJobStore } from '@/lib/stores/jobStore';
 import { CVService } from '@/lib/services/cvService';
 import { TemplateService } from '@/lib/services/templateService';
 import { JobService } from '@/lib/services/jobService';
 import { debounce } from 'lodash';
+import { transformDatabaseToStudio } from '@/lib/utils/cvDataTransform';
+import { toCVDataStructure } from '@/lib/utils/dataAdapter';
 
 interface CVStudioProps {
   jobId?: string | null;
@@ -34,17 +36,10 @@ const CVStudio: React.FC<CVStudioProps> = ({ jobId, cvId, userId }) => {
   });
   const [zoom, setZoom] = useState(1);
   const [paperSize, setPaperSize] = useState<'A4' | 'Letter'>('A4');
-  const [selectedJobId, setSelectedJobId] = useState<string | null>(jobId);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(jobId || null);
   
-  // Store hooks
-  const { 
-    cvData, 
-    setCVData, 
-    updateCVField, 
-    addSection, 
-    removeSection,
-    resetCV 
-  } = useCVStore();
+  // CV Data state
+  const [cvData, setCvData] = useState<CVDataStructure | null>(null);
   
   const { 
     templates, 
@@ -58,21 +53,143 @@ const CVStudio: React.FC<CVStudioProps> = ({ jobId, cvId, userId }) => {
     setCurrentJob 
   } = useJobStore();
 
+  // Update CV field
+  const updateCVField = useCallback((path: string, value: any) => {
+    setCvData(prev => {
+      if (!prev) return prev;
+      
+      const pathArray = path.split('.');
+      const newData = { ...prev };
+      let current: any = newData;
+      
+      for (let i = 0; i < pathArray.length - 1; i++) {
+        current = current[pathArray[i]];
+      }
+      
+      current[pathArray[pathArray.length - 1]] = value;
+      return newData;
+    });
+  }, []);
+
+  // Add section
+  const addSection = useCallback((sectionType: keyof CVDataStructure, item?: any) => {
+    setCvData(prev => {
+      if (!prev) return prev;
+      
+      const newData = { ...prev };
+      const section = newData[sectionType];
+      
+      if (Array.isArray(section)) {
+        const defaultItem = item || getDefaultItemForSection(sectionType);
+        newData[sectionType] = [...section, defaultItem] as any;
+      }
+      
+      return newData;
+    });
+  }, []);
+
+  // Remove section
+  const removeSection = useCallback((sectionType: keyof CVDataStructure, id: string) => {
+    setCvData(prev => {
+      if (!prev) return prev;
+      
+      const newData = { ...prev };
+      const section = newData[sectionType];
+      
+      if (Array.isArray(section)) {
+        newData[sectionType] = section.filter((item: any) => {
+          if (sectionType === 'work') return item.name !== id;
+          if (sectionType === 'education') return item.institution !== id;
+          if (sectionType === 'skills') return item.name !== id;
+          if (sectionType === 'projects') return item.name !== id;
+          if (sectionType === 'certificates') return item.name !== id;
+          if (sectionType === 'languages') return item.language !== id;
+          return true;
+        }) as any;
+      }
+      
+      return newData;
+    });
+  }, []);
+
+  // Get default item for section
+  const getDefaultItemForSection = (sectionType: keyof CVDataStructure) => {
+    switch (sectionType) {
+      case 'work':
+        return {
+          name: '',
+          position: '',
+          url: '',
+          startDate: '',
+          endDate: '',
+          summary: '',
+          highlights: []
+        };
+      case 'education':
+        return {
+          institution: '',
+          url: '',
+          area: '',
+          studyType: '',
+          startDate: '',
+          endDate: '',
+          score: '',
+          courses: []
+        };
+      case 'skills':
+        return {
+          name: '',
+          level: '',
+          keywords: []
+        };
+      case 'projects':
+        return {
+          name: '',
+          startDate: '',
+          endDate: '',
+          description: '',
+          highlights: [],
+          url: ''
+        };
+      case 'certificates':
+        return {
+          name: '',
+          date: '',
+          issuer: '',
+          url: ''
+        };
+      case 'languages':
+        return {
+          language: '',
+          fluency: ''
+        };
+      default:
+        return {};
+    }
+  };
+
   // Debounced autosave
   const debouncedSave = useCallback(
-    debounce(async (data: any) => {
+    debounce(async (data: CVDataStructure) => {
       try {
         setSaveStatus('saving');
         if (cvId) {
-          await CVService.updateCV(cvId, { ...data, jobId: selectedJobId });
+          await CVService.updateCV(cvId, data, userId || undefined);
         } else {
+          // Create new CV
+          const userData = localStorage.getItem('user');
+          const currentUserId = userData ? JSON.parse(userData).id || JSON.parse(userData)._id : '6889b151d17daa1eaee91a5c';
+          
           const newCV = await CVService.createCV({
+            userId: currentUserId,
+            title: 'Untitled CV',
             ...data,
-            jobId: selectedJobId || jobId || undefined,
-            templateId: selectedTemplate?.id
+            jobId: selectedJobId || jobId || undefined
           });
-          // Update URL with new CV ID
-          router.replace(`/studio?jobId=${selectedJobId || jobId}&cvId=${newCV.id}`);
+          
+          // Extract CV ID and update URL
+          const newCvId = newCV.data?.cv?.id || newCV.id;
+          router.replace(`/studio?cvId=${newCvId}${selectedJobId || jobId ? `&jobId=${selectedJobId || jobId}` : ''}`);
         }
         setSaveStatus('saved');
       } catch (err) {
@@ -80,7 +197,7 @@ const CVStudio: React.FC<CVStudioProps> = ({ jobId, cvId, userId }) => {
         setSaveStatus('error');
       }
     }, 1000),
-    [cvId, jobId, selectedJobId, selectedTemplate, router]
+    [cvId, jobId, selectedJobId, selectedTemplate, router, userId]
   );
 
   // Autosave on any change
@@ -97,68 +214,149 @@ const CVStudio: React.FC<CVStudioProps> = ({ jobId, cvId, userId }) => {
         setIsLoading(true);
         setError(null);
 
-        // Load templates
-        const templatesData = await TemplateService.getTemplates();
-        setTemplates(templatesData);
-        
-        // Set default template if none selected
-        if (!selectedTemplate && templatesData.length > 0) {
-          const defaultTemplate = templatesData.find(t => t.isDefault) || templatesData[0];
-          setSelectedTemplate(defaultTemplate);
+        console.log('Loading initial data...', { cvId, jobId, userId });
+
+        // Validate userId
+        if (!userId) {
+          throw new Error('User ID is required to load CV data');
         }
 
-        // Load job data if jobId provided
+        // Load templates
+        let templatesResult: any[] = [];
+        try {
+          templatesResult = await TemplateService.getTemplates();
+          setTemplates(templatesResult);
+          console.log('Templates loaded:', templatesResult.length);
+        } catch (templateError) {
+          console.error('Failed to load templates:', templateError);
+          // Don't fail the entire load for template errors
+          setTemplates([]);
+        }
+
+        // Load job data if jobId is provided
         if (jobId) {
-          const jobData = await JobService.getJob(jobId);
-          setCurrentJob(jobData);
-          setSelectedJobId(jobId);
+          try {
+            const jobResult = await JobService.getJob(jobId);
+            setCurrentJob(jobResult);
+            setSelectedJobId(jobId);
+            console.log('Job data loaded:', jobResult);
+          } catch (jobError) {
+            console.error('Failed to load job data:', jobError);
+            // Don't fail the entire load for job errors
+          }
         }
 
         // Load CV data
         if (cvId) {
-          // Load existing CV
-          const cvData = await CVService.getCV(cvId);
-          setCVData(cvData);
-          if (cvData.jobId) {
-            setSelectedJobId(cvData.jobId);
-            const jobData = await JobService.getJob(cvData.jobId);
-            setCurrentJob(jobData);
+          let cvResult;
+          
+          // Check if CV data is in sessionStorage (for new CVs)
+          const sessionCVData = sessionStorage.getItem('newCVData');
+          if (sessionCVData) {
+            try {
+              const parsedCVData = JSON.parse(sessionCVData);
+              console.log('Found CV data in sessionStorage:', parsedCVData);
+              
+              // Set CV data from sessionStorage
+              if (parsedCVData.cvData) {
+                const convertedData = toCVDataStructure(parsedCVData.cvData);
+                console.log('Converted session CV data:', convertedData);
+                setCvData(convertedData);
+                cvResult = parsedCVData;
+              } else {
+                // Fallback to API call
+                cvResult = await CVService.getCV(cvId, userId);
+                const convertedData = toCVDataStructure(cvResult.cvData);
+                console.log('Converted API CV data:', convertedData);
+                setCvData(convertedData);
+              }
+              
+              // Set template if available
+              if (parsedCVData.templateId && templatesResult.length > 0) {
+                const template = templatesResult.find((t: any) => t.id === parsedCVData.templateId);
+                if (template) {
+                  setSelectedTemplate(template);
+                }
+              }
+              
+              // Clear sessionStorage
+              sessionStorage.removeItem('newCVData');
+            } catch (error) {
+              console.error('Error parsing session CV data:', error);
+              // Fallback to API call
+              cvResult = await CVService.getCV(cvId, userId);
+              const convertedData = toCVDataStructure(cvResult.cvData);
+              console.log('Converted fallback CV data:', convertedData);
+              setCvData(convertedData);
+            }
+          } else {
+            // Load existing CV from API
+            cvResult = await CVService.getCV(cvId, userId);
+            const convertedData = toCVDataStructure(cvResult.cvData);
+            console.log('Converted existing CV data:', convertedData);
+            setCvData(convertedData);
+          }
+          
+          // Set template if available
+          if (cvResult.templateId && templatesResult.length > 0) {
+            const template = templatesResult.find((t: any) => t.id === cvResult.templateId);
+            if (template) {
+              setSelectedTemplate(template);
+            }
           }
         } else {
-          // Create new CV with default data
-          const defaultCVData = {
-            personalInfo: {
-              firstName: '',
-              lastName: '',
+          // Create default CV data structure
+          const defaultCVData: CVDataStructure = {
+            basics: {
+              name: '',
+              label: '',
+              image: '',
               email: '',
               phone: '',
-              location: '',
-              website: '',
-              linkedin: '',
-              github: '',
-              summary: ''
+              url: '',
+              summary: '',
+              location: {
+                address: '',
+                postalCode: '',
+                city: '',
+                countryCode: '',
+                region: ''
+              },
+              profiles: []
             },
-            experience: [],
+            work: [],
+            volunteer: [],
             education: [],
+            awards: [],
+            certificates: [],
+            publications: [],
             skills: [],
-            projects: [],
-            certifications: [],
             languages: [],
-            customSections: []
+            interests: [],
+            references: [],
+            projects: []
           };
-          setCVData(defaultCVData);
+          console.log('Setting default CV data:', defaultCVData);
+          setCvData(defaultCVData);
+          
+          // If no cvId is provided, we're creating a new CV
+          // Set a default template if available
+          if (templatesResult.length > 0) {
+            setSelectedTemplate(templatesResult[0]);
+          }
         }
 
+        setIsLoading(false);
+        console.log('Initial data loading completed');
       } catch (err) {
         console.error('Error loading initial data:', err);
-        setError('Failed to load CV data. Please try again.');
-      } finally {
+        setError(err instanceof Error ? err.message : 'Failed to load CV data');
         setIsLoading(false);
       }
     };
 
     loadInitialData();
-  }, [jobId, cvId, userId]);
+  }, [cvId, jobId, userId, setTemplates, setSelectedTemplate, setCurrentJob, selectedTemplate]);
 
   const handleExport = async (format: 'pdf' | 'docx' | 'json') => {
     try {
@@ -242,12 +440,11 @@ const CVStudio: React.FC<CVStudioProps> = ({ jobId, cvId, userId }) => {
           bg-gray-800 border-r border-gray-700
           flex-shrink-0 relative
         `}>
-          <StructurePanel
-            cvData={cvData}
+          <OnboardingFormPanel
+            cvData={cvData || null}
             onUpdateField={updateCVField}
             onAddSection={addSection}
             onRemoveSection={removeSection}
-            selectedTemplate={selectedTemplate}
             isCollapsed={!panelStates.left}
             onTogglePanel={() => togglePanel('left')}
           />
@@ -283,7 +480,7 @@ const CVStudio: React.FC<CVStudioProps> = ({ jobId, cvId, userId }) => {
             selectedJobId={selectedJobId}
             onJobSelection={handleJobSelection}
             onTogglePanel={() => togglePanel('right')}
-            cvId={cvId}
+            cvId={cvId || null}
           />
         </div>
       </div>

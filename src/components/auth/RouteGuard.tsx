@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
-import SessionManager from '@/lib/utils/sessionManager';
 
 interface RouteGuardProps {
   children: React.ReactNode;
@@ -21,46 +20,39 @@ const RouteGuard: React.FC<RouteGuardProps> = ({
   const pathname = usePathname();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasRedirected, setHasRedirected] = useState(false);
 
   useEffect(() => {
-    const sessionManager = SessionManager.getInstance();
-    
-    // Set up logout callback
-    sessionManager.setLogoutCallback(() => {
-      router.push('/auth/signin?message=session_expired');
-    });
-
-    // Update route in session manager
-    sessionManager.updateRoute(pathname);
-  }, [pathname, router]);
-
-  useEffect(() => {
+    // Don't process if still loading
     if (status === 'loading') return;
+
+    // Don't redirect multiple times
+    if (hasRedirected) return;
 
     if (requireAuth) {
       if (status === 'authenticated' && session) {
         setIsAuthorized(true);
-      } else {
+        setIsLoading(false);
+      } else if (status === 'unauthenticated') {
         // Not authenticated, redirect to login
+        setHasRedirected(true);
         const callbackUrl = encodeURIComponent(pathname);
         router.push(`${redirectTo}?callbackUrl=${callbackUrl}`);
-        return;
       }
     } else {
       // Public route - check if user is authenticated and redirect away from landing
       if (status === 'authenticated' && session && pathname === '/') {
         // Logged in user trying to access landing page, redirect to dashboard
-        const sessionManager = SessionManager.getInstance();
-        const lastRoute = sessionManager.getLastRoute();
-        router.push(lastRoute || '/dashboard');
+        setHasRedirected(true);
+        router.push('/dashboard');
         return;
       }
       setIsAuthorized(true);
+      setIsLoading(false);
     }
+  }, [status, session, requireAuth, pathname, redirectTo, router, hasRedirected]);
 
-    setIsLoading(false);
-  }, [status, session, requireAuth, pathname, redirectTo, router]);
-
+  // Show loading spinner while checking authentication
   if (isLoading || status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -69,7 +61,8 @@ const RouteGuard: React.FC<RouteGuardProps> = ({
     );
   }
 
-  if (!isAuthorized) {
+  // Don't render anything if not authorized (will redirect)
+  if (!isAuthorized && requireAuth) {
     return null;
   }
 

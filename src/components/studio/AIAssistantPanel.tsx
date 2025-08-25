@@ -24,7 +24,7 @@ import {
   X,
   Loader2
 } from 'lucide-react';
-import { CVData } from '@/lib/stores/cvStore';
+import { CVDataStructure } from '@/types/cv';
 import { Job } from '@/lib/stores/jobStore';
 import { useAIStore } from '@/lib/stores/aiStore';
 import { useAIAssistant } from '@/lib/hooks/useAIAssistant';
@@ -33,7 +33,7 @@ import { AISuggestionApplier } from '@/lib/utils/aiSuggestionApplier';
 import AICard from './ai/AICard';
 
 interface AIAssistantPanelProps {
-  cvData: CVData;
+  cvData: CVDataStructure | null;
   jobData: Job | null;
   onUpdateField: (path: string, value: any) => void;
   isCollapsed: boolean;
@@ -66,7 +66,7 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
     generateSectionSuggestions,
     refreshAllJobBasedSuggestions,
     isJobDependentSection
-  } = useAIAssistant(cvId, documentType);
+  } = useAIAssistant(cvId, cvData, documentType);
 
   const [showGeneratingBanner, setShowGeneratingBanner] = useState(false);
 
@@ -99,23 +99,21 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
   ];
 
   const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-lime-400';
+    if (score >= 80) return 'text-green-400';
     if (score >= 60) return 'text-yellow-400';
     return 'text-red-400';
   };
 
   const getScoreBgColor = (score: number) => {
-    if (score >= 80) return 'bg-lime-500';
-    if (score >= 60) return 'bg-yellow-500';
-    return 'bg-red-500';
+    if (score >= 80) return 'bg-green-400';
+    if (score >= 60) return 'bg-yellow-400';
+    return 'bg-red-400';
   };
 
-  const formatTimestamp = (timestamp?: string) => {
-    if (!timestamp) return '';
+  const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp);
     const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
+    const diffMins = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
     
     if (diffMins < 1) return 'just now';
     if (diffMins < 60) return `${diffMins}m ago`;
@@ -126,28 +124,38 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
 
   // Extract keywords from CV data for baseline ATS
   const extractCVKeywords = () => {
+    if (!cvData) return [];
+    
     const keywords: string[] = [];
     
     // Extract from skills
-    cvData.skills.forEach(skill => {
-      keywords.push(...skill.skills);
-    });
+    if (cvData.skills && Array.isArray(cvData.skills)) {
+      cvData.skills.forEach(skill => {
+        if (skill.keywords && Array.isArray(skill.keywords)) {
+          keywords.push(...skill.keywords);
+        }
+      });
+    }
     
-    // Extract from experience descriptions
-    cvData.experience.forEach(exp => {
-      const text = `${exp.jobTitle} ${exp.company} ${exp.description}`;
-      // Simple keyword extraction (in a real app, you'd use NLP)
-      const words = text.split(/\s+/).filter(word => 
-        word.length > 3 && /^[A-Z][a-z]+/.test(word)
-      );
-      keywords.push(...words.slice(0, 3)); // Take first 3 capitalized words
-    });
+    // Extract from work experience descriptions
+    if (cvData.work && Array.isArray(cvData.work)) {
+      cvData.work.forEach(work => {
+        const text = `${work.position} ${work.name} ${work.summary}`;
+        // Simple keyword extraction (in a real app, you'd use NLP)
+        const words = text.split(/\s+/).filter(word => 
+          word.length > 3 && /^[A-Z][a-z]+/.test(word)
+        );
+        keywords.push(...words.slice(0, 3)); // Take first 3 capitalized words
+      });
+    }
     
     // Remove duplicates and limit to 8 keywords
     return [...new Set(keywords)].slice(0, 8);
   };
 
   const handleUseSuggestion = (suggestion: AISuggestion) => {
+    if (!cvData) return;
+    
     const result = AISuggestionApplier.applySuggestion(suggestion, cvData, onUpdateField);
     if (result.success) {
       // Could show a success toast here
@@ -212,7 +220,16 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
                       <span className="text-xs text-gray-400">{keyword}</span>
                       <button 
                         className="text-xs text-lime-400 hover:text-lime-300"
-                        onClick={() => onUpdateField('skills', [...cvData.skills, { id: Date.now().toString(), category: 'Technical Skills', skills: [keyword] }])}
+                        onClick={() => {
+                          if (cvData) {
+                            const newSkill = {
+                              name: 'Technical Skills',
+                              level: '',
+                              keywords: [keyword]
+                            };
+                            onUpdateField('skills', [...(cvData.skills || []), newSkill]);
+                          }
+                        }}
                       >
                         Add to Skills
                       </button>

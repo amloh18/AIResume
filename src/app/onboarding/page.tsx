@@ -2,24 +2,101 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, Sparkles, CheckCircle, LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useSession, signOut } from 'next-auth/react';
+import { signOutUser } from '@/lib/firebase';
 import { OnboardingProvider, useOnboarding } from '@/contexts/OnboardingContext';
-import AuthModal from '@/components/onboarding/AuthModal';
 import RoleSelection from '@/components/onboarding/RoleSelection';
+import SignupModal from '@/components/onboarding/AuthModal';
+import LoginModal from '@/components/auth/LoginModal';
+import CVUpload from '@/components/cv-parser/CVUpload';
+import InteractiveCVForm from '@/components/cv-parser/InteractiveCVForm';
+import CompletionStep from '@/components/onboarding/CompletionStep';
 import PersonalInfoStep from '@/components/onboarding/PersonalInfoStep';
 import ExperienceStep from '@/components/onboarding/ExperienceStep';
 import EducationStep from '@/components/onboarding/EducationStep';
-import CompletionStep from '@/components/onboarding/CompletionStep';
-import { Sparkles, ArrowLeft, CheckCircle } from 'lucide-react';
 
 const OnboardingContent: React.FC = () => {
   const { state, dispatch, nextStep, prevStep } = useOnboarding();
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const { data: session } = useSession();
+
+  useEffect(() => {
+    // Check if user is already authenticated and needs CV setup
+    if (session?.user) {
+      dispatch({ type: 'SET_AUTHENTICATED', payload: true });
+      dispatch({ type: 'SET_USER_DATA', payload: session.user });
+      
+      // Set a default role for authenticated users (they can change this later)
+      dispatch({ type: 'SET_SELECTED_ROLE', payload: { 
+        id: 'professional', 
+        title: 'Professional',
+        description: 'Experienced professional',
+        icon: 'briefcase',
+        color: 'blue'
+      }});
+      
+      // Skip to CV setup step (step 1) if user is already authenticated
+      if (state.currentStep === 0) {
+        nextStep();
+      }
+    } else {
+      // Check for Firebase user data in localStorage (only on client side)
+      if (typeof window !== 'undefined') {
+        const userData = localStorage.getItem('user');
+        const needsCVSetup = sessionStorage.getItem('needsCVSetup');
+        
+        console.log('Onboarding page - userData:', userData);
+        console.log('Onboarding page - needsCVSetup:', needsCVSetup);
+        
+        if (userData && needsCVSetup) {
+          try {
+            const parsedUser = JSON.parse(userData);
+            console.log('Onboarding page - parsed user:', parsedUser);
+            
+            dispatch({ type: 'SET_AUTHENTICATED', payload: true });
+            dispatch({ type: 'SET_USER_DATA', payload: parsedUser });
+            
+            // Set a default role for authenticated users (they can change this later)
+            dispatch({ type: 'SET_SELECTED_ROLE', payload: { 
+              id: 'professional', 
+              title: 'Professional',
+              description: 'Experienced professional',
+              icon: 'briefcase',
+              color: 'blue'
+            }});
+            
+            // Skip to CV setup step (step 1) if user is already authenticated
+            if (state.currentStep === 0) {
+              console.log('Onboarding page - moving to next step');
+              nextStep();
+            }
+          } catch (error) {
+            console.error('Error parsing user data:', error);
+          }
+        } else {
+          console.log('Onboarding page - no user data or needsCVSetup flag');
+        }
+      }
+    }
+  }, [session, dispatch, nextStep, state.currentStep]);
 
   const handleRoleSelect = (role: any) => {
     dispatch({ type: 'SET_SELECTED_ROLE', payload: role });
+    setShowAuthModal(true);
+  };
+
+  const handleSwitchToLogin = () => {
+    setShowAuthModal(false);
+    setShowLoginModal(true);
+  };
+
+  const handleSwitchToSignup = () => {
+    setShowLoginModal(false);
     setShowAuthModal(true);
   };
 
@@ -27,6 +104,27 @@ const OnboardingContent: React.FC = () => {
     dispatch({ type: 'SET_AUTHENTICATED', payload: true });
     dispatch({ type: 'SET_USER_DATA', payload: userData });
     setShowAuthModal(false);
+    setShowLoginModal(false);
+    
+    // Set flag for new user CV setup (only on client side)
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('needsCVSetup', 'true');
+    }
+    
+    nextStep();
+  };
+
+  const handleLoginSuccess = (userData: any) => {
+    dispatch({ type: 'SET_AUTHENTICATED', payload: true });
+    dispatch({ type: 'SET_USER_DATA', payload: userData });
+    setShowAuthModal(false);
+    setShowLoginModal(false);
+    
+    // Set flag for new user CV setup (only on client side)
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('needsCVSetup', 'true');
+    }
+    
     nextStep();
   };
 
@@ -34,38 +132,134 @@ const OnboardingContent: React.FC = () => {
     setIsLoading(true);
     
     try {
+      // Get user ID from session or state or localStorage
+      let userId = session?.user?.id || state.userData?.id;
+      
+      // If no userId from session/state, try localStorage (only on client side)
+      if (!userId && typeof window !== 'undefined') {
+        const userData = localStorage.getItem('user');
+        console.log('🔍 Raw localStorage userData:', userData);
+        if (userData) {
+          try {
+            const parsedUser = JSON.parse(userData);
+            console.log('🔍 Parsed user data:', parsedUser);
+            userId = parsedUser.id;
+            console.log('🔍 Extracted userId from localStorage:', userId);
+          } catch (error) {
+            console.error('Error parsing user data:', error);
+          }
+        }
+      }
+      
+      console.log('🔍 Session user:', session?.user);
+      console.log('🔍 State userData:', state.userData);
+      console.log('🔍 Selected userId:', userId);
+      console.log('🔍 userId type:', typeof userId);
+      console.log('🔍 userId length:', userId?.toString().length);
+      console.log('🔍 userId value:', JSON.stringify(userId));
+      
+      // Ensure user is authenticated
+      if (!userId) {
+        throw new Error('User must be authenticated to create a CV. Please log in or sign up first.');
+      }
+      
+      // Validate userId format (should be a 24-character hex string for MongoDB ObjectId)
+      const userIdString = userId.toString().trim();
+      console.log('🔍 Validating userId:', userIdString);
+      console.log('🔍 userId length:', userIdString.length);
+      console.log('🔍 userId matches hex pattern:', /^[0-9a-fA-F]{24}$/.test(userIdString));
+      
+      if (!/^[0-9a-fA-F]{24}$/.test(userIdString)) {
+        console.error('❌ Invalid userId format:', userIdString);
+        console.error('❌ Expected: 24-character hex string');
+        console.error('❌ Got:', userIdString);
+        console.error('❌ Length:', userIdString.length);
+        console.error('❌ Characters:', userIdString.split('').map((c: string) => c.charCodeAt(0)));
+        throw new Error(`Invalid user ID format. Expected 24-character hex string, got: ${userIdString.substring(0, 10)}...`);
+      }
+      
+      const requestData = {
+        userId: userId,
+        title: `${session?.user?.firstName || state.userData?.firstName || 'User'} ${session?.user?.lastName || state.userData?.lastName || ''}'s CV`.trim(),
+        cvData: state.cvData, // Fixed: was 'sections', should be 'cvData'
+        type: 'cv'
+      };
+      
+      console.log('🚀 Sending CV creation request:', requestData);
+      
       // Save CV data to database
       const response = await fetch('/api/cvs', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          userId: state.userData.id,
-          title: `${state.userData.firstName} ${state.userData.lastName}'s CV`,
-          sections: state.cvData
-        }),
+        body: JSON.stringify(requestData),
       });
+      
+      console.log('📡 Response status:', response.status);
+      console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
 
-      if (response.ok) {
-        // Set completion flag for dashboard
-        sessionStorage.setItem('fromOnboarding', 'true');
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const htmlText = await response.text();
+        console.error('❌ Non-JSON response received:', htmlText.substring(0, 500));
+        throw new Error(`Server returned HTML instead of JSON. Response: ${htmlText.substring(0, 200)}...`);
+      }
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        console.log('✅ CV saved successfully:', result);
         
-        // Redirect to dashboard
-        setTimeout(() => {
+        // Set completion flag for dashboard (only on client side)
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('fromOnboarding', 'true');
+          sessionStorage.setItem('cvId', result.data.cv.id);
+          
+          // Clear the CV setup flag
+          sessionStorage.removeItem('needsCVSetup');
+        }
+        
+        console.log('🚀 Redirecting to dashboard...');
+        
+        // Try multiple redirect methods to ensure it works
+        try {
+          // Method 1: Next.js router (preferred)
           router.push('/dashboard');
-        }, 2000);
+          
+          // Method 2: Fallback after a short delay
+          setTimeout(() => {
+            console.log('🔄 Fallback redirect...');
+            window.location.href = '/dashboard';
+          }, 1000);
+          
+        } catch (routerError) {
+          console.error('Router error:', routerError);
+          // Method 3: Direct navigation
+          window.location.href = '/dashboard';
+        }
       } else {
-        throw new Error('Failed to save CV');
+        console.error('API Error:', result);
+        throw new Error(result.message || 'Failed to save CV');
       }
     } catch (error) {
       console.error('Error completing onboarding:', error);
+      
+      // More helpful error message
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      alert(`Failed to save your CV: ${errorMessage}\n\nPlease check your internet connection and try again.`);
     } finally {
       setIsLoading(false);
     }
   };
 
   const renderStep = () => {
+    // If user is authenticated, skip role selection and start from personal info
+    if (session?.user && state.currentStep === 0) {
+      return <PersonalInfoStep onNext={nextStep} />;
+    }
+    
     switch (state.currentStep) {
       case 0:
         return <RoleSelection onRoleSelect={handleRoleSelect} />;
@@ -121,34 +315,35 @@ const OnboardingContent: React.FC = () => {
       <div className="relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
-            {/* Back Button */}
-            {state.currentStep > 0 && (
-              <motion.button
-                onClick={prevStep}
-                className="flex items-center gap-2 text-white/60 hover:text-white transition-colors"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                whileHover={{ x: -5 }}
-              >
-                <ArrowLeft size={20} />
-                Back
-              </motion.button>
-            )}
+            {/* Left side - Back button and Logo grouped together */}
+            <div className="flex items-center gap-6">
+              {/* Back Button */}
+              {state.currentStep > 0 && (
+                <motion.button
+                  onClick={prevStep}
+                  className="flex items-center gap-2 text-white/60 hover:text-white transition-colors"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  whileHover={{ x: -5 }}
+                >
+                  <ArrowLeft size={20} />
+                </motion.button>
+              )}
 
-            {/* Logo */}
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-lime-400 to-lime-500 rounded-xl flex items-center justify-center">
-                <Sparkles size={20} className="text-black" />
-              </div>
-              <div className="text-2xl font-bold">
-                <span className="text-lime-400">CV</span>
-                <span className="text-white">CIRCLE</span>
+
+
+              {/* Logo */}
+              <div className="flex items-center gap-3">
+                <div className="text-2xl font-bold">
+                  <span className="text-lime-400">CV</span>
+                  <span className="text-white">CIRCLE</span>
+                </div>
               </div>
             </div>
 
-            {/* Progress Steps */}
+            {/* Progress Steps - Desktop */}
             <div className="hidden md:flex items-center gap-4">
-              {state.steps.map((step, index) => (
+              {(session?.user ? state.steps.slice(2) : state.steps).map((step, index) => (
                 <div key={step.id} className="flex items-center gap-2">
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300 ${
@@ -159,9 +354,9 @@ const OnboardingContent: React.FC = () => {
                         : 'bg-white/10 text-white/40'
                     }`}
                   >
-                    {step.isCompleted ? <CheckCircle size={16} /> : index + 1}
+                    {step.isCompleted ? <CheckCircle size={16} /> : (session?.user ? index + 1 : index + 1)}
                   </div>
-                  {index < state.steps.length - 1 && (
+                  {index < (session?.user ? state.steps.slice(2).length - 1 : state.steps.length - 1) && (
                     <div
                       className={`w-8 h-1 transition-all duration-300 ${
                         step.isCompleted ? 'bg-green-500' : 'bg-white/10'
@@ -171,6 +366,75 @@ const OnboardingContent: React.FC = () => {
                 </div>
               ))}
             </div>
+
+            {/* Progress Steps - Mobile */}
+            <div className="md:hidden flex items-center gap-2">
+              {(session?.user ? state.steps.slice(2) : state.steps).map((step, index) => (
+                <div key={step.id} className="flex items-center gap-1">
+                  <div
+                    className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium transition-all duration-300 ${
+                      step.isActive
+                        ? 'bg-lime-400 text-black shadow-lg'
+                        : step.isCompleted
+                        ? 'bg-green-500 text-white'
+                        : 'bg-white/10 text-white/40'
+                    }`}
+                  >
+                    {step.isCompleted ? <CheckCircle size={12} /> : (session?.user ? index + 1 : index + 1)}
+                  </div>
+                  {index < (session?.user ? state.steps.slice(2).length - 1 : state.steps.length - 1) && (
+                    <div
+                      className={`w-4 h-0.5 transition-all duration-300 ${
+                        step.isCompleted ? 'bg-green-500' : 'bg-white/10'
+                      }`}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Logout Button - Only show for authenticated users */}
+            {(session?.user || (typeof window !== 'undefined' && localStorage.getItem('user'))) && (
+              <motion.button
+                onClick={async () => {
+                  try {
+                    // Check if user is from Firebase (has user data in localStorage)
+                    if (typeof window !== 'undefined') {
+                      const userData = localStorage.getItem('user');
+                      if (userData) {
+                        // Firebase user - sign out from Firebase
+                        await signOutUser();
+                        localStorage.removeItem('user');
+                        sessionStorage.removeItem('needsCVSetup');
+                        window.location.href = '/';
+                      } else {
+                        // NextAuth user - sign out from NextAuth
+                        signOut({ callbackUrl: '/' });
+                      }
+                    } else {
+                      // NextAuth user - sign out from NextAuth
+                      signOut({ callbackUrl: '/' });
+                    }
+                  } catch (error) {
+                    console.error('Logout error:', error);
+                    // Fallback - clear storage and redirect
+                    if (typeof window !== 'undefined') {
+                      localStorage.removeItem('user');
+                      sessionStorage.removeItem('needsCVSetup');
+                      window.location.href = '/';
+                    }
+                  }
+                }}
+                className="flex items-center gap-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white transition-all duration-300 px-3 md:px-4 py-2 rounded-lg shadow-lg hover:shadow-red-500/25"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                whileHover={{ x: 5, scale: 1.05, boxShadow: "0 10px 25px -5px rgba(239, 68, 68, 0.4)" }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <LogOut size={16} />
+                <span className="hidden sm:inline text-sm font-medium">Logout</span>
+              </motion.button>
+            )}
           </div>
         </div>
       </div>
@@ -192,13 +456,25 @@ const OnboardingContent: React.FC = () => {
         </div>
       </div>
 
-      {/* Auth Modal */}
-      <AuthModal
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-        onSuccess={handleAuthSuccess}
-        selectedRole={state.selectedRole?.id}
-      />
+      {/* Auth Modals - Only show for non-authenticated users */}
+      {!session?.user && (
+        <>
+          <SignupModal
+            isOpen={showAuthModal}
+            onClose={() => setShowAuthModal(false)}
+            onSuccess={handleAuthSuccess}
+            selectedRole={state.selectedRole?.id}
+            onSwitchToLogin={handleSwitchToLogin}
+          />
+          
+          <LoginModal
+            isOpen={showLoginModal}
+            onClose={() => setShowLoginModal(false)}
+            onSwitchToRegister={handleSwitchToSignup}
+            onLogin={handleLoginSuccess}
+          />
+        </>
+      )}
     </div>
   );
 };

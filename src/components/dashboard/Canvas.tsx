@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useSession } from 'next-auth/react';
 import { 
   FileText, 
   Plus,
@@ -38,6 +39,7 @@ import {
   Lightbulb,
   Activity
 } from 'lucide-react';
+import { useCreateCV } from '@/lib/utils/cvCreationUtils';
 
 interface CV {
   id: string;
@@ -74,7 +76,18 @@ interface CoverLetter {
 }
 
 const Canvas: React.FC = () => {
+  console.log('🔍 Canvas - Component rendered');
+  const { data: session } = useSession();
+  const { createCV } = useCreateCV();
   const [cvs, setCvs] = useState<CV[]>([]);
+  
+  // Debug CVs state
+  useEffect(() => {
+    console.log('🔍 Canvas - CVs state updated:', cvs.length, 'CVs');
+    if (cvs.length > 0) {
+      console.log('🔍 Canvas - First CV:', cvs[0]);
+    }
+  }, [cvs]);
   const [selectedCV, setSelectedCV] = useState<CV | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -84,32 +97,60 @@ const Canvas: React.FC = () => {
 
   // Load CVs from API
   useEffect(() => {
-    loadCVs();
-  }, []);
+    const userId = session?.user?.id || getUserIdFromLocalStorage();
+    if (userId) {
+      loadCVs(userId);
+    } else {
+      console.log('No user ID available, cannot load CVs');
+      setLoading(false);
+    }
+  }, [session?.user?.id]);
 
-  const loadCVs = async () => {
+  const getUserIdFromLocalStorage = (): string | null => {
+    try {
+      const userData = localStorage.getItem('user');
+      if (userData) {
+        const parsedUser = JSON.parse(userData);
+        return parsedUser.id;
+      }
+    } catch (error) {
+      console.error('Error parsing user data from localStorage:', error);
+    }
+    return null;
+  };
+
+  const loadCVs = async (userId?: string) => {
     try {
       setLoading(true);
-      const userData = localStorage.getItem('user');
-      const userId = userData ? JSON.parse(userData).id || JSON.parse(userData)._id : '6889b151d17daa1eaee91a5c';
+      const userIdToUse = userId || session?.user?.id;
       
-      console.log('Loading CVs for user:', userId);
+      if (!userIdToUse) {
+        console.error('No user ID available from session or localStorage');
+        setCvs([]);
+        return;
+      }
       
-      const response = await fetch(`/api/cvs?userId=${userId}`);
+      console.log('Loading CVs for user:', userIdToUse);
+      
+      const response = await fetch(`/api/cvs?userId=${userIdToUse}`);
       const result = await response.json();
+      console.log('🔍 Canvas - CV API response:', result);
       
       if (result.success) {
-        const cvData = result.data.data || [];
-        console.log('CV data received:', cvData);
+        const cvData = result.data.cvs || result.data.data || [];
+        console.log('🔍 Canvas - CV data received:', cvData);
+        console.log('🔍 Canvas - Number of CVs:', cvData.length);
+        console.log('🔍 Canvas - Result structure:', Object.keys(result.data));
         const enrichedCVs = cvData.map((cv: any) => {
           console.log('Processing CV:', cv.id || cv._id, 'Type:', typeof (cv.id || cv._id));
+          console.log('CV data structure:', Object.keys(cv));
           return {
             id: cv.id || cv._id,
             title: cv.title || 'Untitled CV',
-            lastModified: formatTimeAgo(new Date(cv.updatedAt)),
+            lastModified: formatTimeAgo(new Date(cv.lastModified || cv.updatedAt)),
             status: cv.status || 'draft',
-            views: cv.views || 0,
-            isStarred: cv.isStarred || false,
+            views: cv.viewCount || cv.views || 0,
+            isStarred: cv.starred || cv.isStarred || false,
             thumbnail: cv.thumbnail || '/api/placeholder/300/200',
             description: cv.description || 'No description available',
             connectedJobs: cv.connectedJobs || [],
@@ -117,8 +158,11 @@ const Canvas: React.FC = () => {
             completionPercentage: calculateCompletionPercentage(cv)
           };
         });
+        console.log('🔍 Canvas - Setting CVs:', enrichedCVs.length);
+        console.log('🔍 Canvas - First CV sample:', enrichedCVs[0]);
         setCvs(enrichedCVs);
       } else {
+        console.log('🔍 Canvas - API returned success: false, using fallback data');
         // Fallback to mock data
         setCvs(getMockCVs());
       }
@@ -609,18 +653,6 @@ const Canvas: React.FC = () => {
           <h1 className="text-3xl font-bold text-white mb-2">CV Studio</h1>
           <p className="text-white/60">Create, edit, and manage your professional CVs</p>
         </div>
-        
-        <div className="flex items-center gap-4">
-          <motion.button
-            className="px-6 py-3 bg-gradient-to-r from-lime-400 to-lime-500 text-black font-semibold rounded-xl hover:from-lime-300 hover:to-lime-400 transition-all duration-300 flex items-center gap-2"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => window.location.href = '/studio'}
-          >
-            <Plus size={16} />
-            Create CV
-          </motion.button>
-        </div>
       </div>
 
       {/* Main Grid Layout */}
@@ -763,9 +795,19 @@ const Canvas: React.FC = () => {
                 className="px-8 py-3 bg-gradient-to-r from-lime-400 to-lime-500 text-black font-semibold rounded-xl hover:from-lime-300 hover:to-lime-400 transition-all duration-300 flex items-center gap-3 group-hover:scale-105"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={(e) => {
+                onClick={async (e) => {
                   e.stopPropagation();
-                  window.location.href = '/studio';
+                  try {
+                    const userData = localStorage.getItem('user');
+                    const userId = userData ? JSON.parse(userData).id || JSON.parse(userData)._id : '6889b151d17daa1eaee91a5c';
+                    await createCV({
+                      userId,
+                      title: 'My Professional CV',
+                      type: 'cv'
+                    });
+                  } catch (error) {
+                    console.error('Error creating CV:', error);
+                  }
                 }}
               >
                 <Plus size={20} />
@@ -982,8 +1024,11 @@ const Canvas: React.FC = () => {
                     whileTap={{ scale: 0.98 }}
                     onClick={(e) => {
                       e.stopPropagation();
-                      // TODO: Link to new editor when built
-                      console.log('Edit CV:', cv.id);
+                      // Store CV session data and route to studio
+                      sessionStorage.setItem('editingCVId', cv.id);
+                      sessionStorage.setItem('editingCVTitle', cv.title);
+                      sessionStorage.setItem('editingCVData', JSON.stringify(cv));
+                      window.location.href = `/studio?cvId=${cv.id}`;
                     }}
                   >
                     <Edit size={14} />
@@ -1048,12 +1093,12 @@ const Canvas: React.FC = () => {
             </h3>
             <div className="space-y-3">
               <motion.button
-                className="w-full p-3 bg-white/10 rounded-lg text-white/80 text-sm hover:bg-white/20 transition-all duration-300 flex items-center gap-3"
-                whileHover={{ scale: 1.02 }}
+                className="w-full p-3 bg-gradient-to-r from-lime-400/20 to-lime-500/20 border border-lime-400/30 rounded-lg text-lime-400 font-medium text-sm hover:from-lime-400/30 hover:to-lime-500/30 transition-all duration-300 flex items-center gap-3 shadow-lg shadow-lime-400/10"
+                whileHover={{ scale: 1.02, y: -2 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => window.location.href = '/studio'}
               >
-                <Plus size={16} />
+                <Plus size={16} className="text-lime-400" />
                 Create New CV
               </motion.button>
               <motion.button
@@ -1188,6 +1233,10 @@ const Canvas: React.FC = () => {
                           whileTap={{ scale: 0.98 }}
                           onClick={() => {
                             setShowModal(false);
+                            // Store CV session data and route to studio
+                            sessionStorage.setItem('editingCVId', selectedCV.id);
+                            sessionStorage.setItem('editingCVTitle', selectedCV.title);
+                            sessionStorage.setItem('editingCVData', JSON.stringify(selectedCV));
                             window.location.href = `/studio?cvId=${selectedCV.id}`;
                           }}
                         >
