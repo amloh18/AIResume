@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 // @ts-ignore - pdf-parse doesn't have types
 let pdfParse: any;
 let mammoth: any;
-let createWorker: any;
+let createWorker: any = null;
 
 // Dynamic imports to avoid issues with pdf-parse
 try {
@@ -25,6 +25,13 @@ try {
   console.log('tesseract.js loaded successfully');
 } catch (error) {
   console.warn('tesseract.js not available:', error);
+  // Provide a mock implementation
+  createWorker = () => ({
+    loadLanguage: () => Promise.resolve(),
+    initialize: () => Promise.resolve(),
+    recognize: () => Promise.resolve({ data: { text: 'OCR not available' } }),
+    terminate: () => Promise.resolve()
+  });
 }
 
 interface PersonalInfo {
