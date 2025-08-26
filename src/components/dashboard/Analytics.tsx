@@ -484,7 +484,6 @@ const AIGoal: React.FC<{ goal: string; metrics: any }> = ({ goal, metrics }) => 
           if (userId) {
             await createCV({
               userId,
-              title: 'My Professional CV',
               type: 'cv'
             });
           }
@@ -1037,7 +1036,6 @@ const Analytics: React.FC = () => {
                       if (userId) {
                         await createCV({
                           userId,
-                          title: 'My Professional CV',
                           type: 'cv'
                         });
                       }

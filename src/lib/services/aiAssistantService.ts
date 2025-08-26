@@ -346,4 +346,38 @@ export class AIAssistantService {
     
     return text;
   }
+
+  static async performComprehensiveAnalysis(cvData: CVDataStructure, jobData: Job): Promise<any> {
+    try {
+      console.log('🔍 AIAssistantService - Starting comprehensive analysis...');
+      
+      const response = await fetch('/api/ai/comprehensive-analysis', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          cvData,
+          jobData
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Comprehensive analysis failed: ${response.status} ${errorText}`);
+      }
+
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Comprehensive analysis failed');
+      }
+
+      console.log('✅ AIAssistantService - Comprehensive analysis completed');
+      return result.data;
+    } catch (error) {
+      console.error('❌ AIAssistantService - Comprehensive analysis error:', error);
+      throw new Error('Failed to perform comprehensive analysis');
+    }
+  }
 }

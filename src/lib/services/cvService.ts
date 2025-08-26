@@ -196,6 +196,42 @@ export class CVService {
     return result;
   }
 
+  static async updateCVMetadata(cvId: string, metadata: { title?: string; description?: string }, userId?: string): Promise<any> {
+    console.log('🔍 CVService.updateCVMetadata - Input data:', { 
+      cvId, 
+      userId, 
+      metadata 
+    });
+    
+    const requestBody = {
+      userId: userId,
+      ...metadata
+    };
+    
+    console.log('🔍 CVService.updateCVMetadata - Request body:', requestBody);
+    
+    const response = await fetch(`/api/cvs/${cvId}/metadata`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
+    
+    console.log('🔍 CVService.updateCVMetadata - Response status:', response.status);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('🔍 CVService.updateCVMetadata - Error response:', errorText);
+      throw new Error(`Failed to update CV metadata: ${response.status} ${errorText}`);
+    }
+    
+    const result = await response.json();
+    console.log('🔍 CVService.updateCVMetadata - Response data:', result);
+    
+    return result;
+  }
+
   static async deleteCV(cvId: string, userId?: string): Promise<void> {
     const params = new URLSearchParams();
     if (userId) {

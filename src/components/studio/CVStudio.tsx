@@ -17,6 +17,7 @@ import { debounce } from 'lodash';
 import { transformDatabaseToStudio } from '@/lib/utils/cvDataTransform';
 import { toCVDataStructure } from '@/lib/utils/dataAdapter';
 import Toast from '@/components/ui/Toast';
+import { generateCVName, generateCVDescription } from '@/lib/utils/cvNamingUtils';
 
 interface CVStudioProps {
   jobId?: string | null;
@@ -70,9 +71,34 @@ const CVStudio: React.FC<CVStudioProps> = ({ jobId, cvId, userId }) => {
       }
       
       current[pathArray[pathArray.length - 1]] = value;
+      
+      // Auto-update CV title when name, label, or summary changes
+      if (path.startsWith('basics.') && (path.includes('name') || path.includes('label') || path.includes('summary'))) {
+        const newTitle = generateCVName(newData);
+        const newDescription = generateCVDescription(newData);
+        
+        // Update the CV title in the database if we have a CV ID
+        if (cvId) {
+          // Debounced update to avoid too many API calls
+          const updateTitle = debounce(async () => {
+            try {
+              await CVService.updateCVMetadata(cvId, {
+                title: newTitle,
+                description: newDescription
+              }, userId || undefined);
+              console.log('✅ Auto-updated CV title to:', newTitle);
+            } catch (error) {
+              console.error('❌ Failed to auto-update CV title:', error);
+            }
+          }, 1000);
+          
+          updateTitle();
+        }
+      }
+      
       return newData;
     });
-  }, []);
+  }, [cvId, userId]);
 
   // Add section
   const addSection = useCallback((sectionType: keyof CVDataStructure, item?: any) => {
@@ -566,6 +592,7 @@ const CVStudio: React.FC<CVStudioProps> = ({ jobId, cvId, userId }) => {
             onJobSelection={handleJobSelection}
             onTogglePanel={() => togglePanel('right')}
             cvId={cvId || null}
+            userId={userId}
           />
         </div>
       </div>

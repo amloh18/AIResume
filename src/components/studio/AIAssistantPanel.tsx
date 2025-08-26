@@ -31,6 +31,7 @@ import { useAIAssistant } from '@/lib/hooks/useAIAssistant';
 import { AISuggestion } from '@/lib/stores/aiStore';
 import { AISuggestionApplier } from '@/lib/utils/aiSuggestionApplier';
 import AICard from './ai/AICard';
+import JobSelector from './JobSelector';
 
 interface AIAssistantPanelProps {
   cvData: CVDataStructure | null;
@@ -42,6 +43,7 @@ interface AIAssistantPanelProps {
   onJobSelection: (jobId: string | null) => void;
   onTogglePanel: () => void;
   cvId: string | null;
+  userId: string;
 }
 
 const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
@@ -53,7 +55,8 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
   selectedJobId,
   onJobSelection,
   onTogglePanel,
-  cvId
+  cvId,
+  userId
 }) => {
   const {
     ats,
@@ -380,34 +383,11 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
             <h2 className="text-sm font-semibold text-white">AI Assistant</h2>
           </div>
           
-          <div>
-            <label className="block text-xs font-medium text-gray-300 mb-1">Job Reference</label>
-            <select
-              value={selectedJobId || ''}
-              onChange={(e) => onJobSelection(e.target.value || null)}
-              className="w-full bg-gray-600 border border-gray-500 rounded-lg px-3 py-2 text-gray-300 text-xs"
-            >
-              <option value="">Select a job posting...</option>
-              {jobData && (
-                <option value={jobData.id}>{jobData.title} at {jobData.company}</option>
-              )}
-              <option value="sample">Sample Software Engineer Role</option>
-              <option value="sample2">Sample Product Manager Role</option>
-            </select>
-            {!selectedJobId && (
-              <p className="text-xs text-gray-400 mt-1">Select a job to enable AI optimizations</p>
-            )}
-          </div>
-
-          {/* Job Context Chip */}
-          {jobData && (
-            <div className="flex items-center space-x-2">
-              <span className="text-xs text-gray-400">Context:</span>
-              <span className="text-xs text-lime-400 bg-lime-900/20 px-2 py-1 rounded">
-                {jobData.title} @ {jobData.company}
-              </span>
-            </div>
-          )}
+          <JobSelector
+            selectedJobId={selectedJobId}
+            onJobSelection={onJobSelection}
+            userId={userId}
+          />
         </div>
       </div>
 

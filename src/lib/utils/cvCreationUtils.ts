@@ -2,6 +2,7 @@ import { CVService } from '@/lib/services/cvService';
 import { useRouter } from 'next/navigation';
 import { transformStudioToDatabase } from '@/lib/utils/cvDataTransform';
 import { CVDataStructure } from '@/types/cv';
+import { generateCVName } from '@/lib/utils/cvNamingUtils';
 
 export interface CreateCVOptions {
   userId: string;
@@ -13,7 +14,7 @@ export interface CreateCVOptions {
 export const createCVAndNavigate = async (options: CreateCVOptions) => {
   const {
     userId,
-    title = 'Untitled CV',
+    title,
     jobId,
     router
   } = options;
@@ -51,13 +52,16 @@ export const createCVAndNavigate = async (options: CreateCVOptions) => {
       projects: []
     };
 
+    // Generate automatic title if not provided
+    const cvTitle = title || generateCVName(defaultCVData);
+    
     // Create the CV in the database
-    console.log('🚀 Creating CV with data:', { userId, title, jobId, hasData: !!defaultCVData });
+    console.log('🚀 Creating CV with data:', { userId, title: cvTitle, jobId, hasData: !!defaultCVData });
     
     const newCV = await CVService.createCV({
       ...defaultCVData,
       userId,
-      title,
+      title: cvTitle,
       jobId
     });
 
@@ -70,7 +74,7 @@ export const createCVAndNavigate = async (options: CreateCVOptions) => {
     // Log the activity (lazy import to avoid client-side issues)
     try {
       const { ActivityService } = await import('@/lib/services/activityService');
-      await ActivityService.logCVCreated(userId, cvId, title);
+      await ActivityService.logCVCreated(userId, cvId, cvTitle);
     } catch (activityError) {
       console.error('Failed to log CV creation activity:', activityError);
     }

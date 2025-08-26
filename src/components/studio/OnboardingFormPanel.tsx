@@ -17,12 +17,14 @@ import {
   ArrowLeft,
   Palette,
   FileText,
-  Settings
+  Settings,
+  Upload
 } from 'lucide-react';
 import { CVDataStructure } from '@/types/cv';
 import PersonalInfoStep from '@/components/onboarding/PersonalInfoStep';
 import ExperienceStep from '@/components/onboarding/ExperienceStep';
 import EducationStep from '@/components/onboarding/EducationStep';
+import ParseToolSection from './ParseToolSection';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
@@ -102,8 +104,9 @@ const OnboardingFormPanel: React.FC<OnboardingFormPanelProps> = ({
   onTogglePanel
 }) => {
   const [activeTab, setActiveTab] = useState<'structure' | 'design' | 'template'>('structure');
-  const [activeSection, setActiveSection] = useState<'basics' | 'work' | 'education' | 'skills' | 'projects' | 'certificates' | 'languages'>('basics');
+  const [activeSection, setActiveSection] = useState<'parse' | 'basics' | 'work' | 'education' | 'skills' | 'projects' | 'certificates' | 'languages'>('parse');
   const [sectionOrder, setSectionOrder] = useState([
+    'parse',
     'basics',
     'work', 
     'education',
@@ -134,7 +137,10 @@ const OnboardingFormPanel: React.FC<OnboardingFormPanelProps> = ({
     console.log('🔍 Section order updated:', sectionOrder);
   }, [sectionOrder]);
 
+
+
   const sections = [
+    { id: 'parse', label: 'Parse CV', icon: Upload },
     { id: 'basics', label: 'Personal Info', icon: User },
     { id: 'work', label: 'Experience', icon: Briefcase },
     { id: 'education', label: 'Education', icon: GraduationCap },
@@ -148,6 +154,50 @@ const OnboardingFormPanel: React.FC<OnboardingFormPanelProps> = ({
   const orderedSections = sectionOrder.map(id => 
     sections.find(section => section.id === id)
   ).filter(Boolean);
+
+  // Add scroll detection to update active section
+  useEffect(() => {
+    const handleScroll = () => {
+      const container = document.querySelector('.overflow-y-auto');
+      if (!container) return;
+
+      const sections = orderedSections.filter(Boolean);
+      const containerRect = container.getBoundingClientRect();
+      const containerTop = containerRect.top;
+      
+      let closestSection = null;
+      let minDistance = Infinity;
+      
+      for (const section of sections) {
+        if (!section) continue;
+        const sectionElement = document.getElementById(`section-${section.id}`);
+        if (sectionElement) {
+          const rect = sectionElement.getBoundingClientRect();
+          const sectionTop = rect.top;
+          const distance = Math.abs(sectionTop - containerTop);
+          
+          // Check if section is visible in viewport
+          const isVisible = rect.top <= containerTop + 150 && rect.bottom >= containerTop + 50;
+          
+          if (isVisible && distance < minDistance) {
+            minDistance = distance;
+            closestSection = section;
+          }
+        }
+      }
+      
+      if (closestSection && activeSection !== closestSection.id) {
+        console.log('🔍 Auto-updating active section to:', closestSection.id);
+        setActiveSection(closestSection.id as any);
+      }
+    };
+
+    const container = document.querySelector('.overflow-y-auto');
+    if (container) {
+      container.addEventListener('scroll', handleScroll, { passive: true });
+      return () => container.removeEventListener('scroll', handleScroll);
+    }
+  }, [orderedSections, activeSection]);
 
   const handleDragEnd = (event: any) => {
     const { active, over } = event;
@@ -246,7 +296,7 @@ const OnboardingFormPanel: React.FC<OnboardingFormPanelProps> = ({
 
   const mockContext = createMockOnboardingContext();
 
-  const renderSection = () => {
+  const renderSectionForSection = (sectionId: string) => {
     if (!cvData) {
       console.log('❌ No cvData available, showing loading state');
       return (
@@ -273,100 +323,120 @@ const OnboardingFormPanel: React.FC<OnboardingFormPanelProps> = ({
       );
     }
 
-    console.log(`✅ Rendering section: ${activeSection}`, cvData[activeSection as keyof CVDataStructure]);
+    console.log(`✅ Rendering section: ${sectionId}`, cvData[sectionId as keyof CVDataStructure]);
     console.log(`✅ Available CV data keys:`, Object.keys(cvData));
 
-    switch (activeSection) {
+    switch (sectionId) {
+      case 'parse':
+        return (
+          <ParseToolSection
+            onCVParsed={(parsedData) => {
+              console.log('🔍 ParseTool - Received parsed data:', parsedData);
+              // Update the CV data with parsed information
+              if (parsedData.basics) {
+                Object.entries(parsedData.basics).forEach(([key, value]) => {
+                  onUpdateField(`basics.${key}`, value);
+                });
+              }
+              if (parsedData.work) {
+                parsedData.work.forEach((workItem: any, index: number) => {
+                  onUpdateField(`work.${index}`, workItem);
+                });
+              }
+              if (parsedData.education) {
+                parsedData.education.forEach((eduItem: any, index: number) => {
+                  onUpdateField(`education.${index}`, eduItem);
+                });
+              }
+              if (parsedData.skills) {
+                parsedData.skills.forEach((skillItem: any, index: number) => {
+                  onUpdateField(`skills.${index}`, skillItem);
+                });
+              }
+              // Switch to the next section after parsing
+              setActiveSection('basics');
+            }}
+            isActive={true}
+          />
+        );
       case 'basics':
         return (
-          <div className="p-4">
-            <PersonalInfoStepContent 
-              cvData={cvData}
-              onUpdateField={onUpdateField}
-              mockContext={mockContext}
-            />
-          </div>
+          <PersonalInfoStepContent 
+            cvData={cvData}
+            onUpdateField={onUpdateField}
+            mockContext={mockContext}
+          />
         );
       case 'work':
         return (
-          <div className="p-4">
-            <ExperienceStepContent 
-              cvData={cvData}
-              onUpdateField={onUpdateField}
-              onAddSection={onAddSection}
-              onRemoveSection={onRemoveSection}
-              mockContext={mockContext}
-            />
-          </div>
+          <ExperienceStepContent 
+            cvData={cvData}
+            onUpdateField={onUpdateField}
+            onAddSection={onAddSection}
+            onRemoveSection={onRemoveSection}
+            mockContext={mockContext}
+          />
         );
       case 'education':
         return (
-          <div className="p-4">
-            <EducationStepContent 
-              cvData={cvData}
-              onUpdateField={onUpdateField}
-              onAddSection={onAddSection}
-              onRemoveSection={onRemoveSection}
-              mockContext={mockContext}
-            />
-          </div>
+          <EducationStepContent 
+            cvData={cvData}
+            onUpdateField={onUpdateField}
+            onAddSection={onAddSection}
+            onRemoveSection={onRemoveSection}
+            mockContext={mockContext}
+          />
         );
       case 'skills':
         return (
-          <div className="p-4">
-            <SkillsStepContent 
-              cvData={cvData}
-              onUpdateField={onUpdateField}
-              onAddSection={onAddSection}
-              onRemoveSection={onRemoveSection}
-              mockContext={mockContext}
-            />
-          </div>
+          <SkillsStepContent 
+            cvData={cvData}
+            onUpdateField={onUpdateField}
+            onAddSection={onAddSection}
+            onRemoveSection={onRemoveSection}
+            mockContext={mockContext}
+          />
         );
       case 'projects':
         return (
-          <div className="p-4">
-            <ProjectsStepContent 
-              cvData={cvData}
-              onUpdateField={onUpdateField}
-              onAddSection={onAddSection}
-              onRemoveSection={onRemoveSection}
-              mockContext={mockContext}
-            />
-          </div>
+          <ProjectsStepContent 
+            cvData={cvData}
+            onUpdateField={onUpdateField}
+            onAddSection={onAddSection}
+            onRemoveSection={onRemoveSection}
+            mockContext={mockContext}
+          />
         );
       case 'certificates':
         return (
-          <div className="p-4">
-            <CertificatesStepContent 
-              cvData={cvData}
-              onUpdateField={onUpdateField}
-              onAddSection={onAddSection}
-              onRemoveSection={onRemoveSection}
-              mockContext={mockContext}
-            />
-          </div>
+          <CertificatesStepContent 
+            cvData={cvData}
+            onUpdateField={onUpdateField}
+            onAddSection={onAddSection}
+            onRemoveSection={onRemoveSection}
+            mockContext={mockContext}
+          />
         );
       case 'languages':
         return (
-          <div className="p-4">
-            <LanguagesStepContent 
-              cvData={cvData}
-              onUpdateField={onUpdateField}
-              onAddSection={onAddSection}
-              onRemoveSection={onRemoveSection}
-              mockContext={mockContext}
-            />
-          </div>
+          <LanguagesStepContent 
+            cvData={cvData}
+            onUpdateField={onUpdateField}
+            onAddSection={onAddSection}
+            onRemoveSection={onRemoveSection}
+            mockContext={mockContext}
+          />
         );
       default:
         return (
           <div className="p-4 text-gray-400">
-            <p>Section {activeSection} coming soon...</p>
+            <p className="text-sm">Section not found: {sectionId}</p>
           </div>
         );
     }
   };
+
+
 
   const renderDesignTab = () => {
     return (
@@ -554,6 +624,21 @@ const OnboardingFormPanel: React.FC<OnboardingFormPanelProps> = ({
                           console.log('🔍 Previous active section:', activeSection);
                           setActiveSection(section.id as any);
                           console.log('🔍 New active section will be:', section.id);
+                          
+                          // Scroll to the section with better positioning
+                          const sectionElement = document.getElementById(`section-${section.id}`);
+                          const container = document.querySelector('.overflow-y-auto');
+                          if (sectionElement && container) {
+                            const containerRect = container.getBoundingClientRect();
+                            const sectionRect = sectionElement.getBoundingClientRect();
+                            const scrollTop = container.scrollTop;
+                            const targetScrollTop = scrollTop + sectionRect.top - containerRect.top - 20; // 20px offset
+                            
+                            container.scrollTo({
+                              top: targetScrollTop,
+                              behavior: 'smooth'
+                            });
+                          }
                         }}
                       />
                     )
@@ -564,28 +649,50 @@ const OnboardingFormPanel: React.FC<OnboardingFormPanelProps> = ({
           </div>
         )}
 
-        {/* Right Content - Section Details */}
+        {/* Right Content - Continuous Sections */}
         <div className="flex-1 overflow-y-auto">
           {activeTab === 'structure' && (
-            <>
-              {/* Section Header */}
-              <div className="p-4 border-b border-gray-700">
-                <div className="flex items-center gap-3">
-                  {(() => {
-                    const Icon = sections.find(s => s.id === activeSection)?.icon || User;
-                    return <Icon size={24} className="text-blue-400" />;
-                  })()}
-                  <h3 className="text-xl font-semibold text-white">
-                    {sections.find(s => s.id === activeSection)?.label}
-                  </h3>
-                </div>
-              </div>
+            <div className="space-y-0">
+              {orderedSections.map((section, index) => (
+                section && (
+                  <div
+                    key={section.id}
+                    id={`section-${section.id}`}
+                    className={`transition-all duration-300 ${
+                      activeSection === section.id 
+                        ? 'bg-gray-800/30 border-l-4 border-blue-500' 
+                        : 'border-l-4 border-transparent'
+                    }`}
+                  >
+                    {/* Section Header */}
+                    <div className={`p-4 border-b border-gray-700 sticky top-0 z-10 transition-all duration-300 ${
+                      activeSection === section.id 
+                        ? 'bg-gray-800 border-blue-500/50' 
+                        : 'bg-gray-900 border-gray-700'
+                    }`}>
+                      <div className="flex items-center gap-3">
+                        <section.icon size={24} className={`transition-colors duration-300 ${
+                          activeSection === section.id ? 'text-blue-400' : 'text-gray-400'
+                        }`} />
+                        <h3 className={`text-xl font-semibold transition-colors duration-300 ${
+                          activeSection === section.id ? 'text-white' : 'text-gray-300'
+                        }`}>
+                          {section.label}
+                        </h3>
+                        {activeSection === section.id && (
+                          <div className="ml-auto w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+                        )}
+                      </div>
+                    </div>
 
-              {/* Section Content */}
-              <div className="p-4">
-                {renderSection()}
-              </div>
-            </>
+                    {/* Section Content */}
+                    <div className="p-4">
+                      {renderSectionForSection(section.id)}
+                    </div>
+                  </div>
+                )
+              ))}
+            </div>
           )}
           
           {activeTab === 'design' && renderDesignTab()}
