@@ -2,12 +2,28 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+import Lottie from 'lottie-react';
 import Typewriter from '../ui/Typewriter';
 import { Play, ArrowRight, Sparkles } from 'lucide-react';
 
 const Hero = () => {
   const typewriterWords = ['CV', 'Cover Letter', 'Job Tracker'];
   const [scrollY, setScrollY] = useState(0);
+  const [animationData, setAnimationData] = useState(null);
+
+  // Load Lottie animation data
+  useEffect(() => {
+    const loadAnimation = async () => {
+      try {
+        const response = await fetch('/Scene.json');
+        const data = await response.json();
+        setAnimationData(data);
+      } catch (error) {
+        console.error('Failed to load Lottie animation:', error);
+      }
+    };
+    loadAnimation();
+  }, []);
 
   useEffect(() => {
     let ticking = false;
@@ -218,17 +234,23 @@ const Hero = () => {
               willChange: 'transform'
             }}
           >
-            <div className="relative w-full aspect-[16/10] rounded-2xl overflow-hidden">
-              {/* Hero Image */}
-              <img
-                src="/Hero.png"
-                alt="CVCircle Platform Preview"
-                className="w-full h-full object-contain"
-                style={{
-                  filter: 'none',
-                }}
-              />
-              {/* Removed overlay */}
+            <div className="relative w-full aspect-[16/10] rounded-2xl overflow-hidden bg-gradient-to-br from-gray-900/50 to-black/50 backdrop-blur-sm">
+              {/* Lottie Animation */}
+              {animationData ? (
+                <Lottie
+                  animationData={animationData}
+                  className="w-full h-full object-contain"
+                  loop={true}
+                  autoplay={true}
+                  style={{
+                    filter: 'drop-shadow(0 10px 20px rgba(132, 204, 22, 0.2))',
+                  }}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lime-400"></div>
+                </div>
+              )}
             </div>
           </motion.div>
           
