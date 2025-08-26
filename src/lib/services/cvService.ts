@@ -108,54 +108,92 @@ export class CVService {
     userId: string;
     title: string;
   }): Promise<any> {
-    // Transform Studio format to database format
-    const dbData = transformStudioToDatabase(cvData);
+    console.log('🔍 CVService.createCV - Input data:', { 
+      userId: cvData.userId, 
+      title: cvData.title, 
+      hasJobId: !!cvData.jobId,
+      hasData: !!cvData 
+    });
+    
+    // Send CV data directly since it's already in the correct format
+    const requestBody = {
+      userId: cvData.userId,
+      title: cvData.title,
+      cvData: cvData,
+      jobId: cvData.jobId,
+      type: 'cv'
+    };
+    
+    console.log('🔍 CVService.createCV - Request body:', requestBody);
     
     const response = await fetch('/api/cvs', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        userId: cvData.userId,
-        title: cvData.title,
-        cvData: dbData,
-        jobId: cvData.jobId,
-        type: 'cv'
-      }),
+      body: JSON.stringify(requestBody),
     });
     
+    console.log('🔍 CVService.createCV - Response status:', response.status);
+    
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('🔍 CVService.createCV - Error response:', errorText);
       throw new Error('Failed to create CV');
     }
     
-    return await response.json();
+    const result = await response.json();
+    console.log('🔍 CVService.createCV - Response data:', result);
+    
+    return result;
   }
 
   static async updateCV(cvId: string, cvData: CVDataStructure, userId?: string): Promise<any> {
-    // Transform Studio format to database format
-    const dbData = transformStudioToDatabase(cvData);
+    console.log('🔍 CVService.updateCV - Input data:', { 
+      cvId, 
+      userId, 
+      hasData: !!cvData 
+    });
     
-    const params = new URLSearchParams();
-    if (userId) {
-      params.append('userId', userId);
-    }
+    // Send CV data directly since it's already in the correct format
+    const requestBody = {
+      userId: userId,
+      cvData: cvData
+    };
     
-    const response = await fetch(`/api/cvs/${cvId}?${params.toString()}`, {
+    console.log('🔍 CVService.updateCV - Request body:', requestBody);
+    
+    // Add timeout to fetch request
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+    
+    const response = await fetch(`/api/cvs/${cvId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        cvData: dbData
-      }),
+      body: JSON.stringify(requestBody),
+      signal: controller.signal,
     });
     
+    clearTimeout(timeoutId);
+    
+    console.log('🔍 CVService.updateCV - Response status:', response.status);
+    
     if (!response.ok) {
-      throw new Error('Failed to update CV');
+      const errorText = await response.text();
+      console.error('🔍 CVService.updateCV - Error response:', errorText);
+      throw new Error(`Failed to update CV: ${response.status} ${errorText}`);
     }
     
-    return await response.json();
+    if (response.status === 0) {
+      throw new Error('Request was aborted (timeout)');
+    }
+    
+    const result = await response.json();
+    console.log('🔍 CVService.updateCV - Response data:', result);
+    
+    return result;
   }
 
   static async deleteCV(cvId: string, userId?: string): Promise<void> {

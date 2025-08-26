@@ -1,6 +1,7 @@
 import { CVService } from '@/lib/services/cvService';
 import { useRouter } from 'next/navigation';
 import { transformStudioToDatabase } from '@/lib/utils/cvDataTransform';
+import { CVDataStructure } from '@/types/cv';
 
 export interface CreateCVOptions {
   userId: string;
@@ -18,41 +19,53 @@ export const createCVAndNavigate = async (options: CreateCVOptions) => {
   } = options;
 
   try {
-    // Create default CV data structure in Studio format
-    const defaultStudioData = {
-      personalInfo: {
-        firstName: '',
-        lastName: '',
+    // Create default CV data structure in CVDataStructure format
+    const defaultCVData: CVDataStructure = {
+      basics: {
+        name: '',
+        label: '',
+        image: '',
         email: '',
         phone: '',
-        location: '',
-        website: '',
-        linkedin: '',
-        github: '',
-        summary: ''
+        url: '',
+        summary: '',
+        location: {
+          address: '',
+          postalCode: '',
+          city: '',
+          countryCode: '',
+          region: ''
+        },
+        profiles: []
       },
-      experience: [],
+      work: [],
+      volunteer: [],
       education: [],
+      awards: [],
+      certificates: [],
+      publications: [],
       skills: [],
-      projects: [],
-      certifications: [],
       languages: [],
-      customSections: []
+      interests: [],
+      references: [],
+      projects: []
     };
 
-    // Transform to database format
-    const defaultCVData = transformStudioToDatabase(defaultStudioData);
-
     // Create the CV in the database
+    console.log('🚀 Creating CV with data:', { userId, title, jobId, hasData: !!defaultCVData });
+    
     const newCV = await CVService.createCV({
-      ...defaultStudioData,
+      ...defaultCVData,
       userId,
       title,
       jobId
     });
 
+    console.log('✅ CV creation response:', newCV);
+
     // Extract the CV ID from the response
-    const cvId = newCV.data?.cv?.id || newCV.id;
+    const cvId = newCV.data?.cv?.id || newCV.data?.cv?._id || newCV.id || newCV._id;
+    console.log('🔍 Extracted CV ID:', cvId);
 
     // Log the activity (lazy import to avoid client-side issues)
     try {
