@@ -15,11 +15,20 @@ const Hero = () => {
   useEffect(() => {
     const loadAnimation = async () => {
       try {
-        const response = await fetch('/Scene.json');
+        const response = await fetch('/Scene.json', {
+          headers: {
+            'Cache-Control': 'public, max-age=31536000, immutable',
+          },
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
         const data = await response.json();
         setAnimationData(data);
       } catch (error) {
         console.error('Failed to load Lottie animation:', error);
+        // Fallback to a simple loading state
+        setAnimationData(null);
       }
     };
     loadAnimation();
