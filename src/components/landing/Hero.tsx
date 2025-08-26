@@ -234,7 +234,7 @@ const Hero = () => {
               willChange: 'transform'
             }}
           >
-            <div className="relative w-full aspect-[16/10] rounded-2xl overflow-hidden bg-gradient-to-br from-gray-900/50 to-black/50 backdrop-blur-sm">
+            <div className="relative w-full aspect-[16/10] rounded-2xl overflow-hidden">
               {/* Lottie Animation */}
               {animationData ? (
                 <Lottie
@@ -255,34 +255,7 @@ const Hero = () => {
             </div>
           </motion.div>
           
-          {/* Enhanced Floating Elements */}
-          <motion.div
-            className="absolute -top-6 -left-6 w-12 h-12 bg-gradient-to-br from-lime-400 to-lime-500 rounded-full shadow-2xl"
-            animate={{
-              y: [0, -20, 0],
-              rotate: [0, 360],
-              scale: [1, 1.1, 1]
-            }}
-            transition={{
-              duration: 3,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-          />
-          <motion.div
-            className="absolute -bottom-6 -right-6 w-10 h-10 bg-gradient-to-br from-blue-400 to-blue-500 rounded-full shadow-2xl"
-            animate={{
-              y: [0, 20, 0],
-              rotate: [360, 0],
-              scale: [1, 1.2, 1]
-            }}
-            transition={{
-              duration: 4,
-              repeat: Infinity,
-              ease: "easeInOut",
-              delay: 1
-            }}
-          />
+
         </motion.div>
       </div>
 
