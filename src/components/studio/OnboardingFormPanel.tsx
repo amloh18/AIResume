@@ -102,10 +102,10 @@ const OnboardingFormPanel: React.FC<OnboardingFormPanelProps> = ({
   onTogglePanel
 }) => {
   const [activeTab, setActiveTab] = useState<'structure' | 'design' | 'template'>('structure');
-  const [activeSection, setActiveSection] = useState<'basics' | 'experience' | 'education' | 'skills' | 'projects' | 'certificates' | 'languages'>('basics');
+  const [activeSection, setActiveSection] = useState<'basics' | 'work' | 'education' | 'skills' | 'projects' | 'certificates' | 'languages'>('basics');
   const [sectionOrder, setSectionOrder] = useState([
     'basics',
-    'experience', 
+    'work', 
     'education',
     'skills',
     'projects',
@@ -136,7 +136,7 @@ const OnboardingFormPanel: React.FC<OnboardingFormPanelProps> = ({
 
   const sections = [
     { id: 'basics', label: 'Personal Info', icon: User },
-    { id: 'experience', label: 'Experience', icon: Briefcase },
+    { id: 'work', label: 'Experience', icon: Briefcase },
     { id: 'education', label: 'Education', icon: GraduationCap },
     { id: 'skills', label: 'Skills', icon: Zap },
     { id: 'projects', label: 'Projects', icon: Rocket },
@@ -274,6 +274,7 @@ const OnboardingFormPanel: React.FC<OnboardingFormPanelProps> = ({
     }
 
     console.log(`✅ Rendering section: ${activeSection}`, cvData[activeSection as keyof CVDataStructure]);
+    console.log(`✅ Available CV data keys:`, Object.keys(cvData));
 
     switch (activeSection) {
       case 'basics':
@@ -286,7 +287,7 @@ const OnboardingFormPanel: React.FC<OnboardingFormPanelProps> = ({
             />
           </div>
         );
-      case 'experience':
+      case 'work':
         return (
           <div className="p-4">
             <ExperienceStepContent 
@@ -548,7 +549,12 @@ const OnboardingFormPanel: React.FC<OnboardingFormPanelProps> = ({
                         key={section.id}
                         section={section}
                         isActive={activeSection === section.id}
-                        onClick={() => setActiveSection(section.id as any)}
+                        onClick={() => {
+                          console.log('🔍 Section icon clicked:', section.id);
+                          console.log('🔍 Previous active section:', activeSection);
+                          setActiveSection(section.id as any);
+                          console.log('🔍 New active section will be:', section.id);
+                        }}
                       />
                     )
                   ))}
