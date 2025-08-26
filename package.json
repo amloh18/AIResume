@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "build:analyze": "ANALYZE=true next build",
     "type-check": "tsc --noEmit",
     "test-deployment": "node scripts/test-deployment.js",
     "test-cv-parsing": "node scripts/test-cv-parsing.js",
@@ -34,6 +35,11 @@
     "node": ">=18.0.0 <25.0.0",
     "npm": ">=8.0.0"
   },
+  "browserslist": [
+    ">0.3%",
+    "not dead",
+    "not op_mini all"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
