@@ -9,6 +9,7 @@ interface StudioTopBarProps {
   saveStatus: 'saved' | 'saving' | 'error';
   onExport: (format: 'pdf' | 'docx' | 'json') => void;
   onBack: () => void;
+  onManualSave: () => void;
   panelStates: {
     left: boolean;
     right: boolean;
@@ -22,32 +23,13 @@ const StudioTopBar: React.FC<StudioTopBarProps> = ({
   saveStatus,
   onExport,
   onBack,
+  onManualSave,
   panelStates,
   onTogglePanel
 }) => {
   const [showExportMenu, setShowExportMenu] = useState(false);
 
-  const getSaveStatusIcon = () => {
-    switch (saveStatus) {
-      case 'saving':
-        return <div className="animate-spin rounded-full h-4 w-4 border-2 border-lime-500 border-t-transparent" />;
-      case 'error':
-        return <div className="h-4 w-4 bg-red-500 rounded-full" />;
-      default:
-        return <Save className="h-4 w-4 text-lime-500" />;
-    }
-  };
 
-  const getSaveStatusText = () => {
-    switch (saveStatus) {
-      case 'saving':
-        return 'Saving...';
-      case 'error':
-        return 'Save failed';
-      default:
-        return 'All changes saved';
-    }
-  };
 
   return (
     <div className="h-16 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-6 z-50 sticky top-0">
@@ -91,11 +73,39 @@ const StudioTopBar: React.FC<StudioTopBarProps> = ({
 
       {/* Right Region */}
       <div className="flex items-center space-x-3">
-        {/* Save Status */}
-        <div className="flex items-center space-x-2 px-3 py-2 bg-gray-700 rounded-lg">
-          {getSaveStatusIcon()}
-          <span className="text-sm text-gray-300">{getSaveStatusText()}</span>
-        </div>
+        {/* Unified Save Button with Status */}
+        <button
+          onClick={onManualSave}
+          disabled={saveStatus === 'saving'}
+          className={`
+            flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-200 font-medium text-sm
+            ${saveStatus === 'saving' 
+              ? 'bg-gray-600 text-gray-300 cursor-not-allowed' 
+              : saveStatus === 'error'
+              ? 'bg-red-600 text-white hover:bg-red-700 active:bg-red-800'
+              : 'bg-lime-600 text-white hover:bg-lime-700 active:bg-lime-800'
+            }
+            ${saveStatus === 'saved' ? 'ring-2 ring-lime-400 ring-opacity-50' : ''}
+          `}
+          title={saveStatus === 'saving' ? 'Saving...' : saveStatus === 'error' ? 'Save failed - Click to retry' : 'Save manually'}
+        >
+          {saveStatus === 'saving' ? (
+            <>
+              <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-transparent" />
+              <span>Saving...</span>
+            </>
+          ) : saveStatus === 'error' ? (
+            <>
+              <div className="h-4 w-4 bg-red-400 rounded-full" />
+              <span>Save Failed</span>
+            </>
+          ) : (
+            <>
+              <Save className="h-4 w-4" />
+              <span>Saved</span>
+            </>
+          )}
+        </button>
 
         {/* Export Menu */}
         <div className="relative">
