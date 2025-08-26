@@ -25,11 +25,11 @@ try {
   console.log('tesseract.js loaded successfully');
 } catch (error) {
   console.warn('tesseract.js not available:', error);
-  // Provide a mock implementation
+  // Provide a mock implementation for Vercel deployment
   createWorker = () => ({
     loadLanguage: () => Promise.resolve(),
     initialize: () => Promise.resolve(),
-    recognize: () => Promise.resolve({ data: { text: 'OCR not available' } }),
+    recognize: () => Promise.resolve({ data: { text: 'OCR not available in this environment' } }),
     terminate: () => Promise.resolve()
   });
 }
