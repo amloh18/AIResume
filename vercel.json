@@ -1,15 +1,27 @@
 {
-  "buildCommand": "npm run build",
-  "framework": "nextjs",
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization"
+      }
+    }
+  ],
   "functions": {
-    "src/app/api/cv-parser/route.ts": {
-      "maxDuration": 60
-    },
-    "src/app/api/cv/parse/route.ts": {
-      "maxDuration": 60
+    "src/app/api/**/*.ts": {
+      "maxDuration": 30
     }
   },
   "env": {
-    "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD": "true"
+    "NODE_ENV": "production"
   }
 }
