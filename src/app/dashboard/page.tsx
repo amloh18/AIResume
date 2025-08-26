@@ -98,12 +98,16 @@ const Dashboard: React.FC<DashboardProps> = () => {
     // If user just completed onboarding, don't redirect back
     if (fromOnboarding) {
       console.log('🎉 User completed onboarding, staying on dashboard');
+      console.log('🎉 Dashboard - fromOnboarding flag is true, not redirecting');
       return;
     }
     
     // Check if user has CVs - if not, redirect to onboarding
     if (status === 'authenticated' && !hasCV && !isChecking) {
-      console.log('🔄 No CVs found, redirecting to onboarding');
+      console.log('🔄 Dashboard - No CVs found, redirecting to onboarding');
+      console.log('🔄 Dashboard - status:', status);
+      console.log('🔄 Dashboard - hasCV:', hasCV);
+      console.log('🔄 Dashboard - isChecking:', isChecking);
       router.push('/onboarding');
       return;
     }
@@ -117,7 +121,9 @@ const Dashboard: React.FC<DashboardProps> = () => {
       setShowWelcomeAnimation(true);
       sessionStorage.removeItem('fromRegistration');
       sessionStorage.removeItem('fromLogin');
-      sessionStorage.removeItem('fromOnboarding');
+      // Don't clear fromOnboarding here - let the useCVSetup hook handle it
+      if (isFromRegistration) sessionStorage.removeItem('fromRegistration');
+      if (isFromLogin) sessionStorage.removeItem('fromLogin');
     }
   }, [status, hasCV, isChecking, router]);
 

@@ -7,6 +7,7 @@ export interface IJobApplication extends Document {
   company: string;
   jobUrl?: string;
   jobDescription?: string;
+  sponsorship?: 'yes' | 'no' | 'unknown';
   location?: string;
   salary?: {
     min?: number;
@@ -93,6 +94,11 @@ const jobApplicationSchema = new Schema<IJobApplication>({
     trim: true,
     maxlength: [5000, 'Job description cannot exceed 5000 characters']
   },
+  sponsorship: {
+    type: String,
+    enum: ['yes', 'no', 'unknown'],
+    default: 'unknown'
+  },
   location: {
     type: String,
     trim: true,
@@ -130,9 +136,10 @@ const jobApplicationSchema = new Schema<IJobApplication>({
     validate: {
       validator: function(v: Date) {
         if (!v) return true;
-        return v > new Date();
+        // Allow past dates for historical job applications
+        return true;
       },
-      message: 'Deadline must be in the future'
+      message: 'Invalid deadline date'
     }
   },
   notes: {
@@ -196,6 +203,22 @@ const jobApplicationSchema = new Schema<IJobApplication>({
       ret.id = ret._id;
       delete ret._id;
       delete ret.__v;
+      
+      // Safely handle the daysSinceApplication calculation
+      try {
+        // Use doc instead of this for better reliability
+        if (doc && doc.applicationDate && doc.applicationDate instanceof Date) {
+          const now = new Date();
+          const diffTime = Math.abs(now.getTime() - doc.applicationDate.getTime());
+          ret.daysSinceApplication = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        } else {
+          ret.daysSinceApplication = null;
+        }
+      } catch (error) {
+        console.error('Error calculating daysSinceApplication in toJSON:', error);
+        ret.daysSinceApplication = null;
+      }
+      
       return ret;
     }
   }
@@ -208,14 +231,6 @@ jobApplicationSchema.index({ userId: 1, company: 1 });
 jobApplicationSchema.index({ userId: 1, isArchived: 1 });
 jobApplicationSchema.index({ 'contacts.email': 1 });
 
-// Virtual for days since application
-jobApplicationSchema.virtual('daysSinceApplication').get(function() {
-  const now = new Date();
-  const diffTime = Math.abs(now.getTime() - this.applicationDate.getTime());
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-});
 
-// Ensure virtuals are serialized
-jobApplicationSchema.set('toJSON', { virtuals: true });
 
 export default mongoose.models.JobApplication || mongoose.model<IJobApplication>('JobApplication', jobApplicationSchema); 

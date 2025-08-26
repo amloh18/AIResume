@@ -134,15 +134,18 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    console.log('🔍 CV DELETE API - Starting delete request');
     await connectDB();
+    console.log('🔍 CV DELETE API - Database connected');
     
     const { id } = await params;
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
 
-    console.log('DELETE CV request - id:', id, 'userId:', userId);
+    console.log('🔍 CV DELETE API - CV ID:', id, 'User ID:', userId);
 
     if (!userId) {
+      console.log('❌ CV DELETE API - No user ID provided');
       return NextResponse.json(
         {
           success: false,
@@ -151,6 +154,8 @@ export async function DELETE(
         { status: 400 }
       );
     }
+    
+    console.log('🔍 CV DELETE API - User ID validation passed');
 
     let cvId, userObjectId;
     
@@ -170,9 +175,9 @@ export async function DELETE(
     
     try {
       userObjectId = toObjectId(userId);
-      console.log('User ID converted successfully:', userObjectId);
+      console.log('✅ CV DELETE API - User ID converted successfully:', userObjectId);
     } catch (error) {
-      console.error('Invalid User ID format:', userId);
+      console.error('❌ CV DELETE API - Invalid User ID format:', userId, error);
       return NextResponse.json(
         {
           success: false,
@@ -184,11 +189,20 @@ export async function DELETE(
     
     console.log('Converted IDs - cvId:', cvId, 'userObjectId:', userObjectId);
     
+    console.log('🔍 CV DELETE API - Looking for CV with ID:', cvId, 'and user ID:', userObjectId);
+    
     // Find CV and ensure user owns it
     const cv = await CV.findOne({ _id: cvId, userId: userObjectId });
     
     if (!cv) {
-      console.log('CV not found for user');
+      console.log('❌ CV DELETE API - CV not found for user');
+      console.log('🔍 CV DELETE API - Checking if CV exists without user filter...');
+      const cvWithoutUser = await CV.findOne({ _id: cvId });
+      if (cvWithoutUser) {
+        console.log('🔍 CV DELETE API - CV exists but belongs to different user:', cvWithoutUser.userId);
+      } else {
+        console.log('🔍 CV DELETE API - CV does not exist at all');
+      }
       return NextResponse.json(
         {
           success: false,
@@ -198,8 +212,9 @@ export async function DELETE(
       );
     }
 
-    console.log('CV found, deleting...');
+    console.log('✅ CV DELETE API - CV found, deleting...');
     await CV.deleteOne({ _id: cvId });
+    console.log('✅ CV DELETE API - CV deleted successfully');
 
     return NextResponse.json({
       success: true,

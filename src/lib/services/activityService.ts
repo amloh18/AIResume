@@ -77,18 +77,13 @@ export class ActivityService {
     } else {
       // Server-side: make direct database call
       try {
-        const { default: connectDB } = await import('@/lib/database');
-        const { ActivityLog } = await import('@/models');
-        
-        await connectDB();
-        
-        const activityLog = new ActivityLog({
+        // For now, just return a mock activity since ActivityLog model doesn't exist
+        // TODO: Implement proper activity logging when ActivityLog model is created
+        return {
+          id: 'temp-' + Date.now(),
           ...activity,
-          createdAt: new Date()
-        });
-        
-        await activityLog.save();
-        return activityLog.toJSON();
+          createdAt: new Date().toISOString()
+        };
       } catch (error) {
         console.error('Failed to log activity directly:', error);
         // Return a mock activity to prevent breaking the main flow

@@ -40,6 +40,7 @@ import {
   Activity
 } from 'lucide-react';
 import { useCreateCV } from '@/lib/utils/cvCreationUtils';
+import CVPreviewContent from '@/components/studio/CVPreviewContent';
 
 interface CV {
   id: string;
@@ -50,6 +51,7 @@ interface CV {
   isStarred: boolean;
   thumbnail: string;
   description?: string;
+  cvData?: any; // CV data structure for preview
   connectedJobs?: Job[];
   connectedCoverLetters?: CoverLetter[];
   completionPercentage?: number;
@@ -141,34 +143,85 @@ const Canvas: React.FC = () => {
         console.log('🔍 Canvas - CV data received:', cvData);
         console.log('🔍 Canvas - Number of CVs:', cvData.length);
         console.log('🔍 Canvas - Result structure:', Object.keys(result.data));
-        const enrichedCVs = cvData.map((cv: any) => {
+        
+        // Load connected jobs and cover letters for each CV
+        const enrichedCVs = await Promise.all(cvData.map(async (cv: any) => {
           console.log('Processing CV:', cv.id || cv._id, 'Type:', typeof (cv.id || cv._id));
           console.log('CV data structure:', Object.keys(cv));
+          
+          const cvId = cv.id || cv._id;
+          
+          // Load connected jobs
+          let connectedJobs: Job[] = [];
+          try {
+            console.log('🔍 Canvas - Loading jobs for CV:', cvId, 'User:', userIdToUse);
+            const jobsUrl = `/api/jobs?userId=${userIdToUse}&cvId=${cvId}`;
+            console.log('🔍 Canvas - Jobs API URL:', jobsUrl);
+            
+            const jobsResponse = await fetch(jobsUrl);
+            console.log('🔍 Canvas - Jobs response status:', jobsResponse.status);
+            
+            const jobsResult = await jobsResponse.json();
+            console.log('🔍 Canvas - Jobs API result:', jobsResult);
+            
+            if (jobsResult.success && jobsResult.data && jobsResult.data.jobs) {
+              console.log('🔍 Canvas - Found jobs:', jobsResult.data.jobs.length);
+              connectedJobs = jobsResult.data.jobs.map((job: any) => ({
+                id: job.id || job._id,
+                title: job.jobTitle,
+                company: job.company,
+                location: job.location || 'Remote',
+                status: job.status,
+                appliedDate: job.applicationDate,
+                salary: job.salary ? `${job.salary.min || ''} - ${job.salary.max || ''} ${job.salary.currency || ''}` : undefined,
+                description: job.jobDescription
+              }));
+            } else {
+              console.log('🔍 Canvas - No jobs found or API error:', jobsResult);
+            }
+          } catch (error) {
+            console.error('Error loading connected jobs for CV:', cvId, error);
+          }
+          
+          // Load connected cover letters (placeholder for now)
+          let connectedCoverLetters: CoverLetter[] = [];
+          try {
+            // TODO: Implement cover letter loading when API is available
+            // const coverLettersResponse = await fetch(`/api/cover-letters?userId=${userIdToUse}&cvId=${cvId}`);
+            // const coverLettersResult = await coverLettersResponse.json();
+            // if (coverLettersResult.success) {
+            //   connectedCoverLetters = coverLettersResult.data;
+            // }
+          } catch (error) {
+            console.error('Error loading connected cover letters for CV:', cvId, error);
+          }
+          
           return {
-            id: cv.id || cv._id,
+            id: cvId,
             title: cv.title || 'Untitled CV',
-            lastModified: formatTimeAgo(new Date(cv.lastModified || cv.updatedAt)),
+            lastModified: formatTimeAgo(new Date(cv.lastModified || cv.updatedAt || cv.createdAt)),
             status: cv.status || 'draft',
             views: cv.viewCount || cv.views || 0,
             isStarred: cv.starred || cv.isStarred || false,
             thumbnail: cv.thumbnail || '/api/placeholder/300/200',
             description: cv.description || 'No description available',
-            connectedJobs: cv.connectedJobs || [],
-            connectedCoverLetters: cv.connectedCoverLetters || [],
+            cvData: cv.cvData || null, // Include CV data for preview
+            connectedJobs,
+            connectedCoverLetters,
             completionPercentage: calculateCompletionPercentage(cv)
           };
-        });
+        }));
+        
         console.log('🔍 Canvas - Setting CVs:', enrichedCVs.length);
         console.log('🔍 Canvas - First CV sample:', enrichedCVs[0]);
         setCvs(enrichedCVs);
       } else {
-        console.log('🔍 Canvas - API returned success: false, using fallback data');
-        // Fallback to mock data
-        setCvs(getMockCVs());
+        console.log('🔍 Canvas - API returned success: false');
+        setCvs([]);
       }
     } catch (error) {
       console.error('Error loading CVs:', error);
-      setCvs(getMockCVs());
+      setCvs([]);
     } finally {
       setLoading(false);
     }
@@ -332,105 +385,7 @@ const Canvas: React.FC = () => {
     return Math.min(100, totalScore / Math.min(projects.length, maxProjects));
   };
 
-  const getMockCVs = (): CV[] => [
-    {
-      id: '507f1f77bcf86cd799439011',
-      title: 'Senior UX Designer CV',
-      lastModified: '2 hours ago',
-      status: 'published',
-      views: 12,
-      isStarred: true,
-      thumbnail: '/api/placeholder/300/200',
-      description: 'Professional CV for senior UX design positions',
-      completionPercentage: 100,
-      connectedJobs: [
-        {
-          id: 'job1',
-          title: 'Senior UX Designer',
-          company: 'Spotify',
-          location: 'Stockholm, Sweden',
-          status: 'interview',
-          appliedDate: '2024-01-15',
-          salary: '$120k - $150k',
-          description: 'Leading user experience design for music streaming platform'
-        },
-        {
-          id: 'job2',
-          title: 'UX Design Lead',
-          company: 'Figma',
-          location: 'San Francisco, CA',
-          status: 'applied',
-          appliedDate: '2024-01-10',
-          salary: '$140k - $180k',
-          description: 'Leading design systems and user experience'
-        }
-      ],
-      connectedCoverLetters: [
-        {
-          id: 'cl1',
-          title: 'Spotify UX Designer Cover Letter',
-          jobTitle: 'Senior UX Designer',
-          company: 'Spotify',
-          createdDate: '2024-01-15',
-          status: 'sent'
-        },
-        {
-          id: 'cl2',
-          title: 'Figma Design Lead Cover Letter',
-          jobTitle: 'UX Design Lead',
-          company: 'Figma',
-          createdDate: '2024-01-10',
-          status: 'draft'
-        }
-      ]
-    },
-    {
-      id: '507f1f77bcf86cd799439012',
-      title: 'Product Manager CV',
-      lastModified: '1 day ago',
-      status: 'draft',
-      views: 0,
-      isStarred: false,
-      thumbnail: '/api/placeholder/300/200',
-      description: 'Product management CV for tech companies',
-      completionPercentage: 65,
-      connectedJobs: [],
-      connectedCoverLetters: []
-    },
-    {
-      id: '507f1f77bcf86cd799439013',
-      title: 'Frontend Developer CV',
-      lastModified: '3 days ago',
-      status: 'published',
-      views: 8,
-      isStarred: true,
-      thumbnail: '/api/placeholder/300/200',
-      description: 'Frontend development CV with React and TypeScript focus',
-      completionPercentage: 100,
-      connectedJobs: [
-        {
-          id: 'job3',
-          title: 'Senior Frontend Developer',
-          company: 'Netflix',
-          location: 'Los Gatos, CA',
-          status: 'screening',
-          appliedDate: '2024-01-08',
-          salary: '$130k - $160k',
-          description: 'Building scalable frontend applications'
-        }
-      ],
-      connectedCoverLetters: [
-        {
-          id: 'cl3',
-          title: 'Netflix Frontend Developer Cover Letter',
-          jobTitle: 'Senior Frontend Developer',
-          company: 'Netflix',
-          createdDate: '2024-01-08',
-          status: 'sent'
-        }
-      ]
-    }
-  ];
+  
 
   const formatTimeAgo = (date: Date) => {
     const now = new Date();
@@ -487,6 +442,10 @@ const Canvas: React.FC = () => {
   };
 
   const handleCVClick = (cv: CV) => {
+    console.log('🔍 Canvas - CV clicked:', cv.id);
+    console.log('🔍 Canvas - CV data:', cv.cvData);
+    console.log('🔍 Canvas - Connected jobs:', cv.connectedJobs);
+    console.log('🔍 Canvas - Connected cover letters:', cv.connectedCoverLetters);
     setSelectedCV(cv);
     setShowModal(true);
   };
@@ -514,11 +473,43 @@ const Canvas: React.FC = () => {
     setEditingTitle('');
   };
 
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState<string | null>(null);
+
+  const confirmDeleteCV = (cvId: string) => {
+    setShowDeleteConfirmation(cvId);
+  };
+
   const deleteCV = async (cvId: string) => {
     try {
       setDeletingCVId(cvId);
-      const userData = localStorage.getItem('user');
-      const userId = userData ? JSON.parse(userData).id || JSON.parse(userData)._id : '6889b151d17daa1eaee91a5c';
+      setShowDeleteConfirmation(null);
+      
+      // Get user ID from session or localStorage
+      let userId = session?.user?.id;
+      console.log('🔍 Delete - Session user ID:', session?.user?.id);
+      console.log('🔍 Delete - Session data:', session);
+      
+      if (!userId) {
+        const userData = localStorage.getItem('user');
+        console.log('🔍 Delete - localStorage user data:', userData);
+        if (userData) {
+          try {
+            const parsedUser = JSON.parse(userData);
+            userId = parsedUser.id || parsedUser._id;
+            console.log('🔍 Delete - Parsed user ID from localStorage:', userId);
+          } catch (error) {
+            console.error('Error parsing user data:', error);
+          }
+        }
+      }
+      
+      if (!userId) {
+        console.error('No user ID available for delete operation');
+        console.error('Session:', session);
+        console.error('localStorage user data:', localStorage.getItem('user'));
+        alert('Authentication error. Please log in again.');
+        return;
+      }
       
       console.log('Deleting CV:', cvId, 'Type:', typeof cvId, 'for user:', userId);
       
@@ -538,11 +529,22 @@ const Canvas: React.FC = () => {
         return;
       }
       
+      console.log('Making DELETE request to:', `/api/cvs/${cvId}?userId=${userId}`);
+      
       const response = await fetch(`/api/cvs/${cvId}?userId=${userId}`, {
         method: 'DELETE',
       });
       
       console.log('Delete response status:', response.status);
+      console.log('Delete response headers:', Object.fromEntries(response.headers.entries()));
+      
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const textResponse = await response.text();
+        console.error('Non-JSON response received:', textResponse.substring(0, 500));
+        throw new Error(`Server returned non-JSON response: ${response.status}`);
+      }
       
       const result = await response.json();
       console.log('Delete response:', result);
@@ -550,6 +552,8 @@ const Canvas: React.FC = () => {
       if (result.success) {
         // Remove the CV from the local state
         setCvs(cvs.filter(cv => cv.id !== cvId));
+        // Show success message
+        alert('CV deleted successfully!');
       } else {
         console.error('Failed to delete CV:', result.message);
         alert(`Failed to delete CV: ${result.message}`);
@@ -761,8 +765,17 @@ const Canvas: React.FC = () => {
         </div>
 
         <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
-          {/* Create CV Card - Show when no CVs exist */}
-          {cvs.length === 0 && (
+          {loading ? (
+            // Loading skeleton
+            Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 animate-pulse">
+                <div className="h-48 bg-white/10 rounded-lg mb-4"></div>
+                <div className="h-4 bg-white/10 rounded mb-2"></div>
+                <div className="h-3 bg-white/10 rounded w-2/3"></div>
+              </div>
+            ))
+          ) : cvs.length === 0 ? (
+            // Create CV Card - Show when no CVs exist
             <motion.div
               className="bg-gradient-to-br from-lime-400/10 to-blue-400/10 border-2 border-dashed border-lime-400/30 rounded-2xl p-8 flex flex-col items-center justify-center text-center hover:border-lime-400/50 hover:from-lime-400/15 hover:to-blue-400/15 transition-all duration-300 cursor-pointer group"
               initial={{ opacity: 0, y: 20 }}
@@ -822,9 +835,9 @@ const Canvas: React.FC = () => {
                 </div>
               </div>
             </motion.div>
-          )}
-          
-          {cvs.map((cv, index) => (
+          ) : (
+            // CV Cards
+            cvs.map((cv, index) => (
             <motion.div
               key={cv.id}
               className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden hover:bg-white/10 transition-all duration-300 group cursor-pointer"
@@ -1063,9 +1076,7 @@ const Canvas: React.FC = () => {
                     whileTap={{ scale: 0.9 }}
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (confirm('Are you sure you want to delete this CV? This action cannot be undone.')) {
-                        deleteCV(cv.id);
-                      }
+                      confirmDeleteCV(cv.id);
                     }}
                     disabled={deletingCVId === cv.id}
                   >
@@ -1078,7 +1089,8 @@ const Canvas: React.FC = () => {
                 </div>
               </div>
             </motion.div>
-          ))}
+          ))
+          )}
         </div>
         </div>
       </div>
@@ -1212,14 +1224,30 @@ const Canvas: React.FC = () => {
                         CV Preview
                       </h3>
                       
-                    {/* CV Preview - Clean, no redundant info */}
-                      <div className="bg-white/5 border border-white/10 rounded-xl p-4">
-                      <div className="aspect-[1/1.4142] bg-gradient-to-br from-lime-400/10 to-blue-400/10 rounded-lg border border-white/20 flex items-center justify-center">
-                        <div className="w-16 h-20 bg-white/20 rounded-lg border border-white/30 flex items-center justify-center">
-                          <FileText size={32} className="text-white/60" />
+                    {/* CV Preview - Using CVPreviewContent component */}
+                      <div className="bg-white/5 border border-white/10 rounded-xl p-4 h-96 overflow-hidden">
+                        {selectedCV.cvData ? (
+                          <div className="h-full flex items-center justify-center">
+                            <div className="transform scale-[0.35] origin-center">
+                              <div className="w-[794px] h-[1123px] bg-white rounded-lg shadow-lg overflow-hidden">
+                                <CVPreviewContent 
+                                  cvData={selectedCV.cvData}
+                                  theme="light"
+                                  showBadge={false}
+                                />
+                              </div>
+                            </div>
                           </div>
-                        </div>
+                        ) : (
+                          <div className="flex items-center justify-center h-full text-white/60">
+                            <div className="text-center">
+                              <FileText size={48} className="mx-auto mb-4 opacity-50" />
+                              <p className="text-lg font-medium">No CV data available</p>
+                              <p className="text-sm">Start adding your information to see a preview</p>
+                            </div>
                           </div>
+                        )}
+                      </div>
                         </div>
                         
                   {/* Right Column: Actions and Metadata */}
@@ -1278,15 +1306,32 @@ const Canvas: React.FC = () => {
                     </div>
                   </div>
 
-                    {/* Connected Jobs */}
+                    {/* Linked Jobs */}
                     <div className="space-y-3">
                       <div className="flex items-center gap-3">
-                        <label className="text-white/80 text-sm font-medium">Connected Job:</label>
+                        <label className="text-white/80 text-sm font-medium">Linked Jobs:</label>
                         <div className="flex-1 min-w-0">
-                          <select className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:border-lime-400/50">
-                            <option value="">Select a job...</option>
-                            <option value="job1">Software Engineer at Google</option>
-                            <option value="job2">Product Manager at Microsoft</option>
+                          <select 
+                            className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:border-lime-400/50"
+                            onChange={(e) => {
+                              console.log('🔍 Canvas - Job selection changed:', e.target.value);
+                              // Here you would link the selected job to the CV
+                              if (e.target.value) {
+                                // Link job to CV logic
+                                console.log('🔍 Canvas - Linking job to CV:', e.target.value);
+                              }
+                            }}
+                          >
+                            <option value="">Select a job to link...</option>
+                            {selectedCV.connectedJobs && selectedCV.connectedJobs.length > 0 ? (
+                                                              selectedCV.connectedJobs.map((job: any) => (
+                                  <option key={job.id} value={job.id}>
+                                    {job.company} - {job.title}
+                                  </option>
+                                ))
+                            ) : (
+                              <option value="" disabled>No jobs available</option>
+                            )}
                           </select>
                         </div>
                         <motion.button
@@ -1294,66 +1339,178 @@ const Canvas: React.FC = () => {
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
                           title="Link job to CV"
+                          onClick={() => {
+                            console.log('🔍 Canvas - Link job button clicked');
+                            // Navigate to job tracker to select a job
+                            window.location.href = '/dashboard?linkCV=' + selectedCV.id;
+                          }}
                         >
                           <Link size={14} />
                         </motion.button>
                       </div>
-                      </div>
+                      
+                      {/* Show linked jobs */}
+                      {selectedCV.connectedJobs && selectedCV.connectedJobs.length > 0 && (
+                        <div className="space-y-2">
+                          <h4 className="text-white font-medium text-sm">Currently Linked:</h4>
+                          {selectedCV.connectedJobs.map((job: any) => (
+                            <div key={job.id} className="flex items-center gap-2 p-2 bg-white/5 border border-white/10 rounded-lg">
+                              <div className="w-8 h-8 bg-blue-400/20 rounded border border-blue-400/30 flex items-center justify-center">
+                                <Briefcase size={12} className="text-blue-400" />
+                              </div>
+                                                              <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <p className="text-white text-sm truncate">{job.company} - {job.title}</p>
+                                    <span className={`px-2 py-1 rounded text-xs font-medium ${getJobStatusColor(job.status)}`}>
+                                      {job.status}
+                                    </span>
+                                  </div>
+                                </div>
+                              <button 
+                                className="p-1 text-red-400/60 hover:text-red-400 transition-colors"
+                                onClick={() => {
+                                  console.log('🔍 Canvas - Unlink job:', job.id);
+                                  // Unlink job from CV logic
+                                }}
+                              >
+                                <X size={12} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
 
                     {/* Cover Letters */}
-                        <div className="space-y-3">
+                    <div className="space-y-3">
                       <h4 className="text-white font-medium text-sm">Cover Letters</h4>
                       
                       {/* Cover Letter Previews */}
                       <div className="space-y-2">
-                        <div className="flex items-center gap-2 p-3 bg-white/5 border border-white/10 rounded-lg">
-                          <div className="w-12 h-8 bg-purple-400/20 rounded border border-purple-400/30 flex items-center justify-center">
-                            <PenTool size={12} className="text-purple-400" />
+                        {selectedCV.connectedCoverLetters && selectedCV.connectedCoverLetters.length > 0 ? (
+                          selectedCV.connectedCoverLetters.map((coverLetter: any) => (
+                            <div key={coverLetter.id} className="flex items-center gap-2 p-3 bg-white/5 border border-white/10 rounded-lg">
+                              <div className="w-12 h-8 bg-purple-400/20 rounded border border-purple-400/30 flex items-center justify-center">
+                                <PenTool size={12} className="text-purple-400" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-white text-sm truncate">{coverLetter.title}</p>
+                                <p className="text-white/60 text-xs">{coverLetter.company} • {new Date(coverLetter.createdDate).toLocaleDateString()}</p>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <button 
+                                  className="p-1 text-white/60 hover:text-white transition-colors"
+                                  onClick={() => {
+                                    console.log('🔍 Canvas - View cover letter:', coverLetter.id);
+                                    // View cover letter logic
+                                  }}
+                                >
+                                  <Eye size={12} />
+                                </button>
+                                <button 
+                                  className="p-1 text-white/60 hover:text-white transition-colors"
+                                  onClick={() => {
+                                    console.log('🔍 Canvas - Download cover letter:', coverLetter.id);
+                                    // Download cover letter logic
+                                  }}
+                                >
+                                  <Download size={12} />
+                                </button>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-center py-4">
+                            <PenTool size={24} className="text-white/20 mx-auto mb-2" />
+                            <p className="text-white/60 text-sm">No cover letters linked</p>
                           </div>
-                                  <div className="flex-1 min-w-0">
-                            <p className="text-white text-sm truncate">Software Engineer Cover Letter</p>
-                            <p className="text-white/60 text-xs">Google • Updated 2 days ago</p>
-                                    </div>
-                                      <div className="flex items-center gap-1">
-                            <button className="p-1 text-white/60 hover:text-white transition-colors">
-                              <Eye size={12} />
-                            </button>
-                            <button className="p-1 text-white/60 hover:text-white transition-colors">
-                              <Download size={12} />
-                            </button>
-                                      </div>
-                                  </div>
-                                </div>
+                        )}
+                      </div>
                                 
                       {/* Cover Letter Actions */}
                       <div className="flex flex-wrap gap-2">
-                                  <motion.button
+                        <motion.button
                           className="px-3 py-2 bg-purple-400/20 text-purple-400 rounded-lg text-sm hover:bg-purple-400/30 transition-colors flex items-center gap-2"
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
-                          disabled
-                          title="Select a job first"
+                          onClick={() => {
+                            console.log('🔍 Canvas - Generate cover letter clicked');
+                            // Navigate to cover letter generation
+                            window.location.href = `/studio/cover-letter?cvId=${selectedCV.id}&generate=true`;
+                          }}
                         >
                           <Sparkles size={12} />
                           Generate Cover Letter
-                                  </motion.button>
+                        </motion.button>
                         
-                          <motion.button
+                        <motion.button
                           className="px-3 py-2 text-white/60 hover:text-white transition-colors text-sm flex items-center gap-2"
-                              whileHover={{ scale: 1.02 }}
+                          whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
-                              onClick={() => {
-                                setShowModal(false);
+                          onClick={() => {
+                            setShowModal(false);
                             window.location.href = `/studio/cover-letter?cvId=${selectedCV.id}`;
                           }}
                         >
                           <Plus size={12} />
                           Create New Cover Letter
-                            </motion.button>
-                        </div>
+                        </motion.button>
+                      </div>
                     </div>
                   </div>
                 </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteConfirmation && (
+          <motion.div
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="bg-gray-900 border border-gray-700 rounded-xl p-6 w-full max-w-md mx-4"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center">
+                  <Trash2 size={20} className="text-red-400" />
+                </div>
+                <div>
+                  <h3 className="text-white font-semibold text-lg">Delete CV</h3>
+                  <p className="text-gray-400 text-sm">This action cannot be undone</p>
+                </div>
+              </div>
+              
+              <p className="text-gray-300 mb-6">
+                Are you sure you want to delete this CV? This will permanently remove it and all associated data.
+              </p>
+              
+              <div className="flex gap-3">
+                <motion.button
+                  className="flex-1 px-4 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setShowDeleteConfirmation(null)}
+                >
+                  Cancel
+                </motion.button>
+                <motion.button
+                  className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => deleteCV(showDeleteConfirmation)}
+                >
+                  Delete CV
+                </motion.button>
               </div>
             </motion.div>
           </motion.div>

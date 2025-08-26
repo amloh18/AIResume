@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
     const sort = searchParams.get('sort') || 'createdAt';
     const limit = searchParams.get('limit');
     const hasInterviewWithin = searchParams.get('hasInterviewWithin');
+    const cvId = searchParams.get('cvId');
 
     if (!userId) {
       return NextResponse.json(
@@ -65,6 +66,11 @@ export async function GET(request: NextRequest) {
       }
       
       query['interviews.date'] = { $gte: now, $lte: endDate };
+    }
+
+    // Add CV filter
+    if (cvId) {
+      query.cvId = cvId;
     }
 
     // Build the query
@@ -204,17 +210,27 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('🔍 Job API - Starting POST request');
     await connectDB();
+    console.log('🔍 Job API - Database connected');
     
     const body = await request.json();
+    console.log('🔍 Job API - Request body:', JSON.stringify(body, null, 2));
     const { userId, cvId, ...jobData } = body;
 
+    console.log('🔍 Job API - Extracted userId:', userId);
+    console.log('🔍 Job API - Extracted cvId:', cvId);
+    console.log('🔍 Job API - Job data:', jobData);
+
     if (!userId || !cvId) {
+      console.log('❌ Job API - Missing required fields:', { userId: !!userId, cvId: !!cvId });
       return NextResponse.json(
         { success: false, message: 'User ID and CV ID are required' },
         { status: 400 }
       );
     }
+    
+    console.log('✅ Job API - Required fields validation passed');
 
     // Set application date when status is 'applied'
     if (jobData.status === 'applied') {
@@ -222,8 +238,14 @@ export async function POST(request: NextRequest) {
     }
     // Clear application date when status is 'created'
     if (jobData.status === 'created') {
-      jobData.applicationDate = null;
+      jobData.applicationDate = undefined;
     }
+
+    console.log('🔍 Job API - Creating JobApplication with data:', {
+      userId,
+      cvId,
+      ...jobData
+    });
 
     const job = new JobApplication({
       userId,
@@ -231,7 +253,16 @@ export async function POST(request: NextRequest) {
       ...jobData
     });
 
+    console.log('🔍 Job API - JobApplication instance created, saving...');
+    console.log('🔍 Job API - Job instance data before save:', {
+      _id: job._id,
+      applicationDate: job.applicationDate,
+      deadline: job.deadline,
+      status: job.status
+    });
+    
     await job.save();
+    console.log('✅ Job API - Job saved successfully with ID:', job._id);
 
     // Log activity
     try {
@@ -241,10 +272,14 @@ export async function POST(request: NextRequest) {
       console.error('Failed to log job creation activity:', activityError);
     }
 
+    console.log('🔍 Job API - Preparing response...');
+    const jobResponse = job.toJSON();
+    console.log('🔍 Job API - Job data after toJSON:', jobResponse);
+    
     return NextResponse.json({
       success: true,
       message: 'Job application created successfully',
-      data: job
+      data: jobResponse
     }, { status: 201 });
 
   } catch (error: any) {
@@ -260,12 +295,18 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
+    console.log('🔍 Job API - Starting PUT request');
     await connectDB();
     
     const body = await request.json();
+    console.log('🔍 Job API - PUT request body:', JSON.stringify(body, null, 2));
     const { id, ...updateData } = body;
 
+    console.log('🔍 Job API - Extracted ID:', id);
+    console.log('🔍 Job API - Update data:', updateData);
+
     if (!id) {
+      console.log('❌ Job API - Missing job ID');
       return NextResponse.json(
         { success: false, message: 'Job ID is required' },
         { status: 400 }
@@ -273,8 +314,12 @@ export async function PUT(request: NextRequest) {
     }
 
     // Get the current job to track status changes
+    console.log('🔍 Job API - Looking up job with ID:', id);
     const currentJob = await JobApplication.findById(id);
+    console.log('🔍 Job API - Current job found:', currentJob ? 'Yes' : 'No');
+    
     if (!currentJob) {
+      console.log('❌ Job API - Job not found with ID:', id);
       return NextResponse.json(
         { success: false, message: 'Job application not found' },
         { status: 404 }
@@ -287,8 +332,10 @@ export async function PUT(request: NextRequest) {
     }
     // Clear application date when status changes to 'created'
     if (updateData.status === 'created') {
-      updateData.applicationDate = null;
+      updateData.applicationDate = undefined;
     }
+
+    console.log('🔍 Job API - Final update data:', updateData);
 
     const job = await JobApplication.findByIdAndUpdate(
       id,
