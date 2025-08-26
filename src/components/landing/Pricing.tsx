@@ -204,12 +204,16 @@ const Pricing = () => {
         {/* Enhanced Pricing Cards */}
         <motion.div 
           key={selectedCategory}
-          className={`grid grid-cols-1 md:grid-cols-2 ${selectedCategory === 'essential' ? 'lg:grid-cols-2 max-w-4xl' : 'lg:grid-cols-3 max-w-6xl'} gap-6 lg:gap-8 mx-auto`}
+          className="flex justify-center"
           variants={containerVariants}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-100px" }}
         >
+          <div className={`grid grid-cols-1 md:grid-cols-2 ${selectedCategory === 'essential' ? 'lg:grid-cols-2' : 'lg:grid-cols-3'} gap-6 lg:gap-8`} style={{
+            maxWidth: selectedCategory === 'essential' ? '32rem' : '72rem',
+            width: '100%'
+          }}>
           {plans.map((plan, index) => {
             const IconComponent = plan.icon;
             return (
@@ -374,6 +378,7 @@ const Pricing = () => {
               </motion.div>
             );
           })}
+          </div>
         </motion.div>
 
         {/* Enhanced Bottom CTA */}
