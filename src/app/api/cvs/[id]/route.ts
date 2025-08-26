@@ -72,11 +72,16 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    console.log('🔍 CV UPDATE API - Starting update request');
     await connectDB();
+    console.log('🔍 CV UPDATE API - Database connected');
     
     const { id } = await params;
     const body = await request.json();
+    console.log('🔍 CV UPDATE API - Request body:', body);
+    
     const { userId, ...updateData } = body;
+    console.log('🔍 CV UPDATE API - Extracted data:', { userId, hasUpdateData: !!updateData });
 
     if (!userId) {
       return NextResponse.json(
@@ -89,11 +94,14 @@ export async function PUT(
     }
 
     const cvId = toObjectId(id);
+    console.log('🔍 CV UPDATE API - CV ID:', cvId, 'User ID:', userId);
     
     // Find CV and ensure user owns it
     const cv = await CV.findOne({ _id: cvId, userId });
+    console.log('🔍 CV UPDATE API - CV found:', !!cv);
     
     if (!cv) {
+      console.log('❌ CV UPDATE API - CV not found for user');
       return NextResponse.json(
         {
           success: false,
@@ -104,10 +112,13 @@ export async function PUT(
     }
 
     // Update CV with new data
+    console.log('🔍 CV UPDATE API - Updating CV with data:', updateData);
     Object.assign(cv, updateData);
-    cv.metadata.updatedAt = new Date();
+    cv.metadata.lastModified = new Date();
     
+    console.log('🔍 CV UPDATE API - Saving CV...');
     await cv.save();
+    console.log('✅ CV UPDATE API - CV saved successfully');
 
     return NextResponse.json({
       success: true,

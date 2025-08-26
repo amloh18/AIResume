@@ -16,6 +16,7 @@ import { JobService } from '@/lib/services/jobService';
 import { debounce } from 'lodash';
 import { transformDatabaseToStudio } from '@/lib/utils/cvDataTransform';
 import { toCVDataStructure } from '@/lib/utils/dataAdapter';
+import Toast from '@/components/ui/Toast';
 
 interface CVStudioProps {
   jobId?: string | null;
@@ -34,6 +35,8 @@ const CVStudio: React.FC<CVStudioProps> = ({ jobId, cvId, userId }) => {
     left: true,
     right: true
   });
+  const [justCreated, setJustCreated] = useState(false);
+  const [showSavedMessage, setShowSavedMessage] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [paperSize, setPaperSize] = useState<'A4' | 'Letter'>('A4');
   const [selectedJobId, setSelectedJobId] = useState<string | null>(jobId || null);
@@ -168,18 +171,77 @@ const CVStudio: React.FC<CVStudioProps> = ({ jobId, cvId, userId }) => {
     }
   };
 
+  // Manual save function
+  const manualSave = useCallback(async () => {
+    if (!cvData) return;
+    
+    try {
+      console.log('🔍 Studio - Manual save triggered...');
+      setSaveStatus('saving');
+      
+      if (cvId) {
+        console.log('🔍 Studio - Manually updating existing CV:', cvId);
+        await CVService.updateCV(cvId, cvData, userId || undefined);
+        console.log('✅ Studio - Manual CV update successful');
+        setSaveStatus('saved');
+        setShowSavedMessage(true);
+        setTimeout(() => setShowSavedMessage(false), 2000); // Hide after 2 seconds
+      } else {
+        console.log('🔍 Studio - Manual save for new CV');
+        // Create new CV
+        const userData = localStorage.getItem('user');
+        const currentUserId = userData ? JSON.parse(userData).id || JSON.parse(userData)._id : userId || '6889b151d17daa1eaee91a5c';
+        
+        const newCV = await CVService.createCV({
+          userId: currentUserId,
+          title: 'Untitled CV',
+          ...cvData,
+          jobId: selectedJobId || jobId || undefined
+        });
+        
+        const newCvId = newCV.data?.cv?.id || newCV.data?.cv?._id || newCV.id || newCV._id;
+        console.log('🔍 Studio - Manual CV creation with ID:', newCvId);
+        
+        router.replace(`/studio?cvId=${newCvId}${selectedJobId || jobId ? `&jobId=${selectedJobId || jobId}` : ''}`);
+        setSaveStatus('saved');
+        setShowSavedMessage(true);
+        setTimeout(() => setShowSavedMessage(false), 2000); // Hide after 2 seconds
+        setJustCreated(true);
+        setTimeout(() => setJustCreated(false), 2000);
+      }
+    } catch (err) {
+      console.error('❌ Studio - Manual save error:', err);
+      setSaveStatus('error');
+    }
+  }, [cvData, cvId, userId, selectedJobId, jobId, router]);
+
   // Debounced autosave
   const debouncedSave = useCallback(
     debounce(async (data: CVDataStructure) => {
       try {
+        console.log('🔍 Studio - Starting save operation...');
         setSaveStatus('saving');
+        
+        // Add timeout protection
+        const saveTimeout = setTimeout(() => {
+          console.error('❌ Studio - Save operation timed out');
+          setSaveStatus('error');
+        }, 10000); // 10 second timeout
+        
         if (cvId) {
+          console.log('🔍 Studio - Updating existing CV:', cvId);
           await CVService.updateCV(cvId, data, userId || undefined);
+          console.log('✅ Studio - CV updated successfully');
+          clearTimeout(saveTimeout);
+          setSaveStatus('saved');
+          setShowSavedMessage(true);
+          setTimeout(() => setShowSavedMessage(false), 2000); // Hide after 2 seconds
         } else {
           // Create new CV
           const userData = localStorage.getItem('user');
-          const currentUserId = userData ? JSON.parse(userData).id || JSON.parse(userData)._id : '6889b151d17daa1eaee91a5c';
+          const currentUserId = userData ? JSON.parse(userData).id || JSON.parse(userData)._id : userId || '6889b151d17daa1eaee91a5c';
           
+          console.log('🔍 Studio - Creating new CV for user:', currentUserId);
           const newCV = await CVService.createCV({
             userId: currentUserId,
             title: 'Untitled CV',
@@ -188,12 +250,24 @@ const CVStudio: React.FC<CVStudioProps> = ({ jobId, cvId, userId }) => {
           });
           
           // Extract CV ID and update URL
-          const newCvId = newCV.data?.cv?.id || newCV.id;
+          const newCvId = newCV.data?.cv?.id || newCV.data?.cv?._id || newCV.id || newCV._id;
+          console.log('🔍 Studio - New CV created with ID:', newCvId);
+          
+          // Update URL to include the new CV ID
           router.replace(`/studio?cvId=${newCvId}${selectedJobId || jobId ? `&jobId=${selectedJobId || jobId}` : ''}`);
+          
+          // Set save status to saved since we just created the CV
+          clearTimeout(saveTimeout);
+          setSaveStatus('saved');
+          setShowSavedMessage(true);
+          setTimeout(() => setShowSavedMessage(false), 2000); // Hide after 2 seconds
+          
+          // Set flag to prevent immediate autosave
+          setJustCreated(true);
+          setTimeout(() => setJustCreated(false), 2000); // Reset after 2 seconds
         }
-        setSaveStatus('saved');
       } catch (err) {
-        console.error('Error saving CV:', err);
+        console.error('❌ Studio - Error saving CV:', err);
         setSaveStatus('error');
       }
     }, 1000),
@@ -202,10 +276,10 @@ const CVStudio: React.FC<CVStudioProps> = ({ jobId, cvId, userId }) => {
 
   // Autosave on any change
   useEffect(() => {
-    if (cvData && !isLoading) {
+    if (cvData && !isLoading && !justCreated) {
       debouncedSave(cvData);
     }
-  }, [cvData, debouncedSave, isLoading]);
+  }, [cvData, debouncedSave, isLoading, justCreated]);
 
   // Load initial data
   useEffect(() => {
@@ -420,6 +494,15 @@ const CVStudio: React.FC<CVStudioProps> = ({ jobId, cvId, userId }) => {
 
   return (
     <div className="h-screen flex flex-col bg-gray-900 overflow-hidden">
+      {/* Toast Notifications */}
+      <Toast
+        message="CV saved successfully!"
+        type="success"
+        isVisible={showSavedMessage}
+        onClose={() => setShowSavedMessage(false)}
+        duration={2000}
+      />
+      
       {/* Top App Bar */}
       <StudioTopBar
         documentType={documentType}
@@ -427,6 +510,7 @@ const CVStudio: React.FC<CVStudioProps> = ({ jobId, cvId, userId }) => {
         saveStatus={saveStatus}
         onExport={handleExport}
         onBack={() => router.push('/dashboard')}
+        onManualSave={manualSave}
         panelStates={panelStates}
         onTogglePanel={togglePanel}
       />
