@@ -815,7 +815,6 @@ const Canvas: React.FC = () => {
                     const userId = userData ? JSON.parse(userData).id || JSON.parse(userData)._id : '6889b151d17daa1eaee91a5c';
                     await createCV({
                       userId,
-                      title: 'My Professional CV',
                       type: 'cv'
                     });
                   } catch (error) {
@@ -847,12 +846,8 @@ const Canvas: React.FC = () => {
               whileHover={{ y: -5, scale: 1.02 }}
               onClick={() => handleCVClick(cv)}
             >
-              {/* CV Thumbnail */}
-              <div className="relative h-48 bg-gradient-to-br from-lime-400/10 to-blue-400/10 flex items-center justify-center">
-                <div className="w-16 h-20 bg-white/20 rounded-lg border border-white/30 flex items-center justify-center">
-                  <FileText size={24} className="text-white/60" />
-                </div>
-                
+              {/* CV Stats Section */}
+              <div className="relative h-48 bg-gradient-to-br from-lime-400/10 to-blue-400/10 p-6">
                 {/* Status Badge */}
                 <div className={`absolute top-4 left-4 px-2 py-1 rounded-lg text-xs font-medium ${getStatusColor(cv.status)}`}>
                   {cv.status}
@@ -871,20 +866,50 @@ const Canvas: React.FC = () => {
                   <Star size={16} className={cv.isStarred ? 'fill-yellow-400 text-yellow-400' : ''} />
                 </motion.button>
 
-                {/* Connection Indicators */}
-                <div className="absolute bottom-4 left-4 flex items-center gap-2">
-                  {cv.connectedJobs && cv.connectedJobs.length > 0 && (
-                    <div className="flex items-center gap-1 px-2 py-1 bg-blue-400/20 rounded-lg text-xs text-blue-400">
-                      <Briefcase size={12} />
-                      <span>{cv.connectedJobs.length}</span>
+                {/* Stats Grid */}
+                <div className="h-full flex flex-col justify-center">
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Completion Progress */}
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-white mb-1">
+                        {cv.completionPercentage || 0}%
+                      </div>
+                      <div className="text-xs text-white/60">Complete</div>
+                      <div className="w-full bg-white/20 rounded-full h-1 mt-2">
+                        <div 
+                          className="bg-gradient-to-r from-lime-400 to-blue-400 h-1 rounded-full transition-all duration-500 ease-in-out"
+                          style={{ width: `${cv.completionPercentage || 0}%` }}
+                        ></div>
+                      </div>
                     </div>
-                  )}
-                  {cv.connectedCoverLetters && cv.connectedCoverLetters.length > 0 && (
-                    <div className="flex items-center gap-1 px-2 py-1 bg-purple-400/20 rounded-lg text-xs text-purple-400">
-                      <PenTool size={12} />
-                      <span>{cv.connectedCoverLetters.length}</span>
+                    
+                    {/* Views */}
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-white mb-1">
+                        {cv.views || 0}
+                      </div>
+                      <div className="text-xs text-white/60">Views</div>
+                      <div className="flex justify-center mt-2">
+                        <Eye size={12} className="text-white/40" />
+                      </div>
                     </div>
-                  )}
+                  </div>
+                  
+                  {/* Connection Indicators */}
+                  <div className="flex justify-center gap-2 mt-4">
+                    {cv.connectedJobs && cv.connectedJobs.length > 0 && (
+                      <div className="flex items-center gap-1 px-2 py-1 bg-blue-400/20 rounded-lg text-xs text-blue-400">
+                        <Briefcase size={12} />
+                        <span>{cv.connectedJobs.length}</span>
+                      </div>
+                    )}
+                    {cv.connectedCoverLetters && cv.connectedCoverLetters.length > 0 && (
+                      <div className="flex items-center gap-1 px-2 py-1 bg-purple-400/20 rounded-lg text-xs text-purple-400">
+                        <PenTool size={12} />
+                        <span>{cv.connectedCoverLetters.length}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
