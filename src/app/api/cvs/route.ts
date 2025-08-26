@@ -7,10 +7,13 @@ import mongoose from 'mongoose';
 // GET - List CVs for a user with comprehensive filtering
 export async function GET(request: NextRequest) {
   try {
+    console.log('🔍 CV API - Starting GET request');
     await connectDB();
+    console.log('🔍 CV API - Database connected');
     
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
+    console.log('🔍 CV API - User ID from params:', userId);
     const type = searchParams.get('type'); // 'cv' or 'cover'
     const status = searchParams.get('status');
     const sort = searchParams.get('sort') || 'updatedAt';
@@ -20,10 +23,29 @@ export async function GET(request: NextRequest) {
     const published = searchParams.get('published');
     
     if (!userId) {
+      console.log('❌ CV API - No user ID provided');
       return NextResponse.json(
         {
           success: false,
           message: 'User ID is required'
+        },
+        { status: 400 }
+      );
+    }
+    
+    console.log('🔍 CV API - User ID validation passed:', userId);
+
+    // Validate user ID format
+    try {
+      const mongoose = require('mongoose');
+      const objectId = new mongoose.Types.ObjectId(userId);
+      console.log('🔍 CV API - User ID is valid ObjectId:', objectId.toString());
+    } catch (error) {
+      console.error('❌ CV API - Invalid user ID format:', userId, error);
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Invalid user ID format'
         },
         { status: 400 }
       );
@@ -94,7 +116,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Execute query
+    console.log('🔍 CV API - Executing database query for user:', userId);
     const cvs = await query.lean();
+    console.log('🔍 CV API - Query executed, found CVs:', cvs.length);
 
     // Calculate counts for different statuses
     const counts = await Promise.all([

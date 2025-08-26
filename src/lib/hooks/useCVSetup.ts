@@ -34,42 +34,89 @@ export const useCVSetup = () => {
       console.log('🔍 useCVSetup - Session user ID:', session?.user?.id);
       console.log('🔍 useCVSetup - LocalStorage user ID:', getUserIdFromLocalStorage());
       console.log('🔍 useCVSetup - Final user ID:', userId);
+      console.log('🔍 useCVSetup - Session status:', status);
+      console.log('🔍 useCVSetup - Session data:', session);
       
       if (userId) {
+        // Validate userId format (should be a 24-character hex string for MongoDB ObjectId)
+        const userIdString = userId.toString().trim();
+        if (!/^[0-9a-fA-F]{24}$/.test(userIdString)) {
+          console.error('❌ useCVSetup - Invalid userId format:', userIdString);
+          setHasCV(false);
+          return;
+        }
+        
         try {
+          console.log('🔍 useCVSetup - Making API call to:', `/api/cvs?userId=${userId}`);
           const response = await fetch(`/api/cvs?userId=${userId}`);
           console.log('🔍 useCVSetup - CV API response status:', response.status);
+          console.log('🔍 useCVSetup - CV API response headers:', Object.fromEntries(response.headers.entries()));
           
           if (response.ok) {
+            const contentType = response.headers.get('content-type');
+            console.log('🔍 useCVSetup - Response content type:', contentType);
+            
+            if (!contentType || !contentType.includes('application/json')) {
+              const textResponse = await response.text();
+              console.error('❌ useCVSetup - Non-JSON response received:', textResponse.substring(0, 500));
+              setHasCV(false);
+              return;
+            }
+            
             const data = await response.json();
             console.log('🔍 useCVSetup - CV API response data:', data);
-            const userCVs = data.data?.cvs || data.data?.data || data.cvs || [];
+            
+            // Ensure we have the correct data structure
+            if (!data.success) {
+              console.error('❌ useCVSetup - API returned success: false');
+              setHasCV(false);
+              return;
+            }
+            
+            const userCVs = data.data?.cvs || [];
             console.log('🔍 useCVSetup - User CVs found:', userCVs.length);
             console.log('🔍 useCVSetup - Data structure keys:', Object.keys(data.data || {}));
+            console.log('🔍 useCVSetup - Full API response:', JSON.stringify(data, null, 2));
+            console.log('🔍 useCVSetup - userCVs array:', userCVs);
             setHasCV(userCVs.length > 0);
+            
+            // If user has CVs, clear any onboarding flags
+            if (userCVs.length > 0) {
+              console.log('✅ User has CVs, clearing onboarding flags');
+              sessionStorage.removeItem('fromOnboarding');
+              sessionStorage.removeItem('needsCVSetup');
+            }
             
             // Check if user just completed onboarding
             const fromOnboarding = sessionStorage.getItem('fromOnboarding') === 'true';
             const needsCVSetup = sessionStorage.getItem('needsCVSetup') === 'true';
             
+            console.log('🔍 useCVSetup - fromOnboarding flag:', fromOnboarding);
+            console.log('🔍 useCVSetup - needsCVSetup flag:', needsCVSetup);
+            console.log('🔍 useCVSetup - current pathname:', window.location.pathname);
+            
             // If user just completed onboarding, don't redirect back
             if (fromOnboarding) {
               console.log('🎉 User completed onboarding, staying on dashboard');
-              sessionStorage.removeItem('fromOnboarding');
-              sessionStorage.removeItem('needsCVSetup');
+              console.log('🎉 Setting hasCV to true and skipping CV check');
               setHasCV(true); // Trust that CV was created
+              setIsChecking(false);
               return;
             }
             
             // If user has no CVs and is on dashboard, redirect to onboarding
             if ((userCVs.length === 0 || needsCVSetup) && window.location.pathname === '/dashboard') {
               console.log('🔄 No CVs found, redirecting to onboarding');
+              console.log('🔄 userCVs.length:', userCVs.length);
+              console.log('🔄 needsCVSetup:', needsCVSetup);
               sessionStorage.removeItem('needsCVSetup'); // Clear the flag
               router.push('/onboarding');
             }
           }
         } catch (error) {
           console.error('Error checking user CVs:', error);
+          // If there's an error, assume no CVs for safety
+          setHasCV(false);
         }
       }
       

@@ -219,6 +219,10 @@ const OnboardingContent: React.FC = () => {
           
           // Clear the CV setup flag
           sessionStorage.removeItem('needsCVSetup');
+          
+          console.log('✅ Onboarding - Set fromOnboarding flag to true');
+          console.log('✅ Onboarding - Set cvId:', result.data.cv.id);
+          console.log('✅ Onboarding - Cleared needsCVSetup flag');
         }
         
         console.log('🚀 Redirecting to dashboard...');
