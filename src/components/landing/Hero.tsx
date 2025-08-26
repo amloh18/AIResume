@@ -242,6 +242,7 @@ const Hero = () => {
                   className="w-full h-full object-contain"
                   loop={true}
                   autoplay={true}
+                  speed={0.5}
                   style={{
                     filter: 'drop-shadow(0 10px 20px rgba(132, 204, 22, 0.2))',
                   }}
