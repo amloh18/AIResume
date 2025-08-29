@@ -33,12 +33,29 @@ export const useAIAssistant = (
   
   const debouncedATSCalculation = useRef(
     debounce(async (cvData: CVDataStructure | null, jobData: any) => {
-      if (!cvId || !cvData) return;
+      if (!cvId || !cvData) {
+        console.log('❌ ATS calculation skipped - missing data:', { hasCvId: !!cvId, hasCvData: !!cvData });
+        return;
+      }
+      
+      console.log('🎯 ATS calculation triggered:', {
+        hasJobData: !!jobData,
+        jobTitle: jobData?.title || jobData?.jobTitle,
+        cvId
+      });
       
       try {
         setATSUpdating(true);
         const analysis = await AIAssistantService.calculateATSScore(cvData, jobData);
         const isBaseline = !jobData;
+        
+        console.log('📊 ATS calculation result:', {
+          score: analysis.score,
+          missingKeywords: analysis.missingKeywords?.length || 0,
+          strengths: analysis.strengths?.length || 0,
+          isBaseline
+        });
+        
         setATSScore(analysis.score, analysis, isBaseline);
       } catch (error) {
         console.error('ATS calculation error:', error);
@@ -47,23 +64,23 @@ export const useAIAssistant = (
     }, 1500)
   ).current;
 
-  // Calculate ATS score whenever CV data or job changes
-  useEffect(() => {
-    if (cvData && cvId) {
-      debouncedATSCalculation(cvData, currentJob);
-    }
-  }, [cvData, currentJob, cvId, debouncedATSCalculation]);
-
-  // Mark job-based sections as out of date when CV data changes
-  useEffect(() => {
-    if (cvData && currentJob) {
-      markAllJobBasedSectionsOutOfDate();
-    }
-  }, [cvData, currentJob, markAllJobBasedSectionsOutOfDate]);
-
   // Generate initial suggestions when job is selected
   const generateInitialSuggestions = useCallback(async () => {
-    if (!cvId || !currentJob || !cvData) return;
+    if (!cvId || !currentJob || !cvData) {
+      console.log('❌ useAIAssistant - Missing required data:', {
+        hasCvId: !!cvId,
+        hasCurrentJob: !!currentJob,
+        hasCvData: !!cvData,
+        currentJobData: currentJob
+      });
+      return;
+    }
+
+    console.log('🚀 useAIAssistant - Starting generation with job:', {
+      jobId: currentJob.id,
+      jobTitle: currentJob.title || currentJob.jobTitle,
+      company: currentJob.company
+    });
 
     setGeneratingInitial(true);
 
@@ -76,6 +93,12 @@ export const useAIAssistant = (
       if (comprehensiveAnalysis) {
         // Update ATS score
         if (comprehensiveAnalysis.ATSScoreAndKeywords) {
+          console.log('🎯 Setting ATS score from comprehensive analysis:', {
+            score: comprehensiveAnalysis.ATSScoreAndKeywords.score,
+            missingKeywords: comprehensiveAnalysis.ATSScoreAndKeywords.missingKeywords?.length || 0,
+            matchedKeywords: comprehensiveAnalysis.ATSScoreAndKeywords.matchedKeywords?.length || 0
+          });
+          
           setATSScore(
             comprehensiveAnalysis.ATSScoreAndKeywords.score,
             {
@@ -86,6 +109,8 @@ export const useAIAssistant = (
             },
             false
           );
+        } else {
+          console.log('⚠️ No ATS score data in comprehensive analysis');
         }
 
         // Update sections with comprehensive analysis data
@@ -103,8 +128,16 @@ export const useAIAssistant = (
           if (data) {
             const suggestions = convertAnalysisToSuggestions(id, data);
             setSectionSuggestions(id, suggestions);
-            setHasRealData(id, true);
-            markSectionOutOfDate(id, false);
+            // Only mark as having real data if there are actual suggestions
+            if (suggestions && suggestions.length > 0) {
+              setHasRealData(id, true);
+              markSectionOutOfDate(id, false);
+            } else {
+              setHasRealData(id, false);
+            }
+          } else {
+            // No data means no real suggestions
+            setHasRealData(id, false);
           }
         });
       }
@@ -115,6 +148,93 @@ export const useAIAssistant = (
       setGeneratingInitial(false);
     }
   }, [cvId, currentJob, cvData, setGeneratingInitial, setSectionSuggestions, setSectionError, markSectionOutOfDate, setATSScore, setHasRealData]);
+
+  // Generate baseline suggestions without job context
+  const generateBaselineSuggestions = useCallback(async () => {
+    if (!cvData) return;
+
+    try {
+      console.log('🔧 useAIAssistant - Generating baseline suggestions...');
+      
+      const [contentOptimizer, quantification, skillsMapper, gapAnalyzer, achievementGenerator] = await Promise.all([
+        AIAssistantService.optimizeContent(cvData, null),
+        AIAssistantService.quantifyAchievements(cvData, null),
+        AIAssistantService.mapSkillsAndKeywords(cvData, null),
+        AIAssistantService.analyzeGaps(cvData, null),
+        AIAssistantService.generateAchievements(cvData, null)
+      ]);
+
+      // Update sections with baseline suggestions
+      const sectionsToUpdate = [
+        { id: 'content-optimizer', suggestions: contentOptimizer },
+        { id: 'quantification', suggestions: quantification },
+        { id: 'skills-mapper', suggestions: skillsMapper },
+        { id: 'gap-analyzer', suggestions: gapAnalyzer },
+        { id: 'achievement-generator', suggestions: achievementGenerator }
+      ];
+
+      sectionsToUpdate.forEach(({ id, suggestions }) => {
+        if (suggestions && suggestions.length > 0) {
+          setSectionSuggestions(id, suggestions);
+          setHasRealData(id, true);
+          markSectionOutOfDate(id, false);
+        } else {
+          // No suggestions means no real data
+          setHasRealData(id, false);
+        }
+      });
+
+      console.log('✅ useAIAssistant - Baseline suggestions generated');
+    } catch (error) {
+      console.error('❌ useAIAssistant - Error generating baseline suggestions:', error);
+    }
+  }, [cvData, setSectionSuggestions, setHasRealData, markSectionOutOfDate]);
+
+  // Calculate ATS score whenever CV data or job changes
+  useEffect(() => {
+    if (cvData && cvId) {
+      debouncedATSCalculation(cvData, currentJob);
+    }
+  }, [cvData, currentJob, cvId, debouncedATSCalculation]);
+
+  // Initialize sections when AI Assistant loads
+  useEffect(() => {
+    if (cvData && cvId) {
+      console.log('🔧 useAIAssistant - Initializing sections for CV:', cvId);
+      
+      // Generate baseline suggestions without job context
+      if (!currentJob) {
+        console.log('📊 useAIAssistant - Generating baseline suggestions without job context');
+        generateBaselineSuggestions();
+      }
+    }
+  }, [cvData, cvId, currentJob, generateBaselineSuggestions]);
+
+  // Auto-trigger AI analysis when job is selected or CV data changes
+  useEffect(() => {
+    console.log('🔍 useAIAssistant - Job/CV change detected:', {
+      hasCvData: !!cvData,
+      hasCurrentJob: !!currentJob,
+      hasCvId: !!cvId,
+      currentJobId: currentJob?.id,
+      cvId
+    });
+
+    if (cvData && currentJob && cvId) {
+      console.log('🚀 useAIAssistant - Starting auto-generation for job:', currentJob.jobTitle);
+      
+      // Mark sections as out of date first
+      markAllJobBasedSectionsOutOfDate();
+      
+      // Automatically generate initial suggestions after a short delay
+      const timer = setTimeout(() => {
+        console.log('⚡ useAIAssistant - Executing generateInitialSuggestions');
+        generateInitialSuggestions();
+      }, 1000); // 1 second delay to avoid too many API calls
+      
+      return () => clearTimeout(timer);
+    }
+  }, [cvData, currentJob, cvId, markAllJobBasedSectionsOutOfDate, generateInitialSuggestions]);
 
   // Helper function to convert analysis data to suggestions format
   const convertAnalysisToSuggestions = (sectionId: string, data: any): AISuggestion[] => {
@@ -226,6 +346,12 @@ export const useAIAssistant = (
     try {
       let suggestions;
       switch (sectionId) {
+        case 'ats-score':
+          // ATS score is calculated separately, not through suggestions
+          console.log('🎯 ATS score section - triggering ATS calculation');
+          await debouncedATSCalculation(cvData, currentJob);
+          suggestions = []; // ATS doesn't generate suggestions
+          break;
         case 'content-optimizer':
           suggestions = await AIAssistantService.optimizeContent(cvData, currentJob);
           break;

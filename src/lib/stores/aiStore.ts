@@ -117,16 +117,19 @@ export const useAIStore = create<AIStore>()(
         ats: { ...state.ats, updating }
       })),
       
-      setATSScore: (score, analysis, baseline = false) => set((state) => ({
-        ats: {
-          ...state.ats,
-          score,
-          analysis,
-          baseline,
-          updating: false,
-          updatedAt: new Date().toISOString()
-        }
-      })),
+      setATSScore: (score, analysis, baseline = false) => {
+        console.log('🎯 AIStore - Setting ATS score:', { score, baseline, hasAnalysis: !!analysis });
+        return set((state) => ({
+          ats: {
+            ...state.ats,
+            score,
+            analysis,
+            baseline,
+            updating: false,
+            updatedAt: new Date().toISOString()
+          }
+        }));
+      },
       
       setSectionLoading: (sectionId, loading) => set((state) => ({
         sections: {

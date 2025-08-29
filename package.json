@@ -22,7 +22,10 @@
     "fix-mongodb-uri": "node scripts/fix-mongodb-uri.js",
     "setup-cluster": "node scripts/setup-mongodb-cluster.js",
     "populate-mongodb": "node scripts/populate-mongodb.js",
-    "populate-simple": "node scripts/populate-mongodb-simple.js"
+    "populate-simple": "node scripts/populate-mongodb-simple.js",
+    "fix-firebase-domains": "node scripts/fix-firebase-domains.js",
+    "setup-firebase-env": "node scripts/setup-firebase-env.js",
+    "test-google-auth": "node scripts/test-google-auth.js"
   },
   "keywords": [
     "cv",

@@ -50,6 +50,14 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   // Bundle analyzer for optimization
   webpack: (config, { dev, isServer }) => {
+    // Handle optional dependencies
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
+      net: false,
+      tls: false,
+    };
+
     // Optimize bundle size
     if (!dev && !isServer) {
       config.optimization.splitChunks = {
@@ -63,7 +71,30 @@ const nextConfig: NextConfig = {
         },
       };
     }
+
+    // Handle optional dependencies for Vercel
+    config.externals = config.externals || [];
+    if (isServer) {
+      config.externals.push({
+        'tesseract.js': 'commonjs tesseract.js',
+        'canvas': 'commonjs canvas',
+        'puppeteer': 'commonjs puppeteer',
+      });
+    }
+
     return config;
+  },
+  // Vercel deployment optimizations
+  output: 'standalone',
+  trailingSlash: false,
+  // Handle dynamic imports
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: '/api/:path*',
+      },
+    ];
   },
 }
 

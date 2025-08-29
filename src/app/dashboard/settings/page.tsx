@@ -46,6 +46,7 @@ import {
 } from 'lucide-react';
 import RouteGuard from '@/components/auth/RouteGuard';
 import MembershipModal from '@/components/payment/MembershipModal';
+import LoadingAnimation from '@/components/ui/LoadingAnimation';
 
 // --- TYPES ---
 interface PricingPlan {
@@ -353,22 +354,21 @@ const Sidebar = ({
 
     const navigationItems = [
         { id: 'account', name: 'Account & Profile', icon: User },
-        { id: 'security', name: 'Security & Privacy', icon: Shield },
+        { id: 'security', name: 'Security & Notifications', icon: Shield },
         { id: 'membership', name: 'Membership & Billing', icon: CreditCard },
-        { id: 'notifications', name: 'Notifications & Communication', icon: Bell },
         { id: 'referrals', name: 'Referrals & Rewards', icon: Gift },
         { id: 'integrations', name: 'Connected Apps & Integrations', icon: Link },
         { id: 'workspace', name: 'Workspace & Team', icon: Users },
     ];
 
     return (
-        <aside className="w-80 bg-white dark:bg-gray-800 p-6 flex flex-col justify-between border-r border-gray-200 dark:border-gray-700">
+        <aside className="w-80 bg-black/40 backdrop-blur-xl border-r border-white/10 p-6 flex flex-col justify-between">
             <div>
                 <div className="flex flex-col items-center mb-6">
                     <img 
                         src={user.profilePhoto || 'https://placehold.co/96x96/EFEFEF/333333?text=User'} 
                         alt="User Avatar" 
-                        className="w-24 h-24 rounded-full object-cover mb-4 border-2 border-gray-200 dark:border-gray-600"
+                        className="w-24 h-24 rounded-full object-cover mb-4 border-2 border-white/20"
                         onError={(e) => { 
                             const target = e.target as HTMLImageElement;
                             target.onerror = null; 
@@ -376,12 +376,11 @@ const Sidebar = ({
                         }}
                     />
                     <div className="text-center mb-4">
-                        <h3 className="font-semibold text-gray-800 dark:text-white">
+                        <h3 className="font-semibold text-white">
                             {user.firstName} {user.lastName}
                         </h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">{user.email}</p>
+                        <p className="text-sm text-white/60">{user.email}</p>
                     </div>
-                    <ThemeToggle theme={theme} setTheme={setTheme} />
                 </div>
                 <nav>
                     <ul className="space-y-1">
@@ -391,16 +390,16 @@ const Sidebar = ({
                                 <li key={item.id}>
                                     <button 
                                         onClick={() => setActiveTab(item.id)}
-                                        className={`w-full text-left flex items-center gap-3 py-3 px-4 rounded-md font-medium transition-colors duration-200 ${
+                                        className={`w-full text-left flex items-center gap-3 py-3 px-4 rounded-xl font-medium transition-all duration-300 ${
                                             activeTab === item.id
-                                            ? 'bg-lime-500 text-white' 
-                                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                            ? 'bg-gradient-to-r from-lime-400/20 to-lime-500/20 border border-lime-400/30 text-lime-400' 
+                                            : 'text-white/60 hover:text-white hover:bg-white/5'
                                         }`}
                                     >
                                         <IconComponent size={18} />
                                         <span className="text-sm">{item.name}</span>
                                         {item.id === 'workspace' && (
-                                            <span className="ml-auto text-xs bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 px-2 py-1 rounded">
+                                            <span className="ml-auto text-xs bg-white/10 text-white/60 px-2 py-1 rounded">
                                                 Soon
                                             </span>
                                         )}
@@ -413,7 +412,7 @@ const Sidebar = ({
             </div>
             <button 
                 onClick={handleLogout}
-                className="w-full mt-8 flex items-center justify-center gap-2 py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
+                className="w-full mt-8 flex items-center justify-center gap-2 py-3 px-4 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg transition-all duration-200 font-medium"
             >
                 <LogOut size={18} />
                 Log out
@@ -460,94 +459,73 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
 
     return (
         <div className="space-y-8">
-            {/* Profile Header */}
-            <div className="text-center mb-8">
-                <div className="relative inline-block">
-                    <img
-                        src={formData.profilePhoto || 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?q=80&w=2080&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'}
-                        alt="Profile"
-                        className="w-24 h-24 rounded-full object-cover border-4 border-gray-700 mx-auto mb-4"
-                    />
-                    {isEditing && (
-                        <button className="absolute bottom-2 right-2 w-8 h-8 bg-lime-500 rounded-full flex items-center justify-center text-black hover:bg-lime-400 transition-colors">
-                            <Edit size={16} />
-                        </button>
-                    )}
-                </div>
-                <h2 className="text-2xl font-bold text-white mb-1">
-                    {formData.firstName} {formData.lastName}
-                    <span className="ml-2 text-blue-400">✓</span>
-                </h2>
-                <p className="text-gray-400">{formData.email}</p>
-            </div>
-
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Left Column - Personal Details & Security */}
                 <div className="space-y-6">
                     {/* Personal Details */}
-                    <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-6">
+                    <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl p-6">
                         <h3 className="text-lg font-semibold text-white mb-4">Personal Details</h3>
                         <div className="space-y-4">
                             <div className="flex justify-between">
-                                <span className="text-gray-400">Full name</span>
+                                <span className="text-white/60">Full name</span>
                                 <span className="text-white font-medium">{formData.firstName} {formData.lastName}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-400">Date of Birth</span>
+                                <span className="text-white/60">Date of Birth</span>
                                 <span className="text-white">{formData.dateOfBirth}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-400">Gender</span>
+                                <span className="text-white/60">Gender</span>
                                 <span className="text-white">{formData.gender}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-400">Nationality</span>
+                                <span className="text-white/60">Nationality</span>
                                 <span className="text-white">{formData.nationality}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-400">Address</span>
+                                <span className="text-white/60">Address</span>
                                 <span className="text-white flex items-center gap-2">
                                     {formData.address}
                                     <span className="text-sm">🇺🇸</span>
                                 </span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-400">Phone Number</span>
+                                <span className="text-white/60">Phone Number</span>
                                 <span className="text-white">{formData.phone}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-400">Email</span>
+                                <span className="text-white/60">Email</span>
                                 <span className="text-white">{formData.email}</span>
                             </div>
                         </div>
                     </div>
 
                     {/* Security Settings */}
-                    <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-6">
+                    <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl p-6">
                         <h3 className="text-lg font-semibold text-white mb-4">Security Settings</h3>
                         <div className="space-y-4">
                             <div className="flex justify-between">
-                                <span className="text-gray-400">Password Last Changed</span>
+                                <span className="text-white/60">Password Last Changed</span>
                                 <span className="text-white">{formData.passwordLastChanged}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-400">Two-Factor Authentication</span>
-                                <span className="text-blue-400 font-medium">{formData.twoFactorAuth}</span>
+                                <span className="text-white/60">Two-Factor Authentication</span>
+                                <span className="text-lime-400 font-medium">{formData.twoFactorAuth}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-400">Security Questions Set</span>
+                                <span className="text-white/60">Security Questions Set</span>
                                 <span className="text-white">{formData.securityQuestions}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-400">Login Notifications</span>
-                                <span className="text-blue-400 font-medium">{formData.loginNotifications}</span>
+                                <span className="text-white/60">Login Notifications</span>
+                                <span className="text-lime-400 font-medium">{formData.loginNotifications}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-400">Connected Devices</span>
+                                <span className="text-white/60">Connected Devices</span>
                                 <span className="text-white">{formData.connectedDevices} Devices</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-400">Recent Account Activity</span>
+                                <span className="text-white/60">Recent Account Activity</span>
                                 <span className="text-white">{formData.recentActivity}</span>
                             </div>
                         </div>
@@ -557,68 +535,68 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                 {/* Right Column - Account Details & Preferences */}
                 <div className="space-y-6">
                     {/* Account Details */}
-                    <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-6">
+                    <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl p-6">
                         <h3 className="text-lg font-semibold text-white mb-4">Account Details</h3>
                         <div className="space-y-4">
                             <div className="flex justify-between">
-                                <span className="text-gray-400">Display Name</span>
+                                <span className="text-white/60">Display Name</span>
                                 <span className="text-white font-medium">{formData.displayName}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-400">Account Created</span>
+                                <span className="text-white/60">Account Created</span>
                                 <span className="text-white">{formData.accountCreated}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-400">Last Login</span>
+                                <span className="text-white/60">Last Login</span>
                                 <span className="text-white">{formData.lastLogin}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-400">Membership Status</span>
+                                <span className="text-white/60">Membership Status</span>
                                 <span className="text-white font-medium">{formData.membershipStatus}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-400">Account Verification</span>
-                                <span className="bg-green-500 text-black text-xs font-medium px-2 py-1 rounded-full">
+                                <span className="text-white/60">Account Verification</span>
+                                <span className="bg-lime-500 text-black text-xs font-medium px-2 py-1 rounded-full">
                                     {formData.accountVerification}
                                 </span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-400">Language Preference</span>
+                                <span className="text-white/60">Language Preference</span>
                                 <span className="text-white">{formData.languagePreference}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-400">Time Zone</span>
+                                <span className="text-white/60">Time Zone</span>
                                 <span className="text-white">{formData.timezone} (Eastern Time)</span>
                             </div>
                         </div>
                     </div>
 
                     {/* Preferences */}
-                    <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-6">
+                    <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl p-6">
                         <h3 className="text-lg font-semibold text-white mb-4">Preferences</h3>
                         <div className="space-y-4">
                             <div className="flex justify-between">
-                                <span className="text-gray-400">Email Notifications</span>
-                                <span className="text-purple-400 font-medium">{formData.emailNotifications}</span>
+                                <span className="text-white/60">Email Notifications</span>
+                                <span className="text-lime-400 font-medium">{formData.emailNotifications}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-400">SMS Alerts</span>
-                                <span className="text-blue-400 font-medium">{formData.smsAlerts}</span>
+                                <span className="text-white/60">SMS Alerts</span>
+                                <span className="text-lime-400 font-medium">{formData.smsAlerts}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-400">Content Preferences</span>
+                                <span className="text-white/60">Content Preferences</span>
                                 <span className="text-white">{formData.contentPreferences}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-400">Default Dashboard View</span>
+                                <span className="text-white/60">Default Dashboard View</span>
                                 <span className="text-white">{formData.defaultDashboardView}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-400">Dark Mode</span>
+                                <span className="text-white/60">Dark Mode</span>
                                 <span className="text-white">{formData.darkMode}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-400">Language for Content</span>
+                                <span className="text-white/60">Language for Content</span>
                                 <span className="text-white">{formData.languageForContent}</span>
                             </div>
                         </div>
@@ -632,7 +610,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                     <div className="flex gap-3">
                         <button
                             onClick={handleCancel}
-                            className="px-6 py-3 text-sm font-medium text-gray-300 bg-gray-700 border border-gray-600 rounded-lg hover:bg-gray-600 transition-colors"
+                            className="px-6 py-3 text-sm font-medium text-white/60 bg-white/10 border border-white/20 rounded-lg hover:bg-white/20 transition-colors"
                         >
                             Cancel
                         </button>
@@ -666,6 +644,25 @@ const SecurityPrivacy = ({ user }: { user: User }) => {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [activeSessions, setActiveSessions] = useState<ActiveSession[]>(mockActiveSessions);
     const [loading, setLoading] = useState(false);
+
+    // Fetch active sessions from API
+    useEffect(() => {
+        const fetchActiveSessions = async () => {
+            try {
+                const response = await fetch('/api/user/sessions');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.sessions) {
+                        setActiveSessions(data.sessions);
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching active sessions:', error);
+            }
+        };
+
+        fetchActiveSessions();
+    }, []);
 
     const handlePasswordChange = async (currentPassword: string, newPassword: string) => {
         setLoading(true);
@@ -710,7 +707,7 @@ const SecurityPrivacy = ({ user }: { user: User }) => {
 
     const handleRevokeSession = async (sessionId: string) => {
         try {
-            const response = await fetch(`/api/auth/sessions/${sessionId}`, {
+            const response = await fetch(`/api/user/sessions?sessionId=${sessionId}`, {
                 method: 'DELETE',
             });
             
@@ -761,18 +758,16 @@ const SecurityPrivacy = ({ user }: { user: User }) => {
 
     return (
         <div className="space-y-8">
-            <h3 className="text-xl font-semibold text-gray-800 dark:text-white">Security & Privacy</h3>
-
             {/* Password Change */}
-            <section className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
+            <section className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl p-6">
                 <div className="flex justify-between items-start">
                     <div>
-                        <h4 className="text-lg font-medium text-gray-800 dark:text-white mb-2">Password</h4>
-                        <p className="text-gray-600 dark:text-gray-300 text-sm">Update your password to keep your account secure</p>
+                        <h4 className="text-lg font-medium text-white mb-2">Password</h4>
+                        <p className="text-white/60 text-sm">Update your password to keep your account secure</p>
                     </div>
                     <button
                         onClick={() => setShowPasswordModal(true)}
-                        className="px-4 py-2 text-sm font-medium text-white bg-lime-500 rounded-md hover:bg-lime-600"
+                        className="px-4 py-2 text-sm font-medium text-black bg-lime-500 rounded-lg hover:bg-lime-400 transition-colors"
                     >
                         Change Password
                     </button>
@@ -780,15 +775,15 @@ const SecurityPrivacy = ({ user }: { user: User }) => {
             </section>
 
             {/* Two-Factor Authentication */}
-            <section className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
+            <section className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl p-6">
                 <div className="flex justify-between items-start">
                     <div>
-                        <h4 className="text-lg font-medium text-gray-800 dark:text-white mb-2">Two-Factor Authentication</h4>
-                        <p className="text-gray-600 dark:text-gray-300 text-sm">Add an extra layer of security to your account</p>
+                        <h4 className="text-lg font-medium text-white mb-2">Two-Factor Authentication</h4>
+                        <p className="text-white/60 text-sm">Add an extra layer of security to your account</p>
                     </div>
                     <button
                         onClick={() => setShow2FAModal(true)}
-                        className="px-4 py-2 text-sm font-medium text-white bg-lime-500 rounded-md hover:bg-lime-600"
+                        className="px-4 py-2 text-sm font-medium text-black bg-lime-500 rounded-lg hover:bg-lime-400 transition-colors"
                     >
                         Setup 2FA
                     </button>
@@ -796,26 +791,26 @@ const SecurityPrivacy = ({ user }: { user: User }) => {
             </section>
 
             {/* Active Sessions */}
-            <section className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
-                <h4 className="text-lg font-medium text-gray-800 dark:text-white mb-4">Active Sessions</h4>
+            <section className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl p-6">
+                <h4 className="text-lg font-medium text-white mb-4">Active Sessions</h4>
                 <div className="space-y-4">
                     {activeSessions.map((session) => (
-                        <div key={session.id} className="flex justify-between items-center p-4 border border-gray-200 dark:border-gray-600 rounded-lg">
+                        <div key={session.id} className="flex justify-between items-center p-4 bg-white/5 border border-white/10 rounded-lg">
                             <div>
-                                <p className="font-medium text-gray-800 dark:text-white">{session.device}</p>
-                                <p className="text-sm text-gray-600 dark:text-gray-300">{session.location}</p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                <p className="font-medium text-white">{session.device}</p>
+                                <p className="text-sm text-white/60">{session.location}</p>
+                                <p className="text-xs text-white/40">
                                     Last active: {new Date(session.lastActive).toLocaleString()}
                                 </p>
                             </div>
                             <div className="flex items-center gap-2">
                                 {session.current && (
-                                    <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">Current</span>
+                                    <span className="text-xs bg-lime-500 text-black px-2 py-1 rounded font-medium">Current</span>
                                 )}
                                 {!session.current && (
                                     <button
                                         onClick={() => handleRevokeSession(session.id)}
-                                        className="text-red-600 hover:text-red-700 text-sm font-medium"
+                                        className="text-red-400 hover:text-red-300 text-sm font-medium transition-colors"
                                     >
                                         Revoke
                                     </button>
@@ -827,15 +822,15 @@ const SecurityPrivacy = ({ user }: { user: User }) => {
             </section>
 
             {/* Data Export */}
-            <section className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
+            <section className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl p-6">
                 <div className="flex justify-between items-start">
                     <div>
-                        <h4 className="text-lg font-medium text-gray-800 dark:text-white mb-2">Data Export</h4>
-                        <p className="text-gray-600 dark:text-gray-300 text-sm">Download a copy of your personal data</p>
+                        <h4 className="text-lg font-medium text-white mb-2">Data Export</h4>
+                        <p className="text-white/60 text-sm">Download a copy of your personal data</p>
                     </div>
                     <button
                         onClick={handleDataExport}
-                        className="px-4 py-2 text-sm font-medium text-white bg-lime-500 rounded-md hover:bg-lime-600 flex items-center gap-2"
+                        className="px-4 py-2 text-sm font-medium text-black bg-lime-500 rounded-lg hover:bg-lime-400 transition-colors flex items-center gap-2"
                     >
                         <Download size={16} />
                         Export Data
@@ -844,17 +839,17 @@ const SecurityPrivacy = ({ user }: { user: User }) => {
             </section>
 
             {/* Account Deletion */}
-            <section className="bg-red-50 dark:bg-red-900/20 p-6 rounded-lg border border-red-200 dark:border-red-700">
+            <section className="bg-red-500/10 border border-red-500/30 p-6 rounded-xl">
                 <div className="flex justify-between items-start">
                     <div>
-                        <h4 className="text-lg font-medium text-red-800 dark:text-red-200 mb-2">Delete Account</h4>
-                        <p className="text-red-600 dark:text-red-300 text-sm">
+                        <h4 className="text-lg font-medium text-red-400 mb-2">Delete Account</h4>
+                        <p className="text-red-300 text-sm">
                             Permanently delete your account and all associated data. This action cannot be undone.
                         </p>
                     </div>
                     <button
                         onClick={() => setShowDeleteModal(true)}
-                        className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 flex items-center gap-2"
+                        className="px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2"
                     >
                         <Trash2 size={16} />
                         Delete Account
@@ -936,15 +931,572 @@ const SecurityPrivacy = ({ user }: { user: User }) => {
     );
 };
 
+// Security & Notifications Component (Merged)
+const SecurityAndNotifications = ({ user }: { user: User }) => {
+    // Security state
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
+    const [show2FAModal, setShow2FAModal] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [activeSessions, setActiveSessions] = useState<ActiveSession[]>(mockActiveSessions);
+    const [securityLoading, setSecurityLoading] = useState(false);
+
+    // Notifications state
+    const [preferences, setPreferences] = useState<NotificationPreferences>(mockNotificationPreferences);
+    const [notificationsLoading, setNotificationsLoading] = useState(false);
+    const [hasChanges, setHasChanges] = useState(false);
+    const [initialPreferences, setInitialPreferences] = useState<NotificationPreferences | null>(null);
+
+    // Fetch active sessions from API
+    useEffect(() => {
+        const fetchActiveSessions = async () => {
+            try {
+                const response = await fetch('/api/user/sessions');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.sessions) {
+                        setActiveSessions(data.sessions);
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching active sessions:', error);
+            }
+        };
+
+        fetchActiveSessions();
+    }, []);
+
+    // Fetch notification preferences from API
+    useEffect(() => {
+        const fetchPreferences = async () => {
+            try {
+                const response = await fetch('/api/user/notifications');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.preferences) {
+                        setPreferences(data.preferences);
+                        setInitialPreferences(data.preferences);
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching notification preferences:', error);
+            }
+        };
+
+        fetchPreferences();
+    }, []);
+
+    useEffect(() => {
+        if (initialPreferences) {
+            setHasChanges(JSON.stringify(preferences) !== JSON.stringify(initialPreferences));
+        }
+    }, [preferences, initialPreferences]);
+
+    // Security handlers
+    const handlePasswordChange = async (currentPassword: string, newPassword: string) => {
+        setSecurityLoading(true);
+        try {
+            const response = await fetch('/api/auth/change-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ currentPassword, newPassword }),
+            });
+            
+            if (response.ok) {
+                setShowPasswordModal(false);
+            }
+        } catch (error) {
+            console.error('Error changing password:', error);
+        } finally {
+            setSecurityLoading(false);
+        }
+    };
+
+    const handle2FAToggle = async (enabled: boolean) => {
+        setSecurityLoading(true);
+        try {
+            const response = await fetch('/api/auth/2fa', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ enabled }),
+            });
+            
+            if (response.ok) {
+                setShow2FAModal(false);
+            }
+        } catch (error) {
+            console.error('Error toggling 2FA:', error);
+        } finally {
+            setSecurityLoading(false);
+        }
+    };
+
+    const handleRevokeSession = async (sessionId: string) => {
+        try {
+            const response = await fetch(`/api/user/sessions?sessionId=${sessionId}`, {
+                method: 'DELETE',
+            });
+            
+            if (response.ok) {
+                setActiveSessions(prev => prev.filter(session => session.id !== sessionId));
+            }
+        } catch (error) {
+            console.error('Error revoking session:', error);
+        }
+    };
+
+    const handleDataExport = async () => {
+        try {
+            const response = await fetch('/api/privacy/export', {
+                method: 'POST',
+            });
+            
+            if (response.ok) {
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'user-data-export.json';
+                a.click();
+            }
+        } catch (error) {
+            console.error('Error exporting data:', error);
+        }
+    };
+
+    const handleDeleteAccount = async () => {
+        setSecurityLoading(true);
+        try {
+            const response = await fetch('/api/privacy/delete', {
+                method: 'POST',
+            });
+            
+            if (response.ok) {
+                window.location.href = '/';
+            }
+        } catch (error) {
+            console.error('Error deleting account:', error);
+        } finally {
+            setSecurityLoading(false);
+        }
+    };
+
+    // Notifications handlers
+    const handleToggle = (type: 'email' | 'inApp', category: keyof NotificationPreferences['email']) => {
+        setPreferences(prev => ({
+            ...prev,
+            [type]: {
+                ...prev[type],
+                [category]: !prev[type][category]
+            }
+        }));
+    };
+
+    const handleFrequencyChange = (frequency: NotificationPreferences['frequency']) => {
+        setPreferences(prev => ({ ...prev, frequency }));
+    };
+
+    const handleSaveNotifications = async () => {
+        setNotificationsLoading(true);
+        try {
+            const response = await fetch('/api/user/notifications', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(preferences),
+            });
+            
+            if (response.ok) {
+                setHasChanges(false);
+                setInitialPreferences(preferences);
+            }
+        } catch (error) {
+            console.error('Error saving preferences:', error);
+        } finally {
+            setNotificationsLoading(false);
+        }
+    };
+
+    const handleResetNotifications = () => {
+        if (initialPreferences) {
+            setPreferences(initialPreferences);
+        }
+    };
+
+    return (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Security & Privacy Column */}
+            <div className="space-y-6">
+                <h3 className="text-xl font-semibold text-white mb-6">Security & Privacy</h3>
+                
+                {/* Password Change */}
+                <section className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl p-6">
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <h4 className="text-lg font-medium text-white mb-2">Password</h4>
+                            <p className="text-white/60 text-sm">Update your password to keep your account secure</p>
+                        </div>
+                        <button
+                            onClick={() => setShowPasswordModal(true)}
+                            className="px-4 py-2 text-sm font-medium text-black bg-lime-500 rounded-lg hover:bg-lime-400 transition-colors"
+                        >
+                            Change Password
+                        </button>
+                    </div>
+                </section>
+
+                {/* Two-Factor Authentication */}
+                <section className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl p-6">
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <h4 className="text-lg font-medium text-white mb-2">Two-Factor Authentication</h4>
+                            <p className="text-white/60 text-sm">Add an extra layer of security to your account</p>
+                        </div>
+                        <button
+                            onClick={() => setShow2FAModal(true)}
+                            className="px-4 py-2 text-sm font-medium text-black bg-lime-500 rounded-lg hover:bg-lime-400 transition-colors"
+                        >
+                            Setup 2FA
+                        </button>
+                    </div>
+                </section>
+
+                {/* Active Sessions */}
+                <section className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl p-6">
+                    <h4 className="text-lg font-medium text-white mb-4">Active Sessions</h4>
+                    <div className="space-y-4">
+                        {activeSessions.map((session) => (
+                            <div key={session.id} className="flex justify-between items-center p-4 bg-white/5 border border-white/10 rounded-lg">
+                                <div>
+                                    <p className="font-medium text-white">{session.device}</p>
+                                    <p className="text-sm text-white/60">{session.location}</p>
+                                    <p className="text-xs text-white/40">
+                                        Last active: {new Date(session.lastActive).toLocaleString()}
+                                    </p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    {session.current && (
+                                        <span className="text-xs bg-lime-500 text-black px-2 py-1 rounded font-medium">Current</span>
+                                    )}
+                                    {!session.current && (
+                                        <button
+                                            onClick={() => handleRevokeSession(session.id)}
+                                            className="text-red-400 hover:text-red-300 text-sm font-medium transition-colors"
+                                        >
+                                            Revoke
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+
+                {/* Data Export */}
+                <section className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl p-6">
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <h4 className="text-lg font-medium text-white mb-2">Data Export</h4>
+                            <p className="text-white/60 text-sm">Download a copy of your personal data</p>
+                        </div>
+                        <button
+                            onClick={handleDataExport}
+                            className="px-4 py-2 text-sm font-medium text-black bg-lime-500 rounded-lg hover:bg-lime-400 transition-colors flex items-center gap-2"
+                        >
+                            <Download size={16} />
+                            Export Data
+                        </button>
+                    </div>
+                </section>
+
+                {/* Account Deletion */}
+                <section className="bg-red-500/10 border border-red-500/30 p-6 rounded-xl">
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <h4 className="text-lg font-medium text-red-400 mb-2">Delete Account</h4>
+                            <p className="text-red-300 text-sm">
+                                Permanently delete your account and all associated data. This action cannot be undone.
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => setShowDeleteModal(true)}
+                            className="px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2"
+                        >
+                            <Trash2 size={16} />
+                            Delete Account
+                        </button>
+                    </div>
+                </section>
+            </div>
+
+            {/* Notifications & Communication Column */}
+            <div className="space-y-6">
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xl font-semibold text-white">Notifications & Communication</h3>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={handleResetNotifications}
+                            className="px-4 py-2 text-sm font-medium text-white/60 bg-white/10 border border-white/20 rounded-lg hover:bg-white/20 flex items-center gap-2 transition-colors"
+                        >
+                            <RotateCcw size={16} />
+                            Reset
+                        </button>
+                        <button
+                            onClick={handleSaveNotifications}
+                            disabled={!hasChanges || notificationsLoading}
+                            className="px-4 py-2 text-sm font-medium text-black bg-lime-500 rounded-lg hover:bg-lime-400 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
+                        >
+                            {notificationsLoading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                            Save
+                        </button>
+                    </div>
+                </div>
+
+                {/* Email Notifications */}
+                <section className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl p-6">
+                    <h4 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
+                        <Mail size={20} className="text-lime-400" />
+                        Email Notifications
+                    </h4>
+                    <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <p className="font-medium text-white">Product Updates</p>
+                                <p className="text-sm text-white/60">Get notified about new features and improvements</p>
+                            </div>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={preferences.email.productUpdates}
+                                    onChange={() => handleToggle('email', 'productUpdates')}
+                                    className="sr-only peer"
+                                />
+                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-lime-300 dark:peer-focus:ring-lime-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-lime-500"></div>
+                            </label>
+                        </div>
+
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <p className="font-medium text-white">Billing & Payments</p>
+                                <p className="text-sm text-white/60">Receive invoices and payment confirmations</p>
+                            </div>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={preferences.email.billing}
+                                    onChange={() => handleToggle('email', 'billing')}
+                                    className="sr-only peer"
+                                />
+                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-lime-300 dark:peer-focus:ring-lime-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-lime-500"></div>
+                            </label>
+                        </div>
+
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <p className="font-medium text-white">Referrals & Rewards</p>
+                                <p className="text-sm text-white/60">Get notified when friends sign up using your referral</p>
+                            </div>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={preferences.email.referrals}
+                                    onChange={() => handleToggle('email', 'referrals')}
+                                    className="sr-only peer"
+                                />
+                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-lime-300 dark:peer-focus:ring-lime-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-lime-500"></div>
+                            </label>
+                        </div>
+                    </div>
+                </section>
+
+                {/* In-App Notifications */}
+                <section className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl p-6">
+                    <h4 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
+                        <Bell size={20} className="text-lime-400" />
+                        In-App Notifications
+                    </h4>
+                    <div className="space-y-4">
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <p className="font-medium text-white">Product Updates</p>
+                                <p className="text-sm text-white/60">Show notifications about new features</p>
+                            </div>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={preferences.inApp.productUpdates}
+                                    onChange={() => handleToggle('inApp', 'productUpdates')}
+                                    className="sr-only peer"
+                                />
+                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-lime-300 dark:peer-focus:ring-lime-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-lime-500"></div>
+                            </label>
+                        </div>
+
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <p className="font-medium text-white">Billing & Payments</p>
+                                <p className="text-sm text-white/60">Show billing-related notifications</p>
+                            </div>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={preferences.inApp.billing}
+                                    onChange={() => handleToggle('inApp', 'billing')}
+                                    className="sr-only peer"
+                                />
+                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-lime-300 dark:peer-focus:ring-lime-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-lime-500"></div>
+                            </label>
+                        </div>
+
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <p className="font-medium text-white">Referrals & Rewards</p>
+                                <p className="text-sm text-white/60">Show referral success notifications</p>
+                            </div>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={preferences.inApp.referrals}
+                                    onChange={() => handleToggle('inApp', 'referrals')}
+                                    className="sr-only peer"
+                                />
+                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-lime-300 dark:peer-focus:ring-lime-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-lime-500"></div>
+                            </label>
+                        </div>
+                    </div>
+                </section>
+
+                {/* Notification Frequency */}
+                <section className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl p-6">
+                    <h4 className="text-lg font-medium text-white mb-4">Notification Frequency</h4>
+                    <div className="space-y-3">
+                        {[
+                            { value: 'immediate', label: 'Immediate', description: 'Receive notifications as they happen' },
+                            { value: 'daily', label: 'Daily Digest', description: 'Get a summary once per day' },
+                            { value: 'weekly', label: 'Weekly Digest', description: 'Get a summary once per week' }
+                        ].map((option) => (
+                            <label key={option.value} className="flex items-center space-x-3 cursor-pointer">
+                                <input
+                                    type="radio"
+                                    name="frequency"
+                                    value={option.value}
+                                    checked={preferences.frequency === option.value}
+                                    onChange={() => handleFrequencyChange(option.value as NotificationPreferences['frequency'])}
+                                    className="text-lime-500 focus:ring-lime-500"
+                                />
+                                <div>
+                                    <p className="font-medium text-white">{option.label}</p>
+                                    <p className="text-sm text-white/60">{option.description}</p>
+                                </div>
+                            </label>
+                        ))}
+                    </div>
+                </section>
+            </div>
+
+            {/* Modals */}
+            {showPasswordModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-black/90 backdrop-blur-xl border border-white/20 p-6 rounded-xl w-full max-w-md">
+                        <h3 className="text-lg font-medium text-white mb-4">Change Password</h3>
+                        <div className="space-y-4">
+                            <input
+                                type="password"
+                                placeholder="Current password"
+                                className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/5 text-white placeholder-white/40"
+                            />
+                            <input
+                                type="password"
+                                placeholder="New password"
+                                className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/5 text-white placeholder-white/40"
+                            />
+                            <input
+                                type="password"
+                                placeholder="Confirm new password"
+                                className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/5 text-white placeholder-white/40"
+                            />
+                        </div>
+                        <div className="flex gap-2 mt-6">
+                            <button
+                                onClick={() => setShowPasswordModal(false)}
+                                className="flex-1 px-4 py-2 text-sm font-medium text-white/60 bg-white/10 border border-white/20 rounded-lg hover:bg-white/20 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => handlePasswordChange('', '')}
+                                disabled={securityLoading}
+                                className="flex-1 px-4 py-2 text-sm font-medium text-black bg-lime-500 rounded-lg hover:bg-lime-400 disabled:opacity-50 transition-colors"
+                            >
+                                {securityLoading ? 'Changing...' : 'Change Password'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showDeleteModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-black/90 backdrop-blur-xl border border-white/20 p-6 rounded-xl w-full max-w-md">
+                        <div className="flex items-center gap-3 mb-4">
+                            <AlertTriangle className="text-red-400" size={24} />
+                            <h3 className="text-lg font-medium text-white">Delete Account</h3>
+                        </div>
+                        <p className="text-white/60 mb-6">
+                            Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently lost.
+                        </p>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setShowDeleteModal(false)}
+                                className="flex-1 px-4 py-2 text-sm font-medium text-white/60 bg-white/10 border border-white/20 rounded-lg hover:bg-white/20 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleDeleteAccount}
+                                disabled={securityLoading}
+                                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 disabled:opacity-50 transition-colors"
+                            >
+                                {securityLoading ? 'Deleting...' : 'Delete Account'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 // Notifications & Communication Component
 const NotificationsCommunication = () => {
     const [preferences, setPreferences] = useState<NotificationPreferences>(mockNotificationPreferences);
     const [loading, setLoading] = useState(false);
     const [hasChanges, setHasChanges] = useState(false);
+    const [initialPreferences, setInitialPreferences] = useState<NotificationPreferences | null>(null);
+
+    // Fetch notification preferences from API
+    useEffect(() => {
+        const fetchPreferences = async () => {
+            try {
+                const response = await fetch('/api/user/notifications');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.preferences) {
+                        setPreferences(data.preferences);
+                        setInitialPreferences(data.preferences);
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching notification preferences:', error);
+            }
+        };
+
+        fetchPreferences();
+    }, []);
 
     useEffect(() => {
-        setHasChanges(JSON.stringify(preferences) !== JSON.stringify(mockNotificationPreferences));
-    }, [preferences]);
+        if (initialPreferences) {
+            setHasChanges(JSON.stringify(preferences) !== JSON.stringify(initialPreferences));
+        }
+    }, [preferences, initialPreferences]);
 
     const handleToggle = (type: 'email' | 'inApp', category: keyof NotificationPreferences['email']) => {
         setPreferences(prev => ({
@@ -963,7 +1515,7 @@ const NotificationsCommunication = () => {
     const handleSave = async () => {
         setLoading(true);
         try {
-            const response = await fetch('/api/notifications/preferences', {
+            const response = await fetch('/api/user/notifications', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(preferences),
@@ -972,6 +1524,7 @@ const NotificationsCommunication = () => {
             if (response.ok) {
                 // Show success message
                 setHasChanges(false);
+                setInitialPreferences(preferences);
             }
         } catch (error) {
             console.error('Error saving preferences:', error);
@@ -981,17 +1534,19 @@ const NotificationsCommunication = () => {
     };
 
     const handleReset = () => {
-        setPreferences(mockNotificationPreferences);
+        if (initialPreferences) {
+            setPreferences(initialPreferences);
+        }
     };
 
     return (
         <div className="space-y-8">
             <div className="flex justify-between items-center">
-                <h3 className="text-xl font-semibold text-gray-800 dark:text-white">Notifications & Communication</h3>
+                <h3 className="text-xl font-semibold text-white">Notifications & Communication</h3>
                 <div className="flex gap-2">
                     <button
                         onClick={handleReset}
-                        className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 flex items-center gap-2"
+                        className="px-4 py-2 text-sm font-medium text-white/60 bg-white/10 border border-white/20 rounded-lg hover:bg-white/20 flex items-center gap-2 transition-colors"
                     >
                         <RotateCcw size={16} />
                         Reset to Defaults
@@ -999,7 +1554,7 @@ const NotificationsCommunication = () => {
                     <button
                         onClick={handleSave}
                         disabled={!hasChanges || loading}
-                        className="px-4 py-2 text-sm font-medium text-white bg-lime-500 rounded-md hover:bg-lime-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        className="px-4 py-2 text-sm font-medium text-black bg-lime-500 rounded-lg hover:bg-lime-400 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 transition-colors"
                     >
                         {loading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
                         Save Changes
@@ -1008,16 +1563,16 @@ const NotificationsCommunication = () => {
             </div>
 
             {/* Email Notifications */}
-            <section className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
-                <h4 className="text-lg font-medium text-gray-800 dark:text-white mb-4 flex items-center gap-2">
-                    <Mail size={20} />
+            <section className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl p-6">
+                <h4 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
+                    <Mail size={20} className="text-lime-400" />
                     Email Notifications
                 </h4>
                 <div className="space-y-4">
                     <div className="flex justify-between items-center">
                         <div>
-                            <p className="font-medium text-gray-800 dark:text-white">Product Updates</p>
-                            <p className="text-sm text-gray-600 dark:text-gray-300">Get notified about new features and improvements</p>
+                            <p className="font-medium text-white">Product Updates</p>
+                            <p className="text-sm text-white/60">Get notified about new features and improvements</p>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
                             <input
@@ -1032,8 +1587,8 @@ const NotificationsCommunication = () => {
 
                     <div className="flex justify-between items-center">
                         <div>
-                            <p className="font-medium text-gray-800 dark:text-white">Billing & Payments</p>
-                            <p className="text-sm text-gray-600 dark:text-gray-300">Receive invoices and payment confirmations</p>
+                            <p className="font-medium text-white">Billing & Payments</p>
+                            <p className="text-sm text-white/60">Receive invoices and payment confirmations</p>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
                             <input
@@ -1048,8 +1603,8 @@ const NotificationsCommunication = () => {
 
                     <div className="flex justify-between items-center">
                         <div>
-                            <p className="font-medium text-gray-800 dark:text-white">Referrals & Rewards</p>
-                            <p className="text-sm text-gray-600 dark:text-gray-300">Get notified when friends sign up using your referral</p>
+                            <p className="font-medium text-white">Referrals & Rewards</p>
+                            <p className="text-sm text-white/60">Get notified when friends sign up using your referral</p>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
                             <input
@@ -1065,16 +1620,16 @@ const NotificationsCommunication = () => {
             </section>
 
             {/* In-App Notifications */}
-            <section className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
-                <h4 className="text-lg font-medium text-gray-800 dark:text-white mb-4 flex items-center gap-2">
-                    <Bell size={20} />
+            <section className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl p-6">
+                <h4 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
+                    <Bell size={20} className="text-lime-400" />
                     In-App Notifications
                 </h4>
                 <div className="space-y-4">
                     <div className="flex justify-between items-center">
                         <div>
-                            <p className="font-medium text-gray-800 dark:text-white">Product Updates</p>
-                            <p className="text-sm text-gray-600 dark:text-gray-300">Show notifications about new features</p>
+                            <p className="font-medium text-white">Product Updates</p>
+                            <p className="text-sm text-white/60">Show notifications about new features</p>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
                             <input
@@ -1089,8 +1644,8 @@ const NotificationsCommunication = () => {
 
                     <div className="flex justify-between items-center">
                         <div>
-                            <p className="font-medium text-gray-800 dark:text-white">Billing & Payments</p>
-                            <p className="text-sm text-gray-600 dark:text-gray-300">Show billing-related notifications</p>
+                            <p className="font-medium text-white">Billing & Payments</p>
+                            <p className="text-sm text-white/60">Show billing-related notifications</p>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
                             <input
@@ -1105,8 +1660,8 @@ const NotificationsCommunication = () => {
 
                     <div className="flex justify-between items-center">
                         <div>
-                            <p className="font-medium text-gray-800 dark:text-white">Referrals & Rewards</p>
-                            <p className="text-sm text-gray-600 dark:text-gray-300">Show referral success notifications</p>
+                            <p className="font-medium text-white">Referrals & Rewards</p>
+                            <p className="text-sm text-white/60">Show referral success notifications</p>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
                             <input
@@ -1122,8 +1677,8 @@ const NotificationsCommunication = () => {
             </section>
 
             {/* Notification Frequency */}
-            <section className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
-                <h4 className="text-lg font-medium text-gray-800 dark:text-white mb-4">Notification Frequency</h4>
+            <section className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl p-6">
+                <h4 className="text-lg font-medium text-white mb-4">Notification Frequency</h4>
                 <div className="space-y-3">
                     {[
                         { value: 'immediate', label: 'Immediate', description: 'Receive notifications as they happen' },
@@ -1140,8 +1695,8 @@ const NotificationsCommunication = () => {
                                 className="text-lime-500 focus:ring-lime-500"
                             />
                             <div>
-                                <p className="font-medium text-gray-800 dark:text-white">{option.label}</p>
-                                <p className="text-sm text-gray-600 dark:text-gray-300">{option.description}</p>
+                                <p className="font-medium text-white">{option.label}</p>
+                                <p className="text-sm text-white/60">{option.description}</p>
                             </div>
                         </label>
                     ))}
@@ -1156,6 +1711,25 @@ const NotificationsCommunication = () => {
 const ConnectedAppsIntegrations = () => {
     const [apps, setApps] = useState<ConnectedApp[]>(mockConnectedApps);
     const [loading, setLoading] = useState(false);
+
+    // Fetch connected apps from API
+    useEffect(() => {
+        const fetchConnectedApps = async () => {
+            try {
+                const response = await fetch('/api/user/integrations');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.apps) {
+                        setApps(data.apps);
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching connected apps:', error);
+            }
+        };
+
+        fetchConnectedApps();
+    }, []);
 
     const handleConnect = async (appId: string) => {
         setLoading(true);
@@ -1334,6 +1908,25 @@ const ReferralsRewards = () => {
     const [inviteEmail, setInviteEmail] = useState('');
     const [inviteLoading, setInviteLoading] = useState(false);
 
+    // Fetch referral stats from API
+    useEffect(() => {
+        const fetchReferralStats = async () => {
+            try {
+                const response = await fetch('/api/user/referrals');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.stats) {
+                        setStats(data.stats);
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching referral stats:', error);
+            }
+        };
+
+        fetchReferralStats();
+    }, []);
+
     const handleCopyLink = async () => {
         try {
             await navigator.clipboard.writeText(stats.referralLink);
@@ -1385,28 +1978,26 @@ const ReferralsRewards = () => {
 
     return (
         <div className="space-y-8">
-            <h3 className="text-xl font-semibold text-gray-800 dark:text-white">Referrals & Rewards</h3>
-
             {/* Referral Link */}
-            <section className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
-                <h4 className="text-lg font-medium text-gray-800 dark:text-white mb-4">Your Referral Link</h4>
+            <section className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl p-6">
+                <h4 className="text-lg font-medium text-white mb-4">Your Referral Link</h4>
                 <div className="flex gap-2">
                     <input
                         type="text"
                         value={stats.referralLink}
                         readOnly
-                        className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white"
+                        className="flex-1 px-3 py-2 border border-white/20 rounded-lg bg-white/5 text-white placeholder-white/40"
                     />
                     <button
                         onClick={handleCopyLink}
-                        className="px-4 py-2 text-sm font-medium text-white bg-lime-500 rounded-md hover:bg-lime-600 flex items-center gap-2"
+                        className="px-4 py-2 text-sm font-medium text-black bg-lime-500 rounded-lg hover:bg-lime-400 transition-colors flex items-center gap-2"
                     >
                         {copied ? <Check size={16} /> : <Copy size={16} />}
                         {copied ? 'Copied!' : 'Copy'}
                     </button>
                     <button
                         onClick={handleShare}
-                        className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 flex items-center gap-2"
+                        className="px-4 py-2 text-sm font-medium text-white/60 bg-white/10 border border-white/20 rounded-lg hover:bg-white/20 transition-colors flex items-center gap-2"
                     >
                         <Share2 size={16} />
                         Share
@@ -1415,34 +2006,34 @@ const ReferralsRewards = () => {
             </section>
 
             {/* Referral Stats */}
-            <section className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
-                <h4 className="text-lg font-medium text-gray-800 dark:text-white mb-4">Your Referral Stats</h4>
+            <section className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl p-6">
+                <h4 className="text-lg font-medium text-white mb-4">Your Referral Stats</h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="text-center p-4 bg-lime-50 dark:bg-lime-900/20 rounded-lg">
-                        <div className="text-2xl font-bold text-lime-600 dark:text-lime-400">{stats.totalInvites}</div>
-                        <div className="text-sm text-gray-600 dark:text-gray-300">Total Invites</div>
+                    <div className="text-center p-4 bg-lime-500/10 border border-lime-500/30 rounded-lg">
+                        <div className="text-2xl font-bold text-lime-400">{stats.totalInvites}</div>
+                        <div className="text-sm text-white/60">Total Invites</div>
                     </div>
-                    <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                        <div className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.successfulSignups}</div>
-                        <div className="text-sm text-gray-600 dark:text-gray-300">Successful Signups</div>
+                    <div className="text-center p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
+                        <div className="text-2xl font-bold text-green-400">{stats.successfulSignups}</div>
+                        <div className="text-sm text-white/60">Successful Signups</div>
                     </div>
-                    <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                        <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">${stats.rewardsEarned}</div>
-                        <div className="text-sm text-gray-600 dark:text-gray-300">Rewards Earned</div>
+                    <div className="text-center p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                        <div className="text-2xl font-bold text-blue-400">${stats.rewardsEarned}</div>
+                        <div className="text-sm text-white/60">Rewards Earned</div>
                     </div>
                 </div>
             </section>
 
             {/* Send Invites */}
-            <section className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
+            <section className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl p-6">
                 <div className="flex justify-between items-start">
                     <div>
-                        <h4 className="text-lg font-medium text-gray-800 dark:text-white mb-2">Send Invites</h4>
-                        <p className="text-gray-600 dark:text-gray-300 text-sm">Invite friends and earn rewards when they sign up</p>
+                        <h4 className="text-lg font-medium text-white mb-2">Send Invites</h4>
+                        <p className="text-white/60 text-sm">Invite friends and earn rewards when they sign up</p>
                     </div>
                     <button
                         onClick={() => setShowInviteModal(true)}
-                        className="px-4 py-2 text-sm font-medium text-white bg-lime-500 rounded-md hover:bg-lime-600 flex items-center gap-2"
+                        className="px-4 py-2 text-sm font-medium text-black bg-lime-500 rounded-lg hover:bg-lime-400 transition-colors flex items-center gap-2"
                     >
                         <Mail size={16} />
                         Send Invite
@@ -1451,27 +2042,27 @@ const ReferralsRewards = () => {
             </section>
 
             {/* Rewards Ledger */}
-            <section className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
-                <h4 className="text-lg font-medium text-gray-800 dark:text-white mb-4">Rewards Ledger</h4>
+            <section className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl p-6">
+                <h4 className="text-lg font-medium text-white mb-4">Rewards Ledger</h4>
                 <div className="space-y-3">
-                    <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <div className="flex justify-between items-center p-3 bg-white/5 border border-white/10 rounded-lg">
                         <div>
-                            <p className="font-medium text-gray-800 dark:text-white">John Doe signed up</p>
-                            <p className="text-sm text-gray-600 dark:text-gray-300">January 15, 2024</p>
+                            <p className="font-medium text-white">John Doe signed up</p>
+                            <p className="text-sm text-white/60">January 15, 2024</p>
                         </div>
                         <div className="text-right">
-                            <p className="font-medium text-green-600 dark:text-green-400">+$30</p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Reward earned</p>
+                            <p className="font-medium text-green-400">+$30</p>
+                            <p className="text-xs text-white/40">Reward earned</p>
                         </div>
                     </div>
-                    <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <div className="flex justify-between items-center p-3 bg-white/5 border border-white/10 rounded-lg">
                         <div>
-                            <p className="font-medium text-gray-800 dark:text-white">Jane Smith signed up</p>
-                            <p className="text-sm text-gray-600 dark:text-gray-300">January 10, 2024</p>
+                            <p className="font-medium text-white">Jane Smith signed up</p>
+                            <p className="text-sm text-white/60">January 10, 2024</p>
                         </div>
                         <div className="text-right">
-                            <p className="font-medium text-green-600 dark:text-green-400">+$30</p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Reward earned</p>
+                            <p className="font-medium text-green-400">+$30</p>
+                            <p className="text-xs text-white/40">Reward earned</p>
                         </div>
                     </div>
                 </div>
@@ -1539,10 +2130,9 @@ const MembershipBilling = ({
     if (loading) {
         return (
             <div className="space-y-8">
-                <h3 className="text-xl font-semibold text-white">Membership & Billing</h3>
                 <div className="flex items-center justify-center py-12">
                     <Loader2 size={32} className="animate-spin text-lime-500" />
-                    <span className="ml-2 text-gray-400">Loading plans...</span>
+                    <span className="ml-2 text-white/60">Loading plans...</span>
                 </div>
             </div>
         );
@@ -1550,11 +2140,9 @@ const MembershipBilling = ({
 
     return (
         <div className="space-y-8">
-            <h3 className="text-xl font-semibold text-white">Membership & Billing</h3>
-            
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Membership Section */}
-                <section className="bg-gray-800/50 border border-gray-700 rounded-xl p-6">
+                <section className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl p-6">
                     <div className="flex items-center gap-3 mb-6">
                         <Crown size={20} className="text-lime-400" />
                         <h4 className="text-lg font-semibold text-white">Membership</h4>
@@ -1568,7 +2156,7 @@ const MembershipBilling = ({
                                     className={`relative p-4 rounded-lg border transition-all duration-200 ${
                                         currentPlan === plan._id
                                             ? 'border-lime-500 bg-lime-500/10'
-                                            : 'border-gray-600 bg-gray-700/50 hover:border-gray-500'
+                                            : 'border-white/20 bg-white/5 hover:border-white/30'
                                     }`}
                                 >
                                     <div className="flex items-center justify-between">
@@ -1585,20 +2173,20 @@ const MembershipBilling = ({
                                                 <span className="text-2xl font-bold text-white">
                                                     €{plan.price}
                                                 </span>
-                                                <span className="text-gray-400">/{plan.billingCycle}</span>
+                                                <span className="text-white/60">/{plan.billingCycle}</span>
                                             </div>
-                                            <div className="text-sm text-gray-400">
+                                            <div className="text-sm text-white/60">
                                                 {plan.maxCVs === -1 ? 'Unlimited' : plan.maxCVs} CVs, {plan.maxExports === -1 ? 'Unlimited' : plan.maxExports} exports
                                             </div>
                                             {currentPlan === plan._id && (
                                                 <div className="mt-3">
-                                                    <div className="flex justify-between text-xs text-gray-400 mb-1">
+                                                    <div className="flex justify-between text-xs text-white/60 mb-1">
                                                         <span>Credits used</span>
                                                         <span>{userSubscription?.credits || 0} / {plan.maxCVs === -1 ? 'Unlimited' : plan.maxCVs * 1000}</span>
                                                     </div>
-                                                    <div className="w-full bg-gray-600 rounded-full h-2">
+                                                    <div className="w-full bg-white/20 rounded-full h-2">
                                                         <div 
-                                                            className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                                                            className="bg-lime-500 h-2 rounded-full transition-all duration-300"
                                                             style={{ width: `${Math.min(100, ((userSubscription?.credits || 0) / (plan.maxCVs === -1 ? 1000 : plan.maxCVs * 1000)) * 100)}%` }}
                                                         ></div>
                                                     </div>
@@ -1618,14 +2206,14 @@ const MembershipBilling = ({
                             ))
                         ) : (
                             <div className="text-center py-8">
-                                <p className="text-gray-400">No plans available</p>
+                                <p className="text-white/60">No plans available</p>
                             </div>
                         )}
                     </div>
                 </section>
 
                 {/* Payment Methods Section */}
-                <section className="bg-gray-800/50 border border-gray-700 rounded-xl p-6">
+                <section className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl p-6">
                     <div className="flex items-center gap-3 mb-6">
                         <CreditCardIcon size={20} className="text-lime-400" />
                         <h4 className="text-lg font-semibold text-white">Payment Methods</h4>
@@ -1634,7 +2222,7 @@ const MembershipBilling = ({
                     <div className="space-y-4">
                         {paymentMethods.length > 0 ? (
                             paymentMethods.map((method) => (
-                                <div key={method.id} className="flex items-center justify-between p-4 bg-gray-700/50 border border-gray-600 rounded-lg">
+                                <div key={method.id} className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-lg">
                                     <div className="flex items-center gap-3">
                                         <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
                                             method.provider === 'visa' ? 'bg-purple-600' :
@@ -1653,30 +2241,30 @@ const MembershipBilling = ({
                                                     <p className="font-medium text-white">
                                                         {method.brand} ending {method.last4}
                                                     </p>
-                                                    <p className="text-sm text-gray-400">
+                                                    <p className="text-sm text-white/60">
                                                         Expires {String(method.expiryMonth).padStart(2, '0')}/{method.expiryYear}
                                                     </p>
                                                 </>
                                             ) : (
                                                 <>
                                                     <p className="font-medium text-white">PayPal</p>
-                                                    <p className="text-sm text-gray-400">{method.email}</p>
+                                                    <p className="text-sm text-white/60">{method.email}</p>
                                                 </>
                                             )}
                                         </div>
                                     </div>
-                                    <button className="text-gray-400 hover:text-red-400 transition-colors">
+                                    <button className="text-white/60 hover:text-red-400 transition-colors">
                                         <Trash2 size={16} />
                                     </button>
                                 </div>
                             ))
                         ) : (
-                            <div className="text-center py-8 text-gray-400">
+                            <div className="text-center py-8 text-white/60">
                                 No payment methods found
                             </div>
                         )}
 
-                        <button className="w-full p-4 border-2 border-dashed border-gray-600 rounded-lg text-gray-400 hover:text-white hover:border-gray-500 transition-colors duration-200 flex items-center justify-center gap-2">
+                        <button className="w-full p-4 border-2 border-dashed border-white/20 rounded-lg text-white/60 hover:text-white hover:border-white/40 transition-colors duration-200 flex items-center justify-center gap-2">
                             <Plus size={16} />
                             Add Payment Method
                         </button>
@@ -1685,7 +2273,7 @@ const MembershipBilling = ({
             </div>
 
             {/* Invoices Section */}
-            <section className="bg-gray-800/50 border border-gray-700 rounded-xl p-6">
+            <section className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl p-6">
                 <div className="flex items-center gap-3 mb-6">
                     <FileText size={20} className="text-lime-400" />
                     <h4 className="text-lg font-semibold text-white">Invoices</h4>
@@ -1694,12 +2282,12 @@ const MembershipBilling = ({
                 <div className="space-y-3">
                     {invoices.length > 0 ? (
                         invoices.slice(0, 6).map((invoice) => (
-                            <div key={invoice.id} className="flex items-center justify-between p-4 bg-gray-700/50 border border-gray-600 rounded-lg">
+                            <div key={invoice.id} className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-lg">
                                 <div className="flex items-center gap-3">
                                     <input type="checkbox" className="w-4 h-4 text-lime-500 bg-gray-600 border-gray-500 rounded focus:ring-lime-500" />
                                     <div>
                                         <p className="font-medium text-white">{invoice.planName} - {new Date(invoice.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</p>
-                                        <p className="text-sm text-gray-400">{invoice.currency} ${invoice.amount.toFixed(2)}</p>
+                                        <p className="text-sm text-white/60">{invoice.currency} ${invoice.amount.toFixed(2)}</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3">
@@ -1712,17 +2300,17 @@ const MembershipBilling = ({
                                                     {invoice.paymentMethodType === 'visa' ? 'V' : 'M'}
                                                 </span>
                                             </div>
-                                            <span className="text-sm text-gray-400">*** {invoice.paymentMethodLast4}</span>
+                                            <span className="text-sm text-white/60">*** {invoice.paymentMethodLast4}</span>
                                         </div>
                                     )}
-                                    <button className="text-gray-400 hover:text-white transition-colors">
+                                    <button className="text-white/60 hover:text-white transition-colors">
                                         <Download size={16} />
                                     </button>
                                 </div>
                             </div>
                         ))
                     ) : (
-                        <div className="text-center py-8 text-gray-400">
+                        <div className="text-center py-8 text-white/60">
                             No invoices found
                         </div>
                     )}
@@ -1775,9 +2363,8 @@ const MainContent = ({
     const getTabDescription = () => {
         switch (activeTab) {
             case 'account': return 'Manage your account settings and profile information';
-            case 'security': return 'Secure your account and manage privacy settings';
+            case 'security': return 'Secure your account and manage notification preferences';
             case 'membership': return 'Manage your subscription and billing information';
-            case 'notifications': return 'Control how you receive notifications and communications';
             case 'referrals': return 'Refer friends and track your rewards';
             case 'integrations': return 'Connect and manage third-party applications';
             case 'workspace': return 'Manage your workspace and team settings (Coming soon)';
@@ -1807,7 +2394,7 @@ const MainContent = ({
             case 'account':
                 return <AccountProfile user={user} onSave={handleSaveUser} />;
             case 'security':
-                return <SecurityPrivacy user={user} />;
+                return <SecurityAndNotifications user={user} />;
             case 'membership':
                 return (
                     <MembershipBilling 
@@ -1820,8 +2407,6 @@ const MainContent = ({
                         loading={loading}
                     />
                 );
-            case 'notifications':
-                return <NotificationsCommunication />;
             case 'referrals':
                 return <ReferralsRewards />;
             case 'integrations':
@@ -1829,13 +2414,12 @@ const MainContent = ({
             case 'workspace':
                 return (
                     <div className="space-y-8">
-                        <h3 className="text-xl font-semibold text-gray-800 dark:text-white">Workspace & Team</h3>
-                        <div className="bg-white dark:bg-gray-800 p-8 rounded-lg border border-gray-200 dark:border-gray-700 text-center">
-                            <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <Users size={24} className="text-gray-400" />
+                        <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl p-8 text-center">
+                            <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <Users size={24} className="text-white/60" />
                             </div>
-                            <h4 className="text-lg font-medium text-gray-800 dark:text-white mb-2">Coming Soon</h4>
-                            <p className="text-gray-600 dark:text-gray-300 text-sm">
+                            <h4 className="text-lg font-medium text-white mb-2">Coming Soon</h4>
+                            <p className="text-white/60 text-sm">
                                 Team collaboration features are currently in development. 
                                 You'll be able to manage team members, roles, and permissions soon.
                             </p>
@@ -1852,11 +2436,11 @@ const MainContent = ({
             <header className="flex justify-between items-center mb-6">
                 <div>
                     <h2 className="text-3xl font-bold text-white">{getTabTitle()}</h2>
-                    <p className="text-gray-400 mt-1">{getTabDescription()}</p>
+                    <p className="text-white/60 mt-1">{getTabDescription()}</p>
                 </div>
                 <button 
                     onClick={handleClose}
-                    className="p-2 rounded-lg border border-gray-600 text-gray-400 hover:bg-gray-800 transition-colors"
+                    className="p-2 rounded-lg border border-white/20 text-white/60 hover:bg-white/10 transition-colors"
                 >
                     <X size={24} />
                 </button>
@@ -1919,10 +2503,10 @@ function SettingsContent() {
           const subscriptionResponse = await fetch('/api/user/subscription');
           if (subscriptionResponse.ok) {
             const subscriptionData = await subscriptionResponse.json();
-            if (subscriptionData && typeof subscriptionData === 'object') {
-              setUserSubscription(subscriptionData);
-              if (subscriptionData.planId) {
-                setCurrentPlan(subscriptionData.planId);
+            if (subscriptionData.success && subscriptionData.subscription) {
+              setUserSubscription(subscriptionData.subscription);
+              if (subscriptionData.subscription.planId) {
+                setCurrentPlan(subscriptionData.subscription.planId);
               }
             }
           }
@@ -1956,12 +2540,65 @@ function SettingsContent() {
           console.error('Error fetching invoices:', error);
         }
 
-        // Fetch user data (you might want to create this API endpoint)
-        // const userResponse = await fetch('/api/user/profile');
-        // if (userResponse.ok) {
-        //   const userData = await userResponse.json();
-        //   setUser(userData);
-        // }
+        // Fetch user profile
+        try {
+          const userResponse = await fetch('/api/user');
+          if (userResponse.ok) {
+            const userData = await userResponse.json();
+            if (userData.success && userData.user) {
+              // Map database user to frontend user format
+              const mappedUser: User = {
+                id: userData.user.id,
+                firstName: userData.user.firstName,
+                lastName: userData.user.lastName,
+                email: userData.user.email,
+                phone: '',
+                company: '',
+                role: userData.user.role,
+                address: '',
+                profilePhoto: userData.user.avatar,
+                timezone: 'GMT-5',
+                locale: 'en-US',
+                dateOfBirth: '',
+                gender: '',
+                nationality: '',
+                displayName: `${userData.user.firstName}_${userData.user.lastName}_${Date.now()}`,
+                accountCreated: new Date(userData.user.createdAt).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                }),
+                lastLogin: new Date(userData.user.updatedAt).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                }),
+                membershipStatus: userData.user.currentPlanKey === 'free' ? 'Free Member' : 'Premium Member',
+                accountVerification: userData.user.isEmailVerified ? 'Verified' : 'Pending',
+                languagePreference: 'English',
+                passwordLastChanged: new Date(userData.user.updatedAt).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                }),
+                twoFactorAuth: 'Disabled',
+                securityQuestions: 'Not Set',
+                loginNotifications: 'Enabled',
+                connectedDevices: 1,
+                recentActivity: 'No Suspicious Activity Detected',
+                emailNotifications: 'Subscribed',
+                smsAlerts: 'Disabled',
+                contentPreferences: 'Technology, Design, Innovation',
+                defaultDashboardView: 'Analytics',
+                darkMode: 'Activated',
+                languageForContent: 'English'
+              };
+              setUser(mappedUser);
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching user profile:', error);
+        }
 
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -1995,9 +2632,11 @@ function SettingsContent() {
       const subscriptionResponse = await fetch('/api/user/subscription');
       if (subscriptionResponse.ok) {
         const subscriptionData = await subscriptionResponse.json();
-        setUserSubscription(subscriptionData);
-        if (subscriptionData.planId) {
-          setCurrentPlan(subscriptionData.planId);
+        if (subscriptionData.success && subscriptionData.subscription) {
+          setUserSubscription(subscriptionData.subscription);
+          if (subscriptionData.subscription.planId) {
+            setCurrentPlan(subscriptionData.subscription.planId);
+          }
         }
       }
     } catch (error) {
@@ -2048,14 +2687,7 @@ function SettingsContent() {
 
 // Loading fallback component
 function SettingsLoading() {
-  return (
-    <div className="bg-gradient-to-br from-black via-gray-900 to-black min-h-screen font-sans flex items-center justify-center">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lime-500 mx-auto mb-4"></div>
-        <p className="text-gray-400">Loading settings...</p>
-      </div>
-    </div>
-  );
+  return <LoadingAnimation progress={0.4} showProgressBar={false} />;
 }
 
 // --- MAIN COMPONENT ---

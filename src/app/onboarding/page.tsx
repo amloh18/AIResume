@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Sparkles, CheckCircle, LogOut } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { signOutUser } from '@/lib/firebase';
 import { OnboardingProvider, useOnboarding } from '@/contexts/OnboardingContext';
@@ -16,6 +16,7 @@ import CompletionStep from '@/components/onboarding/CompletionStep';
 import PersonalInfoStep from '@/components/onboarding/PersonalInfoStep';
 import ExperienceStep from '@/components/onboarding/ExperienceStep';
 import EducationStep from '@/components/onboarding/EducationStep';
+import LoadingAnimation from '@/components/ui/LoadingAnimation';
 
 const OnboardingContent: React.FC = () => {
   const { state, dispatch, nextStep, prevStep } = useOnboarding();
@@ -24,8 +25,16 @@ const OnboardingContent: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { data: session } = useSession();
+  const searchParams = useSearchParams();
+  const stepParam = searchParams.get('step');
 
   useEffect(() => {
+    console.log('🔍 useEffect - session?.user:', session?.user);
+    console.log('🔍 useEffect - localStorage user:', typeof window !== 'undefined' ? localStorage.getItem('user') : 'N/A');
+    console.log('🔍 useEffect - needsCVSetup:', typeof window !== 'undefined' ? sessionStorage.getItem('needsCVSetup') : 'N/A');
+    console.log('🔍 useEffect - stepParam:', stepParam);
+    console.log('🔍 useEffect - state.currentStep:', state.currentStep);
+    
     // Check if user is already authenticated and needs CV setup
     if (session?.user) {
       dispatch({ type: 'SET_AUTHENTICATED', payload: true });
@@ -40,9 +49,11 @@ const OnboardingContent: React.FC = () => {
         color: 'blue'
       }});
       
-      // Skip to CV setup step (step 1) if user is already authenticated
-      if (state.currentStep === 0) {
-        nextStep();
+      // Skip to Personal Information step (step 2) if user is already authenticated
+      // or if step parameter is provided
+      if (state.currentStep === 0 && stepParam === '2') {
+        console.log('✅ NextAuth user - moving to step 2 due to stepParam');
+        dispatch({ type: 'SET_CURRENT_STEP', payload: 2 });
       }
     } else {
       // Check for Firebase user data in localStorage (only on client side)
@@ -53,7 +64,7 @@ const OnboardingContent: React.FC = () => {
         console.log('Onboarding page - userData:', userData);
         console.log('Onboarding page - needsCVSetup:', needsCVSetup);
         
-        if (userData && needsCVSetup) {
+        if (userData) {
           try {
             const parsedUser = JSON.parse(userData);
             console.log('Onboarding page - parsed user:', parsedUser);
@@ -70,10 +81,11 @@ const OnboardingContent: React.FC = () => {
               color: 'blue'
             }});
             
-            // Skip to CV setup step (step 1) if user is already authenticated
-            if (state.currentStep === 0) {
-              console.log('Onboarding page - moving to next step');
-              nextStep();
+            // Skip to CV setup step (step 2) if user is already authenticated
+            // or if step parameter is provided
+            if (state.currentStep === 0 && stepParam === '2') {
+              console.log('✅ Firebase user - moving to step 2 due to stepParam');
+              dispatch({ type: 'SET_CURRENT_STEP', payload: 2 });
             }
           } catch (error) {
             console.error('Error parsing user data:', error);
@@ -83,7 +95,7 @@ const OnboardingContent: React.FC = () => {
         }
       }
     }
-  }, [session, dispatch, nextStep, state.currentStep]);
+  }, [session, dispatch, nextStep, state.currentStep, stepParam]);
 
   const handleRoleSelect = (role: any) => {
     dispatch({ type: 'SET_SELECTED_ROLE', payload: role });
@@ -100,32 +112,76 @@ const OnboardingContent: React.FC = () => {
     setShowAuthModal(true);
   };
 
-  const handleAuthSuccess = (userData: any) => {
+  const handleAuthSuccess = async (userData: any) => {
     dispatch({ type: 'SET_AUTHENTICATED', payload: true });
     dispatch({ type: 'SET_USER_DATA', payload: userData });
     setShowAuthModal(false);
     setShowLoginModal(false);
     
-    // Set flag for new user CV setup (only on client side)
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('needsCVSetup', 'true');
+    // Check if user has CVs before deciding where to route
+    try {
+      console.log('🔍 Checking CVs for user:', userData.id);
+      const response = await fetch(`/api/cvs?userId=${userData.id}`);
+      const result = await response.json();
+      console.log('🔍 CV check result:', result);
+      
+      if (result.success && result.data.cvs && result.data.cvs.length > 0) {
+        // User has CVs, redirect to dashboard
+        console.log('✅ User has CVs, redirecting to dashboard');
+        window.location.href = '/dashboard';
+      } else {
+        // New user, continue with onboarding
+        console.log('🆕 New user, continuing with onboarding');
+        // Set flag for new user CV setup (only on client side)
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('needsCVSetup', 'true');
+        }
+        nextStep();
+      }
+    } catch (error) {
+      console.log('Error checking CVs, continuing with onboarding:', error);
+      // If we can't check CVs, continue with onboarding
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('needsCVSetup', 'true');
+      }
+      nextStep();
     }
-    
-    nextStep();
   };
 
-  const handleLoginSuccess = (userData: any) => {
+  const handleLoginSuccess = async (userData: any) => {
     dispatch({ type: 'SET_AUTHENTICATED', payload: true });
     dispatch({ type: 'SET_USER_DATA', payload: userData });
     setShowAuthModal(false);
     setShowLoginModal(false);
     
-    // Set flag for new user CV setup (only on client side)
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('needsCVSetup', 'true');
+    // Check if user has CVs before deciding where to route
+    try {
+      console.log('🔍 Checking CVs for user:', userData.id);
+      const response = await fetch(`/api/cvs?userId=${userData.id}`);
+      const result = await response.json();
+      console.log('🔍 CV check result:', result);
+      
+      if (result.success && result.data.cvs && result.data.cvs.length > 0) {
+        // User has CVs, redirect to dashboard
+        console.log('✅ User has CVs, redirecting to dashboard');
+        window.location.href = '/dashboard';
+      } else {
+        // New user, continue with onboarding
+        console.log('🆕 New user, continuing with onboarding');
+        // Set flag for new user CV setup (only on client side)
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('needsCVSetup', 'true');
+        }
+        nextStep();
+      }
+    } catch (error) {
+      console.log('Error checking CVs, continuing with onboarding:', error);
+      // If we can't check CVs, continue with onboarding
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('needsCVSetup', 'true');
+      }
+      nextStep();
     }
-    
-    nextStep();
   };
 
   const handleComplete = async () => {
@@ -259,8 +315,23 @@ const OnboardingContent: React.FC = () => {
   };
 
   const renderStep = () => {
-    // If user is authenticated, skip role selection and start from personal info
-    if (session?.user && state.currentStep === 0) {
+    // Check if user is authenticated (either NextAuth session or Firebase localStorage)
+    const isAuthenticated = session?.user || (typeof window !== 'undefined' && localStorage.getItem('user'));
+    
+    console.log('🔍 renderStep - isAuthenticated:', isAuthenticated);
+    console.log('🔍 renderStep - state.currentStep:', state.currentStep);
+    console.log('🔍 renderStep - session?.user:', session?.user);
+    console.log('🔍 renderStep - localStorage user:', typeof window !== 'undefined' ? localStorage.getItem('user') : 'N/A');
+    
+    // If user is authenticated and on step 0, skip role selection and start from personal info
+    if (isAuthenticated && state.currentStep === 0) {
+      console.log('✅ renderStep - User authenticated on step 0, showing PersonalInfoStep');
+      return <PersonalInfoStep onNext={nextStep} />;
+    }
+    
+    // If user is authenticated and on step 2, show personal info (skip role selection)
+    if (isAuthenticated && state.currentStep === 2) {
+      console.log('✅ renderStep - User authenticated on step 2, showing PersonalInfoStep');
       return <PersonalInfoStep onNext={nextStep} />;
     }
     
@@ -270,10 +341,12 @@ const OnboardingContent: React.FC = () => {
       case 1:
         return <PersonalInfoStep onNext={nextStep} />;
       case 2:
-        return <ExperienceStep onNext={nextStep} onBack={prevStep} />;
+        return <PersonalInfoStep onNext={nextStep} />; // Step 2 is Personal Information
       case 3:
-        return <EducationStep onNext={nextStep} onBack={prevStep} />;
+        return <ExperienceStep onNext={nextStep} onBack={prevStep} />;
       case 4:
+        return <EducationStep onNext={nextStep} onBack={prevStep} />;
+      case 5:
         return <CompletionStep onComplete={handleComplete} onBack={prevStep} isLoading={isLoading} />;
       default:
         return <RoleSelection onRoleSelect={handleRoleSelect} />;
@@ -461,7 +534,7 @@ const OnboardingContent: React.FC = () => {
       </div>
 
       {/* Auth Modals - Only show for non-authenticated users */}
-      {!session?.user && (
+      {!session?.user && !(typeof window !== 'undefined' && localStorage.getItem('user')) && (
         <>
           <SignupModal
             isOpen={showAuthModal}
@@ -486,7 +559,9 @@ const OnboardingContent: React.FC = () => {
 const OnboardingPage: React.FC = () => {
   return (
     <OnboardingProvider>
-      <OnboardingContent />
+      <Suspense fallback={<LoadingAnimation progress={0.3} showProgressBar={false} />}>
+        <OnboardingContent />
+      </Suspense>
     </OnboardingProvider>
   );
 };

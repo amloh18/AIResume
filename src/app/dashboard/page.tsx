@@ -27,11 +27,13 @@ import {
   ArrowRight,
   Calendar,
   Lightbulb,
-  Award
+  Award,
+  Menu,
+  X
 } from 'lucide-react';
 import Canvas from '@/components/dashboard/Canvas';
 import Pipeline from '@/components/dashboard/Pipeline';
-import InkPad from '@/components/dashboard/InkPad';
+
 import Analytics from '@/components/dashboard/Analytics';
 import DashboardNavigation from '@/components/dashboard/DashboardNavigation';
 import RouteGuard from '@/components/auth/RouteGuard';
@@ -43,13 +45,15 @@ interface DashboardProps {}
 const Dashboard: React.FC<DashboardProps> = () => {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [activeSection, setActiveSection] = useState('canvas'); // Default to CV Studio
+  const [activeSection, setActiveSection] = useState('pulse'); // Default to Analytics
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const { hasCV, isChecking } = useCVSetup();
 
   const [user, setUser] = useState({
     name: 'Amarjot',
     email: 'amarjot@example.com',
     progress: 60,
+    profilePhoto: '',
     cvsCreated: 3,
     jobsApplied: 2,
     coverLetters: 1,
@@ -133,7 +137,8 @@ const Dashboard: React.FC<DashboardProps> = () => {
       setUser(prev => ({
         ...prev,
         name: session.user.firstName || session.user.name || 'User',
-        email: session.user.email || prev.email
+        email: session.user.email || prev.email,
+        profilePhoto: session.user.avatar || session.user.profilePhoto || ''
       }));
     }
   }, [session]);
@@ -154,7 +159,7 @@ const Dashboard: React.FC<DashboardProps> = () => {
     { id: 'pulse', name: 'Analytics', icon: BarChart3, description: 'Progress Tracking' },
     { id: 'pipeline', name: 'Job Tracker', icon: Briefcase, description: 'Track Applications' },
     { id: 'canvas', name: 'CV Studio', icon: FileText, description: 'Create & Edit CVs' },
-    { id: 'inkpad', name: 'Cover Letters', icon: PenTool, description: 'Generate Letters' },
+
     { id: 'vault', name: 'Saved Forms', icon: Archive, description: 'Store Data' }
   ];
 
@@ -269,25 +274,33 @@ const Dashboard: React.FC<DashboardProps> = () => {
 
 
       {/* Main Content */}
+      {/* Mobile Menu Toggle */}
+      <div className="xl:hidden fixed top-4 left-4 z-50">
+        <button
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          className="p-2 bg-black/40 backdrop-blur-xl border border-white/10 rounded-lg text-white hover:bg-white/10 transition-colors"
+        >
+          {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
+      </div>
+
       <div className="flex">
         {/* Sidebar */}
-        <motion.aside 
-          initial={{ opacity: 0, x: -10 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.2, duration: 0.3 }}
-          style={{ willChange: 'transform, opacity' }}
-        >
-                  <DashboardNavigation
+        <DashboardNavigation
           activeSection={activeSection}
-          onSectionChange={setActiveSection}
+          onSectionChange={(section) => {
+            setActiveSection(section);
+            setSidebarOpen(false); // Close sidebar on mobile when section changes
+          }}
           onMembershipClick={() => {}}
           user={user}
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
         />
-        </motion.aside>
 
         {/* Main Dashboard Area */}
-                    <main className="flex-1 p-6 pt-8">
-              <div className="max-w-7xl mx-auto">
+        <main className="flex-1 p-2 pt-16 xl:pt-8">
+              <div className="max-w-full mx-auto">
             <AnimatePresence mode="wait">
               {activeSection === 'canvas' && (
                 <motion.div

@@ -119,81 +119,17 @@ Please provide a comprehensive analysis that will help the candidate optimize th
 // AI service call function (replace with your actual AI provider)
 async function callAI(prompt: string) {
   try {
-    // You can use OpenAI, Anthropic, or any other AI provider
-    // For now, I'll create a mock response structure
+    // TODO: Replace with actual AI provider integration
+    // Examples: OpenAI, Anthropic Claude, Google Gemini, etc.
     
-    // Mock AI response - replace this with actual AI call
-    const mockAnalysis = {
-      ATSScoreAndKeywords: {
-        score: 75,
-        missingKeywords: ["React", "TypeScript", "AWS"],
-        matchedKeywords: ["JavaScript", "Node.js", "MongoDB"],
-        relevanceSummary: "Good match with 75% keyword alignment. Missing some key frontend technologies."
-      },
-      ContentOptimizer: {
-        improvements: [
-          "Replace 'responsible for' with action verbs like 'developed', 'implemented'",
-          "Add specific metrics to achievements",
-          "Use more industry-specific terminology"
-        ],
-        toneAndClarity: "Improve clarity by using more specific action verbs and quantifiable results.",
-        redundancies: ["Repeated use of 'responsible for'", "Generic descriptions without metrics"]
-      },
-      QuantificationAssistant: {
-        recommendations: [
-          "Add percentage improvements to performance metrics",
-          "Include team sizes and project scopes",
-          "Specify budget and timeline impacts"
-        ],
-        examples: [
-          "Before: 'Improved application performance' → After: 'Improved application performance by 40% reducing load times from 3s to 1.8s'"
-        ]
-      },
-      SkillsAndKeywordsMapper: {
-        cvSkills: ["JavaScript", "Node.js", "MongoDB", "Express"],
-        jobRequiredSkills: ["React", "TypeScript", "JavaScript", "AWS", "Node.js"],
-        overlap: ["JavaScript", "Node.js"],
-        gaps: ["React", "TypeScript", "AWS"]
-      },
-      GapAnalyzer: {
-        experienceGaps: ["Frontend development experience", "Cloud platform experience"],
-        skillGaps: ["React ecosystem", "TypeScript", "AWS services"],
-        educationGaps: []
-      },
-      AchievementGenerator: {
-        enhancedAchievements: [
-          "Developed and deployed 5+ microservices using Node.js, improving system reliability by 99.9%",
-          "Led a team of 3 developers, reducing bug reports by 40% through improved code quality"
-        ],
-        impactStatements: [
-          "Reduced deployment time by 60% through CI/CD implementation",
-          "Improved application performance by 35% through database optimization"
-        ]
-      },
-      ConsistencyAndCompliance: {
-        formatIssues: ["Inconsistent verb tense usage", "Mixed formatting styles"],
-        complianceIssues: ["No major ATS compliance issues detected"]
-      },
-      TailoredSummaryBuilder: {
-        optimizedSummary: "Experienced software engineer with 5+ years in full-stack development, specializing in JavaScript, Node.js, and scalable web applications. Proven track record of leading development teams and implementing performance improvements.",
-        elevatorPitch: "Senior software engineer with expertise in JavaScript and Node.js development, ready to contribute React and TypeScript skills to build scalable web applications. Demonstrated success in team leadership and performance optimization."
-      },
-      FinalATSScore: {
-        score: 85,
-        summary: "After implementing suggested improvements, ATS score improves to 85% with better keyword alignment and quantified achievements."
-      }
-    };
-
-    return {
-      success: true,
-      data: JSON.stringify(mockAnalysis)
-    };
-
+    // For now, return an error indicating AI service is not configured
+    throw new Error('AI service not configured. Please set up your preferred AI provider.');
+    
   } catch (error) {
     console.error('AI service error:', error);
     return {
       success: false,
-      error: 'AI service unavailable'
+      error: error instanceof Error ? error.message : 'AI service unavailable'
     };
   }
 }
