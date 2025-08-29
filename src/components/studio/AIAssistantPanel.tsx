@@ -24,6 +24,7 @@ import {
   X,
   Loader2
 } from 'lucide-react';
+import CircularProgress from '@/components/ui/CircularProgress';
 import { CVDataStructure } from '@/types/cv';
 import { Job } from '@/lib/stores/jobStore';
 import { useAIStore } from '@/lib/stores/aiStore';
@@ -161,40 +162,52 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
     
     const result = AISuggestionApplier.applySuggestion(suggestion, cvData, onUpdateField);
     if (result.success) {
-      // Could show a success toast here
-      console.log('Suggestion applied successfully:', result.message);
+      // Show success feedback
+      console.log('✅ Suggestion applied successfully:', result.message);
+      
+      // You could add a toast notification here
+      // toast.success(`Applied: ${suggestion.title}`);
+      
+      // Mark the suggestion as applied (optional)
+      // This could be used to show a checkmark or disable the button
     } else {
-      // Could show an error toast here
-      console.error('Failed to apply suggestion:', result.message);
+      // Show error feedback
+      console.error('❌ Failed to apply suggestion:', result.message);
+      
+      // You could add an error toast here
+      // toast.error(`Failed to apply: ${result.message}`);
     }
   };
 
   const renderATSScore = () => {
     const sectionState = sections['ats-score'];
     
+    console.log('🎯 AIAssistantPanel - ATS score state:', {
+      score: ats.score,
+      updating: ats.updating,
+      updatedAt: ats.updatedAt,
+      analysis: !!ats.analysis
+    });
+    
     return (
       <div className="space-y-4">
         {/* ATS Score Display */}
         <div className="bg-gray-700 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-medium text-gray-300">Overall ATS Match</h3>
             <div className="flex items-center space-x-2">
               {ats.updating ? (
                 <Loader2 className="h-4 w-4 animate-spin text-lime-400" />
               ) : (
-                <span className={`text-lg font-bold ${getScoreColor(ats.score || 0)}`}>
-                  {ats.score || 0}%
-                </span>
+                <CircularProgress 
+                  score={ats.score || 0} 
+                  size={60} 
+                  strokeWidth={6}
+                  className="flex-shrink-0"
+                />
               )}
+
             </div>
-          </div>
-          
-          {/* Progress Bar */}
-          <div className="w-full bg-gray-600 rounded-full h-2 mb-4">
-            <div 
-              className={`h-2 rounded-full transition-all duration-300 ${getScoreBgColor(ats.score || 0)}`}
-              style={{ width: `${ats.score || 0}%` }}
-            />
           </div>
 
           {/* Update Status */}
@@ -281,9 +294,48 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
     const isOutOfDate = outOfDate[sectionId];
     const hasRealData = hasRealDataBySection[sectionId];
 
-    // Only render content if we have real data
+    // Show different states based on data availability
     if (!hasRealData) {
-      return null;
+      // Show placeholder content when no real data
+      return (
+        <div className="space-y-4">
+          <div className="bg-gray-700 rounded-lg p-4">
+            <div className="flex items-center space-x-2 mb-3">
+              <Loader2 className="h-4 w-4 text-gray-400 animate-spin" />
+              <span className="text-sm text-gray-400">Analyzing your CV...</span>
+            </div>
+            <p className="text-xs text-gray-500">
+              {jobData ? 
+                `Click "Generate" to get personalized suggestions for ${jobData.title || jobData.jobTitle}` :
+                'Click "Generate" to get AI suggestions for your CV'
+              }
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    // Check if section has suggestions
+    const hasSuggestions = sectionState?.suggestions && sectionState.suggestions.length > 0;
+    
+    if (!hasSuggestions) {
+      // Show message when section has no suggestions but analysis was completed
+      return (
+        <div className="space-y-4">
+          <div className="bg-gray-700 rounded-lg p-4">
+            <div className="flex items-center space-x-2 mb-3">
+              <CheckCircle className="h-4 w-4 text-green-400" />
+              <span className="text-sm text-gray-300">Analysis Complete</span>
+            </div>
+            <p className="text-xs text-gray-500">
+              {jobData ? 
+                `No specific suggestions for ${jobData.title || jobData.jobTitle}. Your CV looks good in this area!` :
+                'No specific suggestions. Your CV looks good in this area!'
+              }
+            </p>
+          </div>
+        </div>
+      );
     }
 
     if (sectionId === 'ats-score') {
@@ -306,20 +358,32 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
         {sectionState.suggestions.length > 0 && (
           <div className="space-y-3">
             {sectionState.suggestions.map((suggestion) => (
-              <div key={suggestion.id} className="bg-gray-700 rounded-lg p-4">
-                <div className="flex items-start justify-between mb-2">
-                  <h4 className="text-sm font-medium text-gray-300">{suggestion.title}</h4>
+              <div key={suggestion.id} className="bg-gray-700 rounded-lg p-4 border border-gray-600 hover:border-lime-500/50 transition-colors">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center space-x-2">
+                    <h4 className="text-sm font-medium text-gray-300">{suggestion.title}</h4>
+                    <span className="text-xs text-gray-500 bg-gray-600 px-2 py-1 rounded">
+                      {suggestion.type}
+                    </span>
+                  </div>
                   <button
                     onClick={() => handleUseSuggestion(suggestion)}
-                    className="text-xs text-lime-400 hover:text-lime-300 bg-lime-900/20 px-2 py-1 rounded"
+                    className="text-xs text-lime-400 hover:text-lime-300 bg-lime-900/20 hover:bg-lime-900/30 px-3 py-1.5 rounded transition-colors flex items-center space-x-1"
+                    title="Apply this suggestion to your CV"
                   >
-                    Use
+                    <CheckCircle className="h-3 w-3" />
+                    <span>Use in CV</span>
                   </button>
                 </div>
-                <p className="text-xs text-gray-400 mb-2">{suggestion.content}</p>
+                <p className="text-xs text-gray-400 mb-3 leading-relaxed">{suggestion.content}</p>
                 <div className="flex items-center justify-between text-xs text-gray-500">
-                  <span>{suggestion.type}</span>
-                  <span>{formatTimestamp(suggestion.generatedAt)}</span>
+                  <span className="flex items-center space-x-1">
+                    <Clock className="h-3 w-3" />
+                    <span>{formatTimestamp(suggestion.generatedAt)}</span>
+                  </span>
+                  {suggestion.section && (
+                    <span className="text-gray-400">Section: {suggestion.section}</span>
+                  )}
                 </div>
               </div>
             ))}

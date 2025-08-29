@@ -22,7 +22,7 @@ export interface CVListResponse {
 }
 
 export class CVService {
-  static async getCV(cvId: string, userId?: string): Promise<{ cvData: CVDataStructure; jobId?: string }> {
+  static async getCV(cvId: string, userId?: string): Promise<{ cvData: CVDataStructure; jobId?: string; title?: string }> {
     const params = new URLSearchParams();
     if (userId) {
       params.append('userId', userId);
@@ -61,13 +61,15 @@ export class CVService {
         console.log('🔍 CVService - Data is already in CVDataStructure format');
         return {
           cvData: cvData.cvData as CVDataStructure,
-          jobId: cvData.jobId
+          jobId: cvData.jobId,
+          title: cvData.title
         };
       } else {
         console.log('🔍 CVService - Transforming old format data');
         return {
           cvData: transformDatabaseToStudio(cvData.cvData),
-          jobId: cvData.jobId
+          jobId: cvData.jobId,
+          title: cvData.title
         };
       }
     }
@@ -77,7 +79,8 @@ export class CVService {
       console.log('🔍 CVService - cvData is already in CVDataStructure format');
       return {
         cvData: cvData as CVDataStructure,
-        jobId: cvData.jobId
+        jobId: cvData.jobId,
+        title: cvData.title
       };
     }
     

@@ -231,57 +231,65 @@ const DraftCard: React.FC<{
 // CV Health Score Component
 const CVHealthScore: React.FC<{ score: number }> = ({ score }) => {
   const getStatus = (score: number) => {
-    if (score >= 80) return { label: 'Good', color: 'text-green-400' };
-    if (score >= 60) return { label: 'Average', color: 'text-yellow-400' };
-    return { label: 'Poor', color: 'text-red-400' };
+    if (score >= 80) return { label: 'Excellent', color: 'text-green-400' };
+    if (score >= 60) return { label: 'Good', color: 'text-yellow-400' };
+    return { label: 'Needs Improvement', color: 'text-red-400' };
   };
 
   const status = getStatus(score);
-  const circumference = 2 * Math.PI * 40;
+  const circumference = 2 * Math.PI * 45;
   const strokeDashoffset = circumference * (1 - score / 100);
 
   return (
     <div className="text-center">
-      <div className="relative w-24 h-24 mx-auto mb-3">
-        <svg className="w-24 h-24 transform -rotate-90" viewBox="0 0 100 100">
+      <div className="relative w-32 h-32 mx-auto mb-4">
+        <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 100 100">
+          {/* Background circle */}
           <circle
             cx="50"
             cy="50"
-            r="40"
+            r="45"
             stroke="currentColor"
-            strokeWidth="8"
+            strokeWidth="10"
             fill="none"
             className="text-white/10"
           />
+          {/* Progress circle with gradient */}
+          <defs>
+            <linearGradient id="cvHealthGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#ef4444" />
+              <stop offset="100%" stopColor="#f97316" />
+            </linearGradient>
+          </defs>
           <circle
             cx="50"
             cy="50"
-            r="40"
-            stroke="currentColor"
-            strokeWidth="8"
+            r="45"
+            stroke="url(#cvHealthGradient)"
+            strokeWidth="10"
             fill="none"
             strokeDasharray={circumference}
             strokeDashoffset={strokeDashoffset}
-            className="text-lime-400 transition-all duration-1000"
+            className="transition-all duration-1000 ease-out"
             strokeLinecap="round"
           />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-xl font-bold text-white">{score}%</span>
+          <span className="text-2xl font-bold text-white">{score}%</span>
         </div>
       </div>
       <p className="text-white/60 text-sm mb-1">CV Health Score</p>
       <p className={`text-sm font-medium ${status.color}`}>{status.label}</p>
-      <p className="text-white/40 text-xs mt-1">Based on best practices and completeness</p>
+      <p className="text-white/40 text-xs mt-1">Based on completeness & best practices</p>
     </div>
   );
 };
 
 // Vault Summary Component
-const VaultSummary: React.FC<{ counts: { cvs: number; coverLetters: number; jobDescriptions: number; notes: number } }> = ({ counts }) => (
+const VaultSummary: React.FC<{ counts: { cvs: number; jobDescriptions: number; notes: number } }> = ({ counts }) => (
   <div className="space-y-3">
     <h4 className="text-white font-medium text-sm mb-3">My Vault</h4>
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
       <motion.div
         className="p-3 bg-white/5 rounded-lg cursor-pointer hover:bg-white/10 transition-all duration-300"
         whileHover={{ scale: 1.05 }}
@@ -296,19 +304,7 @@ const VaultSummary: React.FC<{ counts: { cvs: number; coverLetters: number; jobD
         <p className="text-white/60 text-xs">{counts.cvs} documents</p>
       </motion.div>
 
-      <motion.div
-        className="p-3 bg-white/5 rounded-lg cursor-pointer hover:bg-white/10 transition-all duration-300"
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-      >
-        <div className="flex items-center gap-2 mb-1">
-          <div className="w-6 h-6 bg-gradient-to-br from-blue-400/20 to-blue-500/20 rounded-lg flex items-center justify-center">
-            <PenTool size={12} className="text-blue-400" />
-          </div>
-          <span className="text-white font-medium text-xs">Cover Letters</span>
-        </div>
-        <p className="text-white/60 text-xs">{counts.coverLetters} documents</p>
-      </motion.div>
+
 
       <motion.div
         className="p-3 bg-white/5 rounded-lg cursor-pointer hover:bg-white/10 transition-all duration-300"
@@ -319,7 +315,7 @@ const VaultSummary: React.FC<{ counts: { cvs: number; coverLetters: number; jobD
           <div className="w-6 h-6 bg-gradient-to-br from-purple-400/20 to-purple-500/20 rounded-lg flex items-center justify-center">
             <Briefcase size={12} className="text-purple-400" />
           </div>
-          <span className="text-white font-medium text-xs">Job Descriptions</span>
+          <span className="text-white font-medium text-xs">Jobs</span>
         </div>
         <p className="text-white/60 text-xs">{counts.jobDescriptions} saved</p>
       </motion.div>
@@ -543,6 +539,272 @@ const KeywordsAnalysis: React.FC<{ strengths: string[]; gaps: string[] }> = ({ s
             </div>
   );
 
+// Smart Recommendation Widget
+const SmartRecommendationWidget: React.FC<{ 
+  recommendations: any[];
+}> = ({ recommendations }) => (
+  <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+    <h3 className="text-white font-medium text-sm mb-4 flex items-center gap-2">
+      <Lightbulb size={14} className="text-yellow-400" />
+      Smart Recommendations
+    </h3>
+    <div className="space-y-3">
+      {recommendations && recommendations.length > 0 ? (
+        recommendations.slice(0, 3).map((rec, index) => (
+          <motion.div
+            key={index}
+            className="p-3 bg-white/5 border border-white/10 rounded-lg"
+            whileHover={{ scale: 1.02 }}
+          >
+            <div className="flex items-start justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${
+                  rec.priority === 'high' ? 'bg-red-400' :
+                  rec.priority === 'medium' ? 'bg-yellow-400' : 'bg-green-400'
+                }`}></div>
+                <span className="text-white font-medium text-sm">{rec.title}</span>
+              </div>
+              <span className="text-white/40 text-xs">{rec.timeToComplete}</span>
+            </div>
+            <p className="text-white/60 text-xs mb-2">{rec.description}</p>
+            <div className="flex items-center justify-between">
+              <span className="text-lime-400 text-xs">{rec.impact}</span>
+              <motion.button
+                className="px-3 py-1 bg-gradient-to-r from-lime-400/20 to-lime-500/20 border border-lime-400/30 text-lime-400 rounded text-xs font-medium hover:from-lime-400/30 hover:to-lime-500/30 transition-all duration-300"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => {
+                  if (rec.type === 'cv') window.location.href = '/studio';
+                  else if (rec.type === 'job') window.location.href = '/dashboard/pipeline';
+                  else if (rec.type === 'cover_letter') window.location.href = '/studio?type=cover_letter';
+                  else if (rec.type === 'followup') window.location.href = '/dashboard/pipeline';
+                }}
+              >
+                {rec.action}
+              </motion.button>
+            </div>
+          </motion.div>
+        ))
+      ) : (
+        <div className="text-center py-4">
+          <CheckCircle size={24} className="text-green-400 mx-auto mb-2" />
+          <p className="text-white/60 text-xs">All caught up! Great job staying on top of your career goals.</p>
+        </div>
+      )}
+    </div>
+  </div>
+);
+
+// Predictive Analytics Widget
+const PredictiveAnalyticsWidget: React.FC<{ 
+  predictions: any;
+  onUpdateGoal?: (goal: number) => void;
+}> = ({ predictions, onUpdateGoal }) => {
+  const [isEditingGoal, setIsEditingGoal] = useState(false);
+  const [newGoal, setNewGoal] = useState(predictions?.monthlyGoal || 20);
+
+  const handleUpdateGoal = async () => {
+    if (onUpdateGoal) {
+      await onUpdateGoal(newGoal);
+      setIsEditingGoal(false);
+    }
+  };
+
+  return (
+    <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+      <h3 className="text-white font-medium text-sm mb-4 flex items-center gap-2">
+        <Target size={14} className="text-purple-400" />
+        Career Predictions
+      </h3>
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="text-center p-3 bg-white/5 rounded-lg">
+            <div className="text-2xl font-bold text-purple-400">{predictions?.nextWeekInterviews || 0}</div>
+            <div className="text-white/60 text-xs">Interviews Next Week</div>
+          </div>
+          <div className="text-center p-3 bg-white/5 rounded-lg">
+            <div className="text-2xl font-bold text-green-400">{predictions?.successProbability || 0}%</div>
+            <div className="text-white/60 text-xs">Success Probability</div>
+          </div>
+        </div>
+        <div className="p-3 bg-white/5 rounded-lg">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <span className="text-white text-sm">Monthly Goal Progress</span>
+              {!isEditingGoal && (
+                <button
+                  onClick={() => setIsEditingGoal(true)}
+                  className="text-blue-400 hover:text-blue-300 text-xs"
+                >
+                  Edit
+                </button>
+              )}
+            </div>
+            <span className="text-white/60 text-xs">{predictions?.monthlyGoalProgress || 0}%</span>
+          </div>
+          {isEditingGoal ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={newGoal}
+                  onChange={(e) => setNewGoal(parseInt(e.target.value) || 20)}
+                  className="flex-1 px-2 py-1 bg-white/10 border border-white/20 rounded text-white text-xs"
+                  placeholder="Set monthly goal"
+                />
+                <button
+                  onClick={handleUpdateGoal}
+                  className="px-2 py-1 bg-blue-400 text-black text-xs rounded hover:bg-blue-300"
+                >
+                  Save
+                </button>
+                <button
+                  onClick={() => {
+                    setIsEditingGoal(false);
+                    setNewGoal(predictions?.monthlyGoal || 20);
+                  }}
+                  className="px-2 py-1 bg-white/10 text-white text-xs rounded hover:bg-white/20"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="w-full bg-white/10 rounded-full h-2">
+                <div 
+                  className="bg-gradient-to-r from-lime-400 to-lime-500 h-2 rounded-full transition-all duration-500"
+                  style={{ width: `${Math.min(100, predictions?.monthlyGoalProgress || 0)}%` }}
+                ></div>
+              </div>
+              <div className="flex justify-between text-white/60 text-xs mt-1">
+                <span>{predictions?.jobsThisMonth || 0} / {predictions?.monthlyGoal || 20} jobs</span>
+                <span>Goal: {predictions?.monthlyGoal || 20} jobs/month</span>
+              </div>
+            </>
+          )}
+        </div>
+        <div className="space-y-2">
+          <p className="text-white/80 text-xs font-medium">Recommended Actions:</p>
+          {predictions?.recommendedActions?.map((action: string, index: number) => (
+            <div key={index} className="flex items-center gap-2 text-white/60 text-xs">
+              <div className="w-1 h-1 bg-lime-400 rounded-full"></div>
+              <span>{action}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Market Intelligence Widget
+const MarketIntelligenceWidget: React.FC<{ 
+  marketIntelligence: any;
+}> = ({ marketIntelligence }) => (
+  <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+    <h3 className="text-white font-medium text-sm mb-4 flex items-center gap-2">
+      <TrendingUp size={14} className="text-blue-400" />
+      Market Intelligence
+    </h3>
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3">
+        <div className="text-center p-3 bg-white/5 rounded-lg">
+          <div className="text-lg font-bold text-green-400">{marketIntelligence?.salaryTrend || '+8%'}</div>
+          <div className="text-white/60 text-xs">Salary Trend</div>
+        </div>
+        <div className="text-center p-3 bg-white/5 rounded-lg">
+          <div className="text-lg font-bold text-blue-400">{marketIntelligence?.remoteOpportunities || '+45%'}</div>
+          <div className="text-white/60 text-xs">Remote Jobs</div>
+        </div>
+      </div>
+      <div>
+        <p className="text-white/80 text-xs font-medium mb-2">Top Skills in Demand:</p>
+        <div className="flex flex-wrap gap-1">
+          {marketIntelligence?.topSkills?.map((skill: string, index: number) => (
+            <span
+              key={index}
+              className="px-2 py-1 bg-blue-400/20 text-blue-400 text-xs rounded-full"
+            >
+              {skill}
+            </span>
+          ))}
+        </div>
+      </div>
+      <div>
+        <p className="text-white/80 text-xs font-medium mb-2">Hot Companies Hiring:</p>
+        <div className="flex flex-wrap gap-1">
+          {marketIntelligence?.hotCompanies?.map((company: string, index: number) => (
+            <span
+              key={index}
+              className="px-2 py-1 bg-green-400/20 text-green-400 text-xs rounded-full"
+            >
+              {company}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+// Enhanced Recent Activity Widget with actionable links
+const EnhancedRecentActivityWidget: React.FC<{ 
+  activities: any[];
+}> = ({ activities }) => (
+  <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+    <h3 className="text-white font-medium text-sm mb-4 flex items-center gap-2">
+      <Activity size={14} className="text-blue-400" />
+      Recent Activity
+    </h3>
+    <div className="space-y-3">
+      {activities && activities.length > 0 ? (
+        activities.slice(0, 5).map((activity, index) => (
+          <motion.div
+            key={activity.id || index}
+            className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-all duration-300"
+            whileHover={{ scale: 1.02 }}
+          >
+            <div className={`w-2 h-2 rounded-full ${
+              activity.type === 'cv' ? 'bg-lime-400' :
+              activity.type === 'job' ? 'bg-blue-400' :
+              activity.type === 'cover_letter' ? 'bg-purple-400' : 'bg-orange-400'
+            }`}></div>
+            <div className="flex-1 min-w-0">
+              <p className="text-white/80 text-xs truncate">{activity.description}</p>
+              <p className="text-white/40 text-xs">
+                {new Date(activity.timestamp).toLocaleDateString('en-US', { 
+                  month: 'short', 
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
+              </p>
+            </div>
+            {activity.actionable && activity.actionText && activity.actionUrl && (
+              <motion.button
+                className="px-2 py-1 bg-gradient-to-r from-lime-400/20 to-lime-500/20 border border-lime-400/30 text-lime-400 rounded text-xs font-medium hover:from-lime-400/30 hover:to-lime-500/30 transition-all duration-300"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => window.location.href = activity.actionUrl}
+              >
+                {activity.actionText}
+              </motion.button>
+            )}
+          </motion.div>
+        ))
+      ) : (
+        <div className="text-center py-4">
+          <p className="text-white/40 text-xs">No recent activity</p>
+          <p className="text-white/20 text-xs mt-1">Start using the app to see your activity</p>
+        </div>
+      )}
+    </div>
+  </div>
+);
+
 const Analytics: React.FC = () => {
   // Dashboard Analytics Component
   // Features:
@@ -555,12 +817,40 @@ const Analytics: React.FC = () => {
   const [user, setUser] = useState<any>(null);
   const [jobs, setJobs] = useState<any[]>([]);
   const [cvs, setCvs] = useState<any[]>([]);
-  const [coverLetters, setCoverLetters] = useState<any[]>([]);
+
   const [activities, setActivities] = useState<any[]>([]);
   const [analyticsData, setAnalyticsData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState('week');
   const [selectedStage, setSelectedStage] = useState('all');
+  const [jobData, setJobData] = useState<any[]>([]);
+  const [completedTasks, setCompletedTasks] = useState<{[key: string]: boolean}>({});
+
+  // Handle monthly goal update
+  const handleUpdateMonthlyGoal = async (newGoal: number) => {
+    try {
+      const response = await fetch('/api/user/update-monthly-goal', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ monthlyGoal: newGoal }),
+      });
+
+      if (response.ok) {
+        // Refresh analytics data to get updated predictions
+        const analyticsResponse = await fetch(`/api/analytics?userId=${user?.id || user?._id || session?.user?.id}&period=${selectedPeriod}`);
+        if (analyticsResponse.ok) {
+          const newAnalyticsData = await analyticsResponse.json();
+          setAnalyticsData(newAnalyticsData.data);
+        }
+      } else {
+        console.error('Failed to update monthly goal');
+      }
+    } catch (error) {
+      console.error('Error updating monthly goal:', error);
+    }
+  };
 
   // CV Completion Calculation Functions
   const calculateCompletionPercentage = (cv: any): number => {
@@ -737,31 +1027,158 @@ const Analytics: React.FC = () => {
       setUser(session.user);
       loadData(session.user.id);
     }
-  }, [session, selectedPeriod]);
+  }, [session]);
+
+  // Separate effect for period changes - only reload analytics data
+  useEffect(() => {
+    if (user?.id || user?._id) {
+      loadAnalyticsDataOnly(user.id || user._id);
+    }
+  }, [selectedPeriod, user]);
+
+  // Helper functions for calendar checklist
+  const getStageColor = (stage: string, isBackground: boolean = false) => {
+    switch (stage.toLowerCase()) {
+      case 'applied':
+        return isBackground ? 'bg-blue-400/20 text-blue-400' : 'bg-blue-400';
+      case 'screening':
+        return isBackground ? 'bg-yellow-400/20 text-yellow-400' : 'bg-yellow-400';
+      case 'interview':
+        return isBackground ? 'bg-purple-400/20 text-purple-400' : 'bg-purple-400';
+      case 'offer':
+        return isBackground ? 'bg-green-400/20 text-green-400' : 'bg-green-400';
+      case 'rejected':
+        return isBackground ? 'bg-red-400/20 text-red-400' : 'bg-red-400';
+      default:
+        return isBackground ? 'bg-white/20 text-white/60' : 'bg-white/40';
+    }
+  };
+
+  const getDayTasks = (date: Date, interviews: any[], jobData: any[]) => {
+    const tasks: any[] = [];
+    const dateString = date.toISOString().split('T')[0];
+    
+    // Add interviews for this day
+    interviews.forEach(interview => {
+      const interviewDate = new Date(interview.datetime);
+      if (interviewDate.toISOString().split('T')[0] === dateString) {
+        tasks.push({
+          type: 'interview',
+          title: `${interview.type} with ${interview.company}`,
+          company: interview.company,
+          stage: interview.stage,
+          completed: completedTasks[`${dateString}-interview-${interview.id}`] || false,
+          id: interview.id
+        });
+      }
+    });
+    
+    // Add follow-up tasks for recent applications
+    jobData.forEach(job => {
+      const jobDate = new Date(job.createdAt || job.appliedDate);
+      const daysSinceApplied = Math.floor((date.getTime() - jobDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      // Suggest follow-up after 7 days for applied jobs
+      if (job.status === 'applied' && daysSinceApplied === 7) {
+        tasks.push({
+          type: 'followup',
+          title: `Follow up with ${job.company}`,
+          company: job.company,
+          stage: 'applied',
+          completed: completedTasks[`${dateString}-followup-${job.id}`] || false,
+          id: job.id
+        });
+      }
+      
+      // Suggest interview prep for screening jobs
+      if (job.status === 'screening' && daysSinceApplied === 3) {
+        tasks.push({
+          type: 'prep',
+          title: `Prepare for ${job.company} interview`,
+          company: job.company,
+          stage: 'screening',
+          completed: completedTasks[`${dateString}-prep-${job.id}`] || false,
+          id: job.id
+        });
+      }
+    });
+    
+    return tasks;
+  };
+
+  const toggleTaskCompletion = (date: Date, taskIndex: number) => {
+    const dateString = date.toISOString().split('T')[0];
+    const dayTasks = getDayTasks(date, interviews, jobData);
+    const task = dayTasks[taskIndex];
+    
+    if (task) {
+      const taskKey = `${dateString}-${task.type}-${task.id}`;
+      setCompletedTasks(prev => ({
+        ...prev,
+        [taskKey]: !prev[taskKey]
+      }));
+    }
+  };
+
+  const loadAnalyticsDataOnly = async (userId: string) => {
+    try {
+      console.log('🔍 Analytics - Loading analytics data only for period:', selectedPeriod);
+      
+      // Load only analytics data for the selected period
+      const analyticsResponse = await fetch(`/api/analytics?userId=${userId}&period=${selectedPeriod}`);
+      const analyticsResult = await analyticsResponse.json();
+      
+      console.log('🔍 Analytics - Analytics API response (period change):', analyticsResult);
+      
+      if (analyticsResult.success) {
+        setAnalyticsData(analyticsResult.data);
+        console.log('🔍 Analytics - Updated analytics data for period:', selectedPeriod);
+      } else {
+        console.error('🔍 Analytics - Analytics API failed (period change):', analyticsResult);
+      }
+    } catch (error) {
+      console.error('🔍 Analytics - Error loading analytics data:', error);
+    }
+  };
 
   const loadData = async (userId: string) => {
     try {
       setLoading(true);
+      console.log('🔍 Analytics - Loading data for userId:', userId);
       
       // Load comprehensive analytics data (hardwired from APIs)
       const analyticsResponse = await fetch(`/api/analytics?userId=${userId}&period=${selectedPeriod}`);
       const analyticsResult = await analyticsResponse.json();
       
+      console.log('🔍 Analytics - Analytics API response:', analyticsResult);
+      
       if (analyticsResult.success) {
         setAnalyticsData(analyticsResult.data);
+        console.log('🔍 Analytics - Set analytics data:', analyticsResult.data);
+      } else {
+        console.error('🔍 Analytics - Analytics API failed:', analyticsResult);
       }
       
       // Load jobs (hardwired from jobs API)
       const jobsResponse = await fetch(`/api/jobs?userId=${userId}`);
       const jobsResult = await jobsResponse.json();
+      console.log('🔍 Analytics - Jobs API response:', jobsResult);
+      
       if (jobsResult.success) {
-        const jobData = jobsResult.data || [];
+        const jobData = Array.isArray(jobsResult.data) ? jobsResult.data : [];
         setJobs(jobData);
+        console.log('🔍 Analytics - Set jobs data:', jobData);
         
         // Generate interview schedule from job data (hardwired from API)
         const generateInterviewSchedule = () => {
           const now = new Date();
           const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+          
+          // Ensure jobData is an array before using array methods
+          if (!Array.isArray(jobData)) {
+            console.warn('🔍 Analytics - jobData is not an array:', jobData);
+            return [];
+          }
           
           // Use real interview data from jobs API
           const upcomingInterviews = jobData
@@ -826,14 +1243,18 @@ const Analytics: React.FC = () => {
         };
         
         setInterviews(generateInterviewSchedule());
+        setJobData(jobData);
       }
 
       // Load CVs (hardwired from CVs API)
       const cvsResponse = await fetch(`/api/cvs?userId=${userId}`);
       const cvsResult = await cvsResponse.json();
+      console.log('🔍 Analytics - CVs API response:', cvsResult);
+      
       if (cvsResult.success) {
-        const cvData = cvsResult.data.data || [];
+        const cvData = Array.isArray(cvsResult.data?.cvs) ? cvsResult.data.cvs : [];
         setCvs(cvData);
+        console.log('🔍 Analytics - Set CVs data:', cvData);
         
         // Generate drafts from CV data - show CVs with less than 99% completion
         const incompleteCVs = cvData
@@ -863,18 +1284,14 @@ const Analytics: React.FC = () => {
         setDrafts(incompleteCVs);
       }
 
-      // Load cover letters (hardwired from cover letters API)
-      const coverLettersResponse = await fetch(`/api/cover-letters?userId=${userId}`);
-      const coverLettersResult = await coverLettersResponse.json();
-      if (coverLettersResult.success) {
-        setCoverLetters(coverLettersResult.data || []);
-      }
+
 
       // Load activity (hardwired from activity API)
       const activityResponse = await fetch(`/api/activity?userId=${userId}`);
       const activityResult = await activityResponse.json();
       if (activityResult.success) {
-        setActivities(activityResult.data.activities || []);
+        const activitiesData = Array.isArray(activityResult.data?.activities) ? activityResult.data.activities : [];
+        setActivities(activitiesData);
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -891,24 +1308,27 @@ const Analytics: React.FC = () => {
   };
 
   const calculateKPIs = () => {
-    // Hardwired KPI data from analytics API
+    // Enhanced KPI data from analytics API
     if (!analyticsData) {
+      console.log('🔍 Analytics - No analytics data available, using fallback values');
       return {
         totalJobs: 0,
         cvsCreated: 0,
-        coverLettersCreated: 0,
+
         applicationsSubmitted: 0,
         interviewsScheduled: 0
       };
     }
     
-    // Use data from analytics API
+    console.log('🔍 Analytics - Using analytics data for KPIs:', analyticsData);
+    
+    // Use enhanced data from analytics API
     return {
-      totalJobs: analyticsData.kpis?.totalJobs || 0,
-      cvsCreated: analyticsData.kpis?.cvsCreated || 0,
-      coverLettersCreated: analyticsData.kpis?.coverLettersCreated || 0,
-      applicationsSubmitted: analyticsData.kpis?.applicationsSubmitted || 0,
-      interviewsScheduled: analyticsData.kpis?.interviewsScheduled || 0
+      totalJobs: analyticsData.kpis?.totalJobs?.value || 0,
+      cvsCreated: analyticsData.kpis?.applicationSuccessRate?.value || 0,
+
+      applicationsSubmitted: analyticsData.kpis?.averageCVHealth?.value || 0,
+      interviewsScheduled: analyticsData.kpis?.totalJobs?.value || 0
     };
   };
 
@@ -959,18 +1379,18 @@ const Analytics: React.FC = () => {
     return feedback.slice(0, 3); // Return top 3 suggestions
   };
   
-  const vaultCounts = analyticsData?.vaultCounts || {
-    cvs: 0,
-    coverLetters: 0,
-    jobDescriptions: 0,
-    notes: 0
+  // Calculate vault counts from actual data - exclude rejected jobs
+  const vaultCounts = {
+    cvs: Array.isArray(cvs) ? cvs.length : 0,
+    jobDescriptions: Array.isArray(jobs) ? jobs.filter(job => job.status !== 'rejected').length : 0,
+    notes: Array.isArray(activities) ? activities.length : 0 // Using activities as notes for now
   };
 
   // Use hardwired data from analytics API
   const aiGoal = analyticsData?.aiGoal || "Add your first job to start creating targeted cover letters";
   const aiMetrics = analyticsData?.aiMetrics || {
     cvsPerJob: '0',
-    coverLetterCoverage: 0,
+    
     jobsThisWeek: 0
   };
 
@@ -986,7 +1406,7 @@ const Analytics: React.FC = () => {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="max-w-full mx-auto space-y-4 px-4">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-white mb-2">
@@ -996,38 +1416,46 @@ const Analytics: React.FC = () => {
       </div>
 
       {/* Main Grid Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Continue Where You Left Off */}
-          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
+        {/* Columns 1-2: Continue Where You Left Off, Performance Insights */}
+        <div className="sm:col-span-2 lg:col-span-2 xl:col-span-2 2xl:col-span-2 space-y-4">
+          {/* Continue Where You Left Off - Merged with Smart Recommendations */}
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
             <h2 className="text-xl font-bold text-white mb-4">Continue Where You Left Off</h2>
-            <p className="text-white/60 text-sm mb-4">Complete your CVs to increase your chances of landing interviews</p>
+            <p className="text-white/60 text-sm mb-4">Complete your CVs and follow smart recommendations to increase your chances of landing interviews</p>
+            
+            {/* Drafts Section */}
             {drafts.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {drafts.map((draft) => (
-                  <DraftCard
-                    key={draft.id}
-                    type={draft.type}
-                    title={draft.title}
-                    progress={draft.progress}
-                    lastEdited={draft.lastEdited}
-                    onResume={() => window.location.href = `/studio?draft=${draft.id}`}
-                    onPreview={() => window.location.href = `/preview?draft=${draft.id}`}
-                    onDiscard={() => console.log('Discard draft', draft.id)}
-                    cvData={draft.cvData}
-                  />
-                ))}
+              <div className="mb-6">
+                <h3 className="text-white font-medium text-sm mb-3 flex items-center gap-2">
+                  <FileText size={14} className="text-blue-400" />
+                  Incomplete CVs
+                </h3>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {drafts.map((draft) => (
+                    <DraftCard
+                      key={draft.id}
+                      type={draft.type}
+                      title={draft.title}
+                      progress={draft.progress}
+                      lastEdited={draft.lastEdited}
+                      onResume={() => window.location.href = `/studio?draft=${draft.id}`}
+                      onPreview={() => window.location.href = `/preview?draft=${draft.id}`}
+                      onDiscard={() => console.log('Discard draft', draft.id)}
+                      cvData={draft.cvData}
+                    />
+                  ))}
+                </div>
               </div>
             ) : (
-              <div className="text-center py-8">
-                <div className="w-16 h-16 bg-gradient-to-br from-green-400/20 to-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <CheckCircle size={24} className="text-green-400" />
+              <div className="text-center py-3 mb-4">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <CheckCircle size={16} className="text-green-400" />
+                  <h3 className="text-white font-medium text-sm">All CVs Complete!</h3>
                 </div>
-                <h3 className="text-white font-medium mb-2">All CVs Complete!</h3>
-                <p className="text-white/60 text-sm mb-4">Great job! All your CVs are 99% or more complete</p>
+                <p className="text-white/60 text-xs mb-2">Great job! All your CVs are 99% or more complete</p>
                 <motion.button
-                  className="px-6 py-3 bg-gradient-to-r from-lime-400 to-lime-500 text-black font-semibold rounded-xl hover:from-lime-300 hover:to-lime-400 transition-all duration-300 flex items-center gap-2 mx-auto"
+                  className="px-3 py-1.5 bg-gradient-to-r from-lime-400 to-lime-500 text-black font-semibold rounded-lg hover:from-lime-300 hover:to-lime-400 transition-all duration-300 flex items-center gap-1 mx-auto text-xs"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={async () => {
@@ -1044,294 +1472,428 @@ const Analytics: React.FC = () => {
                     }
                   }}
                 >
-                  <Plus size={20} />
+                  <Plus size={12} />
                   Create New CV
                 </motion.button>
               </div>
             )}
+
+            {/* Smart Recommendations Section */}
+            <div>
+              <h3 className="text-white font-medium text-sm mb-3 flex items-center gap-2">
+                <Lightbulb size={14} className="text-yellow-400" />
+                Smart Recommendations
+              </h3>
+              <div className="space-y-3">
+                {analyticsData?.recommendations && analyticsData.recommendations.length > 0 ? (
+                  analyticsData.recommendations.slice(0, 3).map((rec: any, index: number) => (
+                    <motion.div
+                      key={index}
+                      className="p-3 bg-white/5 border border-white/10 rounded-lg"
+                      whileHover={{ scale: 1.02 }}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-2 h-2 rounded-full ${
+                            rec.priority === 'high' ? 'bg-red-400' :
+                            rec.priority === 'medium' ? 'bg-yellow-400' : 'bg-green-400'
+                          }`}></div>
+                          <span className="text-white font-medium text-sm">{rec.title}</span>
+                        </div>
+                        <span className="text-white/40 text-xs">{rec.timeToComplete}</span>
+                      </div>
+                      <p className="text-white/60 text-xs mb-2">{rec.description}</p>
+                      <div className="flex items-center justify-between">
+                        <span className="text-lime-400 text-xs">{rec.impact}</span>
+                        <motion.button
+                          className="px-3 py-1 bg-gradient-to-r from-lime-400/20 to-lime-500/20 border border-lime-400/30 text-lime-400 rounded text-xs font-medium hover:from-lime-400/30 hover:to-lime-500/30 transition-all duration-300"
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => {
+                            if (rec.type === 'cv') window.location.href = '/studio';
+                            else if (rec.type === 'job') window.location.href = '/dashboard/pipeline';
+                            else if (rec.type === 'cover_letter') window.location.href = '/studio?type=cover_letter';
+                            else if (rec.type === 'followup') window.location.href = '/dashboard/pipeline';
+                          }}
+                        >
+                          {rec.action}
+                        </motion.button>
+                      </div>
+                    </motion.div>
+                  ))
+                ) : (
+                  <div className="text-center py-4">
+                    <CheckCircle size={20} className="text-green-400 mx-auto mb-2" />
+                    <p className="text-white/60 text-xs">All caught up! Great job staying on top of your career goals.</p>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
-          {/* Analytics Chart */}
-          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+          {/* Enhanced Performance Insights */}
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-white">Activity Trends</h2>
+              <h2 className="text-xl font-bold text-white">Performance Insights</h2>
               <PeriodSelector selectedPeriod={selectedPeriod} onPeriodChange={setSelectedPeriod} />
             </div>
             
-            {/* Chart Container */}
-            <div className="h-64 relative">
-              {/* Chart Grid Lines */}
-              <div className="absolute inset-0 flex flex-col justify-between">
-                {[0, 1, 2, 3, 4].map((i) => (
-                  <div key={i} className="border-b border-white/10 h-0"></div>
-                ))}
-              </div>
-              
-              {/* Chart Lines */}
-              <div className="absolute inset-0 flex items-end justify-between px-4 pb-4">
-                {(() => {
-                  const maxValue = Math.max(kpis.totalJobs, kpis.cvsCreated, kpis.coverLettersCreated, kpis.applicationsSubmitted, kpis.interviewsScheduled);
-                  const maxHeight = 32;
-                  
-                  return (
-                    <>
-                      {/* Jobs Added Line */}
-                      <div className="flex-1 flex items-end justify-center">
-                        <div 
-                          className="w-full bg-gradient-to-t from-blue-500/20 to-blue-500/5 rounded-t-lg relative transition-all duration-500"
-                          style={{ height: `${Math.max(8, (kpis.totalJobs / maxValue) * maxHeight)}px` }}
-                        >
-                          <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-blue-400 rounded-full border-2 border-white"></div>
-                          <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 text-xs text-blue-400 font-medium">{kpis.totalJobs}</div>
-                        </div>
-                      </div>
-                      
-                      {/* CVs Created Line */}
-                      <div className="flex-1 flex items-end justify-center">
-                        <div 
-                          className="w-full bg-gradient-to-t from-lime-500/20 to-lime-500/5 rounded-t-lg relative transition-all duration-500"
-                          style={{ height: `${Math.max(8, (kpis.cvsCreated / maxValue) * maxHeight)}px` }}
-                        >
-                          <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-lime-400 rounded-full border-2 border-white"></div>
-                          <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 text-xs text-lime-400 font-medium">{kpis.cvsCreated}</div>
-                        </div>
-                      </div>
-                      
-                      {/* Cover Letters Line */}
-                      <div className="flex-1 flex items-end justify-center">
-                        <div 
-                          className="w-full bg-gradient-to-t from-purple-500/20 to-purple-500/5 rounded-t-lg relative transition-all duration-500"
-                          style={{ height: `${Math.max(8, (kpis.coverLettersCreated / maxValue) * maxHeight)}px` }}
-                        >
-                          <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-purple-400 rounded-full border-2 border-white"></div>
-                          <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 text-xs text-purple-400 font-medium">{kpis.coverLettersCreated}</div>
-                        </div>
-                      </div>
-                      
-                      {/* Applications Line */}
-                      <div className="flex-1 flex items-end justify-center">
-                        <div 
-                          className="w-full bg-gradient-to-t from-green-500/20 to-green-500/5 rounded-t-lg relative transition-all duration-500"
-                          style={{ height: `${Math.max(8, (kpis.applicationsSubmitted / maxValue) * maxHeight)}px` }}
-                        >
-                          <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-green-400 rounded-full border-2 border-white"></div>
-                          <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 text-xs text-green-400 font-medium">{kpis.applicationsSubmitted}</div>
-                        </div>
-                      </div>
-                      
-                      {/* Interviews Line */}
-                      <div className="flex-1 flex items-end justify-center">
-                        <div 
-                          className="w-full bg-gradient-to-t from-orange-500/20 to-orange-500/5 rounded-t-lg relative transition-all duration-500"
-                          style={{ height: `${Math.max(8, (kpis.interviewsScheduled / maxValue) * maxHeight)}px` }}
-                        >
-                          <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-orange-400 rounded-full border-2 border-white"></div>
-                          <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 text-xs text-orange-400 font-medium">{kpis.interviewsScheduled}</div>
-                        </div>
-                      </div>
-                    </>
-                  );
-                })()}
-              </div>
-              
-              {/* X-axis Labels */}
-              <div className="absolute bottom-0 left-0 right-0 flex justify-between px-4 text-xs text-white/60">
-                <span>Jobs</span>
-                <span>CVs</span>
-                <span>Letters</span>
-                <span>Apps</span>
-                <span>Interviews</span>
-              </div>
+            {/* Enhanced KPI Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <KPIWidget
+                title="Total Jobs"
+                value={Array.isArray(jobs) ? jobs.length : 0}
+                icon={<Briefcase size={20} />}
+                color="bg-blue-500/20"
+                change={Array.isArray(jobs) && jobs.length > 0 ? "+12%" : "+0%"}
+              />
+              <KPIWidget
+                title="Success Rate"
+                value={`${Array.isArray(jobs) && jobs.length > 0 ? Math.round((jobs.filter(job => job.status === 'interview' || job.status === 'offer').length / jobs.length) * 100) : 0}%`}
+                icon={<TrendingUp size={20} />}
+                color="bg-green-500/20"
+                change={Array.isArray(jobs) && jobs.length > 0 ? "+5%" : "+0%"}
+              />
+              <KPIWidget
+                title="Interview Rate"
+                value={`${Array.isArray(jobs) && jobs.length > 0 ? Math.round((jobs.filter(job => job.status === 'interview').length / jobs.length) * 100) : 0}%`}
+                icon={<Target size={20} />}
+                color="bg-purple-500/20"
+                change={Array.isArray(jobs) && jobs.length > 0 ? "+8%" : "+0%"}
+              />
+              <KPIWidget
+                title="CV Health"
+                value={`${Array.isArray(cvs) && cvs.length > 0 ? Math.round(cvs.reduce((sum, cv) => sum + calculateCompletionPercentage(cv), 0) / cvs.length) : 0}%`}
+                icon={<Heart size={20} />}
+                color="bg-lime-500/20"
+                change={Array.isArray(cvs) && cvs.length > 0 ? "+10%" : "+0%"}
+              />
             </div>
-            
-            {/* Legend */}
-            <div className="flex flex-wrap gap-4 mt-6 pt-4 border-t border-white/10">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-blue-400 rounded-full"></div>
-                <span className="text-white/80 text-sm">Jobs Added</span>
+
+            {/* Performance Trends */}
+            {analyticsData?.performanceTrends && (
+              <div className="space-y-4">
+                <div className="p-4 bg-white/5 rounded-lg">
+                  <h3 className="text-white font-medium text-sm mb-3">Application Success Insights</h3>
+                  <div className="space-y-2">
+                    {analyticsData.performanceTrends.applicationSuccessRate?.insights?.map((insight: string, index: number) => (
+                      <div key={index} className="flex items-center gap-2 text-white/70 text-xs">
+                        <div className="w-1 h-1 bg-lime-400 rounded-full"></div>
+                        <span>{insight}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="p-4 bg-white/5 rounded-lg">
+                  <h3 className="text-white font-medium text-sm mb-3">CV Optimization Tips</h3>
+                  <div className="space-y-2">
+                    {analyticsData.performanceTrends.cvEffectiveness?.improvements?.map((improvement: string, index: number) => (
+                      <div key={index} className="flex items-center gap-2 text-white/70 text-xs">
+                        <div className="w-1 h-1 bg-blue-400 rounded-full"></div>
+                        <span>{improvement}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-lime-400 rounded-full"></div>
-                <span className="text-white/80 text-sm">CVs Created</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-purple-400 rounded-full"></div>
-                <span className="text-white/80 text-sm">Cover Letters</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-green-400 rounded-full"></div>
-                <span className="text-white/80 text-sm">Applications</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-orange-400 rounded-full"></div>
-                <span className="text-white/80 text-sm">Interviews</span>
-              </div>
-            </div>
+            )}
           </div>
 
-          {/* Weekly Schedule */}
-          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-            <div className="flex items-center justify-between mb-4">
+        </div>
+
+        {/* Column 3: My Vault, This Week's Schedule, CV Health Score */}
+        <div className="space-y-4">
+          {/* My Vault */}
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+            <VaultSummary counts={vaultCounts} />
+          </div>
+
+          {/* This Week's Schedule */}
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+            <div className="flex items-center justify-between mb-3">
               <div>
-                <h2 className="text-xl font-bold text-white">This Week's Schedule</h2>
-                <p className="text-white/60 text-sm">
+                <h3 className="text-white font-medium text-sm flex items-center gap-2">
+                  <Calendar size={14} className="text-blue-400" />
+                  This Week's Schedule
+                </h3>
+                <p className="text-white/60 text-xs mt-1">
                   {new Date().toLocaleDateString('en-US', { 
-                    month: 'long', 
+                    month: 'short', 
                     day: 'numeric' 
-                  })} - {new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { 
-                    month: 'long', 
+                  })} - {new Date(Date.now() + 6 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { 
+                    month: 'short', 
                     day: 'numeric' 
                   })}
                 </p>
               </div>
-              <div className="flex gap-2">
-                {['All', 'Applied', 'Screening', 'Interview', 'Offer', 'Rejected'].map((stage) => (
-                  <motion.button
-                    key={stage}
-                    onClick={() => setSelectedStage(stage.toLowerCase())}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-300 ${
-                      selectedStage === stage.toLowerCase()
-                        ? 'bg-lime-400/20 text-lime-400 border border-lime-400/30'
-                        : 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'
-                    }`}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    {stage}
-                  </motion.button>
-                ))}
-              </div>
             </div>
-            {(() => {
-              const filteredInterviews = selectedStage === 'all' 
-                ? interviews 
-                : interviews.filter(interview => interview.stage === selectedStage);
-              
-              return filteredInterviews.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {filteredInterviews.map((interview) => (
-                    <InterviewItem
-                      key={interview.id}
-                      company={interview.company}
-                      role={interview.role}
-                      stage={interview.stage}
-                      datetime={interview.datetime}
-                      type={interview.type}
-                      location={interview.location}
-                      jobId={interview.jobId}
-                      isMock={interview.isMock}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <Calendar size={48} className="text-white/20 mx-auto mb-4" />
-                  <p className="text-white/60">
-                    {selectedStage === 'all' 
-                      ? 'No upcoming interviews this week' 
-                      : `No ${selectedStage} interviews this week`
-                    }
-                  </p>
-                </div>
-              );
-            })()}
-          </div>
-        </div>
-
-        {/* Right Column */}
-        <div className="space-y-6">
-          {/* Quick Actions */}
-          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-            <h3 className="text-white font-medium text-sm mb-4 flex items-center gap-2">
-              <Zap size={14} className="text-yellow-400" />
-              Quick Actions
-            </h3>
-            <div className="space-y-3">
-              <motion.button
-                className="w-full p-3 bg-white/10 rounded-lg text-white/80 text-sm hover:bg-white/20 transition-all duration-300 flex items-center gap-3"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Plus size={16} />
-                Add New Job
-              </motion.button>
-              <motion.button
-                className="w-full p-3 bg-white/10 rounded-lg text-white/80 text-sm hover:bg-white/20 transition-all duration-300 flex items-center gap-3"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <FileText size={16} />
-                Create CV
-              </motion.button>
-              <motion.button
-                className="w-full p-3 bg-white/10 rounded-lg text-white/80 text-sm hover:bg-white/20 transition-all duration-300 flex items-center gap-3"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <PenTool size={16} />
-                Write Cover Letter
-              </motion.button>
-            </div>
-          </div>
-
-          {/* Recent Activity */}
-          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-            <h3 className="text-white font-medium text-sm mb-4 flex items-center gap-2">
-              <Activity size={14} className="text-blue-400" />
-              Recent Activity
-            </h3>
-            <div className="space-y-3">
-              {activities && activities.length > 0 ? (
-                activities.slice(0, 5).map((activity, index) => (
-                  <div key={activity.id || index} className="flex items-center gap-3 text-white/60 text-xs">
-                    <div className={`w-2 h-2 rounded-full ${
-                      activity.type === 'cv' ? 'bg-lime-400' :
-                      activity.type === 'job' ? 'bg-blue-400' :
-                      activity.type === 'cover_letter' ? 'bg-purple-400' : 'bg-orange-400'
-                    }`}></div>
-                    <span>{activity.description}</span>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-4">
-                  <p className="text-white/40 text-xs">No recent activity</p>
-                  <p className="text-white/20 text-xs mt-1">Start using the app to see your activity</p>
-                </div>
-              )}
+            
+            {/* Calendar Checklist - Only show days with tasks */}
+            <div className="space-y-2">
+              {(() => {
+                const daysWithTasks = [];
+                const today = new Date();
+                
+                for (let i = 0; i < 7; i++) {
+                  const date = new Date(today);
+                  date.setDate(today.getDate() + i);
+                  
+                  const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+                  const dayNumber = date.getDate();
+                  const isToday = i === 0;
+                  
+                  // Get tasks for this day
+                  const dayTasks = getDayTasks(date, interviews, jobData);
+                  
+                  // Only add days that have tasks
+                  if (dayTasks.length > 0) {
+                    daysWithTasks.push(
+                      <div 
+                        key={i} 
+                        className={`p-2 rounded-lg border transition-all duration-300 ${
+                          isToday 
+                            ? 'bg-lime-400/10 border-lime-400/30' 
+                            : 'bg-white/5 border-white/10'
+                        }`}
+                      >
+                        {/* Day Header */}
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-medium ${
+                              isToday 
+                                ? 'bg-lime-400 text-black' 
+                                : 'bg-white/10 text-white/80'
+                            }`}>
+                              {dayNumber}
+                            </div>
+                            <span className={`text-xs font-medium ${
+                              isToday 
+                                ? 'text-lime-400' 
+                                : 'text-white/80'
+                            }`}>
+                              {dayName}
+                            </span>
+                            {isToday && (
+                              <span className="px-1.5 py-0.5 bg-lime-400/20 text-lime-400 text-xs rounded-full">
+                                Today
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            {dayTasks.map((task, taskIndex) => (
+                              <div
+                                key={taskIndex}
+                                className={`w-1.5 h-1.5 rounded-full ${
+                                  task.completed ? 'bg-green-400' : getStageColor(task.stage)
+                                }`}
+                                title={`${task.type}: ${task.title}`}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                        
+                        {/* Day Tasks */}
+                        <div className="space-y-1">
+                          {dayTasks.map((task, taskIndex) => (
+                            <div key={taskIndex} className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={task.completed}
+                                onChange={() => toggleTaskCompletion(date, taskIndex)}
+                                className={`w-3 h-3 rounded border-2 transition-all duration-300 ${
+                                  task.completed 
+                                    ? 'bg-green-400 border-green-400' 
+                                    : 'border-white/30 bg-transparent'
+                                }`}
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1">
+                                  <span className={`text-xs font-medium ${
+                                    task.completed ? 'text-white/40 line-through' : 'text-white/80'
+                                  }`}>
+                                    {task.title}
+                                  </span>
+                                  <span className={`px-1 py-0.5 rounded text-xs ${
+                                    task.completed 
+                                      ? 'bg-white/10 text-white/40' 
+                                      : getStageColor(task.stage, true)
+                                  }`}>
+                                    {task.stage}
+                                  </span>
+                                </div>
+                                {task.company && (
+                                  <span className={`text-xs ${
+                                    task.completed ? 'text-white/30' : 'text-white/50'
+                                  }`}>
+                                    {task.company}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  }
+                }
+                
+                // If no days have tasks, show a message
+                if (daysWithTasks.length === 0) {
+                  return (
+                    <div className="text-center py-4">
+                      <Calendar size={24} className="text-white/30 mx-auto mb-2" />
+                      <span className="text-white/30 text-xs">No tasks scheduled this week</span>
+                    </div>
+                  );
+                }
+                
+                return daysWithTasks;
+              })()}
             </div>
           </div>
 
           {/* CV Health Score */}
-          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-            <CVHealthScore score={cvHealthScore} />
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+            <CVHealthScore score={Array.isArray(cvs) && cvs.length > 0 ? Math.round(cvs.reduce((sum, cv) => sum + calculateCompletionPercentage(cv), 0) / cvs.length) : 0} />
             <motion.button
-              className="w-full mt-4 px-4 py-2 bg-gradient-to-r from-lime-400/20 to-lime-500/20 border border-lime-400/30 text-lime-400 rounded-lg font-medium hover:from-lime-400/30 hover:to-lime-500/30 transition-all duration-300 flex items-center justify-center gap-2"
+              className="w-full mt-3 px-3 py-2 bg-gradient-to-r from-lime-400/20 to-lime-500/20 border border-lime-400/30 text-lime-400 rounded-lg font-medium hover:from-lime-400/30 hover:to-lime-500/30 transition-all duration-300 flex items-center justify-center gap-2 text-sm"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
+              onClick={() => window.location.href = '/studio'}
             >
               <Sparkles size={14} />
               Improve Score
             </motion.button>
           </div>
+        </div>
 
-          {/* AI Job Whisperer */}
-          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-            <h3 className="text-white font-medium text-sm mb-4 flex items-center gap-2">
-              <Bot size={14} className="text-purple-400" />
-              AI Job Whisperer
+        {/* Column 4: Quick Actions, Application Timeline, Recent Activity */}
+        <div className="space-y-4">
+          {/* Quick Actions */}
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+            <h3 className="text-white font-medium text-sm mb-3 flex items-center gap-2">
+              <Zap size={14} className="text-yellow-400" />
+              Quick Actions
             </h3>
-            <div className="space-y-4">
-              <JobTips tips={analyticsData?.jobTips || []} />
-              <AIGoal goal={aiGoal} metrics={aiMetrics} />
-              <KeywordsAnalysis strengths={strengths} gaps={gaps} />
+            <div className="space-y-2">
+              <motion.button
+                className="w-full p-2 bg-white/10 rounded-lg text-white/80 text-xs hover:bg-white/20 transition-all duration-300 flex items-center gap-2"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => window.location.href = '/dashboard/pipeline'}
+              >
+                <Plus size={12} />
+                Add Job
+              </motion.button>
+              <motion.button
+                className="w-full p-2 bg-white/10 rounded-lg text-white/80 text-xs hover:bg-white/20 transition-all duration-300 flex items-center gap-2"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => window.location.href = '/studio'}
+              >
+                <FileText size={12} />
+                Create CV
+              </motion.button>
+              <motion.button
+                className="w-full p-2 bg-white/10 rounded-lg text-white/80 text-xs hover:bg-white/20 transition-all duration-300 flex items-center gap-2"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => window.location.href = '/studio?type=cover_letter'}
+              >
+                <PenTool size={12} />
+                Write Cover Letter
+              </motion.button>
             </div>
           </div>
 
-          {/* Vault Summary */}
-          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-            <VaultSummary counts={vaultCounts} />
+          {/* Application Timeline */}
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+            <h3 className="text-white font-medium text-sm mb-3 flex items-center gap-2">
+              <Calendar size={14} className="text-orange-400" />
+              Application Timeline
+            </h3>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-white/80 text-xs">
+                <span>Applications This Week</span>
+                <span className="text-orange-400 font-medium">{Array.isArray(jobs) ? jobs.filter(job => {
+                  const jobDate = new Date(job.createdAt);
+                  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+                  return jobDate >= weekAgo;
+                }).length : 0}</span>
+              </div>
+              <div className="flex items-center justify-between text-white/80 text-xs">
+                <span>Avg. Response Time</span>
+                <span className="text-green-400 font-medium">8 days</span>
+              </div>
+              <div className="flex items-center justify-between text-white/80 text-xs">
+                <span>Next Follow-up</span>
+                <span className="text-blue-400 font-medium">2 days</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Enhanced Recent Activity */}
+          <EnhancedRecentActivityWidget activities={analyticsData?.recentActivity || []} />
+        </div>
+
+        {/* Column 5: Career Predictions, Market Intelligence, Market Status, Performance */}
+        <div className="space-y-4">
+          {/* Career Predictions */}
+          <PredictiveAnalyticsWidget 
+            predictions={analyticsData?.predictions || {}} 
+            onUpdateGoal={handleUpdateMonthlyGoal}
+          />
+
+          {/* Market Intelligence */}
+          <MarketIntelligenceWidget marketIntelligence={analyticsData?.marketIntelligence || {}} />
+
+          {/* Market Status */}
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+            <h3 className="text-white font-medium text-sm mb-3 flex items-center gap-2">
+              <TrendingUp size={14} className="text-green-400" />
+              Market Status
+            </h3>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-white/80 text-xs">
+                <span>Demand Level</span>
+                <span className="text-green-400 font-medium">High</span>
+              </div>
+              <div className="flex items-center justify-between text-white/80 text-xs">
+                <span>Salary Trend</span>
+                <span className="text-green-400 font-medium">+8%</span>
+              </div>
+              <div className="flex items-center justify-between text-white/80 text-xs">
+                <span>Remote Jobs</span>
+                <span className="text-blue-400 font-medium">+45%</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Performance Metrics */}
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+            <h3 className="text-white font-medium text-sm mb-3 flex items-center gap-2">
+              <BarChart3 size={14} className="text-purple-400" />
+              Performance
+            </h3>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-white/80 text-xs">
+                <span>ATS Score</span>
+                <span className="text-purple-400 font-medium">{Array.isArray(cvs) && cvs.length > 0 ? Math.round(cvs.reduce((sum, cv) => sum + calculateCompletionPercentage(cv), 0) / cvs.length) : 0}%</span>
+              </div>
+              <div className="flex items-center justify-between text-white/80 text-xs">
+                <span>Success Rate</span>
+                <span className="text-green-400 font-medium">{Array.isArray(jobs) && jobs.length > 0 ? Math.round((jobs.filter(job => job.status === 'interview' || job.status === 'offer').length / jobs.length) * 100) : 0}%</span>
+              </div>
+              <div className="flex items-center justify-between text-white/80 text-xs">
+                <span>Interview Rate</span>
+                <span className="text-blue-400 font-medium">{Array.isArray(jobs) && jobs.length > 0 ? Math.round((jobs.filter(job => job.status === 'interview').length / jobs.length) * 100) : 0}%</span>
+              </div>
+            </div>
           </div>
         </div>
+
+
       </div>
     </div>
   );

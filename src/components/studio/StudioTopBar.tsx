@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ChevronLeft, Save, Download, ChevronRight, ChevronLeft as ChevronLeftIcon } from 'lucide-react';
+import { ChevronLeft, Save, Download, ChevronRight, ChevronLeft as ChevronLeftIcon, Edit2, Check, X } from 'lucide-react';
 
 interface StudioTopBarProps {
   documentType: 'cv' | 'cover-letter';
@@ -15,6 +15,10 @@ interface StudioTopBarProps {
     right: boolean;
   };
   onTogglePanel: (panel: 'left' | 'right') => void;
+  documentTitle: string;
+  onTitleUpdate: (newTitle: string) => void;
+  isEditingTitle: boolean;
+  setIsEditingTitle: (editing: boolean) => void;
 }
 
 const StudioTopBar: React.FC<StudioTopBarProps> = ({
@@ -25,9 +29,14 @@ const StudioTopBar: React.FC<StudioTopBarProps> = ({
   onBack,
   onManualSave,
   panelStates,
-  onTogglePanel
+  onTogglePanel,
+  documentTitle,
+  onTitleUpdate,
+  isEditingTitle,
+  setIsEditingTitle
 }) => {
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [tempTitle, setTempTitle] = useState(documentTitle);
 
 
 
@@ -42,7 +51,60 @@ const StudioTopBar: React.FC<StudioTopBarProps> = ({
         >
           <ChevronLeft className="h-5 w-5" />
         </button>
-        <h1 className="text-xl font-semibold text-white">Studio</h1>
+        <div className="flex items-center space-x-2">
+          <h1 className="text-xl font-semibold text-white">Studio</h1>
+          <span className="text-gray-400">•</span>
+          {isEditingTitle ? (
+            <div className="flex items-center space-x-2">
+              <input
+                type="text"
+                value={tempTitle}
+                onChange={(e) => setTempTitle(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    onTitleUpdate(tempTitle);
+                  } else if (e.key === 'Escape') {
+                    setTempTitle(documentTitle);
+                    setIsEditingTitle(false);
+                  }
+                }}
+                className="px-2 py-1 bg-gray-700 text-white text-lg font-semibold rounded border border-gray-600 focus:border-lime-500 focus:outline-none"
+                autoFocus
+              />
+              <button
+                onClick={() => onTitleUpdate(tempTitle)}
+                className="p-1 text-green-400 hover:text-green-300 transition-colors"
+                title="Save title"
+              >
+                <Check className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => {
+                  setTempTitle(documentTitle);
+                  setIsEditingTitle(false);
+                }}
+                className="p-1 text-red-400 hover:text-red-300 transition-colors"
+                title="Cancel"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center space-x-2">
+              <h2 className="text-lg font-medium text-gray-300">{documentTitle}</h2>
+              <button
+                onClick={() => {
+                  setTempTitle(documentTitle);
+                  setIsEditingTitle(true);
+                }}
+                className="p-1 text-gray-400 hover:text-white transition-colors"
+                title="Edit title"
+              >
+                <Edit2 className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Center Region - Document Type Toggle */}

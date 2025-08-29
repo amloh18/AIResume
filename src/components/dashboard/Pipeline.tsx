@@ -454,9 +454,9 @@ const JobDetailsModal: React.FC<{
                 </motion.button>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
                 {/* Main Job Details */}
-                <div className="lg:col-span-2 space-y-6">
+                                  <div className="xl:col-span-2 space-y-6">
                   {/* Status and Progress - Horizontal Timeline */}
                   <div className="bg-white/5 rounded-xl p-4">
                     <h3 className="text-lg font-semibold mb-4">Application Progress</h3>
@@ -499,7 +499,7 @@ const JobDetailsModal: React.FC<{
                   {/* Job Details */}
                   <div className="bg-white/5 rounded-xl p-4">
                     <h3 className="text-lg font-semibold mb-4">Job Details</h3>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="text-white/60 text-sm">Location</label>
                         <p className="text-white">{job.location || 'Not specified'}</p>
@@ -635,7 +635,7 @@ const JobDetailsModal: React.FC<{
                   {/* Quick Actions */}
                   <div className="bg-white/5 rounded-xl p-4">
                     <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       <motion.button
                         onClick={() => {
                           console.log('🔍 Pipeline - Edit job clicked for:', job.id);
@@ -1879,7 +1879,7 @@ const Pipeline: React.FC = () => {
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                   {/* Left Column */}
                   <div className="space-y-3">
                     <div>

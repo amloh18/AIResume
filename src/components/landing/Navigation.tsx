@@ -6,11 +6,13 @@ import Logo from '../ui/Logo';
 import { Menu, X } from 'lucide-react';
 import LoginModal from '../auth/LoginModal';
 import SignupModal from '../onboarding/AuthModal';
+import BetaSignupModal from './BetaSignupModal';
 
 const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
+  const [isBetaModalOpen, setIsBetaModalOpen] = useState(false);
   const [navbarHeight, setNavbarHeight] = useState(80);
   const [scrolled, setScrolled] = useState(false);
 
@@ -68,7 +70,9 @@ const Navigation = () => {
     
     // Set flag for new user CV setup (in case they haven't completed onboarding)
     sessionStorage.setItem('needsCVSetup', 'true');
+    sessionStorage.setItem('fromLogin', 'true');
     
+    // Use router.push instead of window.location.href for better navigation
     window.location.href = '/dashboard';
   };
 
@@ -87,7 +91,9 @@ const Navigation = () => {
     
     // Set flag for new user CV setup
     sessionStorage.setItem('needsCVSetup', 'true');
+    sessionStorage.setItem('fromRegistration', 'true');
     
+    // Use router.push instead of window.location.href for better navigation
     window.location.href = '/dashboard';
   };
 
@@ -134,7 +140,18 @@ const Navigation = () => {
               </div>
 
               {/* Desktop Login Button */}
-              <div className="hidden md:flex items-center">
+              <div className="hidden md:flex items-center space-x-4">
+                <motion.button
+                  className="border border-white/20 text-white px-6 py-3 rounded-full font-medium text-base hover:bg-white/10 transition-all"
+                  whileHover={{
+                    scale: 1.05,
+                    borderColor: 'rgba(132, 204, 22, 0.5)'
+                  }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setIsBetaModalOpen(true)}
+                >
+                  Join Beta
+                </motion.button>
                 <motion.button
                   className="bg-gradient-to-r from-lime-400 to-lime-500 text-black px-6 py-3 rounded-full font-medium text-base hover:shadow-lg hover:shadow-lime-400/25 transition-all"
                   whileHover={{
@@ -197,7 +214,18 @@ const Navigation = () => {
                 {link.label}
               </motion.a>
             ))}
-            <div className="pt-4 border-t border-white/10">
+            <div className="pt-4 border-t border-white/10 space-y-3">
+              <motion.button
+                className="w-full border border-white/20 text-white px-4 py-3 rounded-2xl font-medium text-lg hover:bg-white/10 transition-all"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  setIsBetaModalOpen(true);
+                  setIsMenuOpen(false);
+                }}
+              >
+                Join Beta
+              </motion.button>
               <motion.button
                 className="w-full bg-gradient-to-r from-lime-400 to-lime-500 text-black px-4 py-3 rounded-2xl font-medium text-lg hover:shadow-lg hover:shadow-lime-400/25 transition-all"
                 whileHover={{ scale: 1.02 }}
@@ -228,6 +256,12 @@ const Navigation = () => {
         onClose={() => setIsSignupModalOpen(false)}
         onSuccess={handleSignupSuccess}
         onSwitchToLogin={handleSwitchToLogin}
+      />
+
+      {/* Beta Signup Modal */}
+      <BetaSignupModal
+        isOpen={isBetaModalOpen}
+        onClose={() => setIsBetaModalOpen(false)}
       />
     </>
   );

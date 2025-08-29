@@ -4,6 +4,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Eye, EyeOff, Mail, Lock, Loader2 } from 'lucide-react';
+import LoadingAnimation from '@/components/ui/LoadingAnimation';
 
 const LoginForm = () => {
   const { data: session, status } = useSession();
@@ -52,22 +53,11 @@ const LoginForm = () => {
   };
 
   if (status === 'loading') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <LoadingAnimation progress={0.3} showProgressBar={false} />;
   }
 
   if (status === 'authenticated') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Redirecting...</p>
-        </div>
-      </div>
-    );
+    return <LoadingAnimation progress={0.8} showProgressBar={false} />;
   }
 
   return (
@@ -216,11 +206,7 @@ const LoginForm = () => {
 
 const LoginPage = () => {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-      </div>
-    }>
+    <Suspense fallback={<LoadingAnimation progress={0.3} showProgressBar={false} />}>
       <LoginForm />
     </Suspense>
   );

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Check, Star, ArrowRight, Brain, Users, Crown, Globe, CreditCard, Shield } from 'lucide-react';
 import { LocationService, LocationData, PricingData } from '@/lib/payment/locationService';
+import LoadingAnimation from '@/components/ui/LoadingAnimation';
 
 interface PricingPlan {
   name: string;
@@ -195,7 +196,7 @@ const DynamicPricing: React.FC<DynamicPricingProps> = ({ onPlanSelect }) => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <LoadingAnimation progress={0.3} showProgressBar={false} />
       </div>
     );
   }

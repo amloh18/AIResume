@@ -5,6 +5,7 @@ import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, User, Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
+import { signInWithGoogle } from '@/lib/firebase';
 
 interface RegistrationModalProps {
   isOpen: boolean;
@@ -31,7 +32,10 @@ export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, on
   const router = useRouter();
 
   // Check if OAuth providers are available
-  const hasGoogleCredentials = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && process.env.NEXT_PUBLIC_GOOGLE_CLIENT_SECRET;
+  // For Firebase Google Auth, we check for Firebase config
+  const hasFirebaseGoogle = process.env.NEXT_PUBLIC_FIREBASE_API_KEY && process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN;
+  // For NextAuth Google Auth, we check for NextAuth credentials
+  const hasNextAuthGoogle = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && process.env.NEXT_PUBLIC_GOOGLE_CLIENT_SECRET;
   const hasAppleCredentials = process.env.NEXT_PUBLIC_APPLE_ID && process.env.NEXT_PUBLIC_APPLE_SECRET;
 
   const handleInputChange = (field: string, value: string) => {
@@ -128,11 +132,65 @@ export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, on
     setIsLoading(true);
     setError('');
 
-    try {
-      await signIn(provider, { callbackUrl: '/dashboard' });
-    } catch (error) {
-      setError(`Failed to sign in with ${provider}. Please try again.`);
-      setIsLoading(false);
+    if (provider === 'google') {
+      // Use Firebase for Google authentication
+      try {
+        const user = await signInWithGoogle();
+        
+        // Wait a moment for localStorage to be updated by the hook
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Check if this is a new user by checking if they have a CV
+        const userData = localStorage.getItem('user');
+        if (userData) {
+          try {
+            const parsedUser = JSON.parse(userData);
+            
+            // Check if user has any CVs
+            try {
+              const response = await fetch(`/api/cvs?userId=${parsedUser.id}`);
+              const result = await response.json();
+              
+              if (result.success && result.data.cvs && result.data.cvs.length > 0) {
+                // User has CVs, redirect to dashboard
+                onClose();
+                window.location.href = '/dashboard';
+              } else {
+                // New user, redirect to onboarding Personal Information page (step 1)
+                onClose();
+                window.location.href = '/onboarding?step=1';
+              }
+            } catch (error) {
+              console.log('Error checking CVs, assuming new user:', error);
+              // If we can't check CVs, assume new user and redirect to onboarding Personal Information page
+              onClose();
+              window.location.href = '/onboarding?step=1';
+            }
+          } catch (error) {
+            console.log('Error parsing user data, assuming new user:', error);
+            // Error parsing user data, assume new user
+            onClose();
+            window.location.href = '/onboarding?step=1';
+          }
+        } else {
+          console.log('No user data in localStorage, assuming new user');
+          // No user data, redirect to onboarding Personal Information page
+          onClose();
+          window.location.href = '/onboarding?step=1';
+        }
+      } catch (error: any) {
+        setError(error.message || 'Failed to sign in with Google. Please try again.');
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      // Use NextAuth for Apple authentication
+      try {
+        await signIn(provider, { callbackUrl: '/dashboard' });
+      } catch (error) {
+        setError(`Failed to sign in with ${provider}. Please try again.`);
+        setIsLoading(false);
+      }
     }
   };
 
@@ -223,11 +281,31 @@ export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, on
                     <p className="text-white/60">Join CVCircle and build your professional profile</p>
                   </div>
 
-                  {/* OAuth Buttons - Only show if credentials are configured */}
-                  {(hasGoogleCredentials || hasAppleCredentials) && (
+                  {/* OAuth Buttons - Show Google sign-in if Firebase is configured */}
+                  {(hasFirebaseGoogle || hasNextAuthGoogle || hasAppleCredentials) && (
                     <>
                       <div className="space-y-3 mb-6">
-                        {hasGoogleCredentials && (
+                        {/* Firebase Google Auth (Primary) */}
+                        {hasFirebaseGoogle && (
+                          <motion.button
+                            onClick={() => handleOAuthSignIn('google')}
+                            disabled={isLoading}
+                            className="w-full flex items-center justify-center px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-lime-400/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+                            whileHover={{ scale: isLoading ? 1 : 1.02 }}
+                            whileTap={{ scale: isLoading ? 1 : 0.98 }}
+                          >
+                            <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
+                              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                            </svg>
+                            Continue with Google
+                          </motion.button>
+                        )}
+
+                        {/* NextAuth Google Auth (Fallback) */}
+                        {!hasFirebaseGoogle && hasNextAuthGoogle && (
                           <motion.button
                             onClick={() => handleOAuthSignIn('google')}
                             disabled={isLoading}
@@ -271,6 +349,15 @@ export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, on
                         </div>
                       </div>
                     </>
+                  )}
+
+                  {/* Show message if no OAuth providers are configured */}
+                  {!hasFirebaseGoogle && !hasNextAuthGoogle && !hasAppleCredentials && (
+                    <div className="mb-6 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                      <p className="text-yellow-400 text-sm text-center">
+                        🔧 OAuth providers not configured. Please set up Firebase or NextAuth credentials.
+                      </p>
+                    </div>
                   )}
 
                   {/* Registration Form */}
