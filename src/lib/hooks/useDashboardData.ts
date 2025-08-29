@@ -298,19 +298,23 @@ export function useDashboardData(userId: string, selectedPeriod: string = 'week'
 
   const loadVaultCounts = useCallback(async () => {
     try {
-      const [cvCounts, jobCounts, coverLetterCounts] = await Promise.all([
+      const [cvCounts, jobCounts, coverLetterCounts, allJobs] = await Promise.all([
         CVService.getCVCounts(userId),
         JobService.getJobCounts(userId, 'all'),
-        CVService.getCVs({ userId, type: 'cover', projection: 'list' })
+        CVService.getCVs({ userId, type: 'cover', projection: 'list' }),
+        JobService.getJobs({ userId, status: 'all' })
       ]);
+
+      // Filter out rejected jobs for vault count
+      const nonRejectedJobs = allJobs.jobs.filter((job: any) => job.status !== 'rejected');
 
       setData(prev => ({
         ...prev,
         vaultCounts: {
           cvs: cvCounts.total,
           coverLetters: coverLetterCounts.total,
-          jobDescriptions: jobCounts.total,
-          notes: Math.floor((cvCounts.total + jobCounts.total + coverLetterCounts.total) * 0.3)
+          jobDescriptions: nonRejectedJobs.length,
+          notes: Math.floor((cvCounts.total + nonRejectedJobs.length + coverLetterCounts.total) * 0.3)
         }
       }));
     } catch (error) {

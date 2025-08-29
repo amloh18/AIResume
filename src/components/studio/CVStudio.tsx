@@ -17,7 +17,8 @@ import { debounce } from 'lodash';
 import { transformDatabaseToStudio } from '@/lib/utils/cvDataTransform';
 import { toCVDataStructure } from '@/lib/utils/dataAdapter';
 import Toast from '@/components/ui/Toast';
-import { generateCVName, generateCVDescription } from '@/lib/utils/cvNamingUtils';
+import LoadingAnimation from '@/components/ui/LoadingAnimation';
+import { generateCVName, generateCVDescription, getCVMetadata } from '@/lib/utils/cvNamingUtils';
 
 interface CVStudioProps {
   jobId?: string | null;
@@ -44,6 +45,8 @@ const CVStudio: React.FC<CVStudioProps> = ({ jobId, cvId, userId }) => {
   
   // CV Data state
   const [cvData, setCvData] = useState<CVDataStructure | null>(null);
+  const [cvTitle, setCvTitle] = useState<string>('Untitled CV');
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
   
   const { 
     templates, 
@@ -72,29 +75,32 @@ const CVStudio: React.FC<CVStudioProps> = ({ jobId, cvId, userId }) => {
       
       current[pathArray[pathArray.length - 1]] = value;
       
-      // Auto-update CV title when name, label, or summary changes
-      if (path.startsWith('basics.') && (path.includes('name') || path.includes('label') || path.includes('summary'))) {
-        const newTitle = generateCVName(newData);
-        const newDescription = generateCVDescription(newData);
-        
-        // Update the CV title in the database if we have a CV ID
-        if (cvId) {
-          // Debounced update to avoid too many API calls
-          const updateTitle = debounce(async () => {
-            try {
-              await CVService.updateCVMetadata(cvId, {
-                title: newTitle,
-                description: newDescription
-              }, userId || undefined);
-              console.log('✅ Auto-updated CV title to:', newTitle);
-            } catch (error) {
-              console.error('❌ Failed to auto-update CV title:', error);
-            }
-          }, 1000);
+              // Auto-update CV title when name, label, or summary changes
+        if (path.startsWith('basics.') && (path.includes('name') || path.includes('label') || path.includes('summary'))) {
+          const newTitle = generateCVName(newData);
+          const newDescription = generateCVDescription(newData);
           
-          updateTitle();
+          // Update local title state immediately
+          setCvTitle(newTitle);
+          
+          // Update the CV title in the database if we have a CV ID
+          if (cvId) {
+            // Debounced update to avoid too many API calls
+            const updateTitle = debounce(async () => {
+              try {
+                await CVService.updateCVMetadata(cvId, {
+                  title: newTitle,
+                  description: newDescription
+                }, userId || undefined);
+                console.log('✅ Auto-updated CV title to:', newTitle);
+              } catch (error) {
+                console.error('❌ Failed to auto-update CV title:', error);
+              }
+            }, 1000);
+            
+            updateTitle();
+          }
         }
-      }
       
       return newData;
     });
@@ -263,6 +269,14 @@ const CVStudio: React.FC<CVStudioProps> = ({ jobId, cvId, userId }) => {
           setShowSavedMessage(true);
           setTimeout(() => setShowSavedMessage(false), 2000); // Hide after 2 seconds
         } else {
+          // Prevent multiple CV creation - only create if we don't have a CV ID
+          if (justCreated) {
+            console.log('🔍 Studio - Skipping CV creation, just created one');
+            clearTimeout(saveTimeout);
+            setSaveStatus('saved');
+            return;
+          }
+          
           // Create new CV
           const userData = localStorage.getItem('user');
           const currentUserId = userData ? JSON.parse(userData).id || JSON.parse(userData)._id : userId || '6889b151d17daa1eaee91a5c';
@@ -297,13 +311,18 @@ const CVStudio: React.FC<CVStudioProps> = ({ jobId, cvId, userId }) => {
         setSaveStatus('error');
       }
     }, 1000),
-    [cvId, jobId, selectedJobId, selectedTemplate, router, userId]
+    [cvId, jobId, selectedJobId, selectedTemplate, userId, justCreated]
   );
 
   // Autosave on any change
   useEffect(() => {
     if (cvData && !isLoading && !justCreated) {
-      debouncedSave(cvData);
+      // Add a small delay to prevent immediate autosave on component mount
+      const timeoutId = setTimeout(() => {
+        debouncedSave(cvData);
+      }, 500);
+      
+      return () => clearTimeout(timeoutId);
     }
   }, [cvData, debouncedSave, isLoading, justCreated]);
 
@@ -388,13 +407,31 @@ const CVStudio: React.FC<CVStudioProps> = ({ jobId, cvId, userId }) => {
               const convertedData = toCVDataStructure(cvResult.cvData);
               console.log('Converted fallback CV data:', convertedData);
               setCvData(convertedData);
+              
+              // Set CV title from the result
+              if (cvResult.title) {
+                setCvTitle(cvResult.title);
+              } else {
+                // Generate title from CV data if not available
+                const generatedTitle = generateCVName(convertedData);
+                setCvTitle(generatedTitle);
+              }
             }
           } else {
-            // Load existing CV from API
-            cvResult = await CVService.getCV(cvId, userId);
-            const convertedData = toCVDataStructure(cvResult.cvData);
-            console.log('Converted existing CV data:', convertedData);
-            setCvData(convertedData);
+                      // Load existing CV from API
+          cvResult = await CVService.getCV(cvId, userId);
+          const convertedData = toCVDataStructure(cvResult.cvData);
+          console.log('Converted existing CV data:', convertedData);
+          setCvData(convertedData);
+          
+          // Set CV title from the result
+          if (cvResult.title) {
+            setCvTitle(cvResult.title);
+          } else {
+            // Generate title from CV data if not available
+            const generatedTitle = generateCVName(convertedData);
+            setCvTitle(generatedTitle);
+          }
           }
           
           // Set template if available
@@ -438,6 +475,9 @@ const CVStudio: React.FC<CVStudioProps> = ({ jobId, cvId, userId }) => {
           };
           console.log('Setting default CV data:', defaultCVData);
           setCvData(defaultCVData);
+          
+          // Set default title for new CV
+          setCvTitle('Untitled CV');
           
           // If no cvId is provided, we're creating a new CV
           // Set a default template if available
@@ -491,20 +531,30 @@ const CVStudio: React.FC<CVStudioProps> = ({ jobId, cvId, userId }) => {
     }
   };
 
+  const handleTitleUpdate = async (newTitle: string) => {
+    if (cvId && newTitle.trim()) {
+      try {
+        await CVService.updateCVMetadata(cvId, {
+          title: newTitle.trim()
+        }, userId || undefined);
+        setCvTitle(newTitle.trim());
+        setIsEditingTitle(false);
+      } catch (error) {
+        console.error('Error updating CV title:', error);
+      }
+    } else {
+      setCvTitle(newTitle.trim());
+      setIsEditingTitle(false);
+    }
+  };
+
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-lime-500 mx-auto mb-4"></div>
-          <p className="text-gray-300">Loading Studio...</p>
-        </div>
-      </div>
-    );
+    return <LoadingAnimation progress={0.4} showProgressBar={false} />;
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900">
+      <div className="min-h-screen flex items-center justify-center bg-transparent">
         <div className="text-center">
           <div className="text-red-400 mb-4">{error}</div>
           <button 
@@ -519,7 +569,7 @@ const CVStudio: React.FC<CVStudioProps> = ({ jobId, cvId, userId }) => {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gray-900 overflow-hidden">
+    <div className="h-screen flex flex-col bg-transparent overflow-hidden">
       {/* Toast Notifications */}
       <Toast
         message="CV saved successfully!"
@@ -539,6 +589,10 @@ const CVStudio: React.FC<CVStudioProps> = ({ jobId, cvId, userId }) => {
         onManualSave={manualSave}
         panelStates={panelStates}
         onTogglePanel={togglePanel}
+        documentTitle={cvTitle}
+        onTitleUpdate={handleTitleUpdate}
+        isEditingTitle={isEditingTitle}
+        setIsEditingTitle={setIsEditingTitle}
       />
 
       {/* Main Content Area */}
@@ -561,7 +615,7 @@ const CVStudio: React.FC<CVStudioProps> = ({ jobId, cvId, userId }) => {
         </div>
 
         {/* Center Panel - Preview */}
-        <div className="flex-1 bg-gray-900 relative">
+        <div className="flex-1 bg-black/20 relative">
           <PreviewPanel
             cvData={cvData}
             template={selectedTemplate}

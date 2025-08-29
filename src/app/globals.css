@@ -16,6 +16,10 @@ html {
   scroll-behavior: smooth;
   background: #000000;
   min-height: 100%;
+  /* Optimize for performance */
+  text-rendering: optimizeSpeed;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
@@ -28,6 +32,9 @@ body {
   min-height: 100vh;
   margin: 0;
   padding: 0;
+  /* Performance optimizations */
+  text-rendering: optimizeSpeed;
+  line-height: 1.5;
 }
 
 /* Optimize animations */
@@ -52,6 +59,7 @@ body {
   transform: translateZ(0);
   backface-visibility: hidden;
   perspective: 1000px;
+  will-change: transform;
 }
 
 /* Optimize backdrop blur */
@@ -200,47 +208,104 @@ body {
   }
 }
 
-/* Optimize scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.5);
-}
-
-/* Optimize text rendering */
-.text-optimized {
-  text-rendering: optimizeLegibility;
-  font-feature-settings: "kern" 1;
-  font-kerning: normal;
-}
-
 /* Optimize images */
-.img-optimized {
-  image-rendering: -webkit-optimize-contrast;
-  image-rendering: crisp-edges;
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Optimize fonts */
+@font-face {
+  font-family: 'Inter';
+  font-display: swap;
+  src: url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+}
+
+/* Optimize layout shifts */
+.layout-stable {
+  contain: layout;
+}
+
+/* Optimize paint operations */
+.paint-optimized {
+  contain: paint;
+  will-change: transform;
+}
+
+/* Optimize scrolling */
+.smooth-scroll {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Optimize focus states */
-.focus-visible {
+.focus-optimized:focus {
   outline: 2px solid #84cc16;
   outline-offset: 2px;
 }
 
-/* Optimize dark mode transitions */
-.dark-transition {
-  transition: background-color 0.2s ease, color 0.2s ease;
+/* Optimize text rendering */
+.text-optimized {
+  text-rendering: optimizeSpeed;
+  font-feature-settings: "kern" 1;
+  font-kerning: normal;
+}
+
+/* Optimize animations for better performance */
+.animate-optimized {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+/* Optimize loading animation specifically */
+.cv-circle-loading {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+/* Optimize progress animations */
+.progress-optimized {
+  will-change: width;
+  transform: translateZ(0);
+}
+
+/* Optimize neon glow effects */
+.neon-glow {
+  filter: drop-shadow(0 0 10px rgba(132, 204, 22, 0.8));
+  will-change: filter;
+}
+
+/* Optimize responsive images */
+.responsive-image {
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+  will-change: transform;
+}
+
+/* Optimize lazy loading */
+.lazy-load {
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.lazy-load.loaded {
+  opacity: 1;
+}
+
+/* Optimize critical CSS */
+.critical {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 500px;
+}
+
+/* Optimize non-critical CSS */
+.non-critical {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 100px;
 }
 
 /* Optimize grid layouts */

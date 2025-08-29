@@ -37,7 +37,9 @@ import {
   Save,
   Check,
   Lightbulb,
-  Activity
+  Activity,
+  AlertTriangle,
+  AlertCircle
 } from 'lucide-react';
 import { useCreateCV } from '@/lib/utils/cvCreationUtils';
 import CVPreviewContent from '@/components/studio/CVPreviewContent';
@@ -53,7 +55,7 @@ interface CV {
   description?: string;
   cvData?: any; // CV data structure for preview
   connectedJobs?: Job[];
-  connectedCoverLetters?: CoverLetter[];
+
   completionPercentage?: number;
 }
 
@@ -68,14 +70,117 @@ interface Job {
   description?: string;
 }
 
-interface CoverLetter {
-  id: string;
+
+
+// Modal Component for Confirmations and Errors
+interface ModalProps {
+  isOpen: boolean;
+  onClose: () => void;
   title: string;
-  jobTitle: string;
-  company: string;
-  createdDate: string;
-  status: 'draft' | 'sent' | 'archived';
+  message: string;
+  type: 'success' | 'error' | 'confirmation';
+  onConfirm?: () => void;
+  confirmText?: string;
+  cancelText?: string;
 }
+
+const Modal: React.FC<ModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  title, 
+  message, 
+  type, 
+  onConfirm, 
+  confirmText = 'Confirm', 
+  cancelText = 'Cancel' 
+}) => {
+  if (!isOpen) return null;
+
+  const getIcon = () => {
+    switch (type) {
+      case 'success':
+        return <CheckCircle className="w-6 h-6 text-green-400" />;
+      case 'error':
+        return <AlertCircle className="w-6 h-6 text-red-400" />;
+      case 'confirmation':
+        return <AlertTriangle className="w-6 h-6 text-yellow-400" />;
+      default:
+        return <AlertCircle className="w-6 h-6 text-blue-400" />;
+    }
+  };
+
+  const getButtonColors = () => {
+    switch (type) {
+      case 'success':
+        return 'bg-green-500 hover:bg-green-600';
+      case 'error':
+        return 'bg-red-500 hover:bg-red-600';
+      case 'confirmation':
+        return 'bg-yellow-500 hover:bg-yellow-600';
+      default:
+        return 'bg-blue-500 hover:bg-blue-600';
+    }
+  };
+
+  return (
+    <AnimatePresence>
+      <div className="fixed inset-0 z-50 flex items-center justify-center">
+        {/* Backdrop */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+          onClick={onClose}
+        />
+        
+        {/* Modal */}
+        <motion.div
+          initial={{ scale: 0.95, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.95, opacity: 0 }}
+          className="relative bg-gray-900 border border-white/10 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl"
+        >
+          {/* Header */}
+          <div className="flex items-center gap-3 mb-4">
+            {getIcon()}
+            <h3 className="text-lg font-semibold text-white">{title}</h3>
+            <button
+              onClick={onClose}
+              className="ml-auto p-1 hover:bg-white/10 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5 text-white/60" />
+            </button>
+          </div>
+          
+          {/* Content */}
+          <p className="text-white/80 mb-6">{message}</p>
+          
+          {/* Actions */}
+          <div className="flex gap-3 justify-end">
+            {type === 'confirmation' && (
+              <button
+                onClick={onClose}
+                className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
+              >
+                {cancelText}
+              </button>
+            )}
+            <button
+              onClick={() => {
+                if (onConfirm) onConfirm();
+                onClose();
+              }}
+              className={`px-4 py-2 text-white rounded-lg transition-colors ${getButtonColors()}`}
+            >
+              {type === 'confirmation' ? confirmText : 'OK'}
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    </AnimatePresence>
+  );
+};
 
 const Canvas: React.FC = () => {
   console.log('🔍 Canvas - Component rendered');
@@ -96,6 +201,30 @@ const Canvas: React.FC = () => {
   const [editingCVId, setEditingCVId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
   const [deletingCVId, setDeletingCVId] = useState<string | null>(null);
+  
+  // Modal state
+  const [modalConfig, setModalConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'error' | 'confirmation';
+    onConfirm?: () => void;
+    confirmText?: string;
+    cancelText?: string;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'error'
+  });
+
+  const showModalDialog = (config: Omit<typeof modalConfig, 'isOpen'>) => {
+    setModalConfig({ ...config, isOpen: true });
+  };
+
+  const hideModalDialog = () => {
+    setModalConfig(prev => ({ ...prev, isOpen: false }));
+  };
 
   // Load CVs from API
   useEffect(() => {
@@ -183,18 +312,7 @@ const Canvas: React.FC = () => {
             console.error('Error loading connected jobs for CV:', cvId, error);
           }
           
-          // Load connected cover letters (placeholder for now)
-          let connectedCoverLetters: CoverLetter[] = [];
-          try {
-            // TODO: Implement cover letter loading when API is available
-            // const coverLettersResponse = await fetch(`/api/cover-letters?userId=${userIdToUse}&cvId=${cvId}`);
-            // const coverLettersResult = await coverLettersResponse.json();
-            // if (coverLettersResult.success) {
-            //   connectedCoverLetters = coverLettersResult.data;
-            // }
-          } catch (error) {
-            console.error('Error loading connected cover letters for CV:', cvId, error);
-          }
+
           
           return {
             id: cvId,
@@ -204,10 +322,9 @@ const Canvas: React.FC = () => {
             views: cv.viewCount || cv.views || 0,
             isStarred: cv.starred || cv.isStarred || false,
             thumbnail: cv.thumbnail || '/api/placeholder/300/200',
-            description: cv.description || 'No description available',
+                            description: cv.description || '',
             cvData: cv.cvData || null, // Include CV data for preview
             connectedJobs,
-            connectedCoverLetters,
             completionPercentage: calculateCompletionPercentage(cv)
           };
         }));
@@ -445,7 +562,7 @@ const Canvas: React.FC = () => {
     console.log('🔍 Canvas - CV clicked:', cv.id);
     console.log('🔍 Canvas - CV data:', cv.cvData);
     console.log('🔍 Canvas - Connected jobs:', cv.connectedJobs);
-    console.log('🔍 Canvas - Connected cover letters:', cv.connectedCoverLetters);
+    
     setSelectedCV(cv);
     setShowModal(true);
   };
@@ -457,14 +574,65 @@ const Canvas: React.FC = () => {
 
   const saveTitle = async (cvId: string) => {
     try {
-      // In a real app, you would make an API call here to save the title
-      setCvs(cvs.map(cv => 
-        cv.id === cvId ? { ...cv, title: editingTitle } : cv
-      ));
-      setEditingCVId(null);
-      setEditingTitle('');
+      // Get user ID from session or localStorage
+      let userId = session?.user?.id;
+      if (!userId) {
+        const userData = localStorage.getItem('user');
+        if (userData) {
+          try {
+            const parsedUser = JSON.parse(userData);
+            userId = parsedUser.id || parsedUser._id;
+          } catch (error) {
+            console.error('Error parsing user data:', error);
+          }
+        }
+      }
+      
+      if (!userId) {
+        console.error('No user ID available for title update');
+        showModalDialog({
+          title: 'Authentication Error',
+          message: 'Please log in again to continue.',
+          type: 'error'
+        });
+        return;
+      }
+
+      // Make API call to update the CV title
+      const response = await fetch(`/api/cvs/${cvId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: editingTitle,
+          userId: userId
+        }),
+      });
+
+      if (response.ok) {
+        // Update local state only after successful API call
+        setCvs(cvs.map(cv => 
+          cv.id === cvId ? { ...cv, title: editingTitle } : cv
+        ));
+        setEditingCVId(null);
+        setEditingTitle('');
+      } else {
+        const errorData = await response.json();
+        console.error('Error updating CV title:', errorData);
+        showModalDialog({
+          title: 'Update Failed',
+          message: 'Failed to update CV title. Please try again.',
+          type: 'error'
+        });
+      }
     } catch (error) {
       console.error('Error saving CV title:', error);
+      showModalDialog({
+        title: 'Update Error',
+        message: 'Error updating CV title. Please try again.',
+        type: 'error'
+      });
     }
   };
 
@@ -507,7 +675,11 @@ const Canvas: React.FC = () => {
         console.error('No user ID available for delete operation');
         console.error('Session:', session);
         console.error('localStorage user data:', localStorage.getItem('user'));
-        alert('Authentication error. Please log in again.');
+        showModalDialog({
+          title: 'Authentication Error',
+          message: 'Please log in again to continue.',
+          type: 'error'
+        });
         return;
       }
       
@@ -525,7 +697,11 @@ const Canvas: React.FC = () => {
       const objectIdRegex = /^[0-9a-fA-F]{24}$/;
       if (!objectIdRegex.test(cvId)) {
         console.error('Invalid CV ID format:', cvId);
-        alert('Invalid CV ID format. Cannot delete this CV.');
+        showModalDialog({
+          title: 'Invalid CV',
+          message: 'Invalid CV ID format. Cannot delete this CV.',
+          type: 'error'
+        });
         return;
       }
       
@@ -553,16 +729,114 @@ const Canvas: React.FC = () => {
         // Remove the CV from the local state
         setCvs(cvs.filter(cv => cv.id !== cvId));
         // Show success message
-        alert('CV deleted successfully!');
+        showModalDialog({
+          title: 'Success',
+          message: 'CV deleted successfully!',
+          type: 'success'
+        });
       } else {
         console.error('Failed to delete CV:', result.message);
-        alert(`Failed to delete CV: ${result.message}`);
+        showModalDialog({
+          title: 'Delete Failed',
+          message: `Failed to delete CV: ${result.message}`,
+          type: 'error'
+        });
       }
     } catch (error) {
       console.error('Error deleting CV:', error);
-      alert('Error deleting CV. Please try again.');
+      showModalDialog({
+        title: 'Delete Error',
+        message: 'Error deleting CV. Please try again.',
+        type: 'error'
+      });
     } finally {
       setDeletingCVId(null);
+    }
+  };
+
+  const unlinkJobFromCV = async (cvId: string, jobId: string) => {
+    try {
+      // Get user ID from session or localStorage
+      let userId = session?.user?.id;
+      
+      if (!userId) {
+        const userData = localStorage.getItem('user');
+        if (userData) {
+          try {
+            const parsedUser = JSON.parse(userData);
+            userId = parsedUser.id || parsedUser._id;
+          } catch (error) {
+            console.error('Error parsing user data:', error);
+          }
+        }
+      }
+      
+      if (!userId) {
+        showModalDialog({
+          title: 'Authentication Error',
+          message: 'Please log in again to continue.',
+          type: 'error'
+        });
+        return;
+      }
+
+      // Update local state immediately for better UX
+      setCvs(prevCvs => 
+        prevCvs.map(cv => 
+          cv.id === cvId 
+            ? { 
+                ...cv, 
+                connectedJobs: cv.connectedJobs?.filter(job => job.id !== jobId) || [] 
+              }
+            : cv
+        )
+      );
+
+      // Update selected CV if it's the one being modified
+      if (selectedCV && selectedCV.id === cvId) {
+        setSelectedCV(prev => 
+          prev ? {
+            ...prev,
+            connectedJobs: prev.connectedJobs?.filter(job => job.id !== jobId) || []
+          } : null
+        );
+      }
+
+      // Make API call to update CV (remove jobId from connected jobs)
+      const response = await fetch(`/api/cvs/${cvId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: userId,
+          unlinkJobId: jobId // Signal to remove this job from connected jobs
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Error unlinking job:', errorData);
+        
+        showModalDialog({
+          title: 'Unlink Failed',
+          message: 'Failed to unlink job from CV. Please try again.',
+          type: 'error'
+        });
+      } else {
+        showModalDialog({
+          title: 'Success',
+          message: 'Job unlinked from CV successfully.',
+          type: 'success'
+        });
+      }
+    } catch (error) {
+      console.error('Error unlinking job from CV:', error);
+      showModalDialog({
+        title: 'Unlink Error',
+        message: 'Error unlinking job from CV. Please try again.',
+        type: 'error'
+      });
     }
   };
 
@@ -660,11 +934,11 @@ const Canvas: React.FC = () => {
       </div>
 
       {/* Main Grid Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Left Column - Main Content */}
-        <div className="lg:col-span-2 space-y-6">
+                  <div className="xl:col-span-2 space-y-6">
       {/* Stats Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <motion.div
           className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-4"
           initial={{ opacity: 0, y: 20 }}
@@ -764,7 +1038,7 @@ const Canvas: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
+        <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
           {loading ? (
             // Loading skeleton
             Array.from({ length: 4 }).map((_, index) => (
@@ -847,15 +1121,15 @@ const Canvas: React.FC = () => {
               onClick={() => handleCVClick(cv)}
             >
               {/* CV Stats Section */}
-              <div className="relative h-48 bg-gradient-to-br from-lime-400/10 to-blue-400/10 p-6">
+              <div className="relative h-48 bg-gray-50 overflow-hidden">
                 {/* Status Badge */}
-                <div className={`absolute top-4 left-4 px-2 py-1 rounded-lg text-xs font-medium ${getStatusColor(cv.status)}`}>
+                <div className={`absolute top-4 left-4 px-2 py-1 rounded-lg text-xs font-medium ${getStatusColor(cv.status)} z-10`}>
                   {cv.status}
                 </div>
                 
                 {/* Star Button */}
                 <motion.button
-                  className="absolute top-4 right-4 p-2 rounded-lg bg-black/20 backdrop-blur-sm text-white/60 hover:text-yellow-400 transition-colors"
+                  className="absolute top-4 right-4 p-2 rounded-lg bg-black/20 backdrop-blur-sm text-white/60 hover:text-yellow-400 transition-colors z-10"
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                   onClick={(e) => {
@@ -866,50 +1140,89 @@ const Canvas: React.FC = () => {
                   <Star size={16} className={cv.isStarred ? 'fill-yellow-400 text-yellow-400' : ''} />
                 </motion.button>
 
-                {/* Stats Grid */}
-                <div className="h-full flex flex-col justify-center">
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* Completion Progress */}
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-white mb-1">
-                        {cv.completionPercentage || 0}%
+                {/* CV Preview */}
+                <div className="h-full p-4 bg-gray-50 text-gray-900">
+                  {cv.cvData ? (
+                    <div className="text-sm">
+                      {/* CV Header */}
+                      <div className="text-center mb-2">
+                        <h1 className="text-lg font-bold text-gray-800 mb-1">
+                          {cv.cvData.basics?.name || 'Your Name'}
+                        </h1>
+                        {cv.cvData.basics?.email && (
+                          <p className="text-gray-700 text-xs">{cv.cvData.basics.email}</p>
+                        )}
+                        {cv.cvData.basics?.phone && (
+                          <p className="text-gray-700 text-xs">{cv.cvData.basics.phone}</p>
+                        )}
                       </div>
-                      <div className="text-xs text-white/60">Complete</div>
-                      <div className="w-full bg-white/20 rounded-full h-1 mt-2">
-                        <div 
-                          className="bg-gradient-to-r from-lime-400 to-blue-400 h-1 rounded-full transition-all duration-500 ease-in-out"
-                          style={{ width: `${cv.completionPercentage || 0}%` }}
-                        ></div>
-                      </div>
+                      
+                      {/* Professional Summary */}
+                      {cv.cvData.basics?.summary && (
+                        <div className="mb-2">
+                          <h2 className="text-sm font-semibold text-gray-800 mb-1 border-b border-gray-400 pb-1">Professional Summary</h2>
+                          <p className="text-gray-800 text-xs leading-relaxed">
+                            {cv.cvData.basics.summary.substring(0, 120)}
+                            {cv.cvData.basics.summary.length > 120 && '...'}
+                          </p>
+                        </div>
+                      )}
+                      
+                      {/* Work Experience - First entry */}
+                      {cv.cvData.work && cv.cvData.work.length > 0 && (
+                        <div>
+                          <h2 className="text-sm font-semibold text-gray-800 mb-1 border-b border-gray-400 pb-1">Work Experience</h2>
+                          <div className="mb-1">
+                            <div className="flex justify-between items-start">
+                              <h3 className="font-semibold text-gray-800 text-xs">
+                                {cv.cvData.work[0].position || cv.cvData.work[0].title}
+                              </h3>
+                              <span className="text-gray-600 text-xs">
+                                {cv.cvData.work[0].startDate} - {cv.cvData.work[0].endDate || 'Present'}
+                              </span>
+                            </div>
+                            <p className="text-gray-700 text-xs font-medium">
+                              {cv.cvData.work[0].name || cv.cvData.work[0].company}
+                            </p>
+                            {cv.cvData.work[0].summary && (
+                              <p className="text-gray-600 text-xs mt-1">
+                                {cv.cvData.work[0].summary.substring(0, 80)}
+                                {cv.cvData.work[0].summary.length > 80 && '...'}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    
-                    {/* Views */}
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-white mb-1">
-                        {cv.views || 0}
+                  ) : (
+                    <div className="text-sm">
+                      {/* Fallback CV Preview */}
+                      <div className="text-center mb-2">
+                        <h1 className="text-lg font-bold text-gray-800 mb-1">
+                          {cv.title}
+                        </h1>
+                        <p className="text-gray-700 text-xs">CV Document</p>
                       </div>
-                      <div className="text-xs text-white/60">Views</div>
-                      <div className="flex justify-center mt-2">
-                        <Eye size={12} className="text-white/40" />
+                      
+                      <div className="mb-2">
+                        <h2 className="text-sm font-semibold text-gray-800 mb-1 border-b border-gray-400 pb-1">Status</h2>
+                        <p className="text-gray-800 text-xs">
+                          {cv.status === 'draft' ? 'Draft in progress' : 
+                           cv.status === 'published' ? 'Published and ready' : 
+                           'Archived'}
+                        </p>
                       </div>
+                      
+                      {cv.completionPercentage !== undefined && (
+                        <div>
+                          <h2 className="text-sm font-semibold text-gray-800 mb-1 border-b border-gray-400 pb-1">Progress</h2>
+                          <p className="text-gray-800 text-xs">
+                            {cv.completionPercentage}% complete
+                          </p>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                  
-                  {/* Connection Indicators */}
-                  <div className="flex justify-center gap-2 mt-4">
-                    {cv.connectedJobs && cv.connectedJobs.length > 0 && (
-                      <div className="flex items-center gap-1 px-2 py-1 bg-blue-400/20 rounded-lg text-xs text-blue-400">
-                        <Briefcase size={12} />
-                        <span>{cv.connectedJobs.length}</span>
-                      </div>
-                    )}
-                    {cv.connectedCoverLetters && cv.connectedCoverLetters.length > 0 && (
-                      <div className="flex items-center gap-1 px-2 py-1 bg-purple-400/20 rounded-lg text-xs text-purple-400">
-                        <PenTool size={12} />
-                        <span>{cv.connectedCoverLetters.length}</span>
-                      </div>
-                    )}
-                  </div>
+                  )}
                 </div>
               </div>
 
@@ -982,77 +1295,44 @@ const Canvas: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Progress Bar for Draft Completion */}
-                {cv.status === 'draft' && cv.completionPercentage !== undefined && (
-                  <div className="mb-4">
-                    <div className="flex items-center justify-between text-white/60 text-xs mb-1">
-                      <span>Completion</span>
-                      <span>{cv.completionPercentage}%</span>
-                    </div>
-                    <div className="relative group">
-                      <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden cursor-help">
-                        <motion.div
-                          className={`h-full bg-gradient-to-r ${getCompletionColor(cv.completionPercentage)} rounded-full`}
-                          initial={{ width: 0 }}
-                          animate={{ width: `${cv.completionPercentage}%` }}
-                          transition={{ duration: 1, delay: 0.5 + index * 0.1 }}
-                        />
+                {/* Cover Letter Linked Status */}
+
+
+                {/* Linked Job - Show if CV has connected jobs */}
+                {cv.connectedJobs && cv.connectedJobs.length > 0 && (
+                  <div className="mb-3">
+                    <div className="bg-blue-400/10 border border-blue-400/20 rounded-lg p-2">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Briefcase size={12} className="text-blue-400" />
+                        <span className="text-blue-400 text-xs font-medium">Linked Job</span>
                       </div>
-                      
-                      {/* Tooltip with completion feedback */}
-                      {cv.completionPercentage < 100 && (
-                        <div className="absolute bottom-full left-0 mb-2 p-3 bg-gray-900/95 backdrop-blur-xl border border-white/20 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 min-w-80">
-                          <div className="text-white text-xs font-medium mb-3">CV Completion Breakdown:</div>
-                          
-                          {/* Section completion indicators */}
-                          <div className="grid grid-cols-2 gap-2 mb-3">
-                            {Object.entries(getSectionCompletion(cv)).map(([key, section]) => (
-                              <div key={key} className="flex items-center gap-2 text-xs">
-                                <span className="text-lg">{section.icon}</span>
-                                <span className={`${section.completed ? 'text-green-400' : 'text-white/40'}`}>
-                                  {section.name}
-                                </span>
-                                {section.completed && (
-                                  <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                          
-                          <div className="border-t border-white/10 pt-2">
-                            <div className="text-white text-xs font-medium mb-2">Next steps:</div>
-                            <ul className="space-y-1">
-                              {getCompletionFeedback(cv).map((feedback, idx) => (
-                                <li key={idx} className="text-white/70 text-xs flex items-center gap-2">
-                                  <div className="w-1.5 h-1.5 bg-lime-400 rounded-full"></div>
-                                  {feedback}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                          
-                          {cv.completionPercentage < 50 && (
-                            <div className="mt-2 pt-2 border-t border-white/10">
-                              <div className="text-lime-400 text-xs font-medium">💡 Quick tip:</div>
-                              <div className="text-white/60 text-xs">Focus on adding your name, email, and at least one work experience to get started.</div>
-                            </div>
-                          )}
-                        </div>
-                      )}
+                      <div className="text-white text-xs font-medium truncate">
+                        {cv.connectedJobs[0].title}
+                      </div>
+                      <div className="text-white/60 text-xs truncate">
+                        {cv.connectedJobs[0].company} • {cv.connectedJobs[0].location}
+                      </div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                          cv.connectedJobs[0].status === 'applied' ? 'bg-blue-400/20 text-blue-400' :
+                          cv.connectedJobs[0].status === 'screening' ? 'bg-yellow-400/20 text-yellow-400' :
+                          cv.connectedJobs[0].status === 'interview' ? 'bg-orange-400/20 text-orange-400' :
+                          cv.connectedJobs[0].status === 'offer' ? 'bg-green-400/20 text-green-400' :
+                          'bg-red-400/20 text-red-400'
+                        }`}>
+                          {cv.connectedJobs[0].status.charAt(0).toUpperCase() + cv.connectedJobs[0].status.slice(1)}
+                        </span>
+                        {cv.connectedJobs.length > 1 && (
+                          <span className="text-white/40 text-xs">
+                            +{cv.connectedJobs.length - 1} more
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
 
-                <div className="flex items-center justify-between text-white/40 text-sm mb-4">
-                  <div className="flex items-center gap-2">
-                    <Clock size={14} />
-                    <span>{cv.lastModified}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Eye size={14} />
-                    <span>{cv.views} views</span>
-                  </div>
-                </div>
+
 
                 {/* Action Buttons */}
                 <div className="flex items-center gap-2">
@@ -1241,7 +1521,7 @@ const Canvas: React.FC = () => {
 
               {/* Modal Body */}
               <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Left Column: CV Preview */}
                     <div className="space-y-4">
                       <h3 className="text-lg font-semibold text-white flex items-center gap-2">
@@ -1395,7 +1675,7 @@ const Canvas: React.FC = () => {
                                 className="p-1 text-red-400/60 hover:text-red-400 transition-colors"
                                 onClick={() => {
                                   console.log('🔍 Canvas - Unlink job:', job.id);
-                                  // Unlink job from CV logic
+                                  unlinkJobFromCV(selectedCV.id, job.id);
                                 }}
                               >
                                 <X size={12} />
@@ -1406,82 +1686,7 @@ const Canvas: React.FC = () => {
                       )}
                     </div>
 
-                    {/* Cover Letters */}
-                    <div className="space-y-3">
-                      <h4 className="text-white font-medium text-sm">Cover Letters</h4>
-                      
-                      {/* Cover Letter Previews */}
-                      <div className="space-y-2">
-                        {selectedCV.connectedCoverLetters && selectedCV.connectedCoverLetters.length > 0 ? (
-                          selectedCV.connectedCoverLetters.map((coverLetter: any) => (
-                            <div key={coverLetter.id} className="flex items-center gap-2 p-3 bg-white/5 border border-white/10 rounded-lg">
-                              <div className="w-12 h-8 bg-purple-400/20 rounded border border-purple-400/30 flex items-center justify-center">
-                                <PenTool size={12} className="text-purple-400" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-white text-sm truncate">{coverLetter.title}</p>
-                                <p className="text-white/60 text-xs">{coverLetter.company} • {new Date(coverLetter.createdDate).toLocaleDateString()}</p>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <button 
-                                  className="p-1 text-white/60 hover:text-white transition-colors"
-                                  onClick={() => {
-                                    console.log('🔍 Canvas - View cover letter:', coverLetter.id);
-                                    // View cover letter logic
-                                  }}
-                                >
-                                  <Eye size={12} />
-                                </button>
-                                <button 
-                                  className="p-1 text-white/60 hover:text-white transition-colors"
-                                  onClick={() => {
-                                    console.log('🔍 Canvas - Download cover letter:', coverLetter.id);
-                                    // Download cover letter logic
-                                  }}
-                                >
-                                  <Download size={12} />
-                                </button>
-                              </div>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="text-center py-4">
-                            <PenTool size={24} className="text-white/20 mx-auto mb-2" />
-                            <p className="text-white/60 text-sm">No cover letters linked</p>
-                          </div>
-                        )}
-                      </div>
-                                
-                      {/* Cover Letter Actions */}
-                      <div className="flex flex-wrap gap-2">
-                        <motion.button
-                          className="px-3 py-2 bg-purple-400/20 text-purple-400 rounded-lg text-sm hover:bg-purple-400/30 transition-colors flex items-center gap-2"
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                          onClick={() => {
-                            console.log('🔍 Canvas - Generate cover letter clicked');
-                            // Navigate to cover letter generation
-                            window.location.href = `/studio/cover-letter?cvId=${selectedCV.id}&generate=true`;
-                          }}
-                        >
-                          <Sparkles size={12} />
-                          Generate Cover Letter
-                        </motion.button>
-                        
-                        <motion.button
-                          className="px-3 py-2 text-white/60 hover:text-white transition-colors text-sm flex items-center gap-2"
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                          onClick={() => {
-                            setShowModal(false);
-                            window.location.href = `/studio/cover-letter?cvId=${selectedCV.id}`;
-                          }}
-                        >
-                          <Plus size={12} />
-                          Create New Cover Letter
-                        </motion.button>
-                      </div>
-                    </div>
+
                   </div>
                 </div>
               </div>
@@ -1493,54 +1698,30 @@ const Canvas: React.FC = () => {
       {/* Delete Confirmation Modal */}
       <AnimatePresence>
         {showDeleteConfirmation && (
-          <motion.div
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <motion.div
-              className="bg-gray-900 border border-gray-700 rounded-xl p-6 w-full max-w-md mx-4"
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-            >
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center">
-                  <Trash2 size={20} className="text-red-400" />
-                </div>
-                <div>
-                  <h3 className="text-white font-semibold text-lg">Delete CV</h3>
-                  <p className="text-gray-400 text-sm">This action cannot be undone</p>
-                </div>
-              </div>
-              
-              <p className="text-gray-300 mb-6">
-                Are you sure you want to delete this CV? This will permanently remove it and all associated data.
-              </p>
-              
-              <div className="flex gap-3">
-                <motion.button
-                  className="flex-1 px-4 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => setShowDeleteConfirmation(null)}
-                >
-                  Cancel
-                </motion.button>
-                <motion.button
-                  className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => deleteCV(showDeleteConfirmation)}
-                >
-                  Delete CV
-                </motion.button>
-              </div>
-            </motion.div>
-          </motion.div>
+          <Modal
+            isOpen={!!showDeleteConfirmation}
+            onClose={() => setShowDeleteConfirmation(null)}
+            title="Delete CV"
+            message="Are you sure you want to delete this CV? This will permanently remove it and all associated data."
+            type="confirmation"
+            onConfirm={() => deleteCV(showDeleteConfirmation)}
+            confirmText="Delete CV"
+            cancelText="Cancel"
+          />
         )}
       </AnimatePresence>
+
+      {/* Main Modal for Errors and Success Messages */}
+      <Modal
+        isOpen={modalConfig.isOpen}
+        onClose={hideModalDialog}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        type={modalConfig.type}
+        onConfirm={modalConfig.onConfirm}
+        confirmText={modalConfig.confirmText}
+        cancelText={modalConfig.cancelText}
+      />
     </div>
   );
 };

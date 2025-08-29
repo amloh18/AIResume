@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Mail, Lock, Eye, EyeOff, AlertCircle, User, ArrowRight, Sparkles } from 'lucide-react';
+import { X, Mail, Lock, Eye, EyeOff, AlertCircle, User, ArrowRight } from 'lucide-react';
 import { signInWithGoogle } from '@/lib/firebase';
 
 interface SignupModalProps {
@@ -69,7 +69,28 @@ export default function SignupModal({ isOpen, onClose, onSuccess, selectedRole, 
           lastName: result.data.user.lastName
         };
         localStorage.setItem('user', JSON.stringify(userData));
-        onSuccess(userData);
+        
+        // Check if user has CVs before deciding where to route
+        try {
+          console.log('🔍 Checking CVs for manual signup user:', userData.id);
+          const response = await fetch(`/api/cvs?userId=${userData.id}`);
+          const result = await response.json();
+          console.log('🔍 CV check result:', result);
+          
+          if (result.success && result.data.cvs && result.data.cvs.length > 0) {
+            // User has CVs, redirect to dashboard
+            console.log('✅ User has CVs, redirecting to dashboard');
+            window.location.href = '/dashboard';
+          } else {
+            // New user, continue with onboarding
+            console.log('🆕 New user, continuing with onboarding');
+            onSuccess(userData);
+          }
+        } catch (error) {
+          console.log('Error checking CVs, continuing with onboarding:', error);
+          // If we can't check CVs, continue with onboarding
+          onSuccess(userData);
+        }
       } else {
         const errorResult = await response.json();
         if (response.status === 409) {
@@ -125,7 +146,7 @@ export default function SignupModal({ isOpen, onClose, onSuccess, selectedRole, 
             <div className="flex items-center justify-between p-6 border-b border-white/10">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 bg-gradient-to-br from-lime-400 to-lime-500 rounded-lg flex items-center justify-center">
-                  <Sparkles size={16} className="text-black" />
+                  <User size={16} className="text-black" />
                 </div>
                 <h2 className="text-xl font-bold text-white">
                   Create Account
@@ -170,8 +191,27 @@ export default function SignupModal({ isOpen, onClose, onSuccess, selectedRole, 
                         lastName: user.displayName?.split(' ').slice(1).join(' ') || ''
                       };
                       
-                      // For signup, always treat as new user and continue with onboarding
-                      onSuccess(userData);
+                      // Check if user has CVs before deciding where to route
+                      try {
+                        console.log('🔍 Checking CVs for signup user:', userData.id);
+                        const response = await fetch(`/api/cvs?userId=${userData.id}`);
+                        const result = await response.json();
+                        console.log('🔍 CV check result:', result);
+                        
+                        if (result.success && result.data.cvs && result.data.cvs.length > 0) {
+                          // User has CVs, redirect to dashboard
+                          console.log('✅ User has CVs, redirecting to dashboard');
+                          window.location.href = '/dashboard';
+                        } else {
+                          // New user, continue with onboarding
+                          console.log('🆕 New user, continuing with onboarding');
+                          onSuccess(userData);
+                        }
+                      } catch (error) {
+                        console.log('Error checking CVs, continuing with onboarding:', error);
+                        // If we can't check CVs, continue with onboarding
+                        onSuccess(userData);
+                      }
                     } catch (error: any) {
                       setError(error.message || 'Failed to sign in with Google. Please try again.');
                     } finally {
@@ -179,7 +219,7 @@ export default function SignupModal({ isOpen, onClose, onSuccess, selectedRole, 
                     }
                   }}
                   disabled={isLoading}
-                  className="w-full flex items-center justify-center px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-lime-400/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+                  className="w-full flex items-center justify-center px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-lime-400/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
                   whileHover={{ scale: isLoading ? 1 : 1.02 }}
                   whileTap={{ scale: isLoading ? 1 : 0.98 }}
                 >
@@ -207,7 +247,7 @@ export default function SignupModal({ isOpen, onClose, onSuccess, selectedRole, 
               <form onSubmit={handleRegister} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">
+                    <label className="block text-white/80 text-xs font-medium mb-2">
                       First Name
                     </label>
                     <div className="relative">
@@ -216,21 +256,21 @@ export default function SignupModal({ isOpen, onClose, onSuccess, selectedRole, 
                         type="text"
                         value={registerData.firstName}
                         onChange={(e) => setRegisterData({ ...registerData, firstName: e.target.value })}
-                        className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
+                        className="w-full pl-10 pr-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
                         placeholder="First name"
                         required
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">
+                    <label className="block text-white/80 text-xs font-medium mb-2">
                       Last Name
                     </label>
                     <input
                       type="text"
                       value={registerData.lastName}
                       onChange={(e) => setRegisterData({ ...registerData, lastName: e.target.value })}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
+                      className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
                       placeholder="Last name"
                       required
                     />
@@ -238,7 +278,7 @@ export default function SignupModal({ isOpen, onClose, onSuccess, selectedRole, 
                 </div>
 
                 <div>
-                  <label className="block text-white/80 text-sm font-medium mb-2">
+                  <label className="block text-white/80 text-xs font-medium mb-2">
                     Email Address
                   </label>
                   <div className="relative">
@@ -247,7 +287,7 @@ export default function SignupModal({ isOpen, onClose, onSuccess, selectedRole, 
                       type="email"
                       value={registerData.email}
                       onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
-                      className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
+                      className="w-full pl-10 pr-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
                       placeholder="Enter your email"
                       required
                     />
@@ -255,7 +295,7 @@ export default function SignupModal({ isOpen, onClose, onSuccess, selectedRole, 
                 </div>
 
                 <div>
-                  <label className="block text-white/80 text-sm font-medium mb-2">
+                  <label className="block text-white/80 text-xs font-medium mb-2">
                     Password
                   </label>
                   <div className="relative">
@@ -264,7 +304,7 @@ export default function SignupModal({ isOpen, onClose, onSuccess, selectedRole, 
                       type={showPassword ? 'text' : 'password'}
                       value={registerData.password}
                       onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
-                      className="w-full pl-10 pr-12 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
+                      className="w-full pl-10 pr-12 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
                       placeholder="Create a password"
                       required
                     />
@@ -279,7 +319,7 @@ export default function SignupModal({ isOpen, onClose, onSuccess, selectedRole, 
                 </div>
 
                 <div>
-                  <label className="block text-white/80 text-sm font-medium mb-2">
+                  <label className="block text-white/80 text-xs font-medium mb-2">
                     Confirm Password
                   </label>
                   <div className="relative">
@@ -288,7 +328,7 @@ export default function SignupModal({ isOpen, onClose, onSuccess, selectedRole, 
                       type={showPassword ? 'text' : 'password'}
                       value={registerData.confirmPassword}
                       onChange={(e) => setRegisterData({ ...registerData, confirmPassword: e.target.value })}
-                      className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
+                      className="w-full pl-10 pr-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
                       placeholder="Confirm your password"
                       required
                     />

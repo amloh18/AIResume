@@ -27,19 +27,24 @@ interface DashboardNavigationProps {
     name: string;
     email: string;
     progress: number;
+    profilePhoto?: string;
     subscription?: {
       planName: string;
       status: string;
       credits: number;
     };
   };
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
 const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
   activeSection,
   onSectionChange,
   onMembershipClick,
-  user
+  user,
+  isOpen = true,
+  onClose
 }) => {
   const { data: session } = useSession();
   const router = useRouter();
@@ -78,20 +83,60 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
   };
 
   return (
-    <div className="w-56 bg-black/40 backdrop-blur-xl border-r border-white/10 min-h-screen sticky top-0 z-40">
-      {/* Logo and Title */}
+    <>
+      {/* Mobile Overlay */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
+          onClick={onClose}
+        />
+      )}
+      
+      {/* Sidebar */}
+      <div className={`
+        fixed lg:sticky top-0 z-50 h-screen pt-8 xl:pt-4
+        bg-black/40 backdrop-blur-xl border-r border-white/10
+        transition-all duration-300 ease-in-out
+        ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        w-64 lg:w-56
+      `}>
+      {/* Logo and User Profile */}
       <div className="p-4 border-b border-white/10">
         <div className="text-center mb-4">
-          <div className="text-3xl font-bold mb-2">
+          <div className="text-3xl font-bold mb-4">
             <span className="text-lime-400 drop-shadow-lg">CV</span>
             <span className="text-gray-300">CIRCLE</span>
           </div>
-          <h2 className="text-white/80 text-lg font-medium">Dashboard</h2>
+          
+          {/* User Profile */}
+          <div className="flex flex-col items-center">
+            <div className="w-12 h-12 rounded-full overflow-hidden mb-2 border-2 border-white/20">
+              {user.profilePhoto ? (
+                <img
+                  src={user.profilePhoto}
+                  alt="Profile"
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                    target.nextElementSibling?.classList.remove('hidden');
+                  }}
+                />
+              ) : null}
+              <div className={`w-full h-full bg-gradient-to-br from-lime-400 to-lime-500 flex items-center justify-center text-black font-semibold text-sm ${user.profilePhoto ? 'hidden' : ''}`}>
+                {getUserInitials(user.name)}
+              </div>
+            </div>
+            <div className="text-center">
+              <p className="text-white text-sm font-medium truncate">{user.name}</p>
+              <p className="text-white/60 text-xs truncate">{user.email}</p>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="p-6 pb-32">
+      <nav className="p-6 pb-20">
         <div className="space-y-2">
           {/* Section Navigation */}
           {sections.map((section, index) => (
@@ -123,22 +168,26 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
           ))}
         </div>
 
+
+      </nav>
+
+      {/* Settings and Logout - Fixed at Bottom */}
+      <div className="absolute bottom-0 left-0 right-0 p-6 space-y-3">
         {/* Settings */}
-        <div className="mt-8 pt-6 border-t border-white/10 space-y-2">
-          <motion.button
-            onClick={() => window.location.href = '/dashboard/settings'}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 text-white/60 hover:text-white hover:bg-white/5"
-            whileHover={{ x: 5 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Settings size={20} />
-            <div className="text-left">
-              <div className="font-medium">Settings</div>
-              <div className="text-xs opacity-60">Preferences</div>
-            </div>
-          </motion.button>
-          
-          {/* Admin Dashboard Button - Only show for admin users */}
+        <motion.button
+          onClick={() => window.location.href = '/dashboard/settings'}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 text-white/60 hover:text-white hover:bg-white/5"
+          whileHover={{ x: 5 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <Settings size={20} />
+          <div className="text-left">
+            <div className="font-medium">Settings</div>
+            <div className="text-xs opacity-60">Preferences</div>
+          </div>
+        </motion.button>
+        
+                  {/* Admin Button - Only show for admin users */}
           {isAdmin && (
             <motion.button
               onClick={() => router.push('/admin')}
@@ -151,57 +200,25 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
             >
               <Shield size={20} />
               <div className="text-left">
-                <div className="font-medium">Admin Dashboard</div>
+                <div className="font-medium">Admin</div>
                 <div className="text-xs opacity-60">System Management</div>
               </div>
             </motion.button>
           )}
-        </div>
 
-        {/* Membership Status */}
-        <div className="w-full px-4 py-3 mb-4 bg-gradient-to-r from-blue-400/20 to-blue-500/20 border border-blue-400/30 rounded-xl">
-          <div className="flex items-center gap-3">
-            <Crown size={20} className="text-blue-400" />
-            <div className="flex-1">
-              <span className="font-medium text-blue-400">
-                {user.subscription?.planName || 'Free Plan'}
-              </span>
-              <div className="text-xs text-blue-300/70">
-                {user.subscription?.credits || 20} credits left
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* User Profile - Fixed at Bottom */}
-        <div className="absolute bottom-0 left-0 right-0 p-6">
-          {/* User Info */}
-          <div className="flex items-center gap-3 mb-3">
-            {/* User Avatar */}
-            <div className="w-10 h-10 bg-gradient-to-br from-lime-400 to-lime-500 rounded-lg flex items-center justify-center text-black font-semibold text-sm">
-              {getUserInitials(user.name)}
-            </div>
-            
-            {/* User Info */}
-            <div className="flex-1 min-w-0">
-              <p className="text-white text-sm font-medium truncate">{user.name}</p>
-              <p className="text-white/60 text-xs truncate">{user.email}</p>
-            </div>
-          </div>
-
-          {/* Logout Button */}
-          <motion.button
-            onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg transition-all duration-200 text-sm font-medium shadow-lg hover:shadow-red-500/25"
-            whileHover={{ scale: 1.02, boxShadow: "0 10px 25px -5px rgba(239, 68, 68, 0.4)" }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <LogOut size={16} />
-            <span>Sign Out</span>
-          </motion.button>
-        </div>
-      </nav>
-    </div>
+        {/* Logout Button */}
+        <motion.button
+          onClick={handleLogout}
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg transition-all duration-200 text-sm font-medium shadow-lg hover:shadow-red-500/25"
+          whileHover={{ scale: 1.02, boxShadow: "0 10px 25px -5px rgba(239, 68, 68, 0.4)" }}
+          whileTap={{ scale: 0.98 }}
+        >
+          <LogOut size={16} />
+          <span>Sign Out</span>
+        </motion.button>
+      </div>
+      </div>
+    </>
   );
 };
 

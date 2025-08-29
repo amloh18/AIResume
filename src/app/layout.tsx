@@ -11,20 +11,8 @@ import { LoadingProvider } from '@/components/providers/LoadingProvider'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'CVCircle.io',
-  description: 'AI-powered CV creation platform that revolutionizes how professionals land their dream jobs',
-  keywords: 'CV, resume, job application, AI, career, professional',
-  authors: [{ name: 'CVCircle Team' }],
-  openGraph: {
-    title: 'CVCircle.io',
-    description: 'AI-powered CV creation platform',
-    type: 'website',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'CVCircle.io',
-    description: 'AI-powered CV creation platform',
-  },
+  title: 'CVCircle.io - AI-Powered CV Builder',
+  description: 'Create stunning CVs with AI assistance. Professional templates, ATS optimization, and real-time analytics.',
 }
 
 export default function RootLayout({
@@ -36,13 +24,13 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <ThemeProvider>
-          <LoadingProvider>
-            <SessionProvider>
-              <SessionManagerProvider>
+          <SessionProvider>
+            <SessionManagerProvider>
+              <LoadingProvider>
                 {children}
-              </SessionManagerProvider>
-            </SessionProvider>
-          </LoadingProvider>
+              </LoadingProvider>
+            </SessionManagerProvider>
+          </SessionProvider>
         </ThemeProvider>
         <Analytics />
         <PerformanceMonitor />

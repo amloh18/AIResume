@@ -8,12 +8,10 @@ import Testimonials from '@/components/landing/Testimonials';
 import DynamicPricing from '@/components/pricing/DynamicPricing';
 import Footer from '@/components/landing/Footer';
 import RouteGuard from '@/components/auth/RouteGuard';
-import PageTitle from '@/components/ui/PageTitle';
 
 export default function Home() {
   return (
     <RouteGuard requireAuth={false}>
-      <PageTitle />
       <main className="relative">
         <Navigation />
         <Hero />

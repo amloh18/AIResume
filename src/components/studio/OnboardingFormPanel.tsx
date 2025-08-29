@@ -29,6 +29,7 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import LoadingAnimation from '@/components/ui/LoadingAnimation';
 
 interface OnboardingFormPanelProps {
   cvData: CVDataStructure | null;
@@ -302,7 +303,7 @@ const OnboardingFormPanel: React.FC<OnboardingFormPanelProps> = ({
       return (
         <div className="p-4 text-gray-400">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <LoadingAnimation progress={0.3} showProgressBar={false} />
             <p className="text-sm">Loading CV data...</p>
           </div>
         </div>
@@ -550,13 +551,13 @@ const OnboardingFormPanel: React.FC<OnboardingFormPanelProps> = ({
 
   return (
     <div className="w-[500px] bg-gray-900 border-r border-gray-700 flex flex-col h-full">
-      {/* Header */}
+      {/* Header - Just the toggle button */}
       <div className="p-4 border-b border-gray-700">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-white">CV Studio</h2>
+        <div className="flex items-center justify-end">
           <button
             onClick={onTogglePanel}
             className="p-1 text-gray-400 hover:text-white transition-colors"
+            title="Toggle panel"
           >
             <ChevronLeft size={20} />
           </button>
@@ -728,89 +729,89 @@ const PersonalInfoStepContent: React.FC<{
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-gray-300 mb-1">Full Name *</label>
+        <label className="block text-xs font-medium text-gray-300 mb-1">Full Name *</label>
         <input
           type="text"
           value={cvData.basics?.name || ''}
           onChange={(e) => handleInputChange('name', e.target.value)}
-          className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-1.5 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder="John Doe"
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-300 mb-1">Professional Title</label>
+        <label className="block text-xs font-medium text-gray-300 mb-1">Professional Title</label>
         <input
           type="text"
           value={cvData.basics?.label || ''}
           onChange={(e) => handleInputChange('label', e.target.value)}
-          className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-1.5 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder="Software Engineer"
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-300 mb-1">Email *</label>
+        <label className="block text-xs font-medium text-gray-300 mb-1">Email *</label>
         <input
           type="email"
           value={cvData.basics?.email || ''}
           onChange={(e) => handleInputChange('email', e.target.value)}
-          className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-1.5 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder="john@example.com"
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-300 mb-1">Phone</label>
+        <label className="block text-xs font-medium text-gray-300 mb-1">Phone</label>
         <input
           type="tel"
           value={cvData.basics?.phone || ''}
           onChange={(e) => handleInputChange('phone', e.target.value)}
-          className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-1.5 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder="+1 (555) 123-4567"
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-300 mb-1">City</label>
+        <label className="block text-xs font-medium text-gray-300 mb-1">City</label>
         <input
           type="text"
           value={cvData.basics?.location?.city || ''}
           onChange={(e) => handleLocationChange('city', e.target.value)}
-          className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-1.5 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder="San Francisco"
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-300 mb-1">State/Region</label>
+        <label className="block text-xs font-medium text-gray-300 mb-1">State/Region</label>
         <input
           type="text"
           value={cvData.basics?.location?.region || ''}
           onChange={(e) => handleLocationChange('region', e.target.value)}
-          className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-1.5 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder="California"
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-300 mb-1">Website</label>
+        <label className="block text-xs font-medium text-gray-300 mb-1">Website</label>
         <input
           type="url"
           value={cvData.basics?.url || ''}
           onChange={(e) => handleInputChange('url', e.target.value)}
-          className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-1.5 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder="https://johndoe.com"
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-300 mb-1">Professional Summary</label>
+        <label className="block text-xs font-medium text-gray-300 mb-1">Professional Summary</label>
         <textarea
           value={cvData.basics?.summary || ''}
           onChange={(e) => handleInputChange('summary', e.target.value)}
           rows={4}
-          className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-1.5 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder="Experienced software engineer with 5+ years..."
         />
       </div>
@@ -883,7 +884,7 @@ const ExperienceStepContent: React.FC<{
 
           <div className="space-y-3">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Position</label>
+              <label className="block text-xs font-medium text-gray-300 mb-1">Position</label>
               <input
                 type="text"
                 value={work.position || ''}
@@ -894,7 +895,7 @@ const ExperienceStepContent: React.FC<{
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Company</label>
+              <label className="block text-xs font-medium text-gray-300 mb-1">Company</label>
               <input
                 type="text"
                 value={work.name || ''}
@@ -906,7 +907,7 @@ const ExperienceStepContent: React.FC<{
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Start Date</label>
+                <label className="block text-xs font-medium text-gray-300 mb-1">Start Date</label>
                 <input
                   type="text"
                   value={work.startDate || ''}
@@ -916,7 +917,7 @@ const ExperienceStepContent: React.FC<{
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">End Date</label>
+                <label className="block text-xs font-medium text-gray-300 mb-1">End Date</label>
                 <input
                   type="text"
                   value={work.endDate || ''}
@@ -928,7 +929,7 @@ const ExperienceStepContent: React.FC<{
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Description</label>
+              <label className="block text-xs font-medium text-gray-300 mb-1">Description</label>
               <textarea
                 value={work.summary || ''}
                 onChange={(e) => updateWorkExperience(index, 'summary', e.target.value)}
@@ -1002,7 +1003,7 @@ const EducationStepContent: React.FC<{
 
           <div className="space-y-3">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Institution</label>
+              <label className="block text-xs font-medium text-gray-300 mb-1">Institution</label>
               <input
                 type="text"
                 value={education.institution || ''}
@@ -1014,7 +1015,7 @@ const EducationStepContent: React.FC<{
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Degree</label>
+                <label className="block text-xs font-medium text-gray-300 mb-1">Degree</label>
                 <input
                   type="text"
                   value={education.studyType || ''}
@@ -1024,7 +1025,7 @@ const EducationStepContent: React.FC<{
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Field of Study</label>
+                <label className="block text-xs font-medium text-gray-300 mb-1">Field of Study</label>
                 <input
                   type="text"
                   value={education.area || ''}
@@ -1037,7 +1038,7 @@ const EducationStepContent: React.FC<{
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Start Date</label>
+                <label className="block text-xs font-medium text-gray-300 mb-1">Start Date</label>
                 <input
                   type="text"
                   value={education.startDate || ''}
@@ -1047,7 +1048,7 @@ const EducationStepContent: React.FC<{
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">End Date</label>
+                <label className="block text-xs font-medium text-gray-300 mb-1">End Date</label>
                 <input
                   type="text"
                   value={education.endDate || ''}
@@ -1059,7 +1060,7 @@ const EducationStepContent: React.FC<{
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">GPA/Score</label>
+              <label className="block text-xs font-medium text-gray-300 mb-1">GPA/Score</label>
               <input
                 type="text"
                 value={education.score || ''}
@@ -1129,7 +1130,7 @@ const SkillsStepContent: React.FC<{
 
           <div className="space-y-3">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Skill Name</label>
+              <label className="block text-xs font-medium text-gray-300 mb-1">Skill Name</label>
               <input
                 type="text"
                 value={skill.name || ''}
@@ -1140,7 +1141,7 @@ const SkillsStepContent: React.FC<{
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Level</label>
+              <label className="block text-xs font-medium text-gray-300 mb-1">Level</label>
               <select
                 value={skill.level || 'Beginner'}
                 onChange={(e) => updateSkill(index, 'level', e.target.value)}
@@ -1154,7 +1155,7 @@ const SkillsStepContent: React.FC<{
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Keywords</label>
+              <label className="block text-xs font-medium text-gray-300 mb-1">Keywords</label>
               <input
                 type="text"
                 value={skill.keywords.join(', ') || ''}
@@ -1227,7 +1228,7 @@ const ProjectsStepContent: React.FC<{
 
           <div className="space-y-3">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Project Name</label>
+              <label className="block text-xs font-medium text-gray-300 mb-1">Project Name</label>
               <input
                 type="text"
                 value={project.name || ''}
@@ -1238,7 +1239,7 @@ const ProjectsStepContent: React.FC<{
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Description</label>
+              <label className="block text-xs font-medium text-gray-300 mb-1">Description</label>
               <textarea
                 value={project.description || ''}
                 onChange={(e) => updateProject(index, 'description', e.target.value)}
@@ -1250,7 +1251,7 @@ const ProjectsStepContent: React.FC<{
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Start Date</label>
+                <label className="block text-xs font-medium text-gray-300 mb-1">Start Date</label>
                 <input
                   type="text"
                   value={project.startDate || ''}
@@ -1260,7 +1261,7 @@ const ProjectsStepContent: React.FC<{
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">End Date</label>
+                <label className="block text-xs font-medium text-gray-300 mb-1">End Date</label>
                 <input
                   type="text"
                   value={project.endDate || ''}
@@ -1272,7 +1273,7 @@ const ProjectsStepContent: React.FC<{
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Highlights</label>
+              <label className="block text-xs font-medium text-gray-300 mb-1">Highlights</label>
               <input
                 type="text"
                 value={project.highlights.join(', ') || ''}
@@ -1343,7 +1344,7 @@ const CertificatesStepContent: React.FC<{
 
           <div className="space-y-3">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Certificate Name</label>
+              <label className="block text-xs font-medium text-gray-300 mb-1">Certificate Name</label>
               <input
                 type="text"
                 value={certificate.name || ''}
@@ -1354,7 +1355,7 @@ const CertificatesStepContent: React.FC<{
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Issuer</label>
+              <label className="block text-xs font-medium text-gray-300 mb-1">Issuer</label>
               <input
                 type="text"
                 value={certificate.issuer || ''}
@@ -1365,7 +1366,7 @@ const CertificatesStepContent: React.FC<{
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Date</label>
+              <label className="block text-xs font-medium text-gray-300 mb-1">Date</label>
               <input
                 type="text"
                 value={certificate.date || ''}
@@ -1376,7 +1377,7 @@ const CertificatesStepContent: React.FC<{
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">URL</label>
+              <label className="block text-xs font-medium text-gray-300 mb-1">URL</label>
               <input
                 type="url"
                 value={certificate.url || ''}
@@ -1445,7 +1446,7 @@ const LanguagesStepContent: React.FC<{
 
           <div className="space-y-3">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Language</label>
+              <label className="block text-xs font-medium text-gray-300 mb-1">Language</label>
               <input
                 type="text"
                 value={language.language || ''}
@@ -1456,7 +1457,7 @@ const LanguagesStepContent: React.FC<{
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-1">Fluency</label>
+              <label className="block text-xs font-medium text-gray-300 mb-1">Fluency</label>
               <select
                 value={language.fluency || 'Beginner'}
                 onChange={(e) => updateLanguage(index, 'fluency', e.target.value)}

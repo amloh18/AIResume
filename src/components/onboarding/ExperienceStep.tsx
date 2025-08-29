@@ -138,7 +138,7 @@ export default function ExperienceStep({ onNext, onBack }: ExperienceStepProps) 
               className="bg-white/5 border border-white/10 rounded-xl p-6 mb-4"
             >
               <div className="flex items-start justify-between mb-4">
-                <h4 className="text-lg font-semibold text-white">Experience {index + 1}</h4>
+                <h4 className="text-base font-semibold text-white">Experience {index + 1}</h4>
                 <button
                   onClick={() => removeWorkExperience(index)}
                   className="text-red-400 hover:text-red-300 transition-colors"
@@ -149,64 +149,64 @@ export default function ExperienceStep({ onNext, onBack }: ExperienceStepProps) 
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-white/80 text-sm font-medium mb-2">
-                    Company Name
-                  </label>
+                                        <label className="block text-white/80 text-xs font-medium mb-2">
+                        Company Name
+                      </label>
                   <input
                     type="text"
                     value={work.name}
                     onChange={(e) => updateWorkExperience(index, 'name', e.target.value)}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
+                    className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
                     placeholder="Enter company name"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-white/80 text-sm font-medium mb-2">
+                  <label className="block text-white/80 text-xs font-medium mb-2">
                     Position
                   </label>
                   <input
                     type="text"
                     value={work.position}
                     onChange={(e) => updateWorkExperience(index, 'position', e.target.value)}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
+                    className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
                     placeholder="Enter your position"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-white/80 text-sm font-medium mb-2">
+                  <label className="block text-white/80 text-xs font-medium mb-2">
                     Start Date
                   </label>
                   <input
                     type="date"
                     value={work.startDate}
                     onChange={(e) => updateWorkExperience(index, 'startDate', e.target.value)}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
+                    className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-white/80 text-sm font-medium mb-2">
+                  <label className="block text-white/80 text-xs font-medium mb-2">
                     End Date
                   </label>
                   <input
                     type="date"
                     value={work.endDate}
                     onChange={(e) => updateWorkExperience(index, 'endDate', e.target.value)}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
+                    className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
                   />
                 </div>
               </div>
 
               <div className="mt-4">
-                <label className="block text-white/80 text-sm font-medium mb-2">
+                <label className="block text-white/80 text-xs font-medium mb-2">
                   Job Description
                 </label>
                 <textarea
                   value={work.summary}
                   onChange={(e) => updateWorkExperience(index, 'summary', e.target.value)}
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200 resize-none"
+                  className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200 resize-none"
                   rows={3}
                   placeholder="Describe your role and responsibilities..."
                 />
@@ -272,7 +272,7 @@ export default function ExperienceStep({ onNext, onBack }: ExperienceStepProps) 
               className="bg-white/5 border border-white/10 rounded-xl p-6 mb-4"
             >
               <div className="flex items-start justify-between mb-4">
-                <h4 className="text-lg font-semibold text-white">Project {index + 1}</h4>
+                <h4 className="text-base font-semibold text-white">Project {index + 1}</h4>
                 <button
                   onClick={() => removeProject(index)}
                   className="text-red-400 hover:text-red-300 transition-colors"
@@ -283,64 +283,64 @@ export default function ExperienceStep({ onNext, onBack }: ExperienceStepProps) 
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-white/80 text-sm font-medium mb-2">
+                  <label className="block text-white/80 text-xs font-medium mb-2">
                     Project Name
                   </label>
                   <input
                     type="text"
                     value={project.name}
                     onChange={(e) => updateProject(index, 'name', e.target.value)}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
+                    className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
                     placeholder="Enter project name"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-white/80 text-sm font-medium mb-2">
+                  <label className="block text-white/80 text-xs font-medium mb-2">
                     Project URL
                   </label>
                   <input
                     type="url"
                     value={project.url}
                     onChange={(e) => updateProject(index, 'url', e.target.value)}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
+                    className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
                     placeholder="https://project-url.com"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-white/80 text-sm font-medium mb-2">
+                  <label className="block text-white/80 text-xs font-medium mb-2">
                     Start Date
                   </label>
                   <input
                     type="date"
                     value={project.startDate}
                     onChange={(e) => updateProject(index, 'startDate', e.target.value)}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
+                    className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-white/80 text-sm font-medium mb-2">
+                  <label className="block text-white/80 text-xs font-medium mb-2">
                     End Date
                   </label>
                   <input
                     type="date"
                     value={project.endDate}
                     onChange={(e) => updateProject(index, 'endDate', e.target.value)}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
+                    className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
                   />
                 </div>
               </div>
 
               <div className="mt-4">
-                <label className="block text-white/80 text-sm font-medium mb-2">
+                <label className="block text-white/80 text-xs font-medium mb-2">
                   Project Description
                 </label>
                 <textarea
                   value={project.description}
                   onChange={(e) => updateProject(index, 'description', e.target.value)}
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200 resize-none"
+                  className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200 resize-none"
                   rows={3}
                   placeholder="Describe the project and your role..."
                 />

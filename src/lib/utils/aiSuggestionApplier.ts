@@ -31,12 +31,20 @@ export class AISuggestionApplier {
           this.applySkillsSuggestion(suggestion, cvData, onUpdateField, updatedFields);
           break;
 
+        case 'work':
+          this.applyWorkSuggestion(suggestion, cvData, onUpdateField, updatedFields);
+          break;
+
         case 'experience':
           this.applyExperienceSuggestion(suggestion, cvData, onUpdateField, updatedFields);
           break;
 
         case 'achievements':
           this.applyAchievementSuggestion(suggestion, cvData, onUpdateField, updatedFields);
+          break;
+
+        case 'content':
+          this.applyContentSuggestion(suggestion, cvData, onUpdateField, updatedFields);
           break;
 
         case 'cover-letter':
@@ -146,6 +154,46 @@ export class AISuggestionApplier {
         onUpdateField(`work.${workIndex}`, updatedWork);
         updatedFields.push(`work.${workIndex}`);
       }
+    }
+  }
+
+  /**
+   * Apply work-related suggestions
+   */
+  private static applyWorkSuggestion(
+    suggestion: AISuggestion,
+    cvData: CVDataStructure,
+    onUpdateField: (path: string, value: any) => void,
+    updatedFields: string[]
+  ) {
+    if (suggestion.type === 'improvement') {
+      const workIndex = parseInt(suggestion.field || '0');
+      if (workIndex >= 0 && workIndex < cvData.work.length) {
+        // Update work description
+        onUpdateField(`work.${workIndex}.summary`, suggestion.content);
+        updatedFields.push(`work.${workIndex}.summary`);
+      }
+    } else if (suggestion.type === 'addition') {
+      // Add new work experience
+      const newWork = this.parseWorkExperience(suggestion.content);
+      onUpdateField('work', [...cvData.work, newWork]);
+      updatedFields.push('work');
+    }
+  }
+
+  /**
+   * Apply content-related suggestions
+   */
+  private static applyContentSuggestion(
+    suggestion: AISuggestion,
+    cvData: CVDataStructure,
+    onUpdateField: (path: string, value: any) => void,
+    updatedFields: string[]
+  ) {
+    if (suggestion.field === 'general') {
+      // For general content improvements, we might want to show a toast or notification
+      // rather than directly applying changes
+      console.log('Content improvement suggestion:', suggestion.content);
     }
   }
 

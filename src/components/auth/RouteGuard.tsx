@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
+import LoadingAnimation from '@/components/ui/LoadingAnimation';
 
 interface RouteGuardProps {
   children: React.ReactNode;
@@ -54,11 +55,7 @@ const RouteGuard: React.FC<RouteGuardProps> = ({
 
   // Show loading spinner while checking authentication
   if (isLoading || status === 'loading') {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <LoadingAnimation progress={0.3} showProgressBar={false} />;
   }
 
   // Don't render anything if not authorized (will redirect)

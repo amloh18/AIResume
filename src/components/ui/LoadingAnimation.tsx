@@ -1,95 +1,85 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 
 interface LoadingAnimationProps {
-  isVisible: boolean;
-  onComplete?: () => void;
+  progress?: number; // 0 to 1
+  className?: string;
+  showProgressBar?: boolean; // Optional: hide progress bar for minimal loading
 }
 
-const LoadingAnimation: React.FC<LoadingAnimationProps> = ({ isVisible, onComplete }) => {
-  const [progress, setProgress] = useState(0);
+const LoadingAnimation: React.FC<LoadingAnimationProps> = React.memo(({ 
+  progress = 0, 
+  className = '',
+  showProgressBar = true
+}) => {
+  // Memoize the progress width calculation
+  const progressWidth = useMemo(() => `${progress * 100}%`, [progress]);
 
-  useEffect(() => {
-    if (isVisible) {
-      setProgress(0);
-      const interval = setInterval(() => {
-        setProgress((prev) => {
-          if (prev >= 100) {
-            clearInterval(interval);
-            setTimeout(() => {
-              onComplete?.();
-            }, 500);
-            return 100;
-          }
-          return prev + 2;
-        });
-      }, 50);
-
-      return () => clearInterval(interval);
-    }
-  }, [isVisible, onComplete]);
-
-  if (!isVisible) return null;
+  // Memoize the container class
+  const containerClass = useMemo(() => 
+    `flex items-center justify-center min-h-screen bg-black ${className}`, 
+    [className]
+  );
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-black flex items-center justify-center">
-      <div className="text-center">
+    <div className={containerClass}>
+      <div className="text-center space-y-8">
+        {/* Logo Container */}
         <motion.div
-          className="text-6xl font-black font-sans mb-4"
+          className="text-6xl font-black font-sans mb-4 flex items-center justify-center"
+          style={{ fontWeight: 900 }}
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
         >
           {/* CV part - always neon */}
-          <span className="text-lime-400 drop-shadow-[0_0_10px_rgba(132,204,22,0.8)]">CV</span>
+          <span className="text-lime-400 drop-shadow-[0_0_10px_rgba(132,204,22,0.8)]">
+            CV
+          </span>
           
-          {/* CIRCLE part - fills progressively */}
-          <span className="relative">
+          {/* CIRCLE part - progressive fill */}
+          <span className="relative inline-block">
+            {/* Grey base text */}
             <span className="text-gray-600">CIRCLE</span>
+            
+            {/* Neon overlay that fills progressively */}
             <motion.span
-              className="absolute inset-0 text-lime-400 drop-shadow-[0_0_10px_rgba(132,204,22,0.8)] overflow-hidden"
+              className="absolute top-0 left-0 text-lime-400 drop-shadow-[0_0_10px_rgba(132,204,22,0.8)] overflow-hidden"
               style={{
-                width: `${progress}%`,
-                clipPath: `inset(0 ${100 - progress}% 0 0)`
+                width: progressWidth,
               }}
-              initial={{ width: '0%' }}
-              animate={{ width: `${progress}%` }}
-              transition={{ duration: 0.1 }}
+              initial={{ width: 0 }}
+              animate={{ width: progressWidth }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
             >
               CIRCLE
             </motion.span>
           </span>
         </motion.div>
-        
-        {/* Progress bar */}
-        <motion.div
-          className="w-64 h-1 bg-gray-800 rounded-full overflow-hidden mx-auto"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
-        >
+
+        {/* Progress Bar - Only show if enabled */}
+        {showProgressBar && (
           <motion.div
-            className="h-full bg-gradient-to-r from-lime-400 to-lime-500 rounded-full"
-            initial={{ width: '0%' }}
-            animate={{ width: `${progress}%` }}
-            transition={{ duration: 0.1 }}
-          />
-        </motion.div>
-        
-        {/* Loading text */}
-        <motion.p
-          className="text-gray-400 mt-4 text-lg font-medium"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.3 }}
-        >
-          Loading...
-        </motion.p>
+            className="w-64 h-2 bg-gray-800 rounded-full overflow-hidden mx-auto"
+            initial={{ opacity: 0, scaleX: 0 }}
+            animate={{ opacity: 1, scaleX: 1 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+          >
+            <motion.div
+              className="h-full bg-gradient-to-r from-lime-400 to-lime-500 rounded-full"
+              initial={{ width: 0 }}
+              animate={{ width: progressWidth }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+            />
+          </motion.div>
+        )}
       </div>
     </div>
   );
-};
+});
+
+LoadingAnimation.displayName = 'LoadingAnimation';
 
 export default LoadingAnimation;

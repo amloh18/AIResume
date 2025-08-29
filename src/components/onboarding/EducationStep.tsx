@@ -170,7 +170,7 @@ export default function EducationStep({ onNext, onBack }: EducationStepProps) {
               className="bg-white/5 border border-white/10 rounded-xl p-6 mb-4"
             >
               <div className="flex items-start justify-between mb-4">
-                <h4 className="text-lg font-semibold text-white">Education {index + 1}</h4>
+                <h4 className="text-base font-semibold text-white">Education {index + 1}</h4>
                 <button
                   onClick={() => removeEducation(index)}
                   className="text-red-400 hover:text-red-300 transition-colors"
@@ -181,78 +181,78 @@ export default function EducationStep({ onNext, onBack }: EducationStepProps) {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-white/80 text-sm font-medium mb-2">
+                  <label className="block text-white/80 text-xs font-medium mb-2">
                     Institution
                   </label>
                   <input
                     type="text"
                     value={education.institution}
                     onChange={(e) => updateEducation(index, 'institution', e.target.value)}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
+                    className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
                     placeholder="Enter institution name"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-white/80 text-sm font-medium mb-2">
+                  <label className="block text-white/80 text-xs font-medium mb-2">
                     Degree Type
                   </label>
                   <input
                     type="text"
                     value={education.studyType}
                     onChange={(e) => updateEducation(index, 'studyType', e.target.value)}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
+                    className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
                     placeholder="e.g., Bachelor's, Master's"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-white/80 text-sm font-medium mb-2">
+                  <label className="block text-white/80 text-xs font-medium mb-2">
                     Field of Study
                   </label>
                   <input
                     type="text"
                     value={education.area}
                     onChange={(e) => updateEducation(index, 'area', e.target.value)}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
+                    className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
                     placeholder="e.g., Computer Science"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-white/80 text-sm font-medium mb-2">
+                  <label className="block text-white/80 text-xs font-medium mb-2">
                     GPA/Score
                   </label>
                   <input
                     type="text"
                     value={education.score}
                     onChange={(e) => updateEducation(index, 'score', e.target.value)}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
+                    className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
                     placeholder="e.g., 3.8/4.0"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-white/80 text-sm font-medium mb-2">
+                  <label className="block text-white/80 text-xs font-medium mb-2">
                     Start Date
                   </label>
                   <input
                     type="date"
                     value={education.startDate}
                     onChange={(e) => updateEducation(index, 'startDate', e.target.value)}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
+                    className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-white/80 text-sm font-medium mb-2">
+                  <label className="block text-white/80 text-xs font-medium mb-2">
                     End Date
                   </label>
                   <input
                     type="date"
                     value={education.endDate}
                     onChange={(e) => updateEducation(index, 'endDate', e.target.value)}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
+                    className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
                   />
                 </div>
               </div>
@@ -317,7 +317,7 @@ export default function EducationStep({ onNext, onBack }: EducationStepProps) {
               className="bg-white/5 border border-white/10 rounded-xl p-6 mb-4"
             >
               <div className="flex items-start justify-between mb-4">
-                <h4 className="text-lg font-semibold text-white">Skill {index + 1}</h4>
+                <h4 className="text-base font-semibold text-white">Skill {index + 1}</h4>
                 <button
                   onClick={() => removeSkill(index)}
                   className="text-red-400 hover:text-red-300 transition-colors"
@@ -328,26 +328,26 @@ export default function EducationStep({ onNext, onBack }: EducationStepProps) {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-white/80 text-sm font-medium mb-2">
+                  <label className="block text-white/80 text-xs font-medium mb-2">
                     Skill Category
                   </label>
                   <input
                     type="text"
                     value={skill.name}
                     onChange={(e) => updateSkill(index, 'name', e.target.value)}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
+                    className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
                     placeholder="e.g., Programming Languages"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-white/80 text-sm font-medium mb-2">
+                  <label className="block text-white/80 text-xs font-medium mb-2">
                     Proficiency Level
                   </label>
                   <select
                     value={skill.level}
                     onChange={(e) => updateSkill(index, 'level', e.target.value)}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
+                    className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
                   >
                     <option value="">Select level</option>
                     <option value="Expert">Expert</option>
@@ -359,14 +359,14 @@ export default function EducationStep({ onNext, onBack }: EducationStepProps) {
               </div>
 
               <div className="mt-4">
-                <label className="block text-white/80 text-sm font-medium mb-2">
+                <label className="block text-white/80 text-xs font-medium mb-2">
                   Skills (comma separated)
                 </label>
                 <input
                   type="text"
                   value={skill.keywords.join(', ')}
                   onChange={(e) => updateSkill(index, 'keywords', e.target.value.split(',').map(s => s.trim()).filter(s => s))}
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
+                  className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
                   placeholder="e.g., JavaScript, React, Node.js"
                 />
               </div>
@@ -431,7 +431,7 @@ export default function EducationStep({ onNext, onBack }: EducationStepProps) {
               className="bg-white/5 border border-white/10 rounded-xl p-6 mb-4"
             >
               <div className="flex items-start justify-between mb-4">
-                <h4 className="text-lg font-semibold text-white">Language {index + 1}</h4>
+                <h4 className="text-base font-semibold text-white">Language {index + 1}</h4>
                 <button
                   onClick={() => removeLanguage(index)}
                   className="text-red-400 hover:text-red-300 transition-colors"
@@ -442,26 +442,26 @@ export default function EducationStep({ onNext, onBack }: EducationStepProps) {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-white/80 text-sm font-medium mb-2">
+                  <label className="block text-white/80 text-xs font-medium mb-2">
                     Language
                   </label>
                   <input
                     type="text"
                     value={language.language}
                     onChange={(e) => updateLanguage(index, 'language', e.target.value)}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
+                    className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
                     placeholder="e.g., English"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-white/80 text-sm font-medium mb-2">
+                  <label className="block text-white/80 text-xs font-medium mb-2">
                     Fluency Level
                   </label>
                   <select
                     value={language.fluency}
                     onChange={(e) => updateLanguage(index, 'fluency', e.target.value)}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
+                    className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
                   >
                     <option value="">Select fluency</option>
                     <option value="Native speaker">Native speaker</option>

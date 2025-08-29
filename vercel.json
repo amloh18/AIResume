@@ -23,5 +23,12 @@
   },
   "env": {
     "NODE_ENV": "production"
-  }
+  },
+  "build": {
+    "env": {
+      "NODE_ENV": "production"
+    }
+  },
+  "regions": ["iad1"],
+  "public": true
 }

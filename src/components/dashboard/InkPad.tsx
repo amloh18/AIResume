@@ -156,9 +156,9 @@ const InkPad: React.FC = () => {
       </div>
 
       {/* Main Grid Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Left Column - Main Content */}
-        <div className="lg:col-span-2 space-y-6">
+                  <div className="xl:col-span-2 space-y-6">
           {/* AI Generation Section */}
           <motion.div 
             className="bg-gradient-to-r from-purple-400/10 to-pink-400/10 border border-purple-400/20 rounded-2xl p-6 backdrop-blur-xl"
@@ -233,7 +233,7 @@ const InkPad: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           <div>
             <label className="block text-white/80 text-sm font-medium mb-2">Tone</label>
             <select className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-purple-400/50 focus:border-purple-400/50">
@@ -283,7 +283,7 @@ const InkPad: React.FC = () => {
       </motion.div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <motion.div
           className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6"
           initial={{ opacity: 0, y: 20 }}

@@ -15,6 +15,7 @@ export interface IUser extends Document {
   resetPasswordToken?: string;
   resetPasswordExpires?: Date;
   currentPlanKey: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly';
+  monthlyGoal?: number; // Monthly job application goal
   subscription: {
     planKey: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly';
     status: 'active' | 'inactive' | 'cancelled' | 'expired';
@@ -45,7 +46,6 @@ const userSchema = new Schema<IUser>({
   email: {
     type: String,
     required: [true, 'Email is required'],
-    unique: true,
     lowercase: true,
     trim: true
   },
@@ -94,6 +94,12 @@ const userSchema = new Schema<IUser>({
     type: String,
     enum: ['free', 'day_pass', 'pro_monthly', 'pro_quarterly', 'pro_yearly'],
     default: 'free'
+  },
+  monthlyGoal: {
+    type: Number,
+    default: 20, // Default goal of 20 jobs per month
+    min: 1,
+    max: 100
   },
   subscription: {
     planKey: {
@@ -184,7 +190,8 @@ userSchema.methods.comparePassword = async function(candidatePassword: string): 
   return bcrypt.compare(candidatePassword, this.password);
 };
 
-// Index for better query performance
+// Indexes for better query performance
+userSchema.index({ email: 1 }, { unique: true });
 userSchema.index({ 'subscription.status': 1 });
 
 export default mongoose.models.User || mongoose.model<IUser>('User', userSchema); 

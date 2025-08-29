@@ -215,9 +215,9 @@ export default function PersonalInfoStep({ onNext }: PersonalInfoStepProps) {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Name */}
                     <div>
-                      <label className="block text-white/80 text-sm font-medium mb-2">
-                        Full Name *
-                      </label>
+                                    <label className="block text-white/80 text-xs font-medium mb-2">
+                Full Name *
+              </label>
                       <div className="relative">
                         <User size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/40" />
                         <input
@@ -233,7 +233,7 @@ export default function PersonalInfoStep({ onNext }: PersonalInfoStepProps) {
 
                     {/* Professional Title */}
                     <div>
-                      <label className="block text-white/80 text-sm font-medium mb-2">
+                      <label className="block text-white/80 text-xs font-medium mb-2">
                         Professional Title
                       </label>
                       <input
@@ -247,9 +247,9 @@ export default function PersonalInfoStep({ onNext }: PersonalInfoStepProps) {
 
                     {/* Email */}
                     <div>
-                      <label className="block text-white/80 text-sm font-medium mb-2">
-                        Email Address *
-                      </label>
+                                    <label className="block text-white/80 text-xs font-medium mb-2">
+                Email Address *
+              </label>
                       <div className="relative">
                         <Mail size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/40" />
                         <input
@@ -265,9 +265,9 @@ export default function PersonalInfoStep({ onNext }: PersonalInfoStepProps) {
 
                     {/* Phone */}
                     <div>
-                      <label className="block text-white/80 text-sm font-medium mb-2">
-                        Phone Number
-                      </label>
+                                    <label className="block text-white/80 text-xs font-medium mb-2">
+                Phone Number
+              </label>
                       <div className="relative">
                         <Phone size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/40" />
                         <input
@@ -282,7 +282,7 @@ export default function PersonalInfoStep({ onNext }: PersonalInfoStepProps) {
 
                     {/* Website */}
                     <div>
-                      <label className="block text-white/80 text-sm font-medium mb-2">
+                      <label className="block text-white/80 text-xs font-medium mb-2">
                         Website
                       </label>
                       <div className="relative">
@@ -299,7 +299,7 @@ export default function PersonalInfoStep({ onNext }: PersonalInfoStepProps) {
 
                     {/* City */}
                     <div>
-                      <label className="block text-white/80 text-sm font-medium mb-2">
+                      <label className="block text-white/80 text-xs font-medium mb-2">
                         City
                       </label>
                       <div className="relative">
@@ -317,7 +317,7 @@ export default function PersonalInfoStep({ onNext }: PersonalInfoStepProps) {
 
                   {/* Professional Summary */}
                   <div className="mt-4">
-                    <label className="block text-white/80 text-sm font-medium mb-2">
+                    <label className="block text-white/80 text-xs font-medium mb-2">
                       Professional Summary
                     </label>
                     <textarea

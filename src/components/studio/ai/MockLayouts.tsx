@@ -11,6 +11,7 @@ import {
   MessageSquare,
   AlertCircle
 } from 'lucide-react';
+import CircularProgress from '@/components/ui/CircularProgress';
 
 interface MockLayoutProps {
   title: string;
@@ -27,16 +28,13 @@ export const ATSMockLayout: React.FC<{ score?: number; keywords?: string[] }> = 
     <div className="space-y-4">
       {/* Baseline ATS Score */}
       <div className="bg-gray-700 rounded-lg p-4">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-medium text-gray-300">Baseline ATS Readiness</h3>
-          <span className="text-lg font-bold text-lime-400">{score}%</span>
-        </div>
-        
-        {/* Progress Bar */}
-        <div className="w-full bg-gray-600 rounded-full h-2 mb-4">
-          <div 
-            className="h-2 rounded-full transition-all duration-300 bg-lime-500"
-            style={{ width: `${score}%` }}
+          <CircularProgress 
+            score={score} 
+            size={60} 
+            strokeWidth={6}
+            className="flex-shrink-0"
           />
         </div>
 
