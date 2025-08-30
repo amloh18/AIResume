@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { getMongoDBUserId } from '@/lib/utils/userIdUtils';
 
 export const useCVSetup = () => {
   const { data: session, status } = useSession();
@@ -30,21 +31,14 @@ export const useCVSetup = () => {
         return;
       }
 
-      const userId = session?.user?.id || getUserIdFromLocalStorage();
+      // Get MongoDB user ID (handles both MongoDB ObjectId and Google OAuth ID)
+      const userId = await getMongoDBUserId();
       console.log('🔍 useCVSetup - Session user ID:', session?.user?.id);
-      console.log('🔍 useCVSetup - LocalStorage user ID:', getUserIdFromLocalStorage());
-      console.log('🔍 useCVSetup - Final user ID:', userId);
+      console.log('🔍 useCVSetup - Final MongoDB user ID:', userId);
       console.log('🔍 useCVSetup - Session status:', status);
       console.log('🔍 useCVSetup - Session data:', session);
       
       if (userId) {
-        // Validate userId format (should be a 24-character hex string for MongoDB ObjectId)
-        const userIdString = userId.toString().trim();
-        if (!/^[0-9a-fA-F]{24}$/.test(userIdString)) {
-          console.error('❌ useCVSetup - Invalid userId format:', userIdString);
-          setHasCV(false);
-          return;
-        }
         
         try {
           console.log('🔍 useCVSetup - Making API call to:', `/api/cvs?userId=${userId}`);

@@ -244,6 +244,13 @@ After deployment, test these features:
    - **Solution**: Vercel automatically handles timeouts for Next.js API routes
    - **Default**: 10 seconds for Hobby plan, 60 seconds for Pro plan
 
+### **Authentication Issues**
+
+4. **"Invalid user ID format. Expected 24-character hex string"**
+   - ✅ **Fixed**: Updated user ID validation to handle Google OAuth IDs
+   - **Solution**: Created `userIdUtils.ts` with flexible validation
+   - **Impact**: Google authentication users can now save CVs successfully
+
 ### **Common Issues**
 
 1. **Build Failures**
