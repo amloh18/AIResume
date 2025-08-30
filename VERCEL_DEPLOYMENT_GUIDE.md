@@ -2,6 +2,11 @@
 
 ## 🚀 **Pre-Deployment Checklist**
 
+### **0. Configuration Files**
+✅ **vercel.json** - Updated to use modern Vercel configuration (no incompatible `builds` and `functions` properties)
+✅ **next.config.ts** - Optimized for Vercel deployment with proper function handling
+✅ **package.json** - Correct Node.js version requirements
+
 ### **1. Environment Variables Setup**
 
 Set these environment variables in your Vercel project dashboard:
@@ -107,7 +112,20 @@ EMAIL_SERVER_PASSWORD=your-app-password
 
 ## 🚀 **Deployment Steps**
 
-### **1. Connect to Vercel**
+### **1. Quick Deployment (Recommended)**
+
+Use the provided deployment script:
+```bash
+./deploy.sh
+```
+
+This script will:
+- Check if Vercel CLI is installed
+- Verify login status
+- Build the project
+- Deploy to Vercel
+
+### **2. Manual Deployment**
 
 1. **Install Vercel CLI**
    ```bash
@@ -119,7 +137,12 @@ EMAIL_SERVER_PASSWORD=your-app-password
    vercel login
    ```
 
-3. **Deploy to Vercel**
+3. **Build the project**
+   ```bash
+   npm run build
+   ```
+
+4. **Deploy to Vercel**
    ```bash
    vercel --prod
    ```
@@ -206,6 +229,20 @@ After deployment, test these features:
 - [ ] Admin dashboard
 
 ## 🐛 **Troubleshooting**
+
+### **Vercel Configuration Issues**
+
+1. **"functions property cannot be used in conjunction with builds property"**
+   - ✅ **Fixed**: Updated `vercel.json` to use modern configuration
+   - **Solution**: Use the updated `vercel.json` file provided
+
+2. **Build failures due to optional dependencies**
+   - ✅ **Fixed**: Configured webpack to handle tesseract.js, canvas, puppeteer
+   - **Solution**: The `next.config.ts` handles these automatically
+
+3. **Function timeout issues**
+   - **Solution**: Vercel automatically handles timeouts for Next.js API routes
+   - **Default**: 10 seconds for Hobby plan, 60 seconds for Pro plan
 
 ### **Common Issues**
 
