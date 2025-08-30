@@ -17,12 +17,24 @@ import PersonalInfoStep from '@/components/onboarding/PersonalInfoStep';
 import ExperienceStep from '@/components/onboarding/ExperienceStep';
 import EducationStep from '@/components/onboarding/EducationStep';
 import LoadingAnimation from '@/components/ui/LoadingAnimation';
+import ErrorDialog from '@/components/ui/ErrorDialog';
+import { validateAndGetMongoDBUserId } from '@/lib/utils/userIdUtils';
 
 const OnboardingContent: React.FC = () => {
   const { state, dispatch, nextStep, prevStep } = useOnboarding();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [errorDialog, setErrorDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    showRetry?: boolean;
+  }>({
+    isOpen: false,
+    title: '',
+    message: ''
+  });
   const router = useRouter();
   const { data: session } = useSession();
   const searchParams = useSearchParams();
@@ -110,6 +122,15 @@ const OnboardingContent: React.FC = () => {
   const handleSwitchToSignup = () => {
     setShowLoginModal(false);
     setShowAuthModal(true);
+  };
+
+  const handleErrorDialogClose = () => {
+    setErrorDialog(prev => ({ ...prev, isOpen: false }));
+  };
+
+  const handleRetry = () => {
+    setErrorDialog(prev => ({ ...prev, isOpen: false }));
+    handleComplete();
   };
 
   const handleAuthSuccess = async (userData: any) => {
@@ -219,23 +240,17 @@ const OnboardingContent: React.FC = () => {
         throw new Error('User must be authenticated to create a CV. Please log in or sign up first.');
       }
       
-      // Validate userId format (should be a 24-character hex string for MongoDB ObjectId)
-      const userIdString = userId.toString().trim();
-      console.log('🔍 Validating userId:', userIdString);
-      console.log('🔍 userId length:', userIdString.length);
-      console.log('🔍 userId matches hex pattern:', /^[0-9a-fA-F]{24}$/.test(userIdString));
-      
-      if (!/^[0-9a-fA-F]{24}$/.test(userIdString)) {
-        console.error('❌ Invalid userId format:', userIdString);
-        console.error('❌ Expected: 24-character hex string');
-        console.error('❌ Got:', userIdString);
-        console.error('❌ Length:', userIdString.length);
-        console.error('❌ Characters:', userIdString.split('').map((c: string) => c.charCodeAt(0)));
-        throw new Error(`Invalid user ID format. Expected 24-character hex string, got: ${userIdString.substring(0, 10)}...`);
+      // Validate and get MongoDB user ID (handles both MongoDB ObjectId and Google OAuth ID)
+      try {
+        userId = await validateAndGetMongoDBUserId(userId);
+        console.log('✅ Validated and converted user ID:', userId);
+      } catch (error) {
+        console.error('❌ User ID validation failed:', error);
+        throw new Error(`Failed to validate user ID: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
       
       const requestData = {
-        userId: userId,
+        userId: userId, // This is now the correct MongoDB user ID
         title: `${session?.user?.firstName || state.userData?.firstName || 'User'} ${session?.user?.lastName || state.userData?.lastName || ''}'s CV`.trim(),
         cvData: state.cvData, // Fixed: was 'sections', should be 'cvData'
         type: 'cv'
@@ -306,9 +321,14 @@ const OnboardingContent: React.FC = () => {
     } catch (error) {
       console.error('Error completing onboarding:', error);
       
-      // More helpful error message
+      // Show error dialog instead of browser alert
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      alert(`Failed to save your CV: ${errorMessage}\n\nPlease check your internet connection and try again.`);
+      setErrorDialog({
+        isOpen: true,
+        title: 'Failed to Save CV',
+        message: `${errorMessage}\n\nPlease check your internet connection and try again.`,
+        showRetry: true
+      });
     } finally {
       setIsLoading(false);
     }
@@ -552,6 +572,17 @@ const OnboardingContent: React.FC = () => {
           />
         </>
       )}
+
+      {/* Error Dialog */}
+      <ErrorDialog
+        isOpen={errorDialog.isOpen}
+        onClose={handleErrorDialogClose}
+        title={errorDialog.title}
+        message={errorDialog.message}
+        onRetry={handleRetry}
+        showRetry={errorDialog.showRetry}
+        type="error"
+      />
     </div>
   );
 };
