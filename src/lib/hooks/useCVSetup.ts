@@ -72,10 +72,13 @@ export const useCVSetup = () => {
             console.log('🔍 useCVSetup - Data structure keys:', Object.keys(data.data || {}));
             console.log('🔍 useCVSetup - Full API response:', JSON.stringify(data, null, 2));
             console.log('🔍 useCVSetup - userCVs array:', userCVs);
-            setHasCV(userCVs.length > 0);
+            
+            // Set hasCV based on actual CV count
+            const userHasCVs = userCVs.length > 0;
+            setHasCV(userHasCVs);
             
             // If user has CVs, clear any onboarding flags
-            if (userCVs.length > 0) {
+            if (userHasCVs) {
               console.log('✅ User has CVs, clearing onboarding flags');
               sessionStorage.removeItem('fromOnboarding');
               sessionStorage.removeItem('needsCVSetup');
@@ -88,6 +91,7 @@ export const useCVSetup = () => {
             console.log('🔍 useCVSetup - fromOnboarding flag:', fromOnboarding);
             console.log('🔍 useCVSetup - needsCVSetup flag:', needsCVSetup);
             console.log('🔍 useCVSetup - current pathname:', window.location.pathname);
+            console.log('🔍 useCVSetup - userHasCVs:', userHasCVs);
             
             // If user just completed onboarding, don't redirect back
             if (fromOnboarding) {
@@ -98,18 +102,26 @@ export const useCVSetup = () => {
               return;
             }
             
-            // If user has no CVs and is on dashboard, redirect to onboarding
-            if ((userCVs.length === 0 || needsCVSetup) && window.location.pathname === '/dashboard') {
-              console.log('🔄 No CVs found, redirecting to onboarding');
+            // Only redirect to onboarding if:
+            // 1. User has no CVs AND
+            // 2. User is on dashboard AND
+            // 3. The needsCVSetup flag is explicitly set to true
+            if (userHasCVs === false && needsCVSetup === true && window.location.pathname === '/dashboard') {
+              console.log('🔄 No CVs found and needsCVSetup flag is true, redirecting to onboarding');
               console.log('🔄 userCVs.length:', userCVs.length);
               console.log('🔄 needsCVSetup:', needsCVSetup);
               sessionStorage.removeItem('needsCVSetup'); // Clear the flag
               router.push('/onboarding');
+            } else if (userHasCVs === true) {
+              console.log('✅ User has CVs, no need to redirect to onboarding');
+            } else if (needsCVSetup !== true) {
+              console.log('ℹ️ User has no CVs but needsCVSetup flag is not set, staying on dashboard');
             }
           }
         } catch (error) {
           console.error('Error checking user CVs:', error);
-          // If there's an error, assume no CVs for safety
+          // If there's an error, don't assume no CVs - stay on current page
+          console.log('⚠️ Error occurred during CV check, staying on current page');
           setHasCV(false);
         }
       }

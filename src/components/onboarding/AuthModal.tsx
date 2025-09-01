@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Mail, Lock, Eye, EyeOff, AlertCircle, User, ArrowRight } from 'lucide-react';
-import { signInWithGoogle } from '@/lib/firebase';
+import { useFirebaseAuth } from '@/lib/hooks/useFirebaseAuth';
 
 interface SignupModalProps {
   isOpen: boolean;
@@ -17,6 +17,7 @@ export default function SignupModal({ isOpen, onClose, onSuccess, selectedRole, 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const { signInWithGoogle: firebaseSignInWithGoogle } = useFirebaseAuth();
   
   // Registration form state
   const [registerData, setRegisterData] = useState({
@@ -182,35 +183,43 @@ export default function SignupModal({ isOpen, onClose, onSuccess, selectedRole, 
                     setIsLoading(true);
                     setError('');
                     try {
-                      const user = await signInWithGoogle();
-                      const userData = {
-                        id: user.uid,
-                        email: user.email,
-                        name: user.displayName || user.email,
-                        firstName: user.displayName?.split(' ')[0] || 'User',
-                        lastName: user.displayName?.split(' ').slice(1).join(' ') || ''
-                      };
+                      const user = await firebaseSignInWithGoogle();
                       
-                      // Check if user has CVs before deciding where to route
-                      try {
-                        console.log('🔍 Checking CVs for signup user:', userData.id);
-                        const response = await fetch(`/api/cvs?userId=${userData.id}`);
-                        const result = await response.json();
-                        console.log('🔍 CV check result:', result);
+                      // The useFirebaseAuth hook already handles localStorage storage
+                      const userData = localStorage.getItem('user');
+                      if (userData) {
+                        const parsedUser = JSON.parse(userData);
                         
-                        if (result.success && result.data.cvs && result.data.cvs.length > 0) {
-                          // User has CVs, redirect to dashboard
-                          console.log('✅ User has CVs, redirecting to dashboard');
-                          window.location.href = '/dashboard';
-                        } else {
-                          // New user, continue with onboarding
-                          console.log('🆕 New user, continuing with onboarding');
-                          onSuccess(userData);
+                        // Check if user has CVs before deciding where to route
+                        try {
+                          console.log('🔍 Checking CVs for signup user:', parsedUser.id);
+                          const response = await fetch(`/api/cvs?userId=${parsedUser.id}`);
+                          const result = await response.json();
+                          console.log('🔍 CV check result:', result);
+                          
+                          if (result.success && result.data.cvs && result.data.cvs.length > 0) {
+                            // User has CVs, redirect to dashboard
+                            console.log('✅ User has CVs, redirecting to dashboard');
+                            window.location.href = '/dashboard';
+                          } else {
+                            // New user, continue with onboarding
+                            console.log('🆕 New user, continuing with onboarding');
+                            onSuccess(parsedUser);
+                          }
+                        } catch (error) {
+                          console.log('Error checking CVs, continuing with onboarding:', error);
+                          // If we can't check CVs, continue with onboarding
+                          onSuccess(parsedUser);
                         }
-                      } catch (error) {
-                        console.log('Error checking CVs, continuing with onboarding:', error);
-                        // If we can't check CVs, continue with onboarding
-                        onSuccess(userData);
+                      } else {
+                        console.log('No user data in localStorage, continuing with onboarding');
+                        onSuccess({
+                          id: user.uid,
+                          email: user.email,
+                          name: user.displayName || user.email,
+                          firstName: user.displayName?.split(' ')[0] || 'User',
+                          lastName: user.displayName?.split(' ').slice(1).join(' ') || ''
+                        });
                       }
                     } catch (error: any) {
                       setError(error.message || 'Failed to sign in with Google. Please try again.');

@@ -7,6 +7,9 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  images: {
+    domains: ['ui-avatars.com', 'placehold.co'],
+  },
   // Performance optimizations
   experimental: {
     optimizeCss: true,

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { User } from 'firebase/auth';
-import { signInWithGoogle, signOutUser, onAuthStateChange } from '@/lib/firebase';
+import { signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
+import { auth, googleProvider } from '@/lib/firebase';
 
 interface UseFirebaseAuthReturn {
   user: User | null;
@@ -16,7 +17,7 @@ export const useFirebaseAuth = (): UseFirebaseAuthReturn => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChange((user) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setLoading(false);
     });
@@ -28,7 +29,8 @@ export const useFirebaseAuth = (): UseFirebaseAuthReturn => {
     try {
       setError(null);
       setLoading(true);
-      const firebaseUser = await signInWithGoogle();
+      const signInResult = await signInWithPopup(auth, googleProvider);
+      const firebaseUser = signInResult.user;
       
       // Get the ID token for backend verification
       const idToken = await firebaseUser.getIdToken();
@@ -80,7 +82,7 @@ export const useFirebaseAuth = (): UseFirebaseAuthReturn => {
     try {
       setError(null);
       setLoading(true);
-      await signOutUser();
+      await signOut(auth);
     } catch (error: any) {
       const errorMessage = error.message || 'An error occurred during sign-out';
       setError(errorMessage);
