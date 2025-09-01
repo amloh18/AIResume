@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React from 'react';
+import { motion } from 'framer-motion';
 import { signOut, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { 
@@ -11,11 +11,7 @@ import {
   Archive, 
   MessageSquare, 
   BarChart3,
-  Settings,
-  Sparkles,
-  User,
   LogOut,
-  Crown,
   Shield
 } from 'lucide-react';
 
@@ -51,10 +47,10 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
   const router = useRouter();
   
   // Check if user is admin
-  const isAdmin = session?.user?.role === 'admin';
+  const isAdmin = (session as any)?.user?.role === 'admin';
 
   const sections = [
-    { id: 'pulse', name: 'Analytics', icon: BarChart3, description: 'Progress Tracking' },
+    { id: 'analytics', name: 'Analytics', icon: BarChart3, description: 'Progress Tracking' },
     { id: 'pipeline', name: 'Job Tracker', icon: Briefcase, description: 'Track Applications' },
     { id: 'canvas', name: 'CV Studio', icon: FileText, description: 'Create & Edit CVs' },
     { id: 'inkpad', name: 'Cover Letters', icon: PenTool, description: 'Generate Letters' },
@@ -99,59 +95,30 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
         bg-black/40 backdrop-blur-xl border-r border-white/10
         transition-all duration-300 ease-in-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-        w-64 lg:w-56
+        w-56 lg:w-48
       `}>
-      {/* Logo and User Profile */}
+      {/* Logo */}
       <div className="p-4 border-b border-white/10">
-        <div className="text-center mb-4">
-          <div className="text-3xl font-bold mb-4">
+        <div className="text-center mb-2">
+          <button
+            onClick={() => router.push('/dashboard')}
+            className="text-3xl font-bold mb-2 hover:opacity-90 transition-opacity"
+          >
             <span className="text-lime-400 drop-shadow-lg">CV</span>
             <span className="text-gray-300">CIRCLE</span>
-          </div>
-          
-          {/* User Profile */}
-          <div className="flex flex-col items-center">
-            <button
-              onClick={() => {
-                // Use username if available, otherwise fallback to email prefix
-                const username = user.username || user.email.split('@')[0];
-                router.push(`/profile/${username}`);
-              }}
-              className="w-12 h-12 rounded-full overflow-hidden mb-2 border-2 border-white/20 hover:border-lime-400/50 transition-colors duration-200 cursor-pointer group"
-            >
-              {user.profilePhoto ? (
-                <img
-                  src={user.profilePhoto}
-                  alt="Profile"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                    target.nextElementSibling?.classList.remove('hidden');
-                  }}
-                />
-              ) : null}
-              <div className={`w-full h-full bg-gradient-to-br from-lime-400 to-lime-500 flex items-center justify-center text-black font-semibold text-sm group-hover:scale-105 transition-transform duration-200 ${user.profilePhoto ? 'hidden' : ''}`}>
-                {getUserInitials(user.name)}
-              </div>
-            </button>
-            <div className="text-center">
-              <p className="text-white text-sm font-medium truncate">{user.name}</p>
-              <p className="text-white/60 text-xs truncate">{user.email}</p>
-            </div>
-          </div>
+          </button>
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="p-6 pb-20">
+      <nav className="p-4 pb-20">
         <div className="space-y-2">
           {/* Section Navigation */}
           {sections.map((section, index) => (
             <motion.button
               key={section.id}
               onClick={() => onSectionChange(section.id)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group ${
+              className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-300 group ${
                 activeSection === section.id
                   ? 'bg-gradient-to-r from-lime-400/20 to-lime-500/20 border border-lime-400/30 text-lime-400'
                   : 'text-white/60 hover:text-white hover:bg-white/5'
@@ -163,14 +130,14 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
               transition={{ delay: 0.1 + index * 0.1 }}
             >
               <section.icon 
-                size={20} 
+                size={18} 
                 className={`transition-colors ${
                   activeSection === section.id ? 'text-lime-400' : 'text-white/60 group-hover:text-white'
                 }`}
               />
               <div className="text-left">
-                <div className="font-medium">{section.name}</div>
-                <div className="text-xs opacity-60">{section.description}</div>
+                <div className="text-sm font-medium">{section.name}</div>
+                <div className="hidden xl:block text-[10px] opacity-60">{section.description}</div>
               </div>
             </motion.button>
           ))}
@@ -179,45 +146,31 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
 
       </nav>
 
-      {/* Settings and Logout - Fixed at Bottom */}
+      {/* Footer Actions - Fixed at Bottom */}
       <div className="absolute bottom-0 left-0 right-0 p-6 space-y-3">
-        {/* Settings */}
-        <motion.button
-          onClick={() => window.location.href = '/dashboard/settings'}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 text-white/60 hover:text-white hover:bg-white/5"
-          whileHover={{ x: 5 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <Settings size={20} />
-          <div className="text-left">
-            <div className="font-medium">Settings</div>
-            <div className="text-xs opacity-60">Preferences</div>
-          </div>
-        </motion.button>
-        
-                  {/* Admin Button - Only show for admin users */}
-          {isAdmin && (
-            <motion.button
-              onClick={() => router.push('/admin')}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 border border-purple-500/20"
-              whileHover={{ x: 5 }}
-              whileTap={{ scale: 0.95 }}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.2 }}
-            >
-              <Shield size={20} />
-              <div className="text-left">
-                <div className="font-medium">Admin</div>
-                <div className="text-xs opacity-60">System Management</div>
-              </div>
-            </motion.button>
-          )}
+        {/* Admin Button - Only show for admin users */}
+        {isAdmin && (
+          <motion.button
+            onClick={() => router.push('/admin')}
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-300 text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 border border-purple-500/20"
+            whileHover={{ x: 5 }}
+            whileTap={{ scale: 0.95 }}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <Shield size={20} />
+            <div className="text-left">
+              <div className="text-sm font-medium">Admin</div>
+              <div className="text-[10px] opacity-60">System Management</div>
+            </div>
+          </motion.button>
+        )}
 
         {/* Logout Button */}
         <motion.button
           onClick={handleLogout}
-          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg transition-all duration-200 text-sm font-medium shadow-lg hover:shadow-red-500/25"
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg transition-all duration-200 text-sm font-medium shadow-lg hover:shadow-red-500/25"
           whileHover={{ scale: 1.02, boxShadow: "0 10px 25px -5px rgba(239, 68, 68, 0.4)" }}
           whileTap={{ scale: 0.98 }}
         >
