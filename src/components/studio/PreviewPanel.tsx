@@ -10,12 +10,19 @@ import {
   ChevronRight,
   RotateCcw,
   Sun,
-  Moon
+  Moon,
+  Download,
+  FileJson,
+  FileText as FileTextIcon,
+  FileDown,
+  Loader2,
+  Image
 } from 'lucide-react';
 import { CVDataStructure } from '@/types/cv';
 import { Template } from '@/lib/stores/templateStore';
 import { Job } from '@/lib/stores/jobStore';
 import CVPreviewContent from './CVPreviewContent';
+import { downloadAsJSON, downloadAsPDF, downloadAsDOCX, downloadAsImage } from '@/lib/utils/download';
 
 interface PreviewPanelProps {
   cvData: CVDataStructure | null;
@@ -27,6 +34,8 @@ interface PreviewPanelProps {
   setPaperSize: (size: 'A4' | 'Letter') => void;
   documentType: 'cv' | 'cover-letter';
   sectionOrder?: string[];
+  pagePadding: { top: number; bottom: number };
+  setPagePadding: (padding: { top: number; bottom: number }) => void;
 }
 
 const PreviewPanel: React.FC<PreviewPanelProps> = ({
@@ -38,7 +47,9 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
   paperSize,
   setPaperSize,
   documentType,
-  sectionOrder = ['basics', 'experience', 'education', 'skills', 'projects', 'certificates', 'languages']
+  sectionOrder = ['basics', 'experience', 'education', 'skills', 'projects', 'certificates', 'languages'],
+  pagePadding,
+  setPagePadding
 }) => {
   console.log('PreviewPanel received cvData:', cvData);
   
@@ -46,6 +57,7 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
   const [fitMode, setFitMode] = useState<'fit-height' | 'custom'>('fit-height');
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [totalPages, setTotalPages] = useState(1);
+  const [isDownloading, setIsDownloading] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -108,8 +120,66 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
     setCurrentPage(Math.min(totalPages, currentPage + 1));
   };
 
+  // Download handlers
+  const handleDownloadJSON = () => {
+    if (!cvData) return;
+    try {
+      const filename = `${cvData.basics.name?.toLowerCase().replace(/\s+/g, '-') || 'cv'}-data.json`;
+      downloadAsJSON(cvData, filename);
+    } catch (error) {
+      console.error('Error downloading JSON:', error);
+      alert('Failed to download JSON. Please try again.');
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    if (!previewRef.current || !cvData) return;
+    setIsDownloading(true);
+    try {
+      const filename = `${cvData.basics.name?.toLowerCase().replace(/\s+/g, '-') || 'cv'}.pdf`;
+      await downloadAsPDF(previewRef.current, filename);
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      alert('Failed to download PDF. Please try again.');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const handleDownloadDOCX = async () => {
+    if (!cvData) return;
+    setIsDownloading(true);
+    try {
+      const filename = `${cvData.basics.name?.toLowerCase().replace(/\s+/g, '-') || 'cv'}.docx`;
+      await downloadAsDOCX(cvData, filename);
+    } catch (error) {
+      console.error('Error downloading DOCX:', error);
+      alert('Failed to download DOCX. Please try again.');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const handleDownloadImage = async () => {
+    if (!previewRef.current || !cvData) return;
+    setIsDownloading(true);
+    try {
+      const filename = `${cvData.basics.name?.toLowerCase().replace(/\s+/g, '-') || 'cv'}.png`;
+      await downloadAsImage(previewRef.current, filename);
+    } catch (error) {
+      console.error('Error downloading image:', error);
+      alert('Failed to download image. Please try again.');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   const renderCVPreview = () => {
-    // Always show our enhanced preview regardless of template
+    // Apply template styles if available
+    const templateStyles = template?.globalStyles;
+    const customCSS = template?.customCSS;
+    const templateName = template?.name;
+    
     return (
       <div 
         className="relative"
@@ -128,6 +198,10 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
             theme={theme}
             showBadge={false}
             sectionOrder={sectionOrder}
+            templateStyles={templateStyles}
+            customCSS={customCSS}
+            templateName={templateName}
+            pagePadding={pagePadding}
           />
         </div>
       </div>
@@ -327,6 +401,73 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
           >
             <Sun className="h-3 w-3" />
             Light
+          </button>
+        </div>
+
+        {/* Padding Controls */}
+        <div className="flex items-center space-x-2 bg-gray-700 rounded p-2">
+          <div className="flex items-center space-x-1">
+            <label className="text-xs text-gray-300">Top:</label>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              value={pagePadding.top}
+              onChange={(e) => setPagePadding({ ...pagePadding, top: parseInt(e.target.value) || 0 })}
+              className="w-12 h-6 text-xs bg-gray-600 text-white border border-gray-500 rounded px-1 text-center"
+            />
+            <span className="text-xs text-gray-300">px</span>
+          </div>
+          <div className="flex items-center space-x-1">
+            <label className="text-xs text-gray-300">Bottom:</label>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              value={pagePadding.bottom}
+              onChange={(e) => setPagePadding({ ...pagePadding, bottom: parseInt(e.target.value) || 0 })}
+              className="w-12 h-6 text-xs bg-gray-600 text-white border border-gray-500 rounded px-1 text-center"
+            />
+            <span className="text-xs text-gray-300">px</span>
+          </div>
+        </div>
+
+        {/* Download Controls */}
+        <div className="flex items-center space-x-1">
+          <button
+            onClick={handleDownloadJSON}
+            disabled={!cvData || isDownloading}
+            className="p-2 text-gray-400 hover:text-white transition-colors rounded hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-lime-500 focus:ring-offset-2 focus:ring-offset-gray-800"
+            title="Download as JSON"
+          >
+            {isDownloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileJson className="h-4 w-4" />}
+          </button>
+          
+          <button
+            onClick={handleDownloadPDF}
+            disabled={!cvData || isDownloading}
+            className="p-2 text-gray-400 hover:text-white transition-colors rounded hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-lime-500 focus:ring-offset-2 focus:ring-offset-gray-800"
+            title="Download as PDF"
+          >
+            {isDownloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
+          </button>
+          
+          <button
+            onClick={handleDownloadDOCX}
+            disabled={!cvData || isDownloading}
+            className="p-2 text-gray-400 hover:text-white transition-colors rounded hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-lime-500 focus:ring-offset-2 focus:ring-offset-gray-800"
+            title="Download as DOCX"
+          >
+            {isDownloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileTextIcon className="h-4 w-4" />}
+          </button>
+          
+          <button
+            onClick={handleDownloadImage}
+            disabled={!cvData || isDownloading}
+            className="p-2 text-gray-400 hover:text-white transition-colors rounded hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-lime-500 focus:ring-offset-2 focus:ring-offset-gray-800"
+            title="Download as PNG Image"
+          >
+            {isDownloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Image className="h-4 w-4" />}
           </button>
         </div>
 

@@ -42,6 +42,7 @@ const CVStudio: React.FC<CVStudioProps> = ({ jobId, cvId, userId }) => {
   const [zoom, setZoom] = useState(1);
   const [paperSize, setPaperSize] = useState<'A4' | 'Letter'>('A4');
   const [selectedJobId, setSelectedJobId] = useState<string | null>(jobId || null);
+  const [pagePadding, setPagePadding] = useState({ top: 32, bottom: 32 });
   
   // CV Data state
   const [cvData, setCvData] = useState<CVDataStructure | null>(null);
@@ -54,6 +55,8 @@ const CVStudio: React.FC<CVStudioProps> = ({ jobId, cvId, userId }) => {
     setTemplates, 
     setSelectedTemplate 
   } = useTemplateStore();
+  
+
   
   const { 
     currentJob, 
@@ -496,7 +499,7 @@ const CVStudio: React.FC<CVStudioProps> = ({ jobId, cvId, userId }) => {
     };
 
     loadInitialData();
-  }, [cvId, jobId, userId, setTemplates, setSelectedTemplate, setCurrentJob, selectedTemplate]);
+  }, [cvId, jobId, userId, setTemplates, setSelectedTemplate, setCurrentJob]);
 
   const handleExport = async (format: 'pdf' | 'docx' | 'json') => {
     try {
@@ -626,6 +629,8 @@ const CVStudio: React.FC<CVStudioProps> = ({ jobId, cvId, userId }) => {
             setPaperSize={setPaperSize}
             documentType={documentType}
             sectionOrder={['basics', 'experience', 'education', 'skills', 'projects', 'certificates', 'languages']}
+            pagePadding={pagePadding}
+            setPagePadding={setPagePadding}
           />
         </div>
 

@@ -49,5 +49,4 @@ export class AIService {
   // TODO: Implement real AI service integration
   // These methods should be replaced with actual AI provider calls
   // Examples: OpenAI API, Anthropic Claude API, Google Gemini API, etc.
-}
 } 

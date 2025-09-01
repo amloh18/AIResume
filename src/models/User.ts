@@ -7,6 +7,7 @@ export interface IUser extends Document {
   firebaseUid?: string;
   firstName: string;
   lastName: string;
+  username?: string;
   avatar?: string;
   role: 'user' | 'admin';
   isEmailVerified: boolean;
@@ -46,6 +47,7 @@ const userSchema = new Schema<IUser>({
   email: {
     type: String,
     required: [true, 'Email is required'],
+    unique: true,
     lowercase: true,
     trim: true
   },
@@ -72,6 +74,14 @@ const userSchema = new Schema<IUser>({
     required: [true, 'Last name is required'],
     trim: true,
     maxlength: [50, 'Last name cannot exceed 50 characters']
+  },
+  username: {
+    type: String,
+    trim: true,
+    lowercase: true,
+    minlength: [3, 'Username must be at least 3 characters long'],
+    maxlength: [30, 'Username cannot exceed 30 characters'],
+    match: [/^[a-zA-Z0-9_-]+$/, 'Username can only contain letters, numbers, hyphens, and underscores']
   },
   avatar: {
     type: String,
@@ -191,7 +201,7 @@ userSchema.methods.comparePassword = async function(candidatePassword: string): 
 };
 
 // Indexes for better query performance
-userSchema.index({ email: 1 }, { unique: true });
+userSchema.index({ username: 1 }, { unique: true, sparse: true });
 userSchema.index({ 'subscription.status': 1 });
 
 export default mongoose.models.User || mongoose.model<IUser>('User', userSchema); 

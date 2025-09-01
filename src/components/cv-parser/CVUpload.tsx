@@ -3,7 +3,7 @@
 import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDropzone } from 'react-dropzone';
-import { AICVParser } from '@/lib/services/aiCVParser';
+
 import { Upload, FileText, Image, File, X, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface CVUploadProps {
@@ -91,16 +91,27 @@ const CVUpload: React.FC<CVUploadProps> = ({ onCVParsed, onClose }) => {
   const parseCVFile = async (file: File): Promise<any> => {
     try {
       console.log('Starting CV file parsing for:', file.name, 'Type:', file.type, 'Size:', file.size);
-      // Use unified AI parser (server-side extraction + AI + normalization)
-      const result = await AICVParser.parseCV(file);
-      if (!result.success || !result.data) {
-        throw new Error(result.error || 'Failed to parse CV');
+      
+      // Use direct parsing API (no AI dependency)
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await fetch('/api/cv/parse', {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to parse CV');
       }
+      
+      const result = await response.json();
+      console.log('Raw parsed data:', result);
 
-      console.log('Raw parsed data:', result.data);
-
-      // Map universal schema to form schema and normalize dates
-      const mapped = mapUniversalToForm(result.data);
+      // The direct parsing API already returns the correct format
+      // Just validate and clean the data
+      const mapped = validateAndCleanFormData(result);
       
       console.log('Mapped form data:', mapped);
       
@@ -172,12 +183,12 @@ const CVUpload: React.FC<CVUploadProps> = ({ onCVParsed, onClose }) => {
     return { firstName: parts.slice(0, -1).join(' '), lastName: parts.slice(-1).join('') };
   };
 
-  const mapUniversalToForm = (data: any) => {
+  const mapParsedDataToForm = (data: any) => {
     const empty = getEmptyStructure();
     
-    // Handle both direct form data and universal CV schema
-    if (data.personalInfo) {
-      // Data is already in form format, just validate and clean
+    // Handle direct parsing API structure (CVData interface)
+    if (data.personalInfo && data.education && data.experience && data.skills && data.projects) {
+      // Direct parsing API structure - already in the correct format
       return validateAndCleanFormData(data);
     }
     

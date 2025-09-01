@@ -17,66 +17,13 @@ import {
   Plus,
   X,
   Layout,
-  Palette
+  Palette,
+  Code
 } from 'lucide-react';
 import PreviewBridge from './PreviewBridge';
+import { ITemplate, TemplatePreviewData } from '@/types/template';
 
-interface Template {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  categories?: string[];
-  tier: 'free' | 'premium';
-  isDefault: boolean;
-  isActive: boolean;
-  isPublished: boolean;
-  globalStyles: {
-    fontFamily: string;
-    primaryColor: string;
-    backgroundColor: string;
-    fontSize: string;
-  };
-  availableSections: Array<{
-    key: string;
-    displayName: string;
-    componentName: string;
-    isList: boolean;
-    defaultItemContent: any;
-  }>;
-  templateData: any;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface TemplatePreviewData {
-  personalInfo: {
-    name: string;
-    email: string;
-    phone: string;
-    location: string;
-    title: string;
-    summary: string;
-  };
-  experience: Array<{
-    company: string;
-    position: string;
-    duration: string;
-    description: string;
-  }>;
-  education: Array<{
-    institution: string;
-    degree: string;
-    duration: string;
-    description: string;
-  }>;
-  skills: Array<string>;
-  projects: Array<{
-    name: string;
-    description: string;
-    technologies: string;
-  }>;
-}
+type Template = ITemplate;
 
 const TemplateManager: React.FC = () => {
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -151,11 +98,18 @@ const TemplateManager: React.FC = () => {
             isDefault: false,
             isActive: true,
             isPublished: true,
+            globalAccess: true,
+            version: 1,
             globalStyles: {
               fontFamily: 'Inter, system-ui, sans-serif',
               primaryColor: '#2563eb',
+              secondaryColor: '#64748b',
               backgroundColor: '#ffffff',
-              fontSize: '12pt'
+              fontSize: '12pt',
+              lineHeight: '1.6',
+              spacing: '24px',
+              borderRadius: '8px',
+              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
             },
             availableSections: [],
             templateData: {},
@@ -177,10 +131,69 @@ const TemplateManager: React.FC = () => {
       const reader = new FileReader();
       reader.onload = (e) => {
         const content = e.target?.result as string;
-        setUploadedJson(content);
-        setJsonError('');
+        
+        // Check if it's a TypeScript file
+        if (file.name.endsWith('.ts') || file.name.endsWith('.tsx')) {
+          // Parse TypeScript content
+          try {
+            const parsedTemplate = parseTypeScriptTemplate(content);
+            setUploadedJson(JSON.stringify(parsedTemplate, null, 2));
+            setJsonError('');
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            setJsonError(`Failed to parse TypeScript: ${errorMessage}`);
+          }
+        } else {
+          // Handle JSON files as before
+          setUploadedJson(content);
+          setJsonError('');
+        }
       };
       reader.readAsText(file);
+    }
+  };
+
+  // Parse TypeScript template content
+  const parseTypeScriptTemplate = (tsContent: string): any => {
+    try {
+      // Remove comments and clean up the content
+      let cleanContent = tsContent
+        .replace(/\/\*[\s\S]*?\*\//g, '') // Remove block comments
+        .replace(/\/\/.*$/gm, '') // Remove line comments
+        .replace(/import.*?from.*?['"`].*?['"`];?\s*/g, '') // Remove import statements
+        .replace(/export\s+(const|default)\s+(\w+)\s*:\s*ITemplate\s*=\s*/, '') // Remove export declaration
+        .replace(/export\s+default\s+\w+;?\s*$/, '') // Remove default export
+        .trim();
+
+      // Find the object content between the first { and the last }
+      const startIndex = cleanContent.indexOf('{');
+      const endIndex = cleanContent.lastIndexOf('}');
+      
+      if (startIndex === -1 || endIndex === -1) {
+        throw new Error('No valid template object found in TypeScript file');
+      }
+
+      const objectContent = cleanContent.substring(startIndex, endIndex + 1);
+      
+      // Convert TypeScript object syntax to valid JSON
+      let jsonContent = objectContent
+        // Remove trailing commas
+        .replace(/,(\s*[}\]])/g, '$1')
+        // Convert single quotes to double quotes for JSON
+        .replace(/'/g, '"')
+        // Handle unquoted property names (but not inside strings)
+        .replace(/([{,]\s*)(\w+):/g, '$1"$2":')
+        // Handle boolean and null values
+        .replace(/"true"/g, 'true')
+        .replace(/"false"/g, 'false')
+        .replace(/"null"/g, 'null');
+      
+      // Parse the object content as JSON
+      const template = JSON.parse(jsonContent);
+      return template;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to parse TypeScript template: ${errorMessage}`);
     }
   };
 
@@ -188,33 +201,82 @@ const TemplateManager: React.FC = () => {
     const value = event.target.value;
     setUploadedJson(value);
     
-    // Only validate JSON if there's content
+    // Only validate if there's content
     if (value.trim()) {
       try {
-        const parsedJson = JSON.parse(value);
+        let parsedData;
+        
+        // Check if it looks like TypeScript (contains import, export, or TypeScript syntax)
+        if (value.includes('import') || value.includes('export') || value.includes(': ITemplate') || value.includes('const') && value.includes('Template')) {
+          // Parse as TypeScript
+          parsedData = parseTypeScriptTemplate(value);
+        } else {
+          // Parse as JSON
+          parsedData = JSON.parse(value);
+        }
+        
         setJsonError('');
         
-        // Update preview data if the JSON contains template data
-        if (parsedJson.templateData && parsedJson.templateData.personalInfo) {
-          setPreviewData(parsedJson.templateData);
-        } else if (parsedJson.personalInfo) {
-          // If the JSON is directly CV data (not wrapped in templateData)
-          setPreviewData(parsedJson);
+        // Update preview data if the parsed data contains template data
+        if (parsedData.templateData && parsedData.templateData.personalInfo) {
+          setPreviewData(parsedData.templateData);
+        } else if (parsedData.personalInfo) {
+          // If the data is directly CV data (not wrapped in templateData)
+          setPreviewData(parsedData);
         }
       } catch (error) {
-        setJsonError('Invalid JSON format');
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        setJsonError(`Invalid format: ${errorMessage}`);
       }
     } else {
       setJsonError('');
     }
   };
 
+  const validateTemplateData = (templateData: any) => {
+    const validCategories = ['cv', 'portfolio', 'cover-letter', 'resume', 'custom'];
+    const validCategoryTags = ['Creative', 'Professional', 'Modern'];
+    
+    // Validate main category
+    if (templateData.category && !validCategories.includes(templateData.category)) {
+      throw new Error(`Invalid category '${templateData.category}'. Valid categories are: ${validCategories.join(', ')}`);
+    }
+    
+    // Validate category tags
+    if (templateData.categories && Array.isArray(templateData.categories)) {
+      const invalidTags = templateData.categories.filter((cat: string) => !validCategoryTags.includes(cat));
+      if (invalidTags.length > 0) {
+        throw new Error(`Invalid category tags: ${invalidTags.join(', ')}. Valid tags are: ${validCategoryTags.join(', ')}`);
+      }
+    }
+    
+    return true;
+  };
+
   const handleCreateTemplate = async () => {
     if (jsonError || !uploadedJson || selectedCategories.length === 0) return;
 
     try {
-      const templateData = JSON.parse(uploadedJson);
+      let templateData;
       
+      // Check if it looks like TypeScript
+      if (uploadedJson.includes('import') || uploadedJson.includes('export') || uploadedJson.includes(': ITemplate') || uploadedJson.includes('const') && uploadedJson.includes('Template')) {
+        // Parse as TypeScript
+        templateData = parseTypeScriptTemplate(uploadedJson);
+      } else {
+        // Parse as JSON
+        templateData = JSON.parse(uploadedJson);
+      }
+      
+      // Validate template data
+      try {
+        validateTemplateData(templateData);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Validation failed';
+        alert(`Template validation failed: ${errorMessage}`);
+        return;
+      }
+
       // Prepare the template data for database
       const templateToSave = {
         ...templateData,
@@ -228,7 +290,9 @@ const TemplateManager: React.FC = () => {
         globalAccess: true,
         tier: templateData.tier || 'free',
         // Ensure we have a name field
-        name: templateData.name || templateData.templateName || 'Untitled Template'
+        name: templateData.name || templateData.templateName || 'Untitled Template',
+        // Ensure category is valid
+        category: templateData.category || 'cv'
       };
 
       console.log('Saving template:', templateToSave);
@@ -335,8 +399,13 @@ const TemplateManager: React.FC = () => {
       globalStyles: {
         fontFamily: "Inter, system-ui, sans-serif",
         primaryColor: "#2563eb",
+        secondaryColor: "#64748b",
         backgroundColor: "#ffffff",
-        fontSize: "12pt"
+        fontSize: "12pt",
+        lineHeight: "1.6",
+        spacing: "24px",
+        borderRadius: "8px",
+        boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.1)"
       },
       availableSections: [
         {
@@ -435,19 +504,30 @@ const TemplateManager: React.FC = () => {
     if (!uploadedJson.trim()) return;
     
     try {
-      const parsedJson = JSON.parse(uploadedJson);
-      if (parsedJson.templateData && parsedJson.templateData.personalInfo) {
-        setPreviewData(parsedJson.templateData);
+      let parsedData;
+      
+      // Check if it looks like TypeScript
+      if (uploadedJson.includes('import') || uploadedJson.includes('export') || uploadedJson.includes(': ITemplate') || uploadedJson.includes('const') && uploadedJson.includes('Template')) {
+        // Parse as TypeScript
+        parsedData = parseTypeScriptTemplate(uploadedJson);
+      } else {
+        // Parse as JSON
+        parsedData = JSON.parse(uploadedJson);
+      }
+      
+      if (parsedData.templateData && parsedData.templateData.personalInfo) {
+        setPreviewData(parsedData.templateData);
         setJsonError('');
-      } else if (parsedJson.personalInfo) {
-        // If the JSON is directly CV data (not wrapped in templateData)
-        setPreviewData(parsedJson);
+      } else if (parsedData.personalInfo) {
+        // If the data is directly CV data (not wrapped in templateData)
+        setPreviewData(parsedData);
         setJsonError('');
       } else {
-        setJsonError('No valid CV data found in JSON. Please include personalInfo section.');
+        setJsonError('No valid CV data found. Please include personalInfo section.');
       }
     } catch (error) {
-      setJsonError('Invalid JSON format');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      setJsonError(`Invalid format: ${errorMessage}`);
     }
   };
 
@@ -611,6 +691,114 @@ const TemplateManager: React.FC = () => {
     return template.categories && template.categories.includes(selectedSortCategory);
   });
 
+  // Convert template to TypeScript
+  const convertTemplateToTypeScript = (template: Template): string => {
+    const templateName = template.name.replace(/[^a-zA-Z0-9]/g, '_');
+    const className = `${templateName}Template`;
+    
+    const tsContent = `import { ITemplate } from '@/types/template';
+
+export const ${className}: ITemplate = {
+  id: '${template.id}',
+  name: '${template.name}',
+  description: '${template.description || ''}',
+  category: '${template.category}',
+  categories: ${JSON.stringify(template.categories || [], null, 2)},
+  tier: '${template.tier}',
+  isDefault: ${template.isDefault},
+  isActive: ${template.isActive},
+  isPublished: ${template.isPublished},
+  globalStyles: ${JSON.stringify(template.globalStyles, null, 2)},
+  availableSections: ${JSON.stringify(template.availableSections, null, 2)},
+  templateData: ${JSON.stringify(template.templateData, null, 2)},
+  createdAt: '${template.createdAt}',
+  updatedAt: '${template.updatedAt}'
+};
+
+export default ${className};
+`;
+
+    return tsContent;
+  };
+
+  // Download template as TypeScript file
+  const downloadTemplateAsTypeScript = (template: Template) => {
+    const tsContent = convertTemplateToTypeScript(template);
+    const templateName = template.name.replace(/[^a-zA-Z0-9]/g, '_');
+    const fileName = `${templateName}Template.ts`;
+    
+    const blob = new Blob([tsContent], { type: 'text/typescript' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // Download all templates as TypeScript
+  const downloadAllTemplatesAsTypeScript = () => {
+    const allTemplatesContent = templates.map(template => {
+      const templateName = template.name.replace(/[^a-zA-Z0-9]/g, '_');
+      const className = `${templateName}Template`;
+      
+      return `import { ITemplate } from '@/types/template';
+
+export const ${className}: ITemplate = {
+  id: '${template.id}',
+  name: '${template.name}',
+  description: '${template.description || ''}',
+  category: '${template.category}',
+  categories: ${JSON.stringify(template.categories || [], null, 2)},
+  tier: '${template.tier}',
+  isDefault: ${template.isDefault},
+  isActive: ${template.isActive},
+  isPublished: ${template.isPublished},
+  globalStyles: ${JSON.stringify(template.globalStyles, null, 2)},
+  availableSections: ${JSON.stringify(template.availableSections, null, 2)},
+  templateData: ${JSON.stringify(template.templateData, null, 2)},
+  createdAt: '${template.createdAt}',
+  updatedAt: '${template.updatedAt}'
+};`;
+    }).join('\n\n');
+
+    const indexContent = `// Template exports
+${templates.map(template => {
+  const templateName = template.name.replace(/[^a-zA-Z0-9]/g, '_');
+  return `export { ${templateName}Template } from './${templateName}Template';`;
+}).join('\n')}
+
+// Default export for all templates
+export const allTemplates = [
+${templates.map(template => {
+  const templateName = template.name.replace(/[^a-zA-Z0-9]/g, '_');
+  return `  ${templateName}Template`;
+}).join(',\n')}
+];
+`;
+
+    // Create zip file with all templates
+    const zipContent = `// All Templates - Generated on ${new Date().toISOString()}
+${allTemplatesContent}
+
+// Index file
+${indexContent}`;
+
+    const blob = new Blob([zipContent], { type: 'text/typescript' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'allTemplates.ts';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -630,6 +818,13 @@ const TemplateManager: React.FC = () => {
         
         <div className="flex items-center gap-3">
           <button
+            onClick={downloadAllTemplatesAsTypeScript}
+            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl hover:from-purple-700 hover:to-purple-800 transition-all duration-200 shadow-lg hover:shadow-xl font-semibold"
+          >
+            <Code size={16} />
+            Export All as TS
+          </button>
+          <button
             onClick={() => setShowDefaultDataModal(true)}
             className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl hover:from-green-700 hover:to-green-800 transition-all duration-200 shadow-lg hover:shadow-xl font-semibold"
           >
@@ -641,7 +836,7 @@ const TemplateManager: React.FC = () => {
             className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg hover:shadow-xl font-semibold"
           >
             <Upload size={16} />
-            Upload Template
+            Upload Template (JSON/TS)
           </button>
         </div>
       </div>
@@ -730,6 +925,13 @@ const TemplateManager: React.FC = () => {
                 Preview
               </button>
               <button
+                onClick={() => downloadTemplateAsTypeScript(template)}
+                className="flex items-center gap-1 px-3 py-2 text-sm bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all duration-200 shadow-md hover:shadow-lg font-medium"
+              >
+                <Code size={14} />
+                TS
+              </button>
+              <button
                 onClick={() => handleDeleteTemplate(template.id)}
                 className="flex items-center gap-1 px-3 py-2 text-sm bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 transition-all duration-200 shadow-md hover:shadow-lg font-medium"
               >
@@ -766,12 +968,12 @@ const TemplateManager: React.FC = () => {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Upload JSON File
+                      Upload Template File (JSON, TS, TSX)
                     </label>
                     <input
                       ref={fileInputRef}
                       type="file"
-                      accept=".json"
+                      accept=".json,.ts,.tsx"
                       onChange={handleFileUpload}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                     />
@@ -780,7 +982,7 @@ const TemplateManager: React.FC = () => {
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                        JSON Content
+                        Template Content (JSON/TypeScript)
                       </label>
                       <button
                         onClick={loadSampleTemplate}
@@ -795,7 +997,7 @@ const TemplateManager: React.FC = () => {
                       onChange={handleJsonChange}
                       rows={20}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white font-mono text-sm resize-none"
-                      placeholder="Paste your JSON template data here..."
+                      placeholder="Paste your template data here (JSON or TypeScript format)..."
                     />
                     {jsonError && (
                       <p className="text-red-600 text-sm mt-1">{jsonError}</p>
@@ -1070,6 +1272,13 @@ const TemplateManager: React.FC = () => {
                       >
                         <Save size={16} />
                         Save Changes
+                      </button>
+                      <button
+                        onClick={() => selectedTemplate && downloadTemplateAsTypeScript(selectedTemplate)}
+                        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all duration-200 shadow-md hover:shadow-lg font-medium"
+                      >
+                        <Code size={16} />
+                        Download TS
                       </button>
                       <button
                         onClick={() => handleDeleteTemplate(selectedTemplate!.id)}

@@ -15,7 +15,7 @@ const Footer = () => {
 
   const socialLinks = [
     { name: 'Twitter', icon: Twitter, href: '#', color: 'from-blue-400 to-blue-500' },
-    { name: 'LinkedIn', icon: Linkedin, href: '#', color: 'from-blue-600 to-blue-700' },
+    { name: 'LinkedIn', icon: Linkedin, href: 'https://www.linkedin.com/company/cvcircle-io/', color: 'from-blue-600 to-blue-700' },
     { name: 'GitHub', icon: Github, href: '#', color: 'from-gray-600 to-gray-700' },
     { name: 'Discord', icon: MessageCircle, href: '#', color: 'from-purple-400 to-purple-500' },
   ];
@@ -219,17 +219,30 @@ const Footer = () => {
             </motion.div>
           </motion.div>
           <div className="flex space-x-8 mt-6 md:mt-0">
-            {['Privacy Policy', 'Terms of Service', 'Cookie Policy'].map((link, index) => (
-              <motion.a 
-                key={index}
-                href="#" 
-                className="text-white/60 hover:text-lime-400 text-sm transition-colors duration-300 font-medium"
-                whileHover={{ y: -2 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                {link}
-              </motion.a>
-            ))}
+            <motion.a 
+              href="/privacy-policy"
+              className="text-white/60 hover:text-lime-400 text-sm transition-colors duration-300 font-medium"
+              whileHover={{ y: -2 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              Privacy Policy
+            </motion.a>
+            <motion.a 
+              href="/terms"
+              className="text-white/60 hover:text-lime-400 text-sm transition-colors duration-300 font-medium"
+              whileHover={{ y: -2 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              Terms of Service
+            </motion.a>
+            <motion.a 
+              href="/cookie-policy"
+              className="text-white/60 hover:text-lime-400 text-sm transition-colors duration-300 font-medium"
+              whileHover={{ y: -2 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              Cookie Policy
+            </motion.a>
           </div>
         </motion.div>
       </div>

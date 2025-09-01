@@ -2,8 +2,6 @@ import { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 import AppleProvider from 'next-auth/providers/apple';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { MongoDBAdapter } from '@auth/mongodb-adapter';
-import clientPromise from './mongodb';
 import connectDB from './database';
 import { User } from '@/models';
 
@@ -12,7 +10,6 @@ const hasGoogleCredentials = process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_
 const hasAppleCredentials = process.env.APPLE_ID && process.env.APPLE_SECRET;
 
 export const authOptions: NextAuthOptions = {
-  adapter: MongoDBAdapter(clientPromise) as any,
   providers: [
     // Only add Google provider if credentials are configured
     ...(hasGoogleCredentials ? [
@@ -154,7 +151,7 @@ export const authOptions: NextAuthOptions = {
     }
   },
   pages: {
-    signIn: '/auth/signin',
+    signIn: '/auth/login',
     error: '/auth/error',
   },
   session: {
