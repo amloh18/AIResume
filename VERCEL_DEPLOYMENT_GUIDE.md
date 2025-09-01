@@ -6,6 +6,10 @@
 ✅ **vercel.json** - Updated to use modern Vercel configuration (no incompatible `builds` and `functions` properties)
 ✅ **next.config.ts** - Optimized for Vercel deployment with proper function handling
 ✅ **package.json** - Correct Node.js version requirements
+✅ **Firebase Authentication** - All components now use `useFirebaseAuth` hook
+✅ **Google Login Flow** - Fixed and working correctly
+✅ **Policy Pages** - Privacy Policy, Terms of Service, Cookie Policy implemented
+✅ **Footer Links** - All policy pages linked with LinkedIn company page
 
 ### **1. Environment Variables Setup**
 
@@ -220,6 +224,7 @@ Create an admin user for the application:
 After deployment, test these features:
 
 - [ ] User registration and login
+- [ ] Google OAuth authentication
 - [ ] CV creation and editing
 - [ ] Job application tracking
 - [ ] AI assistant functionality
@@ -227,6 +232,8 @@ After deployment, test these features:
 - [ ] Email notifications
 - [ ] File uploads
 - [ ] Admin dashboard
+- [ ] Policy pages (Privacy, Terms, Cookie Policy)
+- [ ] Footer links and LinkedIn integration
 
 ## 🐛 **Troubleshooting**
 
@@ -250,6 +257,11 @@ After deployment, test these features:
    - ✅ **Fixed**: Updated user ID validation to handle Google OAuth IDs
    - **Solution**: Created `userIdUtils.ts` with flexible validation
    - **Impact**: Google authentication users can now save CVs successfully
+
+5. **Google login redirecting to onboarding instead of dashboard**
+   - ✅ **Fixed**: Updated all authentication modals to use `useFirebaseAuth` hook
+   - **Solution**: Proper CV checking and smart redirect logic
+   - **Impact**: Existing users go to dashboard, new users go to onboarding
 
 ### **Common Issues**
 

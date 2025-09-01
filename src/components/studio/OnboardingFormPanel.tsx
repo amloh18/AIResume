@@ -30,6 +30,7 @@ import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSo
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import LoadingAnimation from '@/components/ui/LoadingAnimation';
+import { useTemplateStore } from '@/lib/stores/templateStore';
 
 interface OnboardingFormPanelProps {
   cvData: CVDataStructure | null;
@@ -116,6 +117,9 @@ const OnboardingFormPanel: React.FC<OnboardingFormPanelProps> = ({
     'certificates',
     'languages'
   ]);
+
+  // Get templates from store
+  const { templates, selectedTemplate, setSelectedTemplate } = useTemplateStore();
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -498,14 +502,18 @@ const OnboardingFormPanel: React.FC<OnboardingFormPanelProps> = ({
   };
 
   const renderTemplateTab = () => {
-    const templates = [
-      { id: '1', name: 'Modern Professional', image: '/api/templates/1/image', selected: true },
-      { id: '2', name: 'Classic Elegant', image: '/api/templates/2/image', selected: false },
-      { id: '3', name: 'Creative Portfolio', image: '/api/templates/3/image', selected: false },
-      { id: '4', name: 'Minimal Clean', image: '/api/templates/4/image', selected: false },
-      { id: '5', name: 'Executive Summary', image: '/api/templates/5/image', selected: false },
-      { id: '6', name: 'Tech Specialist', image: '/api/templates/6/image', selected: false },
-    ];
+    if (templates.length === 0) {
+      return (
+        <div className="p-4">
+          <h3 className="text-lg font-semibold text-white mb-4">Choose Template</h3>
+          <div className="text-center py-8">
+            <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-400 text-sm">No templates available</p>
+            <p className="text-gray-500 text-xs mt-2">Templates will be loaded from the database</p>
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div className="p-4">
@@ -514,8 +522,9 @@ const OnboardingFormPanel: React.FC<OnboardingFormPanelProps> = ({
           {templates.map((template) => (
             <div
               key={template.id}
+              onClick={() => setSelectedTemplate(template)}
               className={`relative cursor-pointer rounded-lg border-2 transition-all ${
-                template.selected
+                selectedTemplate?.id === template.id
                   ? 'border-blue-500 bg-blue-500/10'
                   : 'border-gray-600 bg-gray-800 hover:border-gray-500'
               }`}
@@ -525,8 +534,9 @@ const OnboardingFormPanel: React.FC<OnboardingFormPanelProps> = ({
               </div>
               <div className="p-2">
                 <p className="text-xs text-gray-300 text-center">{template.name}</p>
+                <p className="text-xs text-gray-500 text-center mt-1">{template.category}</p>
               </div>
-              {template.selected && (
+              {selectedTemplate?.id === template.id && (
                 <div className="absolute top-1 right-1 w-3 h-3 bg-blue-500 rounded-full"></div>
               )}
             </div>

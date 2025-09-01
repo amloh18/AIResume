@@ -177,19 +177,13 @@ export async function POST(request: NextRequest) {
     console.error('CV parsing API error:', error);
     console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     
-    // Return a basic structure even on error to prevent client-side failures
-    const fallbackData = getEmptyStructure();
-    fallbackData.personalInfo.summary = 'An error occurred during CV parsing. Please enter your information manually.';
+    // Return proper error response
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     
-    // Add error info to help with debugging
-    const responseData = {
-      ...fallbackData,
-      _error: error instanceof Error ? error.message : 'Unknown error',
-      _parsed: false,
-      _timestamp: new Date().toISOString()
-    };
-    
-    return NextResponse.json(responseData, { status: 200 }); // Return 200 with empty data instead of 500
+    return NextResponse.json(
+      { error: errorMessage },
+      { status: 400 }
+    );
   }
 }
 
@@ -210,13 +204,38 @@ async function parseDocument(file: File) {
           const pdfData = await pdfParse(buffer);
           extractedText = pdfData.text || '';
           console.log('PDF parsing successful, text length:', extractedText.length);
+          
+          // If no text extracted, try alternative method
+          if (!extractedText || extractedText.trim().length === 0) {
+            console.log('No text extracted from PDF, trying alternative parsing...');
+            // Try to extract text from PDF pages
+            try {
+              const pdfjsLib = require('pdfjs-dist');
+              const loadingTask = pdfjsLib.getDocument({ data: buffer });
+              const pdf = await loadingTask.promise;
+              const textContent = [];
+              
+              for (let i = 1; i <= Math.min(pdf.numPages, 5); i++) {
+                const page = await pdf.getPage(i);
+                const content = await page.getTextContent();
+                const pageText = content.items.map((item: any) => item.str).join(' ');
+                textContent.push(pageText);
+              }
+              
+              extractedText = textContent.join('\n');
+              console.log('Alternative PDF parsing successful, text length:', extractedText.length);
+            } catch (altError) {
+              console.error('Alternative PDF parsing failed:', altError);
+              throw new Error('PDF parsing is currently unavailable. Please copy and paste your CV content as text instead.');
+            }
+          }
         } catch (pdfError) {
           console.error('PDF parsing failed:', pdfError);
-          extractedText = '';
+          throw new Error('PDF parsing is currently unavailable. Please copy and paste your CV content as text instead.');
         }
       } else {
         console.log('PDF parsing library not available');
-        extractedText = '';
+        throw new Error('PDF parsing is currently unavailable. Please copy and paste your CV content as text instead.');
       }
     } else if (fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
       if (mammoth) {
@@ -225,13 +244,17 @@ async function parseDocument(file: File) {
           const result = await mammoth.extractRawText({ buffer });
           extractedText = result.value || '';
           console.log('DOCX parsing successful, text length:', extractedText.length);
+          
+          if (!extractedText || extractedText.trim().length === 0) {
+            throw new Error('Failed to parse CV with AI. Please try again or check your file format.');
+          }
         } catch (docxError) {
           console.error('DOCX parsing failed:', docxError);
-          extractedText = '';
+          throw new Error('Failed to parse CV with AI. Please try again or check your file format.');
         }
       } else {
         console.log('DOCX parsing library not available');
-        extractedText = '';
+        throw new Error('Failed to parse CV with AI. Please try again or check your file format.');
       }
     } else if (fileType.startsWith('image/')) {
       if (createWorker) {

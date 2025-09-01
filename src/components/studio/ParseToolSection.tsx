@@ -3,7 +3,7 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, FileText, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
-import { AICVParser } from '@/lib/services/aiCVParser';
+
 
 interface ParseToolSectionProps {
   onCVParsed: (data: any) => void;
@@ -26,15 +26,29 @@ const ParseToolSection: React.FC<ParseToolSectionProps> = ({ onCVParsed, isActiv
     try {
       console.log('🔍 ParseTool - Starting CV parsing for:', file.name);
       
-      // Parse the CV using AI parser
-      const result = await AICVParser.parseCV(file);
+      // Use direct parsing API (no AI dependency)
+      const formData = new FormData();
+      formData.append('file', file);
       
-      if (result.success && result.data) {
+      const response = await fetch('/api/cv/parse', {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to parse CV');
+      }
+      
+      const result = await response.json();
+      
+      if (result.personalInfo) {
         setUploadStatus('success');
         setSuccessMessage('CV parsed successfully! Data has been loaded.');
         
-        // Pass the parsed data to the parent component
-        onCVParsed(result.data);
+        // The direct parsing API returns the correct format
+        // Just pass it directly to the parent component
+        onCVParsed(result);
         
         // Auto-hide success message after 3 seconds
         setTimeout(() => {
@@ -43,12 +57,12 @@ const ParseToolSection: React.FC<ParseToolSectionProps> = ({ onCVParsed, isActiv
         }, 3000);
       } else {
         setUploadStatus('error');
-        setErrorMessage(result.error || 'Failed to parse CV');
+        setErrorMessage('Failed to parse CV data');
       }
     } catch (error) {
       console.error('❌ ParseTool - Error parsing CV:', error);
       setUploadStatus('error');
-      setErrorMessage('An error occurred while parsing the CV');
+      setErrorMessage(error instanceof Error ? error.message : 'An error occurred while parsing the CV');
     } finally {
       setIsUploading(false);
     }

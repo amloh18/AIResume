@@ -128,8 +128,13 @@ export async function POST(request: NextRequest) {
       globalStyles: templateData.globalStyles || {
         fontFamily: templateData.style?.fontFamily || 'Inter, system-ui, sans-serif',
         primaryColor: '#2563eb',
+        secondaryColor: '#64748b',
         backgroundColor: '#ffffff',
-        fontSize: '12pt'
+        fontSize: '12pt',
+        lineHeight: '1.6',
+        spacing: '24px',
+        borderRadius: '8px',
+        boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)'
       },
       availableSections: templateData.availableSections || [],
       templateData: templateData.templateData || extractCVData(templateData),
@@ -140,9 +145,25 @@ export async function POST(request: NextRequest) {
       createdBy: templateData.createdBy
     };
 
+    // Validate and fix category field
+    const validCategories = ['cv', 'portfolio', 'cover-letter', 'resume', 'custom'];
+    if (!validCategories.includes(normalizedTemplateData.category)) {
+      console.log(`⚠️ Invalid category '${normalizedTemplateData.category}', defaulting to 'cv'`);
+      normalizedTemplateData.category = 'cv';
+    }
+
+    // Ensure categories array contains valid values
+    const validCategoryTags = ['Creative', 'Professional', 'Modern'];
+    if (normalizedTemplateData.categories && Array.isArray(normalizedTemplateData.categories)) {
+      normalizedTemplateData.categories = normalizedTemplateData.categories.filter(cat => 
+        validCategoryTags.includes(cat)
+      );
+    }
+
+    // If no categories are provided, add a default one based on the main category
     if (!normalizedTemplateData.categories || normalizedTemplateData.categories.length === 0) {
-      console.log('❌ Missing categories');
-      return NextResponse.json({ error: 'At least one category is required' }, { status: 400 });
+      console.log('⚠️ No categories provided, adding default category');
+      normalizedTemplateData.categories = ['Professional'];
     }
 
     console.log('📝 Creating template with normalized data:', JSON.stringify(normalizedTemplateData, null, 2));

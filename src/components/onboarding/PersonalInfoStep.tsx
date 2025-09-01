@@ -2,9 +2,9 @@
 
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, FileText, User, Mail, Phone, MapPin, Globe, ArrowRight, X, RotateCcw } from 'lucide-react';
+import { Upload, FileText, User, Mail, Phone, MapPin, Globe, ArrowRight, X, RotateCcw, CheckCircle } from 'lucide-react';
 import { useOnboarding } from '@/contexts/OnboardingContext';
-import { AICVParser } from '@/lib/services/aiCVParser';
+
 
 interface PersonalInfoStepProps {
   onNext: () => void;
@@ -23,22 +23,40 @@ export default function PersonalInfoStep({ onNext }: PersonalInfoStepProps) {
     setUploadError('');
 
     try {
-      const result = await AICVParser.parseCV(file);
+      // Use direct parsing API (no AI dependency)
+      const formData = new FormData();
+      formData.append('file', file);
       
-      if (result.success && result.data) {
-        dispatch({ type: 'UPDATE_CV_DATA', payload: result.data });
+      const response = await fetch('/api/cv/parse', {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to parse CV');
+      }
+      
+      const result = await response.json();
+      
+      if (result.personalInfo) {
+        // The direct parsing API returns the correct format
+        // Just update the onboarding context
+        dispatch({ type: 'UPDATE_CV_DATA', payload: result });
         setShowUpload(false);
-        // Auto-fill the form with parsed data
-        if (result.data.basics) {
-          // Update form fields with parsed data
-          const basics = result.data.basics;
-          // You can add more auto-fill logic here
-        }
+        
+        // Show success message briefly, then flip the card
+        setTimeout(() => {
+          if (!isFlipped) {
+            setIsFlipped(true);
+          }
+        }, 2000); // Give user time to see the success message
       } else {
-        setUploadError(result.error || 'Failed to parse CV');
+        setUploadError('Failed to parse CV data');
       }
     } catch (error) {
-      setUploadError('An error occurred while parsing the CV');
+      console.error('CV parsing error:', error);
+      setUploadError(error instanceof Error ? error.message : 'An error occurred while parsing the CV');
     } finally {
       setIsUploading(false);
     }
@@ -180,6 +198,24 @@ export default function PersonalInfoStep({ onNext }: PersonalInfoStepProps) {
                         {uploadError && (
                           <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">
                             {uploadError}
+                          </div>
+                        )}
+                        
+                        {isUploading && (
+                          <div className="p-4 bg-lime-500/10 border border-lime-500/20 rounded-lg text-lime-400 text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-lime-400"></div>
+                              Processing your CV...
+                            </div>
+                          </div>
+                        )}
+                        
+                        {!isUploading && !uploadError && state.cvData.basics.name && (
+                          <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg text-green-400 text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              <CheckCircle size={16} />
+                              CV parsed successfully! Flipping card...
+                            </div>
                           </div>
                         )}
                         

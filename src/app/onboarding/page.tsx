@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Sparkles, CheckCircle, LogOut } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
-import { signOutUser } from '@/lib/firebase';
+import { signOut as firebaseSignOut } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 import { OnboardingProvider, useOnboarding } from '@/contexts/OnboardingContext';
 import RoleSelection from '@/components/onboarding/RoleSelection';
 import SignupModal from '@/components/onboarding/AuthModal';
@@ -25,6 +26,7 @@ const OnboardingContent: React.FC = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingCVs, setIsCheckingCVs] = useState(false);
   const [errorDialog, setErrorDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -41,6 +43,9 @@ const OnboardingContent: React.FC = () => {
   const stepParam = searchParams.get('step');
 
   useEffect(() => {
+    // Prevent multiple CV checks
+    if (isCheckingCVs) return;
+    
     console.log('🔍 useEffect - session?.user:', session?.user);
     console.log('🔍 useEffect - localStorage user:', typeof window !== 'undefined' ? localStorage.getItem('user') : 'N/A');
     console.log('🔍 useEffect - needsCVSetup:', typeof window !== 'undefined' ? sessionStorage.getItem('needsCVSetup') : 'N/A');
@@ -61,12 +66,41 @@ const OnboardingContent: React.FC = () => {
         color: 'blue'
       }});
       
-      // Skip to Personal Information step (step 2) if user is already authenticated
-      // or if step parameter is provided
-      if (state.currentStep === 0 && stepParam === '2') {
-        console.log('✅ NextAuth user - moving to step 2 due to stepParam');
-        dispatch({ type: 'SET_CURRENT_STEP', payload: 2 });
-      }
+      // Check if user already has CVs before proceeding
+      const checkExistingCVs = async () => {
+        if (isCheckingCVs) return;
+        setIsCheckingCVs(true);
+        
+        try {
+          const response = await fetch(`/api/cvs?userId=${session.user.id}`);
+          const result = await response.json();
+          
+          if (result.success && result.data.cvs && result.data.cvs.length > 0) {
+            // User has CVs, redirect to dashboard
+            console.log('✅ User already has CVs, redirecting to dashboard');
+            if (typeof window !== 'undefined') {
+              sessionStorage.removeItem('needsCVSetup');
+              sessionStorage.removeItem('fromOnboarding');
+            }
+            window.location.href = '/dashboard';
+            return;
+          }
+          
+          // Skip to Personal Information step (step 2) if user is already authenticated
+          // or if step parameter is provided
+          if (state.currentStep === 0 && stepParam === '2') {
+            console.log('✅ NextAuth user - moving to step 2 due to stepParam');
+            dispatch({ type: 'SET_CURRENT_STEP', payload: 2 });
+          }
+        } catch (error) {
+          console.error('Error checking existing CVs:', error);
+          // Continue with onboarding if we can't check
+        } finally {
+          setIsCheckingCVs(false);
+        }
+      };
+      
+      checkExistingCVs();
     } else {
       // Check for Firebase user data in localStorage (only on client side)
       if (typeof window !== 'undefined') {
@@ -93,12 +127,41 @@ const OnboardingContent: React.FC = () => {
               color: 'blue'
             }});
             
-            // Skip to CV setup step (step 2) if user is already authenticated
-            // or if step parameter is provided
-            if (state.currentStep === 0 && stepParam === '2') {
-              console.log('✅ Firebase user - moving to step 2 due to stepParam');
-              dispatch({ type: 'SET_CURRENT_STEP', payload: 2 });
-            }
+            // Check if user already has CVs before proceeding
+            const checkExistingCVs = async () => {
+              if (isCheckingCVs) return;
+              setIsCheckingCVs(true);
+              
+              try {
+                const response = await fetch(`/api/cvs?userId=${parsedUser.id}`);
+                const result = await response.json();
+                
+                if (result.success && result.data.cvs && result.data.cvs.length > 0) {
+                  // User has CVs, redirect to dashboard
+                  console.log('✅ Firebase user already has CVs, redirecting to dashboard');
+                  if (typeof window !== 'undefined') {
+                    sessionStorage.removeItem('needsCVSetup');
+                    sessionStorage.removeItem('fromOnboarding');
+                  }
+                  window.location.href = '/dashboard';
+                  return;
+                }
+                
+                // Skip to CV setup step (step 2) if user is already authenticated
+                // or if step parameter is provided
+                if (state.currentStep === 0 && stepParam === '2') {
+                  console.log('✅ Firebase user - moving to step 2 due to stepParam');
+                  dispatch({ type: 'SET_CURRENT_STEP', payload: 2 });
+                }
+              } catch (error) {
+                console.error('Error checking existing CVs:', error);
+                // Continue with onboarding if we can't check
+              } finally {
+                setIsCheckingCVs(false);
+              }
+            };
+            
+            checkExistingCVs();
           } catch (error) {
             console.error('Error parsing user data:', error);
           }
@@ -107,7 +170,7 @@ const OnboardingContent: React.FC = () => {
         }
       }
     }
-  }, [session, dispatch, nextStep, state.currentStep, stepParam]);
+  }, [session, dispatch, state.currentStep, stepParam, isCheckingCVs]); // Added isCheckingCVs to dependencies
 
   const handleRoleSelect = (role: any) => {
     dispatch({ type: 'SET_SELECTED_ROLE', payload: role });
@@ -246,7 +309,16 @@ const OnboardingContent: React.FC = () => {
         console.log('✅ Validated and converted user ID:', userId);
       } catch (error) {
         console.error('❌ User ID validation failed:', error);
-        throw new Error(`Failed to validate user ID: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        
+        // Provide more specific error messages based on the error
+        if (errorMessage.includes('Failed to fetch user data from server')) {
+          throw new Error('Authentication session expired. Please log in again.');
+        } else if (errorMessage.includes('Invalid user ID format')) {
+          throw new Error('Authentication error. Please try logging in again.');
+        } else {
+          throw new Error(`Authentication error: ${errorMessage}`);
+        }
       }
       
       const requestData = {
@@ -335,6 +407,27 @@ const OnboardingContent: React.FC = () => {
   };
 
   const renderStep = () => {
+    // Show loading if checking CVs
+    if (isCheckingCVs) {
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-start pt-20 px-4">
+          <div className="w-full max-w-4xl flex flex-col items-center">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl md:text-4xl font-bold text-white mb-3">
+                Checking Your Profile
+              </h2>
+              <p className="text-xl text-white/60">
+                Please wait while we check your existing CVs...
+              </p>
+            </div>
+            <div className="flex items-center justify-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lime-400"></div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    
     // Check if user is authenticated (either NextAuth session or Firebase localStorage)
     const isAuthenticated = session?.user || (typeof window !== 'undefined' && localStorage.getItem('user'));
     
@@ -500,7 +593,7 @@ const OnboardingContent: React.FC = () => {
                       const userData = localStorage.getItem('user');
                       if (userData) {
                         // Firebase user - sign out from Firebase
-                        await signOutUser();
+                        await firebaseSignOut(auth);
                         localStorage.removeItem('user');
                         sessionStorage.removeItem('needsCVSetup');
                         window.location.href = '/';

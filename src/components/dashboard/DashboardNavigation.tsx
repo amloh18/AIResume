@@ -26,6 +26,7 @@ interface DashboardNavigationProps {
   user: {
     name: string;
     email: string;
+    username?: string;
     progress: number;
     profilePhoto?: string;
     subscription?: {
@@ -110,12 +111,19 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
           
           {/* User Profile */}
           <div className="flex flex-col items-center">
-            <div className="w-12 h-12 rounded-full overflow-hidden mb-2 border-2 border-white/20">
+            <button
+              onClick={() => {
+                // Use username if available, otherwise fallback to email prefix
+                const username = user.username || user.email.split('@')[0];
+                router.push(`/profile/${username}`);
+              }}
+              className="w-12 h-12 rounded-full overflow-hidden mb-2 border-2 border-white/20 hover:border-lime-400/50 transition-colors duration-200 cursor-pointer group"
+            >
               {user.profilePhoto ? (
                 <img
                   src={user.profilePhoto}
                   alt="Profile"
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
                     target.style.display = 'none';
@@ -123,10 +131,10 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
                   }}
                 />
               ) : null}
-              <div className={`w-full h-full bg-gradient-to-br from-lime-400 to-lime-500 flex items-center justify-center text-black font-semibold text-sm ${user.profilePhoto ? 'hidden' : ''}`}>
+              <div className={`w-full h-full bg-gradient-to-br from-lime-400 to-lime-500 flex items-center justify-center text-black font-semibold text-sm group-hover:scale-105 transition-transform duration-200 ${user.profilePhoto ? 'hidden' : ''}`}>
                 {getUserInitials(user.name)}
               </div>
-            </div>
+            </button>
             <div className="text-center">
               <p className="text-white text-sm font-medium truncate">{user.name}</p>
               <p className="text-white/60 text-xs truncate">{user.email}</p>

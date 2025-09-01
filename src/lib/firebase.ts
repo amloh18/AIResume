@@ -33,39 +33,6 @@ googleProvider.setCustomParameters({
   prompt: 'select_account'
 });
 
-// Firebase Auth functions
-export const signInWithGoogle = async () => {
-  try {
-    const result = await signInWithPopup(auth, googleProvider);
-    return result.user;
-  } catch (error: any) {
-    console.error('Error signing in with Google:', error);
-    
-    // Handle specific Firebase auth errors
-    if (error.code === 'auth/unauthorized-domain') {
-      console.error('Domain not authorized in Firebase Console. Please add your domain to authorized domains.');
-      throw new Error('This domain is not authorized for Firebase authentication. Please contact support.');
-    }
-    
-    throw error;
-  }
-};
 
-export const signOutUser = async () => {
-  try {
-    await signOut(auth);
-  } catch (error) {
-    console.error('Error signing out:', error);
-    throw error;
-  }
-};
-
-export const getCurrentUser = (): User | null => {
-  return auth.currentUser;
-};
-
-export const onAuthStateChange = (callback: (user: User | null) => void) => {
-  return onAuthStateChanged(auth, callback);
-};
 
 export { app, analytics };

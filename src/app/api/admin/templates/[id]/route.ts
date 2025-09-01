@@ -59,7 +59,7 @@ const extractCVData = (data: any): any => {
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -71,7 +71,7 @@ export async function PUT(
     await connectDB();
     
     const templateData = await request.json();
-    const templateId = params.id;
+    const { id: templateId } = await params;
 
     console.log('🔄 Updating template:', templateId);
     console.log('📝 Update data:', JSON.stringify(templateData, null, 2));
@@ -105,7 +105,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -116,7 +116,7 @@ export async function DELETE(
 
     await connectDB();
     
-    const templateId = params.id;
+    const { id: templateId } = await params;
 
     console.log('🗑️ Deleting template:', templateId);
 

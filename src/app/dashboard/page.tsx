@@ -52,6 +52,7 @@ const Dashboard: React.FC<DashboardProps> = () => {
   const [user, setUser] = useState({
     name: 'Amarjot',
     email: 'amarjot@example.com',
+    username: undefined,
     progress: 60,
     profilePhoto: '',
     cvsCreated: 3,
@@ -64,24 +65,37 @@ const Dashboard: React.FC<DashboardProps> = () => {
     }
   });
 
-  // Fetch user subscription data
+  // Fetch user data including subscription and username
   useEffect(() => {
-    const fetchUserSubscription = async () => {
+    const fetchUserData = async () => {
       try {
-        const response = await fetch('/api/user/subscription');
-        const data = await response.json();
-        if (data.success) {
+        // Fetch user profile data
+        const userResponse = await fetch('/api/user');
+        const userData = await userResponse.json();
+        
+        if (userData.success) {
           setUser(prev => ({
             ...prev,
-            subscription: data.subscription
+            username: userData.user.username,
+            subscription: prev.subscription // Keep existing subscription data
+          }));
+        }
+
+        // Fetch subscription data
+        const subscriptionResponse = await fetch('/api/user/subscription');
+        const subscriptionData = await subscriptionResponse.json();
+        if (subscriptionData.success) {
+          setUser(prev => ({
+            ...prev,
+            subscription: subscriptionData.subscription
           }));
         }
       } catch (error) {
-        console.error('Error fetching user subscription:', error);
+        console.error('Error fetching user data:', error);
       }
     };
 
-    fetchUserSubscription();
+    fetchUserData();
   }, []);
 
   const [showWelcomeAnimation, setShowWelcomeAnimation] = useState(false);

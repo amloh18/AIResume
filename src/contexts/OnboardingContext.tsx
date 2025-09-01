@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useReducer, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, ReactNode, useCallback } from 'react';
 import { CVDataStructure, OnboardingStep, UserRole } from '@/types/cv';
 
 interface OnboardingState {
@@ -151,23 +151,23 @@ const OnboardingContext = createContext<OnboardingContextType | undefined>(undef
 export function OnboardingProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(onboardingReducer, initialState);
 
-  const nextStep = () => {
+  const nextStep = useCallback(() => {
     if (state.currentStep < state.steps.length - 1) {
       dispatch({ type: 'SET_CURRENT_STEP', payload: state.currentStep + 1 });
     }
-  };
+  }, [state.currentStep, state.steps.length]);
 
-  const prevStep = () => {
+  const prevStep = useCallback(() => {
     if (state.currentStep > 0) {
       dispatch({ type: 'SET_CURRENT_STEP', payload: state.currentStep - 1 });
     }
-  };
+  }, [state.currentStep]);
 
-  const goToStep = (step: number) => {
+  const goToStep = useCallback((step: number) => {
     if (step >= 0 && step < state.steps.length) {
       dispatch({ type: 'SET_CURRENT_STEP', payload: step });
     }
-  };
+  }, [state.steps.length]);
 
   return (
     <OnboardingContext.Provider value={{ state, dispatch, nextStep, prevStep, goToStep }}>

@@ -5,7 +5,7 @@ import { signIn, getSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Mail, Lock, Eye, EyeOff, AlertCircle, User, ArrowRight } from 'lucide-react';
-import { signInWithGoogle } from '@/lib/firebase';
+import { useFirebaseAuth } from '@/lib/hooks/useFirebaseAuth';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -21,13 +21,14 @@ export default function LoginModal({ isOpen, onClose, onSwitchToRegister, onLogi
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
+  const { signInWithGoogle: firebaseSignInWithGoogle } = useFirebaseAuth();
 
   // Check if OAuth providers are available
   // For Firebase Google Auth, we check for Firebase config
   const hasFirebaseGoogle = process.env.NEXT_PUBLIC_FIREBASE_API_KEY && process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN;
-  // For NextAuth Google Auth, we check for NextAuth credentials
-  const hasNextAuthGoogle = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && process.env.NEXT_PUBLIC_GOOGLE_CLIENT_SECRET;
-  const hasAppleCredentials = process.env.NEXT_PUBLIC_APPLE_ID && process.env.NEXT_PUBLIC_APPLE_SECRET;
+  // For NextAuth Google Auth, we check for NextAuth credentials (server-side only)
+  const hasNextAuthGoogle = false; // NextAuth credentials are server-side only
+  const hasAppleCredentials = false; // Apple credentials are server-side only
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,16 +61,16 @@ export default function LoginModal({ isOpen, onClose, onSwitchToRegister, onLogi
               onClose();
               window.location.href = '/dashboard';
             } else {
-              // New user, redirect to onboarding Personal Information page (step 2)
-              console.log('🆕 New user, redirecting to onboarding Personal Information page (step 2)');
+              // User exists but no CVs - still redirect to dashboard (they can create CVs there)
+              console.log('🔄 Existing user with no CVs, redirecting to dashboard');
               onClose();
-              window.location.href = '/onboarding?step=2';
+              window.location.href = '/dashboard';
             }
           } catch (error) {
-            console.log('Error checking CVs, assuming new user:', error);
-            // If we can't check CVs, assume new user and redirect to onboarding Personal Information page (step 2)
+            console.log('Error checking CVs, redirecting to dashboard:', error);
+            // If we can't check CVs, redirect to dashboard (safer default)
             onClose();
-            window.location.href = '/onboarding?step=2';
+            window.location.href = '/dashboard';
           }
         } else {
           setError('Failed to establish session. Please try again.');
@@ -90,12 +91,11 @@ export default function LoginModal({ isOpen, onClose, onSwitchToRegister, onLogi
       // Use Firebase for Google authentication
       try {
         console.log('🚀 Starting Google sign-in process...');
-        const user = await signInWithGoogle();
+        const user = await firebaseSignInWithGoogle();
         console.log('✅ Firebase authentication successful:', user);
         
-        // Wait a moment for localStorage to be updated by the hook
-        console.log('⏳ Waiting for localStorage to be updated...');
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // The useFirebaseAuth hook already handles localStorage storage
+        console.log('⏳ Checking localStorage for user data...');
         
         // Check if this is a new user by checking if they have a CV
         const userData = localStorage.getItem('user');
@@ -113,18 +113,16 @@ export default function LoginModal({ isOpen, onClose, onSwitchToRegister, onLogi
               const result = await response.json();
               console.log('🔍 CV check result:', result);
               
-              if (result.success && result.data.data && result.data.data.length > 0) {
+              if (result.success && result.data.cvs && result.data.cvs.length > 0) {
                 // User has CVs, redirect to dashboard
                 console.log('✅ User has CVs, redirecting to dashboard');
                 onClose();
-                // Use window.location.href for more reliable redirect
                 window.location.href = '/dashboard';
               } else {
-                // New user, redirect to onboarding Personal Information page (step 2)
-                console.log('🆕 New user, redirecting to onboarding Personal Information page (step 2)');
+                // User exists but no CVs - still redirect to dashboard (they can create CVs there)
+                console.log('🔄 Existing user with no CVs, redirecting to dashboard');
                 onClose();
-                // Use window.location.href for more reliable redirect
-                window.location.href = '/onboarding?step=2';
+                window.location.href = '/dashboard';
               }
             } catch (error) {
               console.log('Error checking CVs, assuming new user:', error);
@@ -133,16 +131,16 @@ export default function LoginModal({ isOpen, onClose, onSwitchToRegister, onLogi
               window.location.href = '/onboarding?step=2';
             }
           } catch (error) {
-            console.log('Error parsing user data, assuming new user:', error);
-            // Error parsing user data, assume new user
+            console.log('Error parsing user data, redirecting to dashboard:', error);
+            // Error parsing user data, redirect to dashboard (safer default)
             onClose();
-            window.location.href = '/onboarding?step=2';
+            window.location.href = '/dashboard';
           }
         } else {
-          console.log('⚠️ No user data in localStorage, assuming new user');
-          // No user data, redirect to onboarding Personal Information page (step 2)
+          console.log('⚠️ No user data in localStorage, redirecting to dashboard');
+          // No user data, redirect to dashboard (safer default)
           onClose();
-          window.location.href = '/onboarding?step=2';
+          window.location.href = '/dashboard';
         }
         
         // Ensure modal closes and redirects even if there are issues
@@ -178,22 +176,22 @@ export default function LoginModal({ isOpen, onClose, onSwitchToRegister, onLogi
               const result = await response.json();
               console.log('🔍 CV check result:', result);
               
-                          if (result.success && result.data.cvs && result.data.cvs.length > 0) {
-              // User has CVs, redirect to dashboard
-              console.log('✅ User has CVs, redirecting to dashboard');
+              if (result.success && result.data.cvs && result.data.cvs.length > 0) {
+                // User has CVs, redirect to dashboard
+                console.log('✅ User has CVs, redirecting to dashboard');
+                onClose();
+                window.location.href = '/dashboard';
+              } else {
+                // User exists but no CVs - still redirect to dashboard (they can create CVs there)
+                console.log('🔄 Existing user with no CVs, redirecting to dashboard');
+                onClose();
+                window.location.href = '/dashboard';
+              }
+            } catch (error) {
+              console.log('Error checking CVs, redirecting to dashboard:', error);
+              // If we can't check CVs, redirect to dashboard (safer default)
               onClose();
               window.location.href = '/dashboard';
-            } else {
-              // New user, redirect to onboarding Personal Information page (step 2)
-              console.log('🆕 New user, redirecting to onboarding Personal Information page (step 2)');
-              onClose();
-              window.location.href = '/onboarding?step=2';
-            }
-            } catch (error) {
-              console.log('Error checking CVs, assuming new user:', error);
-              // If we can't check CVs, assume new user and redirect to onboarding Personal Information page (step 2)
-              onClose();
-              window.location.href = '/onboarding?step=2';
             }
           }
         } else if (result?.error) {

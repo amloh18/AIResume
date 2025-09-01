@@ -47,6 +47,7 @@ import {
 import RouteGuard from '@/components/auth/RouteGuard';
 import MembershipModal from '@/components/payment/MembershipModal';
 import LoadingAnimation from '@/components/ui/LoadingAnimation';
+import UsernameEditor from '@/components/settings/UsernameEditor';
 
 // --- TYPES ---
 interface PricingPlan {
@@ -76,6 +77,7 @@ interface User {
   firstName: string;
   lastName: string;
   email: string;
+  username?: string;
   phone?: string;
   company?: string;
   role?: string;
@@ -151,6 +153,7 @@ const mockUser: User = {
   firstName: 'Liam',
   lastName: 'Smith',
   email: 'wilson@example.com',
+  username: 'liam_smith',
   phone: '(213) 555-1234',
   company: 'TechCorp',
   role: 'Software Engineer',
@@ -365,16 +368,25 @@ const Sidebar = ({
         <aside className="w-80 bg-black/40 backdrop-blur-xl border-r border-white/10 p-6 flex flex-col justify-between">
             <div>
                 <div className="flex flex-col items-center mb-6">
-                    <img 
-                        src={user.profilePhoto || 'https://placehold.co/96x96/EFEFEF/333333?text=User'} 
-                        alt="User Avatar" 
-                        className="w-24 h-24 rounded-full object-cover mb-4 border-2 border-white/20"
-                        onError={(e) => { 
-                            const target = e.target as HTMLImageElement;
-                            target.onerror = null; 
-                            target.src='https://placehold.co/96x96/EFEFEF/333333?text=User'; 
+                    <button
+                        onClick={() => {
+                            // Use username if available, otherwise fallback to email prefix
+                            const username = user.username || user.email.split('@')[0];
+                            window.location.href = `/profile/${username}`;
                         }}
-                    />
+                        className="w-24 h-24 rounded-full overflow-hidden mb-4 border-2 border-white/20 hover:border-lime-400/50 transition-colors duration-200 cursor-pointer group"
+                    >
+                        <img 
+                            src={user.profilePhoto || 'https://placehold.co/96x96/EFEFEF/333333?text=User'} 
+                            alt="User Avatar" 
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                            onError={(e) => { 
+                                const target = e.target as HTMLImageElement;
+                                target.onerror = null; 
+                                target.src='https://placehold.co/96x96/EFEFEF/333333?text=User'; 
+                            }}
+                        />
+                    </button>
                     <div className="text-center mb-4">
                         <h3 className="font-semibold text-white">
                             {user.firstName} {user.lastName}
@@ -538,10 +550,39 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                     <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl p-6">
                         <h3 className="text-lg font-semibold text-white mb-4">Account Details</h3>
                         <div className="space-y-4">
-                            <div className="flex justify-between">
-                                <span className="text-white/60">Display Name</span>
-                                <span className="text-white font-medium">{formData.displayName}</span>
-                            </div>
+                            <UsernameEditor
+                                currentUsername={formData.username}
+                                displayName={formData.displayName}
+                                onSave={async (username) => {
+                                    try {
+                                        const response = await fetch('/api/user/update-username', {
+                                            method: 'PUT',
+                                            headers: {
+                                                'Content-Type': 'application/json',
+                                            },
+                                            body: JSON.stringify({ username }),
+                                        });
+
+                                        const data = await response.json();
+
+                                        if (data.success) {
+                                            setFormData(prev => ({ ...prev, username }));
+                                            // Refresh user data to get updated username
+                                            const userResponse = await fetch('/api/user');
+                                            if (userResponse.ok) {
+                                                const userData = await userResponse.json();
+                                                if (userData.success && userData.user) {
+                                                    setUser(prev => ({ ...prev, username: userData.user.username }));
+                                                }
+                                            }
+                                        } else {
+                                            throw new Error(data.error);
+                                        }
+                                    } catch (error: any) {
+                                        throw new Error(error.message || 'Failed to update username');
+                                    }
+                                }}
+                            />
                             <div className="flex justify-between">
                                 <span className="text-white/60">Account Created</span>
                                 <span className="text-white">{formData.accountCreated}</span>
@@ -2552,6 +2593,7 @@ function SettingsContent() {
                 firstName: userData.user.firstName,
                 lastName: userData.user.lastName,
                 email: userData.user.email,
+                username: userData.user.username,
                 phone: '',
                 company: '',
                 role: userData.user.role,

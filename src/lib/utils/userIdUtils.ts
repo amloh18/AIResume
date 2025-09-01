@@ -57,6 +57,7 @@ export async function getMongoDBUserId(): Promise<string | null> {
         try {
           const parsedUser = JSON.parse(userData);
           userId = parsedUser.id;
+          console.log('🔍 getMongoDBUserId - Found user ID in localStorage:', userId);
         } catch (error) {
           console.error('Error parsing user data from localStorage:', error);
         }
@@ -70,6 +71,7 @@ export async function getMongoDBUserId(): Promise<string | null> {
     
     // Validate the user ID
     const validation = validateUserId(userId);
+    console.log('🔍 getMongoDBUserId - User ID validation:', validation);
     
     if (!validation.isValid) {
       console.error('Invalid user ID:', validation.message);
@@ -78,29 +80,42 @@ export async function getMongoDBUserId(): Promise<string | null> {
     
     // If it's already a MongoDB ObjectId, return it
     if (validation.type === 'mongodb') {
+      console.log('✅ getMongoDBUserId - Valid MongoDB ObjectId found');
       return userId;
     }
     
     // If it's a Google OAuth ID, fetch the MongoDB user ID from the server
     if (validation.type === 'google') {
-      console.log('Google OAuth ID detected, fetching MongoDB user ID...');
+      console.log('🔍 getMongoDBUserId - Google OAuth ID detected, fetching MongoDB user ID...');
       try {
-        const userResponse = await fetch('/api/user');
+        // Try the new current user endpoint first
+        let userResponse = await fetch('/api/user/current');
+        console.log('🔍 getMongoDBUserId - Current user API response status:', userResponse.status);
+        
+        if (!userResponse.ok) {
+          // If that fails, try with the user ID as query parameter
+          console.log('🔍 getMongoDBUserId - Trying with user ID as query parameter...');
+          userResponse = await fetch(`/api/user/current?userId=${userId}`);
+          console.log('🔍 getMongoDBUserId - User API response status (with query):', userResponse.status);
+        }
+        
         if (userResponse.ok) {
           const userData = await userResponse.json();
+          console.log('🔍 getMongoDBUserId - User API response:', userData);
+          
           if (userData.success && userData.user && userData.user.id) {
-            console.log('Found MongoDB user ID:', userData.user.id);
+            console.log('✅ getMongoDBUserId - Found MongoDB user ID:', userData.user.id);
             return userData.user.id;
           } else {
-            console.error('Could not retrieve user data from server');
+            console.error('❌ getMongoDBUserId - Could not retrieve user data from server');
             return null;
           }
         } else {
-          console.error('Failed to fetch user data from server');
+          console.error('❌ getMongoDBUserId - Failed to fetch user data from server, status:', userResponse.status);
           return null;
         }
       } catch (error) {
-        console.error('Error fetching MongoDB user ID:', error);
+        console.error('❌ getMongoDBUserId - Error fetching MongoDB user ID:', error);
         return null;
       }
     }

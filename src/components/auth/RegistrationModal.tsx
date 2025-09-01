@@ -5,7 +5,8 @@ import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, User, Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
-import { signInWithGoogle } from '@/lib/firebase';
+import { useFirebaseAuth } from '@/lib/hooks/useFirebaseAuth';
+import PrivacyPolicyDialog from '@/components/ui/PrivacyPolicyDialog';
 
 interface RegistrationModalProps {
   isOpen: boolean;
@@ -29,37 +30,36 @@ export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, on
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
   const router = useRouter();
+  const { signInWithGoogle: firebaseSignInWithGoogle } = useFirebaseAuth();
 
   // Check if OAuth providers are available
   // For Firebase Google Auth, we check for Firebase config
   const hasFirebaseGoogle = process.env.NEXT_PUBLIC_FIREBASE_API_KEY && process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN;
-  // For NextAuth Google Auth, we check for NextAuth credentials
-  const hasNextAuthGoogle = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && process.env.NEXT_PUBLIC_GOOGLE_CLIENT_SECRET;
-  const hasAppleCredentials = process.env.NEXT_PUBLIC_APPLE_ID && process.env.NEXT_PUBLIC_APPLE_SECRET;
+  // For NextAuth Google Auth, we check for NextAuth credentials (server-side only)
+  const hasNextAuthGoogle = false; // NextAuth credentials are server-side only
+  const hasAppleCredentials = false; // Apple credentials are server-side only
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (error) setError('');
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handlePrivacyPolicyAccept = () => {
+    setShowPrivacyPolicy(false);
+    // Continue with registration after privacy policy acceptance
+    handleRegistration();
+  };
+
+  const handlePrivacyPolicyDecline = () => {
+    setShowPrivacyPolicy(false);
+    setError('You must accept our Privacy Policy and Terms of Service to continue.');
+  };
+
+  const handleRegistration = async () => {
     setIsLoading(true);
     setError('');
-
-    // Validation
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      setIsLoading(false);
-      return;
-    }
-
-    if (formData.password.length < 8) {
-      setError('Password must be at least 8 characters long');
-      setIsLoading(false);
-      return;
-    }
 
     // If this is the onboarding flow, use the onRegister callback
     if (onRegister) {
@@ -98,34 +98,38 @@ export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, on
 
       const result = await response.json();
 
-      if (response.ok) {
+      if (response.ok && result.success) {
         setRegistrationSuccess(true);
-        
-        // Auto-login after successful registration
-        const signInResult = await signIn('credentials', {
-          email: formData.email,
-          password: formData.password,
-          redirect: false,
-        });
-
-        if (signInResult?.error) {
-          setError('Registration successful but login failed. Please try logging in.');
-          setRegistrationSuccess(false);
-        } else {
-          // Close modal and redirect after success animation
-          setTimeout(() => {
-            onClose();
-            router.push('/dashboard');
-          }, 2000);
-        }
+        setTimeout(() => {
+          onClose();
+          router.push('/dashboard');
+        }, 2000);
       } else {
         setError(result.message || 'Registration failed. Please try again.');
       }
     } catch (error) {
-      setError('An error occurred. Please try again.');
+      setError('Network error. Please check your connection and try again.');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Validation
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    if (formData.password.length < 8) {
+      setError('Password must be at least 8 characters long');
+      return;
+    }
+
+    // Show privacy policy dialog before proceeding with registration
+    setShowPrivacyPolicy(true);
   };
 
   const handleOAuthSignIn = async (provider: 'google' | 'apple') => {
@@ -135,10 +139,9 @@ export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, on
     if (provider === 'google') {
       // Use Firebase for Google authentication
       try {
-        const user = await signInWithGoogle();
+        const user = await firebaseSignInWithGoogle();
         
-        // Wait a moment for localStorage to be updated by the hook
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // The useFirebaseAuth hook already handles localStorage storage
         
         // Check if this is a new user by checking if they have a CV
         const userData = localStorage.getItem('user');
@@ -533,6 +536,13 @@ export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, on
           </motion.div>
         </motion.div>
       )}
+
+      {/* Privacy Policy Dialog */}
+      <PrivacyPolicyDialog
+        isOpen={showPrivacyPolicy}
+        onAccept={handlePrivacyPolicyAccept}
+        onDecline={handlePrivacyPolicyDecline}
+      />
     </AnimatePresence>
   );
 } 
