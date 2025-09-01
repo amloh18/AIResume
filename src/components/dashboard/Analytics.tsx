@@ -29,7 +29,7 @@ const MyStatusSection: React.FC<{
 
   return (
     <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-      <h2 className="text-xl font-bold text-white mb-4">My Status</h2>
+      <h2 className="text-lg font-bold text-white mb-4">My Status</h2>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* CV Health Score */}
@@ -48,7 +48,7 @@ const MyStatusSection: React.FC<{
                 className="transition-all duration-1000 ease-out" strokeLinecap="round" />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-2xl font-bold text-white">{cvHealthScore}%</span>
+              <span className="text-xl font-bold text-white">{cvHealthScore}%</span>
         </div>
       </div>
       <p className="text-white/60 text-sm mb-1">CV Health Score</p>
@@ -695,8 +695,141 @@ const Analytics: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-lime-400"></div>
+      <div className="max-w-full mx-auto space-y-6 px-4">
+        {/* Header Skeleton */}
+        <div className="mb-8">
+          <div className="h-8 w-64 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded mb-2">
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+          </div>
+          <div className="h-4 w-32 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+          </div>
+        </div>
+
+        {/* Main Grid Layout Skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Column 1: Status + Application Hub */}
+          <div className="space-y-6">
+            {/* My Status Section Skeleton */}
+            <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+              <div className="h-6 w-24 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded mb-4">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* CV Health Score Skeleton */}
+                <div className="text-center">
+                  <div className="w-32 h-32 mx-auto mb-4 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded-full">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+                  </div>
+                  <div className="h-3 w-20 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded mx-auto mb-1">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+                  </div>
+                  <div className="h-3 w-16 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded mx-auto">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+                  </div>
+                </div>
+                {/* Quick Actions Skeleton */}
+                <div className="space-y-3">
+                  <div className="h-4 w-24 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+                  </div>
+                  {Array.from({ length: 4 }).map((_, index) => (
+                    <div key={index} className="h-10 w-full bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded-lg">
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Application Hub Skeleton */}
+            <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+              <div className="h-6 w-32 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded mb-4">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+              </div>
+              <div className="flex gap-2 mb-6">
+                {Array.from({ length: 2 }).map((_, index) => (
+                  <div key={index} className="h-8 w-24 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded-lg">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-4">
+                {Array.from({ length: 2 }).map((_, index) => (
+                  <div key={index} className="p-4 bg-white/5 border border-white/10 rounded-lg">
+                    <div className="h-4 w-3/4 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded mb-2">
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+                    </div>
+                    <div className="h-3 w-1/2 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Column 2: Intelligence + Performance */}
+          <div className="space-y-6">
+            {/* Intelligence Dashboard Skeleton */}
+            <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+              <div className="h-6 w-40 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded mb-4">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {Array.from({ length: 2 }).map((_, index) => (
+                  <div key={index} className="space-y-4">
+                    <div className="h-4 w-32 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      {Array.from({ length: 2 }).map((_, cardIndex) => (
+                        <div key={cardIndex} className="p-3 bg-white/5 rounded-lg">
+                          <div className="h-6 w-12 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded mb-1">
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+                          </div>
+                          <div className="h-3 w-16 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Performance Insights Skeleton */}
+            <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="h-6 w-40 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+                </div>
+                <div className="flex gap-2">
+                  {Array.from({ length: 3 }).map((_, index) => (
+                    <div key={index} className="h-8 w-16 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded-lg">
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* KPI Cards Skeleton */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <div key={index} className="bg-white/5 border border-white/10 rounded-xl p-4">
+                    <div className="h-6 w-16 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded mb-3">
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+                    </div>
+                    <div className="h-4 w-12 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -704,15 +837,10 @@ const Analytics: React.FC = () => {
   return (
     <div className="max-w-full mx-auto space-y-6 px-4">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">
-          Hello, {user?.firstName || user?.name || 'User'}
-        </h1>
-        <p className="text-white/60">{getGreeting()}</p>
-      </div>
+
 
       {/* Main Grid Layout - Redesigned with Fused Sections */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         {/* Column 1: My Status + Application Hub */}
         <div className="space-y-6">
           <MyStatusSection

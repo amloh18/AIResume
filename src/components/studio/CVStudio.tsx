@@ -17,7 +17,7 @@ import { debounce } from 'lodash';
 import { transformDatabaseToStudio } from '@/lib/utils/cvDataTransform';
 import { toCVDataStructure } from '@/lib/utils/dataAdapter';
 import Toast from '@/components/ui/Toast';
-import LoadingAnimation from '@/components/ui/LoadingAnimation';
+import { Skeleton } from '@/components/ui/SkeletonLoader';
 import { generateCVName, generateCVDescription, getCVMetadata } from '@/lib/utils/cvNamingUtils';
 
 interface CVStudioProps {
@@ -552,7 +552,51 @@ const CVStudio: React.FC<CVStudioProps> = ({ jobId, cvId, userId }) => {
   };
 
   if (isLoading) {
-    return <LoadingAnimation progress={0.4} showProgressBar={false} />;
+    return (
+      <div className="min-h-screen bg-black p-6">
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* Header Skeleton */}
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="h-8 w-48 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded mb-2">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+              </div>
+              <div className="h-4 w-32 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-10 w-24 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          {/* Main Content Skeleton */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[800px]">
+            {/* Left Panel */}
+            <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-lg p-6">
+              <div className="space-y-4">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="h-16 w-full bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Right Panel */}
+            <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-lg p-6">
+              <div className="h-full w-full bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (error) {

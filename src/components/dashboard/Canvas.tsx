@@ -917,28 +917,102 @@ const Canvas: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-lime-400"></div>
+      <div className="max-w-6xl mx-auto space-y-6">
+        {/* Header Skeleton */}
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="h-8 w-48 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded mb-2">
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+            </div>
+            <div className="h-4 w-96 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Grid Layout Skeleton */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          {/* Left Column - Main Content */}
+          <div className="xl:col-span-2 space-y-6">
+            {/* Stats Cards Skeleton */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div key={index} className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-4">
+                  <div className="h-4 w-20 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded mb-2">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+                  </div>
+                  <div className="h-6 w-12 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* CV Grid Skeleton */}
+            <div className="space-y-6">
+              <div className="h-6 w-32 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+              </div>
+
+              <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <div key={index} className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden">
+                    {/* CV Preview Skeleton */}
+                    <div className="h-48 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+                    </div>
+                    
+                    {/* CV Info Skeleton */}
+                    <div className="p-6 space-y-3">
+                      <div className="h-5 w-3/4 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+                      </div>
+                      <div className="h-3 w-1/2 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+                      </div>
+                      <div className="h-8 w-full bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded-lg">
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column - Sidebar Skeleton */}
+          <div className="space-y-6">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div key={index} className="bg-white/5 border border-white/10 rounded-xl p-6">
+                <div className="h-5 w-32 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded mb-4">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+                </div>
+                <div className="space-y-3">
+                  <div className="h-8 w-full bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded-lg">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+                  </div>
+                  <div className="h-8 w-full bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded-lg">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-white mb-2">CV Studio</h1>
-          <p className="text-white/60">Create, edit, and manage your professional CVs</p>
-        </div>
-      </div>
+    <div className="max-w-full mx-auto space-y-6 px-4">
+
 
       {/* Main Grid Layout */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
         {/* Left Column - Main Content */}
-                  <div className="xl:col-span-2 space-y-6">
+                  <div className="xl:col-span-3 space-y-6">
       {/* Stats Cards */}
-                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                      <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         <motion.div
           className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-4"
           initial={{ opacity: 0, y: 20 }}
@@ -1031,7 +1105,7 @@ const Canvas: React.FC = () => {
       {/* CV Grid */}
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-white">Your CVs</h2>
+          <h2 className="text-lg font-semibold text-white">Your CVs</h2>
           <div className="flex items-center gap-2 text-white/60 text-sm">
             <Clock size={16} />
             <span>Recently modified</span>
@@ -1062,7 +1136,7 @@ const Canvas: React.FC = () => {
                 <Plus size={32} className="text-lime-400" />
               </div>
               
-              <h3 className="text-xl font-bold text-white mb-3">Create Your First CV</h3>
+              <h3 className="text-lg font-bold text-white mb-3">Create Your First CV</h3>
               <p className="text-white/60 mb-6 max-w-sm">
                 Start building your professional CV with our intuitive editor. Choose from beautiful templates and customize every detail.
               </p>
