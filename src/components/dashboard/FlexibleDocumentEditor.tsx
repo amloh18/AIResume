@@ -315,7 +315,13 @@ const FlexibleDocumentEditor: React.FC<FlexibleDocumentEditorProps> = ({
   };
 
   if (loading) {
-    return <div className="flex justify-center items-center h-64">Loading...</div>;
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="w-16 h-16 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded-lg">
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+        </div>
+      </div>
+    );
   }
 
   if (error) {

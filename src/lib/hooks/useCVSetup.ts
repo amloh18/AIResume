@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { getMongoDBUserId } from '@/lib/utils/userIdUtils';
@@ -8,6 +8,8 @@ export const useCVSetup = () => {
   const router = useRouter();
   const [isChecking, setIsChecking] = useState(true);
   const [hasCV, setHasCV] = useState(false);
+  const hasCheckedRef = useRef(false); // Prevent multiple checks
+  const isCheckingRef = useRef(false); // Prevent concurrent checks
 
   const getUserIdFromLocalStorage = (): string | null => {
     try {
@@ -24,27 +26,51 @@ export const useCVSetup = () => {
 
   useEffect(() => {
     const checkUserCV = async () => {
-      if (status === 'loading') return;
-      
-      if (status === 'unauthenticated') {
-        setIsChecking(false);
+      // Prevent multiple simultaneous checks
+      if (isCheckingRef.current || hasCheckedRef.current) {
+        console.log('🔍 useCVSetup - Skipping check (already checking or checked)');
         return;
       }
 
-      // Get MongoDB user ID (handles both MongoDB ObjectId and Google OAuth ID)
-      const userId = await getMongoDBUserId();
-      console.log('🔍 useCVSetup - Session user ID:', session?.user?.id);
-      console.log('🔍 useCVSetup - Final MongoDB user ID:', userId);
-      console.log('🔍 useCVSetup - Session status:', status);
-      console.log('🔍 useCVSetup - Session data:', session);
+      if (status === 'loading') {
+        console.log('🔍 useCVSetup - Session still loading');
+        return;
+      }
       
-      if (userId) {
+      if (status === 'unauthenticated') {
+        console.log('🔍 useCVSetup - User not authenticated');
+        setIsChecking(false);
+        hasCheckedRef.current = true;
+        return;
+      }
+
+      // Check if user just completed onboarding first (before API call)
+      if (typeof window !== 'undefined') {
+        const fromOnboarding = sessionStorage.getItem('fromOnboarding') === 'true';
+        if (fromOnboarding) {
+          console.log('🎉 useCVSetup - User just completed onboarding, trusting CV exists');
+          setHasCV(true);
+          setIsChecking(false);
+          hasCheckedRef.current = true;
+          // Clear the flag after using it
+          sessionStorage.removeItem('fromOnboarding');
+          return;
+        }
+      }
+
+      isCheckingRef.current = true;
+
+      try {
+        // Get MongoDB user ID (handles both MongoDB ObjectId and Google OAuth ID)
+        const userId = await getMongoDBUserId();
+        console.log('🔍 useCVSetup - Session user ID:', session?.user?.id);
+        console.log('🔍 useCVSetup - Final MongoDB user ID:', userId);
+        console.log('🔍 useCVSetup - Session status:', status);
         
-        try {
+        if (userId) {
           console.log('🔍 useCVSetup - Making API call to:', `/api/cvs?userId=${userId}`);
           const response = await fetch(`/api/cvs?userId=${userId}`);
           console.log('🔍 useCVSetup - CV API response status:', response.status);
-          console.log('🔍 useCVSetup - CV API response headers:', Object.fromEntries(response.headers.entries()));
           
           if (response.ok) {
             const contentType = response.headers.get('content-type');
@@ -69,68 +95,48 @@ export const useCVSetup = () => {
             
             const userCVs = data.data?.cvs || [];
             console.log('🔍 useCVSetup - User CVs found:', userCVs.length);
-            console.log('🔍 useCVSetup - Data structure keys:', Object.keys(data.data || {}));
-            console.log('🔍 useCVSetup - Full API response:', JSON.stringify(data, null, 2));
-            console.log('🔍 useCVSetup - userCVs array:', userCVs);
             
             // Set hasCV based on actual CV count
             const userHasCVs = userCVs.length > 0;
             setHasCV(userHasCVs);
             
             // If user has CVs, clear any onboarding flags
-            if (userHasCVs) {
+            if (userHasCVs && typeof window !== 'undefined') {
               console.log('✅ User has CVs, clearing onboarding flags');
               sessionStorage.removeItem('fromOnboarding');
               sessionStorage.removeItem('needsCVSetup');
             }
             
-            // Check if user just completed onboarding
-            const fromOnboarding = sessionStorage.getItem('fromOnboarding') === 'true';
-            const needsCVSetup = sessionStorage.getItem('needsCVSetup') === 'true';
-            
-            console.log('🔍 useCVSetup - fromOnboarding flag:', fromOnboarding);
-            console.log('🔍 useCVSetup - needsCVSetup flag:', needsCVSetup);
-            console.log('🔍 useCVSetup - current pathname:', window.location.pathname);
-            console.log('🔍 useCVSetup - userHasCVs:', userHasCVs);
-            
-            // If user just completed onboarding, don't redirect back
-            if (fromOnboarding) {
-              console.log('🎉 User completed onboarding, staying on dashboard');
-              console.log('🎉 Setting hasCV to true and skipping CV check');
-              setHasCV(true); // Trust that CV was created
-              setIsChecking(false);
-              return;
-            }
-            
-            // Only redirect to onboarding if:
-            // 1. User has no CVs AND
-            // 2. User is on dashboard AND
-            // 3. The needsCVSetup flag is explicitly set to true
-            if (userHasCVs === false && needsCVSetup === true && window.location.pathname === '/dashboard') {
-              console.log('🔄 No CVs found and needsCVSetup flag is true, redirecting to onboarding');
-              console.log('🔄 userCVs.length:', userCVs.length);
-              console.log('🔄 needsCVSetup:', needsCVSetup);
-              sessionStorage.removeItem('needsCVSetup'); // Clear the flag
-              router.push('/onboarding');
-            } else if (userHasCVs === true) {
-              console.log('✅ User has CVs, no need to redirect to onboarding');
-            } else if (needsCVSetup !== true) {
-              console.log('ℹ️ User has no CVs but needsCVSetup flag is not set, staying on dashboard');
-            }
+            console.log('🔍 useCVSetup - Final hasCV state:', userHasCVs);
+          } else {
+            console.error('❌ useCVSetup - API call failed:', response.status);
+            setHasCV(false);
           }
-        } catch (error) {
-          console.error('Error checking user CVs:', error);
-          // If there's an error, don't assume no CVs - stay on current page
-          console.log('⚠️ Error occurred during CV check, staying on current page');
+        } else {
+          console.log('❌ useCVSetup - No valid user ID found');
           setHasCV(false);
         }
+      } catch (error) {
+        console.error('Error checking user CVs:', error);
+        // If there's an error, assume no CVs to be safe
+        setHasCV(false);
+      } finally {
+        setIsChecking(false);
+        hasCheckedRef.current = true;
+        isCheckingRef.current = false;
       }
-      
-      setIsChecking(false);
     };
 
     checkUserCV();
   }, [session, status, router]);
+
+  // Reset check when session changes significantly
+  useEffect(() => {
+    if (status === 'loading') {
+      hasCheckedRef.current = false;
+      setIsChecking(true);
+    }
+  }, [status]);
 
   return { hasCV, isChecking };
 };

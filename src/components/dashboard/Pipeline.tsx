@@ -1482,9 +1482,60 @@ const Pipeline: React.FC = () => {
 
   if (status === 'loading' || isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-white">
-          {status === 'loading' ? 'Loading session...' : 'Loading jobs...'}
+      <div className="max-w-6xl mx-auto space-y-6">
+        {/* Header Skeleton */}
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <div className="h-8 w-48 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded mb-2">
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+            </div>
+            <div className="h-4 w-96 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+            </div>
+          </div>
+          <div className="h-10 w-32 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded-xl">
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+          </div>
+        </div>
+
+        {/* Controls Skeleton */}
+        <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
+          <div className="h-10 w-full bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded-lg">
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+          </div>
+        </div>
+
+        {/* Kanban Board Skeleton */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          {Array.from({ length: 5 }).map((_, stageIndex) => (
+            <div key={stageIndex} className="flex flex-col">
+              {/* Stage Header Skeleton */}
+              <div className="bg-white/5 border border-white/10 rounded-xl p-4 mb-4">
+                <div className="h-6 w-24 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+                </div>
+              </div>
+              
+              {/* Job Cards Skeleton */}
+              <div className="space-y-3">
+                {Array.from({ length: 2 }).map((_, cardIndex) => (
+                  <div key={cardIndex} className="bg-white/5 border border-white/10 rounded-xl p-4 h-48">
+                    <div className="space-y-2">
+                      <div className="h-4 w-3/4 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+                      </div>
+                      <div className="h-3 w-1/2 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+                      </div>
+                      <div className="h-3 w-2/3 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -1499,25 +1550,9 @@ const Pipeline: React.FC = () => {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="max-w-full mx-auto space-y-6 px-4">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Job Tracker</h1>
-          <p className="text-white/60">Track your job applications and manage your career progress</p>
-        </div>
-        <div className="flex gap-3">
-          <motion.button
-            onClick={handleAddJob}
-            className="px-6 py-3 bg-gradient-to-r from-lime-400 to-lime-500 text-black font-semibold rounded-xl hover:from-lime-300 hover:to-lime-400 transition-all duration-300 flex items-center gap-2"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Plus size={20} />
-            Add Job
-          </motion.button>
-        </div>
-      </div>
+
 
       {/* Controls Row */}
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 p-4 bg-white/5 border border-white/10 rounded-xl">
@@ -1571,8 +1606,19 @@ const Pipeline: React.FC = () => {
           </div>
         </div>
 
-        {/* Sort and View Toggle */}
+        {/* Add Job, Sort and View Toggle */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full lg:w-auto">
+          {/* Add Job Button */}
+          <motion.button
+            onClick={handleAddJob}
+            className="px-4 py-2 bg-gradient-to-r from-lime-400 to-lime-500 text-black font-medium rounded-lg hover:from-lime-300 hover:to-lime-400 transition-all duration-300 flex items-center gap-2 text-sm"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <Plus size={16} />
+            Add Job
+          </motion.button>
+
           {/* Sort by Date */}
           <div className="flex items-center gap-2">
             <span className="text-white/60 text-sm">Sort by date:</span>

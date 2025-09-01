@@ -17,7 +17,7 @@ import CompletionStep from '@/components/onboarding/CompletionStep';
 import PersonalInfoStep from '@/components/onboarding/PersonalInfoStep';
 import ExperienceStep from '@/components/onboarding/ExperienceStep';
 import EducationStep from '@/components/onboarding/EducationStep';
-import LoadingAnimation from '@/components/ui/LoadingAnimation';
+import { SkeletonText, Skeleton } from '@/components/ui/SkeletonLoader';
 import ErrorDialog from '@/components/ui/ErrorDialog';
 import { validateAndGetMongoDBUserId } from '@/lib/utils/userIdUtils';
 
@@ -82,7 +82,7 @@ const OnboardingContent: React.FC = () => {
               sessionStorage.removeItem('needsCVSetup');
               sessionStorage.removeItem('fromOnboarding');
             }
-            window.location.href = '/dashboard';
+            router.push('/dashboard');
             return;
           }
           
@@ -143,7 +143,7 @@ const OnboardingContent: React.FC = () => {
                     sessionStorage.removeItem('needsCVSetup');
                     sessionStorage.removeItem('fromOnboarding');
                   }
-                  window.location.href = '/dashboard';
+                  router.push('/dashboard');
                   return;
                 }
                 
@@ -212,7 +212,7 @@ const OnboardingContent: React.FC = () => {
       if (result.success && result.data.cvs && result.data.cvs.length > 0) {
         // User has CVs, redirect to dashboard
         console.log('✅ User has CVs, redirecting to dashboard');
-        window.location.href = '/dashboard';
+        router.push('/dashboard');
       } else {
         // New user, continue with onboarding
         console.log('🆕 New user, continuing with onboarding');
@@ -248,7 +248,7 @@ const OnboardingContent: React.FC = () => {
       if (result.success && result.data.cvs && result.data.cvs.length > 0) {
         // User has CVs, redirect to dashboard
         console.log('✅ User has CVs, redirecting to dashboard');
-        window.location.href = '/dashboard';
+        router.push('/dashboard');
       } else {
         // New user, continue with onboarding
         console.log('🆕 New user, continuing with onboarding');
@@ -370,22 +370,9 @@ const OnboardingContent: React.FC = () => {
         
         console.log('🚀 Redirecting to dashboard...');
         
-        // Try multiple redirect methods to ensure it works
-        try {
-          // Method 1: Next.js router (preferred)
-          router.push('/dashboard');
-          
-          // Method 2: Fallback after a short delay
-          setTimeout(() => {
-            console.log('🔄 Fallback redirect...');
-            window.location.href = '/dashboard';
-          }, 1000);
-          
-        } catch (routerError) {
-          console.error('Router error:', routerError);
-          // Method 3: Direct navigation
-          window.location.href = '/dashboard';
-        }
+        // Use Next.js router for navigation
+        console.log('🚀 Navigating to dashboard with Next.js router...');
+        router.push('/dashboard');
       } else {
         console.error('API Error:', result);
         throw new Error(result.message || 'Failed to save CV');
@@ -407,21 +394,22 @@ const OnboardingContent: React.FC = () => {
   };
 
   const renderStep = () => {
-    // Show loading if checking CVs
+    // Show skeleton loading if checking CVs
     if (isCheckingCVs) {
       return (
         <div className="min-h-screen flex flex-col items-center justify-start pt-20 px-4">
           <div className="w-full max-w-4xl flex flex-col items-center">
-            <div className="text-center mb-8">
-              <h2 className="text-3xl md:text-4xl font-bold text-white mb-3">
-                Checking Your Profile
-              </h2>
-              <p className="text-xl text-white/60">
-                Please wait while we check your existing CVs...
-              </p>
+            <div className="text-center mb-12">
+              <Skeleton variant="text" height={40} width="400px" className="mx-auto mb-4" />
+              <Skeleton variant="text" height={20} width="300px" className="mx-auto" />
             </div>
-            <div className="flex items-center justify-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lime-400"></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
+              <Skeleton variant="rounded" height="150px" />
+              <Skeleton variant="rounded" height="150px" />
+              <Skeleton variant="rounded" height="150px" />
+            </div>
+            <div className="mt-8 w-full max-w-2xl">
+              <Skeleton variant="rounded" height="60px" />
             </div>
           </div>
         </div>
@@ -683,7 +671,21 @@ const OnboardingContent: React.FC = () => {
 const OnboardingPage: React.FC = () => {
   return (
     <OnboardingProvider>
-      <Suspense fallback={<LoadingAnimation progress={0.3} showProgressBar={false} />}>
+      <Suspense fallback={
+        <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black flex items-center justify-center">
+          <div className="w-full max-w-4xl mx-auto p-6 space-y-6">
+            <div className="text-center mb-8">
+              <Skeleton variant="text" height={32} width="300px" className="mx-auto mb-4" />
+              <Skeleton variant="text" height={16} width="200px" className="mx-auto" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Skeleton variant="rounded" height="200px" />
+              <Skeleton variant="rounded" height="200px" />
+              <Skeleton variant="rounded" height="200px" />
+            </div>
+          </div>
+        </div>
+      }>
         <OnboardingContent />
       </Suspense>
     </OnboardingProvider>

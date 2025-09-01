@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
-import LoadingAnimation from '@/components/ui/LoadingAnimation';
+import { Skeleton } from '@/components/ui/SkeletonLoader';
 
 interface RouteGuardProps {
   children: React.ReactNode;
@@ -53,9 +53,23 @@ const RouteGuard: React.FC<RouteGuardProps> = ({
     }
   }, [status, session, requireAuth, pathname, redirectTo, router, hasRedirected]);
 
-  // Show loading spinner while checking authentication
+  // Show skeleton loader while checking authentication
   if (isLoading || status === 'loading') {
-    return <LoadingAnimation progress={0.3} showProgressBar={false} />;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black flex items-center justify-center">
+        <div className="w-full max-w-4xl mx-auto p-6 space-y-6">
+          <div className="text-center mb-8">
+            <Skeleton variant="text" height={32} width="300px" className="mx-auto mb-4" />
+            <Skeleton variant="text" height={16} width="200px" className="mx-auto" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Skeleton variant="rounded" height="200px" />
+            <Skeleton variant="rounded" height="200px" />
+            <Skeleton variant="rounded" height="200px" />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   // Don't render anything if not authorized (will redirect)

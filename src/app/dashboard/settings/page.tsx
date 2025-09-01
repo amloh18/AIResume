@@ -46,7 +46,7 @@ import {
 } from 'lucide-react';
 import RouteGuard from '@/components/auth/RouteGuard';
 import MembershipModal from '@/components/payment/MembershipModal';
-import LoadingAnimation from '@/components/ui/LoadingAnimation';
+import { Skeleton } from '@/components/ui/SkeletonLoader';
 import UsernameEditor from '@/components/settings/UsernameEditor';
 
 // --- TYPES ---
@@ -2729,7 +2729,38 @@ function SettingsContent() {
 
 // Loading fallback component
 function SettingsLoading() {
-  return <LoadingAnimation progress={0.4} showProgressBar={false} />;
+  return (
+    <div className="max-w-4xl mx-auto space-y-8 p-6">
+      {/* Header Skeleton */}
+      <div className="space-y-4">
+        <div className="h-8 w-48 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+        </div>
+        <div className="h-4 w-96 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+        </div>
+      </div>
+      
+      {/* Settings Cards Skeleton */}
+      <div className="grid gap-6">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="h-6 w-32 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+              </div>
+              <div className="h-8 w-20 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+              </div>
+            </div>
+            <div className="h-4 w-full bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 // --- MAIN COMPONENT ---
