@@ -9,9 +9,11 @@ export async function GET(request: NextRequest) {
     
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
+    const jobId = searchParams.get('jobId');
     const status = searchParams.get('status');
     const period = searchParams.get('period') || 'all';
     const sort = searchParams.get('sort') || 'createdAt';
+    const order = searchParams.get('order') || 'desc';
     const limit = searchParams.get('limit');
     const hasInterviewWithin = searchParams.get('hasInterviewWithin');
     const cvId = searchParams.get('cvId');
@@ -73,11 +75,16 @@ export async function GET(request: NextRequest) {
       query.cvId = cvId;
     }
 
+    // Add job ID filter
+    if (jobId) {
+      query._id = jobId;
+    }
+
     // Build the query
     let jobsQuery = JobApplication.find(query);
 
     // Apply sorting
-    const sortOrder = sort === 'createdAt' ? -1 : 1;
+    const sortOrder = order === 'asc' ? 1 : -1;
     jobsQuery = jobsQuery.sort({ [sort]: sortOrder });
 
     // Apply limit if specified
@@ -222,10 +229,10 @@ export async function POST(request: NextRequest) {
     console.log('🔍 Job API - Extracted cvId:', cvId);
     console.log('🔍 Job API - Job data:', jobData);
 
-    if (!userId || !cvId) {
+    if (!userId) {
       console.log('❌ Job API - Missing required fields:', { userId: !!userId, cvId: !!cvId });
       return NextResponse.json(
-        { success: false, message: 'User ID and CV ID are required' },
+        { success: false, message: 'User ID is required' },
         { status: 400 }
       );
     }

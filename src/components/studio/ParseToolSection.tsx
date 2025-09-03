@@ -101,14 +101,14 @@ const ParseToolSection: React.FC<ParseToolSectionProps> = ({ onCVParsed, isActiv
           transition={{ duration: 0.3 }}
           className="space-y-4"
         >
-          <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-blue-600/20 rounded-lg">
-                <Upload size={20} className="text-blue-400" />
+          <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="p-1.5 bg-blue-100 rounded-md">
+                <Upload size={16} className="text-blue-600" />
               </div>
               <div>
-                <h3 className="text-white font-medium">Parse Existing CV</h3>
-                <p className="text-gray-400 text-sm">Upload your CV to auto-fill the form</p>
+                <h3 className="text-gray-900 text-sm font-medium">Parse Existing CV</h3>
+                <p className="text-gray-600 text-xs">Upload your CV to auto-fill the form</p>
               </div>
             </div>
 
@@ -120,12 +120,12 @@ const ParseToolSection: React.FC<ParseToolSectionProps> = ({ onCVParsed, isActiv
               className={`
                 border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all duration-200
                 ${uploadStatus === 'uploading' || uploadStatus === 'parsing'
-                  ? 'border-blue-400 bg-blue-400/10'
+                  ? 'border-blue-400 bg-blue-50'
                   : uploadStatus === 'success'
-                  ? 'border-green-400 bg-green-400/10'
+                  ? 'border-green-400 bg-green-50'
                   : uploadStatus === 'error'
-                  ? 'border-red-400 bg-red-400/10'
-                  : 'border-gray-600 hover:border-gray-500 hover:bg-gray-700/50'
+                  ? 'border-red-400 bg-red-50'
+                  : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50'
                 }
               `}
             >
@@ -146,12 +146,12 @@ const ParseToolSection: React.FC<ParseToolSectionProps> = ({ onCVParsed, isActiv
                     exit={{ opacity: 0 }}
                     className="space-y-3"
                   >
-                    <div className="w-12 h-12 mx-auto bg-gray-700 rounded-lg flex items-center justify-center">
-                      <FileText size={24} className="text-gray-400" />
+                    <div className="w-10 h-10 mx-auto bg-gray-100 rounded-md flex items-center justify-center">
+                      <FileText size={20} className="text-gray-600" />
                     </div>
                     <div>
-                      <p className="text-white font-medium">Drop your CV here</p>
-                      <p className="text-gray-400 text-sm">or click to browse</p>
+                      <p className="text-gray-900 text-sm font-medium">Drop your CV here</p>
+                      <p className="text-gray-600 text-xs">or click to browse</p>
                     </div>
                     <p className="text-gray-500 text-xs">Supports PDF, DOCX, DOC, TXT</p>
                   </motion.div>
@@ -165,10 +165,10 @@ const ParseToolSection: React.FC<ParseToolSectionProps> = ({ onCVParsed, isActiv
                     exit={{ opacity: 0 }}
                     className="space-y-3"
                   >
-                    <div className="w-12 h-12 mx-auto bg-blue-600/20 rounded-lg flex items-center justify-center">
-                      <Loader2 size={24} className="text-blue-400 animate-spin" />
+                    <div className="w-12 h-12 mx-auto bg-blue-100 rounded-lg flex items-center justify-center">
+                      <Loader2 size={24} className="text-blue-600 animate-spin" />
                     </div>
-                    <p className="text-blue-400 font-medium">Uploading...</p>
+                    <p className="text-blue-600 font-medium">Uploading...</p>
                   </motion.div>
                 )}
 
@@ -180,11 +180,11 @@ const ParseToolSection: React.FC<ParseToolSectionProps> = ({ onCVParsed, isActiv
                     exit={{ opacity: 0 }}
                     className="space-y-3"
                   >
-                    <div className="w-12 h-12 mx-auto bg-blue-600/20 rounded-lg flex items-center justify-center">
-                      <Loader2 size={24} className="text-blue-400 animate-spin" />
+                    <div className="w-12 h-12 mx-auto bg-blue-100 rounded-lg flex items-center justify-center">
+                      <Loader2 size={24} className="text-blue-600 animate-spin" />
                     </div>
-                    <p className="text-blue-400 font-medium">Parsing CV...</p>
-                    <p className="text-gray-400 text-sm">Extracting information with AI</p>
+                    <p className="text-blue-600 font-medium">Parsing CV...</p>
+                    <p className="text-gray-600 text-sm">Extracting information with AI</p>
                   </motion.div>
                 )}
 
@@ -196,11 +196,11 @@ const ParseToolSection: React.FC<ParseToolSectionProps> = ({ onCVParsed, isActiv
                     exit={{ opacity: 0 }}
                     className="space-y-3"
                   >
-                    <div className="w-12 h-12 mx-auto bg-green-600/20 rounded-lg flex items-center justify-center">
-                      <CheckCircle size={24} className="text-green-400" />
+                    <div className="w-12 h-12 mx-auto bg-green-100 rounded-lg flex items-center justify-center">
+                      <CheckCircle size={24} className="text-green-600" />
                     </div>
-                    <p className="text-green-400 font-medium">Success!</p>
-                    <p className="text-gray-400 text-sm">CV parsed and loaded</p>
+                    <p className="text-green-600 font-medium">Success!</p>
+                    <p className="text-gray-600 text-sm">CV parsed and loaded</p>
                   </motion.div>
                 )}
 
@@ -212,11 +212,11 @@ const ParseToolSection: React.FC<ParseToolSectionProps> = ({ onCVParsed, isActiv
                     exit={{ opacity: 0 }}
                     className="space-y-3"
                   >
-                    <div className="w-12 h-12 mx-auto bg-red-600/20 rounded-lg flex items-center justify-center">
-                      <AlertCircle size={24} className="text-red-400" />
+                    <div className="w-12 h-12 mx-auto bg-red-100 rounded-lg flex items-center justify-center">
+                      <AlertCircle size={24} className="text-red-600" />
                     </div>
-                    <p className="text-red-400 font-medium">Error</p>
-                    <p className="text-gray-400 text-sm">{errorMessage}</p>
+                    <p className="text-red-600 font-medium">Error</p>
+                    <p className="text-gray-600 text-sm">{errorMessage}</p>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -228,11 +228,11 @@ const ParseToolSection: React.FC<ParseToolSectionProps> = ({ onCVParsed, isActiv
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="mt-3 p-3 bg-green-600/20 border border-green-600/30 rounded-lg"
+                className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg"
               >
                 <div className="flex items-center gap-2">
-                  <CheckCircle size={16} className="text-green-400" />
-                  <span className="text-green-400 text-sm">{successMessage}</span>
+                  <CheckCircle size={16} className="text-green-600" />
+                  <span className="text-green-700 text-sm">{successMessage}</span>
                 </div>
               </motion.div>
             )}
@@ -243,11 +243,11 @@ const ParseToolSection: React.FC<ParseToolSectionProps> = ({ onCVParsed, isActiv
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="mt-3 p-3 bg-red-600/20 border border-red-600/30 rounded-lg"
+                className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg"
               >
                 <div className="flex items-center gap-2">
-                  <AlertCircle size={16} className="text-red-400" />
-                  <span className="text-red-400 text-sm">{errorMessage}</span>
+                  <AlertCircle size={16} className="text-red-600" />
+                  <span className="text-red-700 text-sm">{errorMessage}</span>
                 </div>
               </motion.div>
             )}

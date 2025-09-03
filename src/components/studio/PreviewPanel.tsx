@@ -22,7 +22,9 @@ import { CVDataStructure } from '@/types/cv';
 import { Template } from '@/lib/stores/templateStore';
 import { Job } from '@/lib/stores/jobStore';
 import CVPreviewContent from './CVPreviewContent';
+import CoverLetterPreview from './CoverLetterPreview';
 import { downloadAsJSON, downloadAsPDF, downloadAsDOCX, downloadAsImage } from '@/lib/utils/download';
+import { useTheme } from '@/lib/contexts/ThemeContext';
 
 interface PreviewPanelProps {
   cvData: CVDataStructure | null;
@@ -36,6 +38,7 @@ interface PreviewPanelProps {
   sectionOrder?: string[];
   pagePadding: { top: number; bottom: number };
   setPagePadding: (padding: { top: number; bottom: number }) => void;
+  onDocumentTypeChange?: (type: 'cv' | 'cover-letter') => void;
 }
 
 const PreviewPanel: React.FC<PreviewPanelProps> = ({
@@ -49,13 +52,14 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
   documentType,
   sectionOrder = ['basics', 'experience', 'education', 'skills', 'projects', 'certificates', 'languages'],
   pagePadding,
-  setPagePadding
+  setPagePadding,
+  onDocumentTypeChange
 }) => {
   console.log('PreviewPanel received cvData:', cvData);
   
+  const { theme } = useTheme();
   const [currentPage, setCurrentPage] = useState(1);
   const [fitMode, setFitMode] = useState<'fit-height' | 'custom'>('fit-height');
-  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
   const [totalPages, setTotalPages] = useState(1);
   const [isDownloading, setIsDownloading] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
@@ -90,22 +94,22 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
     if (!containerRef.current || fitMode !== 'fit-height') return;
 
     const container = containerRef.current;
-    const containerHeight = container.clientHeight - 64; // Account for padding and controls
+    const containerHeight = container.clientHeight - 32; // Reduced padding since no floating bar
     const scale = containerHeight / currentDimensions.height;
     
-    // Cap zoom between 0.3x and 1.5x for better fit
-    const clampedScale = Math.max(0.3, Math.min(scale, 1.5));
+    // Cap zoom between 0.25x and 2x for better fit
+    const clampedScale = Math.max(0.25, Math.min(scale, 2));
     setZoom(clampedScale);
   }, [fitMode, paperSize, currentDimensions.height, setZoom]);
 
   const handleZoomIn = () => {
     setFitMode('custom');
-    setZoom(Math.min(zoom + 0.1, 1.5));
+    setZoom(Math.min(zoom + 0.25, 2));
   };
 
   const handleZoomOut = () => {
     setFitMode('custom');
-    setZoom(Math.max(zoom - 0.1, 0.3));
+    setZoom(Math.max(zoom - 0.25, 0.25));
   };
 
   const handleResetZoom = () => {
@@ -192,7 +196,7 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
           marginBottom: '0'
         }}
       >
-        <div className={`${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-100'} mx-auto shadow-lg`}>
+        <div className="bg-white mx-auto">
           <CVPreviewContent 
             cvData={cvData} 
             theme={theme}
@@ -219,279 +223,58 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
           transformOrigin: 'top center'
         }}
       >
-        <div className="p-8 h-full">
-          <div className="mb-6">
-            <p className="text-sm text-gray-600 mb-4">
-              {cvData?.basics.name}<br />
-              {cvData?.basics.email}<br />
-              {cvData?.basics.phone}<br />
-              {cvData?.basics.location.city}
-            </p>
-            
-            <p className="text-sm text-gray-600 mb-4">
-              {jobData ? (
-                <>
-                  Hiring Manager<br />
-                  {jobData.company}<br />
-                  {jobData.location}
-                </>
-              ) : (
-                <>
-                  Hiring Manager<br />
-                  [Company Name]<br />
-                  [Company Address]
-                </>
-              )}
-            </p>
-          </div>
-
-          <div className="mb-4">
-            <p className="text-sm text-gray-600 mb-4">Dear Hiring Manager,</p>
-            
-            <p className="text-sm text-gray-700 mb-4">
-              [Your cover letter content will appear here. Use the AI Assistant to generate tailored content.]
-            </p>
-            
-            <p className="text-sm text-gray-700 mb-4">
-              I am writing to express my interest in the [Position] role at [Company]. With my background in [relevant experience], I am confident in my ability to contribute effectively to your team.
-            </p>
-            
-            <p className="text-sm text-gray-700 mb-4">
-              [Additional paragraphs with specific examples and achievements...]
-            </p>
-            
-            <p className="text-sm text-gray-700 mb-4">
-              Thank you for considering my application. I look forward to discussing how my skills and experience can benefit [Company].
-            </p>
-          </div>
-
-          <div>
-            <p className="text-sm text-gray-600 mb-2">Sincerely,</p>
-            <p className="text-sm text-gray-600">{cvData?.basics.name}</p>
-          </div>
-        </div>
+        <CoverLetterPreview
+          content={cvData?.basics?.summary || ''}
+          cvData={cvData}
+          jobData={jobData}
+          selectedCVData={null}
+        />
       </div>
     );
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-900 relative">
+    <div className="h-full flex flex-col bg-[#f8fafe] relative">
+      {/* Document Type Switcher - Centered above the first page */}
+      {onDocumentTypeChange && (
+        <div className="flex justify-center pt-6 pb-2">
+          <div className="flex items-center space-x-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg p-1 shadow-lg">
+            <button
+              onClick={() => onDocumentTypeChange('cv')}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                documentType === 'cv'
+                  ? 'bg-lime-600 text-white'
+                  : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100'
+              }`}
+            >
+              CV
+            </button>
+            <button
+              onClick={() => onDocumentTypeChange('cover-letter')}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                documentType === 'cover-letter'
+                  ? 'bg-lime-600 text-white'
+                  : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100'
+              }`}
+            >
+              Cover Letter
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Preview Area */}
       <div 
         ref={containerRef}
         className="flex-1 flex items-start justify-center overflow-auto p-4"
         style={{ 
           minHeight: 0,
-          paddingTop: '1rem',
-          paddingBottom: '6rem' // Extra space for controls
+          paddingTop: '0.5rem',
+          paddingBottom: '1rem'
         }}
       >
         <div ref={previewRef} className="flex items-start justify-center w-full">
           {documentType === 'cv' ? renderCVPreview() : renderCoverLetterPreview()}
-        </div>
-      </div>
-
-      {/* Floating Document Controls */}
-      <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-gray-800 border border-gray-700 rounded-lg shadow-xl p-3 flex items-center space-x-4">
-        {/* Zoom Controls */}
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={handleZoomOut}
-            className="p-2 text-gray-400 hover:text-white transition-colors rounded hover:bg-gray-700 focus:ring-2 focus:ring-lime-500 focus:ring-offset-2 focus:ring-offset-gray-800"
-            title="Zoom Out"
-          >
-            <ZoomOut className="h-4 w-4" />
-          </button>
-          
-          <div className="w-20">
-            <input
-              type="range"
-              min="0.3"
-              max="1.5"
-              step="0.1"
-              value={zoom}
-              onChange={(e) => {
-                setFitMode('custom');
-                setZoom(parseFloat(e.target.value));
-              }}
-              className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
-            />
-          </div>
-          
-          <button
-            onClick={handleZoomIn}
-            className="p-2 text-gray-400 hover:text-white transition-colors rounded hover:bg-gray-700 focus:ring-2 focus:ring-lime-500 focus:ring-offset-2 focus:ring-offset-gray-800"
-            title="Zoom In"
-          >
-            <ZoomIn className="h-4 w-4" />
-          </button>
-        </div>
-
-        {/* Page Navigator */}
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={handlePreviousPage}
-            disabled={currentPage === 1}
-            className="p-2 text-gray-400 hover:text-white transition-colors rounded hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-lime-500 focus:ring-offset-2 focus:ring-offset-gray-800"
-            title="Previous Page"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          
-          <span className="text-sm text-gray-300 min-w-[3rem] text-center">
-            {currentPage} / {totalPages}
-          </span>
-          
-          <button
-            onClick={handleNextPage}
-            disabled={currentPage === totalPages}
-            className="p-2 text-gray-400 hover:text-white transition-colors rounded hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-lime-500 focus:ring-offset-2 focus:ring-offset-gray-800"
-            title="Next Page"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        </div>
-
-        {/* Paper Size Toggle */}
-        <div className="flex items-center space-x-1 bg-gray-700 rounded p-1">
-          <button
-            onClick={() => setPaperSize('A4')}
-            className={`px-2 py-1 text-xs rounded transition-colors ${
-              paperSize === 'A4'
-                ? 'bg-lime-600 text-white'
-                : 'text-gray-300 hover:text-white'
-            }`}
-          >
-            A4
-          </button>
-          <button
-            onClick={() => setPaperSize('Letter')}
-            className={`px-2 py-1 text-xs rounded transition-colors ${
-              paperSize === 'Letter'
-                ? 'bg-lime-600 text-white'
-                : 'text-gray-300 hover:text-white'
-            }`}
-          >
-            Letter
-          </button>
-        </div>
-
-        {/* Theme Toggle */}
-        <div className="flex items-center space-x-1 bg-gray-700 rounded p-1">
-          <button
-            onClick={() => setTheme('dark')}
-            className={`px-2 py-1 text-xs rounded transition-colors flex items-center gap-1 ${
-              theme === 'dark'
-                ? 'bg-gray-800 text-lime-400'
-                : 'text-gray-400 hover:text-white'
-            }`}
-            title="Dark Theme"
-          >
-            <Moon className="h-3 w-3" />
-            Dark
-          </button>
-          <button
-            onClick={() => setTheme('light')}
-            className={`px-2 py-1 text-xs rounded transition-colors flex items-center gap-1 ${
-              theme === 'light'
-                ? 'bg-gray-800 text-lime-400'
-                : 'text-gray-400 hover:text-white'
-            }`}
-            title="Light Theme"
-          >
-            <Sun className="h-3 w-3" />
-            Light
-          </button>
-        </div>
-
-        {/* Padding Controls */}
-        <div className="flex items-center space-x-2 bg-gray-700 rounded p-2">
-          <div className="flex items-center space-x-1">
-            <label className="text-xs text-gray-300">Top:</label>
-            <input
-              type="number"
-              min="0"
-              max="100"
-              value={pagePadding.top}
-              onChange={(e) => setPagePadding({ ...pagePadding, top: parseInt(e.target.value) || 0 })}
-              className="w-12 h-6 text-xs bg-gray-600 text-white border border-gray-500 rounded px-1 text-center"
-            />
-            <span className="text-xs text-gray-300">px</span>
-          </div>
-          <div className="flex items-center space-x-1">
-            <label className="text-xs text-gray-300">Bottom:</label>
-            <input
-              type="number"
-              min="0"
-              max="100"
-              value={pagePadding.bottom}
-              onChange={(e) => setPagePadding({ ...pagePadding, bottom: parseInt(e.target.value) || 0 })}
-              className="w-12 h-6 text-xs bg-gray-600 text-white border border-gray-500 rounded px-1 text-center"
-            />
-            <span className="text-xs text-gray-300">px</span>
-          </div>
-        </div>
-
-        {/* Download Controls */}
-        <div className="flex items-center space-x-1">
-          <button
-            onClick={handleDownloadJSON}
-            disabled={!cvData || isDownloading}
-            className="p-2 text-gray-400 hover:text-white transition-colors rounded hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-lime-500 focus:ring-offset-2 focus:ring-offset-gray-800"
-            title="Download as JSON"
-          >
-            {isDownloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileJson className="h-4 w-4" />}
-          </button>
-          
-          <button
-            onClick={handleDownloadPDF}
-            disabled={!cvData || isDownloading}
-            className="p-2 text-gray-400 hover:text-white transition-colors rounded hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-lime-500 focus:ring-offset-2 focus:ring-offset-gray-800"
-            title="Download as PDF"
-          >
-            {isDownloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
-          </button>
-          
-          <button
-            onClick={handleDownloadDOCX}
-            disabled={!cvData || isDownloading}
-            className="p-2 text-gray-400 hover:text-white transition-colors rounded hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-lime-500 focus:ring-offset-2 focus:ring-offset-gray-800"
-            title="Download as DOCX"
-          >
-            {isDownloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileTextIcon className="h-4 w-4" />}
-          </button>
-          
-          <button
-            onClick={handleDownloadImage}
-            disabled={!cvData || isDownloading}
-            className="p-2 text-gray-400 hover:text-white transition-colors rounded hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-lime-500 focus:ring-offset-2 focus:ring-offset-gray-800"
-            title="Download as PNG Image"
-          >
-            {isDownloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Image className="h-4 w-4" />}
-          </button>
-        </div>
-
-        {/* Fit Controls */}
-        <div className="flex items-center space-x-1">
-          <button
-            onClick={handleResetZoom}
-            className={`p-2 rounded transition-colors ${
-              fitMode === 'fit-height'
-                ? 'bg-lime-600 text-white'
-                : 'text-gray-400 hover:text-white hover:bg-gray-700'
-            } focus:ring-2 focus:ring-lime-500 focus:ring-offset-2 focus:ring-offset-gray-800`}
-            title="Fit to Height"
-          >
-            <Maximize className="h-4 w-4" />
-          </button>
-          
-          <button
-            onClick={handleResetZoom}
-            className="p-2 text-gray-400 hover:text-white transition-colors rounded hover:bg-gray-700 focus:ring-2 focus:ring-lime-500 focus:ring-offset-2 focus:ring-offset-gray-800"
-            title="Reset Zoom"
-          >
-            <RotateCcw className="h-4 w-4" />
-          </button>
         </div>
       </div>
 

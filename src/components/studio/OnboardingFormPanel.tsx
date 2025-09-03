@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   User, 
@@ -20,7 +20,8 @@ import {
   Settings,
   Upload
 } from 'lucide-react';
-import { CVDataStructure } from '@/types/cv';
+import { CVDataStructure, CVDesignSettings, CVSession } from '@/types/cv';
+import { CVSessionService } from '@/lib/services/cvSessionService';
 import PersonalInfoStep from '@/components/onboarding/PersonalInfoStep';
 import ExperienceStep from '@/components/onboarding/ExperienceStep';
 import EducationStep from '@/components/onboarding/EducationStep';
@@ -31,6 +32,8 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import LoadingAnimation from '@/components/ui/LoadingAnimation';
 import { useTemplateStore } from '@/lib/stores/templateStore';
+import AIEnhancedField from '@/components/ui/AIEnhancedField';
+import { useTheme } from '@/lib/contexts/ThemeContext';
 
 interface OnboardingFormPanelProps {
   cvData: CVDataStructure | null;
@@ -39,6 +42,15 @@ interface OnboardingFormPanelProps {
   onRemoveSection: (sectionType: keyof CVDataStructure, id: string) => void;
   isCollapsed: boolean;
   onTogglePanel: () => void;
+  pagePadding?: { top: number; bottom: number };
+  setPagePadding?: (padding: { top: number; bottom: number }) => void;
+  onSaveDesignSettings?: (settings: CVDesignSettings) => void;
+  onSaveTemplate?: (templateId: string, templateName: string) => void;
+  designSettings?: CVDesignSettings;
+  selectedTemplate?: any;
+  cvId?: string;
+  userId?: string;
+  onSessionUpdate?: (session: CVSession) => void;
 }
 
 // Sortable Section Icon Component
@@ -47,6 +59,7 @@ const SortableSectionIcon = ({ section, isActive, onClick }: {
   isActive: boolean; 
   onClick: () => void;
 }) => {
+  const { theme } = useTheme();
   const {
     attributes,
     listeners,
@@ -83,15 +96,17 @@ const SortableSectionIcon = ({ section, isActive, onClick }: {
         onClick={handleClick}
         className={`p-2 rounded-lg transition-all duration-200 cursor-grab active:cursor-grabbing hover:scale-105 ${
           isActive
-            ? 'bg-blue-600 text-white shadow-lg'
-            : 'text-gray-400 hover:text-white hover:bg-gray-700'
+            ? 'bg-lime-600 text-white shadow-lg'
+            : theme === 'dark'
+            ? 'text-gray-300 hover:text-white hover:bg-gray-700'
+            : 'text-gray-600 hover:text-lime-600 hover:bg-lime-100'
         } ${isDragging ? 'z-50' : ''}`}
         title={`${section.label} (Drag to reorder)`}
       >
         <Icon size={18} />
       </button>
       {isDragging && (
-        <div className="absolute inset-0 bg-blue-600/20 rounded-lg border-2 border-blue-400 border-dashed"></div>
+        <div className="absolute inset-0 bg-lime-600/20 rounded-lg border-2 border-lime-400 border-dashed"></div>
       )}
     </div>
   );
@@ -103,7 +118,16 @@ const OnboardingFormPanel: React.FC<OnboardingFormPanelProps> = ({
   onAddSection,
   onRemoveSection,
   isCollapsed,
-  onTogglePanel
+  onTogglePanel,
+  pagePadding,
+  setPagePadding,
+  onSaveDesignSettings,
+  onSaveTemplate,
+  designSettings,
+  selectedTemplate: initialSelectedTemplate,
+  cvId,
+  userId,
+  onSessionUpdate
 }) => {
   const [activeTab, setActiveTab] = useState<'structure' | 'design' | 'template'>('structure');
   const [activeSection, setActiveSection] = useState<'parse' | 'basics' | 'work' | 'education' | 'skills' | 'projects' | 'certificates' | 'languages'>('parse');
@@ -117,9 +141,135 @@ const OnboardingFormPanel: React.FC<OnboardingFormPanelProps> = ({
     'certificates',
     'languages'
   ]);
+  const [panelWidth, setPanelWidth] = useState(600);
+  const [isDragging, setIsDragging] = useState(false);
+
+  // Design tab state - use passed settings or defaults
+  const [headerFontSize, setHeaderFontSize] = useState(designSettings?.headerFontSize || 24);
+  const [bodyFontSize, setBodyFontSize] = useState(designSettings?.bodyFontSize || 14);
+  const [sectionFontSize, setSectionFontSize] = useState(designSettings?.sectionFontSize || 18);
+  const [lineSpacing, setLineSpacing] = useState(designSettings?.lineSpacing || 1.2);
+  const [selectedFont, setSelectedFont] = useState(designSettings?.fontFamily || 'Inter');
+  const [letterSpacing, setLetterSpacing] = useState(designSettings?.letterSpacing || 0);
+  const [sectionSpacing, setSectionSpacing] = useState(designSettings?.sectionSpacing || 16);
+  const [colorScheme, setColorScheme] = useState(designSettings?.colorScheme || 'professional');
+  
+  // CV Session management
+  const [currentSession, setCurrentSession] = useState<CVSession | null>(null);
+
+  // Handle panel resizing
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleMouseMove = (e: MouseEvent) => {
+    if (!isDragging) return;
+    
+    const newWidth = e.clientX;
+    const minWidth = 400;
+    const maxWidth = 1000; // Increased max width
+    
+    if (newWidth >= minWidth && newWidth <= maxWidth) {
+      setPanelWidth(newWidth);
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [isDragging]);
 
   // Get templates from store
   const { templates, selectedTemplate, setSelectedTemplate } = useTemplateStore();
+  const { theme } = useTheme();
+
+  // Initialize CV Session
+  useEffect(() => {
+    if (cvId && userId && cvData && selectedTemplate) {
+      // Try to load existing session
+      let session = CVSessionService.loadSession(cvId, userId);
+      
+      if (!session) {
+        // Create new session if none exists
+        const designSettings: CVDesignSettings = {
+          fontFamily: selectedFont,
+          headerFontSize,
+          bodyFontSize,
+          sectionFontSize,
+          lineSpacing,
+          letterSpacing,
+          sectionSpacing,
+          pagePadding: pagePadding || { top: 32, bottom: 32 },
+          colorScheme,
+          templateId: selectedTemplate.id,
+          templateName: selectedTemplate.name
+        };
+        
+        session = CVSessionService.createSession(
+          cvId,
+          userId,
+          cvData,
+          selectedTemplate,
+          designSettings
+        );
+      }
+      
+      setCurrentSession(session);
+      onSessionUpdate?.(session);
+    }
+  }, [cvId, userId, cvData, selectedTemplate]);
+
+  // Update session when design settings change
+  const updateSessionWithDesignSettings = useCallback(() => {
+    if (currentSession && cvData) {
+      const designSettings: CVDesignSettings = {
+        fontFamily: selectedFont,
+        headerFontSize,
+        bodyFontSize,
+        sectionFontSize,
+        lineSpacing,
+        letterSpacing,
+        sectionSpacing,
+        pagePadding: pagePadding || { top: 32, bottom: 32 },
+        colorScheme,
+        templateId: selectedTemplate?.id,
+        templateName: selectedTemplate?.name
+      };
+      
+      const updatedSession = CVSessionService.updateSession(currentSession, {
+        cvData,
+        designSettings,
+        layout: {
+          sectionOrder,
+          activeSection,
+          panelWidth,
+          isCollapsed
+        }
+      });
+      
+      setCurrentSession(updatedSession);
+      onSessionUpdate?.(updatedSession);
+      
+      // Auto-save session
+      CVSessionService.debouncedAutoSave(updatedSession);
+    }
+  }, [
+    currentSession, cvData, selectedFont, headerFontSize, bodyFontSize, 
+    sectionFontSize, lineSpacing, letterSpacing, sectionSpacing, 
+    pagePadding, colorScheme, selectedTemplate, sectionOrder, 
+    activeSection, panelWidth, isCollapsed, onSessionUpdate
+  ]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -142,7 +292,116 @@ const OnboardingFormPanel: React.FC<OnboardingFormPanelProps> = ({
     console.log('🔍 Section order updated:', sectionOrder);
   }, [sectionOrder]);
 
+  // Function to calculate progress for each section
+  const calculateSectionProgress = (sectionId: string): number => {
+    if (!cvData) return 0;
+    
+    switch (sectionId) {
+      case 'parse':
+        // Parse is completed if CV data exists
+        return cvData.basics ? 100 : 0;
+      
+      case 'basics':
+        // Personal Info progress based on required fields
+        const basics = cvData.basics;
+        if (!basics) return 0;
+        
+        let basicsProgress = 0;
+        if (basics.name) basicsProgress += 25;
+        if (basics.email) basicsProgress += 25;
+        if (basics.phone) basicsProgress += 25;
+        if (basics.summary && basics.location?.city) basicsProgress += 25;
+        return Math.min(basicsProgress, 100);
+      
+      case 'work':
+        // Experience progress based on completeness
+        const work = cvData.work;
+        if (!work || work.length === 0) return 0;
+        
+        const firstWork = work[0];
+        let workProgress = 0;
+        if (firstWork.name) workProgress += 25;
+        if (firstWork.position) workProgress += 25;
+        if (firstWork.startDate) workProgress += 25;
+        if (firstWork.summary) workProgress += 25;
+        return Math.min(workProgress, 100);
+      
+      case 'education':
+        // Education progress based on completeness
+        const education = cvData.education;
+        if (!education || education.length === 0) return 0;
+        
+        const firstEducation = education[0];
+        let educationProgress = 0;
+        if (firstEducation.institution) educationProgress += 25;
+        if (firstEducation.studyType) educationProgress += 25;
+        if (firstEducation.area) educationProgress += 25;
+        if (firstEducation.startDate) educationProgress += 25;
+        return Math.min(educationProgress, 100);
+      
+      case 'skills':
+        // Skills progress based on number and completeness
+        const skills = cvData.skills;
+        if (!skills || skills.length === 0) return 0;
+        
+        let skillsProgress = 0;
+        if (skills.length >= 1) skillsProgress += 25;
+        if (skills.length >= 2) skillsProgress += 25;
+        if (skills.length >= 3) skillsProgress += 25;
+        if (skills.length >= 4) skillsProgress += 25;
+        return Math.min(skillsProgress, 100);
+      
+      case 'projects':
+        // Projects progress based on completeness
+        const projects = cvData.projects;
+        if (!projects || projects.length === 0) return 0;
+        
+        const firstProject = projects[0];
+        let projectsProgress = 0;
+        if (firstProject.name) projectsProgress += 25;
+        if (firstProject.description) projectsProgress += 25;
+        if (firstProject.startDate) projectsProgress += 25;
+        if (firstProject.highlights && firstProject.highlights.length > 0) projectsProgress += 25;
+        return Math.min(projectsProgress, 100);
+      
+      case 'certificates':
+        // Certificates are optional - show progress but don't penalize
+        const certificates = cvData.certificates;
+        if (!certificates || certificates.length === 0) return 0;
+        
+        const firstCertificate = certificates[0];
+        let certificatesProgress = 0;
+        if (firstCertificate.name) certificatesProgress += 25;
+        if (firstCertificate.issuer) certificatesProgress += 25;
+        if (firstCertificate.date) certificatesProgress += 25;
+        if (firstCertificate.url) certificatesProgress += 25;
+        return Math.min(certificatesProgress, 100);
+      
+      case 'languages':
+        // Languages are optional - show progress but don't penalize
+        const languages = cvData.languages;
+        if (!languages || languages.length === 0) return 0;
+        
+        let languagesProgress = 0;
+        if (languages.length >= 1) languagesProgress += 25;
+        if (languages.length >= 2) languagesProgress += 25;
+        if (languages.length >= 3) languagesProgress += 25;
+        if (languages.length >= 4) languagesProgress += 25;
+        return Math.min(languagesProgress, 100);
+      
+      default:
+        return 0;
+    }
+  };
 
+  // Function to get progress color based on percentage
+  const getProgressColor = (progress: number): string => {
+    if (progress >= 100) return 'bg-lime-500';
+    if (progress >= 75) return 'bg-lime-400';
+    if (progress >= 50) return 'bg-lime-300';
+    if (progress >= 25) return 'bg-lime-200';
+    return 'bg-lime-100';
+  };
 
   const sections = [
     { id: 'parse', label: 'Parse CV', icon: Upload },
@@ -441,60 +700,343 @@ const OnboardingFormPanel: React.FC<OnboardingFormPanelProps> = ({
     }
   };
 
-
+  const getSectionDescription = (sectionId: string) => {
+    switch (sectionId) {
+      case 'parse':
+        return 'Upload your CV file to parse and extract key information.';
+      case 'basics':
+        return 'Enter your personal information, including name, title, and contact details.';
+      case 'work':
+        return 'List your work experience, including positions, companies, and dates.';
+      case 'education':
+        return 'Add your educational background, degrees, and fields of study.';
+      case 'skills':
+        return 'List your skills and proficiency levels.';
+      case 'projects':
+        return 'Detail your notable projects, including descriptions and dates.';
+      case 'certificates':
+        return 'Add your certifications and their issuing authorities.';
+      case 'languages':
+        return 'List your fluency levels in different languages.';
+      default:
+        return '';
+    }
+  };
 
   const renderDesignTab = () => {
+    const professionalFonts = [
+      { name: 'Inter', value: 'Inter', preview: 'Inter' },
+      { name: 'Roboto', value: 'Roboto', preview: 'Roboto' },
+      { name: 'Open Sans', value: 'Open Sans', preview: 'Open Sans' },
+      { name: 'Lato', value: 'Lato', preview: 'Lato' },
+      { name: 'Poppins', value: 'Poppins', preview: 'Poppins' },
+      { name: 'Source Sans Pro', value: 'Source Sans Pro', preview: 'Source Sans Pro' },
+      { name: 'Nunito', value: 'Nunito', preview: 'Nunito' },
+      { name: 'Work Sans', value: 'Work Sans', preview: 'Work Sans' }
+    ];
+
     return (
-      <div className="p-4">
-        <h3 className="text-lg font-semibold text-white mb-4">Design Settings</h3>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Header Font Size</label>
-            <input
-              type="range"
-              min="12"
-              max="48"
-              defaultValue="24"
-              className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
-            />
-            <div className="text-xs text-gray-400 mt-1">24px</div>
-          </div>
+      <div className={`p-6 space-y-6 ${theme === 'dark' ? 'text-gray-100' : 'text-gray-900'}`}>
+        <h3 className={`text-lg font-semibold mb-6 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+          Design Settings
+        </h3>
+        
+        {/* Two Column Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Body Font Size</label>
-            <input
-              type="range"
-              min="10"
-              max="20"
-              defaultValue="14"
-              className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
-            />
-            <div className="text-xs text-gray-400 mt-1">14px</div>
+          {/* Left Column - Typography */}
+          <div className="space-y-6">
+            {/* Font Selection */}
+            <div className={`p-4 rounded-lg border ${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+              <h4 className={`text-sm font-semibold mb-4 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                Typography
+              </h4>
+              
+              <div className="space-y-4">
+                {/* Font Family */}
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Font Family
+                  </label>
+                  <select
+                    value={selectedFont}
+                    onChange={(e) => {
+                      setSelectedFont(e.target.value);
+                      updateSessionWithDesignSettings();
+                    }}
+                    className={`w-full px-3 py-2 rounded-lg border transition-colors ${
+                      theme === 'dark' 
+                        ? 'bg-gray-700 border-gray-600 text-white focus:border-lime-500 focus:ring-lime-500' 
+                        : 'bg-white border-gray-300 text-gray-900 focus:border-lime-500 focus:ring-lime-500'
+                    }`}
+                  >
+                    {professionalFonts.map((font) => (
+                      <option key={font.value} value={font.value} style={{ fontFamily: font.value }}>
+                        {font.name}
+                      </option>
+                    ))}
+                  </select>
+                  <div className={`text-xs mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                    Preview: <span style={{ fontFamily: selectedFont }}>{selectedFont}</span>
+                  </div>
+                </div>
+
+                {/* Header Font Size */}
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Header Font Size
+                  </label>
+                  <input
+                    type="range"
+                    min="12"
+                    max="48"
+                    value={headerFontSize}
+                    onChange={(e) => {
+                      setHeaderFontSize(parseInt(e.target.value));
+                      updateSessionWithDesignSettings();
+                    }}
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                  />
+                  <div className={`text-xs mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                    {headerFontSize}px
+                  </div>
+                </div>
+
+                {/* Body Font Size */}
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Body Font Size
+                  </label>
+                  <input
+                    type="range"
+                    min="10"
+                    max="20"
+                    value={bodyFontSize}
+                    onChange={(e) => setBodyFontSize(parseInt(e.target.value))}
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                  />
+                  <div className={`text-xs mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                    {bodyFontSize}px
+                  </div>
+                </div>
+
+                {/* Section Title Font Size */}
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Section Title Font Size
+                  </label>
+                  <input
+                    type="range"
+                    min="14"
+                    max="32"
+                    value={sectionFontSize}
+                    onChange={(e) => setSectionFontSize(parseInt(e.target.value))}
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                  />
+                  <div className={`text-xs mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                    {sectionFontSize}px
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Spacing */}
+            <div className={`p-4 rounded-lg border ${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+              <h4 className={`text-sm font-semibold mb-4 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                Spacing
+              </h4>
+              
+              <div className="space-y-4">
+                {/* Line Spacing */}
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Line Spacing
+                  </label>
+                  <input
+                    type="range"
+                    min="1"
+                    max="2"
+                    step="0.1"
+                    value={lineSpacing}
+                    onChange={(e) => setLineSpacing(parseFloat(e.target.value))}
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                  />
+                  <div className={`text-xs mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                    {lineSpacing}
+                  </div>
+                </div>
+
+                {/* Letter Spacing */}
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Letter Spacing
+                  </label>
+                  <input
+                    type="range"
+                    min="-2"
+                    max="4"
+                    step="0.5"
+                    value={letterSpacing}
+                    onChange={(e) => setLetterSpacing(parseFloat(e.target.value))}
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                  />
+                  <div className={`text-xs mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                    {letterSpacing}px
+                  </div>
+                </div>
+
+                {/* Section Spacing */}
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Section Spacing
+                  </label>
+                  <input
+                    type="range"
+                    min="8"
+                    max="32"
+                    value={sectionSpacing}
+                    onChange={(e) => setSectionSpacing(parseInt(e.target.value))}
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                  />
+                  <div className={`text-xs mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                    {sectionSpacing}px
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Section Title Font Size</label>
-            <input
-              type="range"
-              min="14"
-              max="32"
-              defaultValue="18"
-              className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
-            />
-            <div className="text-xs text-gray-400 mt-1">18px</div>
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Line Spacing</label>
-            <input
-              type="range"
-              min="1"
-              max="2"
-              step="0.1"
-              defaultValue="1.2"
-              className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
-            />
-            <div className="text-xs text-gray-400 mt-1">1.2</div>
+
+          {/* Right Column - Layout & Padding */}
+          <div className="space-y-6">
+            {/* Page Layout */}
+            <div className={`p-4 rounded-lg border ${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+              <h4 className={`text-sm font-semibold mb-4 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                Page Layout
+              </h4>
+              
+              <div className="space-y-4">
+                {/* Page Padding Controls */}
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Top Padding
+                  </label>
+                  <input
+                    type="range"
+                    min="16"
+                    max="64"
+                    value={pagePadding?.top || 32}
+                    onChange={(e) => setPagePadding?.({ 
+                      top: parseInt(e.target.value), 
+                      bottom: pagePadding?.bottom || 32 
+                    })}
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                  />
+                  <div className={`text-xs mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                    {pagePadding?.top || 32}px
+                  </div>
+                </div>
+                
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+                    Bottom Padding
+                  </label>
+                  <input
+                    type="range"
+                    min="16"
+                    max="64"
+                    value={pagePadding?.bottom || 32}
+                    onChange={(e) => setPagePadding?.({ 
+                      top: pagePadding?.top || 32, 
+                      bottom: parseInt(e.target.value) 
+                    })}
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                  />
+                  <div className={`text-xs mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                    {pagePadding?.bottom || 32}px
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Color Scheme */}
+            <div className={`p-4 rounded-lg border ${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+              <h4 className={`text-sm font-semibold mb-4 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                Color Scheme
+              </h4>
+              
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <button className={`p-3 rounded-lg border-2 transition-all ${
+                    theme === 'dark' 
+                      ? 'border-lime-500 bg-lime-500/20 text-white' 
+                      : 'border-lime-500 bg-lime-50 text-gray-900'
+                  }`}>
+                    <div className="text-xs font-medium mb-1">Professional</div>
+                    <div className="text-xs opacity-70">Black & White</div>
+                  </button>
+                  
+                  <button className={`p-3 rounded-lg border-2 transition-all ${
+                    theme === 'dark' 
+                      ? 'border-gray-600 bg-gray-700 text-gray-300 hover:border-lime-500' 
+                      : 'border-gray-200 bg-white text-gray-700 hover:border-lime-500'
+                  }`}>
+                    <div className="text-xs font-medium mb-1">Modern</div>
+                    <div className="text-xs opacity-70">Blue Accent</div>
+                  </button>
+                  
+                  <button className={`p-3 rounded-lg border-2 transition-all ${
+                    theme === 'dark' 
+                      ? 'border-gray-600 bg-gray-700 text-gray-300 hover:border-lime-500' 
+                      : 'border-gray-200 bg-white text-gray-700 hover:border-lime-500'
+                  }`}>
+                    <div className="text-xs font-medium mb-1">Creative</div>
+                    <div className="text-xs opacity-70">Colorful</div>
+                  </button>
+                  
+                  <button className={`p-3 rounded-lg border-2 transition-all ${
+                    theme === 'dark' 
+                      ? 'border-gray-600 bg-gray-700 text-gray-300 hover:border-lime-500' 
+                      : 'border-gray-200 bg-white text-gray-700 hover:border-lime-500'
+                  }`}>
+                    <div className="text-xs font-medium mb-1">Minimal</div>
+                    <div className="text-xs opacity-70">Clean Lines</div>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className={`p-4 rounded-lg border ${theme === 'dark' ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+              <h4 className={`text-sm font-semibold mb-4 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                Quick Actions
+              </h4>
+              
+              <div className="space-y-2">
+                <button className={`w-full px-3 py-2 text-sm rounded-lg transition-colors ${
+                  theme === 'dark' 
+                    ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}>
+                  Reset to Default
+                </button>
+                
+                <button className={`w-full px-3 py-2 text-sm rounded-lg transition-colors ${
+                  theme === 'dark' 
+                    ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}>
+                  Save as Preset
+                </button>
+                
+                <button className={`w-full px-3 py-2 text-sm rounded-lg transition-colors ${
+                  theme === 'dark' 
+                    ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}>
+                  Preview Changes
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -505,7 +1047,7 @@ const OnboardingFormPanel: React.FC<OnboardingFormPanelProps> = ({
     if (templates.length === 0) {
       return (
         <div className="p-4">
-          <h3 className="text-lg font-semibold text-white mb-4">Choose Template</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Choose Template</h3>
           <div className="text-center py-8">
             <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-400 text-sm">No templates available</p>
@@ -517,7 +1059,7 @@ const OnboardingFormPanel: React.FC<OnboardingFormPanelProps> = ({
 
     return (
       <div className="p-4">
-        <h3 className="text-lg font-semibold text-white mb-4">Choose Template</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Choose Template</h3>
         <div className="grid grid-cols-2 gap-3">
           {templates.map((template) => (
             <div
@@ -526,14 +1068,14 @@ const OnboardingFormPanel: React.FC<OnboardingFormPanelProps> = ({
               className={`relative cursor-pointer rounded-lg border-2 transition-all ${
                 selectedTemplate?.id === template.id
                   ? 'border-blue-500 bg-blue-500/10'
-                  : 'border-gray-600 bg-gray-800 hover:border-gray-500'
+                  : 'border-gray-200 bg-gray-100 hover:border-gray-200'
               }`}
             >
-              <div className="aspect-[3/4] bg-gray-700 rounded-t-lg flex items-center justify-center">
+              <div className="aspect-[3/4] bg-gray-200 rounded-t-lg flex items-center justify-center">
                 <FileText className="h-8 w-8 text-gray-400" />
               </div>
               <div className="p-2">
-                <p className="text-xs text-gray-300 text-center">{template.name}</p>
+                <p className="text-xs text-gray-700 text-center">{template.name}</p>
                 <p className="text-xs text-gray-500 text-center mt-1">{template.category}</p>
               </div>
               {selectedTemplate?.id === template.id && (
@@ -546,85 +1088,54 @@ const OnboardingFormPanel: React.FC<OnboardingFormPanelProps> = ({
     );
   };
 
-  if (isCollapsed) {
-    return (
-      <div className="w-12 bg-gray-900 border-r border-gray-700 flex flex-col items-center py-4">
-        <button
-          onClick={onTogglePanel}
-          className="p-2 text-gray-400 hover:text-white transition-colors"
-        >
-          <ChevronRight size={20} />
-        </button>
-      </div>
-    );
-  }
 
-  return (
-    <div className="w-[500px] bg-gray-900 border-r border-gray-700 flex flex-col h-full">
-      {/* Header - Just the toggle button */}
-      <div className="p-4 border-b border-gray-700">
-        <div className="flex items-center justify-end">
-          <button
-            onClick={onTogglePanel}
-            className="p-1 text-gray-400 hover:text-white transition-colors"
-            title="Toggle panel"
-          >
-            <ChevronLeft size={20} />
-          </button>
-        </div>
-      </div>
+
+      return (
+      <div className={`h-full flex flex-col ${theme === 'dark' ? 'bg-gray-900' : 'bg-white'}`}>
 
       {/* Tab Navigation */}
-      <div className="flex border-b border-gray-700">
-        <button
-          onClick={() => setActiveTab('structure')}
-          className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
-            activeTab === 'structure'
-              ? 'text-blue-400 border-b-2 border-blue-400'
-              : 'text-gray-400 hover:text-white'
-          }`}
-        >
-          Structure
-        </button>
-        <button
-          onClick={() => setActiveTab('design')}
-          className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
-            activeTab === 'design'
-              ? 'text-blue-400 border-b-2 border-blue-400'
-              : 'text-gray-400 hover:text-white'
-          }`}
-        >
-          Design
-        </button>
-        <button
-          onClick={() => setActiveTab('template')}
-          className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
-            activeTab === 'template'
-              ? 'text-blue-400 border-b-2 border-blue-400'
-              : 'text-gray-400 hover:text-white'
-          }`}
-        >
-          Template
-        </button>
+      <div className={`flex border-b transition-colors ${
+        theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
+      }`}>
+        {[
+          { id: 'structure', label: 'Structure', icon: FileText },
+          { id: 'design', label: 'Design', icon: Palette },
+          { id: 'template', label: 'Template', icon: Settings }
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as any)}
+            className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
+              activeTab === tab.id
+                ? theme === 'dark'
+                  ? 'bg-gray-800 text-white border-b-2 border-blue-500'
+                  : 'bg-white text-gray-900 border-b-2 border-blue-500'
+                : theme === 'dark'
+                ? 'text-gray-400 hover:text-gray-300 hover:bg-gray-800'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Sidebar - Section Icons (only for Structure tab) */}
+        {/* Left Sidebar - Section Icons */}
         {activeTab === 'structure' && (
-          <div className="w-12 bg-gray-800 border-r border-gray-700 flex flex-col items-center py-4">
+          <div className={`w-16 border-r transition-colors shadow-lg ${
+            theme === 'dark' ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'
+          }`}>
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}
               onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
             >
-              <SortableContext
-                items={orderedSections.map(s => s?.id).filter((id): id is string => Boolean(id))}
-                strategy={verticalListSortingStrategy}
-              >
-                <div className="flex flex-col items-center space-y-3">
-                  {orderedSections.map((section, index) => (
+              <SortableContext items={orderedSections.map(s => s?.id || '')} strategy={verticalListSortingStrategy}>
+                <div className="flex flex-col items-center justify-center h-full py-4 space-y-3">
+                  {orderedSections.map((section) => (
                     section && (
                       <SortableSectionIcon
                         key={section.id}
@@ -660,44 +1171,91 @@ const OnboardingFormPanel: React.FC<OnboardingFormPanelProps> = ({
           </div>
         )}
 
-        {/* Right Content - Continuous Sections */}
-        <div className="flex-1 overflow-y-auto">
+        {/* Right Content - Draggable Panel */}
+        <div className="relative flex-1 flex overflow-hidden">
+          {/* Main Content Panel */}
+          <div 
+            className={`transition-colors shadow-lg flex-shrink-0 ${
+              theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'
+            }`}
+            style={{ width: `${panelWidth}px`, minWidth: `${panelWidth}px` }}
+          >
+            <div className={`h-full overflow-y-auto transition-colors ${
+              theme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'
+            }`}>
           {activeTab === 'structure' && (
-            <div className="space-y-0">
+            <div className="space-y-6 p-6">
               {orderedSections.map((section, index) => (
                 section && (
                   <div
                     key={section.id}
                     id={`section-${section.id}`}
-                    className={`transition-all duration-300 ${
+                    className={`transition-all duration-300 rounded-lg shadow-sm border ${
                       activeSection === section.id 
-                        ? 'bg-gray-800/30 border-l-4 border-blue-500' 
-                        : 'border-l-4 border-transparent'
+                        ? theme === 'dark'
+                          ? 'bg-gray-800 border-blue-500 shadow-blue-500/10' 
+                          : 'bg-white border-lime-500 shadow-lime-500/10'
+                        : theme === 'dark'
+                        ? 'bg-gray-800 border-gray-700'
+                        : 'bg-white border-gray-200'
                     }`}
                   >
                     {/* Section Header */}
-                    <div className={`p-4 border-b border-gray-700 sticky top-0 z-10 transition-all duration-300 ${
+                    <div className={`px-6 py-4 border-b transition-all duration-300 ${
                       activeSection === section.id 
-                        ? 'bg-gray-800 border-blue-500/50' 
-                        : 'bg-gray-900 border-gray-700'
+                        ? theme === 'dark'
+                          ? 'bg-gray-800 border-gray-600' 
+                          : 'bg-lime-50 border-lime-200'
+                        : theme === 'dark'
+                        ? 'bg-gray-800 border-gray-700'
+                        : 'bg-gray-50 border-gray-200'
                     }`}>
                       <div className="flex items-center gap-3">
-                        <section.icon size={24} className={`transition-colors duration-300 ${
-                          activeSection === section.id ? 'text-blue-400' : 'text-gray-400'
-                        }`} />
-                        <h3 className={`text-xl font-semibold transition-colors duration-300 ${
-                          activeSection === section.id ? 'text-white' : 'text-gray-300'
+                        <div className={`p-2 rounded-lg transition-colors duration-300 ${
+                          activeSection === section.id 
+                            ? theme === 'dark'
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-lime-600 text-white'
+                            : theme === 'dark'
+                            ? 'bg-gray-700 text-gray-300'
+                            : 'bg-gray-200 text-gray-600'
                         }`}>
-                          {section.label}
-                        </h3>
+                          <section.icon size={18} />
+                        </div>
+                        <div>
+                          <h3 className={`text-base font-semibold transition-colors duration-300 ${
+                            activeSection === section.id 
+                              ? theme === 'dark' ? 'text-white' : 'text-gray-900'
+                              : theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                          }`}>
+                            {section.label}
+                          </h3>
+                                                     
+                           {/* Progress Bar */}
+                           <div className="mt-2">
+                             <div className="flex items-center gap-2">
+                               <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                 <div 
+                                   className={`h-full rounded-full transition-all duration-300 ${getProgressColor(calculateSectionProgress(section.id))}`}
+                                   style={{ width: `${calculateSectionProgress(section.id)}%` }}
+                                 />
+                               </div>
+                               <span className={`text-xs font-medium ${
+                                 theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                               }`}>
+                                 {calculateSectionProgress(section.id)}%
+                               </span>
+                             </div>
+                           </div>
+                        </div>
                         {activeSection === section.id && (
-                          <div className="ml-auto w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+                          <div className="ml-auto w-2 h-2 bg-lime-500 rounded-full animate-pulse"></div>
                         )}
                       </div>
                     </div>
 
                     {/* Section Content */}
-                    <div className="p-4">
+                    <div className="px-6 py-6">
                       {renderSectionForSection(section.id)}
                     </div>
                   </div>
@@ -705,13 +1263,32 @@ const OnboardingFormPanel: React.FC<OnboardingFormPanelProps> = ({
               ))}
             </div>
           )}
-          
-          {activeTab === 'design' && renderDesignTab()}
-          {activeTab === 'template' && renderTemplateTab()}
-        </div>
-      </div>
-    </div>
-  );
+
+          {activeTab === 'design' && (
+            <div className="p-6">
+              {renderDesignTab()}
+            </div>
+          )}
+
+                     {activeTab === 'template' && (
+             <div className="p-6">
+               {renderTemplateTab()}
+             </div>
+           )}
+             </div>
+           </div>
+
+           {/* Resize Handle */}
+           <div
+             className={`w-1 cursor-col-resize transition-colors ${
+               theme === 'dark' ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-300 hover:bg-gray-400'
+             } ${isDragging ? 'bg-lime-500' : ''}`}
+             onMouseDown={handleMouseDown}
+           />
+         </div>
+       </div>
+     </div>
+   );
 };
 
 // Adapted PersonalInfoStep content for Studio
@@ -738,90 +1315,90 @@ const PersonalInfoStepContent: React.FC<{
 
   return (
     <div className="space-y-4">
-      <div>
-        <label className="block text-xs font-medium text-gray-300 mb-1">Full Name *</label>
-        <input
-          type="text"
-          value={cvData.basics?.name || ''}
-          onChange={(e) => handleInputChange('name', e.target.value)}
-          className="w-full px-3 py-1.5 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="John Doe"
-        />
-      </div>
+              <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Full Name *</label>
+          <input
+            type="text"
+            value={cvData.basics?.name || ''}
+            onChange={(e) => handleInputChange('name', e.target.value)}
+            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm"
+            placeholder="John Doe"
+          />
+        </div>
+
+              <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Professional Title</label>
+          <input
+            type="text"
+            value={cvData.basics?.label || ''}
+            onChange={(e) => handleInputChange('label', e.target.value)}
+            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm"
+            placeholder="Software Engineer"
+          />
+        </div>
+
+              <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Email *</label>
+          <input
+            type="email"
+            value={cvData.basics?.email || ''}
+            onChange={(e) => handleInputChange('email', e.target.value)}
+            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm"
+            placeholder="john@example.com"
+          />
+        </div>
+
+              <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Phone</label>
+          <input
+            type="tel"
+            value={cvData.basics?.phone || ''}
+            onChange={(e) => handleInputChange('phone', e.target.value)}
+            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm"
+            placeholder="+1 (555) 123-4567"
+          />
+        </div>
+
+              <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">City</label>
+          <input
+            type="text"
+            value={cvData.basics?.location?.city || ''}
+            onChange={(e) => handleLocationChange('city', e.target.value)}
+            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm"
+            placeholder="San Francisco"
+          />
+        </div>
+
+              <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">State/Region</label>
+          <input
+            type="text"
+            value={cvData.basics?.location?.region || ''}
+            onChange={(e) => handleLocationChange('region', e.target.value)}
+            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm"
+            placeholder="California"
+          />
+        </div>
+
+              <div>
+          <label className="block text-xs font-medium text-gray-700 mb-1">Website</label>
+          <input
+            type="url"
+            value={cvData.basics?.url || ''}
+            onChange={(e) => handleInputChange('url', e.target.value)}
+            className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm"
+            placeholder="https://johndoe.com"
+          />
+        </div>
 
       <div>
-        <label className="block text-xs font-medium text-gray-300 mb-1">Professional Title</label>
-        <input
-          type="text"
-          value={cvData.basics?.label || ''}
-          onChange={(e) => handleInputChange('label', e.target.value)}
-          className="w-full px-3 py-1.5 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Software Engineer"
-        />
-      </div>
-
-      <div>
-        <label className="block text-xs font-medium text-gray-300 mb-1">Email *</label>
-        <input
-          type="email"
-          value={cvData.basics?.email || ''}
-          onChange={(e) => handleInputChange('email', e.target.value)}
-          className="w-full px-3 py-1.5 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="john@example.com"
-        />
-      </div>
-
-      <div>
-        <label className="block text-xs font-medium text-gray-300 mb-1">Phone</label>
-        <input
-          type="tel"
-          value={cvData.basics?.phone || ''}
-          onChange={(e) => handleInputChange('phone', e.target.value)}
-          className="w-full px-3 py-1.5 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="+1 (555) 123-4567"
-        />
-      </div>
-
-      <div>
-        <label className="block text-xs font-medium text-gray-300 mb-1">City</label>
-        <input
-          type="text"
-          value={cvData.basics?.location?.city || ''}
-          onChange={(e) => handleLocationChange('city', e.target.value)}
-          className="w-full px-3 py-1.5 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="San Francisco"
-        />
-      </div>
-
-      <div>
-        <label className="block text-xs font-medium text-gray-300 mb-1">State/Region</label>
-        <input
-          type="text"
-          value={cvData.basics?.location?.region || ''}
-          onChange={(e) => handleLocationChange('region', e.target.value)}
-          className="w-full px-3 py-1.5 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="California"
-        />
-      </div>
-
-      <div>
-        <label className="block text-xs font-medium text-gray-300 mb-1">Website</label>
-        <input
-          type="url"
-          value={cvData.basics?.url || ''}
-          onChange={(e) => handleInputChange('url', e.target.value)}
-          className="w-full px-3 py-1.5 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="https://johndoe.com"
-        />
-      </div>
-
-      <div>
-        <label className="block text-xs font-medium text-gray-300 mb-1">Professional Summary</label>
+        <label className="block text-xs font-medium text-gray-700 mb-1">Professional Summary</label>
         <textarea
           value={cvData.basics?.summary || ''}
           onChange={(e) => handleInputChange('summary', e.target.value)}
-          rows={4}
-          className="w-full px-3 py-1.5 bg-gray-800 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          rows={3}
+          className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm"
           placeholder="Experienced software engineer with 5+ years..."
         />
       </div>
@@ -873,20 +1450,20 @@ const ExperienceStepContent: React.FC<{
       <div className="flex items-center justify-between">
         <button
           onClick={addWorkExperience}
-          className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          className="flex items-center gap-2 px-3 py-1.5 bg-lime-600 text-white rounded-md hover:bg-lime-700 transition-colors shadow-sm"
         >
-          <Plus size={16} />
-          <span className="text-sm">Add Experience</span>
+          <Plus size={14} />
+          <span className="text-xs font-medium">Add Experience</span>
         </button>
       </div>
 
-      {(cvData.work || []).map((work, index) => (
-        <div key={index} className="p-4 bg-gray-800 rounded-lg border border-gray-700">
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="font-medium text-white">Experience #{index + 1}</h4>
+                      {(cvData.work || []).map((work, index) => (
+          <div key={index} className="p-4 bg-white rounded-lg border border-gray-200 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-sm font-medium text-gray-900">Experience #{index + 1}</h4>
             <button
               onClick={() => removeWorkExperience(index)}
-              className="text-red-400 hover:text-red-300"
+              className="text-red-600 hover:text-red-700 text-xs font-medium"
             >
               Remove
             </button>
@@ -894,58 +1471,69 @@ const ExperienceStepContent: React.FC<{
 
           <div className="space-y-3">
             <div>
-              <label className="block text-xs font-medium text-gray-300 mb-1">Position</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Position</label>
               <input
                 type="text"
                 value={work.position || ''}
                 onChange={(e) => updateWorkExperience(index, 'position', e.target.value)}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm"
                 placeholder="Software Engineer"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-300 mb-1">Company</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Company</label>
               <input
                 type="text"
                 value={work.name || ''}
                 onChange={(e) => updateWorkExperience(index, 'name', e.target.value)}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm"
                 placeholder="Tech Company Inc."
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="block text-xs font-medium text-gray-300 mb-1">Start Date</label>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Start Date</label>
                 <input
                   type="text"
                   value={work.startDate || ''}
                   onChange={(e) => updateWorkExperience(index, 'startDate', e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm"
                   placeholder="Jan 2020"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-300 mb-1">End Date</label>
+                <label className="block text-xs font-medium text-gray-700 mb-1">End Date</label>
                 <input
                   type="text"
                   value={work.endDate || ''}
                   onChange={(e) => updateWorkExperience(index, 'endDate', e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm"
                   placeholder="Present"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-300 mb-1">Description</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
               <textarea
                 value={work.summary || ''}
                 onChange={(e) => updateWorkExperience(index, 'summary', e.target.value)}
                 rows={3}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-gray-200 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Describe your role and achievements..."
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Key Achievements</label>
+              <textarea
+                value={work.highlights?.join('\n') || ''}
+                onChange={(e) => updateWorkExperience(index, 'highlights', e.target.value.split('\n').filter(line => line.trim()))}
+                rows={3}
+                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                placeholder="• Led a team of 5 developers...&#10;• Increased performance by 25%...&#10;• Implemented new features..."
               />
             </div>
           </div>
@@ -992,7 +1580,7 @@ const EducationStepContent: React.FC<{
       <div className="flex items-center justify-between">
         <button
           onClick={addEducation}
-          className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          className="flex items-center gap-2 px-3 py-2 bg-lime-600 text-white rounded-md hover:bg-lime-700 transition-colors"
         >
           <Plus size={16} />
           <span className="text-sm">Add Education</span>
@@ -1000,9 +1588,9 @@ const EducationStepContent: React.FC<{
       </div>
 
       {(cvData.education || []).map((education, index) => (
-        <div key={index} className="p-4 bg-gray-800 rounded-lg border border-gray-700">
+        <div key={index} className="p-4 bg-gray-100 rounded-lg border border-gray-200">
           <div className="flex items-center justify-between mb-3">
-            <h4 className="font-medium text-white">Education #{index + 1}</h4>
+            <h4 className="font-medium text-gray-900">Education #{index + 1}</h4>
             <button
               onClick={() => removeEducation(index)}
               className="text-red-400 hover:text-red-300"
@@ -1013,34 +1601,34 @@ const EducationStepContent: React.FC<{
 
           <div className="space-y-3">
             <div>
-              <label className="block text-xs font-medium text-gray-300 mb-1">Institution</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Institution</label>
               <input
                 type="text"
                 value={education.institution || ''}
                 onChange={(e) => updateEducation(index, 'institution', e.target.value)}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-gray-200 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="University of Technology"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-300 mb-1">Degree</label>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Degree</label>
                 <input
                   type="text"
                   value={education.studyType || ''}
                   onChange={(e) => updateEducation(index, 'studyType', e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-gray-200 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Bachelor's"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-300 mb-1">Field of Study</label>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Field of Study</label>
                 <input
                   type="text"
                   value={education.area || ''}
                   onChange={(e) => updateEducation(index, 'area', e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-gray-200 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Computer Science"
                 />
               </div>
@@ -1048,34 +1636,34 @@ const EducationStepContent: React.FC<{
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-300 mb-1">Start Date</label>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Start Date</label>
                 <input
                   type="text"
                   value={education.startDate || ''}
                   onChange={(e) => updateEducation(index, 'startDate', e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-gray-200 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="2018"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-300 mb-1">End Date</label>
+                <label className="block text-xs font-medium text-gray-700 mb-1">End Date</label>
                 <input
                   type="text"
                   value={education.endDate || ''}
                   onChange={(e) => updateEducation(index, 'endDate', e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-gray-200 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="2022"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-300 mb-1">GPA/Score</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">GPA/Score</label>
               <input
                 type="text"
                 value={education.score || ''}
                 onChange={(e) => updateEducation(index, 'score', e.target.value)}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-gray-200 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="3.8/4.0"
               />
             </div>
@@ -1127,9 +1715,9 @@ const SkillsStepContent: React.FC<{
       </div>
 
       {(cvData.skills || []).map((skill, index) => (
-        <div key={index} className="p-4 bg-gray-800 rounded-lg border border-gray-700">
+        <div key={index} className="p-4 bg-gray-100 rounded-lg border border-gray-200">
           <div className="flex items-center justify-between mb-3">
-            <h4 className="font-medium text-white">Skill #{index + 1}</h4>
+            <h4 className="font-medium text-gray-900">Skill #{index + 1}</h4>
             <button
               onClick={() => removeSkill(index)}
               className="text-red-400 hover:text-red-300"
@@ -1140,22 +1728,22 @@ const SkillsStepContent: React.FC<{
 
           <div className="space-y-3">
             <div>
-              <label className="block text-xs font-medium text-gray-300 mb-1">Skill Name</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Skill Name</label>
               <input
                 type="text"
                 value={skill.name || ''}
                 onChange={(e) => updateSkill(index, 'name', e.target.value)}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-gray-200 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="JavaScript"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-300 mb-1">Level</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Level</label>
               <select
                 value={skill.level || 'Beginner'}
                 onChange={(e) => updateSkill(index, 'level', e.target.value)}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-gray-200 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="Beginner">Beginner</option>
                 <option value="Intermediate">Intermediate</option>
@@ -1165,12 +1753,12 @@ const SkillsStepContent: React.FC<{
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-300 mb-1">Keywords</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Keywords</label>
               <input
                 type="text"
                 value={skill.keywords.join(', ') || ''}
                 onChange={(e) => updateSkill(index, 'keywords', e.target.value.split(',').map(k => k.trim()))}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-gray-200 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="javascript, react, node.js"
               />
             </div>
@@ -1225,9 +1813,9 @@ const ProjectsStepContent: React.FC<{
       </div>
 
       {(cvData.projects || []).map((project, index) => (
-        <div key={index} className="p-4 bg-gray-800 rounded-lg border border-gray-700">
+        <div key={index} className="p-4 bg-gray-100 rounded-lg border border-gray-200">
           <div className="flex items-center justify-between mb-3">
-            <h4 className="font-medium text-white">Project #{index + 1}</h4>
+            <h4 className="font-medium text-gray-900">Project #{index + 1}</h4>
             <button
               onClick={() => removeProject(index)}
               className="text-red-400 hover:text-red-300"
@@ -1238,58 +1826,58 @@ const ProjectsStepContent: React.FC<{
 
           <div className="space-y-3">
             <div>
-              <label className="block text-xs font-medium text-gray-300 mb-1">Project Name</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Project Name</label>
               <input
                 type="text"
                 value={project.name || ''}
                 onChange={(e) => updateProject(index, 'name', e.target.value)}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-gray-200 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="My Awesome App"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-300 mb-1">Description</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
               <textarea
                 value={project.description || ''}
                 onChange={(e) => updateProject(index, 'description', e.target.value)}
                 rows={3}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-gray-200 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="A brief description of your project..."
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-300 mb-1">Start Date</label>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Start Date</label>
                 <input
                   type="text"
                   value={project.startDate || ''}
                   onChange={(e) => updateProject(index, 'startDate', e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-gray-200 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="2022"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-300 mb-1">End Date</label>
+                <label className="block text-xs font-medium text-gray-700 mb-1">End Date</label>
                 <input
                   type="text"
                   value={project.endDate || ''}
                   onChange={(e) => updateProject(index, 'endDate', e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-gray-200 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Present"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-300 mb-1">Highlights</label>
-              <input
-                type="text"
-                value={project.highlights.join(', ') || ''}
-                onChange={(e) => updateProject(index, 'highlights', e.target.value.split(',').map(h => h.trim()))}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Implemented new feature, improved performance"
+              <label className="block text-xs font-medium text-gray-700 mb-1">Highlights</label>
+              <textarea
+                value={project.highlights.join('\n') || ''}
+                onChange={(e) => updateProject(index, 'highlights', e.target.value.split('\n').filter(line => line.trim()))}
+                rows={3}
+                className="w-full px-3 py-2 bg-gray-200 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="• Implemented new feature&#10;• Improved performance by 30%&#10;• Added user authentication"
               />
             </div>
           </div>
@@ -1341,9 +1929,9 @@ const CertificatesStepContent: React.FC<{
       </div>
 
       {(cvData.certificates || []).map((certificate, index) => (
-        <div key={index} className="p-4 bg-gray-800 rounded-lg border border-gray-700">
+        <div key={index} className="p-4 bg-gray-100 rounded-lg border border-gray-200">
           <div className="flex items-center justify-between mb-3">
-            <h4 className="font-medium text-white">Certificate #{index + 1}</h4>
+            <h4 className="font-medium text-gray-900">Certificate #{index + 1}</h4>
             <button
               onClick={() => removeCertificate(index)}
               className="text-red-400 hover:text-red-300"
@@ -1354,45 +1942,45 @@ const CertificatesStepContent: React.FC<{
 
           <div className="space-y-3">
             <div>
-              <label className="block text-xs font-medium text-gray-300 mb-1">Certificate Name</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Certificate Name</label>
               <input
                 type="text"
                 value={certificate.name || ''}
                 onChange={(e) => updateCertificate(index, 'name', e.target.value)}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-gray-200 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="AWS Certified Developer"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-300 mb-1">Issuer</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Issuer</label>
               <input
                 type="text"
                 value={certificate.issuer || ''}
                 onChange={(e) => updateCertificate(index, 'issuer', e.target.value)}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-gray-200 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Amazon Web Services"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-300 mb-1">Date</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Date</label>
               <input
                 type="text"
                 value={certificate.date || ''}
                 onChange={(e) => updateCertificate(index, 'date', e.target.value)}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-gray-200 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="2022-01-01"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-300 mb-1">URL</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">URL</label>
               <input
                 type="url"
                 value={certificate.url || ''}
                 onChange={(e) => updateCertificate(index, 'url', e.target.value)}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-gray-200 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="https://example.com/credentials/ABC123XYZ"
               />
             </div>
@@ -1443,9 +2031,9 @@ const LanguagesStepContent: React.FC<{
       </div>
 
       {(cvData.languages || []).map((language, index) => (
-        <div key={index} className="p-4 bg-gray-800 rounded-lg border border-gray-700">
+        <div key={index} className="p-4 bg-gray-100 rounded-lg border border-gray-200">
           <div className="flex items-center justify-between mb-3">
-            <h4 className="font-medium text-white">Language #{index + 1}</h4>
+            <h4 className="font-medium text-gray-900">Language #{index + 1}</h4>
             <button
               onClick={() => removeLanguage(index)}
               className="text-red-400 hover:text-red-300"
@@ -1456,22 +2044,22 @@ const LanguagesStepContent: React.FC<{
 
           <div className="space-y-3">
             <div>
-              <label className="block text-xs font-medium text-gray-300 mb-1">Language</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Language</label>
               <input
                 type="text"
                 value={language.language || ''}
                 onChange={(e) => updateLanguage(index, 'language', e.target.value)}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-gray-200 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="English"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-300 mb-1">Fluency</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Fluency</label>
               <select
                 value={language.fluency || 'Beginner'}
                 onChange={(e) => updateLanguage(index, 'fluency', e.target.value)}
-                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 bg-gray-200 border border-gray-300 rounded-md text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="Beginner">Beginner</option>
                 <option value="Intermediate">Intermediate</option>

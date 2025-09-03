@@ -1,7 +1,27 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ChevronLeft, Save, Download, ChevronRight, ChevronLeft as ChevronLeftIcon, Edit2, Check, X } from 'lucide-react';
+import { 
+  ChevronLeft, 
+  Save, 
+  ChevronRight, 
+  ChevronLeft as ChevronLeftIcon, 
+  Edit2, 
+  Check, 
+  X,
+  FileText,
+  Briefcase,
+  PenTool,
+  Archive,
+  MessageSquare,
+  BarChart3,
+  Settings,
+  Bell,
+  User,
+  Sun,
+  Moon
+} from 'lucide-react';
+import { useTheme } from '@/lib/contexts/ThemeContext';
 
 interface StudioTopBarProps {
   documentType: 'cv' | 'cover-letter';
@@ -35,25 +55,33 @@ const StudioTopBar: React.FC<StudioTopBarProps> = ({
   isEditingTitle,
   setIsEditingTitle
 }) => {
-  const [showExportMenu, setShowExportMenu] = useState(false);
   const [tempTitle, setTempTitle] = useState(documentTitle);
-
-
+  const { theme, toggleTheme } = useTheme();
 
   return (
-    <div className="h-16 bg-gray-800 border-b border-gray-700 flex items-center justify-between px-6 z-50 sticky top-0">
+    <div className={`h-16 backdrop-blur-sm border-b flex items-center justify-between px-6 z-50 sticky top-0 shadow-sm transition-colors duration-200 ${
+      theme === 'dark' 
+        ? 'bg-gray-900/95 border-gray-700' 
+        : 'bg-white/95 border-lime-200/50'
+    }`}>
       {/* Left Region */}
       <div className="flex items-center space-x-4">
         <button
           onClick={onBack}
-          className="p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-gray-700 focus:ring-2 focus:ring-lime-500 focus:ring-offset-2 focus:ring-offset-gray-800"
+          className={`p-2 transition-colors rounded-lg focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+            theme === 'dark'
+              ? 'text-gray-300 hover:text-white hover:bg-gray-800'
+              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+          }`}
           title="Back to Dashboard"
         >
           <ChevronLeft className="h-5 w-5" />
         </button>
         <div className="flex items-center space-x-2">
-          <h1 className="text-xl font-semibold text-white">Studio</h1>
-          <span className="text-gray-400">•</span>
+          <h1 className={`text-lg font-semibold ${
+            theme === 'dark' ? 'text-white' : 'text-gray-900'
+          }`}>Studio</h1>
+          <span className={theme === 'dark' ? 'text-gray-500' : 'text-gray-400'}>•</span>
           {isEditingTitle ? (
             <div className="flex items-center space-x-2">
               <input
@@ -68,12 +96,16 @@ const StudioTopBar: React.FC<StudioTopBarProps> = ({
                     setIsEditingTitle(false);
                   }
                 }}
-                className="px-2 py-1 bg-gray-700 text-white text-lg font-semibold rounded border border-gray-600 focus:border-lime-500 focus:outline-none"
+                className={`px-2 py-1 text-base font-semibold rounded border focus:outline-none transition-colors ${
+                  theme === 'dark'
+                    ? 'bg-gray-800 text-white border-gray-600 focus:border-blue-500'
+                    : 'bg-gray-50 text-gray-900 border-gray-300 focus:border-blue-500'
+                }`}
                 autoFocus
               />
               <button
                 onClick={() => onTitleUpdate(tempTitle)}
-                className="p-1 text-green-400 hover:text-green-300 transition-colors"
+                className="p-1 text-green-600 hover:text-green-700 transition-colors"
                 title="Save title"
               >
                 <Check className="h-4 w-4" />
@@ -83,7 +115,7 @@ const StudioTopBar: React.FC<StudioTopBarProps> = ({
                   setTempTitle(documentTitle);
                   setIsEditingTitle(false);
                 }}
-                className="p-1 text-red-400 hover:text-red-300 transition-colors"
+                className="p-1 text-red-600 hover:text-red-700 transition-colors"
                 title="Cancel"
               >
                 <X className="h-4 w-4" />
@@ -91,13 +123,19 @@ const StudioTopBar: React.FC<StudioTopBarProps> = ({
             </div>
           ) : (
             <div className="flex items-center space-x-2">
-              <h2 className="text-lg font-medium text-gray-300">{documentTitle}</h2>
+              <h2 className={`text-base font-medium ${
+                theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+              }`}>{documentTitle}</h2>
               <button
                 onClick={() => {
                   setTempTitle(documentTitle);
                   setIsEditingTitle(true);
                 }}
-                className="p-1 text-gray-400 hover:text-white transition-colors"
+                className={`p-1 transition-colors ${
+                  theme === 'dark' 
+                    ? 'text-gray-400 hover:text-gray-200' 
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
                 title="Edit title"
               >
                 <Edit2 className="h-4 w-4" />
@@ -109,13 +147,17 @@ const StudioTopBar: React.FC<StudioTopBarProps> = ({
 
       {/* Center Region - Document Type Toggle */}
       <div className="flex items-center">
-        <div className="bg-gray-700 rounded-lg p-1 flex">
+        <div className={`rounded-lg p-1 flex ${
+          theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'
+        }`}>
           <button
             onClick={() => setDocumentType('cv')}
             className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
               documentType === 'cv'
-                ? 'bg-lime-600 text-white shadow-lg'
-                : 'text-gray-300 hover:text-white hover:bg-gray-600'
+                ? 'bg-lime-600 text-white shadow-sm'
+                : theme === 'dark'
+                ? 'text-gray-300 hover:text-white hover:bg-gray-700'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
             }`}
           >
             CV
@@ -124,8 +166,10 @@ const StudioTopBar: React.FC<StudioTopBarProps> = ({
             onClick={() => setDocumentType('cover-letter')}
             className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
               documentType === 'cover-letter'
-                ? 'bg-lime-600 text-white shadow-lg'
-                : 'text-gray-300 hover:text-white hover:bg-gray-600'
+                ? 'bg-lime-600 text-white shadow-sm'
+                : theme === 'dark'
+                ? 'text-gray-300 hover:text-white hover:bg-gray-700'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
             }`}
           >
             Cover Letter
@@ -133,16 +177,54 @@ const StudioTopBar: React.FC<StudioTopBarProps> = ({
         </div>
       </div>
 
-      {/* Right Region */}
+      {/* Right Region - Dashboard Header Icons */}
       <div className="flex items-center space-x-3">
+        {/* Theme Toggle */}
+        <button
+          onClick={toggleTheme}
+          className={`p-2 transition-colors rounded-lg ${
+            theme === 'dark'
+              ? 'text-gray-300 hover:text-white hover:bg-gray-800'
+              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+          }`}
+          title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+        >
+          {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+        </button>
+
+        {/* Dashboard Header Icons */}
+        <div className="flex items-center space-x-2">
+          <button className={`p-2 transition-colors rounded-lg ${
+            theme === 'dark'
+              ? 'text-gray-300 hover:text-white hover:bg-gray-800'
+              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+          }`} title="Notifications">
+            <Bell className="h-4 w-4" />
+          </button>
+          <button className={`p-2 transition-colors rounded-lg ${
+            theme === 'dark'
+              ? 'text-gray-300 hover:text-white hover:bg-gray-800'
+              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+          }`} title="Settings">
+            <Settings className="h-4 w-4" />
+          </button>
+          <button className={`p-2 transition-colors rounded-lg ${
+            theme === 'dark'
+              ? 'text-gray-300 hover:text-white hover:bg-gray-800'
+              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+          }`} title="Profile">
+            <User className="h-4 w-4" />
+          </button>
+        </div>
+
         {/* Unified Save Button with Status */}
         <button
           onClick={onManualSave}
           disabled={saveStatus === 'saving'}
           className={`
-            flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-200 font-medium text-sm
+            flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-200 font-medium text-sm min-w-[120px] justify-center
             ${saveStatus === 'saving' 
-              ? 'bg-gray-600 text-gray-300 cursor-not-allowed' 
+              ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
               : saveStatus === 'error'
               ? 'bg-red-600 text-white hover:bg-red-700 active:bg-red-800'
               : 'bg-lime-600 text-white hover:bg-lime-700 active:bg-lime-800'
@@ -153,7 +235,7 @@ const StudioTopBar: React.FC<StudioTopBarProps> = ({
         >
           {saveStatus === 'saving' ? (
             <>
-              <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-transparent" />
+              <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-400 border-t-transparent" />
               <span>Saving...</span>
             </>
           ) : saveStatus === 'error' ? (
@@ -168,60 +250,7 @@ const StudioTopBar: React.FC<StudioTopBarProps> = ({
             </>
           )}
         </button>
-
-        {/* Export Menu */}
-        <div className="relative">
-          <button
-            onClick={() => setShowExportMenu(!showExportMenu)}
-            className="p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-gray-700 focus:ring-2 focus:ring-lime-500 focus:ring-offset-2 focus:ring-offset-gray-800"
-            title="Export Document"
-          >
-            <Download className="h-4 w-4" />
-          </button>
-          
-          {showExportMenu && (
-            <div className="absolute right-0 top-full mt-2 w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50">
-              <div className="py-1">
-                <button
-                  onClick={() => {
-                    onExport('pdf');
-                    setShowExportMenu(false);
-                  }}
-                  className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
-                >
-                  Export as PDF
-                </button>
-                <button
-                  onClick={() => {
-                    onExport('docx');
-                    setShowExportMenu(false);
-                  }}
-                  className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
-                >
-                  Export as DOCX
-                </button>
-                <button
-                  onClick={() => {
-                    onExport('json');
-                    setShowExportMenu(false);
-                  }}
-                  className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
-                >
-                  Export as JSON
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
       </div>
-
-      {/* Click outside to close export menu */}
-      {showExportMenu && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={() => setShowExportMenu(false)}
-        />
-      )}
     </div>
   );
 };
