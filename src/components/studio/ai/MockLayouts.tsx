@@ -27,9 +27,9 @@ export const ATSMockLayout: React.FC<{ score?: number; keywords?: string[] }> = 
   return (
     <div className="space-y-4">
       {/* Baseline ATS Score */}
-      <div className="bg-gray-700 rounded-lg p-4">
+      <div className="bg-white rounded-lg p-4 border border-gray-200">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-medium text-gray-300">Baseline ATS Readiness</h3>
+          <h3 className="text-sm font-medium text-gray-700">Baseline ATS Readiness</h3>
           <CircularProgress 
             score={score} 
             size={60} 
@@ -40,12 +40,12 @@ export const ATSMockLayout: React.FC<{ score?: number; keywords?: string[] }> = 
 
         {/* Keyword Profile */}
         <div className="mb-3">
-          <h4 className="text-xs font-medium text-gray-300 mb-2">Your Keyword Profile</h4>
+          <h4 className="text-xs font-medium text-gray-700 mb-2">Your Keyword Profile</h4>
           <div className="flex flex-wrap gap-2">
             {keywords.map((keyword, index) => (
               <span
                 key={index}
-                className="text-xs bg-gray-600 text-gray-300 px-2 py-1 rounded-full"
+                className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded-full"
               >
                 {keyword}
               </span>
@@ -54,7 +54,7 @@ export const ATSMockLayout: React.FC<{ score?: number; keywords?: string[] }> = 
         </div>
 
         {/* Info Line */}
-        <div className="text-xs text-gray-400 flex items-center space-x-1">
+        <div className="text-xs text-gray-500 flex items-center space-x-1">
           <AlertCircle className="h-3 w-3" />
           <span>Select a job to see targeted keyword gaps</span>
         </div>
@@ -70,14 +70,14 @@ export const ContentOptimizerMockLayout: React.FC<MockLayoutProps> = ({ onGenera
       {/* Placeholder suggestions */}
       <div className="space-y-3">
         {Array.from({ length: 3 }).map((_, index) => (
-          <div key={index} className="bg-gray-700 rounded-lg p-3">
+          <div key={index} className="bg-white rounded-lg p-3 border border-gray-200">
             <div className="flex items-start justify-between mb-2">
               <div className="flex-1">
-                <div className="h-4 bg-gray-600 rounded animate-pulse mb-1" style={{ width: '70%' }} />
-                <div className="h-3 bg-gray-600 rounded animate-pulse" style={{ width: '90%' }} />
+                <div className="h-4 bg-gray-200 rounded animate-pulse mb-1" style={{ width: '70%' }} />
+                <div className="h-3 bg-gray-200 rounded animate-pulse" style={{ width: '90%' }} />
               </div>
               <div className="flex space-x-1">
-                <span className="text-xs bg-gray-600 text-gray-400 px-2 py-1 rounded">
+                <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded">
                   {index === 0 ? 'Summary' : index === 1 ? 'Experience' : 'Skills'}
                 </span>
               </div>
@@ -87,7 +87,7 @@ export const ContentOptimizerMockLayout: React.FC<MockLayoutProps> = ({ onGenera
       </div>
 
       {/* Footer */}
-      <div className="text-xs text-gray-400 text-center">
+      <div className="text-xs text-gray-500 text-center">
         Select a job to tailor rewrites to role requirements
       </div>
     </div>
@@ -102,13 +102,13 @@ export const QuantificationMockLayout: React.FC<MockLayoutProps> = ({ onGenerate
     <div className="space-y-4">
       {/* Placeholder metrics */}
       <div className="space-y-3">
-        <div className="bg-gray-700 rounded-lg p-3">
-          <div className="h-3 bg-gray-600 rounded animate-pulse mb-2" style={{ width: '60%' }} />
+        <div className="bg-white rounded-lg p-3 border border-gray-200">
+          <div className="h-3 bg-gray-200 rounded animate-pulse mb-2" style={{ width: '60%' }} />
           <div className="flex flex-wrap gap-2">
             {mockMetrics.map((metric, index) => (
               <span
                 key={index}
-                className="text-xs bg-gray-600 text-gray-400 px-2 py-1 rounded-full opacity-50"
+                className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded-full opacity-50"
               >
                 {metric}
               </span>
@@ -118,7 +118,7 @@ export const QuantificationMockLayout: React.FC<MockLayoutProps> = ({ onGenerate
       </div>
 
       {/* Info */}
-      <div className="text-xs text-gray-400 text-center">
+      <div className="text-xs text-gray-500 text-center">
         Select a job to infer relevant KPIs
       </div>
     </div>
@@ -135,13 +135,13 @@ export const SkillsMapperMockLayout: React.FC<MockLayoutProps> = ({ onGenerate }
       {/* Two column layout */}
       <div className="grid grid-cols-2 gap-4">
         {/* Job Skills */}
-        <div className="bg-gray-700 rounded-lg p-3">
-          <h4 className="text-xs font-medium text-gray-300 mb-2">Job Skills</h4>
+        <div className="bg-white rounded-lg p-3 border border-gray-200">
+          <h4 className="text-xs font-medium text-gray-700 mb-2">Job Skills</h4>
           <div className="space-y-1">
             {mockJobSkills.map((skill, index) => (
               <div
                 key={index}
-                className="h-4 bg-gray-600 rounded animate-pulse opacity-50"
+                className="h-4 bg-gray-200 rounded animate-pulse opacity-50"
                 style={{ width: `${Math.random() * 40 + 60}%` }}
               />
             ))}
@@ -149,13 +149,13 @@ export const SkillsMapperMockLayout: React.FC<MockLayoutProps> = ({ onGenerate }
         </div>
 
         {/* Your Skills */}
-        <div className="bg-gray-700 rounded-lg p-3">
-          <h4 className="text-xs font-medium text-gray-300 mb-2">Your Skills</h4>
+        <div className="bg-white rounded-lg p-3 border border-gray-200">
+          <h4 className="text-xs font-medium text-gray-700 mb-2">Your Skills</h4>
           <div className="space-y-1">
             {mockYourSkills.map((skill, index) => (
               <div
                 key={index}
-                className="h-4 bg-gray-600 rounded animate-pulse opacity-50"
+                className="h-4 bg-gray-200 rounded animate-pulse opacity-50"
                 style={{ width: `${Math.random() * 40 + 60}%` }}
               />
             ))}
@@ -164,7 +164,7 @@ export const SkillsMapperMockLayout: React.FC<MockLayoutProps> = ({ onGenerate }
       </div>
 
       {/* Info */}
-      <div className="text-xs text-gray-400 text-center">
+      <div className="text-xs text-gray-500 text-center">
         Link a job to map skills and gaps
       </div>
     </div>
@@ -178,17 +178,17 @@ export const GapAnalyzerMockLayout: React.FC<MockLayoutProps> = ({ onGenerate })
       {/* Placeholder gaps */}
       <div className="space-y-3">
         {Array.from({ length: 2 }).map((_, index) => (
-          <div key={index} className="bg-gray-700 rounded-lg p-3">
+          <div key={index} className="bg-white rounded-lg p-3 border border-gray-200">
             <div className="space-y-2">
-              <div className="h-3 bg-gray-600 rounded animate-pulse opacity-50" style={{ width: '80%' }} />
-              <div className="h-3 bg-gray-600 rounded animate-pulse opacity-50" style={{ width: '60%' }} />
+              <div className="h-3 bg-gray-200 rounded animate-pulse opacity-50" style={{ width: '80%' }} />
+              <div className="h-3 bg-gray-200 rounded animate-pulse opacity-50" style={{ width: '60%' }} />
             </div>
           </div>
         ))}
       </div>
 
       {/* Info */}
-      <div className="text-xs text-gray-400 text-center">
+      <div className="text-xs text-gray-500 text-center">
         Select a job to identify qualification gaps
       </div>
     </div>
@@ -200,16 +200,16 @@ export const AchievementGeneratorMockLayout: React.FC<MockLayoutProps> = ({ onGe
   return (
     <div className="space-y-4">
       {/* STAR bullet placeholder */}
-      <div className="bg-gray-700 rounded-lg p-3">
+      <div className="bg-white rounded-lg p-3 border border-gray-200">
         <div className="space-y-2">
-          <div className="h-3 bg-gray-600 rounded animate-pulse opacity-50" style={{ width: '90%' }} />
-          <div className="h-3 bg-gray-600 rounded animate-pulse opacity-50" style={{ width: '75%' }} />
-          <div className="h-3 bg-gray-600 rounded animate-pulse opacity-50" style={{ width: '85%' }} />
+          <div className="h-3 bg-gray-200 rounded animate-pulse opacity-50" style={{ width: '90%' }} />
+          <div className="h-3 bg-gray-200 rounded animate-pulse opacity-50" style={{ width: '75%' }} />
+          <div className="h-3 bg-gray-200 rounded animate-pulse opacity-50" style={{ width: '85%' }} />
         </div>
       </div>
 
       {/* Info */}
-      <div className="text-xs text-gray-400 text-center">
+      <div className="text-xs text-gray-500 text-center">
         Select a job to generate STAR-format achievements
       </div>
     </div>
@@ -226,14 +226,14 @@ export const ConsistencyCheckerMockLayout: React.FC<MockLayoutProps> = ({ onGene
       <div className="space-y-2">
         {mockItems.map((item, index) => (
           <div key={index} className="flex items-center space-x-2">
-            <div className="w-4 h-4 border border-gray-500 rounded opacity-50" />
-            <span className="text-xs text-gray-400 opacity-50">{item}</span>
+            <div className="w-4 h-4 border border-gray-400 rounded opacity-50" />
+            <span className="text-xs text-gray-600 opacity-50">{item}</span>
           </div>
         ))}
       </div>
 
       {/* Info */}
-      <div className="text-xs text-gray-400 text-center">
+      <div className="text-xs text-gray-500 text-center">
         Select a job to check formatting consistency
       </div>
     </div>
@@ -247,18 +247,18 @@ export const SummaryBuilderMockLayout: React.FC<MockLayoutProps> = ({ onGenerate
       {/* Summary blocks */}
       <div className="space-y-3">
         {Array.from({ length: 2 }).map((_, index) => (
-          <div key={index} className="bg-gray-700 rounded-lg p-3">
+          <div key={index} className="bg-white rounded-lg p-3 border border-gray-200">
             <div className="space-y-2">
-              <div className="h-3 bg-gray-600 rounded animate-pulse opacity-50" style={{ width: '100%' }} />
-              <div className="h-3 bg-gray-600 rounded animate-pulse opacity-50" style={{ width: '85%' }} />
-              <div className="h-3 bg-gray-600 rounded animate-pulse opacity-50" style={{ width: '70%' }} />
+              <div className="h-3 bg-gray-200 rounded animate-pulse opacity-50" style={{ width: '100%' }} />
+              <div className="h-3 bg-gray-200 rounded animate-pulse opacity-50" style={{ width: '85%' }} />
+              <div className="h-3 bg-gray-200 rounded animate-pulse opacity-50" style={{ width: '70%' }} />
             </div>
           </div>
         ))}
       </div>
 
       {/* Info */}
-      <div className="text-xs text-gray-400 text-center">
+      <div className="text-xs text-gray-500 text-center">
         Select a job to build tailored summaries
       </div>
     </div>
@@ -270,17 +270,17 @@ export const CoverLetterMockLayout: React.FC<MockLayoutProps> = ({ onGenerate })
   return (
     <div className="space-y-4">
       {/* Cover letter placeholder */}
-      <div className="bg-gray-700 rounded-lg p-3">
+      <div className="bg-white rounded-lg p-3 border border-gray-200">
         <div className="space-y-2">
-          <div className="h-3 bg-gray-600 rounded animate-pulse opacity-50" style={{ width: '100%' }} />
-          <div className="h-3 bg-gray-600 rounded animate-pulse opacity-50" style={{ width: '95%' }} />
-          <div className="h-3 bg-gray-600 rounded animate-pulse opacity-50" style={{ width: '80%' }} />
-          <div className="h-3 bg-gray-600 rounded animate-pulse opacity-50" style={{ width: '90%' }} />
+          <div className="h-3 bg-gray-200 rounded animate-pulse opacity-50" style={{ width: '100%' }} />
+          <div className="h-3 bg-gray-200 rounded animate-pulse opacity-50" style={{ width: '95%' }} />
+          <div className="h-3 bg-gray-200 rounded animate-pulse opacity-50" style={{ width: '80%' }} />
+          <div className="h-3 bg-gray-200 rounded animate-pulse opacity-50" style={{ width: '90%' }} />
         </div>
       </div>
 
       {/* Info */}
-      <div className="text-xs text-gray-400 text-center">
+      <div className="text-xs text-gray-500 text-center">
         Select a job to generate tailored cover letter
       </div>
     </div>

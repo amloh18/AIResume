@@ -2,7 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IJobApplication extends Document {
   userId: mongoose.Types.ObjectId;
-  cvId: mongoose.Types.ObjectId;
+  cvId?: mongoose.Types.ObjectId;
   jobTitle: string;
   company: string;
   jobUrl?: string;
@@ -64,7 +64,7 @@ const jobApplicationSchema = new Schema<IJobApplication>({
   cvId: {
     type: Schema.Types.ObjectId,
     ref: 'CV',
-    required: true
+    required: false
   },
   jobTitle: {
     type: String,

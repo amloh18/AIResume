@@ -5,6 +5,8 @@ export interface ICoverLetter extends Document {
   title: string;
   content: string;
   status: 'draft' | 'final' | 'archived';
+  cvId?: string; // Reference to the CV this cover letter is based on
+  jobId?: string; // Reference to the job this cover letter is for
   metadata: {
     targetCompany?: string;
     targetPosition?: string;
@@ -37,6 +39,14 @@ const coverLetterSchema = new Schema<ICoverLetter>({
     type: String,
     enum: ['draft', 'final', 'archived'],
     default: 'draft',
+    index: true
+  },
+  cvId: {
+    type: String,
+    index: true
+  },
+  jobId: {
+    type: String,
     index: true
   },
   metadata: {
