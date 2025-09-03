@@ -1,0 +1,286 @@
+import { NextRequest, NextResponse } from 'next/server';
+
+interface ATSRequest {
+  cvText: string;
+  jobDescription: string;
+  cvData?: any; // Optional structured CV data
+}
+
+interface ATSResponse {
+  score: number;
+  breakdown: {
+    keywordMatch: number;
+    experienceEducation: number;
+    actionVerbs: number;
+  };
+  details: {
+    matchedKeywords: string[];
+    missingKeywords: string[];
+    experienceYears: number;
+    educationLevel: string;
+    actionVerbMatches: string[];
+  };
+  suggestions: string[];
+}
+
+// Common job-related keywords by category
+const KEYWORD_CATEGORIES = {
+  technical: [
+    'javascript', 'python', 'java', 'react', 'node.js', 'sql', 'mongodb', 'aws', 'docker', 'kubernetes',
+    'machine learning', 'ai', 'data analysis', 'frontend', 'backend', 'full stack', 'devops', 'agile',
+    'scrum', 'git', 'api', 'rest', 'graphql', 'typescript', 'angular', 'vue', 'php', 'c++', 'c#', 'ruby'
+  ],
+  softSkills: [
+    'leadership', 'communication', 'teamwork', 'problem solving', 'analytical', 'creative', 'organized',
+    'detail oriented', 'multitasking', 'time management', 'collaboration', 'mentoring', 'presentation',
+    'negotiation', 'customer service', 'project management'
+  ],
+  industries: [
+    'finance', 'healthcare', 'ecommerce', 'education', 'marketing', 'sales', 'consulting', 'manufacturing',
+    'retail', 'technology', 'media', 'nonprofit', 'government', 'real estate', 'transportation'
+  ]
+};
+
+// Action verbs commonly used in job descriptions
+const ACTION_VERBS = [
+  'develop', 'design', 'implement', 'manage', 'lead', 'coordinate', 'analyze', 'create', 'build',
+  'maintain', 'optimize', 'improve', 'enhance', 'deliver', 'execute', 'plan', 'organize', 'supervise',
+  'train', 'mentor', 'collaborate', 'communicate', 'present', 'negotiate', 'resolve', 'troubleshoot',
+  'deploy', 'test', 'debug', 'document', 'research', 'evaluate', 'assess', 'recommend', 'strategize'
+];
+
+// Education keywords and their levels
+const EDUCATION_LEVELS = {
+  'phd': 5,
+  'doctorate': 5,
+  'master': 4,
+  'mba': 4,
+  'bachelor': 3,
+  'bachelor\'s': 3,
+  'associate': 2,
+  'diploma': 2,
+  'certificate': 1,
+  'high school': 0
+};
+
+export async function POST(request: NextRequest) {
+  try {
+    console.log('🔍 ATS API - Starting calculation request');
+    const body: ATSRequest = await request.json();
+    const { cvText, jobDescription, cvData } = body;
+
+    console.log('🔍 ATS API - Request data:', {
+      cvTextLength: cvText?.length || 0,
+      jobDescriptionLength: jobDescription?.length || 0,
+      hasCvText: !!cvText,
+      hasJobDescription: !!jobDescription,
+      hasCvData: !!cvData
+    });
+
+    if (!cvText || !jobDescription) {
+      console.log('❌ ATS API - Missing required fields:', {
+        cvText: !!cvText,
+        jobDescription: !!jobDescription
+      });
+      return NextResponse.json(
+        { error: 'Both CV text and job description are required' },
+        { status: 400 }
+      );
+    }
+
+    console.log('✅ ATS API - Validation passed, starting calculation');
+
+    // Normalize text for analysis
+    const normalizedCV = cvText.toLowerCase();
+    const normalizedJob = jobDescription.toLowerCase();
+
+    // 1. Keyword Matching (60% weight)
+    const keywordScore = calculateKeywordMatch(normalizedCV, normalizedJob);
+
+    // 2. Experience & Education (30% weight)
+    const experienceScore = calculateExperienceEducation(normalizedCV, normalizedJob, cvData);
+
+    // 3. Action Verb Matching (10% weight)
+    const actionVerbScore = calculateActionVerbMatch(normalizedCV, normalizedJob);
+
+    // Calculate final score
+    const finalScore = Math.round(
+      keywordScore.score * 0.6 + 
+      experienceScore.score * 0.3 + 
+      actionVerbScore.score * 0.1
+    );
+
+    // Generate suggestions
+    const suggestions = generateSuggestions(keywordScore, experienceScore, actionVerbScore);
+
+    const response: ATSResponse = {
+      score: finalScore,
+      breakdown: {
+        keywordMatch: Math.round(keywordScore.score),
+        experienceEducation: Math.round(experienceScore.score),
+        actionVerbs: Math.round(actionVerbScore.score)
+      },
+      details: {
+        matchedKeywords: keywordScore.matched,
+        missingKeywords: keywordScore.missing,
+        experienceYears: experienceScore.years,
+        educationLevel: experienceScore.education,
+        actionVerbMatches: actionVerbScore.matches
+      },
+      suggestions
+    };
+
+    console.log('✅ ATS API - Calculation completed successfully:', {
+      finalScore,
+      keywordScore: Math.round(keywordScore.score),
+      experienceScore: Math.round(experienceScore.score),
+      actionVerbScore: Math.round(actionVerbScore.score)
+    });
+
+    return NextResponse.json(response);
+
+  } catch (error) {
+    console.error('ATS Score calculation error:', error);
+    return NextResponse.json(
+      { error: 'Failed to calculate ATS score' },
+      { status: 500 }
+    );
+  }
+}
+
+function calculateKeywordMatch(cvText: string, jobText: string) {
+  const allKeywords = [
+    ...KEYWORD_CATEGORIES.technical,
+    ...KEYWORD_CATEGORIES.softSkills,
+    ...KEYWORD_CATEGORIES.industries
+  ];
+
+  // Extract keywords from job description
+  const jobKeywords = allKeywords.filter(keyword => 
+    jobText.includes(keyword)
+  );
+
+  // Find matches in CV
+  const matchedKeywords = jobKeywords.filter(keyword => 
+    cvText.includes(keyword)
+  );
+
+  const missingKeywords = jobKeywords.filter(keyword => 
+    !cvText.includes(keyword)
+  );
+
+  const score = jobKeywords.length > 0 
+    ? (matchedKeywords.length / jobKeywords.length) * 100 
+    : 100;
+
+  return {
+    score: Math.min(score, 100),
+    matched: matchedKeywords,
+    missing: missingKeywords
+  };
+}
+
+function calculateExperienceEducation(cvText: string, jobText: string, cvData?: any) {
+  let experienceYears = 0;
+  let educationLevel = 'Not specified';
+
+  // Extract experience from CV text
+  const experiencePatterns = [
+    /(\d+)\s*(?:years?|yrs?)\s*(?:of\s*)?experience/gi,
+    /experience[:\s]*(\d+)\s*(?:years?|yrs?)/gi,
+    /(\d+)\s*(?:years?|yrs?)\s*(?:in\s*)?(?:the\s*)?(?:field|industry|role)/gi
+  ];
+
+  for (const pattern of experiencePatterns) {
+    const match = cvText.match(pattern);
+    if (match) {
+      const years = parseInt(match[1]);
+      if (years > experienceYears) {
+        experienceYears = years;
+      }
+    }
+  }
+
+  // Extract education level
+  for (const [level, score] of Object.entries(EDUCATION_LEVELS)) {
+    if (cvText.includes(level)) {
+      educationLevel = level.charAt(0).toUpperCase() + level.slice(1);
+      break;
+    }
+  }
+
+  // Calculate score based on experience and education
+  let score = 0;
+
+  // Experience scoring (0-15 years = 0-100%)
+  if (experienceYears >= 0) {
+    score += Math.min((experienceYears / 15) * 100, 100) * 0.7;
+  }
+
+  // Education scoring
+  const educationScore = Object.values(EDUCATION_LEVELS).reduce((max, current) => 
+    Math.max(max, current), 0
+  );
+  const currentEducation = Object.entries(EDUCATION_LEVELS).find(([level]) => 
+    cvText.includes(level)
+  );
+  
+  if (currentEducation) {
+    score += (currentEducation[1] / educationScore) * 100 * 0.3;
+  }
+
+  return {
+    score: Math.min(score, 100),
+    years: experienceYears,
+    education: educationLevel
+  };
+}
+
+function calculateActionVerbMatch(cvText: string, jobText: string) {
+  // Extract action verbs from job description
+  const jobActionVerbs = ACTION_VERBS.filter(verb => 
+    jobText.includes(verb)
+  );
+
+  // Find matches in CV
+  const matchedVerbs = jobActionVerbs.filter(verb => 
+    cvText.includes(verb)
+  );
+
+  const score = jobActionVerbs.length > 0 
+    ? (matchedVerbs.length / jobActionVerbs.length) * 100 
+    : 100;
+
+  return {
+    score: Math.min(score, 100),
+    matches: matchedVerbs
+  };
+}
+
+function generateSuggestions(keywordScore: any, experienceScore: any, actionVerbScore: any) {
+  const suggestions: string[] = [];
+
+  // Keyword suggestions
+  if (keywordScore.missing.length > 0) {
+    suggestions.push(
+      `Add these keywords to your CV: ${keywordScore.missing.slice(0, 5).join(', ')}`
+    );
+  }
+
+  // Experience suggestions
+  if (experienceScore.years < 2) {
+    suggestions.push('Consider highlighting more specific experience and achievements');
+  }
+
+  // Action verb suggestions
+  if (actionVerbScore.matches.length < 3) {
+    suggestions.push('Use more action verbs from the job description in your CV');
+  }
+
+  // General suggestions
+  if (suggestions.length === 0) {
+    suggestions.push('Your CV looks well-aligned with the job description!');
+  }
+
+  return suggestions;
+}

@@ -88,7 +88,7 @@ const AICard: React.FC<AICardProps> = ({
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <Icon className="h-4 w-4 text-lime-400" />
-          <h3 className="text-sm font-medium text-gray-300">{title}</h3>
+          <h3 className="text-sm font-medium text-gray-700">{title}</h3>
           
           {/* Status indicators */}
           {showSkeleton && (
@@ -97,8 +97,8 @@ const AICard: React.FC<AICardProps> = ({
           
           {showMock && (
             <div className="flex items-center space-x-1">
-              <AlertCircle className="h-3 w-3 text-yellow-400" />
-              <span className="text-xs text-yellow-400 bg-yellow-900/20 px-2 py-1 rounded">
+              <AlertCircle className="h-3 w-3 text-yellow-500" />
+              <span className="text-xs text-yellow-700 bg-yellow-100 px-2 py-1 rounded">
                 Requires Job
               </span>
             </div>
@@ -110,7 +110,7 @@ const AICard: React.FC<AICardProps> = ({
           {showRealData && onGenerate && (
             <button
               onClick={onGenerate}
-              className="text-xs text-lime-400 hover:text-lime-300 bg-lime-900/20 px-2 py-1 rounded flex items-center space-x-1"
+              className="text-xs text-lime-600 hover:text-lime-700 bg-lime-100 px-2 py-1 rounded flex items-center space-x-1"
             >
               <RefreshCw className="h-3 w-3" />
               <span>Refresh</span>
@@ -120,7 +120,7 @@ const AICard: React.FC<AICardProps> = ({
           {showEmptyState && onGenerate && (
             <button
               onClick={onGenerate}
-              className="text-xs text-lime-400 hover:text-lime-300 bg-lime-900/20 px-2 py-1 rounded flex items-center space-x-1"
+              className="text-xs text-lime-600 hover:text-lime-700 bg-lime-100 px-2 py-1 rounded flex items-center space-x-1"
             >
               <Wand2 className="h-3 w-3" />
               <span>Generate</span>
@@ -131,7 +131,7 @@ const AICard: React.FC<AICardProps> = ({
             <button
               disabled
               title="Select a job to generate tailored suggestions"
-              className="text-xs text-gray-500 bg-gray-700 px-2 py-1 rounded flex items-center space-x-1 cursor-not-allowed"
+              className="text-xs text-gray-400 bg-gray-200 px-2 py-1 rounded flex items-center space-x-1 cursor-not-allowed"
             >
               <Wand2 className="h-3 w-3" />
               <span>Generate</span>
@@ -141,7 +141,7 @@ const AICard: React.FC<AICardProps> = ({
       </div>
 
       {/* Content Area */}
-      <div className="bg-gray-700 rounded-lg p-4">
+      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
         {showSkeleton && (
           <SkeletonLayout 
             lines={4} 
@@ -157,7 +157,7 @@ const AICard: React.FC<AICardProps> = ({
         {showEmptyState && (
           <div className="text-center py-8">
             <Wand2 className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-            <p className="text-sm text-gray-400 mb-2">
+            <p className="text-sm text-gray-600 mb-2">
               {requiresJob && !hasJob 
                 ? 'Select a job to generate tailored suggestions'
                 : 'Click Generate to get AI suggestions'

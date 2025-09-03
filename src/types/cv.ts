@@ -94,12 +94,112 @@ export interface CVDataStructure {
   }>;
 }
 
+export interface CVDesignSettings {
+  // Typography
+  fontFamily: string;
+  headerFontSize: number;
+  bodyFontSize: number;
+  sectionFontSize: number;
+  
+  // Spacing
+  lineSpacing: number;
+  letterSpacing: number;
+  sectionSpacing: number;
+  
+  // Layout
+  pagePadding: {
+    top: number;
+    bottom: number;
+  };
+  
+  // Color Scheme
+  colorScheme: 'professional' | 'modern' | 'creative' | 'minimal';
+  
+  // Template
+  templateId?: string;
+  templateName?: string;
+}
+
+// CV Session - Complete state of a CV including template and design settings
+export interface CVSession {
+  // Session metadata
+  sessionId: string;
+  cvId: string;
+  userId: string;
+  createdAt: Date;
+  lastModified: Date;
+  version: number;
+  
+  // CV Content Data
+  cvData: CVDataStructure;
+  
+  // Template Configuration (snapshot of selected template)
+  template: {
+    id: string;
+    name: string;
+    description?: string;
+    category: string;
+    globalStyles: {
+      fontFamily: string;
+      primaryColor: string;
+      secondaryColor: string;
+      backgroundColor: string;
+      fontSize: string;
+      lineHeight: string;
+      spacing: string;
+      borderRadius: string;
+      boxShadow: string;
+      customCSS?: string;
+    };
+    availableSections: Array<{
+      id: string;
+      type: string;
+      title: string;
+      required: boolean;
+      order: number;
+    }>;
+  };
+  
+  // Design Settings (user customizations)
+  designSettings: CVDesignSettings;
+  
+  // Layout Configuration
+  layout: {
+    sectionOrder: string[];
+    activeSection: string;
+    panelWidth: number;
+    isCollapsed: boolean;
+  };
+  
+  // Session State
+  status: 'draft' | 'published' | 'archived';
+  isDirty: boolean; // Whether session has unsaved changes
+  autoSaveEnabled: boolean;
+  
+  // Metadata
+  metadata: {
+    title: string;
+    tags: string[];
+    notes?: string;
+    lastEditSession?: Date;
+    editCount: number;
+  };
+}
+
 export interface OnboardingStep {
   id: string;
   title: string;
   description: string;
   isCompleted: boolean;
-  isActive: boolean;
+  isRequired: boolean;
+  order: number;
+}
+
+export interface OnboardingFormData {
+  currentStep: number;
+  steps: OnboardingStep[];
+  formData: any;
+  isCompleted: boolean;
 }
 
 export interface UserRole {

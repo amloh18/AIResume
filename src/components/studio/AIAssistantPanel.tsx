@@ -22,7 +22,9 @@ import {
   RefreshCw,
   Clock,
   X,
-  Loader2
+  Loader2,
+  Crown,
+  Lock
 } from 'lucide-react';
 import CircularProgress from '@/components/ui/CircularProgress';
 import { CVDataStructure } from '@/types/cv';
@@ -33,6 +35,8 @@ import { AISuggestion } from '@/lib/stores/aiStore';
 import { AISuggestionApplier } from '@/lib/utils/aiSuggestionApplier';
 import AICard from './ai/AICard';
 import JobSelector from './JobSelector';
+import { useUserPlan } from '@/lib/hooks/useUserPlan';
+import { useTheme } from '@/lib/contexts/ThemeContext';
 
 interface AIAssistantPanelProps {
   cvData: CVDataStructure | null;
@@ -72,15 +76,17 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
     isJobDependentSection
   } = useAIAssistant(cvId, cvData, documentType);
 
+  const { hasAI, userPlan, loading: planLoading } = useUserPlan();
   const [showGeneratingBanner, setShowGeneratingBanner] = useState(false);
+  const { theme } = useTheme();
 
-  // Auto-generate initial suggestions when job is selected
+  // Auto-generate initial suggestions when job is selected (only for PRO users)
   useEffect(() => {
-    if (selectedJobId && jobData && !generatingInitial) {
+    if (hasAI && selectedJobId && jobData && !generatingInitial) {
       generateInitialSuggestions();
       setShowGeneratingBanner(true);
     }
-  }, [selectedJobId, jobData, generateInitialSuggestions, generatingInitial]);
+  }, [hasAI, selectedJobId, jobData, generateInitialSuggestions, generatingInitial]);
 
   // Hide banner when generation is complete
   useEffect(() => {
@@ -94,12 +100,12 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
     { id: 'ats-score', label: 'ATS Score & Keywords', icon: Target, color: 'text-lime-400' },
     { id: 'content-optimizer', label: 'Content Optimizer', icon: Zap, color: 'text-lime-400' },
     { id: 'quantification', label: 'Quantification Assistant', icon: TrendingUp, color: 'text-lime-400' },
-    { id: 'skills-mapper', label: 'Skills & Keywords Mapper', icon: Brain, color: 'text-lime-400' },
-    { id: 'gap-analyzer', label: 'Gap Analyzer', icon: BarChart3, color: 'text-lime-400' },
-    { id: 'achievement-generator', label: 'Achievement Generator', icon: Star, color: 'text-lime-400' },
-    { id: 'consistency-checker', label: 'Consistency & Compliance', icon: CheckCircle, color: 'text-lime-400' },
-    { id: 'summary-builder', label: 'Tailored Summary Builder', icon: FileText, color: 'text-lime-400' },
-    ...(documentType === 'cover-letter' ? [{ id: 'cover-letter-draft', label: 'Cover Letter Draft', icon: MessageSquare, color: 'text-lime-400' }] : [])
+          { id: 'skills-mapper', label: 'Skills & Keywords Mapper', icon: Brain, color: 'text-lime-400' },
+      { id: 'gap-analyzer', label: 'Gap Analyzer', icon: BarChart3, color: 'text-lime-400' },
+          { id: 'achievement-generator', label: 'Achievement Generator', icon: Star, color: 'text-lime-400' },
+      { id: 'consistency-checker', label: 'Consistency & Compliance', icon: CheckCircle, color: 'text-lime-400' },
+          { id: 'summary-builder', label: 'Tailored Summary Builder', icon: FileText, color: 'text-lime-400' },
+      ...(documentType === 'cover-letter' ? [{ id: 'cover-letter-draft', label: 'Cover Letter Draft', icon: MessageSquare, color: 'text-lime-400' }] : [])
   ];
 
   const getScoreColor = (score: number) => {
@@ -405,7 +411,9 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
 
   if (isCollapsed) {
     return (
-      <div className="h-full flex flex-col bg-gray-800 relative">
+      <div className={`h-full flex flex-col relative transition-colors ${
+        theme === 'dark' ? 'bg-gray-900' : 'bg-gray-800'
+      }`}>
         {/* Floating Toggle Button */}
         <button
           onClick={onTogglePanel}
@@ -429,22 +437,30 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
   }
 
   return (
-    <div className="h-full flex flex-col bg-gray-800 relative">
+    <div className={`h-full flex flex-col backdrop-blur-sm relative transition-colors ${
+      theme === 'dark' ? 'bg-gray-900/95' : 'bg-white/95'
+    }`}>
       {/* Floating Toggle Button */}
       <button
         onClick={onTogglePanel}
-        className="absolute -left-3 top-4 z-50 w-6 h-6 bg-lime-600 text-white rounded-full flex items-center justify-center hover:bg-lime-700 transition-colors shadow-lg focus:ring-2 focus:ring-lime-500 focus:ring-offset-2 focus:ring-offset-gray-800"
+        className="absolute -left-3 top-4 z-50 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center hover:bg-blue-700 transition-colors shadow-lg focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
         title="Collapse AI Assistant Panel"
       >
         <ChevronRight className="h-3 w-3" />
       </button>
 
       {/* Fixed Job Reference Bar */}
-      <div className="p-4 border-b border-gray-700 bg-gray-700">
+      <div className={`p-4 border-b transition-colors ${
+        theme === 'dark' 
+          ? 'border-gray-700 bg-gray-800/50' 
+          : 'border-lime-200/50 bg-lime-50/50'
+      }`}>
         <div className="space-y-3">
           <div className="flex items-center space-x-2">
             <Brain className="h-4 w-4 text-lime-400" />
-            <h2 className="text-sm font-semibold text-white">AI Assistant</h2>
+            <h2 className={`text-sm font-semibold ${
+              theme === 'dark' ? 'text-white' : 'text-gray-900'
+            }`}>AI Assistant</h2>
           </div>
           
           <JobSelector
@@ -457,15 +473,21 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
 
       {/* Generating Banner */}
       {showGeneratingBanner && (
-        <div className="bg-lime-900/20 border-b border-lime-500/20 p-3">
+        <div className={`border-b transition-colors ${
+          theme === 'dark' 
+            ? 'bg-lime-900/20 border-lime-700' 
+            : 'bg-lime-50 border-lime-200'
+        } p-3`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <Loader2 className="h-4 w-4 animate-spin text-lime-400" />
-              <span className="text-sm text-lime-400">Generating tailored suggestions...</span>
+              <Loader2 className="h-4 w-4 animate-spin text-lime-600" />
+              <span className={`text-sm ${
+                theme === 'dark' ? 'text-lime-300' : 'text-lime-700'
+              }`}>Generating tailored suggestions...</span>
             </div>
             <button
               onClick={() => setShowGeneratingBanner(false)}
-              className="text-lime-400 hover:text-lime-300"
+              className="text-lime-600 hover:text-lime-700"
             >
               <X className="h-4 w-4" />
             </button>
@@ -475,32 +497,91 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
 
       {/* AI Sections */}
       <div className="flex-1 overflow-y-auto ai-panel-scrollbar">
-        <div className="p-4 space-y-6">
-          {aiSections.map((section) => (
-            <AICard
-              key={section.id}
-              sectionId={section.id}
-              title={section.label}
-              description={`AI-powered ${section.label.toLowerCase()}`}
-              icon={section.icon}
-              requiresJob={isJobDependentSection(section.id)}
-              isLoading={loadingBySection[section.id] || false}
-              hasData={hasRealDataBySection[section.id] || false}
-              hasJob={!!selectedJobId}
-              onGenerate={() => generateSectionSuggestions(section.id)}
-              atsScore={ats.score}
-              atsKeywords={ats.baseline ? extractCVKeywords() : (ats.analysis?.missingKeywords || [])}
-              isBaseline={ats.baseline}
-            >
-              {renderSectionContent(section.id)}
-            </AICard>
-          ))}
+        <div className={`p-4 space-y-6 transition-colors ${
+          theme === 'dark' ? 'bg-gray-900/80' : 'bg-white/80'
+        }`}>
+          {!hasAI && !planLoading ? (
+            // PRO Upgrade Prompt
+            <div className="space-y-4">
+              <div className={`border rounded-lg p-6 text-center transition-colors ${
+                theme === 'dark'
+                  ? 'bg-gradient-to-r from-lime-900/20 to-lime-800/20 border-lime-700'
+                  : 'bg-gradient-to-r from-lime-50 to-lime-100 border-lime-200'
+              }`}>
+                <div className="flex items-center justify-center mb-4">
+                  <Crown className="h-8 w-8 text-lime-600" />
+                </div>
+                <h3 className={`text-lg font-semibold mb-2 ${
+                  theme === 'dark' ? 'text-white' : 'text-gray-900'
+                }`}>Unlock AI Assistant</h3>
+                <p className={`text-sm mb-4 ${
+                  theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                }`}>
+                  Upgrade to PRO to access AI-powered CV optimization, ATS scoring, and personalized suggestions.
+                </p>
+                <button
+                  onClick={() => {
+                    // Open membership modal or redirect to pricing
+                    window.open('/dashboard/settings?tab=membership', '_blank');
+                  }}
+                  className="w-full bg-gradient-to-r from-lime-500 to-lime-600 hover:from-lime-600 hover:to-lime-700 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-105"
+                >
+                  Upgrade to PRO
+                </button>
+              </div>
+              
+              {/* Feature Preview */}
+              <div className="space-y-3">
+                <h4 className={`text-sm font-medium ${
+                  theme === 'dark' ? 'text-gray-300' : 'text-gray-700'
+                }`}>PRO Features:</h4>
+                <div className="space-y-2">
+                  {aiSections.slice(0, 4).map((section) => (
+                    <div key={section.id} className={`flex items-center space-x-3 p-3 rounded-lg opacity-60 transition-colors ${
+                      theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'
+                    }`}>
+                      <Lock className="h-4 w-4 text-gray-500" />
+                      <div>
+                        <div className={`text-sm ${
+                          theme === 'dark' ? 'text-gray-300' : 'text-gray-600'
+                        }`}>{section.label}</div>
+                        <div className="text-xs text-gray-500">PRO feature</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            // AI Features for PRO users
+            aiSections.map((section) => (
+              <AICard
+                key={section.id}
+                sectionId={section.id}
+                title={section.label}
+                description={`AI-powered ${section.label.toLowerCase()}`}
+                icon={section.icon}
+                requiresJob={isJobDependentSection(section.id)}
+                isLoading={loadingBySection[section.id] || false}
+                hasData={hasRealDataBySection[section.id] || false}
+                hasJob={!!selectedJobId}
+                onGenerate={() => generateSectionSuggestions(section.id)}
+                atsScore={ats.score}
+                atsKeywords={ats.baseline ? extractCVKeywords() : (ats.analysis?.missingKeywords || [])}
+                isBaseline={ats.baseline}
+              >
+                {renderSectionContent(section.id)}
+              </AICard>
+            ))
+          )}
         </div>
       </div>
 
-      {/* Global Refresh Button */}
-      {jobData && Object.values(outOfDate).some(Boolean) && (
-        <div className="p-4 border-t border-gray-700">
+      {/* Global Refresh Button - Only for PRO users */}
+      {hasAI && jobData && Object.values(outOfDate).some(Boolean) && (
+        <div className={`p-4 border-t transition-colors ${
+          theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
+        }`}>
           <button
             onClick={refreshAllJobBasedSuggestions}
             className="w-full text-xs text-lime-400 hover:text-lime-300 bg-lime-900/20 px-3 py-2 rounded flex items-center justify-center space-x-2"
@@ -512,14 +593,24 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
       )}
 
       {/* AI Status */}
-      <div className="p-4 border-t border-gray-700">
+      <div className={`p-4 border-t transition-colors ${
+        theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
+      }`}>
         <div className="flex items-center justify-between text-xs text-gray-400">
           <span>
-            {ats.updating ? 'ATS: Updating...' : ats.score ? `ATS: ${ats.score}%` : 'AI: Ready'}
+            {!hasAI ? 'PRO Required' : ats.updating ? 'ATS: Updating...' : ats.score ? `ATS: ${ats.score}%` : 'AI: Ready'}
           </span>
-          <button className="text-lime-400 hover:text-lime-300">
-            <Settings className="h-3 w-3" />
-          </button>
+          <div className="flex items-center space-x-2">
+            {hasAI && (
+              <div className="flex items-center space-x-1 text-lime-400">
+                <Crown className="h-3 w-3" />
+                <span className="text-xs">PRO</span>
+              </div>
+            )}
+            <button className="text-lime-400 hover:text-lime-300">
+              <Settings className="h-3 w-3" />
+            </button>
+          </div>
         </div>
       </div>
     </div>

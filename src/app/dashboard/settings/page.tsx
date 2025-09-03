@@ -48,6 +48,7 @@ import RouteGuard from '@/components/auth/RouteGuard';
 import MembershipModal from '@/components/payment/MembershipModal';
 import { Skeleton } from '@/components/ui/SkeletonLoader';
 import UsernameEditor from '@/components/settings/UsernameEditor';
+import PageHeader from '@/components/dashboard/PageHeader';
 
 // --- TYPES ---
 interface PricingPlan {
@@ -2473,19 +2474,13 @@ const MainContent = ({
     };
 
     return (
-        <main className="flex-1 bg-gradient-to-br from-black via-gray-900 to-black p-6 sm:p-8 overflow-y-auto">
-            <header className="flex justify-between items-center mb-6">
-                <div>
-                    <h2 className="text-3xl font-bold text-white">{getTabTitle()}</h2>
-                    <p className="text-white/60 mt-1">{getTabDescription()}</p>
-                </div>
-                <button 
-                    onClick={handleClose}
-                    className="p-2 rounded-lg border border-white/20 text-white/60 hover:bg-white/10 transition-colors"
-                >
-                    <X size={24} />
-                </button>
-            </header>
+        <main className="flex-1 bg-gradient-to-br from-black via-gray-900 to-black py-6 overflow-y-auto">
+            <PageHeader
+                title={getTabTitle()}
+                description={getTabDescription()}
+                user={user}
+                showSettings={false}
+            />
 
             {renderTabContent()}
         </main>
@@ -2730,7 +2725,7 @@ function SettingsContent() {
 // Loading fallback component
 function SettingsLoading() {
   return (
-    <div className="max-w-4xl mx-auto space-y-8 p-6">
+    <div className="space-y-8 p-6">
       {/* Header Skeleton */}
       <div className="space-y-4">
         <div className="h-8 w-48 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">

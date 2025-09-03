@@ -10,6 +10,8 @@ import { useTheme } from '@/lib/contexts/ThemeContext';
 import DashboardNavigation from '@/components/dashboard/DashboardNavigation';
 import RouteGuard from '@/components/auth/RouteGuard';
 import { useCVSetup } from '@/lib/hooks/useCVSetup';
+import { JobJourneyProvider } from '@/contexts/JobJourneyContext';
+import JourneyStatusBanner from '@/components/JourneyStatusBanner';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -44,26 +46,63 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        // Fetch user profile data
-        const userResponse = await fetch('/api/user');
-        const userData = await userResponse.json();
-        
-        if (userData.success) {
-          setUser(prev => ({
-            ...prev,
-            username: userData.user.username,
-            subscription: prev.subscription // Keep existing subscription data
-          }));
+        // Check if user is authenticated via Firebase
+        const userData = localStorage.getItem('user');
+        if (userData) {
+          try {
+            const parsedUser = JSON.parse(userData);
+            if (parsedUser.firebaseUid) {
+              // Use Firebase user data
+              setUser(prev => ({
+                ...prev,
+                name: parsedUser.firstName + ' ' + parsedUser.lastName,
+                email: parsedUser.email,
+                username: parsedUser.username
+              }));
+              
+              // Fetch subscription data for Firebase user
+              const subscriptionResponse = await fetch('/api/user/subscription', {
+                headers: {
+                  'x-firebase-user-id': parsedUser.firebaseUid
+                }
+              });
+              const subscriptionData = await subscriptionResponse.json();
+              if (subscriptionData.success) {
+                setUser(prev => ({
+                  ...prev,
+                  subscription: subscriptionData.subscription
+                }));
+              }
+              return;
+            }
+          } catch (error) {
+            console.error('Error parsing Firebase user data:', error);
+          }
         }
 
-        // Fetch subscription data
-        const subscriptionResponse = await fetch('/api/user/subscription');
-        const subscriptionData = await subscriptionResponse.json();
-        if (subscriptionData.success) {
-          setUser(prev => ({
-            ...prev,
-            subscription: subscriptionData.subscription
-          }));
+        // Fallback to NextAuth user data
+        if (session?.user) {
+          // Fetch user profile data
+          const userResponse = await fetch('/api/user');
+          const userData = await userResponse.json();
+          
+          if (userData.success) {
+            setUser(prev => ({
+              ...prev,
+              username: userData.user.username,
+              subscription: prev.subscription // Keep existing subscription data
+            }));
+          }
+
+          // Fetch subscription data
+          const subscriptionResponse = await fetch('/api/user/subscription');
+          const subscriptionData = await subscriptionResponse.json();
+          if (subscriptionData.success) {
+            setUser(prev => ({
+              ...prev,
+              subscription: subscriptionData.subscription
+            }));
+          }
         }
       } catch (error) {
         console.error('Error fetching user data:', error);
@@ -71,7 +110,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     };
 
     fetchUserData();
-  }, []);
+  }, [session]);
 
   // Check authentication and handle onboarding flow
   useEffect(() => {
@@ -80,9 +119,25 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
       return; // Still loading
     }
 
+    // Check for Firebase authentication first
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      try {
+        const parsedUser = JSON.parse(userData);
+        if (parsedUser.firebaseUid) {
+          console.log('🔍 Dashboard Layout - Firebase user found:', parsedUser);
+          // User is authenticated via Firebase, allow access
+          return;
+        }
+      } catch (error) {
+        console.error('Error parsing Firebase user data:', error);
+      }
+    }
+
+    // Check NextAuth session
     if (status === 'unauthenticated') {
-      // If user is not authenticated, redirect to home page
-      console.log('🔄 Dashboard Layout - User not authenticated, redirecting to home');
+      // If user is not authenticated via either method, redirect to home page
+      console.log('🔄 Dashboard Layout - User not authenticated via NextAuth or Firebase, redirecting to home');
       router.push('/');
       return;
     }
@@ -131,7 +186,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
         ...prev,
         name: session.user.firstName || session.user.name || 'User',
         email: session.user.email || prev.email,
-        profilePhoto: session.user.avatar || session.user.profilePhoto || ''
+        profilePhoto: session.user.image || ''
       }));
     }
   }, [session]);
@@ -152,25 +207,13 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     }
   };
 
-  const isSettingsPage = pathname === '/dashboard/settings';
 
-  const getPageInfo = () => {
-    const section = getActiveSection();
-    switch (section) {
-      case 'analytics': return { title: 'Analytics', description: 'Progress tracking and insights' };
-      case 'pipeline': return { title: 'Job Tracker', description: 'Track applications and manage career progress' };
-      case 'canvas': return { title: 'CV Studio', description: 'Create, edit, and manage professional CVs' };
-      case 'inkpad': return { title: 'Cover Letters', description: 'Generate personalized cover letters' };
-      case 'vault': return { title: 'Saved Forms', description: 'Store and manage form data' };
-      case 'quillbox': return { title: 'Snippets', description: 'Content library and templates' };
-      case 'settings': return { title: 'Settings', description: 'Account preferences and configuration' };
-      default: return { title: 'Dashboard', description: 'Overview and quick actions' };
-    }
-  };
 
   return (
     <RouteGuard requireAuth={true}>
-      <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black">
+      <JobJourneyProvider>
+        <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black">
+          <JourneyStatusBanner />
         {/* Welcome Animation Overlay */}
         <AnimatePresence>
           {showWelcomeAnimation && (
@@ -267,45 +310,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
           />
 
           {/* Main Dashboard Area */}
-          <main className="flex-1 p-2 pt-20 xl:pt-10">
-            <div className="max-w-full mx-auto">
-              {/* Top Header */}
-              <div className="sticky top-0 z-30 -mt-2 xl:-mt-0 mb-6 px-2 xl:px-0 bg-gradient-to-br from-black/70 via-gray-900/70 to-black/70 backdrop-blur supports-[backdrop-filter]:bg-black/40 rounded-xl border border-white/10">
-                <div className="flex items-center justify-between py-4 px-4">
-                  {/* Title and Description */}
-                  <div>
-                    <h1 className="text-lg xl:text-xl font-semibold text-white">{getPageInfo().title}</h1>
-                    <p className="text-xs xl:text-sm text-white/60 mt-1">{getPageInfo().description}</p>
-                  </div>
-                  {/* Actions */}
-                  <div className="flex items-center gap-2">
-                    {/* Notifications */}
-                    <button aria-label="Notifications" className="p-2 rounded-lg hover:bg-white/10 text-white/80 hover:text-white transition-colors">
-                      <Bell size={18} />
-                    </button>
-                    {/* Theme Toggle */}
-                    <button aria-label="Toggle Theme" onClick={toggleTheme} className="p-2 rounded-lg hover:bg-white/10 text-white/80 hover:text-white transition-colors">
-                      {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-                    </button>
-                    {/* Settings (hide on settings page) */}
-                    {!isSettingsPage && (
-                      <button onClick={() => router.push('/dashboard/settings')} className="p-2 rounded-lg hover:bg-white/10 text-white/80 hover:text-white transition-colors">
-                        <Settings size={18} />
-                      </button>
-                    )}
-                    {/* Profile compact */}
-                    <div className="flex items-center gap-2 pl-2 ml-1 border-l border-white/10">
-                      <div className="w-7 h-7 rounded-full overflow-hidden bg-gradient-to-br from-lime-400 to-lime-500 flex items-center justify-center text-black text-xs font-bold">
-                        {(user.name || 'U').slice(0,1).toUpperCase()}
-                      </div>
-                      <div className="hidden sm:block leading-tight">
-                        <div className="text-white text-sm">{user.name}</div>
-                        <div className="text-white/50 text-[10px]">{user.email}</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+          <main className="flex-1 px-6 sm:px-8 lg:px-12 py-2 pt-16 xl:pt-8">
+            <div className="max-w-[1500px] mx-auto">
               <motion.div
                 key={pathname}
                 initial={{ opacity: 0, x: 5 }}
@@ -318,6 +324,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
           </main>
         </div>
       </div>
+      </JobJourneyProvider>
     </RouteGuard>
   );
 };

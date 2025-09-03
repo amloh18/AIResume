@@ -12,7 +12,8 @@ import {
   MessageSquare, 
   BarChart3,
   LogOut,
-  Shield
+  Shield,
+  Route
 } from 'lucide-react';
 
 interface DashboardNavigationProps {
@@ -52,6 +53,7 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
   const sections = [
     { id: 'analytics', name: 'Analytics', icon: BarChart3, description: 'Progress Tracking' },
     { id: 'pipeline', name: 'Job Tracker', icon: Briefcase, description: 'Track Applications' },
+    { id: 'cv-journey', name: 'CV Journey', icon: Route, description: 'Guided CV Creation' },
     { id: 'canvas', name: 'CV Studio', icon: FileText, description: 'Create & Edit CVs' },
     { id: 'inkpad', name: 'Cover Letters', icon: PenTool, description: 'Generate Letters' },
     { id: 'vault', name: 'Saved Forms', icon: Archive, description: 'Store Data' },
@@ -102,7 +104,7 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
         <div className="text-center mb-2">
           <button
             onClick={() => router.push('/dashboard')}
-            className="text-3xl font-bold mb-2 hover:opacity-90 transition-opacity"
+            className="text-xl font-bold mb-2 hover:opacity-90 transition-opacity"
           >
             <span className="text-lime-400 drop-shadow-lg">CV</span>
             <span className="text-gray-300">CIRCLE</span>
@@ -111,7 +113,11 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
       </div>
 
       {/* Navigation */}
-      <nav className="p-4 pb-20">
+      <nav className="p-4 pb-20 mt-8">
+        {/* Section Separator */}
+        <div className="mb-6">
+          <div className="h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+        </div>
         <div className="space-y-2">
           {/* Section Navigation */}
           {sections.map((section, index) => (
@@ -137,7 +143,7 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
               />
               <div className="text-left">
                 <div className="text-sm font-medium">{section.name}</div>
-                <div className="hidden xl:block text-[10px] opacity-60">{section.description}</div>
+                <div className="hidden xl:block text-xs opacity-60">{section.description}</div>
               </div>
             </motion.button>
           ))}
@@ -162,7 +168,7 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
             <Shield size={20} />
             <div className="text-left">
               <div className="text-sm font-medium">Admin</div>
-              <div className="text-[10px] opacity-60">System Management</div>
+              <div className="text-xs opacity-60">System Management</div>
             </div>
           </motion.button>
         )}

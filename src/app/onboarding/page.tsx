@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Sparkles, CheckCircle, LogOut } from 'lucide-react';
+import { ArrowLeft, Sparkles, CheckCircle, LogOut, X } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { signOut as firebaseSignOut } from 'firebase/auth';
@@ -571,48 +571,73 @@ const OnboardingContent: React.FC = () => {
               ))}
             </div>
 
-            {/* Logout Button - Only show for authenticated users */}
-            {(session?.user || (typeof window !== 'undefined' && localStorage.getItem('user'))) && (
-              <motion.button
-                onClick={async () => {
-                  try {
-                    // Check if user is from Firebase (has user data in localStorage)
+            {/* Action Buttons */}
+            <div className="flex items-center gap-3">
+              {/* Close Button - Show when in import mode */}
+              {searchParams.get('mode') === 'import' && (
+                <motion.button
+                  onClick={() => {
+                    // Clear any onboarding flags and redirect to dashboard
                     if (typeof window !== 'undefined') {
-                      const userData = localStorage.getItem('user');
-                      if (userData) {
-                        // Firebase user - sign out from Firebase
-                        await firebaseSignOut(auth);
-                        localStorage.removeItem('user');
-                        sessionStorage.removeItem('needsCVSetup');
-                        window.location.href = '/';
+                      sessionStorage.removeItem('needsCVSetup');
+                      sessionStorage.removeItem('fromOnboarding');
+                    }
+                    router.push('/dashboard');
+                  }}
+                  className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white transition-all duration-300 px-3 md:px-4 py-2 rounded-lg border border-white/20"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  whileHover={{ x: 5, scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <X size={16} />
+                  <span className="hidden sm:inline text-sm font-medium">Close</span>
+                </motion.button>
+              )}
+
+              {/* Logout Button - Only show for authenticated users */}
+              {(session?.user || (typeof window !== 'undefined' && localStorage.getItem('user'))) && (
+                <motion.button
+                  onClick={async () => {
+                    try {
+                      // Check if user is from Firebase (has user data in localStorage)
+                      if (typeof window !== 'undefined') {
+                        const userData = localStorage.getItem('user');
+                        if (userData) {
+                          // Firebase user - sign out from Firebase
+                          await firebaseSignOut(auth);
+                          localStorage.removeItem('user');
+                          sessionStorage.removeItem('needsCVSetup');
+                          window.location.href = '/';
+                        } else {
+                          // NextAuth user - sign out from NextAuth
+                          signOut({ callbackUrl: '/' });
+                        }
                       } else {
                         // NextAuth user - sign out from NextAuth
                         signOut({ callbackUrl: '/' });
                       }
-                    } else {
-                      // NextAuth user - sign out from NextAuth
-                      signOut({ callbackUrl: '/' });
+                    } catch (error) {
+                      console.error('Logout error:', error);
+                      // Fallback - clear storage and redirect
+                      if (typeof window !== 'undefined') {
+                        localStorage.removeItem('user');
+                        sessionStorage.removeItem('needsCVSetup');
+                        window.location.href = '/';
+                      }
                     }
-                  } catch (error) {
-                    console.error('Logout error:', error);
-                    // Fallback - clear storage and redirect
-                    if (typeof window !== 'undefined') {
-                      localStorage.removeItem('user');
-                      sessionStorage.removeItem('needsCVSetup');
-                      window.location.href = '/';
-                    }
-                  }
-                }}
-                className="flex items-center gap-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white transition-all duration-300 px-3 md:px-4 py-2 rounded-lg shadow-lg hover:shadow-red-500/25"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                whileHover={{ x: 5, scale: 1.05, boxShadow: "0 10px 25px -5px rgba(239, 68, 68, 0.4)" }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <LogOut size={16} />
-                <span className="hidden sm:inline text-sm font-medium">Logout</span>
-              </motion.button>
-            )}
+                  }}
+                  className="flex items-center gap-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white transition-all duration-300 px-3 md:px-4 py-2 rounded-lg shadow-lg hover:shadow-red-500/25"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  whileHover={{ x: 5, scale: 1.05, boxShadow: "0 10px 25px -5px rgba(239, 68, 68, 0.4)" }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <LogOut size={16} />
+                  <span className="hidden sm:inline text-sm font-medium">Logout</span>
+                </motion.button>
+              )}
+            </div>
           </div>
         </div>
       </div>

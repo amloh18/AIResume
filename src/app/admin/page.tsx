@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { 
   BarChart3 as DashboardIcon,
@@ -21,7 +21,8 @@ import {
   Cloud,
   Server,
   CreditCard,
-  Wallet
+  Wallet,
+  Bell
 } from 'lucide-react';
 import AdminKPIs from '@/components/admin/AdminKPIs';
 import TemplateManager from '@/components/admin/TemplateManager';
@@ -40,7 +41,7 @@ const AdminPage: React.FC<AdminPageProps> = () => {
   const { theme, toggleTheme } = useTheme();
   const [activeTab, setActiveTab] = useState('kpis');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activityOpen, setActivityOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   // Check if user is admin
   useEffect(() => {
@@ -67,6 +68,18 @@ const AdminPage: React.FC<AdminPageProps> = () => {
     
     console.log('✅ User is admin, showing admin dashboard');
   }, [session, status, router]);
+
+  const handleLogout = async () => {
+    // Clear localStorage
+    localStorage.removeItem('user');
+    // Clear sessionStorage
+    sessionStorage.clear();
+    // Sign out from NextAuth
+    await signOut({ 
+      redirect: true,
+      callbackUrl: '/'
+    });
+  };
 
   const menuItems = [
     { id: 'kpis', label: 'KPIs & Analytics', icon: Analytics },
@@ -142,10 +155,10 @@ const AdminPage: React.FC<AdminPageProps> = () => {
         />
       )}
       
-      {activityOpen && (
+      {notificationsOpen && (
         <div 
-          className="fixed inset-0 z-40 bg-black bg-opacity-50 xl:hidden"
-          onClick={() => setActivityOpen(false)}
+          className="fixed inset-0 z-40 bg-black bg-opacity-50"
+          onClick={() => setNotificationsOpen(false)}
         />
       )}
 
@@ -156,9 +169,8 @@ const AdminPage: React.FC<AdminPageProps> = () => {
         {/* Header */}
         <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
           <h1 className="text-xl font-bold">
-            <span className="text-gray-900 dark:text-white">CV</span>
-            <span className="text-lime-500">Circle</span>
-            <span className="text-gray-900 dark:text-white"> Dashboard</span>
+            <span className="text-lime-500">CV</span>
+            <span className="text-gray-900 dark:text-white">Circle</span>
           </h1>
           <button
             onClick={() => setSidebarOpen(false)}
@@ -270,20 +282,39 @@ const AdminPage: React.FC<AdminPageProps> = () => {
               </button>
               
               <div className="flex items-center space-x-4">
-                <div className="text-sm text-gray-600 dark:text-gray-300">
+                <div className="text-base font-bold text-gray-900 dark:text-white">
                   Welcome, {session.user?.name || 'Admin'}
                 </div>
+              </div>
+
+              {/* Right side controls */}
+              <div className="flex items-center space-x-2">
                 <button
                   onClick={toggleTheme}
                   className="p-2 rounded-md text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-gray-100 transition-colors"
+                  title="Toggle theme"
                 >
                   {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
                 </button>
+                
                 <button
-                  onClick={() => setActivityOpen(true)}
-                  className="xl:hidden p-2 rounded-md text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-gray-100"
+                  onClick={() => setNotificationsOpen(true)}
+                  className="p-2 rounded-md text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-gray-100 transition-colors relative"
+                  title="Notifications"
                 >
-                  <Activity size={20} />
+                  <Bell size={20} />
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    3
+                  </span>
+                </button>
+
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg transition-all duration-200 text-sm font-medium shadow-lg hover:shadow-red-500/25"
+                  title="Sign Out"
+                >
+                  <LogOut size={16} />
+                  <span>Sign Out</span>
                 </button>
               </div>
             </div>
@@ -294,32 +325,25 @@ const AdminPage: React.FC<AdminPageProps> = () => {
             {renderContent()}
           </main>
         </div>
+      </div>
 
-        {/* Recent Activity - Third column */}
-        <div className="hidden xl:block w-80 flex-shrink-0">
-          <div className="sticky top-0 h-screen overflow-y-auto bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700">
+      {/* Notifications Panel */}
+      {notificationsOpen && (
+        <div className="fixed inset-y-0 right-0 z-50 w-80 bg-white dark:bg-gray-800 shadow-lg transform transition-transform duration-300 ease-in-out">
+          <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 dark:border-gray-700">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Recent Activity</h2>
+            <button
+              onClick={() => setNotificationsOpen(false)}
+              className="p-2 rounded-md text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-gray-100"
+            >
+              <Close size={20} />
+            </button>
+          </div>
+          <div className="overflow-y-auto h-[calc(100vh-4rem)]">
             <RecentActivity />
           </div>
         </div>
-
-        {/* Mobile Activity Panel */}
-        {activityOpen && (
-          <div className="fixed inset-y-0 right-0 z-50 w-80 bg-white dark:bg-gray-800 shadow-lg transform transition-transform duration-300 ease-in-out xl:hidden">
-            <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Recent Activity</h2>
-              <button
-                onClick={() => setActivityOpen(false)}
-                className="p-2 rounded-md text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-gray-100"
-              >
-                <Close size={20} />
-              </button>
-            </div>
-            <div className="overflow-y-auto h-[calc(100vh-4rem)]">
-              <RecentActivity />
-            </div>
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 };

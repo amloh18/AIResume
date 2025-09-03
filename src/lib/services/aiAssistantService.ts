@@ -10,6 +10,38 @@ export interface ATSAnalysis {
 }
 
 export class AIAssistantService {
+  // Section guidelines based on the image
+  private static readonly SECTION_GUIDELINES = {
+    contactInfo: {
+      recommendedLength: '1-2 lines',
+      keyFocus: 'Clarity, professional links (LinkedIn/GitHub)'
+    },
+    summary: {
+      recommendedLength: '3-4 lines (~50-80 words)',
+      keyFocus: 'High-level pitch, top skills, career goal'
+    },
+    workExperience: {
+      recommendedLength: '3-5 bullet points per role',
+      keyFocus: 'Quantified achievements, action verbs, results'
+    },
+    education: {
+      recommendedLength: '1-2 lines per degree',
+      keyFocus: 'Brevity, highest qualification first'
+    },
+    skills: {
+      recommendedLength: 'Keyword list (~15-25 skills)',
+      keyFocus: 'Categorized, relevant hard skills'
+    },
+    projects: {
+      recommendedLength: '2-3 projects, 2-3 bullets each',
+      keyFocus: 'Practical application, personal contribution, tech stack'
+    },
+    certificates: {
+      recommendedLength: '1 line per item',
+      keyFocus: 'Credibility, recognition'
+    }
+  };
+
   static async calculateATSScore(cvData: CVDataStructure, jobData: Job | null): Promise<ATSAnalysis> {
     try {
       console.log('🔍 AIAssistantService - Starting ATS score calculation');
@@ -79,14 +111,15 @@ export class AIAssistantService {
     try {
       const suggestions: AISuggestion[] = [];
       
-      // Analyze summary
-      if (!cvData.basics?.summary || cvData.basics.summary.length < 100) {
+      // Analyze summary following guidelines
+      const summaryGuidelines = this.SECTION_GUIDELINES.summary;
+      if (!cvData.basics?.summary || cvData.basics.summary.length < 50) {
         suggestions.push({
           id: 'content-summary',
           title: 'Enhance Professional Summary',
           content: jobData ? 
-            `Create a compelling summary that highlights your experience relevant to ${jobData.title || jobData.jobTitle} at ${jobData.company}. Focus on key achievements and skills that match the job requirements.` :
-            'Expand your professional summary to better showcase your experience and key achievements.',
+            `Create a compelling summary (${summaryGuidelines.recommendedLength}) that highlights your experience relevant to ${jobData.title || jobData.jobTitle} at ${jobData.company}. Focus on ${summaryGuidelines.keyFocus}.` :
+            `Expand your professional summary to ${summaryGuidelines.recommendedLength}. Focus on ${summaryGuidelines.keyFocus}.`,
           type: 'improvement',
           section: 'summary',
           field: 'summary',
@@ -95,7 +128,8 @@ export class AIAssistantService {
         });
       }
       
-      // Analyze work experience descriptions
+      // Analyze work experience descriptions following guidelines
+      const workGuidelines = this.SECTION_GUIDELINES.workExperience;
       if (cvData.work && cvData.work.length > 0) {
         cvData.work.forEach((work, index) => {
           if (!work.summary || work.summary.length < 50) {
@@ -611,5 +645,480 @@ export class AIAssistantService {
       console.error('❌ AIAssistantService - Analysis error:', error);
       throw new Error('Failed to perform analysis');
     }
+  }
+
+  /**
+   * Generate AI suggestions following section guidelines
+   */
+  static async generateSectionSuggestions(
+    section: keyof typeof AIAssistantService.SECTION_GUIDELINES,
+    cvData: CVDataStructure,
+    jobData: Job | null
+  ): Promise<AISuggestion[]> {
+    const guidelines = this.SECTION_GUIDELINES[section];
+    const suggestions: AISuggestion[] = [];
+
+    switch (section) {
+      case 'summary':
+        suggestions.push(...await this.generateSummarySuggestions(cvData, jobData, guidelines));
+        break;
+      case 'workExperience':
+        suggestions.push(...await this.generateWorkExperienceSuggestions(cvData, jobData, guidelines));
+        break;
+      case 'skills':
+        suggestions.push(...await this.generateSkillsSuggestions(cvData, jobData, guidelines));
+        break;
+      case 'projects':
+        suggestions.push(...await this.generateProjectsSuggestions(cvData, jobData, guidelines));
+        break;
+      case 'education':
+        suggestions.push(...await this.generateEducationSuggestions(cvData, jobData, guidelines));
+        break;
+      case 'certificates':
+        suggestions.push(...await this.generateCertificatesSuggestions(cvData, jobData, guidelines));
+        break;
+    }
+
+    return suggestions;
+  }
+
+  /**
+   * Generate summary suggestions following guidelines
+   */
+  private static async generateSummarySuggestions(
+    cvData: CVDataStructure,
+    jobData: Job | null,
+    guidelines: any
+  ): Promise<AISuggestion[]> {
+    const suggestions: AISuggestion[] = [];
+    const summary = cvData.basics?.summary || '';
+    const wordCount = summary.split(/\s+/).length;
+
+    if (wordCount < 30) {
+      suggestions.push({
+        id: 'summary-too-short',
+        title: 'Expand Professional Summary',
+        content: `Your summary is too brief. Aim for ${guidelines.recommendedLength}. Focus on ${guidelines.keyFocus}.`,
+        type: 'improvement',
+        section: 'summary',
+        field: 'summary',
+        generatedAt: new Date().toISOString(),
+        isOutOfDate: false
+      });
+    }
+
+    if (wordCount > 100) {
+      suggestions.push({
+        id: 'summary-too-long',
+        title: 'Condense Professional Summary',
+        content: `Your summary is too long. Keep it to ${guidelines.recommendedLength}. Focus on ${guidelines.keyFocus}.`,
+        type: 'improvement',
+        section: 'summary',
+        field: 'summary',
+        generatedAt: new Date().toISOString(),
+        isOutOfDate: false
+      });
+    }
+
+    return suggestions;
+  }
+
+  /**
+   * Generate work experience suggestions following guidelines
+   */
+  private static async generateWorkExperienceSuggestions(
+    cvData: CVDataStructure,
+    jobData: Job | null,
+    guidelines: any
+  ): Promise<AISuggestion[]> {
+    const suggestions: AISuggestion[] = [];
+
+    if (cvData.work && cvData.work.length > 0) {
+      cvData.work.forEach((work, index) => {
+        const highlights = work.highlights || [];
+        
+        if (highlights.length < 3) {
+          suggestions.push({
+            id: `work-${index}-few-bullets`,
+            title: `Add More Bullet Points to ${work.position || 'Work Experience'}`,
+            content: `Add ${guidelines.recommendedLength} for this role. Focus on ${guidelines.keyFocus}.`,
+            type: 'improvement',
+            section: 'work',
+            field: `work.${index}.highlights`,
+            generatedAt: new Date().toISOString(),
+            isOutOfDate: false
+          });
+        }
+
+        if (highlights.length > 5) {
+          suggestions.push({
+            id: `work-${index}-too-many-bullets`,
+            title: `Condense Bullet Points for ${work.position || 'Work Experience'}`,
+            content: `Reduce to ${guidelines.recommendedLength}. Focus on ${guidelines.keyFocus}.`,
+            type: 'improvement',
+            section: 'work',
+            field: `work.${index}.highlights`,
+            generatedAt: new Date().toISOString(),
+            isOutOfDate: false
+          });
+        }
+      });
+    }
+
+    return suggestions;
+  }
+
+  /**
+   * Generate skills suggestions following guidelines
+   */
+  private static async generateSkillsSuggestions(
+    cvData: CVDataStructure,
+    jobData: Job | null,
+    guidelines: any
+  ): Promise<AISuggestion[]> {
+    const suggestions: AISuggestion[] = [];
+    const skills = cvData.skills || [];
+    const totalKeywords = skills.reduce((acc, skill) => acc + (skill.keywords?.length || 0), 0);
+
+    if (totalKeywords < 10) {
+      suggestions.push({
+        id: 'skills-too-few',
+        title: 'Add More Skills',
+        content: `Include ${guidelines.recommendedLength}. Focus on ${guidelines.keyFocus}.`,
+        type: 'improvement',
+        section: 'skills',
+        field: 'skills',
+        generatedAt: new Date().toISOString(),
+        isOutOfDate: false
+      });
+    }
+
+    if (totalKeywords > 30) {
+      suggestions.push({
+        id: 'skills-too-many',
+        title: 'Streamline Skills List',
+        content: `Reduce to ${guidelines.recommendedLength}. Focus on ${guidelines.keyFocus}.`,
+        type: 'improvement',
+        section: 'skills',
+        field: 'skills',
+        generatedAt: new Date().toISOString(),
+        isOutOfDate: false
+      });
+    }
+
+    return suggestions;
+  }
+
+  /**
+   * Generate projects suggestions following guidelines
+   */
+  private static async generateProjectsSuggestions(
+    cvData: CVDataStructure,
+    jobData: Job | null,
+    guidelines: any
+  ): Promise<AISuggestion[]> {
+    const suggestions: AISuggestion[] = [];
+    const projects = cvData.projects || [];
+
+    if (projects.length < 2) {
+      suggestions.push({
+        id: 'projects-too-few',
+        title: 'Add More Projects',
+        content: `Include ${guidelines.recommendedLength}. Focus on ${guidelines.keyFocus}.`,
+        type: 'improvement',
+        section: 'projects',
+        field: 'projects',
+        generatedAt: new Date().toISOString(),
+        isOutOfDate: false
+      });
+    }
+
+    if (projects.length > 4) {
+      suggestions.push({
+        id: 'projects-too-many',
+        title: 'Limit Projects',
+        content: `Keep to ${guidelines.recommendedLength}. Focus on ${guidelines.keyFocus}.`,
+        type: 'improvement',
+        section: 'projects',
+        field: 'projects',
+        generatedAt: new Date().toISOString(),
+        isOutOfDate: false
+      });
+    }
+
+    return suggestions;
+  }
+
+  /**
+   * Generate education suggestions following guidelines
+   */
+  private static async generateEducationSuggestions(
+    cvData: CVDataStructure,
+    jobData: Job | null,
+    guidelines: any
+  ): Promise<AISuggestion[]> {
+    const suggestions: AISuggestion[] = [];
+    const education = cvData.education || [];
+
+    education.forEach((edu, index) => {
+      const description = `${edu.institution} ${edu.area} ${edu.studyType}`.trim();
+      if (description.length > 100) {
+        suggestions.push({
+          id: `education-${index}-too-long`,
+          title: 'Condense Education Entry',
+          content: `Keep to ${guidelines.recommendedLength}. Focus on ${guidelines.keyFocus}.`,
+          type: 'improvement',
+          section: 'education',
+          field: `education.${index}`,
+          generatedAt: new Date().toISOString(),
+          isOutOfDate: false
+        });
+      }
+    });
+
+    return suggestions;
+  }
+
+  /**
+   * Generate certificates suggestions following guidelines
+   */
+  private static async generateCertificatesSuggestions(
+    cvData: CVDataStructure,
+    jobData: Job | null,
+    guidelines: any
+  ): Promise<AISuggestion[]> {
+    const suggestions: AISuggestion[] = [];
+    const certificates = cvData.certificates || [];
+
+    certificates.forEach((cert, index) => {
+      const description = `${cert.name} ${cert.issuer}`.trim();
+      if (description.length > 80) {
+        suggestions.push({
+          id: `certificate-${index}-too-long`,
+          title: 'Condense Certificate Entry',
+          content: `Keep to ${guidelines.recommendedLength}. Focus on ${guidelines.keyFocus}.`,
+          type: 'improvement',
+          section: 'certificates',
+          field: `certificates.${index}`,
+          generatedAt: new Date().toISOString(),
+          isOutOfDate: false
+        });
+      }
+    });
+
+    return suggestions;
+  }
+
+  // AI Content Improvement Methods
+  static async improveSummary(currentText: string, cvData: any, jobData: any): Promise<string> {
+    try {
+      const prompt = `Improve this professional summary following CV guidelines:
+      
+Current Summary: "${currentText}"
+CV Data: ${JSON.stringify(cvData?.basics || {})}
+Job Context: ${jobData ? JSON.stringify(jobData) : 'No specific job'}
+
+Guidelines:
+- Length: 3-4 lines (~50-80 words)
+- Focus: High-level pitch, top skills, career goal
+- Style: Professional, concise, impactful
+
+Return only the improved summary text.`;
+
+      const response = await this.callAI(prompt);
+      return response || currentText;
+    } catch (error) {
+      console.error('Error improving summary:', error);
+      return currentText;
+    }
+  }
+
+  static async improveDescription(currentText: string, cvData: any, jobData: any): Promise<string> {
+    try {
+      const prompt = `Improve this work/project description:
+
+Current Description: "${currentText}"
+CV Data: ${JSON.stringify(cvData || {})}
+Job Context: ${jobData ? JSON.stringify(jobData) : 'No specific job'}
+
+Guidelines:
+- Be specific and quantifiable
+- Use action verbs
+- Focus on achievements and impact
+- Keep it concise but informative
+
+Return only the improved description text.`;
+
+      const response = await this.callAI(prompt);
+      return response || currentText;
+    } catch (error) {
+      console.error('Error improving description:', error);
+      return currentText;
+    }
+  }
+
+  static async improveHighlights(currentText: string, cvData: any, jobData: any): Promise<string> {
+    try {
+      const prompt = `Improve these bullet points/highlights:
+
+Current Highlights: "${currentText}"
+CV Data: ${JSON.stringify(cvData || {})}
+Job Context: ${jobData ? JSON.stringify(jobData) : 'No specific job'}
+
+Guidelines:
+- 3-5 bullet points per role
+- Quantified achievements with numbers/percentages
+- Action verbs at the start
+- Focus on results and impact
+- Each bullet should be 1-2 lines
+
+Return only the improved bullet points, one per line.`;
+
+      const response = await this.callAI(prompt);
+      return response || currentText;
+    } catch (error) {
+      console.error('Error improving highlights:', error);
+      return currentText;
+    }
+  }
+
+  static async improveAchievements(currentText: string, cvData: any, jobData: any): Promise<string> {
+    try {
+      const prompt = `Improve these achievements to be more quantifiable:
+
+Current Achievements: "${currentText}"
+CV Data: ${JSON.stringify(cvData || {})}
+Job Context: ${jobData ? JSON.stringify(jobData) : 'No specific job'}
+
+Guidelines:
+- Add specific numbers, percentages, metrics
+- Focus on measurable impact
+- Use strong action verbs
+- Include timeframes where relevant
+- Make achievements more concrete
+
+Return only the improved achievements text.`;
+
+      const response = await this.callAI(prompt);
+      return response || currentText;
+    } catch (error) {
+      console.error('Error improving achievements:', error);
+      return currentText;
+    }
+  }
+
+  static async improveSkills(currentText: string, cvData: any, jobData: any): Promise<string> {
+    try {
+      const prompt = `Improve this skills section:
+
+Current Skills: "${currentText}"
+CV Data: ${JSON.stringify(cvData || {})}
+Job Context: ${jobData ? JSON.stringify(jobData) : 'No specific job'}
+
+Guidelines:
+- 15-25 relevant hard skills
+- Categorized by type (Technical, Soft Skills, Tools, etc.)
+- Include job-relevant keywords
+- Remove outdated or irrelevant skills
+- Add missing skills from job requirements
+
+Return only the improved skills list.`;
+
+      const response = await this.callAI(prompt);
+      return response || currentText;
+    } catch (error) {
+      console.error('Error improving skills:', error);
+      return currentText;
+    }
+  }
+
+  static async improveProjectDescription(currentText: string, cvData: any, jobData: any): Promise<string> {
+    try {
+      const prompt = `Improve this project description:
+
+Current Description: "${currentText}"
+CV Data: ${JSON.stringify(cvData || {})}
+Job Context: ${jobData ? JSON.stringify(jobData) : 'No specific job'}
+
+Guidelines:
+- Focus on practical application
+- Include personal contribution
+- Mention tech stack and technologies
+- Quantify impact where possible
+- Keep it concise but informative
+
+Return only the improved project description.`;
+
+      const response = await this.callAI(prompt);
+      return response || currentText;
+    } catch (error) {
+      console.error('Error improving project description:', error);
+      return currentText;
+    }
+  }
+
+  static async improveContent(currentText: string, fieldType: string, cvData: any, jobData: any): Promise<string> {
+    try {
+      const prompt = `Improve this ${fieldType} content:
+
+Current Content: "${currentText}"
+CV Data: ${JSON.stringify(cvData || {})}
+Job Context: ${jobData ? JSON.stringify(jobData) : 'No specific job'}
+
+Make it more professional, impactful, and relevant to the job context.
+
+Return only the improved content.`;
+
+      const response = await this.callAI(prompt);
+      return response || currentText;
+    } catch (error) {
+      console.error('Error improving content:', error);
+      return currentText;
+    }
+  }
+
+  private static async callAI(prompt: string): Promise<string> {
+    try {
+      // Use the new improve-content API
+      const response = await fetch('/api/ai/improve-content', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt,
+          cvData: {},
+          jobData: null
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.content) {
+          return data.content;
+        }
+      }
+
+      // Fallback to local processing
+      return this.processLocally(prompt);
+    } catch (error) {
+      console.error('AI API call failed:', error);
+      return this.processLocally(prompt);
+    }
+  }
+
+  private static processLocally(prompt: string): string {
+    // Simple local processing as fallback
+    // In a real implementation, this would use a local AI model or basic text processing
+    console.log('Processing locally:', prompt);
+    
+    // Return a basic improvement suggestion
+    return prompt.includes('summary') ? 
+      'Experienced professional with proven track record of delivering results...' :
+      prompt.includes('description') ?
+      'Led cross-functional teams to deliver high-impact solutions...' :
+      prompt.includes('highlights') ?
+      '• Increased efficiency by 25% through process optimization\n• Managed team of 5 developers\n• Delivered project 2 weeks ahead of schedule' :
+      'Improved content based on best practices...';
   }
 }

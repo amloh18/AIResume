@@ -37,13 +37,32 @@ export interface JobListResponse {
 }
 
 export class JobService {
-  static async getJob(jobId: string): Promise<Job> {
-    const response = await fetch(`/api/jobs/${jobId}`);
+  static async getJob(jobId: string, userId?: string): Promise<Job> {
+    if (!userId) {
+      throw new Error('User ID is required to fetch job');
+    }
+    
+    const response = await fetch(`/api/jobs?userId=${userId}&jobId=${jobId}`);
     if (!response.ok) {
       throw new Error('Failed to fetch job');
     }
     const data = await response.json();
-    return data.job;
+    
+    // Extract job data from the response
+    let jobData;
+    if (data.data?.jobs) {
+      // If we got a list of jobs, find the specific one
+      jobData = data.data.jobs.find((job: any) => job.id === jobId || job._id === jobId);
+    } else {
+      // If we got a single job directly
+      jobData = data.job || data;
+    }
+    
+    if (!jobData) {
+      throw new Error('Job not found');
+    }
+    
+    return jobData;
   }
 
   static async getJobs(filters: JobFilters = {}): Promise<JobListResponse> {

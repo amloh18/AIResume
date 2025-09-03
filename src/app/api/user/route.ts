@@ -8,7 +8,27 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
-    if (!session?.user?.email) {
+    // Check for Firebase user ID in headers or query params
+    const firebaseUserId = request.headers.get('x-firebase-user-id') || 
+                          request.nextUrl.searchParams.get('firebaseUserId');
+    
+    let userEmail: string | undefined;
+    let userId: string | undefined;
+    
+    if (session?.user?.email) {
+      // NextAuth user
+      userEmail = session.user.email;
+    } else if (firebaseUserId) {
+      // Firebase user - get user by Firebase UID
+      await connectDB();
+      const firebaseUser = await User.findOne({ firebaseUid: firebaseUserId });
+      if (firebaseUser) {
+        userEmail = firebaseUser.email;
+        userId = firebaseUser._id.toString();
+      }
+    }
+    
+    if (!userEmail) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -18,7 +38,7 @@ export async function GET(request: NextRequest) {
     await connectDB();
 
     // Find user
-    const user = await User.findOne({ email: session.user.email });
+    const user = await User.findOne({ email: userEmail });
     if (!user) {
       return NextResponse.json(
         { success: false, error: 'User not found' },
@@ -61,7 +81,25 @@ export async function PUT(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
-    if (!session?.user?.email) {
+    // Check for Firebase user ID in headers or query params
+    const firebaseUserId = request.headers.get('x-firebase-user-id') || 
+                          request.nextUrl.searchParams.get('firebaseUserId');
+    
+    let userEmail: string | undefined;
+    
+    if (session?.user?.email) {
+      // NextAuth user
+      userEmail = session.user.email;
+    } else if (firebaseUserId) {
+      // Firebase user - get user by Firebase UID
+      await connectDB();
+      const firebaseUser = await User.findOne({ firebaseUid: firebaseUserId });
+      if (firebaseUser) {
+        userEmail = firebaseUser.email;
+      }
+    }
+    
+    if (!userEmail) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -74,7 +112,7 @@ export async function PUT(request: NextRequest) {
     const { firstName, lastName, avatar, settings } = body;
 
     // Find user
-    const user = await User.findOne({ email: session.user.email });
+    const user = await User.findOne({ email: userEmail });
     if (!user) {
       return NextResponse.json(
         { success: false, error: 'User not found' },

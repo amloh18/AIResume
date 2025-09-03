@@ -8,6 +8,9 @@ import {
 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useCreateCV } from '@/lib/utils/cvCreationUtils';
+import AnalyticsJourneyWidget from './AnalyticsJourneyWidget';
+import PageHeader from './PageHeader';
+import { authenticatedFetch } from '@/lib/utils/apiUtils';
 
 // 1. The At-a-Glance "My Status" Section - Fused CV Health Score + Quick Actions
 const MyStatusSection: React.FC<{ 
@@ -33,7 +36,7 @@ const MyStatusSection: React.FC<{
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* CV Health Score */}
-    <div className="text-center">
+        <div className="text-center">
       <div className="relative w-32 h-32 mx-auto mb-4">
         <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 100 100">
               <circle cx="50" cy="50" r="45" stroke="currentColor" strokeWidth="10" fill="none" className="text-white/10" />
@@ -48,7 +51,7 @@ const MyStatusSection: React.FC<{
                 className="transition-all duration-1000 ease-out" strokeLinecap="round" />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-xl font-bold text-white">{cvHealthScore}%</span>
+              <span className="text-lg font-bold text-white">{cvHealthScore}%</span>
         </div>
       </div>
       <p className="text-white/60 text-sm mb-1">CV Health Score</p>
@@ -56,37 +59,32 @@ const MyStatusSection: React.FC<{
     </div>
 
         {/* Quick Actions */}
-  <div className="space-y-3">
+        <div className="space-y-3">
           <h3 className="text-white font-medium text-sm flex items-center gap-2">
             <Zap size={14} className="text-yellow-400" />
             Quick Actions
           </h3>
           <div className="space-y-2">
             <motion.button onClick={onImproveScore}
-              className="w-full p-3 bg-gradient-to-r from-lime-400/20 to-lime-500/20 border border-lime-400/30 text-lime-400 rounded-lg font-medium hover:from-lime-400/30 hover:to-lime-500/30 transition-all duration-300 flex items-center justify-center gap-2"
+              className="w-full p-3 bg-gradient-to-r from-lime-400/20 to-lime-500/20 border border-lime-400/30 text-lime-400 rounded-lg font-medium hover:from-lime-400/30 hover:to-lime-500/30 transition-all duration-300 flex items-center justify-center gap-2 text-sm"
               whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
               <Sparkles size={14} /> Improve CV Score
             </motion.button>
-            <motion.button onClick={onCreateCV}
-              className="w-full p-3 bg-white/10 text-white/80 rounded-lg hover:bg-white/20 transition-all duration-300 flex items-center justify-center gap-2"
-              whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              <FileText size={14} /> Create New CV
-            </motion.button>
             <motion.button onClick={onAddJob}
-              className="w-full p-3 bg-white/10 text-white/80 rounded-lg hover:bg-white/20 transition-all duration-300 flex items-center justify-center gap-2"
+              className="w-full p-3 bg-white/10 text-white/80 rounded-lg hover:bg-white/20 transition-all duration-300 flex items-center justify-center gap-2 text-sm"
               whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
               <Plus size={14} /> Add Job
             </motion.button>
             <motion.button onClick={onWriteCoverLetter}
-              className="w-full p-3 bg-white/10 text-white/80 rounded-lg hover:bg-white/20 transition-all duration-300 flex items-center justify-center gap-2"
+              className="w-full p-3 bg-white/10 text-white/80 rounded-lg hover:bg-white/20 transition-all duration-300 flex items-center justify-center gap-2 text-sm"
               whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
               <PenTool size={14} /> Write Cover Letter
             </motion.button>
           </div>
         </div>
+      </div>
     </div>
-  </div>
-);
+  );
 };
 
 // 2. The "Application Hub" - Fused Incomplete CVs + Application Timeline
@@ -108,7 +106,7 @@ const ApplicationHub: React.FC<{
 
     return {
       applicationsThisWeek: thisWeekJobs.length,
-      successRate: jobs.length > 0 ? Math.round((jobs.filter(job => job.status === 'interview' || job.status === 'offer').length / jobs.length) * 100) : 0
+      successRate: jobs.length > 0 ? Math.round((jobs.filter(job => job.status === 'interview' || job.status === 'offer' || job.status === 'accepted').length / jobs.length) * 100) : 0
     };
   };
 
@@ -116,7 +114,7 @@ const ApplicationHub: React.FC<{
 
   return (
     <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-      <h2 className="text-xl font-bold text-white mb-4">Application Hub</h2>
+      <h2 className="text-lg font-bold text-white mb-4">Application Hub</h2>
       
       {/* Tab Navigation */}
       <div className="flex items-center gap-2 mb-6">
@@ -233,7 +231,7 @@ const IntelligenceDashboard: React.FC<{
 
   return (
     <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-      <h2 className="text-xl font-bold text-white mb-4">Intelligence Dashboard</h2>
+      <h2 className="text-lg font-bold text-white mb-4">Intelligence Dashboard</h2>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Career Predictions */}
@@ -343,7 +341,7 @@ const PerformanceInsights: React.FC<{
   const calculateKPIs = () => {
     return {
       totalJobs: Array.isArray(jobs) ? jobs.length : 0,
-      successRate: Array.isArray(jobs) && jobs.length > 0 ? Math.round((jobs.filter(job => job.status === 'interview' || job.status === 'offer').length / jobs.length) * 100) : 0,
+      successRate: Array.isArray(jobs) && jobs.length > 0 ? Math.round((jobs.filter(job => job.status === 'interview' || job.status === 'offer' || job.status === 'accepted').length / jobs.length) * 100) : 0,
       interviewRate: Array.isArray(jobs) && jobs.length > 0 ? Math.round((jobs.filter(job => job.status === 'interview').length / jobs.length) * 100) : 0,
       cvHealth: Array.isArray(cvs) && cvs.length > 0 ? Math.round(cvs.reduce((sum, cv) => sum + (cv.progress || 0), 0) / cvs.length) : 0
     };
@@ -354,7 +352,7 @@ const PerformanceInsights: React.FC<{
   return (
   <div className="bg-white/5 border border-white/10 rounded-xl p-6">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-bold text-white">Performance Insights</h2>
+        <h2 className="text-lg font-bold text-white">Performance Insights</h2>
         <div className="flex items-center gap-2">
           <span className="text-white/60 text-sm">Period:</span>
           {['Day', 'Week', 'Month'].map((period) => (
@@ -447,6 +445,137 @@ const PerformanceInsights: React.FC<{
 );
 };
 
+// 5. The "Recent Jobs" Widget - Shows list view of recent 5 jobs
+const RecentJobsWidget: React.FC<{ 
+  jobs: any[];
+  onViewJob: (jobId: string) => void;
+}> = ({ jobs, onViewJob }) => {
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'applied': return 'text-blue-400';
+      case 'screening': return 'text-orange-400';
+      case 'interview': return 'text-purple-400';
+      case 'offer': return 'text-green-400';
+      case 'rejected': return 'text-red-400';
+      case 'accepted': return 'text-emerald-400';
+      case 'withdrawn': return 'text-gray-400';
+      case 'created': return 'text-yellow-400';
+      default: return 'text-white/60';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'applied': return '📝';
+      case 'screening': return '🔍';
+      case 'interview': return '🎯';
+      case 'offer': return '🎉';
+      case 'rejected': return '❌';
+      case 'accepted': return '✅';
+      case 'withdrawn': return '↩️';
+      case 'created': return '📋';
+      default: return '📄';
+    }
+  };
+
+  const formatDate = (date: string | Date) => {
+    const d = new Date(date);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - d.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    return d.toLocaleDateString();
+  };
+
+  const lastJobs = jobs
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+    .slice(0, 5);
+
+  return (
+    <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-lg font-bold text-white">Last 5 Jobs</h2>
+        <motion.button 
+          onClick={() => window.location.href = '/dashboard/pipeline'}
+          className="px-3 py-1.5 bg-blue-400/20 text-blue-400 rounded-lg text-sm font-medium hover:bg-blue-400/30 transition-all duration-300 flex items-center gap-2"
+          whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+          <Briefcase size={14} /> View All
+        </motion.button>
+      </div>
+      
+      {lastJobs.length > 0 ? (
+        <div className="space-y-3">
+          {lastJobs.map((job) => (
+            <motion.div 
+              key={job.id || job._id}
+              onClick={() => onViewJob(job.id || job._id)}
+              className="p-4 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-all duration-300 cursor-pointer"
+              whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-start gap-3 flex-1">
+                  <div className="p-2 rounded-lg bg-white/10">
+                    <Briefcase size={16} className="text-white/80" />
+                  </div>
+                                     <div className="flex-1 min-w-0">
+                     <h4 className="text-white font-medium text-sm mb-1 truncate">{job.jobTitle}</h4>
+                     <p className="text-white/60 text-xs mb-1">{job.company}</p>
+                     {job.location && (
+                       <p className="text-white/40 text-xs">{job.location}</p>
+                     )}
+                   </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`text-xs font-medium ${getStatusColor(job.status)}`}>
+                    {getStatusIcon(job.status)} {job.status}
+                  </span>
+                  <span className="text-white/40 text-xs">{formatDate(job.createdAt)}</span>
+                </div>
+              </div>
+              
+                             <div className="flex items-center justify-between text-white/60 text-xs">
+                 {job.salary && (job.salary.min || job.salary.max) && (
+                   <div className="flex items-center gap-2">
+                     <span>💰</span>
+                     <span>
+                       {job.salary.min && job.salary.max 
+                         ? `${job.salary.currency || '$'}${job.salary.min.toLocaleString()}-${job.salary.max.toLocaleString()}`
+                         : job.salary.min 
+                           ? `${job.salary.currency || '$'}${job.salary.min.toLocaleString()}+`
+                           : `${job.salary.currency || '$'}${job.salary.max.toLocaleString()}`
+                       } {job.salary.period || 'yearly'}
+                     </span>
+                   </div>
+                 )}
+                 {job.applicationDate && (
+                   <div className="flex items-center gap-2">
+                     <span>📅</span>
+                     <span>Applied: {formatDate(job.applicationDate)}</span>
+                   </div>
+                 )}
+               </div>
+            </motion.div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-8">
+          <Briefcase size={32} className="text-white/40 mx-auto mb-3" />
+          <h3 className="text-white font-medium text-sm mb-2">No Jobs Yet</h3>
+          <p className="text-white/60 text-xs mb-4">Start tracking your job applications to see your last 5 jobs here.</p>
+          <motion.button 
+            onClick={() => window.location.href = '/dashboard/pipeline'}
+            className="px-4 py-2 bg-blue-400/20 text-blue-400 rounded-lg text-sm font-medium hover:bg-blue-400/30 transition-all duration-300"
+            whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            Add Your First Job
+          </motion.button>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // Main Analytics Component
 const Analytics: React.FC = () => {
   const { data: session } = useSession();
@@ -461,13 +590,12 @@ const Analytics: React.FC = () => {
 
   const handleUpdateMonthlyGoal = async (newGoal: number) => {
     try {
-      const response = await fetch('/api/user/update-monthly-goal', {
+      const response = await authenticatedFetch('/api/user/update-monthly-goal', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ monthlyGoal: newGoal }),
       });
       if (response.ok) {
-        const analyticsResponse = await fetch(`/api/analytics?userId=${user?.id || user?._id || session?.user?.id}&period=${selectedPeriod}`);
+        const analyticsResponse = await authenticatedFetch(`/api/analytics?userId=${user?.id || user?._id || session?.user?.id}&period=${selectedPeriod}`);
         if (analyticsResponse.ok) {
           const newAnalyticsData = await analyticsResponse.json();
           setAnalyticsData(newAnalyticsData.data);
@@ -595,14 +723,24 @@ const Analytics: React.FC = () => {
   };
 
   useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      const parsedUser = JSON.parse(userData);
-      setUser(parsedUser);
-      loadData(parsedUser.id || parsedUser._id);
-    } else if (session?.user) {
+    // Check NextAuth session first
+    if (session?.user) {
       setUser(session.user);
       loadData(session.user.id);
+    } else {
+      // Fallback to Firebase user data
+      const userData = localStorage.getItem('user');
+      if (userData) {
+        try {
+          const parsedUser = JSON.parse(userData);
+          if (parsedUser.firebaseUid) {
+            setUser(parsedUser);
+            loadData(parsedUser.id || parsedUser._id);
+          }
+        } catch (error) {
+          console.error('Error parsing Firebase user data:', error);
+        }
+      }
     }
   }, [session]);
 
@@ -614,7 +752,7 @@ const Analytics: React.FC = () => {
 
   const loadAnalyticsDataOnly = async (userId: string) => {
     try {
-      const analyticsResponse = await fetch(`/api/analytics?userId=${userId}&period=${selectedPeriod}`);
+      const analyticsResponse = await authenticatedFetch(`/api/analytics?userId=${userId}&period=${selectedPeriod}`);
       const analyticsResult = await analyticsResponse.json();
       if (analyticsResult.success) {
         setAnalyticsData(analyticsResult.data);
@@ -628,20 +766,20 @@ const Analytics: React.FC = () => {
     try {
       setLoading(true);
       
-      const analyticsResponse = await fetch(`/api/analytics?userId=${userId}&period=${selectedPeriod}`);
+      const analyticsResponse = await authenticatedFetch(`/api/analytics?userId=${userId}&period=${selectedPeriod}`);
       const analyticsResult = await analyticsResponse.json();
       if (analyticsResult.success) {
         setAnalyticsData(analyticsResult.data);
       }
       
-      const jobsResponse = await fetch(`/api/jobs?userId=${userId}`);
+      const jobsResponse = await authenticatedFetch(`/api/jobs?userId=${userId}&limit=5&sort=createdAt&order=asc`);
       const jobsResult = await jobsResponse.json();
       if (jobsResult.success) {
-        const jobData = Array.isArray(jobsResult.data) ? jobsResult.data : [];
+        const jobData = Array.isArray(jobsResult.jobs) ? jobsResult.jobs : [];
         setJobs(jobData);
       }
 
-      const cvsResponse = await fetch(`/api/cvs?userId=${userId}`);
+      const cvsResponse = await authenticatedFetch(`/api/cvs?userId=${userId}`);
       const cvsResult = await cvsResponse.json();
       if (cvsResult.success) {
         const cvData = Array.isArray(cvsResult.data?.cvs) ? cvsResult.data.cvs : [];
@@ -695,7 +833,7 @@ const Analytics: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="max-w-full mx-auto space-y-6 px-4">
+      <div className="space-y-6">
         {/* Header Skeleton */}
         <div className="mb-8">
           <div className="h-8 w-64 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded mb-2">
@@ -708,7 +846,7 @@ const Analytics: React.FC = () => {
 
         {/* Main Grid Layout Skeleton */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Column 1: Status + Application Hub */}
+          {/* Column 1: Status + Application Hub + Last 5 Jobs */}
           <div className="space-y-6">
             {/* My Status Section Skeleton */}
             <div className="bg-white/5 border border-white/10 rounded-xl p-6">
@@ -769,7 +907,7 @@ const Analytics: React.FC = () => {
             </div>
           </div>
 
-          {/* Column 2: Intelligence + Performance */}
+          {/* Column 2: Intelligence Dashboard + Performance */}
           <div className="space-y-6">
             {/* Intelligence Dashboard Skeleton */}
             <div className="bg-white/5 border border-white/10 rounded-xl p-6">
@@ -828,6 +966,50 @@ const Analytics: React.FC = () => {
                 ))}
               </div>
             </div>
+
+            {/* Last 5 Jobs Widget Skeleton */}
+            <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="h-6 w-28 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+                </div>
+                <div className="h-8 w-20 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded-lg">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+                </div>
+              </div>
+              <div className="space-y-3">
+                {Array.from({ length: 5 }).map((_, index) => (
+                  <div key={index} className="p-4 bg-white/5 border border-white/10 rounded-lg">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-start gap-3 flex-1">
+                        <div className="w-8 h-8 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded-lg">
+                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+                        </div>
+                        <div className="flex-1">
+                          <div className="h-4 w-3/4 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded mb-2">
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+                          </div>
+                          <div className="h-3 w-1/2 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded mb-1">
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+                          </div>
+                          <div className="h-3 w-1/3 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="h-4 w-16 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
+                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+                        </div>
+                        <div className="h-3 w-12 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
+                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -835,13 +1017,36 @@ const Analytics: React.FC = () => {
   }
 
   return (
-    <div className="max-w-full mx-auto space-y-6 px-4">
-      {/* Header */}
+    <div className="space-y-6">
+      {/* Page Header */}
+      <PageHeader
+        title={`Hello, ${user?.name || user?.username || 'User'}`}
+        description="Welcome back! Here's your career progress overview."
+        user={user || { name: 'User', email: 'user@example.com' }}
+        showSettings={true}
+      />
 
+      {/* CV Journey Widget */}
+      <AnalyticsJourneyWidget
+        onResumeJourney={(journey) => {
+          // TODO: Implement resume journey functionality
+          console.log('Resume journey:', journey);
+          window.location.href = `/dashboard/cv-journey`;
+        }}
+        onDeleteJourney={(journeyId) => {
+          // TODO: Implement delete journey functionality
+          console.log('Delete journey:', journeyId);
+        }}
+        onViewJourney={(journey) => {
+          // TODO: Implement view journey functionality
+          console.log('View journey:', journey);
+          window.location.href = `/dashboard/cv-journey`;
+        }}
+      />
 
-      {/* Main Grid Layout - Redesigned with Fused Sections */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-        {/* Column 1: My Status + Application Hub */}
+      {/* Main Grid Layout - 2 columns */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Column 1: My Status + Application Hub + Last 5 Jobs */}
         <div className="space-y-6">
           <MyStatusSection
             cvHealthScore={cvHealthScore}
@@ -850,7 +1055,7 @@ const Analytics: React.FC = () => {
                     try {
                       const userId = user?.id || user?._id || session?.user?.id;
                       if (userId) {
-                  await createCV({ userId, type: 'cv' });
+                  await createCV({ userId });
                       }
                     } catch (error) {
                       console.error('Error creating CV:', error);
@@ -867,7 +1072,12 @@ const Analytics: React.FC = () => {
             onPreviewDraft={(draftId) => window.location.href = `/preview?draft=${draftId}`}
             onDiscardDraft={(draftId) => console.log('Discard draft', draftId)}
           />
-                        </div>
+
+          <RecentJobsWidget
+            jobs={jobs}
+            onViewJob={(jobId) => window.location.href = `/dashboard/pipeline?job=${jobId}`}
+          />
+        </div>
                         
         {/* Column 2: Intelligence Dashboard + Performance Insights */}
         <div className="space-y-6">
@@ -884,7 +1094,7 @@ const Analytics: React.FC = () => {
             selectedPeriod={selectedPeriod}
             onPeriodChange={setSelectedPeriod}
           />
-              </div>
+        </div>
       </div>
     </div>
   );

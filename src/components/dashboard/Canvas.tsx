@@ -43,6 +43,8 @@ import {
 } from 'lucide-react';
 import { useCreateCV } from '@/lib/utils/cvCreationUtils';
 import CVPreviewContent from '@/components/studio/CVPreviewContent';
+import PageHeader from './PageHeader';
+import { authenticatedFetch } from '@/lib/utils/apiUtils';
 
 interface CV {
   id: string;
@@ -63,11 +65,35 @@ interface Job {
   id: string;
   title: string;
   company: string;
-  location: string;
+  location: string | { address?: string; postalCode?: string; city?: string; countryCode?: string; region?: string };
   status: 'applied' | 'screening' | 'interview' | 'offer' | 'rejected';
   appliedDate: string;
   salary?: string;
   description?: string;
+}
+
+interface CoverLetter {
+  id: string;
+  title: string;
+  lastModified: string;
+  status: 'draft' | 'final' | 'archived';
+  views: number;
+  isStarred: boolean;
+  thumbnail: string;
+  description?: string;
+  coverLetterData?: any;
+  connectedJobs?: Job[];
+  completionPercentage?: number;
+  content?: string;
+  metadata?: {
+    targetCompany?: string;
+    targetPosition?: string;
+    keywords?: string[];
+    wordCount?: number;
+    isPublic?: boolean;
+    lastModified?: Date;
+    version?: number;
+  };
 }
 
 
@@ -195,12 +221,29 @@ const Canvas: React.FC = () => {
       console.log('🔍 Canvas - First CV:', cvs[0]);
     }
   }, [cvs]);
+
+  // Handle CV creation
+  const handleCreateCV = async () => {
+    try {
+      const userId = session?.user?.id || getUserIdFromLocalStorage();
+      if (userId) {
+        await createCV({ userId });
+      } else {
+        console.error('No user ID available for CV creation');
+      }
+    } catch (error) {
+      console.error('Error creating CV:', error);
+    }
+  };
+
   const [selectedCV, setSelectedCV] = useState<CV | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [editingCVId, setEditingCVId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
   const [deletingCVId, setDeletingCVId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'cv' | 'coverLetter'>('cv');
+  const [coverLetters, setCoverLetters] = useState<CoverLetter[]>([]);
   
   // Modal state
   const [modalConfig, setModalConfig] = useState<{
@@ -226,14 +269,22 @@ const Canvas: React.FC = () => {
     setModalConfig(prev => ({ ...prev, isOpen: false }));
   };
 
-  // Load CVs from API
+  // Load CVs and Cover Letters from API
   useEffect(() => {
-    const userId = session?.user?.id || getUserIdFromLocalStorage();
-    if (userId) {
-      loadCVs(userId);
+    // Check NextAuth session first
+    if (session?.user?.id) {
+      loadCVs(session.user.id);
+      loadCoverLetters();
     } else {
-      console.log('No user ID available, cannot load CVs');
-      setLoading(false);
+      // Fallback to Firebase user data
+      const userId = getUserIdFromLocalStorage();
+      if (userId) {
+        loadCVs(userId);
+        loadCoverLetters();
+      } else {
+        console.log('No user ID available, cannot load CVs and Cover Letters');
+        setLoading(false);
+      }
     }
   }, [session?.user?.id]);
 
@@ -242,7 +293,10 @@ const Canvas: React.FC = () => {
       const userData = localStorage.getItem('user');
       if (userData) {
         const parsedUser = JSON.parse(userData);
-        return parsedUser.id;
+        // Only return ID if it's a Firebase user
+        if (parsedUser.firebaseUid) {
+          return parsedUser.id || parsedUser._id;
+        }
       }
     } catch (error) {
       console.error('Error parsing user data from localStorage:', error);
@@ -263,7 +317,7 @@ const Canvas: React.FC = () => {
       
       console.log('Loading CVs for user:', userIdToUse);
       
-      const response = await fetch(`/api/cvs?userId=${userIdToUse}`);
+      const response = await authenticatedFetch(`/api/cvs?userId=${userIdToUse}`);
       const result = await response.json();
       console.log('🔍 Canvas - CV API response:', result);
       
@@ -299,7 +353,7 @@ const Canvas: React.FC = () => {
                 id: job.id || job._id,
                 title: job.jobTitle,
                 company: job.company,
-                location: job.location || 'Remote',
+                location: typeof job.location === 'string' ? job.location : job.location?.city || 'Remote',
                 status: job.status,
                 appliedDate: job.applicationDate,
                 salary: job.salary ? `${job.salary.min || ''} - ${job.salary.max || ''} ${job.salary.currency || ''}` : undefined,
@@ -341,6 +395,47 @@ const Canvas: React.FC = () => {
       setCvs([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadCoverLetters = async () => {
+    try {
+      console.log('🔍 Canvas - Loading Cover Letters...');
+      const userId = session?.user?.id;
+      if (!userId) {
+        console.log('🔍 Canvas - No user ID, skipping Cover Letter load');
+        return;
+      }
+
+      const response = await authenticatedFetch(`/api/cover-letters?userId=${userId}`);
+      const result = await response.json();
+      
+      console.log('🔍 Canvas - Cover Letter API response:', result);
+      
+      if (result.success && result.data?.coverLetters) {
+        const enrichedCoverLetters = result.data.coverLetters.map((cl: any) => ({
+          ...cl,
+          id: cl.id || cl._id,
+          lastModified: cl.lastModified || cl.updatedAt,
+          views: cl.views || 0,
+          isStarred: cl.isStarred || false,
+          thumbnail: '/api/cover-letters/thumbnail/' + (cl.id || cl._id),
+          description: cl.metadata?.targetCompany ? `For ${cl.metadata.targetCompany}` : 'Cover letter',
+          coverLetterData: cl.content,
+          connectedJobs: cl.connectedJobs || [],
+          completionPercentage: cl.completionPercentage || 0
+        }));
+        
+        console.log('🔍 Canvas - Setting Cover Letters:', enrichedCoverLetters.length);
+        console.log('🔍 Canvas - First Cover Letter sample:', enrichedCoverLetters[0]);
+        setCoverLetters(enrichedCoverLetters);
+      } else {
+        console.log('🔍 Canvas - Cover Letter API returned success: false');
+        setCoverLetters([]);
+      }
+    } catch (error) {
+      console.error('Error loading Cover Letters:', error);
+      setCoverLetters([]);
     }
   };
 
@@ -574,14 +669,16 @@ const Canvas: React.FC = () => {
 
   const saveTitle = async (cvId: string) => {
     try {
-      // Get user ID from session or localStorage
+      // Get user ID from session or Firebase
       let userId = session?.user?.id;
       if (!userId) {
         const userData = localStorage.getItem('user');
         if (userData) {
           try {
             const parsedUser = JSON.parse(userData);
-            userId = parsedUser.id || parsedUser._id;
+            if (parsedUser.firebaseUid) {
+              userId = parsedUser.id || parsedUser._id;
+            }
           } catch (error) {
             console.error('Error parsing user data:', error);
           }
@@ -599,11 +696,8 @@ const Canvas: React.FC = () => {
       }
 
       // Make API call to update the CV title
-      const response = await fetch(`/api/cvs/${cvId}`, {
+      const response = await authenticatedFetch(`/api/cvs/${cvId}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           title: editingTitle,
           userId: userId
@@ -652,7 +746,7 @@ const Canvas: React.FC = () => {
       setDeletingCVId(cvId);
       setShowDeleteConfirmation(null);
       
-      // Get user ID from session or localStorage
+      // Get user ID from session or Firebase
       let userId = session?.user?.id;
       console.log('🔍 Delete - Session user ID:', session?.user?.id);
       console.log('🔍 Delete - Session data:', session);
@@ -663,8 +757,10 @@ const Canvas: React.FC = () => {
         if (userData) {
           try {
             const parsedUser = JSON.parse(userData);
-            userId = parsedUser.id || parsedUser._id;
-            console.log('🔍 Delete - Parsed user ID from localStorage:', userId);
+            if (parsedUser.firebaseUid) {
+              userId = parsedUser.id || parsedUser._id;
+              console.log('🔍 Delete - Parsed user ID from localStorage:', userId);
+            }
           } catch (error) {
             console.error('Error parsing user data:', error);
           }
@@ -707,7 +803,7 @@ const Canvas: React.FC = () => {
       
       console.log('Making DELETE request to:', `/api/cvs/${cvId}?userId=${userId}`);
       
-      const response = await fetch(`/api/cvs/${cvId}?userId=${userId}`, {
+      const response = await authenticatedFetch(`/api/cvs/${cvId}?userId=${userId}`, {
         method: 'DELETE',
       });
       
@@ -756,7 +852,7 @@ const Canvas: React.FC = () => {
 
   const unlinkJobFromCV = async (cvId: string, jobId: string) => {
     try {
-      // Get user ID from session or localStorage
+      // Get user ID from session or Firebase
       let userId = session?.user?.id;
       
       if (!userId) {
@@ -764,7 +860,9 @@ const Canvas: React.FC = () => {
         if (userData) {
           try {
             const parsedUser = JSON.parse(userData);
-            userId = parsedUser.id || parsedUser._id;
+            if (parsedUser.firebaseUid) {
+              userId = parsedUser.id || parsedUser._id;
+            }
           } catch (error) {
             console.error('Error parsing user data:', error);
           }
@@ -803,11 +901,8 @@ const Canvas: React.FC = () => {
       }
 
       // Make API call to update CV (remove jobId from connected jobs)
-      const response = await fetch(`/api/cvs/${cvId}`, {
+      const response = await authenticatedFetch(`/api/cvs/${cvId}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           userId: userId,
           unlinkJobId: jobId // Signal to remove this job from connected jobs
@@ -916,8 +1011,8 @@ const Canvas: React.FC = () => {
   };
 
   if (loading) {
-    return (
-      <div className="max-w-6xl mx-auto space-y-6">
+      return (
+    <div className="space-y-6">
         {/* Header Skeleton */}
         <div className="flex items-center justify-between">
           <div>
@@ -1004,15 +1099,47 @@ const Canvas: React.FC = () => {
   }
 
   return (
-    <div className="max-w-full mx-auto space-y-6 px-4">
+    <div className="space-y-6">
+      {/* Page Header */}
+      <PageHeader
+        title="CV Studio"
+        description="Create, edit, and manage professional CVs"
+        user={session?.user || { name: 'User', email: 'user@example.com' }}
+        showSettings={true}
+      />
 
+      {/* Tab Navigation */}
+      <div className="flex items-center gap-2 mb-6">
+        <motion.button
+          onClick={() => setActiveTab('cv')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
+            activeTab === 'cv' ? 'bg-lime-400/20 text-lime-400 border border-lime-400/30' : 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'
+          }`}
+          whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+        >
+          <FileText size={16} className="inline mr-2" />
+          CVs
+        </motion.button>
+        <motion.button
+          onClick={() => setActiveTab('coverLetter')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
+            activeTab === 'coverLetter' ? 'bg-blue-400/20 text-blue-400 border border-blue-400/30' : 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'
+          }`}
+          whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+        >
+          <PenTool size={16} className="inline mr-2" />
+          Cover Letters
+        </motion.button>
+      </div>
 
-      {/* Main Grid Layout */}
-      <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
-        {/* Left Column - Main Content */}
-                  <div className="xl:col-span-3 space-y-6">
-      {/* Stats Cards */}
-                      <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+      {/* Main Content Based on Active Tab */}
+      {activeTab === 'cv' ? (
+        /* CV Content */
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+          {/* Left Column - Main Content */}
+          <div className="xl:col-span-3 space-y-6">
+            {/* Stats Cards */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         <motion.div
           className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-4"
           initial={{ opacity: 0, y: 20 }}
@@ -1113,6 +1240,79 @@ const Canvas: React.FC = () => {
         </div>
 
         <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
+          {/* Create New CV Card - Always First */}
+          <motion.div
+            className="bg-gradient-to-br from-lime-400/10 to-blue-400/10 border-2 border-dashed border-lime-400/30 rounded-2xl p-8 flex flex-col items-center justify-center text-center hover:border-lime-400/50 hover:from-lime-400/15 hover:to-blue-400/15 transition-all duration-300 cursor-pointer group"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            whileHover={{ y: -5, scale: 1.02 }}
+            onClick={() => window.location.href = '/studio'}
+          >
+            <div className="w-20 h-20 bg-gradient-to-br from-lime-400/20 to-lime-500/20 rounded-full flex items-center justify-center mb-6 group-hover:from-lime-400/30 group-hover:to-lime-500/30 transition-all duration-300">
+              <Plus size={32} className="text-lime-400" />
+            </div>
+            
+            <h3 className="text-lg font-bold text-white mb-3">Create New CV</h3>
+            <p className="text-white/60 mb-6 max-w-sm">
+              Start building your professional CV with our intuitive editor. Choose from beautiful templates and customize every detail.
+            </p>
+            
+            <div className="flex items-center gap-4 text-white/40 text-sm mb-6">
+              <div className="flex items-center gap-2">
+                <CheckCircle size={16} className="text-lime-400" />
+                <span>Professional Templates</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle size={16} className="text-lime-400" />
+                <span>Easy Customization</span>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <motion.button
+                className="px-6 py-3 bg-gradient-to-r from-lime-400 to-lime-500 text-black font-semibold rounded-xl hover:from-lime-300 hover:to-lime-400 transition-all duration-300 flex items-center gap-2 group-hover:scale-105"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  try {
+                    const userData = localStorage.getItem('user');
+                    const userId = userData ? JSON.parse(userData).id || JSON.parse(userData)._id : '6889b151d17daa1eaee91a5c';
+                    await createCV({
+                      userId
+                    });
+                  } catch (error) {
+                    console.error('Error creating CV:', error);
+                  }
+                }}
+              >
+                <Plus size={18} />
+                Create New
+              </motion.button>
+              
+              <motion.button
+                className="px-6 py-3 bg-white/10 text-white font-semibold rounded-xl hover:bg-white/20 transition-all duration-300 flex items-center gap-2 border border-white/20"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.location.href = '/onboarding?mode=import';
+                }}
+              >
+                <FileText size={18} />
+                Import CV
+              </motion.button>
+            </div>
+            
+            <div className="mt-6 p-4 bg-white/5 rounded-lg border border-white/10">
+              <div className="flex items-center gap-3 text-white/60 text-sm">
+                <Sparkles size={16} className="text-lime-400" />
+                <span>AI-powered suggestions to help you create the perfect CV</span>
+              </div>
+            </div>
+          </motion.div>
+
           {loading ? (
             // Loading skeleton
             Array.from({ length: 4 }).map((_, index) => (
@@ -1122,66 +1322,6 @@ const Canvas: React.FC = () => {
                 <div className="h-3 bg-white/10 rounded w-2/3"></div>
               </div>
             ))
-          ) : cvs.length === 0 ? (
-            // Create CV Card - Show when no CVs exist
-            <motion.div
-              className="bg-gradient-to-br from-lime-400/10 to-blue-400/10 border-2 border-dashed border-lime-400/30 rounded-2xl p-8 flex flex-col items-center justify-center text-center hover:border-lime-400/50 hover:from-lime-400/15 hover:to-blue-400/15 transition-all duration-300 cursor-pointer group"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              whileHover={{ y: -5, scale: 1.02 }}
-              onClick={() => window.location.href = '/studio'}
-            >
-              <div className="w-20 h-20 bg-gradient-to-br from-lime-400/20 to-lime-500/20 rounded-full flex items-center justify-center mb-6 group-hover:from-lime-400/30 group-hover:to-lime-500/30 transition-all duration-300">
-                <Plus size={32} className="text-lime-400" />
-              </div>
-              
-              <h3 className="text-lg font-bold text-white mb-3">Create Your First CV</h3>
-              <p className="text-white/60 mb-6 max-w-sm">
-                Start building your professional CV with our intuitive editor. Choose from beautiful templates and customize every detail.
-              </p>
-              
-              <div className="flex items-center gap-4 text-white/40 text-sm mb-6">
-                <div className="flex items-center gap-2">
-                  <CheckCircle size={16} className="text-lime-400" />
-                  <span>Professional Templates</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle size={16} className="text-lime-400" />
-                  <span>Easy Customization</span>
-                </div>
-              </div>
-              
-              <motion.button
-                className="px-8 py-3 bg-gradient-to-r from-lime-400 to-lime-500 text-black font-semibold rounded-xl hover:from-lime-300 hover:to-lime-400 transition-all duration-300 flex items-center gap-3 group-hover:scale-105"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  try {
-                    const userData = localStorage.getItem('user');
-                    const userId = userData ? JSON.parse(userData).id || JSON.parse(userData)._id : '6889b151d17daa1eaee91a5c';
-                    await createCV({
-                      userId,
-                      type: 'cv'
-                    });
-                  } catch (error) {
-                    console.error('Error creating CV:', error);
-                  }
-                }}
-              >
-                <Plus size={20} />
-                Start Creating
-                <ArrowRight size={16} />
-              </motion.button>
-              
-              <div className="mt-6 p-4 bg-white/5 rounded-lg border border-white/10">
-                <div className="flex items-center gap-3 text-white/60 text-sm">
-                  <Sparkles size={16} className="text-lime-400" />
-                  <span>AI-powered suggestions to help you create the perfect CV</span>
-                </div>
-              </div>
-            </motion.div>
           ) : (
             // CV Cards
             cvs.map((cv, index) => (
@@ -1384,7 +1524,7 @@ const Canvas: React.FC = () => {
                         {cv.connectedJobs[0].title}
                       </div>
                       <div className="text-white/60 text-xs truncate">
-                        {cv.connectedJobs[0].company} • {cv.connectedJobs[0].location}
+                        {cv.connectedJobs[0].company} • {typeof cv.connectedJobs[0].location === 'string' ? cv.connectedJobs[0].location : cv.connectedJobs[0].location?.city || 'Remote'}
                       </div>
                       <div className="flex items-center gap-2 mt-1">
                         <span className={`text-xs px-1.5 py-0.5 rounded-full ${
@@ -1420,7 +1560,7 @@ const Canvas: React.FC = () => {
                       sessionStorage.setItem('editingCVId', cv.id);
                       sessionStorage.setItem('editingCVTitle', cv.title);
                       sessionStorage.setItem('editingCVData', JSON.stringify(cv));
-                      window.location.href = `/studio?cvId=${cv.id}`;
+                      window.location.href = `/studio?type=cv&cvId=${cv.id}`;
                     }}
                   >
                     <Edit size={14} />
@@ -1476,40 +1616,6 @@ const Canvas: React.FC = () => {
 
         {/* Right Column - Sidebar */}
         <div className="space-y-6">
-          {/* Quick Actions */}
-          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-            <h3 className="text-white font-medium text-sm mb-4 flex items-center gap-2">
-              <Sparkles size={14} className="text-lime-400" />
-              Quick Actions
-            </h3>
-            <div className="space-y-3">
-              <motion.button
-                className="w-full p-3 bg-gradient-to-r from-lime-400/20 to-lime-500/20 border border-lime-400/30 rounded-lg text-lime-400 font-medium text-sm hover:from-lime-400/30 hover:to-lime-500/30 transition-all duration-300 flex items-center gap-3 shadow-lg shadow-lime-400/10"
-                whileHover={{ scale: 1.02, y: -2 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => window.location.href = '/studio'}
-              >
-                <Plus size={16} className="text-lime-400" />
-                Create New CV
-              </motion.button>
-              <motion.button
-                className="w-full p-3 bg-white/10 rounded-lg text-white/80 text-sm hover:bg-white/20 transition-all duration-300 flex items-center gap-3"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Download size={16} />
-                Import CV
-              </motion.button>
-              <motion.button
-                className="w-full p-3 bg-white/10 rounded-lg text-white/80 text-sm hover:bg-white/20 transition-all duration-300 flex items-center gap-3"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Share2 size={16} />
-                Share All CVs
-              </motion.button>
-            </div>
-          </div>
 
           {/* CV Tips */}
           <div className="bg-white/5 border border-white/10 rounded-xl p-6">
@@ -1556,6 +1662,257 @@ const Canvas: React.FC = () => {
           </div>
         </div>
       </div>
+      ) : (
+        /* Cover Letter Content */
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+          {/* Left Column - Main Content */}
+          <div className="xl:col-span-3 space-y-6">
+            {/* Stats Cards */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              <motion.div
+                className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-4"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-gradient-to-br from-blue-400/20 to-blue-500/20 rounded-lg flex items-center justify-center">
+                    <PenTool size={16} className="text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="text-white/60 text-xs">Total Cover Letters</p>
+                    <p className="text-lg font-bold text-white">{coverLetters.length}</p>
+                  </div>
+                </div>
+                {coverLetters.length === 0 && (
+                  <div className="mt-2 p-2 bg-blue-400/10 border border-blue-400/20 rounded-lg">
+                    <p className="text-blue-400 text-xs">Create your first cover letter!</p>
+                  </div>
+                )}
+              </motion.div>
+
+              <motion.div
+                className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-4"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-gradient-to-br from-purple-400/20 to-purple-500/20 rounded-lg flex items-center justify-center">
+                    <Eye size={16} className="text-purple-400" />
+                  </div>
+                  <div>
+                    <p className="text-white/60 text-xs">Total Views</p>
+                    <p className="text-lg font-bold text-white">{coverLetters.reduce((sum, cl) => sum + cl.views, 0)}</p>
+                  </div>
+                </div>
+                {coverLetters.reduce((sum, cl) => sum + cl.views, 0) === 0 && (
+                  <div className="mt-2 p-2 bg-purple-400/10 border border-purple-400/20 rounded-lg">
+                    <p className="text-purple-400 text-xs">Publish to get views!</p>
+                  </div>
+                )}
+              </motion.div>
+
+              <motion.div
+                className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-4"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-gradient-to-br from-green-400/20 to-green-500/20 rounded-lg flex items-center justify-center">
+                  <Star size={16} className="text-green-400" />
+                  </div>
+                  <div>
+                    <p className="text-white/60 text-xs">Starred</p>
+                    <p className="text-lg font-bold text-white">{coverLetters.filter(cl => cl.isStarred).length}</p>
+                  </div>
+                </div>
+                {coverLetters.filter(cl => cl.isStarred).length === 0 && (
+                  <div className="mt-2 p-2 bg-green-400/10 border border-green-400/20 rounded-lg">
+                    <p className="text-green-400 text-xs">Star your favorites!</p>
+                  </div>
+                )}
+              </motion.div>
+
+              <motion.div
+                className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-4"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-gradient-to-br from-orange-400/20 to-orange-500/20 rounded-lg flex items-center justify-center">
+                    <CheckCircle size={16} className="text-orange-400" />
+                  </div>
+                  <div>
+                    <p className="text-white/60 text-xs">Published</p>
+                    <p className="text-lg font-bold text-white">{coverLetters.filter(cl => cl.status === 'final').length}</p>
+                  </div>
+                </div>
+                {coverLetters.filter(cl => cl.status === 'final').length === 0 && coverLetters.length > 0 && (
+                  <div className="mt-2 p-2 bg-orange-400/10 border border-orange-400/20 rounded-lg">
+                    <p className="text-orange-400 text-xs">Publish your cover letters!</p>
+                  </div>
+                )}
+              </motion.div>
+
+              <motion.div
+                className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-4"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-gradient-to-br from-red-400/20 to-red-500/20 rounded-lg flex items-center justify-center">
+                    <Target size={16} className="text-red-400" />
+                  </div>
+                  <div>
+                    <p className="text-white/60 text-xs">Connected Jobs</p>
+                    <p className="text-lg font-bold text-white">{coverLetters.reduce((sum, cl) => sum + (cl.connectedJobs?.length || 0), 0)}</p>
+                  </div>
+                </div>
+                {coverLetters.reduce((sum, cl) => sum + (cl.connectedJobs?.length || 0), 0) === 0 && (
+                  <div className="mt-2 p-2 bg-red-400/10 border border-red-400/20 rounded-lg">
+                    <p className="text-red-400 text-xs">Connect to jobs!</p>
+                  </div>
+                )}
+              </motion.div>
+            </div>
+
+            {/* Cover Letter Grid */}
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-white">Cover Letters</h2>
+                <motion.button
+                  onClick={() => window.location.href = '/studio?type=cover_letter'}
+                  className="px-4 py-2 bg-blue-400/20 text-blue-400 rounded-lg text-sm font-medium hover:bg-blue-400/30 transition-all duration-300 flex items-center gap-2"
+                  whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                >
+                  <Plus size={16} />
+                  Create Cover Letter
+                </motion.button>
+              </div>
+
+              <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
+                {coverLetters.map((coverLetter) => (
+                  <motion.div
+                    key={coverLetter.id}
+                    className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden hover:bg-white/10 transition-all duration-300"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    whileHover={{ y: -5 }}
+                  >
+                    {/* Cover Letter Preview */}
+                    <div className="h-48 bg-gradient-to-br from-blue-400/20 to-blue-500/20 flex items-center justify-center">
+                      <PenTool size={48} className="text-blue-400" />
+                    </div>
+                    
+                    {/* Cover Letter Info */}
+                    <div className="p-6 space-y-3">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h3 className="text-white font-semibold text-lg">{coverLetter.title}</h3>
+                          <p className="text-white/60 text-sm">{coverLetter.description}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {coverLetter.isStarred && (
+                            <Star size={16} className="text-yellow-400 fill-current" />
+                          )}
+                                                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                             coverLetter.status === 'final' ? 'bg-green-400/20 text-green-400' :
+                             coverLetter.status === 'draft' ? 'bg-yellow-400/20 text-yellow-400' :
+                             'bg-red-400/20 text-red-400'
+                           }`}>
+                             {coverLetter.status}
+                           </span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between text-white/40 text-xs">
+                        <span>Modified {new Date(coverLetter.lastModified).toLocaleDateString()}</span>
+                        <span>{coverLetter.views} views</span>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <motion.button
+                          onClick={() => window.location.href = `/studio?type=cover_letter&coverLetterId=${coverLetter.id}`}
+                          className="flex-1 px-3 py-2 bg-blue-400/20 text-blue-400 rounded-lg text-sm font-medium hover:bg-blue-400/30 transition-all duration-300 flex items-center justify-center gap-2"
+                          whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                        >
+                          <Edit size={14} />
+                          Edit
+                        </motion.button>
+                        <motion.button
+                          onClick={() => window.open(`/api/cover-letters/preview/${coverLetter.id}`, '_blank')}
+                          className="px-3 py-2 bg-white/10 text-white/80 rounded-lg text-sm font-medium hover:bg-white/20 transition-all duration-300"
+                          whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                        >
+                          <Eye size={14} />
+                        </motion.button>
+                        <motion.button
+                          onClick={() => window.open(`/api/cover-letters/download/${coverLetter.id}`, '_blank')}
+                          className="px-3 py-2 bg-white/10 text-white/80 rounded-lg text-sm font-medium hover:bg-white/20 transition-all duration-300"
+                          whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                        >
+                          <Download size={14} />
+                        </motion.button>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column - Sidebar */}
+          <div className="space-y-6">
+            {/* Cover Letter Tips */}
+            <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+              <h3 className="text-white font-medium text-sm mb-4 flex items-center gap-2">
+                <Lightbulb size={14} className="text-blue-400" />
+                Cover Letter Tips
+              </h3>
+              <div className="space-y-3">
+                <div className="p-3 bg-blue-400/10 border border-blue-400/20 rounded-lg">
+                  <p className="text-blue-400 text-xs font-medium mb-1">Personalize it</p>
+                  <p className="text-white/60 text-xs">Address the hiring manager by name when possible</p>
+                </div>
+                <div className="p-3 bg-green-400/10 border border-green-400/20 rounded-lg">
+                  <p className="text-green-400 text-xs font-medium mb-1">Show enthusiasm</p>
+                  <p className="text-white/60 text-xs">Express genuine interest in the company and role</p>
+                </div>
+                <div className="p-3 bg-purple-400/10 border border-purple-400/20 rounded-lg">
+                  <p className="text-purple-400 text-xs font-medium mb-1">Keep it concise</p>
+                  <p className="text-white/60 text-xs">Limit to one page and focus on key achievements</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Recent Activity */}
+            <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+              <h3 className="text-white font-medium text-sm mb-4 flex items-center gap-2">
+                <Activity size={14} className="text-blue-400" />
+                Recent Activity
+              </h3>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 text-white/60 text-xs">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                  <span>Created Software Engineer Cover Letter</span>
+                </div>
+                <div className="flex items-center gap-3 text-white/60 text-xs">
+                  <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                  <span>Updated Product Manager Cover Letter</span>
+                </div>
+                <div className="flex items-center gap-3 text-white/60 text-xs">
+                  <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
+                  <span>Published Data Scientist Cover Letter</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* CV Details Modal */}
       <AnimatePresence>
@@ -1644,7 +2001,7 @@ const Canvas: React.FC = () => {
                             sessionStorage.setItem('editingCVId', selectedCV.id);
                             sessionStorage.setItem('editingCVTitle', selectedCV.title);
                             sessionStorage.setItem('editingCVData', JSON.stringify(selectedCV));
-                            window.location.href = `/studio?cvId=${selectedCV.id}`;
+                            window.location.href = `/studio?type=cv&cvId=${selectedCV.id}`;
                           }}
                         >
                           <Edit size={14} />

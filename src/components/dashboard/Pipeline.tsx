@@ -83,6 +83,10 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { useSession } from 'next-auth/react';
 import { IJobApplication } from '@/models/JobApplication';
+import PageHeader from './PageHeader';
+import { authenticatedFetch } from '@/lib/utils/apiUtils';
+import { useJobJourney } from '@/contexts/JobJourneyContext';
+import JobPipelineCardModal from '@/components/modals/JobPipelineCardModal';
 
 interface Job extends Omit<IJobApplication, '_id' | 'userId' | 'cvId'> {
   id: string;
@@ -234,11 +238,14 @@ const SortableJobCard: React.FC<SortableJobCardProps> = ({
       {...attributes}
       {...listeners}
       onClick={(e) => {
-        console.log('🔍 Pipeline - Card clicked, target:', e.target);
+        e.preventDefault();
+        e.stopPropagation();
+        
         // Only trigger view if not clicking on action buttons
         if (!(e.target as HTMLElement).closest('button')) {
-          console.log('🔍 Pipeline - Triggering onView for job:', job.id);
-          onView(job);
+          setSelectedJobForJourney(job.id);
+          startJourney(job.id);
+          setShowPipelineModal(true);
         }
       }}
     >
@@ -432,7 +439,7 @@ const JobDetailsModal: React.FC<{
           exit={{ opacity: 0 }}
         >
           <motion.div
-            className="bg-gray-900 border border-white/10 rounded-xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto"
+            className="bg-gray-900 border border-white/10 rounded-xl p-6 w-full max-w-[1500px] max-h-[90vh] overflow-y-auto"
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
@@ -692,7 +699,7 @@ const JobDetailsModal: React.FC<{
             exit={{ opacity: 0 }}
           >
             <motion.div
-              className="bg-gray-900 border border-white/10 rounded-xl p-6 w-full max-w-md"
+              className="bg-gray-900 border border-white/10 rounded-xl p-6 w-full max-w-[1500px]"
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
@@ -756,6 +763,11 @@ const Pipeline: React.FC = () => {
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
   const [selectedPriority, setSelectedPriority] = useState<'all' | 'high' | 'medium' | 'low'>('all');
 
+  // Job Journey Modal state
+  const [showPipelineModal, setShowPipelineModal] = useState(false);
+  const [selectedJobForJourney, setSelectedJobForJourney] = useState<string | null>(null);
+  const { startJourney } = useJobJourney();
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -795,7 +807,7 @@ const Pipeline: React.FC = () => {
     try {
       setIsLoading(true);
       console.log('🔍 Pipeline - Loading jobs for user:', userId);
-      const response = await fetch(`/api/jobs?userId=${userId}`);
+      const response = await authenticatedFetch(`/api/jobs?userId=${userId}`);
       const result = await response.json();
       console.log('🔍 Pipeline - Jobs API response:', result);
       
@@ -1033,9 +1045,8 @@ const Pipeline: React.FC = () => {
             updatedJob
           });
 
-          const response = await fetch('/api/jobs', {
+          const response = await authenticatedFetch('/api/jobs', {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               ...updatedJob,
               id: activeJob.id
@@ -1106,7 +1117,7 @@ const Pipeline: React.FC = () => {
     }
 
     try {
-      const response = await fetch(`/api/jobs?id=${jobId}`, {
+      const response = await authenticatedFetch(`/api/jobs?id=${jobId}`, {
         method: 'DELETE'
       });
 
@@ -1157,9 +1168,8 @@ const Pipeline: React.FC = () => {
       const job = jobs.find(j => j.id === jobId);
       if (!job) return;
 
-      const response = await fetch('/api/jobs', {
+      const response = await authenticatedFetch('/api/jobs', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...job,
           cvId: cvId,
@@ -1212,9 +1222,8 @@ const Pipeline: React.FC = () => {
     };
 
     try {
-      const response = await fetch('/api/jobs', {
+      const response = await authenticatedFetch('/api/jobs', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...updatedJob,
           id: jobId
@@ -1481,8 +1490,8 @@ const Pipeline: React.FC = () => {
   };
 
   if (status === 'loading' || isLoading) {
-    return (
-      <div className="max-w-6xl mx-auto space-y-6">
+      return (
+    <div className="space-y-6">
         {/* Header Skeleton */}
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -1550,14 +1559,19 @@ const Pipeline: React.FC = () => {
   }
 
   return (
-    <div className="max-w-full mx-auto space-y-6 px-4">
-      {/* Header */}
-
+    <div className="space-y-6">
+      {/* Page Header */}
+      <PageHeader
+        title="Job Tracker"
+        description="Track applications and manage career progress"
+        user={session?.user || { name: 'User', email: 'user@example.com' }}
+        showSettings={true}
+      />
 
       {/* Controls Row */}
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 p-4 bg-white/5 border border-white/10 rounded-xl">
         {/* Search and Period */}
-        <div className="flex-1 w-full lg:max-w-md space-y-3">
+        <div className="flex-1 w-full space-y-3">
           <div className="relative">
             <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/40" />
             <input
@@ -1676,8 +1690,7 @@ const Pipeline: React.FC = () => {
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <div className="max-w-6xl mx-auto">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 h-full">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 h-full">
             {stages.map((stage) => (
               <div key={stage.id} className="flex flex-col">
                 {/* Stage Header */}
@@ -1730,7 +1743,6 @@ const Pipeline: React.FC = () => {
                 </DroppableZone>
               </div>
             ))}
-            </div>
           </div>
 
           {/* Drag Overlay */}
@@ -1876,7 +1888,7 @@ const Pipeline: React.FC = () => {
             exit={{ opacity: 0 }}
           >
             <motion.div
-              className="bg-gray-900 border border-white/10 rounded-xl p-4 w-full max-w-3xl max-h-[85vh] overflow-y-auto"
+              className="bg-gray-900 border border-white/10 rounded-xl p-4 w-full max-w-[1500px] max-h-[85vh] overflow-y-auto"
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
@@ -2167,6 +2179,12 @@ const Pipeline: React.FC = () => {
         )}
       </AnimatePresence>
 
+      {/* Job Pipeline Card Modal */}
+      <JobPipelineCardModal
+        isOpen={showPipelineModal}
+        onClose={() => setShowPipelineModal(false)}
+        jobId={selectedJobForJourney}
+      />
 
     </div>
   );
