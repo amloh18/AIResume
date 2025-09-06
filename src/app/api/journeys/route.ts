@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/database';
-import { JobApplication, CV } from '@/models';
+import { JobApplication, CV, CoverLetter } from '@/models';
 import { createErrorResponse } from '@/lib/db-utils';
 
 export async function GET(request: NextRequest) {
@@ -10,6 +10,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     const status = searchParams.get('status'); // 'in-progress' | 'completed' | 'all'
+    const jobId = searchParams.get('jobId'); // Filter by specific job ID
     
     if (!userId) {
       return NextResponse.json(
@@ -18,11 +19,19 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Fetch job applications for the user (including those in 'created' stage)
-    const jobApplications = await JobApplication.find({ 
+    // Build query for job applications
+    let jobQuery: any = { 
       userId, 
       isArchived: false 
-    }).lean();
+    };
+    
+    // Add jobId filter if provided
+    if (jobId) {
+      jobQuery._id = jobId;
+    }
+
+    // Fetch job applications for the user (including those in 'created' stage)
+    const jobApplications = await JobApplication.find(jobQuery).lean();
 
     console.log(`🔍 Journeys API - Found ${jobApplications.length} job applications for user ${userId}`);
     console.log(`🔍 Journeys API - Job statuses:`, jobApplications.map(job => ({ id: job._id, status: job.status, jobTitle: job.jobTitle, company: job.company })));
@@ -30,21 +39,40 @@ export async function GET(request: NextRequest) {
     // Fetch CVs for the user
     const cvs = await CV.find({ userId }).lean();
 
-    // Create a map of CVs by jobId for quick lookup
+    // Fetch Cover Letters for the user
+    const coverLetters = await CoverLetter.find({ userId }).lean();
+
+    // Create a map of CVs by ID for quick lookup
     const cvMap = new Map();
     cvs.forEach(cv => {
-      if (cv.linkedJobId) {
-        cvMap.set(cv.linkedJobId.toString(), cv);
+      cvMap.set(cv._id.toString(), cv);
+    });
+
+    // Create a map of Cover Letters by jobId for quick lookup
+    const coverLetterMap = new Map();
+    coverLetters.forEach(coverLetter => {
+      if (coverLetter.jobId) {
+        coverLetterMap.set(coverLetter.jobId, coverLetter);
       }
     });
 
     // Transform job applications into journeys
     const journeys = jobApplications.map(job => {
-      const linkedCV = cvMap.get(job._id.toString());
+      // Get linked CV using job.cvId
+      const linkedCV = job.cvId ? cvMap.get(job.cvId.toString()) : null;
+      const linkedCoverLetter = coverLetterMap.get(job._id.toString());
       
-      // Determine journey status and current step
+      console.log(`🔍 Journeys API - Processing job ${job._id}:`, {
+        jobTitle: job.jobTitle,
+        company: job.company,
+        cvId: job.cvId,
+        linkedCV: linkedCV ? { id: linkedCV._id, title: linkedCV.title, atsScore: linkedCV.metadata?.atsScore } : null,
+        linkedCoverLetter: linkedCoverLetter ? { id: linkedCoverLetter._id, title: linkedCoverLetter.title } : null
+      });
+      
+      // Determine journey status and current step based on database state
       let status: 'in-progress' | 'completed' = 'in-progress';
-      let currentStep = 1; // Start with step 1 (Add Job)
+      let currentStep = 1;
       let atsScore: number | undefined;
       let cvId: string | undefined;
       let coverLetterId: string | undefined;
@@ -52,39 +80,28 @@ export async function GET(request: NextRequest) {
       // Step 1: Job Added (always true if we have a job application)
       if (job.jobTitle && job.company) {
         currentStep = 1;
-        // For jobs in 'created' stage, ensure they start the journey
-        if (job.status === 'created') {
-          status = 'in-progress';
-          currentStep = 1;
-        }
       }
 
-      // Step 2: CV Created
-      if (linkedCV) {
+      // Step 2: CV Created/Linked (check if job has cvId)
+      if (job.cvId && linkedCV) {
         currentStep = 2;
-        cvId = linkedCV._id.toString();
+        cvId = job.cvId.toString();
         
-        // Check if CV has ATS score data
+        // Step 3: ATS Score Checked (if CV has ATS score data)
         if (linkedCV.metadata?.atsScore) {
           currentStep = 3;
           atsScore = linkedCV.metadata.atsScore;
+          
+          // Step 4: Cover Letter Created (check if cover letter exists for this job)
+          if (linkedCoverLetter) {
+            currentStep = 4;
+            coverLetterId = linkedCoverLetter._id.toString();
+            
+            // Step 5: Download (if all previous steps are complete)
+            currentStep = 5;
+            status = 'completed';
+          }
         }
-      }
-
-      // Step 3: ATS Score Checked (if CV exists and has ATS data)
-      if (linkedCV && linkedCV.metadata?.atsScore) {
-        currentStep = 3;
-        atsScore = linkedCV.metadata.atsScore;
-      }
-
-      // Step 4: Cover Letter Created (check if cover letter exists)
-      // This would need to be implemented when cover letter functionality is added
-      // For now, we'll assume it's not completed
-      
-      // Step 5: Download (if all previous steps are complete)
-      if (currentStep >= 3 && atsScore && atsScore >= 80) {
-        currentStep = 5;
-        status = 'completed';
       }
 
       return {

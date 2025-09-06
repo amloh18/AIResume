@@ -16,6 +16,7 @@ import {
 import AIEnhancedFormField from './AIEnhancedFormField';
 import ATSScoreGauge from '@/components/ui/ATSScoreGauge';
 import JobSelector from './JobSelector';
+import CVParserButton from './CVParserButton';
 import { CVDataStructure } from '@/types/cv';
 import { Job } from '@/lib/stores/jobStore';
 import { useUserPlan } from '@/lib/hooks/useUserPlan';
@@ -225,13 +226,22 @@ export const PersonalInfoSection: React.FC<{
   const { User } = require('lucide-react');
   
   const fields = [
-    { key: 'name', label: 'Full Name', type: 'input' as const, required: true, maxLength: 100 },
-    { key: 'label', label: 'Professional Title', type: 'input' as const, fieldType: 'position', maxLength: 100 },
-    { key: 'email', label: 'Email', type: 'input' as const, required: true, maxLength: 100 },
-    { key: 'phone', label: 'Phone', type: 'input' as const, maxLength: 20 },
+    { key: 'name', label: 'Full Name', type: 'input' as const, required: true, maxLength: 100, placeholder: 'Enter your full name', rows: undefined },
+    { key: 'label', label: 'Professional Title', type: 'input' as const, fieldType: 'position' as const, maxLength: 100, placeholder: 'e.g., Software Engineer', rows: undefined },
+    { key: 'email', label: 'Email', type: 'input' as const, required: true, maxLength: 100, placeholder: 'your.email@example.com', rows: undefined },
+    { key: 'phone', label: 'Phone', type: 'input' as const, maxLength: 20, placeholder: '+1 (555) 123-4567', rows: undefined },
   ];
 
-  const summaryField = { key: 'summary', label: 'Professional Summary', type: 'textarea' as const, fieldType: 'summary', rows: 4, maxLength: 500 };
+  const summaryField = { 
+    key: 'summary', 
+    label: 'Professional Summary', 
+    type: 'textarea' as const, 
+    fieldType: 'summary' as const, 
+    rows: 4, 
+    maxLength: 500, 
+    placeholder: 'Write a brief professional summary...',
+    required: false
+  };
 
   return (
     <EnhancedFormSection
@@ -266,9 +276,28 @@ export const PersonalInfoSection: React.FC<{
               <h3 className="text-lg font-medium text-gray-900 mb-2">Target Job</h3>
               <p className="text-sm text-gray-600 mb-3">Select a job to calculate ATS score</p>
               <JobSelector
-                selectedJobId={selectedJobId}
-                onJobSelection={onJobSelection}
-                userId={userId}
+                selectedJobId={selectedJobId || null}
+                onJobSelection={onJobSelection || (() => {})}
+                userId={userId || ''}
+              />
+            </div>
+
+            {/* CV Parser */}
+            <div className="w-full">
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Quick Fill</h3>
+              <p className="text-sm text-gray-600 mb-3">Upload your existing CV to auto-fill fields</p>
+              <CVParserButton
+                onDataParsed={(parsedData) => {
+                  // Update personal information fields
+                  if (parsedData.basics) {
+                    Object.keys(parsedData.basics).forEach(key => {
+                      if (parsedData.basics[key]) {
+                        onUpdate(key, parsedData.basics[key]);
+                      }
+                    });
+                  }
+                }}
+                className="w-full"
               />
             </div>
           </div>
@@ -287,7 +316,7 @@ export const PersonalInfoSection: React.FC<{
                 required={field.required}
                 disabled={false}
                 maxLength={field.maxLength}
-                rows={field.rows}
+                rows={field.rows || undefined}
                 showCharacterCount={field.maxLength ? true : false}
                 cvData={cvData}
                 jobData={jobData}
@@ -659,7 +688,7 @@ export const LanguagesSection: React.FC<{
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <AIEnhancedFormField
                 type="input"
-                fieldType="languages"
+                fieldType="skills"
                 label="Language"
                 value={language.language || ''}
                 onChange={(value) => onUpdate(`languages.${index}.language`, value)}
@@ -673,7 +702,7 @@ export const LanguagesSection: React.FC<{
 
               <AIEnhancedFormField
                 type="input"
-                fieldType="languages"
+                fieldType="skills"
                 label="Proficiency Level"
                 value={language.fluency || ''}
                 onChange={(value) => onUpdate(`languages.${index}.fluency`, value)}

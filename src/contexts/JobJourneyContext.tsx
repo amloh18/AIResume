@@ -31,6 +31,7 @@ interface JobJourneyContextType {
   updateJourneyStatus: (status: JourneyStatus) => void;
   updateCurrentStep: (step: number) => void;
   updateJobInfo: (jobTitle: string, company: string) => void;
+  updateCurrentJobId: (jobId: string) => void;
   updateAtsScore: (score: number) => void;
   updateCVId: (cvId: string) => void;
   updateCoverLetterId: (coverLetterId: string) => void;
@@ -99,6 +100,7 @@ interface JobJourneyProviderProps {
 
 export const JobJourneyProvider: React.FC<JobJourneyProviderProps> = ({ children }) => {
   const [state, setState] = useState<JobJourneyState>(initialState);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Load journey state from localStorage on mount
   useEffect(() => {
@@ -106,17 +108,22 @@ export const JobJourneyProvider: React.FC<JobJourneyProviderProps> = ({ children
     if (savedState) {
       try {
         const parsedState = JSON.parse(savedState);
+        console.log('🔍 JobJourneyContext - Restored state from localStorage:', parsedState);
         setState(parsedState);
       } catch (error) {
         console.error('Error parsing saved journey state:', error);
       }
     }
+    setIsInitialized(true);
   }, []);
 
-  // Save journey state to localStorage whenever it changes
+  // Save journey state to localStorage whenever it changes (only after initialization)
   useEffect(() => {
-    localStorage.setItem('jobJourneyState', JSON.stringify(state));
-  }, [state]);
+    if (isInitialized) {
+      localStorage.setItem('jobJourneyState', JSON.stringify(state));
+      console.log('🔍 JobJourneyContext - Saved state to localStorage:', state);
+    }
+  }, [state, isInitialized]);
 
   const startJourney = useCallback((jobId: string) => {
     console.log('🔍 JobJourneyContext - startJourney called with jobId:', jobId);
@@ -214,6 +221,15 @@ export const JobJourneyProvider: React.FC<JobJourneyProviderProps> = ({ children
     }));
   }, []);
 
+  const updateCurrentJobId = useCallback((jobId: string) => {
+    console.log('🔍 JobJourneyContext - updateCurrentJobId called:', jobId);
+    setState(prev => ({
+      ...prev,
+      currentJobId: jobId,
+      isJourneyActive: true
+    }));
+  }, []);
+
   const updateAtsScore = useCallback((score: number) => {
     setState(prev => ({
       ...prev,
@@ -247,6 +263,7 @@ export const JobJourneyProvider: React.FC<JobJourneyProviderProps> = ({ children
     updateJourneyStatus,
     updateCurrentStep,
     updateJobInfo,
+    updateCurrentJobId,
     updateAtsScore,
     updateCVId,
     updateCoverLetterId,
@@ -258,6 +275,7 @@ export const JobJourneyProvider: React.FC<JobJourneyProviderProps> = ({ children
     updateJourneyStatus,
     updateCurrentStep,
     updateJobInfo,
+    updateCurrentJobId,
     updateAtsScore,
     updateCVId,
     updateCoverLetterId,

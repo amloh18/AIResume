@@ -1,40 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/database';
-import CoverLetter from '@/models/CoverLetter';
-
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    await connectDB();
-    
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-    const resolvedParams = await params;
-    
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
-    }
-
-    const coverLetter = await CoverLetter.findOne({
-      _id: resolvedParams.id,
-      userId: userId
-    });
-
-    if (!coverLetter) {
-      return NextResponse.json({ error: 'Cover letter not found' }, { status: 404 });
-    }
-
-    return NextResponse.json(coverLetter);
-  } catch (error) {
-    console.error('Error fetching cover letter:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch cover letter' },
-      { status: 500 }
-    );
-  }
-}
+import { CoverLetter } from '@/models';
 
 export async function PUT(
   request: NextRequest,
@@ -42,72 +8,48 @@ export async function PUT(
 ) {
   try {
     await connectDB();
-    
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-    const resolvedParams = await params;
-    
+    const { id } = await params;
+    const body = await request.json();
+    const { jobId, userId } = body;
+
     if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: 'User ID is required' },
+        { status: 400 }
+      );
     }
 
-    const body = await request.json();
-
-    const coverLetter = await CoverLetter.findOneAndUpdate(
-      {
-        _id: resolvedParams.id,
-        userId: userId
-      },
-      {
-        ...body,
-        updatedAt: new Date()
+    // Update the cover letter with the job ID
+    const updatedCoverLetter = await CoverLetter.findByIdAndUpdate(
+      id,
+      { 
+        jobId: jobId,
+        'metadata.lastModified': new Date()
       },
       { new: true }
     );
 
-    if (!coverLetter) {
-      return NextResponse.json({ error: 'Cover letter not found' }, { status: 404 });
+    if (!updatedCoverLetter) {
+      return NextResponse.json(
+        { success: false, error: 'Cover letter not found' },
+        { status: 404 }
+      );
     }
 
-    return NextResponse.json(coverLetter);
-  } catch (error) {
-    console.error('Error updating cover letter:', error);
-    return NextResponse.json(
-      { error: 'Failed to update cover letter' },
-      { status: 500 }
-    );
-  }
-}
+    console.log('✅ Cover letter linked to job:', { coverLetterId: id, jobId });
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    await connectDB();
-    
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-    const resolvedParams = await params;
-    
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
-    }
-
-    const coverLetter = await CoverLetter.findOneAndDelete({
-      _id: resolvedParams.id,
-      userId: userId
+    return NextResponse.json({
+      success: true,
+      data: updatedCoverLetter
     });
 
-    if (!coverLetter) {
-      return NextResponse.json({ error: 'Cover letter not found' }, { status: 404 });
-    }
-
-    return NextResponse.json({ message: 'Cover letter deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting cover letter:', error);
+  } catch (error: any) {
+    console.error('Error updating cover letter:', error);
     return NextResponse.json(
-      { error: 'Failed to delete cover letter' },
+      { 
+        success: false, 
+        error: error.message || 'Failed to update cover letter' 
+      },
       { status: 500 }
     );
   }

@@ -76,6 +76,8 @@ export default function ATSScoreAnalyzer({
       cvData.work.forEach((job: any) => {
         if (job.name) cvText += `Company: ${job.name}\n`;
         if (job.position) cvText += `Position: ${job.position}\n`;
+        if (job.startDate) cvText += `Start Date: ${job.startDate}\n`;
+        if (job.endDate) cvText += `End Date: ${job.endDate}\n`;
         if (job.summary) cvText += `Description: ${job.summary}\n`;
         if (job.highlights && Array.isArray(job.highlights)) {
           job.highlights.forEach((highlight: string) => {

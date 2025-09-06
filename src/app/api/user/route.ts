@@ -109,7 +109,7 @@ export async function PUT(request: NextRequest) {
     await connectDB();
 
     const body = await request.json();
-    const { firstName, lastName, avatar, settings } = body;
+    const { firstName, lastName, avatar, phone, location, website, linkedin, github, summary, settings } = body;
 
     // Find user
     const user = await User.findOne({ email: userEmail });
@@ -124,9 +124,52 @@ export async function PUT(request: NextRequest) {
     if (firstName !== undefined) user.firstName = firstName;
     if (lastName !== undefined) user.lastName = lastName;
     if (avatar !== undefined) user.avatar = avatar;
-    if (settings !== undefined) user.settings = { ...user.settings, ...settings };
+    
+    // Update profile fields
+    if (phone !== undefined) user.phone = phone;
+    if (location !== undefined) user.location = location;
+    if (website !== undefined) user.website = website;
+    if (linkedin !== undefined) user.linkedin = linkedin;
+    if (github !== undefined) user.github = github;
+    if (summary !== undefined) user.summary = summary;
+    
+    // Update settings
+    if (settings !== undefined) {
+      // Merge settings while preserving existing structure
+      user.settings = {
+        ...user.settings,
+        ...settings,
+        notifications: {
+          ...user.settings.notifications,
+          ...(settings.notifications || {})
+        }
+      };
+    }
 
-    await user.save();
+    console.log('User before save:', {
+      firstName: user.firstName,
+      lastName: user.lastName,
+      settings: user.settings
+    });
+
+    try {
+      await user.save();
+      console.log('User saved successfully');
+    } catch (saveError) {
+      console.error('Save error:', saveError);
+      // Check if it's a validation error
+      if (saveError.name === 'ValidationError') {
+        const errors = Object.values(saveError.errors).map((err: any) => err.message);
+        return NextResponse.json(
+          { success: false, error: 'Validation failed', details: errors },
+          { status: 400 }
+        );
+      }
+      return NextResponse.json(
+        { success: false, error: 'Failed to save user', details: saveError.message },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,

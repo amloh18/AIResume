@@ -112,10 +112,11 @@ export const getPageBackground = (pageType: 'dashboard' | 'studio' | 'admin' | '
 export const getSidebarClasses = (isOpen: boolean = true) => ({
   container: `
     fixed lg:sticky top-0 z-50 h-screen pt-8 xl:pt-4
-    bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-r border-gray-200 dark:border-gray-700
+    bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border border-gray-200 dark:border-gray-700
     transition-all duration-300 ease-in-out
     ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
     w-72 lg:w-16 xl:w-72
+    rounded-lg m-[5px]
   `,
   logo: 'text-lime-600 dark:text-lime-400',
   navItem: 'text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white',

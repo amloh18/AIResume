@@ -38,6 +38,18 @@ interface User {
     interval: string;
   };
   createdAt: string;
+  // Profile information
+  phone?: string;
+  location?: string;
+  website?: string;
+  linkedin?: string;
+  github?: string;
+  summary?: string;
+  // Settings information
+  company?: string;
+  timezone?: string;
+  languagePreference?: string;
+  // Admin tracking fields
   lastLogin?: string;
   region?: string;
 }
@@ -210,11 +222,11 @@ const UserManagement: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
-          <p className="text-gray-600">Manage user accounts and subscriptions</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">User Management</h1>
+          <p className="text-gray-600 dark:text-gray-300">Manage user accounts and subscriptions</p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600">
+          <span className="text-sm text-gray-600 dark:text-gray-300">
             {filteredUsers.length} of {users.length} users
           </span>
         </div>
@@ -230,14 +242,14 @@ const UserManagement: React.FC = () => {
               placeholder="Search users..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
         </div>
         <select
           value={filterRole}
           onChange={(e) => setFilterRole(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         >
           <option value="all">All Roles</option>
           <option value="user">User</option>
@@ -246,7 +258,7 @@ const UserManagement: React.FC = () => {
         <select
           value={filterPlan}
           onChange={(e) => setFilterPlan(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         >
           <option value="all">All Plans</option>
           <option value="free">Free</option>
@@ -258,63 +270,63 @@ const UserManagement: React.FC = () => {
       </div>
 
       {/* Users Table */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   User
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Current Plan
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Provider
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Next Renewal/Expiry
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Region
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {filteredUsers.map((user) => (
-                <tr key={user._id} className="hover:bg-gray-50">
+                <tr key={user._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="flex-shrink-0 h-10 w-10">
-                        <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-                          <span className="text-sm font-medium text-gray-700">
+                        <div className="h-10 w-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
                             {user.firstName.charAt(0)}{user.lastName.charAt(0)}
                           </span>
                         </div>
                       </div>
                       <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">
                           {user.firstName} {user.lastName}
                         </div>
-                        <div className="text-sm text-gray-500">{user.email}</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-300">{user.email}</div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
                       {getPlanDisplayName(user.currentPlanKey)}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-2">
                       {getProviderIcon(user.subscription?.provider || 'none')}
-                      <span className="text-sm text-gray-900 capitalize">
+                      <span className="text-sm text-gray-900 dark:text-white capitalize">
                         {user.subscription?.provider || 'none'}
                       </span>
                     </div>
@@ -322,18 +334,18 @@ const UserManagement: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-2">
                       {getStatusIcon(user.subscription?.status || 'inactive')}
-                      <span className="text-sm text-gray-900 capitalize">
+                      <span className="text-sm text-gray-900 dark:text-white capitalize">
                         {user.subscription?.status || 'inactive'}
                       </span>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                     {formatDate(user.subscription?.currentPeriodEnd || '')}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-2">
-                      <Globe size={14} className="text-gray-600" />
-                      <span className="text-sm text-gray-900">
+                      <Globe size={14} className="text-gray-600 dark:text-gray-400" />
+                      <span className="text-sm text-gray-900 dark:text-white">
                         {user.region || 'Unknown'}
                       </span>
                     </div>

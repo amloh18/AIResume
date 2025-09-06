@@ -17,6 +17,25 @@ export interface IUser extends Document {
   resetPasswordExpires?: Date;
   currentPlanKey: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly';
   monthlyGoal?: number; // Monthly job application goal
+  // Usage tracking for limits enforcement
+  usage: {
+    cvJourneyCount: number; // Total CV journeys completed
+    cvCreatedCount: number; // Total CVs created
+    exportCount: number; // Total exports/downloads
+    atsCheckCount: number; // Total ATS checks performed
+    lastResetDate: Date; // Last time usage was reset (for day pass)
+    deviceFingerprint?: string; // Device identifier for tracking
+  };
+  // Profile information from onboarding
+  phone?: string;
+  location?: string;
+  website?: string;
+  linkedin?: string;
+  github?: string;
+  summary?: string;
+  // Admin tracking fields
+  lastLogin?: Date;
+  region?: string;
   subscription: {
     planKey: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly';
     status: 'active' | 'inactive' | 'cancelled' | 'expired';
@@ -37,6 +56,14 @@ export interface IUser extends Document {
       email: boolean;
       push: boolean;
     };
+    // Additional profile settings
+    company?: string;
+    address?: string;
+    timezone?: string;
+    languagePreference?: string;
+    dateOfBirth?: string;
+    gender?: string;
+    nationality?: string;
   };
   createdAt: Date;
   updatedAt: Date;
@@ -111,6 +138,78 @@ const userSchema = new Schema<IUser>({
     min: 1,
     max: 100
   },
+  // Usage tracking for limits enforcement
+  usage: {
+    cvJourneyCount: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    cvCreatedCount: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    exportCount: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    atsCheckCount: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    lastResetDate: {
+      type: Date,
+      default: Date.now
+    },
+    deviceFingerprint: {
+      type: String,
+      trim: true
+    }
+  },
+  // Profile information from onboarding
+  phone: {
+    type: String,
+    trim: true,
+    maxlength: [20, 'Phone number cannot exceed 20 characters']
+  },
+  location: {
+    type: String,
+    trim: true,
+    maxlength: [100, 'Location cannot exceed 100 characters']
+  },
+  website: {
+    type: String,
+    trim: true,
+    maxlength: [200, 'Website URL cannot exceed 200 characters']
+  },
+  linkedin: {
+    type: String,
+    trim: true,
+    maxlength: [200, 'LinkedIn URL cannot exceed 200 characters']
+  },
+  github: {
+    type: String,
+    trim: true,
+    maxlength: [200, 'GitHub URL cannot exceed 200 characters']
+  },
+  summary: {
+    type: String,
+    trim: true,
+    maxlength: [1000, 'Summary cannot exceed 1000 characters']
+  },
+  // Admin tracking fields
+  lastLogin: {
+    type: Date,
+    default: null
+  },
+  region: {
+    type: String,
+    trim: true,
+    maxlength: [100, 'Region cannot exceed 100 characters']
+  },
   subscription: {
     planKey: {
       type: String,
@@ -165,6 +264,46 @@ const userSchema = new Schema<IUser>({
         type: Boolean,
         default: true
       }
+    },
+    // Additional profile settings
+    phone: {
+      type: String,
+      trim: true,
+      maxlength: [20, 'Phone number cannot exceed 20 characters']
+    },
+    company: {
+      type: String,
+      trim: true,
+      maxlength: [100, 'Company name cannot exceed 100 characters']
+    },
+    address: {
+      type: String,
+      trim: true,
+      maxlength: [200, 'Address cannot exceed 200 characters']
+    },
+    timezone: {
+      type: String,
+      trim: true,
+      default: 'UTC +07:00 - Asia / Jakarta'
+    },
+    languagePreference: {
+      type: String,
+      trim: true,
+      default: 'English'
+    },
+    dateOfBirth: {
+      type: String,
+      trim: true
+    },
+    gender: {
+      type: String,
+      trim: true,
+      enum: ['male', 'female', 'other', 'prefer-not-to-say']
+    },
+    nationality: {
+      type: String,
+      trim: true,
+      maxlength: [50, 'Nationality cannot exceed 50 characters']
     }
   }
 }, {

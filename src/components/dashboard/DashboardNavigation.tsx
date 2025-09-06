@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { signOut, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
@@ -49,9 +49,38 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
   const { data: session } = useSession();
   const router = useRouter();
   const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const [subscription, setSubscription] = useState<any>(null);
+  const [cvJourneyCount, setCvJourneyCount] = useState(0);
   
   // Check if user is admin
   const isAdmin = (session as any)?.user?.role === 'admin';
+
+  // Fetch subscription data and CV journey count
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (!session?.user?.email) return;
+      
+      try {
+        // Fetch subscription data
+        const subscriptionResponse = await fetch('/api/user/subscription');
+        if (subscriptionResponse.ok) {
+          const subscriptionData = await subscriptionResponse.json();
+          setSubscription(subscriptionData.subscription);
+        }
+
+        // Fetch CV journey count (completed CVs)
+        const cvsResponse = await fetch(`/api/cvs?userId=${user.id}&type=cv`);
+        if (cvsResponse.ok) {
+          const cvsData = await cvsResponse.json();
+          setCvJourneyCount(cvsData.cvs?.length || 0);
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
+    };
+
+    fetchUserData();
+  }, [session, user.id]);
 
   const sections = [
     { id: 'analytics', name: 'Analytics', icon: BarChart3, description: 'Progress Tracking' },
@@ -261,7 +290,7 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
                 </div>
               </div>
               
-              {user.subscription?.planName === 'Pro' || user.subscription?.planName === 'Premium' || user.subscription?.planName === 'Professional' || user.subscription?.planName === 'Pro Monthly' || user.subscription?.planName === 'Pro Quarterly' || user.subscription?.planName === 'Pro Yearly' ? (
+              {subscription?.planKey && subscription.planKey !== 'free' ? (
                 // Premium User Content
                 <>
                   <div className="text-sm opacity-90">
@@ -280,6 +309,10 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
                     <div className="flex items-center gap-2 text-sm">
                       <span className="text-green-300">✓</span>
                       <span>ATS Optimization</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="text-blue-300">📊</span>
+                      <span>{cvJourneyCount} CV Journey{cvJourneyCount !== 1 ? 's' : ''} Completed</span>
                     </div>
                   </div>
                   
@@ -319,7 +352,7 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        onMembershipClick();
+                        router.push('/dashboard/settings?tab=membership');
                       }}
                       className="flex-1 bg-white/20 hover:bg-white/30 text-sm py-2 rounded-lg transition-colors"
                     >

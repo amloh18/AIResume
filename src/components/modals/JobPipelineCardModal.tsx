@@ -24,12 +24,15 @@ import {
 import { useJobJourney } from '@/contexts/JobJourneyContext';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import { useUserPlan } from '@/lib/hooks/useUserPlan';
+import ATSScoreAnalyzer from '@/components/studio/ATSScoreAnalyzer';
 import AddJobModal from './AddJobModal';
 
 interface JobPipelineCardModalProps {
   isOpen: boolean;
   onClose: () => void;
   jobId: string | null;
+  onJourneyUpdated?: () => void; // Callback to refresh journey data
 }
 
 interface CV {
@@ -38,6 +41,11 @@ interface CV {
   status: string;
   lastModified: string;
   completionPercentage?: number;
+  metadata?: {
+    atsScore?: number;
+    atsScoreDate?: Date;
+    atsScoreJobId?: string;
+  };
 }
 
 interface CoverLetter {
@@ -45,12 +53,14 @@ interface CoverLetter {
   title: string;
   status: string;
   lastModified: string;
+  jobId?: string;
 }
 
-const JobPipelineCardModal: React.FC<JobPipelineCardModalProps> = ({ isOpen, onClose, jobId }) => {
+const JobPipelineCardModal: React.FC<JobPipelineCardModalProps> = ({ isOpen, onClose, jobId, onJourneyUpdated }) => {
   const router = useRouter();
   const { data: session } = useSession();
-  const { state, updateJourneyStatus, updateJobInfo, updateCurrentStep, updateCVId, updateCoverLetterId } = useJobJourney();
+  const { state, updateJourneyStatus, updateJobInfo, updateCurrentStep, updateCVId, updateCoverLetterId, updateAtsScore, updateCurrentJobId, endJourney } = useJobJourney();
+  const { hasAI } = useUserPlan();
   const [showAddJobModal, setShowAddJobModal] = useState(false);
   const [jobData, setJobData] = useState<any>(null);
   const [isLoadingJob, setIsLoadingJob] = useState(false);
@@ -137,18 +147,149 @@ const JobPipelineCardModal: React.FC<JobPipelineCardModalProps> = ({ isOpen, onC
       fetchJobData(jobId);
     } else if (!jobId || jobId === 'temp') {
       setJobData(null);
+      // Reset CV selection state for new journeys
+      setSelectedCV(null);
+      setCvSelectionSuccess(false);
     }
   }, [jobId, session?.user?.id]);
 
-  useEffect(() => {
-    if (jobId && jobId !== 'temp') {
-      updateCurrentStep(2);
-      updateJourneyStatus('job-added');
-    } else {
+  // Fetch journey state from database and restore complete state
+  const fetchJourneyStateFromDatabase = async (jobId: string, availableCVs: CV[] = []) => {
+    try {
+      const userId = session?.user?.id;
+      if (!userId) return;
+
+      console.log('🔍 JobPipelineCardModal - Fetching journey state from database for jobId:', jobId);
+      
+      // Fetch the specific journey from the database
+      const response = await fetch(`/api/journeys?userId=${userId}&jobId=${jobId}`);
+      if (!response.ok) {
+        console.error('❌ Failed to fetch journey state from database');
+        return;
+      }
+
+      const journeyData = await response.json();
+      console.log('🔍 JobPipelineCardModal - Journey data from database:', journeyData);
+
+      if (journeyData.success && journeyData.data?.journeys?.length > 0) {
+        const journey = journeyData.data.journeys[0];
+        console.log('🔍 JobPipelineCardModal - Found journey in database:', {
+          id: journey.id,
+          currentStep: journey.currentStep,
+          status: journey.status,
+          cvId: journey.cvId,
+          atsScore: journey.atsScore,
+          coverLetterId: journey.coverLetterId
+        });
+
+        // Update the journey context with database state
+        updateCurrentJobId(jobId);
+        updateJobInfo(journey.jobTitle, journey.company);
+        updateCurrentStep(journey.currentStep);
+        updateJourneyStatus(journey.status === 'completed' ? 'completed' : 'job-added');
+
+        // Set local state based on database state
+        setJobSelectionSuccess(true);
+
+        // Restore CV state if linked - try both userCVs and passed availableCVs
+        if (journey.cvId) {
+          let linkedCV = userCVs.find(cv => cv.id === journey.cvId);
+          if (!linkedCV && availableCVs.length > 0) {
+            linkedCV = availableCVs.find(cv => cv.id === journey.cvId);
+          }
+          
+          if (linkedCV) {
+            setSelectedCV(linkedCV);
+            setCvSelectionSuccess(true);
+            updateCVId(journey.cvId);
+            console.log('🔍 JobPipelineCardModal - Restored CV from database:', linkedCV.title);
+            
+            // Check if CV has ATS score for this job in metadata (priority over journey ATS score)
+            if (linkedCV.metadata?.atsScore && linkedCV.metadata?.atsScoreJobId === jobId) {
+              setAtsScore(linkedCV.metadata.atsScore);
+              updateAtsScore(linkedCV.metadata.atsScore);
+              console.log('🔍 JobPipelineCardModal - Restored ATS score from CV metadata (priority):', linkedCV.metadata.atsScore);
+            } else if (journey.atsScore && !atsScore) {
+              // Fallback to journey ATS score if CV doesn't have metadata for this job
+              setAtsScore(journey.atsScore);
+              updateAtsScore(journey.atsScore);
+              console.log('🔍 JobPipelineCardModal - Restored ATS score from journey (fallback):', journey.atsScore);
+            }
+          } else {
+            // CV exists in database but not loaded yet - mark as selected
+            setCvSelectionSuccess(true);
+            updateCVId(journey.cvId);
+            console.log('🔍 JobPipelineCardModal - CV linked in database but not found in local arrays:', journey.cvId);
+            
+            // Still restore ATS score from journey if available
+            if (journey.atsScore && !atsScore) {
+              setAtsScore(journey.atsScore);
+              updateAtsScore(journey.atsScore);
+              console.log('🔍 JobPipelineCardModal - Restored ATS score from journey (CV not found locally):', journey.atsScore);
+            }
+          }
+        }
+
+        // This is now handled in the CV restoration section above to avoid overriding CV metadata scores
+
+        // Restore cover letter if linked
+        if (journey.coverLetterId) {
+          updateCoverLetterId(journey.coverLetterId);
+          console.log('🔍 JobPipelineCardModal - Restored cover letter from database:', journey.coverLetterId);
+        }
+
+        console.log('✅ JobPipelineCardModal - Successfully restored journey state from database');
+        return true; // Indicate successful restoration
+      } else {
+        console.log('🔍 JobPipelineCardModal - No journey found in database, initializing new journey');
+        updateCurrentStep(1);
+        updateJourneyStatus('onboarding');
+        setJobSelectionSuccess(false);
+        setSelectedCV(null);
+        setCvSelectionSuccess(false);
+        setAtsScore(null);
+        setAtsKeywords([]);
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ Error fetching journey state from database:', error);
+      // Fallback to default state
       updateCurrentStep(1);
       updateJourneyStatus('onboarding');
+      setJobSelectionSuccess(false);
+      setSelectedCV(null);
+      setCvSelectionSuccess(false);
+      setAtsScore(null);
+      setAtsKeywords([]);
+      return false;
     }
-  }, [jobId, updateCurrentStep, updateJourneyStatus]);
+  };
+
+  // Initialize modal state - separate from CV loading to avoid race conditions
+  useEffect(() => {
+    if (jobId && jobId !== 'temp' && session?.user?.id) {
+      console.log('🔍 JobPipelineCardModal - Initialized with existing job:', jobId);
+      // Try to fetch journey state immediately, then again when CVs are loaded
+      fetchJourneyStateFromDatabase(jobId, userCVs);
+    } else if (jobId === 'temp') {
+      console.log('🔍 JobPipelineCardModal - Initialized with new journey');
+      updateCurrentStep(1);
+      updateJourneyStatus('onboarding');
+      setJobSelectionSuccess(false);
+      setSelectedCV(null);
+      setCvSelectionSuccess(false);
+      setAtsScore(null);
+      setAtsKeywords([]);
+    }
+  }, [jobId, session?.user?.id]);
+
+  // Re-fetch journey state when CVs are loaded to restore CV and ATS data
+  useEffect(() => {
+    if (jobId && jobId !== 'temp' && userCVs.length > 0 && session?.user?.id) {
+      console.log('🔍 JobPipelineCardModal - CVs loaded, re-fetching journey state to restore CV data');
+      fetchJourneyStateFromDatabase(jobId, userCVs);
+    }
+  }, [userCVs.length, jobId, session?.user?.id]);
 
   useEffect(() => {
     if (session?.user?.id) {
@@ -157,24 +298,165 @@ const JobPipelineCardModal: React.FC<JobPipelineCardModalProps> = ({ isOpen, onC
     }
   }, [session?.user?.id]);
 
+  // Check if there's a CV already linked from the journey context
+  useEffect(() => {
+    if (state.cvId && userCVs.length > 0) {
+      const linkedCV = userCVs.find(cv => cv.id === state.cvId);
+      if (linkedCV && !selectedCV) {
+        setSelectedCV(linkedCV);
+        setCvSelectionSuccess(true);
+        console.log('🔍 JobPipelineCardModal - Restored CV from journey context:', linkedCV.title);
+        
+        // Also check for ATS score in CV metadata for this job
+        if (linkedCV.metadata?.atsScore && linkedCV.metadata?.atsScoreJobId === jobId && !atsScore) {
+          setAtsScore(linkedCV.metadata.atsScore);
+          updateAtsScore(linkedCV.metadata.atsScore);
+          console.log('🔍 JobPipelineCardModal - Restored ATS score from CV metadata:', linkedCV.metadata.atsScore);
+        }
+      }
+    }
+  }, [state.cvId, userCVs, selectedCV, jobId, atsScore]);
+
+  // Debug CV restoration
+  useEffect(() => {
+    console.log('🔍 JobPipelineCardModal - CV State Debug:', {
+      cvSelectionSuccess,
+      selectedCV: selectedCV ? selectedCV.title : null,
+      jobDataCvId: jobData?.cvId,
+      stateCvId: state.cvId,
+      userCVsCount: userCVs.length,
+      currentStep
+    });
+  }, [cvSelectionSuccess, selectedCV, jobData?.cvId, state.cvId, userCVs.length, currentStep]);
+
+  // Sync local state with journey context state
+  useEffect(() => {
+    console.log('🔍 JobPipelineCardModal - State Sync Debug:', {
+      stateCvId: state.cvId,
+      stateAtsScore: state.atsScore,
+      stateCoverLetterId: state.coverLetterId,
+      stateCurrentJobId: state.currentJobId,
+      stateCurrentStep: state.currentStep,
+      localAtsScore: atsScore,
+      localSelectedCV: selectedCV ? selectedCV.title : null,
+      localCvSelectionSuccess: cvSelectionSuccess
+    });
+
+    // Sync ATS score from journey context if not already set
+    if (state.atsScore !== null && atsScore === null) {
+      setAtsScore(state.atsScore);
+      console.log('🔍 JobPipelineCardModal - Synced ATS score from journey context:', state.atsScore);
+    }
+
+    // Sync CV selection from journey context
+    if (state.cvId && !selectedCV && userCVs.length > 0) {
+      const linkedCV = userCVs.find(cv => cv.id === state.cvId);
+      if (linkedCV) {
+        setSelectedCV(linkedCV);
+        setCvSelectionSuccess(true);
+        console.log('🔍 JobPipelineCardModal - Synced CV selection from journey context:', linkedCV.title);
+        
+        // Also check for ATS score in CV metadata
+        if (linkedCV.metadata?.atsScore && linkedCV.metadata?.atsScoreJobId === jobId && !atsScore) {
+          setAtsScore(linkedCV.metadata.atsScore);
+          updateAtsScore(linkedCV.metadata.atsScore);
+          console.log('🔍 JobPipelineCardModal - Synced ATS score from CV metadata:', linkedCV.metadata.atsScore);
+        }
+      }
+    }
+  }, [state.cvId, state.atsScore, state.coverLetterId, state.currentJobId, state.currentStep, atsScore, selectedCV, cvSelectionSuccess, userCVs, jobId]);
+
+  // Additional state restoration when userCVs are loaded
+  useEffect(() => {
+    if (userCVs.length > 0 && state.cvId && !selectedCV) {
+      console.log('🔍 JobPipelineCardModal - Additional CV restoration attempt:', {
+        stateCvId: state.cvId,
+        userCVsCount: userCVs.length,
+        selectedCV: selectedCV ? selectedCV.title : null
+      });
+      
+      const linkedCV = userCVs.find(cv => cv.id === state.cvId);
+      if (linkedCV) {
+        setSelectedCV(linkedCV);
+        setCvSelectionSuccess(true);
+        console.log('🔍 JobPipelineCardModal - Additional CV restoration successful:', linkedCV.title);
+        
+        // Check for ATS score in CV metadata
+        if (linkedCV.metadata?.atsScore && linkedCV.metadata?.atsScoreJobId === jobId && !atsScore) {
+          setAtsScore(linkedCV.metadata.atsScore);
+          updateAtsScore(linkedCV.metadata.atsScore);
+          console.log('🔍 JobPipelineCardModal - Restored ATS score from additional CV restoration:', linkedCV.metadata.atsScore);
+        }
+      } else {
+        console.log('🔍 JobPipelineCardModal - CV not found in userCVs:', state.cvId);
+      }
+    }
+  }, [userCVs, state.cvId, selectedCV, jobId, atsScore]);
+
+  // Monitor step 5 completion and mark journey as completed
+  useEffect(() => {
+    if (currentStep === 5) {
+      const step5Status = getStepStatus(5);
+      if (step5Status === 'completed') {
+        console.log('🔍 JobPipelineCardModal - Step 5 completed, marking journey as completed');
+        endJourney();
+        updateJourneyStatus('completed');
+        // Notify parent components that journey has been updated
+        if (onJourneyUpdated) {
+          onJourneyUpdated();
+        }
+      }
+    }
+  }, [currentStep, jobData, selectedCV, cvSelectionSuccess, atsScore, state.atsScore, state.coverLetterId, userCoverLetters, jobId, endJourney, updateJourneyStatus, onJourneyUpdated]);
+
+  // Notify parent when modal is closed after significant changes
+  useEffect(() => {
+    if (!isOpen && onJourneyUpdated) {
+      // Small delay to ensure all state updates are complete
+      const timeoutId = setTimeout(() => {
+        onJourneyUpdated();
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isOpen, onJourneyUpdated]);
+
+  // Check if there's a job already linked from the journey context
+  useEffect(() => {
+    if (state.currentJobId && availableJobs.length > 0 && !jobData) {
+      const linkedJob = availableJobs.find(job => (job._id || job.id) === state.currentJobId);
+      if (linkedJob) {
+        setJobData(linkedJob);
+        setJobSelectionSuccess(true);
+        updateJobInfo(linkedJob.jobTitle || linkedJob.title, linkedJob.company);
+        console.log('🔍 JobPipelineCardModal - Restored job from journey context:', linkedJob.jobTitle || linkedJob.title);
+      }
+    }
+  }, [state.currentJobId, availableJobs, jobData]);
+
   const fetchJobData = async (jobId: string) => {
     try {
       setIsLoadingJob(true);
       const userId = session?.user?.id;
       if (!userId) throw new Error('User not authenticated');
       
-      const response = await fetch(`/api/jobs?userId=${userId}&jobId=${jobId}`);
+      console.log('🔍 JobPipelineCardModal - Fetching job data:', { jobId, userId });
+      
+      // Use the individual job endpoint to get complete job data including cvId
+      const response = await fetch(`/api/jobs/${jobId}?userId=${userId}`);
       if (!response.ok) throw new Error('Failed to fetch job data');
       
       const responseData = await response.json();
-      let jobData;
-      if (responseData.data?.jobs) {
-        jobData = responseData.data.jobs.find((job: any) => job.id === jobId || job._id === jobId);
-      } else {
-        jobData = responseData.job || responseData;
-      }
+      const jobData = responseData.job;
       
       if (!jobData) throw new Error('Job not found');
+      
+      console.log('🔍 JobPipelineCardModal - Job data fetched:', {
+        id: jobData.id,
+        title: jobData.title || jobData.jobTitle,
+        company: jobData.company,
+        cvId: jobData.cvId
+      });
       
       setJobData(jobData);
       updateJobInfo(jobData.title || jobData.jobTitle, jobData.company);
@@ -199,22 +481,33 @@ const JobPipelineCardModal: React.FC<JobPipelineCardModalProps> = ({ isOpen, onC
       const userId = session?.user?.id;
       if (!userId) return;
 
-      // Load CVs
+      console.log('🔍 JobPipelineCardModal - Loading user documents for userId:', userId);
+
+      // Load CVs with metadata (including ATS scores)
       const cvResponse = await fetch(`/api/cvs?userId=${userId}&type=cv`);
       if (cvResponse.ok) {
         const cvData = await cvResponse.json();
         if (cvData.success) {
-          setUserCVs(cvData.data.cvs || []);
+          const cvs = cvData.data.cvs || [];
+          console.log('🔍 JobPipelineCardModal - Loaded CVs:', cvs.length, 'CVs with metadata');
+          setUserCVs(cvs);
         }
       }
 
       // Load Cover Letters
-      const coverResponse = await fetch(`/api/cvs?userId=${userId}&type=cover`);
+      console.log('🔍 JobPipelineCardModal - Fetching cover letters for userId:', userId);
+      const coverResponse = await fetch(`/api/cover-letters?userId=${userId}`);
       if (coverResponse.ok) {
         const coverData = await coverResponse.json();
+        console.log('🔍 JobPipelineCardModal - Cover letter response:', coverData);
         if (coverData.success) {
-          setUserCoverLetters(coverData.data.cvs || []);
+          setUserCoverLetters(coverData.data.coverLetters || []);
+          console.log('🔍 JobPipelineCardModal - Set cover letters:', coverData.data.coverLetters?.length || 0);
+        } else {
+          console.error('❌ JobPipelineCardModal - Cover letter fetch failed:', coverData.message);
         }
+      } else {
+        console.error('❌ JobPipelineCardModal - Cover letter API request failed:', coverResponse.status);
       }
     } catch (error) {
       console.error('Error loading user documents:', error);
@@ -240,7 +533,8 @@ const JobPipelineCardModal: React.FC<JobPipelineCardModalProps> = ({ isOpen, onC
   };
 
   const handleStepClick = (stepId: number) => {
-    if (stepId <= currentStep) {
+    const status = getStepStatus(stepId);
+    if (status === 'completed' || status === 'active') {
       updateCurrentStep(stepId);
     }
   };
@@ -295,6 +589,8 @@ const JobPipelineCardModal: React.FC<JobPipelineCardModalProps> = ({ isOpen, onC
       const userId = session?.user?.id;
       if (!userId) return;
 
+      console.log('🔍 JobPipelineCardModal - Selecting job:', selectedJob);
+
       // Update local state and journey
       setJobData(selectedJob);
       updateJobInfo(selectedJob.title || selectedJob.jobTitle, selectedJob.company);
@@ -305,11 +601,16 @@ const JobPipelineCardModal: React.FC<JobPipelineCardModalProps> = ({ isOpen, onC
       // Move to next step (Step 2: CV Creation)
       updateCurrentStep(2);
       
-      // Update URL with job ID
+      // Update the journey context with the selected job ID FIRST
       const jobId = selectedJob._id || selectedJob.id;
       if (jobId) {
+        updateCurrentJobId(jobId);
+        
+        // Update URL with job ID to maintain state
         const newUrl = `/dashboard/cv-journey?jobId=${jobId}`;
         router.replace(newUrl);
+        console.log('🔍 JobPipelineCardModal - Updated URL with jobId:', jobId);
+        console.log('🔍 JobPipelineCardModal - Job selected successfully, moving to step 2');
       }
     } catch (error) {
       console.error('Error selecting job and moving to next step:', error);
@@ -327,12 +628,51 @@ const JobPipelineCardModal: React.FC<JobPipelineCardModalProps> = ({ isOpen, onC
   const handleATSCheck = async () => {
     setIsRunningATSCheck(true);
     try {
-      // Simulate ATS check - in real implementation, this would call the ATS API
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      const mockScore = Math.floor(Math.random() * 40) + 60; // 60-100
-      const mockKeywords = ['project management', 'data analysis', 'agile', 'scrum', 'javascript'];
-      setAtsScore(mockScore);
-      setAtsKeywords(mockKeywords);
+      if (!selectedCV || !jobData) {
+        console.error('❌ Missing CV or Job data for ATS check');
+        return;
+      }
+
+      console.log('🔍 JobPipelineCardModal - Running ATS check:', {
+        cvId: selectedCV.id,
+        jobId: jobData._id || jobData.id,
+        cvTitle: selectedCV.title,
+        jobTitle: jobData.jobTitle || jobData.title
+      });
+
+      // Call the ATS API with CV ID and Job ID
+      const response = await fetch('/api/ats/calculate-score', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          cvText: JSON.stringify(selectedCV.cvData), // Convert CV data to text
+          jobDescription: jobData.jobDescription || jobData.description || '',
+          cvData: selectedCV.cvData,
+          cvId: selectedCV.id,
+          jobId: jobData._id || jobData.id
+        }),
+      });
+
+      if (response.ok) {
+        const atsResult = await response.json();
+        setAtsScore(atsResult.score);
+        setAtsKeywords(atsResult.details?.matchedKeywords || []);
+        updateAtsScore(atsResult.score);
+        
+        // Move to next step (Step 4: Cover Letter)
+        updateCurrentStep(4);
+        
+        // Notify parent components that journey has been updated
+        if (onJourneyUpdated) {
+          onJourneyUpdated();
+        }
+        
+        console.log('✅ ATS check completed successfully:', atsResult.score);
+      } else {
+        console.error('❌ ATS check failed:', response.statusText);
+      }
     } catch (error) {
       console.error('Error running ATS check:', error);
     } finally {
@@ -382,20 +722,28 @@ const JobPipelineCardModal: React.FC<JobPipelineCardModalProps> = ({ isOpen, onC
       const userId = session?.user?.id;
       if (!userId) return;
 
+      console.log('🔍 JobPipelineCardModal - Job added:', job);
+
       // Update local state and journey
       setJobData(job);
       updateJobInfo(job.jobTitle, job.company);
       updateJourneyStatus('job-added');
       setShowJobForm(false);
+      setJobSelectionSuccess(true);
       
       // Move to next step (Step 2: CV Creation)
       updateCurrentStep(2);
       
-      // Update URL with job ID
+      // Update the journey context with the new job ID FIRST
       const jobId = job._id || job.id;
       if (jobId) {
+        updateCurrentJobId(jobId);
+        
+        // Update URL with job ID to maintain state
         const newUrl = `/dashboard/cv-journey?jobId=${jobId}`;
         router.replace(newUrl);
+        console.log('🔍 JobPipelineCardModal - Updated journey with new job ID:', jobId);
+        console.log('🔍 JobPipelineCardModal - Job created successfully, moving to step 2');
       }
     } catch (error) {
       console.error('Error adding new job and moving to next step:', error);
@@ -447,7 +795,31 @@ const JobPipelineCardModal: React.FC<JobPipelineCardModalProps> = ({ isOpen, onC
     try {
       setIsSelectingCV(true);
       const userId = session?.user?.id;
-      if (!userId) return;
+      if (!userId || !jobData) {
+        console.error('❌ Missing userId or jobData for CV selection');
+        return;
+      }
+
+      console.log('🔍 JobPipelineCardModal - Selecting CV:', cv.title, 'for job:', jobData.title || jobData.jobTitle);
+
+      // Update the job with the linked CV
+      const jobUpdateResponse = await fetch(`/api/jobs/${jobId}?userId=${userId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          cvId: cv.id
+        }),
+      });
+
+      if (jobUpdateResponse.ok) {
+        console.log('✅ Job linked to CV successfully');
+        // Update the local jobData to reflect the CV link
+        setJobData((prev: any) => ({ ...prev, cvId: cv.id }));
+      } else {
+        console.error('❌ Failed to link job to CV');
+      }
 
       // Update local state and journey
       setSelectedCV(cv);
@@ -458,6 +830,13 @@ const JobPipelineCardModal: React.FC<JobPipelineCardModalProps> = ({ isOpen, onC
       
       // Move to next step (Step 3: ATS Scoring)
       updateCurrentStep(3);
+      
+      // Notify parent components that journey has been updated
+      if (onJourneyUpdated) {
+        onJourneyUpdated();
+      }
+      
+      console.log('🔍 JobPipelineCardModal - CV selection completed, moved to step 3');
     } catch (error) {
       console.error('Error selecting CV and moving to next step:', error);
     } finally {
@@ -468,7 +847,30 @@ const JobPipelineCardModal: React.FC<JobPipelineCardModalProps> = ({ isOpen, onC
   const handleCoverLetterSelect = async (coverLetter: CoverLetter) => {
     try {
       const userId = session?.user?.id;
-      if (!userId) return;
+      if (!userId || !jobData) {
+        console.error('❌ Missing userId or jobData for cover letter selection');
+        return;
+      }
+
+      console.log('🔍 JobPipelineCardModal - Selecting cover letter:', coverLetter.title, 'for job:', jobData.title || jobData.jobTitle);
+
+      // Update the cover letter with the linked job ID
+      const coverLetterUpdateResponse = await fetch(`/api/cover-letters/${coverLetter.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          jobId: jobData._id || jobData.id,
+          userId: userId
+        }),
+      });
+
+      if (coverLetterUpdateResponse.ok) {
+        console.log('✅ Cover letter linked to job successfully');
+      } else {
+        console.error('❌ Failed to link cover letter to job');
+      }
 
       // Update local state and journey
       updateCoverLetterId(coverLetter.id);
@@ -477,15 +879,102 @@ const JobPipelineCardModal: React.FC<JobPipelineCardModalProps> = ({ isOpen, onC
       
       // Move to next step (Step 5: Apply)
       updateCurrentStep(5);
+      
+      console.log('🔍 JobPipelineCardModal - Cover letter selection completed, moved to step 5');
     } catch (error) {
       console.error('Error selecting cover letter and moving to next step:', error);
     }
   };
 
   const getStepStatus = (stepId: number) => {
-    if (stepId < currentStep) return 'completed';
-    if (stepId === currentStep) return 'active';
-    return 'pending';
+    // Check actual database state for step completion
+    let status: 'completed' | 'active' | 'pending' = 'pending';
+    
+    switch (stepId) {
+      case 1: // Job Added
+        status = (jobData || jobSelectionSuccess || (jobId && jobId !== 'temp')) ? 'completed' : 'pending';
+        break;
+      
+      case 2: // CV Created/Linked
+        // Check multiple sources for CV link
+        const hasCVLinked = selectedCV || 
+                           cvSelectionSuccess || 
+                           (jobData && jobData.cvId) || 
+                           state.cvId ||
+                           (userCVs.some(cv => cv.id === state.cvId));
+        
+        status = hasCVLinked ? 'completed' : 
+                 (jobData || jobSelectionSuccess || (jobId && jobId !== 'temp')) ? 'active' : 'pending';
+        break;
+      
+      case 3: // ATS Score Checked
+        // Check multiple sources for ATS score including CV metadata
+        const hasATSScore = atsScore !== null || 
+                           (selectedCV && selectedCV.metadata?.atsScore && selectedCV.metadata?.atsScoreJobId === jobId) ||
+                           state.atsScore !== null ||
+                           (userCVs.some(cv => cv.metadata?.atsScore && cv.metadata?.atsScoreJobId === jobId && cv.id === state.cvId));
+        
+        const hasCVLinkedForATS = selectedCV || 
+                                 cvSelectionSuccess || 
+                                 (jobData && jobData.cvId) || 
+                                 state.cvId ||
+                                 (userCVs.some(cv => cv.id === state.cvId));
+        
+        status = hasATSScore ? 'completed' :
+                 hasCVLinkedForATS ? 'active' : 'pending';
+        break;
+      
+      case 4: // Cover Letter Created
+        // Only consider cover letter completed if it's explicitly linked to this journey
+        const hasCoverLetter = state.coverLetterId && state.coverLetterId.trim() !== '';
+        
+        const hasATSScoreForCoverLetter = atsScore !== null || 
+                                         (selectedCV && selectedCV.metadata?.atsScore && selectedCV.metadata?.atsScoreJobId === jobId) ||
+                                         state.atsScore !== null ||
+                                         (userCVs.some(cv => cv.metadata?.atsScore && cv.metadata?.atsScoreJobId === jobId && cv.id === state.cvId));
+        
+        status = hasCoverLetter ? 'completed' :
+                 hasATSScoreForCoverLetter ? 'active' : 'pending';
+        break;
+      
+      case 5: // Download/Apply
+        // Only consider cover letter completed if it's explicitly linked to this journey
+        const hasCoverLetterForApply = state.coverLetterId && state.coverLetterId.trim() !== '';
+        
+        // Step 5 is completed if we have all previous steps completed
+        const hasJob = jobData || jobSelectionSuccess || (jobId && jobId !== 'temp');
+        const hasCV = selectedCV || cvSelectionSuccess || (jobData && jobData.cvId) || state.cvId;
+        const hasATS = atsScore !== null || state.atsScore !== null || 
+                      (selectedCV && selectedCV.metadata?.atsScore && selectedCV.metadata?.atsScoreJobId === jobId) ||
+                      (userCVs.some(cv => cv.metadata?.atsScore && cv.metadata?.atsScoreJobId === jobId && cv.id === state.cvId));
+        
+        status = (hasJob && hasCV && hasATS && hasCoverLetterForApply) ? 'completed' : 
+                 hasCoverLetterForApply ? 'active' : 'pending';
+        break;
+      
+      default:
+        status = 'pending';
+    }
+    
+    console.log(`🔍 JobPipelineCardModal - Step ${stepId} status:`, {
+      status,
+      jobData: !!jobData,
+      jobSelectionSuccess,
+      selectedCV: !!selectedCV,
+      cvSelectionSuccess,
+      atsScore,
+      stateAtsScore: state.atsScore,
+      stateCvId: state.cvId,
+      coverLetterId: state.coverLetterId,
+      jobId,
+      currentJobId: state.currentJobId,
+      userCVsCount: userCVs.length,
+      userCoverLettersCount: userCoverLetters.length,
+      selectedCVMetadata: selectedCV?.metadata,
+      hasCoverLetterCheck: stepId === 4 ? (state.coverLetterId && state.coverLetterId.trim() !== '') : undefined
+    });
+    
+    return status;
   };
 
   const getStepColor = (stepId: number) => {
@@ -523,7 +1012,7 @@ const JobPipelineCardModal: React.FC<JobPipelineCardModalProps> = ({ isOpen, onC
         <div>
           {currentStep === 1 && (
             <div>
-              {jobSelectionSuccess ? (
+              {jobSelectionSuccess || jobData ? (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -557,20 +1046,6 @@ const JobPipelineCardModal: React.FC<JobPipelineCardModalProps> = ({ isOpen, onC
                     ✓ Job selected successfully • Moving to Step 2: CV Creation
                   </motion.div>
                 </motion.div>
-              ) : jobData ? (
-                <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Briefcase className="h-5 w-5 text-blue-400" />
-                    <h3 className="text-base font-semibold text-white">Linked Job</h3>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-white font-medium text-sm">{jobData.title || jobData.jobTitle}</p>
-                    <p className="text-white/60 text-sm">{jobData.company}</p>
-                    {jobData.location && (
-                      <p className="text-white/40 text-xs">{jobData.location}</p>
-                    )}
-                  </div>
-                </div>
               ) : (
                 <div className="bg-white/5 rounded-lg p-4 border border-white/10">
                   <div className="text-left">
@@ -628,7 +1103,19 @@ const JobPipelineCardModal: React.FC<JobPipelineCardModalProps> = ({ isOpen, onC
 
           {currentStep === 2 && (
             <div>
-              {cvSelectionSuccess ? (
+              {(() => {
+                const hasCVLinked = cvSelectionSuccess || selectedCV || (jobData && jobData.cvId) || state.cvId || (userCVs.some(cv => cv.id === state.cvId));
+                console.log('🔍 JobPipelineCardModal - Step 2 CV check:', {
+                  cvSelectionSuccess,
+                  selectedCV: selectedCV ? selectedCV.title : null,
+                  jobDataCvId: jobData?.cvId,
+                  stateCvId: state.cvId,
+                  userCVsCount: userCVs.length,
+                  hasCVLinked,
+                  currentStep
+                });
+                return hasCVLinked;
+              })() ? (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -647,7 +1134,11 @@ const JobPipelineCardModal: React.FC<JobPipelineCardModalProps> = ({ isOpen, onC
                     <h3 className="text-base font-semibold text-white">CV Selected Successfully!</h3>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-white font-medium text-sm">{selectedCV?.title}</p>
+                    <p className="text-white font-medium text-sm">
+                      {selectedCV?.title || 
+                       (state.cvId && userCVs.find(cv => cv.id === state.cvId)?.title) || 
+                       'Linked CV'}
+                    </p>
                     <p className="text-white/60 text-sm">CV</p>
                   </div>
                   <motion.div
@@ -659,17 +1150,6 @@ const JobPipelineCardModal: React.FC<JobPipelineCardModalProps> = ({ isOpen, onC
                     ✓ CV linked successfully • Moving to Step 3: ATS Scoring
                   </motion.div>
                 </motion.div>
-              ) : selectedCV ? (
-                <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-                  <div className="flex items-center gap-2 mb-3">
-                    <FileText className="h-5 w-5 text-green-400" />
-                    <h3 className="text-base font-semibold text-white">Linked CV</h3>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-white font-medium text-sm">{selectedCV.title}</p>
-                    <p className="text-white/60 text-sm">CV</p>
-                  </div>
-                </div>
               ) : (
                 <div className="bg-white/5 rounded-lg p-4 border border-white/10">
                   <div className="text-left">
@@ -727,58 +1207,107 @@ const JobPipelineCardModal: React.FC<JobPipelineCardModalProps> = ({ isOpen, onC
 
           {currentStep === 3 && (
             <div>
-              {atsScore !== null ? (
-                <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+              {(() => {
+                // Check if ATS score exists either locally or from CV metadata
+                const currentATSScore = atsScore || 
+                                       (selectedCV && selectedCV.metadata?.atsScore && selectedCV.metadata?.atsScoreJobId === jobId ? selectedCV.metadata.atsScore : null) ||
+                                       state.atsScore;
+                
+                console.log('🔍 JobPipelineCardModal - Step 3 ATS check:', {
+                  atsScore,
+                  selectedCVMetadata: selectedCV?.metadata,
+                  stateAtsScore: state.atsScore,
+                  currentATSScore,
+                  jobId
+                });
+                
+                return currentATSScore !== null;
+              })() ? (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="bg-gradient-to-r from-purple-500/20 to-indigo-500/20 rounded-lg p-4 border border-purple-500/30"
+                >
                   <div className="flex items-center gap-2 mb-3">
-                    <Settings className="h-5 w-5 text-purple-400" />
-                    <h3 className="text-base font-semibold text-white">ATS Score</h3>
-                  </div>
-                  
-                  {/* ATS Score Meter */}
-                  <div className="mb-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-white/60 text-sm">ATS Compatibility</span>
-                      <span className="text-white font-semibold text-sm">{atsScore}%</span>
-                    </div>
-                    <div className="w-full bg-white/10 rounded-full h-2">
+                    <div className="p-1 bg-purple-500/20 rounded-full">
                       <motion.div
-                        className="bg-gradient-to-r from-purple-400 to-purple-600 h-2 rounded-full"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${atsScore}%` }}
-                        transition={{ duration: 1, ease: "easeOut" }}
-                      />
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                      >
+                        <Settings className="h-4 w-4 text-purple-400" />
+                      </motion.div>
                     </div>
+                    <h3 className="text-base font-semibold text-white">ATS Score Completed!</h3>
                   </div>
-
-                  {/* Missing Keywords */}
-                  {atsKeywords.length > 0 && (
-                    <div>
-                      <h4 className="text-white font-medium mb-2 text-sm">Missing Keywords</h4>
-                      <div className="flex flex-wrap gap-1.5">
-                        {atsKeywords.map((keyword, index) => (
-                          <motion.span
-                            key={index}
-                            initial={{ opacity: 0, scale: 0.8 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: index * 0.1 }}
-                            className="px-2 py-0.5 bg-red-500/20 text-red-300 rounded-full text-xs border border-red-500/30"
-                          >
-                            {keyword}
-                          </motion.span>
-                        ))}
+                  <div className="space-y-1">
+                    <p className="text-white font-medium text-sm">
+                      ATS Score: {atsScore || 
+                                 (selectedCV && selectedCV.metadata?.atsScore && selectedCV.metadata?.atsScoreJobId === jobId ? selectedCV.metadata.atsScore : null) ||
+                                 state.atsScore}%
+                    </p>
+                    <p className="text-white/60 text-sm">CV optimized for ATS systems</p>
+                  </div>
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className="mt-3 text-xs text-purple-300"
+                  >
+                    ✓ ATS check completed successfully • Moving to Step 4: Cover Letter
+                  </motion.div>
+                </motion.div>
+              ) : (
+                <div>
+                  {hasAI ? (
+                    // Pro users get the full ATS analyzer
+                    <div className="bg-white/5 rounded-lg border border-white/10 overflow-hidden">
+                      <div className="p-4 border-b border-white/10">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Settings className="h-5 w-5 text-purple-400" />
+                          <h3 className="text-base font-semibold text-white">ATS Score Analyzer</h3>
+                          <span className="px-2 py-1 bg-purple-500/20 text-purple-300 rounded-full text-xs">PRO</span>
+                        </div>
+                        <p className="text-white/60 text-sm">
+                          Advanced ATS analysis with detailed insights and optimization suggestions
+                        </p>
+                      </div>
+                      <div className="p-4">
+                        {jobData && selectedCV ? (
+                          <ATSScoreAnalyzer
+                            cvData={selectedCV.cvData}
+                            jobData={jobData}
+                            onScoreUpdate={(score) => {
+                              setAtsScore(score);
+                              updateAtsScore(score);
+                            }}
+                            onUpdateField={(path, value) => {
+                              // Handle CV field updates if needed
+                              console.log('CV field update:', path, value);
+                            }}
+                          />
+                        ) : (
+                          <div className="text-center py-8">
+                            <Settings className="h-12 w-12 text-white/40 mx-auto mb-4" />
+                            <p className="text-white/60 text-sm mb-2">Job and CV Required</p>
+                            <p className="text-white/40 text-xs">
+                              Please complete Steps 1 and 2 to run ATS analysis
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
+                  ) : (
+                    <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Settings className="h-5 w-5 text-purple-400" />
+                        <h3 className="text-base font-semibold text-white">ATS Optimization</h3>
+                      </div>
+                      <p className="text-white/60 text-sm">
+                        Run an ATS check to see how well your CV matches the job requirements
+                      </p>
+                    </div>
                   )}
-                </div>
-              ) : (
-                <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Settings className="h-5 w-5 text-purple-400" />
-                    <h3 className="text-base font-semibold text-white">ATS Optimization</h3>
-                  </div>
-                  <p className="text-white/60 text-sm">
-                    Run an ATS check to see how well your CV matches the job requirements
-                  </p>
                 </div>
               )}
             </div>
@@ -786,15 +1315,98 @@ const JobPipelineCardModal: React.FC<JobPipelineCardModalProps> = ({ isOpen, onC
 
           {currentStep === 4 && (
             <div>
-              <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-                <div className="flex items-center gap-2 mb-3">
-                  <Mail className="h-5 w-5 text-orange-400" />
-                  <h3 className="text-base font-semibold text-white">Cover Letter</h3>
+              {state.coverLetterId && state.coverLetterId.trim() !== '' ? (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="bg-gradient-to-r from-orange-500/20 to-red-500/20 rounded-lg p-4 border border-orange-500/30"
+                >
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="p-1 bg-orange-500/20 rounded-full">
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                      >
+                        <Mail className="h-4 w-4 text-orange-400" />
+                      </motion.div>
+                    </div>
+                    <h3 className="text-base font-semibold text-white">Cover Letter Selected!</h3>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-white font-medium text-sm">Cover Letter Linked</p>
+                    <p className="text-white/60 text-sm">Ready for application</p>
+                  </div>
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className="mt-3 text-xs text-orange-300"
+                  >
+                    ✓ Cover letter linked successfully • Moving to Step 5: Apply
+                  </motion.div>
+                </motion.div>
+              ) : (
+                <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                  <div className="text-left">
+                    <Mail className="h-8 w-8 text-orange-400 mb-3" />
+                    <h3 className="text-base font-semibold text-white mb-2">Cover Letter Required</h3>
+                    <p className="text-white/60 text-sm mb-4">Create or select a cover letter for this job application</p>
+                    
+                    <div className="space-y-2">
+                      <button
+                        onClick={() => setShowCoverLetterSelector(!showCoverLetterSelector)}
+                        className="w-full px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm"
+                      >
+                        Select Existing Cover Letter
+                      </button>
+                      <button
+                        onClick={() => {
+                          // Navigate to cover letter creation
+                          router.push('/dashboard/studio?type=cover');
+                        }}
+                        className="w-full px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-sm border border-white/20"
+                      >
+                        Create New Cover Letter
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                <p className="text-white/60 text-sm">
-                  Create a personalized cover letter that complements your CV
-                </p>
-              </div>
+              )}
+              
+              {/* Cover Letter Selection Dropdown */}
+              {showCoverLetterSelector && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="bg-white/5 rounded-lg border border-white/10 mt-2"
+                >
+                  <div className="p-3">
+                    <h4 className="text-sm font-medium text-white mb-2">Select from Your Cover Letters</h4>
+                    {userCoverLetters.length === 0 ? (
+                      <p className="text-white/60 text-xs">No cover letters found. Create your first cover letter!</p>
+                    ) : (
+                      <div className="space-y-2 max-h-32 overflow-y-auto">
+                        {userCoverLetters.map((coverLetter) => (
+                          <button
+                            key={coverLetter.id}
+                            onClick={() => handleCoverLetterSelect(coverLetter)}
+                            className="w-full text-left p-2 hover:bg-white/10 rounded transition-colors"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="text-sm text-white font-medium">{coverLetter.title}</div>
+                                <div className="text-xs text-white/60">Cover Letter</div>
+                              </div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
             </div>
           )}
 
@@ -833,40 +1445,6 @@ const JobPipelineCardModal: React.FC<JobPipelineCardModalProps> = ({ isOpen, onC
             </div>
           )}
 
-          {currentStep === 5 && (
-            <div className="space-y-3">
-              <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-                <div className="flex items-center gap-2 mb-3">
-                  <Rocket className="h-5 w-5 text-lime-400" />
-                  <h3 className="text-base font-semibold text-white">Ready to Apply!</h3>
-                </div>
-                <p className="text-white/60 text-sm">
-                  Your application is complete. Download your documents or apply directly.
-                </p>
-                
-                {/* Summary */}
-                <div className="bg-white/10 rounded-lg p-3 mt-3">
-                  <h4 className="text-white font-medium mb-2 text-sm">Application Summary</h4>
-                  <div className="space-y-1 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-white/60">Job:</span>
-                      <span className="text-white">{jobData?.title || jobData?.jobTitle}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-white/60">Company:</span>
-                      <span className="text-white">{jobData?.company}</span>
-                    </div>
-                    {atsScore && (
-                      <div className="flex justify-between">
-                        <span className="text-white/60">ATS Score:</span>
-                        <span className="text-white">{atsScore}%</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Action Buttons */}
@@ -1140,7 +1718,7 @@ const JobPipelineCardModal: React.FC<JobPipelineCardModalProps> = ({ isOpen, onC
                           isCompleted ? 'opacity-100' : isActive ? 'opacity-100' : 'opacity-60'
                         }`}
                         onClick={() => handleStepClick(step.id)}
-                        whileHover={step.id <= currentStep ? { scale: 1.02 } : {}}
+                        whileHover={(isCompleted || isActive) ? { scale: 1.02 } : {}}
                       >
                         {/* Progress Line */}
                         {index < stepDefinitions.length - 1 && (

@@ -1,0 +1,230 @@
+import { useState, useEffect, useCallback } from 'react';
+import { useSession } from 'next-auth/react';
+
+export interface UsageLimits {
+  cvJourneyCount: number;
+  cvCreatedCount: number;
+  exportCount: number;
+  atsCheckCount: number;
+  planLimits: {
+    maxCVs: number;
+    maxExports: number;
+    storageLimit: number;
+  };
+  dayPassExpiry?: Date;
+}
+
+export interface UsageCheckResult {
+  allowed: boolean;
+  reason?: string;
+  currentUsage: number;
+  limit: number;
+  resetTime?: Date;
+}
+
+export function useUsageLimits() {
+  const { data: session } = useSession();
+  const [usageLimits, setUsageLimits] = useState<UsageLimits | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch usage limits
+  const fetchUsageLimits = useCallback(async () => {
+    if (!session?.user?.email) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/user/usage-limits');
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setUsageLimits(data.usage);
+      } else {
+        setError(data.error || 'Failed to fetch usage limits');
+      }
+    } catch (err) {
+      setError('Network error occurred');
+    } finally {
+      setLoading(false);
+    }
+  }, [session?.user?.email]);
+
+  // Check if a specific action is allowed
+  const checkAction = useCallback(async (
+    action: 'cv_journey' | 'cv_create' | 'export' | 'ats_check',
+    deviceFingerprint?: string
+  ): Promise<UsageCheckResult> => {
+    if (!session?.user?.email) {
+      return {
+        allowed: false,
+        reason: 'Not authenticated',
+        currentUsage: 0,
+        limit: 0
+      };
+    }
+
+    try {
+      const response = await fetch('/api/user/usage-limits', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action,
+          deviceFingerprint
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        return {
+          allowed: data.allowed,
+          reason: data.reason,
+          currentUsage: data.currentUsage,
+          limit: data.limit,
+          resetTime: data.resetTime ? new Date(data.resetTime) : undefined
+        };
+      } else {
+        return {
+          allowed: false,
+          reason: data.error || 'Check failed',
+          currentUsage: 0,
+          limit: 0
+        };
+      }
+    } catch (err) {
+      return {
+        allowed: false,
+        reason: 'Network error',
+        currentUsage: 0,
+        limit: 0
+      };
+    }
+  }, [session?.user?.email]);
+
+  // Check if user can perform CV journey
+  const canPerformCVJourney = useCallback(async (deviceFingerprint?: string): Promise<UsageCheckResult> => {
+    return checkAction('cv_journey', deviceFingerprint);
+  }, [checkAction]);
+
+  // Check if user can create CV
+  const canCreateCV = useCallback(async (deviceFingerprint?: string): Promise<UsageCheckResult> => {
+    return checkAction('cv_create', deviceFingerprint);
+  }, [checkAction]);
+
+  // Check if user can export
+  const canExport = useCallback(async (deviceFingerprint?: string): Promise<UsageCheckResult> => {
+    return checkAction('export', deviceFingerprint);
+  }, [checkAction]);
+
+  // Check if user can perform ATS check
+  const canPerformATSCheck = useCallback(async (deviceFingerprint?: string): Promise<UsageCheckResult> => {
+    return checkAction('ats_check', deviceFingerprint);
+  }, [checkAction]);
+
+  // Get remaining usage for a specific action
+  const getRemainingUsage = useCallback((action: 'cv_journey' | 'cv_create' | 'export' | 'ats_check'): number => {
+    if (!usageLimits) return 0;
+
+    let currentUsage: number;
+    let limit: number;
+
+    switch (action) {
+      case 'cv_journey':
+        currentUsage = usageLimits.cvJourneyCount;
+        limit = usageLimits.planLimits.maxCVs;
+        break;
+      case 'cv_create':
+        currentUsage = usageLimits.cvCreatedCount;
+        limit = usageLimits.planLimits.maxCVs;
+        break;
+      case 'export':
+        currentUsage = usageLimits.exportCount;
+        limit = usageLimits.planLimits.maxExports;
+        break;
+      case 'ats_check':
+        currentUsage = usageLimits.atsCheckCount;
+        limit = usageLimits.planLimits.maxCVs;
+        break;
+      default:
+        return 0;
+    }
+
+    if (limit === -1) return -1; // Unlimited
+    return Math.max(0, limit - currentUsage);
+  }, [usageLimits]);
+
+  // Check if user has unlimited access
+  const hasUnlimitedAccess = useCallback((): boolean => {
+    if (!usageLimits) return false;
+    return usageLimits.planLimits.maxCVs === -1 && usageLimits.planLimits.maxExports === -1;
+  }, [usageLimits]);
+
+  // Check if day pass is expired
+  const isDayPassExpired = useCallback((): boolean => {
+    if (!usageLimits?.dayPassExpiry) return false;
+    return new Date() > usageLimits.dayPassExpiry;
+  }, [usageLimits]);
+
+  // Get time until day pass expires
+  const getTimeUntilDayPassExpiry = useCallback((): number | null => {
+    if (!usageLimits?.dayPassExpiry) return null;
+    const now = new Date();
+    const expiry = usageLimits.dayPassExpiry;
+    return Math.max(0, expiry.getTime() - now.getTime());
+  }, [usageLimits]);
+
+  // Generate device fingerprint (simple implementation)
+  const generateDeviceFingerprint = useCallback((): string => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.textBaseline = 'top';
+      ctx.font = '14px Arial';
+      ctx.fillText('Device fingerprint', 2, 2);
+    }
+    
+    const fingerprint = [
+      navigator.userAgent,
+      navigator.language,
+      screen.width + 'x' + screen.height,
+      new Date().getTimezoneOffset(),
+      canvas.toDataURL()
+    ].join('|');
+    
+    // Simple hash function
+    let hash = 0;
+    for (let i = 0; i < fingerprint.length; i++) {
+      const char = fingerprint.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    
+    return Math.abs(hash).toString(36);
+  }, []);
+
+  // Load usage limits on mount
+  useEffect(() => {
+    fetchUsageLimits();
+  }, [fetchUsageLimits]);
+
+  return {
+    usageLimits,
+    loading,
+    error,
+    fetchUsageLimits,
+    checkAction,
+    canPerformCVJourney,
+    canCreateCV,
+    canExport,
+    canPerformATSCheck,
+    getRemainingUsage,
+    hasUnlimitedAccess,
+    isDayPassExpired,
+    getTimeUntilDayPassExpiry,
+    generateDeviceFingerprint
+  };
+}

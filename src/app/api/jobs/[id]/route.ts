@@ -29,10 +29,13 @@ export async function GET(
     // Transform the job data to match the expected format
     const transformedJob = {
       id: job._id,
+      _id: job._id, // Include both id and _id for compatibility
       title: job.jobTitle,
+      jobTitle: job.jobTitle, // Include both title and jobTitle for compatibility
       company: job.company,
       location: job.location,
       description: job.jobDescription,
+      jobDescription: job.jobDescription, // Include both description and jobDescription for compatibility
       requirements: job.requirements || [],
       responsibilities: job.responsibilities || [],
       salary: job.salary,
@@ -41,6 +44,7 @@ export async function GET(
       postedDate: job.postedDate,
       applicationDeadline: job.applicationDeadline,
       status: job.status,
+      cvId: job.cvId, // Include cvId field for CV linking
       userId: job.userId,
       createdAt: job.createdAt,
       updatedAt: job.updatedAt

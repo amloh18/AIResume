@@ -4,6 +4,8 @@ interface ATSRequest {
   cvText: string;
   jobDescription: string;
   cvData?: any; // Optional structured CV data
+  cvId?: string; // CV ID to save the score
+  jobId?: string; // Job ID for reference
 }
 
 interface ATSResponse {
@@ -67,7 +69,7 @@ export async function POST(request: NextRequest) {
   try {
     console.log('🔍 ATS API - Starting calculation request');
     const body: ATSRequest = await request.json();
-    const { cvText, jobDescription, cvData } = body;
+    const { cvText, jobDescription, cvData, cvId, jobId } = body;
 
     console.log('🔍 ATS API - Request data:', {
       cvTextLength: cvText?.length || 0,
@@ -137,6 +139,27 @@ export async function POST(request: NextRequest) {
       actionVerbScore: Math.round(actionVerbScore.score)
     });
 
+    // Save ATS score to CV if cvId is provided
+    if (cvId) {
+      try {
+        const { CV } = await import('@/models');
+        const mongoose = await import('mongoose');
+        
+        await CV.findByIdAndUpdate(cvId, {
+          $set: {
+            'metadata.atsScore': finalScore,
+            'metadata.atsScoreDate': new Date(),
+            'metadata.atsScoreJobId': jobId ? new mongoose.Types.ObjectId(jobId) : undefined
+          }
+        });
+        
+        console.log('✅ ATS API - Score saved to CV:', cvId);
+      } catch (error) {
+        console.error('❌ ATS API - Failed to save score to CV:', error);
+        // Don't fail the request if saving fails
+      }
+    }
+
     return NextResponse.json(response);
 
   } catch (error) {
@@ -184,21 +207,65 @@ function calculateExperienceEducation(cvText: string, jobText: string, cvData?: 
   let experienceYears = 0;
   let educationLevel = 'Not specified';
 
-  // Extract experience from CV text
-  const experiencePatterns = [
-    /(\d+)\s*(?:years?|yrs?)\s*(?:of\s*)?experience/gi,
-    /experience[:\s]*(\d+)\s*(?:years?|yrs?)/gi,
-    /(\d+)\s*(?:years?|yrs?)\s*(?:in\s*)?(?:the\s*)?(?:field|industry|role)/gi
-  ];
+  // First, try to calculate experience from structured CV data (work history)
+  if (cvData && cvData.work && Array.isArray(cvData.work)) {
+    console.log('🔍 ATS - Calculating experience from work history:', cvData.work.length, 'jobs');
+    
+    let totalMonths = 0;
+    const currentDate = new Date();
+    
+    cvData.work.forEach((job: any, index: number) => {
+      console.log(`🔍 ATS - Processing job ${index + 1}:`, {
+        company: job.name || job.company,
+        position: job.position,
+        startDate: job.startDate,
+        endDate: job.endDate
+      });
+      
+      if (job.startDate) {
+        const startDate = new Date(job.startDate);
+        let endDate = currentDate; // Default to current date
+        
+        // If there's an end date, use it
+        if (job.endDate && job.endDate !== 'Present' && job.endDate !== 'Current') {
+          endDate = new Date(job.endDate);
+        }
+        
+        // Calculate months of experience for this job
+        const monthsDiff = (endDate.getFullYear() - startDate.getFullYear()) * 12 + 
+                          (endDate.getMonth() - startDate.getMonth());
+        
+        if (monthsDiff > 0) {
+          totalMonths += monthsDiff;
+          console.log(`🔍 ATS - Job ${index + 1} duration: ${monthsDiff} months`);
+        }
+      }
+    });
+    
+    // Convert months to years (round to nearest 0.5)
+    experienceYears = Math.round((totalMonths / 12) * 2) / 2;
+    console.log('🔍 ATS - Total calculated experience:', experienceYears, 'years');
+  }
 
-  for (const pattern of experiencePatterns) {
-    const match = cvText.match(pattern);
-    if (match) {
-      const years = parseInt(match[1]);
-      if (years > experienceYears) {
-        experienceYears = years;
+  // If no structured data or calculation failed, fall back to text pattern matching
+  if (experienceYears === 0) {
+    console.log('🔍 ATS - Falling back to text pattern matching');
+    const experiencePatterns = [
+      /(\d+)\s*(?:years?|yrs?)\s*(?:of\s*)?experience/gi,
+      /experience[:\s]*(\d+)\s*(?:years?|yrs?)/gi,
+      /(\d+)\s*(?:years?|yrs?)\s*(?:in\s*)?(?:the\s*)?(?:field|industry|role)/gi
+    ];
+
+    for (const pattern of experiencePatterns) {
+      const match = cvText.match(pattern);
+      if (match) {
+        const years = parseInt(match[1]);
+        if (years > experienceYears) {
+          experienceYears = years;
+        }
       }
     }
+    console.log('🔍 ATS - Text pattern experience:', experienceYears, 'years');
   }
 
   // Extract education level
@@ -228,6 +295,12 @@ function calculateExperienceEducation(cvText: string, jobText: string, cvData?: 
   if (currentEducation) {
     score += (currentEducation[1] / educationScore) * 100 * 0.3;
   }
+
+  console.log('🔍 ATS - Final experience calculation:', {
+    experienceYears,
+    educationLevel,
+    score: Math.min(score, 100)
+  });
 
   return {
     score: Math.min(score, 100),

@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     await connectToDatabase();
 
     const users = await User.find({})
-      .select('firstName lastName email role currentPlanKey subscription createdAt lastLogin region')
+      .select('firstName lastName email role currentPlanKey subscription createdAt phone location website linkedin github summary settings lastLogin region')
       .lean();
 
     // Transform the data to match the expected format
@@ -28,11 +28,23 @@ export async function GET(request: NextRequest) {
       currentPlanKey: user.currentPlanKey || 'free',
       subscription: {
         status: user.subscription?.status || 'inactive',
-        provider: user.subscription?.provider || 'none',
+        provider: user.subscription?.provider || 'stripe',
         currentPeriodEnd: user.subscription?.currentPeriodEnd,
         interval: user.subscription?.interval || 'monthly'
       },
       createdAt: user.createdAt,
+      // Profile information
+      phone: user.phone || '',
+      location: user.location || '',
+      website: user.website || '',
+      linkedin: user.linkedin || '',
+      github: user.github || '',
+      summary: user.summary || '',
+      // Settings information
+      company: user.settings?.company || '',
+      timezone: user.settings?.timezone || 'UTC +07:00 - Asia / Jakarta',
+      languagePreference: user.settings?.languagePreference || 'English',
+      // Admin tracking fields
       lastLogin: user.lastLogin,
       region: user.region || 'Unknown'
     }));
