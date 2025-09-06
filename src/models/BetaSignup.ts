@@ -31,12 +31,8 @@ const BetaSignupSchema = new Schema<IBetaSignup>({
 });
 
 // Index for faster queries
-BetaSignupSchema.index({ email: 1 });
 BetaSignupSchema.index({ status: 1 });
 BetaSignupSchema.index({ createdAt: -1 });
-
-// Prevent duplicate emails
-BetaSignupSchema.index({ email: 1 }, { unique: true });
 
 export default mongoose.models.BetaSignup || mongoose.model<IBetaSignup>('BetaSignup', BetaSignupSchema);
 
