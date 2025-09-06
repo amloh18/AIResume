@@ -7,6 +7,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Menu, X } from 'lucide-react';
 import { Bell, Sun, Moon, Settings } from 'lucide-react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
+import { getPageBackground } from '@/lib/utils/themeUtils';
+import ThemeToggle from '@/components/ui/ThemeToggle';
 import DashboardNavigation from '@/components/dashboard/DashboardNavigation';
 import RouteGuard from '@/components/auth/RouteGuard';
 import { useCVSetup } from '@/lib/hooks/useCVSetup';
@@ -32,6 +34,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     username: undefined,
     progress: 60,
     profilePhoto: '',
+    designation: 'Software Developer',
     cvsCreated: 3,
     jobsApplied: 2,
     coverLetters: 1,
@@ -212,13 +215,13 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   return (
     <RouteGuard requireAuth={true}>
       <JobJourneyProvider>
-        <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black">
+        <div className={getPageBackground('dashboard')}>
           <JourneyStatusBanner />
         {/* Welcome Animation Overlay */}
         <AnimatePresence>
           {showWelcomeAnimation && (
             <motion.div
-              className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xl flex items-center justify-center backdrop-optimized"
+              className="fixed inset-0 z-50 bg-black/80 dark:bg-black/90 backdrop-blur-xl flex items-center justify-center backdrop-optimized"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -292,7 +295,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
         <div className="xl:hidden fixed top-4 left-4 z-50">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 bg-black/40 backdrop-blur-xl border border-white/10 rounded-lg text-white hover:bg-white/10 transition-colors"
+            className="p-2 bg-white/80 dark:bg-gray-800 backdrop-blur-xl border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
           >
             {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
           </button>

@@ -614,32 +614,32 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                     </div>
 
                     {/* Preferences */}
-                    <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl p-6">
-                        <h3 className="text-lg font-semibold text-white mb-4">Preferences</h3>
+                    <div className="bg-white/80 dark:bg-black/40 backdrop-blur-xl border border-gray-200 dark:border-white/10 rounded-xl p-6">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Preferences</h3>
                         <div className="space-y-4">
                             <div className="flex justify-between">
-                                <span className="text-white/60">Email Notifications</span>
-                                <span className="text-lime-400 font-medium">{formData.emailNotifications}</span>
+                                <span className="text-gray-600 dark:text-white/60">Email Notifications</span>
+                                <span className="text-lime-600 dark:text-lime-400 font-medium">{formData.emailNotifications}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-white/60">SMS Alerts</span>
-                                <span className="text-lime-400 font-medium">{formData.smsAlerts}</span>
+                                <span className="text-gray-600 dark:text-white/60">SMS Alerts</span>
+                                <span className="text-lime-600 dark:text-lime-400 font-medium">{formData.smsAlerts}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-white/60">Content Preferences</span>
-                                <span className="text-white">{formData.contentPreferences}</span>
+                                <span className="text-gray-600 dark:text-white/60">Content Preferences</span>
+                                <span className="text-gray-900 dark:text-white">{formData.contentPreferences}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-white/60">Default Dashboard View</span>
-                                <span className="text-white">{formData.defaultDashboardView}</span>
+                                <span className="text-gray-600 dark:text-white/60">Default Dashboard View</span>
+                                <span className="text-gray-900 dark:text-white">{formData.defaultDashboardView}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-white/60">Dark Mode</span>
-                                <span className="text-white">{formData.darkMode}</span>
+                                <span className="text-gray-600 dark:text-white/60">Dark Mode</span>
+                                <span className="text-gray-900 dark:text-white">{formData.darkMode}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-white/60">Language for Content</span>
-                                <span className="text-white">{formData.languageForContent}</span>
+                                <span className="text-gray-600 dark:text-white/60">Language for Content</span>
+                                <span className="text-gray-900 dark:text-white">{formData.languageForContent}</span>
                             </div>
                         </div>
                     </div>
@@ -2456,12 +2456,12 @@ const MainContent = ({
             case 'workspace':
                 return (
                     <div className="space-y-8">
-                        <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl p-8 text-center">
-                            <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <Users size={24} className="text-white/60" />
+                        <div className="bg-white/80 dark:bg-black/40 backdrop-blur-xl border border-gray-200 dark:border-white/10 rounded-xl p-8 text-center">
+                            <div className="w-16 h-16 bg-gray-100 dark:bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <Users size={24} className="text-gray-600 dark:text-white/60" />
                             </div>
-                            <h4 className="text-lg font-medium text-white mb-2">Coming Soon</h4>
-                            <p className="text-white/60 text-sm">
+                            <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Coming Soon</h4>
+                            <p className="text-gray-600 dark:text-white/60 text-sm">
                                 Team collaboration features are currently in development. 
                                 You'll be able to manage team members, roles, and permissions soon.
                             </p>
@@ -2474,7 +2474,7 @@ const MainContent = ({
     };
 
     return (
-        <main className="flex-1 bg-gradient-to-br from-black via-gray-900 to-black py-6 overflow-y-auto">
+        <main className="flex-1 bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-black dark:via-gray-900 dark:to-black py-6 overflow-y-auto">
             <PageHeader
                 title={getTabTitle()}
                 description={getTabDescription()}
@@ -2687,7 +2687,7 @@ function SettingsContent() {
 
   return (
     <RouteGuard requireAuth={true}>
-      <div className="bg-gradient-to-br from-black via-gray-900 to-black min-h-screen font-sans">
+      <div className="bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-black dark:via-gray-900 dark:to-black min-h-screen font-sans">
           <div className="flex h-screen">
               <Sidebar 
                   theme={theme} 
