@@ -51,11 +51,20 @@ export async function POST(request: NextRequest) {
       firstName: firstName.trim(),
       lastName: lastName.trim(),
       subscription: {
-        plan: 'basic',
+        planKey: 'free',
         status: 'inactive',
         startDate: new Date(),
+        provider: 'stripe',
+        interval: 'monthly',
         seats: 3,
         storageUsed: 0
+      },
+      settings: {
+        theme: 'auto',
+        notifications: {
+          email: true,
+          push: true
+        }
       }
     });
 

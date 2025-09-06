@@ -88,6 +88,9 @@ export interface ICV extends Document {
     isPublic: boolean;
     viewCount: number;
     downloadCount: number;
+    atsScore?: number;
+    atsScoreDate?: Date;
+    atsScoreJobId?: mongoose.Types.ObjectId;
   };
   createdAt: Date;
   updatedAt: Date;
@@ -363,7 +366,10 @@ const cvSchema = new Schema<ICV>({
     tags: [{ type: String, trim: true }],
     isPublic: { type: Boolean, default: false },
     viewCount: { type: Number, default: 0 },
-    downloadCount: { type: Number, default: 0 }
+    downloadCount: { type: Number, default: 0 },
+    atsScore: { type: Number, min: 0, max: 100 },
+    atsScoreDate: { type: Date },
+    atsScoreJobId: { type: Schema.Types.ObjectId, ref: 'JobApplication' }
   }
 }, {
   timestamps: true,

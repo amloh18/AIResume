@@ -22,7 +22,9 @@ export async function POST(request: NextRequest) {
       interval, 
       billingDetails, 
       discountCode, 
-      provider 
+      provider,
+      returnUrl,
+      triggerContext
     } = body;
 
     // Validate plan key
@@ -200,8 +202,8 @@ async function handleProPlanPayment(
           },
         ],
         mode: 'subscription',
-        success_url: `${process.env.NEXTAUTH_URL}/dashboard?success=true&session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${process.env.NEXTAUTH_URL}/dashboard/settings?canceled=true`,
+        success_url: `${returnUrl || process.env.NEXTAUTH_URL}/dashboard?success=true&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${returnUrl || process.env.NEXTAUTH_URL}/dashboard/settings?canceled=true`,
         metadata: {
           planKey: plan.key,
           userId: user._id.toString(),

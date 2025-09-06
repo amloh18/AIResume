@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/database';
-import { User, Subscription } from '@/models';
+import { User, Subscription, PricingPlan } from '@/models';
 
 export async function GET(request: NextRequest) {
   try {
@@ -47,38 +47,37 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Get the current plan details from database
+    const currentPlanKey = user.currentPlanKey || 'free';
+    const planDetails = await PricingPlan.findOne({ key: currentPlanKey }).lean();
+
     // If user has no subscription, return default free plan
     if (!user.subscription) {
+      const freePlan = await PricingPlan.findOne({ key: 'free' }).lean();
       return NextResponse.json({
         success: true,
         subscription: {
-          planName: 'Free Plan',
+          planName: freePlan?.name || 'Free Plan',
+          planKey: 'free',
           status: 'active',
-          credits: 20,
+          credits: freePlan?.features?.maxCVs || 20,
           endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'long',
             day: 'numeric'
           }),
-          planId: null
+          planId: freePlan?._id || null,
+          planDetails: freePlan
         }
       });
     }
 
-    // Map planKey to planName
-    const planKeyToName = {
-      'free': 'Free Plan',
-      'day_pass': 'Day Pass',
-      'pro_monthly': 'Pro Monthly',
-      'pro_quarterly': 'Pro Quarterly', 
-      'pro_yearly': 'Pro Yearly'
-    };
-
-    // Format subscription data
+    // Format subscription data with database plan details
     const subscription = {
-      planName: planKeyToName[user.subscription.planKey] || 'Free Plan',
+      planName: planDetails?.name || 'Free Plan',
+      planKey: user.subscription.planKey || 'free',
       status: user.subscription.status || 'active',
-      credits: user.subscription.credits || 20,
+      credits: planDetails?.features?.maxCVs || 20,
       endDate: user.subscription.endDate 
         ? new Date(user.subscription.endDate).toLocaleDateString('en-US', {
             year: 'numeric',
@@ -90,8 +89,8 @@ export async function GET(request: NextRequest) {
             month: 'long',
             day: 'numeric'
           }),
-      planId: user.subscription.planId || null,
-      planKey: user.subscription.planKey || 'free'
+      planId: planDetails?._id || null,
+      planDetails: planDetails
     };
 
     return NextResponse.json({
