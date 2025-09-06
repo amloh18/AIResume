@@ -100,7 +100,8 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
   };
 
   const incompleteJourneys = journeys.filter(journey => journey.status === 'in-progress');
-  const totalPages = Math.ceil(incompleteJourneys.length / 3); // Show 3 journeys per page
+  const journeysPerPage = Math.min(2, incompleteJourneys.length); // Show 1-2 journeys per page
+  const totalPages = Math.ceil(incompleteJourneys.length / journeysPerPage);
 
   const handleDeleteJourney = async (journeyId: string) => {
     try {
@@ -138,8 +139,8 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
   };
 
   const getCurrentPageJourneys = () => {
-    const startIndex = currentPage * 3;
-    return incompleteJourneys.slice(startIndex, startIndex + 3);
+    const startIndex = currentPage * journeysPerPage;
+    return incompleteJourneys.slice(startIndex, startIndex + journeysPerPage);
   };
 
   const nextPage = () => {
@@ -197,7 +198,7 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
   }
 
   return (
-    <div className="bg-white/5 border-2 border-dashed border-white/20 rounded-xl p-6">
+    <div className="bg-white/5 border-2 border-dashed border-white/20 rounded-xl p-6" style={{ borderDasharray: '8 4' } as React.CSSProperties}>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-lg font-bold text-white mb-1">CV Journeys</h2>
@@ -280,7 +281,7 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
           </div>
         </div>
       ) : (
-        <div className="relative h-64 overflow-hidden">
+        <div className="relative overflow-hidden" style={{ height: `${Math.min(incompleteJourneys.length, 2) * 200}px` }}>
           {/* Navigation Arrows */}
           {totalPages > 1 && (
             <>
@@ -309,13 +310,13 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
           {/* Carousel Container */}
           <motion.div
             className="h-full"
-            animate={{ y: -currentPage * 64 }}
+            animate={{ y: -currentPage * (Math.min(incompleteJourneys.length, 2) * 200) }}
             transition={{ duration: 0.5, ease: "easeInOut" }}
           >
             {Array.from({ length: totalPages }, (_, pageIndex) => (
-              <div key={pageIndex} className="h-64 flex flex-col justify-center">
+              <div key={pageIndex} className="flex flex-col justify-center" style={{ height: `${Math.min(incompleteJourneys.length, 2) * 200}px` }}>
                 <div className="space-y-4">
-                  {incompleteJourneys.slice(pageIndex * 3, pageIndex * 3 + 3).map((journey, index) => (
+                  {incompleteJourneys.slice(pageIndex * journeysPerPage, pageIndex * journeysPerPage + journeysPerPage).map((journey, index) => (
                     <motion.div
                       key={journey.id}
                       className="bg-white/5 border border-white/10 rounded-lg p-4 hover:bg-white/10 transition-all duration-300"

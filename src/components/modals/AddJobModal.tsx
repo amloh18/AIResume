@@ -106,7 +106,7 @@ const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onJobAdded }
       exit={{ opacity: 0 }}
     >
       <motion.div
-        className="bg-gray-900 border border-white/10 rounded-xl p-6 w-full max-w-md"
+        className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 w-full max-w-md"
         initial={{ scale: 0.9, y: 20 }}
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.9, y: 20 }}
@@ -119,13 +119,13 @@ const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onJobAdded }
               <Briefcase className="h-5 w-5 text-lime-400" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-white">Add New Job</h2>
-              <p className="text-white/60 text-sm">Enter job details to start your journey</p>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Add New Job</h2>
+              <p className="text-gray-600 dark:text-white/60 text-sm">Enter job details to start your journey</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+            className="p-2 text-gray-500 dark:text-white/60 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors"
           >
             <X className="h-5 w-5" />
           </button>

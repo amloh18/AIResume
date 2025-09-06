@@ -65,9 +65,18 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // Map planKey to planName
+    const planKeyToName = {
+      'free': 'Free Plan',
+      'day_pass': 'Day Pass',
+      'pro_monthly': 'Pro Monthly',
+      'pro_quarterly': 'Pro Quarterly', 
+      'pro_yearly': 'Pro Yearly'
+    };
+
     // Format subscription data
     const subscription = {
-      planName: user.subscription.planName || 'Free Plan',
+      planName: planKeyToName[user.subscription.planKey] || 'Free Plan',
       status: user.subscription.status || 'active',
       credits: user.subscription.credits || 20,
       endDate: user.subscription.endDate 
@@ -81,7 +90,8 @@ export async function GET(request: NextRequest) {
             month: 'long',
             day: 'numeric'
           }),
-      planId: user.subscription.planId || null
+      planId: user.subscription.planId || null,
+      planKey: user.subscription.planKey || 'free'
     };
 
     return NextResponse.json({

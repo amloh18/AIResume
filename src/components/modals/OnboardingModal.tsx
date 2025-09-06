@@ -71,13 +71,13 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClose }) =>
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 dark:bg-black/80 backdrop-blur-sm"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
         >
           <motion.div
-            className="bg-gray-900 border border-white/10 rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto"
+            className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto"
             initial={{ scale: 0.9, y: 20 }}
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.9, y: 20 }}
@@ -85,10 +85,10 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClose }) =>
           >
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-white">CV Journey Setup</h2>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">CV Journey Setup</h2>
               <button
                 onClick={handleClose}
-                className="p-2 text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                className="p-2 text-gray-500 dark:text-white/60 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors"
               >
                 <X size={20} />
               </button>
@@ -96,11 +96,11 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClose }) =>
 
             {/* Progress Bar */}
             <div className="mb-6">
-              <div className="flex items-center justify-between text-xs text-white/60 mb-2">
+              <div className="flex items-center justify-between text-xs text-gray-600 dark:text-white/60 mb-2">
                 <span>Step {currentStep + 1} of {steps.length}</span>
                 <span>{Math.round(((currentStep + 1) / steps.length) * 100)}%</span>
               </div>
-              <div className="w-full bg-white/10 rounded-full h-2">
+              <div className="w-full bg-gray-200 dark:bg-white/10 rounded-full h-2">
                 <motion.div
                   className="bg-lime-500 h-2 rounded-full"
                   initial={{ width: 0 }}

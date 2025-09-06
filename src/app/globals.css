@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@300;400;500;600;700;800;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -5,6 +7,44 @@
 /* CSS Variables */
 :root {
   --navbar-height: 80px;
+  
+  /* Light theme colors */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f9fafb;
+  --bg-tertiary: #f3f4f6;
+  --text-primary: #111827;
+  --text-secondary: #6b7280;
+  --text-tertiary: #9ca3af;
+  --border-primary: #e5e7eb;
+  --border-secondary: #d1d5db;
+  --accent-primary: #84cc16;
+  --accent-hover: #65a30d;
+  --shadow-color: rgba(0, 0, 0, 0.1);
+}
+
+.dark {
+  /* Dark theme colors - Professional dark theme */
+  --bg-primary: #0f0f0f;
+  --bg-secondary: #1a1a1a;
+  --bg-tertiary: #262626;
+  --text-primary: #ffffff;
+  --text-secondary: #e5e5e5;
+  --text-tertiary: #a3a3a3;
+  --border-primary: #404040;
+  --border-secondary: #525252;
+  --accent-primary: #84cc16;
+  --accent-hover: #65a30d;
+  --shadow-color: rgba(0, 0, 0, 0.5);
+  
+  /* Additional dark theme colors for better contrast */
+  --card-bg: #1a1a1a;
+  --card-border: #404040;
+  --widget-bg: #1a1a1a;
+  --sidebar-bg: #0f0f0f;
+  --header-bg: #1a1a1a;
+  --input-bg: #262626;
+  --input-border: #404040;
+  --hover-bg: #262626;
 }
 
 /* Performance optimizations */
@@ -14,27 +54,30 @@
 
 html {
   scroll-behavior: smooth;
-  background: #000000;
+  background: var(--bg-primary);
   min-height: 100%;
   /* Optimize for performance */
   text-rendering: optimizeSpeed;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Cabinet Grotesk font optimization */
+  font-family: 'Cabinet Grotesk', system-ui, sans-serif;
+  transition: background-color 0.2s ease-in-out;
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: 'Cabinet Grotesk', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: #000000;
+  background: var(--bg-primary);
+  color: var(--text-primary);
   min-height: 100vh;
   margin: 0;
   padding: 0;
   /* Performance optimizations */
   text-rendering: optimizeSpeed;
   line-height: 1.5;
+  transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
 }
 
 /* Optimize animations */
@@ -928,6 +971,55 @@ nav {
   overflow: hidden;
 }
 
+/* Theme-aware utility classes */
+.theme-bg-primary {
+  background-color: var(--bg-primary);
+}
+
+.theme-bg-secondary {
+  background-color: var(--bg-secondary);
+}
+
+.theme-bg-tertiary {
+  background-color: var(--bg-tertiary);
+}
+
+.theme-text-primary {
+  color: var(--text-primary);
+}
+
+.theme-text-secondary {
+  color: var(--text-secondary);
+}
+
+.theme-text-tertiary {
+  color: var(--text-tertiary);
+}
+
+.theme-border-primary {
+  border-color: var(--border-primary);
+}
+
+.theme-border-secondary {
+  border-color: var(--border-secondary);
+}
+
+.theme-accent {
+  color: var(--accent-primary);
+}
+
+.theme-accent-bg {
+  background-color: var(--accent-primary);
+}
+
+.theme-shadow {
+  box-shadow: 0 4px 6px -1px var(--shadow-color), 0 2px 4px -1px var(--shadow-color);
+}
+
+.theme-shadow-lg {
+  box-shadow: 0 10px 15px -3px var(--shadow-color), 0 4px 6px -2px var(--shadow-color);
+}
+
 /* Studio AI assistant animations */
 .ai-suggestion-enter {
   opacity: 0;
@@ -1032,6 +1124,110 @@ nav {
 
 .rotate-y-180 {
   transform: rotateY(180deg);
+}
+
+/* Cabinet Grotesk Typography Utilities */
+@layer utilities {
+  /* Font family utilities */
+  .font-cabinet {
+    font-family: 'Cabinet Grotesk', system-ui, sans-serif;
+  }
+  
+  /* Optical sizing utilities for Cabinet Grotesk */
+  .opsz-display {
+    font-optical-sizing: 140;
+  }
+  
+  .opsz-heading {
+    font-optical-sizing: 100;
+  }
+  
+  .opsz-body {
+    font-optical-sizing: 60;
+  }
+  
+  .opsz-label {
+    font-optical-sizing: 45;
+  }
+  
+  .opsz-caption {
+    font-optical-sizing: 35;
+  }
+  
+  .opsz-button {
+    font-optical-sizing: 35;
+  }
+  
+  .opsz-kpi {
+    font-optical-sizing: 60;
+  }
+  
+  .opsz-badge {
+    font-optical-sizing: 20;
+  }
+  
+  /* Text rendering optimization for Cabinet Grotesk */
+  .text-optimize {
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* Font feature settings for better Cabinet Grotesk rendering */
+  .font-features {
+    font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
+  }
+}
+
+/* Cabinet Grotesk specific text styles */
+.text-hero-title {
+  @apply text-6xl sm:text-7xl lg:text-8xl font-bold leading-tight;
+  font-optical-sizing: 140;
+}
+
+.text-hero-subtitle {
+  @apply text-xl sm:text-2xl lg:text-3xl font-medium leading-relaxed;
+  font-optical-sizing: 60;
+}
+
+.text-page-header {
+  @apply text-xl sm:text-2xl lg:text-3xl font-semibold leading-snug;
+  font-optical-sizing: 50;
+}
+
+.text-section-title {
+  @apply text-lg sm:text-xl lg:text-2xl font-semibold leading-snug;
+  font-optical-sizing: 45;
+}
+
+.text-body {
+  @apply text-base sm:text-lg font-normal leading-normal;
+  font-optical-sizing: 35;
+}
+
+.text-label {
+  @apply text-sm font-normal leading-normal;
+  font-optical-sizing: 30;
+}
+
+.text-caption {
+  @apply text-xs font-normal leading-normal;
+  font-optical-sizing: 25;
+}
+
+.text-kpi-value {
+  @apply text-xl sm:text-2xl lg:text-3xl font-bold leading-tight;
+  font-optical-sizing: 60;
+}
+
+.text-button {
+  @apply text-base font-medium leading-normal;
+  font-optical-sizing: 35;
+}
+
+.text-badge {
+  @apply text-xs font-semibold leading-tight;
+  font-optical-sizing: 20;
 }
 
  
