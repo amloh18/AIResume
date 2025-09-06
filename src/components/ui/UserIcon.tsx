@@ -7,7 +7,7 @@ import UserProfileDialog from './UserProfileDialog';
 
 interface UserIconProps {
   user: {
-    name: string;
+    name?: string;
     email: string;
     username?: string;
     profilePhoto?: string;
@@ -19,7 +19,11 @@ const UserIcon: React.FC<UserIconProps> = ({ user }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
-  const getUserInitials = (name: string) => {
+  const getUserInitials = (name: string | undefined) => {
+    if (!name || typeof name !== 'string') {
+      return 'U'; // Default fallback
+    }
+    
     return name
       .split(' ')
       .map(word => word.charAt(0))
@@ -42,7 +46,7 @@ const UserIcon: React.FC<UserIconProps> = ({ user }) => {
           {user.profilePhoto ? (
             <img 
               src={user.profilePhoto} 
-              alt={user.name}
+              alt={user.name || 'User'}
               className="w-full h-full rounded-full object-cover"
             />
           ) : (

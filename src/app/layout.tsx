@@ -7,6 +7,7 @@ import { ThemeProvider } from '@/lib/contexts/ThemeContext'
 import PerformanceMonitor from '@/components/ui/PerformanceMonitor'
 import SessionManagerProvider from '@/components/providers/SessionManagerProvider'
 import { LoadingProvider } from '@/components/providers/LoadingProvider'
+import { PaymentModalProvider } from '@/contexts/PaymentModalContext'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -27,7 +28,9 @@ export default function RootLayout({
           <SessionProvider>
             <SessionManagerProvider>
               <LoadingProvider>
-                {children}
+                <PaymentModalProvider>
+                  {children}
+                </PaymentModalProvider>
               </LoadingProvider>
             </SessionManagerProvider>
           </SessionProvider>
