@@ -132,19 +132,19 @@ const KPIWidget: React.FC<{ title: string; value: string | number; icon: React.R
   change 
 }) => (
   <motion.div 
-    className={`${color} p-4 rounded-xl border border-white/10`}
+    className={`${color} p-4 rounded-xl border border-gray-200 dark:border-gray-700`}
     whileHover={{ y: -2, scale: 1.02 }}
     transition={{ type: "spring", stiffness: 300 }}
   >
     <div className="flex items-center justify-between">
       <div>
-        <p className="text-white/60 text-xs font-medium">{title}</p>
-        <p className="text-white text-2xl font-bold">{value}</p>
+        <p className="text-gray-600 dark:text-white/60 text-xs font-medium">{title}</p>
+        <p className="text-gray-900 dark:text-white text-2xl font-bold">{value}</p>
         {change && (
-          <p className="text-white/60 text-xs mt-1">{change}</p>
+          <p className="text-gray-600 dark:text-white/60 text-xs mt-1">{change}</p>
         )}
       </div>
-      <div className="text-white/40">
+      <div className="text-gray-500 dark:text-white/40">
         {icon}
       </div>
     </div>

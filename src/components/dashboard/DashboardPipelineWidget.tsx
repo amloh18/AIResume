@@ -41,7 +41,7 @@ const DashboardPipelineWidget: React.FC = () => {
 
   return (
     <motion.div
-      className="bg-white/5 border border-white/10 rounded-xl p-4"
+      className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
@@ -52,16 +52,16 @@ const DashboardPipelineWidget: React.FC = () => {
           <div className="bg-gradient-to-r from-lime-500/10 to-lime-600/10 border border-lime-500/20 rounded-lg p-3">
             <div className="flex items-center gap-2 mb-2">
               <Briefcase className="h-4 w-4 text-lime-400" />
-              <h3 className="text-sm font-medium text-white truncate">
+              <h3 className="text-sm font-medium text-gray-900 dark:text-white truncate">
                 {jobTitle || 'Untitled Job'}
               </h3>
             </div>
             {company && (
-              <p className="text-xs text-white/60 truncate">{company}</p>
+              <p className="text-xs text-gray-600 dark:text-white/60 truncate">{company}</p>
             )}
             <div className="mt-2 flex items-center gap-2">
-              <span className="text-xs text-white/60">Step {currentStep} of {steps.length}</span>
-              <span className="text-xs text-lime-400 font-medium">
+              <span className="text-xs text-gray-600 dark:text-white/60">Step {currentStep} of {steps.length}</span>
+              <span className="text-xs text-lime-600 dark:text-lime-400 font-medium">
                 {Math.round(getProgressPercentage())}% Complete
               </span>
             </div>

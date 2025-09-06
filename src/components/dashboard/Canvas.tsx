@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSession } from 'next-auth/react';
+import RecentActivityWidget from './RecentActivityWidget';
 import { 
   FileText, 
   Plus,
@@ -1640,26 +1641,7 @@ const Canvas: React.FC = () => {
           </div>
 
           {/* Recent Activity */}
-          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-            <h3 className="text-white font-medium text-sm mb-4 flex items-center gap-2">
-              <Activity size={14} className="text-blue-400" />
-              Recent Activity
-            </h3>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 text-white/60 text-xs">
-                <div className="w-2 h-2 bg-lime-400 rounded-full"></div>
-                <span>Created Product Manager CV</span>
-              </div>
-              <div className="flex items-center gap-3 text-white/60 text-xs">
-                <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                <span>Updated Software Engineer CV</span>
-              </div>
-              <div className="flex items-center gap-3 text-white/60 text-xs">
-                <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
-                <span>Published Designer CV</span>
-              </div>
-            </div>
-          </div>
+          <RecentActivityWidget limit={5} />
         </div>
       </div>
       ) : (
@@ -1670,7 +1652,7 @@ const Canvas: React.FC = () => {
             {/* Stats Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
               <motion.div
-                className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-4"
+                className="bg-gray-50 dark:bg-gray-800 backdrop-blur-xl border border-gray-200 dark:border-gray-700 rounded-xl p-4"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
@@ -1680,8 +1662,8 @@ const Canvas: React.FC = () => {
                     <PenTool size={16} className="text-blue-400" />
                   </div>
                   <div>
-                    <p className="text-white/60 text-xs">Total Cover Letters</p>
-                    <p className="text-lg font-bold text-white">{coverLetters.length}</p>
+                    <p className="text-gray-600 dark:text-white/60 text-xs">Total Cover Letters</p>
+                    <p className="text-lg font-bold text-gray-900 dark:text-white">{coverLetters.length}</p>
                   </div>
                 </div>
                 {coverLetters.length === 0 && (
@@ -1889,27 +1871,6 @@ const Canvas: React.FC = () => {
               </div>
             </div>
 
-            {/* Recent Activity */}
-            <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-              <h3 className="text-white font-medium text-sm mb-4 flex items-center gap-2">
-                <Activity size={14} className="text-blue-400" />
-                Recent Activity
-              </h3>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3 text-white/60 text-xs">
-                  <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                  <span>Created Software Engineer Cover Letter</span>
-                </div>
-                <div className="flex items-center gap-3 text-white/60 text-xs">
-                  <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                  <span>Updated Product Manager Cover Letter</span>
-                </div>
-                <div className="flex items-center gap-3 text-white/60 text-xs">
-                  <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
-                  <span>Published Data Scientist Cover Letter</span>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       )}

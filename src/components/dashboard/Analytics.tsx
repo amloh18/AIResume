@@ -39,7 +39,7 @@ const MyStatusSection: React.FC<{
         <div className="text-center">
       <div className="relative w-32 h-32 mx-auto mb-4">
         <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r="45" stroke="currentColor" strokeWidth="10" fill="none" className="text-white/10" />
+              <circle cx="50" cy="50" r="45" stroke="currentColor" strokeWidth="10" fill="none" className="text-gray-200 dark:text-white/10" />
           <defs>
             <linearGradient id="cvHealthGradient" x1="0%" y1="0%" x2="100%" y2="0%">
               <stop offset="0%" stopColor="#ef4444" />
@@ -66,17 +66,17 @@ const MyStatusSection: React.FC<{
           </h3>
           <div className="space-y-2">
             <motion.button onClick={onImproveScore}
-              className="w-full p-3 bg-gradient-to-r from-lime-400/20 to-lime-500/20 border border-lime-400/30 text-lime-400 rounded-lg font-medium hover:from-lime-400/30 hover:to-lime-500/30 transition-all duration-300 flex items-center justify-center gap-2 text-sm"
+              className="w-full p-3 bg-gradient-to-r from-lime-100 to-lime-200 dark:from-lime-400/20 dark:to-lime-500/20 border border-lime-300 dark:border-lime-400/30 text-lime-700 dark:text-lime-400 rounded-lg font-medium hover:from-lime-200 hover:to-lime-300 dark:hover:from-lime-400/30 dark:hover:to-lime-500/30 transition-all duration-300 flex items-center justify-center gap-2 text-sm"
               whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
               <Sparkles size={14} /> Improve CV Score
             </motion.button>
             <motion.button onClick={onAddJob}
-              className="w-full p-3 bg-white/10 text-white/80 rounded-lg hover:bg-white/20 transition-all duration-300 flex items-center justify-center gap-2 text-sm"
+              className="w-full p-3 bg-white/5 text-white/80 rounded-lg hover:bg-white/10 transition-all duration-300 flex items-center justify-center gap-2 text-sm"
               whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
               <Plus size={14} /> Add Job
             </motion.button>
             <motion.button onClick={onWriteCoverLetter}
-              className="w-full p-3 bg-white/10 text-white/80 rounded-lg hover:bg-white/20 transition-all duration-300 flex items-center justify-center gap-2 text-sm"
+              className="w-full p-3 bg-white/5 text-white/80 rounded-lg hover:bg-white/10 transition-all duration-300 flex items-center justify-center gap-2 text-sm"
               whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
               <PenTool size={14} /> Write Cover Letter
             </motion.button>
@@ -938,7 +938,7 @@ const Analytics: React.FC = () => {
             </div>
 
             {/* Performance Insights Skeleton */}
-            <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+            <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
               <div className="flex items-center justify-between mb-6">
                 <div className="h-6 w-40 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
@@ -955,7 +955,7 @@ const Analytics: React.FC = () => {
               {/* KPI Cards Skeleton */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {Array.from({ length: 4 }).map((_, index) => (
-                  <div key={index} className="bg-white/5 border border-white/10 rounded-xl p-4">
+                  <div key={index} className="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl p-4">
                     <div className="h-6 w-16 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded mb-3">
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
                     </div>
@@ -968,7 +968,7 @@ const Analytics: React.FC = () => {
             </div>
 
             {/* Last 5 Jobs Widget Skeleton */}
-            <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+            <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
               <div className="flex items-center justify-between mb-6">
                 <div className="h-6 w-28 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
