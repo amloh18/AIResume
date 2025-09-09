@@ -27,6 +27,7 @@ import { useSession } from 'next-auth/react';
 import { useUserPlan } from '@/lib/hooks/useUserPlan';
 import ATSScoreAnalyzer from '@/components/studio/ATSScoreAnalyzer';
 import AddJobModal from './AddJobModal';
+import CVSelectionStep from '@/components/journey/CVSelectionStep';
 
 interface JobPipelineCardModalProps {
   isOpen: boolean;
@@ -209,7 +210,7 @@ const JobPipelineCardModal: React.FC<JobPipelineCardModalProps> = ({ isOpen, onC
               setAtsScore(linkedCV.metadata.atsScore);
               updateAtsScore(linkedCV.metadata.atsScore);
               console.log('🔍 JobPipelineCardModal - Restored ATS score from CV metadata (priority):', linkedCV.metadata.atsScore);
-            } else if (journey.atsScore && !atsScore) {
+            } else if (journey.atsScore) {
               // Fallback to journey ATS score if CV doesn't have metadata for this job
               setAtsScore(journey.atsScore);
               updateAtsScore(journey.atsScore);
@@ -222,7 +223,7 @@ const JobPipelineCardModal: React.FC<JobPipelineCardModalProps> = ({ isOpen, onC
             console.log('🔍 JobPipelineCardModal - CV linked in database but not found in local arrays:', journey.cvId);
             
             // Still restore ATS score from journey if available
-            if (journey.atsScore && !atsScore) {
+            if (journey.atsScore) {
               setAtsScore(journey.atsScore);
               updateAtsScore(journey.atsScore);
               console.log('🔍 JobPipelineCardModal - Restored ATS score from journey (CV not found locally):', journey.atsScore);
@@ -844,6 +845,67 @@ const JobPipelineCardModal: React.FC<JobPipelineCardModalProps> = ({ isOpen, onC
     }
   };
 
+  // New enhanced CV selection handler for the CVSelectionStep component
+  const handleCVSelectionStepComplete = async (cvId: string, action: 'existing' | 'duplicate' | 'new') => {
+    try {
+      const userId = session?.user?.id;
+      if (!userId || !jobData) {
+        console.error('❌ Missing userId or jobData for CV selection');
+        return;
+      }
+
+      console.log('🔍 JobPipelineCardModal - CV selection step completed:', { cvId, action });
+
+      if (action === 'existing' || action === 'duplicate') {
+        // Find the CV in our local array
+        const selectedCVData = userCVs.find(cv => cv.id === cvId);
+        
+        if (selectedCVData) {
+          // Update the job with the linked CV
+          const jobUpdateResponse = await fetch(`/api/jobs/${jobId}?userId=${userId}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              cvId: cvId
+            }),
+          });
+
+          if (jobUpdateResponse.ok) {
+            console.log('✅ Job linked to CV successfully');
+            setJobData((prev: any) => ({ ...prev, cvId: cvId }));
+          }
+
+          // Update local state and journey
+          setSelectedCV(selectedCVData);
+          updateCVId(cvId);
+          updateJourneyStatus('cv-created');
+          setCvSelectionSuccess(true);
+          
+          // Move to next step (Step 3: ATS Scoring)
+          updateCurrentStep(3);
+          
+          if (onJourneyUpdated) {
+            onJourneyUpdated();
+          }
+          
+          console.log('🔍 JobPipelineCardModal - CV selection completed, moved to step 3');
+        }
+      } else if (action === 'new') {
+        // Redirect to CV studio for new CV creation
+        const params = new URLSearchParams({
+          jobId: jobId || '',
+          jobTitle: jobData?.title || jobData?.jobTitle || '',
+          company: jobData?.company || ''
+        });
+        router.push(`/studio?${params.toString()}`);
+      }
+    } catch (error) {
+      console.error('Error in CV selection step:', error);
+    }
+  };
+
   const handleCoverLetterSelect = async (coverLetter: CoverLetter) => {
     try {
       const userId = session?.user?.id;
@@ -896,12 +958,13 @@ const JobPipelineCardModal: React.FC<JobPipelineCardModalProps> = ({ isOpen, onC
         break;
       
       case 2: // CV Created/Linked
-        // Check multiple sources for CV link
-        const hasCVLinked = selectedCV || 
-                           cvSelectionSuccess || 
-                           (jobData && jobData.cvId) || 
-                           state.cvId ||
-                           (userCVs.some(cv => cv.id === state.cvId));
+        // Check multiple sources for CV link - prioritize actual CV data over flags
+        const linkedCVId = selectedCV?.id || state.cvId || (jobData && jobData.cvId);
+        const hasCVLinked = linkedCVId && (
+          selectedCV || 
+          cvSelectionSuccess || 
+          (userCVs.some(cv => cv.id === linkedCVId))
+        );
         
         status = hasCVLinked ? 'completed' : 
                  (jobData || jobSelectionSuccess || (jobId && jobId !== 'temp')) ? 'active' : 'pending';
@@ -1104,16 +1167,13 @@ const JobPipelineCardModal: React.FC<JobPipelineCardModalProps> = ({ isOpen, onC
           {currentStep === 2 && (
             <div>
               {(() => {
-                const hasCVLinked = cvSelectionSuccess || selectedCV || (jobData && jobData.cvId) || state.cvId || (userCVs.some(cv => cv.id === state.cvId));
-                console.log('🔍 JobPipelineCardModal - Step 2 CV check:', {
-                  cvSelectionSuccess,
-                  selectedCV: selectedCV ? selectedCV.title : null,
-                  jobDataCvId: jobData?.cvId,
-                  stateCvId: state.cvId,
-                  userCVsCount: userCVs.length,
-                  hasCVLinked,
-                  currentStep
-                });
+                const linkedCVId = selectedCV?.id || state.cvId || (jobData && jobData.cvId);
+                const hasCVLinked = linkedCVId && (
+                  selectedCV || 
+                  cvSelectionSuccess || 
+                  (userCVs.some(cv => cv.id === linkedCVId)) ||
+                  (jobData && jobData.cvId)
+                );
                 return hasCVLinked;
               })() ? (
                 <motion.div
@@ -1136,10 +1196,27 @@ const JobPipelineCardModal: React.FC<JobPipelineCardModalProps> = ({ isOpen, onC
                   <div className="space-y-1">
                     <p className="text-white font-medium text-sm">
                       {selectedCV?.title || 
-                       (state.cvId && userCVs.find(cv => cv.id === state.cvId)?.title) || 
+                       (state.cvId && userCVs.find(cv => cv.id === state.cvId)?.title) ||
+                       (jobData?.cvId && userCVs.find(cv => cv.id === jobData.cvId)?.title) ||
                        'Linked CV'}
                     </p>
-                    <p className="text-white/60 text-sm">CV</p>
+                    <p className="text-white/60 text-sm">CV Document</p>
+                    {(selectedCV || state.cvId || jobData?.cvId) && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <button
+                          onClick={() => {
+                            const cvIdToEdit = selectedCV?.id || state.cvId || jobData?.cvId;
+                            if (cvIdToEdit) {
+                              router.push(`/studio?cvId=${cvIdToEdit}`);
+                            }
+                          }}
+                          className="text-xs text-lime-400 hover:text-lime-300 flex items-center gap-1"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          Edit CV
+                        </button>
+                      </div>
+                    )}
                   </div>
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
@@ -1151,56 +1228,13 @@ const JobPipelineCardModal: React.FC<JobPipelineCardModalProps> = ({ isOpen, onC
                   </motion.div>
                 </motion.div>
               ) : (
-                <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-                  <div className="text-left">
-                    <FileText className="h-8 w-8 text-green-400 mb-3" />
-                    <h3 className="text-base font-semibold text-white mb-2">No CV Selected</h3>
-                    <p className="text-white/60 text-sm">Choose to create a new CV or link an existing one from your collection</p>
-                  </div>
-                </div>
-              )}
-              
-              {/* CV Selection Dropdown */}
-              {showCVSelector && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="bg-white/5 rounded-lg border border-white/10 mt-2"
-                >
-                  <div className="p-3">
-                    <h4 className="text-sm font-medium text-white mb-2">Select from Your CVs</h4>
-                    {userCVs.length === 0 ? (
-                      <p className="text-white/60 text-xs">No CVs found. Create your first CV!</p>
-                    ) : (
-                      <div className="space-y-2 max-h-32 overflow-y-auto">
-                        {userCVs.map((cv) => (
-                          <button
-                            key={cv.id}
-                            onClick={() => handleCVSelect(cv)}
-                            disabled={isSelectingCV}
-                            className="w-full text-left p-2 hover:bg-white/10 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <div className="text-sm text-white font-medium">{cv.title}</div>
-                                <div className="text-xs text-white/60">CV</div>
-                              </div>
-                              {isSelectingCV && (
-                                <motion.div
-                                  animate={{ rotate: 360 }}
-                                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                                >
-                                  <Settings className="h-3 w-3 text-green-400" />
-                                </motion.div>
-                              )}
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
+                <CVSelectionStep
+                  jobTitle={jobData?.title || jobData?.jobTitle}
+                  company={jobData?.company}
+                  jobId={jobId}
+                  onCVSelected={handleCVSelectionStepComplete}
+                  onBack={() => updateCurrentStep(1)}
+                />
               )}
             </div>
           )}
@@ -1362,8 +1396,13 @@ const JobPipelineCardModal: React.FC<JobPipelineCardModalProps> = ({ isOpen, onC
                       </button>
                       <button
                         onClick={() => {
-                          // Navigate to cover letter creation
-                          router.push('/dashboard/studio?type=cover');
+                          // Navigate to cover letter creation with job and CV data
+                          const params = new URLSearchParams({
+                            type: 'cover',
+                            jobId: jobId || '',
+                            cvId: selectedCV?.id || state.cvId || ''
+                          });
+                          router.push(`/studio?${params.toString()}`);
                         }}
                         className="w-full px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-sm border border-white/20"
                       >

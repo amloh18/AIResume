@@ -10,7 +10,9 @@ import { useSession } from 'next-auth/react';
 import { useCreateCV } from '@/lib/utils/cvCreationUtils';
 import AnalyticsJourneyWidget from './AnalyticsJourneyWidget';
 import PageHeader from './PageHeader';
+import MasterCVBadge from './MasterCVBadge';
 import { authenticatedFetch } from '@/lib/utils/apiUtils';
+import CVJourneyModal from '@/components/modals/CVJourneyModal';
 
 // 1. The At-a-Glance "My Status" Section - Fused CV Health Score + Quick Actions
 const MyStatusSection: React.FC<{ 
@@ -165,7 +167,10 @@ const ApplicationHub: React.FC<{
                     <FileText size={16} className="text-lime-400" />
       </div>
       <div>
-                    <h4 className="text-white font-medium text-sm">{draft.title}</h4>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h4 className="text-white font-medium text-sm">{draft.title}</h4>
+                      {draft.isMaster && <MasterCVBadge variant="compact" />}
+                    </div>
                     <p className="text-white/40 text-xs">Progress: {draft.progress}%</p>
         </div>
       </div>
@@ -587,6 +592,8 @@ const Analytics: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState('week');
   const [drafts, setDrafts] = useState<any[]>([]);
+  const [showCVJourneyModal, setShowCVJourneyModal] = useState(false);
+  const [modalStep, setModalStep] = useState(1);
 
   const handleUpdateMonthlyGoal = async (newGoal: number) => {
     try {
@@ -744,6 +751,17 @@ const Analytics: React.FC = () => {
     }
   }, [session]);
 
+  // Add event listener for CV Journey Modal
+  useEffect(() => {
+    const handleOpenCVJourneyModal = (event: any) => {
+      setModalStep(event.detail.step || 1);
+      setShowCVJourneyModal(true);
+    };
+
+    window.addEventListener('openCVJourneyModal', handleOpenCVJourneyModal);
+    return () => window.removeEventListener('openCVJourneyModal', handleOpenCVJourneyModal);
+  }, []);
+
   useEffect(() => {
     if (user?.id || user?._id) {
       loadAnalyticsDataOnly(user.id || user._id);
@@ -805,7 +823,8 @@ const Analytics: React.FC = () => {
             title: cv.title || 'Untitled CV',
             progress: calculateCompletionPercentage(cv),
             lastEdited: new Date(cv.updatedAt || cv.createdAt),
-            cvData: cv.cvData
+            cvData: cv.cvData,
+            isMaster: cv.isMaster || false
           }));
         
         setDrafts(incompleteCVs);
@@ -1096,6 +1115,13 @@ const Analytics: React.FC = () => {
           />
         </div>
       </div>
+
+      {/* CV Journey Modal */}
+      <CVJourneyModal
+        isOpen={showCVJourneyModal}
+        onClose={() => setShowCVJourneyModal(false)}
+        initialStep={modalStep}
+      />
     </div>
   );
 };

@@ -12,5 +12,5 @@ export { default as DiscountCode, type IDiscountCode } from './DiscountCode';
 export { default as Subscription, type ISubscription } from './Subscription';
 export { default as PaymentMethod, type IPaymentMethod } from './PaymentMethod';
 export { default as Invoice, type IInvoice } from './Invoice';
-export { default as BetaSignup, type IBetaSignup } from './BetaSignup';
+
 export { default as CoverLetter, type ICoverLetter } from './CoverLetter'; 

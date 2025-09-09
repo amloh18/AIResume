@@ -9,6 +9,7 @@ interface CVPreviewContentProps {
   theme?: 'light' | 'dark';
   showBadge?: boolean;
   sectionOrder?: string[];
+  sectionVisibility?: Record<string, boolean>;
   templateStyles?: {
     fontFamily: string;
     primaryColor: string;
@@ -30,13 +31,25 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
   cvData, 
   theme = 'light', 
   showBadge = true,
-  sectionOrder = ['basics', 'experience', 'education', 'skills', 'projects', 'certificates', 'languages'],
+  sectionOrder = ['basics', 'work', 'education', 'skills', 'projects', 'certificates', 'languages'],
+  sectionVisibility = {},
   templateStyles,
   customCSS,
   templateName,
   pagePadding = { top: 32, bottom: 32 }
 }) => {
   const isDark = theme === 'dark';
+  
+  // Helper function to check if a section should be visible
+  const isSectionVisible = (sectionName: string) => {
+    // If sectionVisibility is provided, use it; otherwise default to true
+    if (Object.keys(sectionVisibility).length === 0) {
+      return true; // Default to visible if no visibility settings provided
+    }
+    const isVisible = sectionVisibility[sectionName] !== false;
+    console.log(`Section ${sectionName} visibility:`, isVisible, 'Settings:', sectionVisibility);
+    return isVisible;
+  };
   
   // Debug contact information
   console.log('CVPreviewContent - Contact Info:', {
@@ -381,55 +394,53 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
                 </div>
               )}
 
-              {/* Work Experience */}
-              {cvData.work.length > 0 && (
-                <div className="mb-6">
-                  <h5 className={`text-xl font-semibold mb-4 border-b pb-1`} style={{
+              {/* Work Experience - Optimized for space */}
+              {cvData.work.length > 0 && isSectionVisible('work') && (
+                <div className="mb-4">
+                  <h5 className={`text-lg font-semibold mb-3 border-b pb-1`} style={{
                     color: templateStyles?.primaryColor || themeClasses.text.primary,
                     borderBottomColor: templateStyles?.secondaryColor || themeClasses.border
                   }}>
                     Work Experience
                   </h5>
-                  <div className="space-y-4">
-                    {/* First 2 work experiences on page 1 */}
-                    {cvData.work.slice(0, 2).map((work, index) => (
-                      <div key={index} className="border-l-4 pl-4" style={{
+                  <div className="space-y-3">
+                    {/* Show first 3 work experiences on page 1 to prevent splitting */}
+                    {cvData.work.slice(0, 3).map((work, index) => (
+                      <div key={index} className="border-l-3 pl-3 break-inside-avoid" style={{
                         borderLeftColor: templateStyles?.primaryColor || themeClasses.accent
                       }}>
-                        <div className="flex justify-between items-start mb-2">
-                          <div>
-                            <h6 className="font-semibold text-lg" style={{
+                        <div className="flex justify-between items-start mb-1">
+                          <div className="flex-1 min-w-0">
+                            <h6 className="font-semibold text-base leading-tight" style={{
                               color: templateStyles?.primaryColor || themeClasses.text.primary
                             }}>
                               {work.position}
                             </h6>
-                            <p className="text-base" style={{
+                            <p className="text-sm font-medium" style={{
                               color: templateStyles?.secondaryColor || themeClasses.text.accent
                             }}>
                               {work.name}
                             </p>
                           </div>
-                          <span className="text-sm" style={{
+                          <span className="text-xs text-right ml-2 flex-shrink-0" style={{
                             color: templateStyles?.secondaryColor || themeClasses.text.muted
                           }}>
                             {work.startDate && work.endDate ? `${work.startDate} - ${work.endDate}` : ''}
                           </span>
                         </div>
                         {work.summary && (
-                          <div className="text-sm leading-relaxed" style={{
+                          <div className="text-xs leading-relaxed mb-1" style={{
                             color: templateStyles?.secondaryColor || themeClasses.text.secondary
                           }}>
-                            {work.summary.split('\n').map((line, i) => (
-                              <p key={i} className="mb-1">{line}</p>
-                            ))}
+                            <p className="line-clamp-2">{work.summary}</p>
                           </div>
                         )}
                         {work.highlights && work.highlights.length > 0 && (
-                          <ul className="text-sm list-disc list-inside space-y-1 mt-2" style={{
+                          <ul className="text-xs list-disc list-inside space-y-0.5" style={{
                             color: templateStyles?.secondaryColor || themeClasses.text.secondary
                           }}>
-                            {work.highlights.map((highlight, i) => (
-                              <li key={i}>{highlight}</li>
+                            {work.highlights.slice(0, 2).map((highlight, i) => (
+                              <li key={i} className="line-clamp-1">{highlight}</li>
                             ))}
                           </ul>
                         )}
@@ -439,41 +450,41 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
                 </div>
               )}
 
-              {/* Education - only if work has 2 or fewer entries */}
-              {cvData.work.length <= 2 && cvData.education.length > 0 && (
-                <div className="mb-6">
-                  <h5 className={`text-xl font-semibold mb-4 border-b pb-1`} style={{
+              {/* Education - Compact layout */}
+              {cvData.education.length > 0 && isSectionVisible('education') && (
+                <div className="mb-4">
+                  <h5 className={`text-lg font-semibold mb-3 border-b pb-1`} style={{
                     color: templateStyles?.primaryColor || themeClasses.text.primary,
                     borderBottomColor: templateStyles?.secondaryColor || themeClasses.border
                   }}>
                     Education
                   </h5>
-                  <div className="space-y-4">
+                  <div className="space-y-2">
                     {cvData.education.map((education, index) => (
-                      <div key={index} className="border-l-4 pl-4" style={{
+                      <div key={index} className="border-l-3 pl-3" style={{
                         borderLeftColor: templateStyles?.primaryColor || themeClasses.accent
                       }}>
                         <div className="flex justify-between items-start">
-                          <div>
-                            <h6 className="font-semibold text-lg" style={{
+                          <div className="flex-1 min-w-0">
+                            <h6 className="font-semibold text-base leading-tight" style={{
                               color: templateStyles?.primaryColor || themeClasses.text.primary
                             }}>
                               {education.institution}
                             </h6>
-                            <p className="text-base" style={{
+                            <p className="text-sm" style={{
                               color: templateStyles?.secondaryColor || themeClasses.text.accent
                             }}>
                               {education.studyType} in {education.area}
                             </p>
                             {education.score && (
-                              <p className="text-sm" style={{
+                              <p className="text-xs" style={{
                                 color: templateStyles?.secondaryColor || themeClasses.text.muted
                               }}>
                                 Score: {education.score}
                               </p>
                             )}
                           </div>
-                          <span className="text-sm" style={{
+                          <span className="text-xs text-right ml-2 flex-shrink-0" style={{
                             color: templateStyles?.secondaryColor || themeClasses.text.muted
                           }}>
                             {education.startDate && education.endDate ? `${education.startDate} - ${education.endDate}` : ''}
@@ -485,20 +496,20 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
                 </div>
               )}
 
-              {/* Skills - only if work has 2 or fewer entries */}
-              {cvData.work.length <= 2 && cvData.skills.length > 0 && (
-                <div className="mb-6">
-                  <h5 className={`text-xl font-semibold mb-4 border-b pb-1`} style={{
+              {/* Skills - Compact layout */}
+              {cvData.skills.length > 0 && isSectionVisible('skills') && (
+                <div className="mb-4">
+                  <h5 className={`text-lg font-semibold mb-3 border-b pb-1`} style={{
                     color: templateStyles?.primaryColor || themeClasses.text.primary,
                     borderBottomColor: templateStyles?.secondaryColor || themeClasses.border
                   }}>
                     Skills
                   </h5>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-1.5">
                     {cvData.skills.map((skill, index) => (
-                      <div key={index} className="px-3 py-2 rounded-full text-sm font-medium" style={{
-                        backgroundColor: templateStyles?.primaryColor ? `${templateStyles.primaryColor}20` : (isDark ? 'rgba(132, 204, 22, 0.2)' : 'rgba(59, 130, 246, 0.1)'),
-                        color: templateStyles?.primaryColor || (isDark ? '#84cc16' : '#1d4ed8')
+                      <div key={index} className="px-2.5 py-1 rounded-full text-xs font-medium" style={{
+                        backgroundColor: templateStyles?.primaryColor ? `${templateStyles.primaryColor}15` : 'rgba(59, 130, 246, 0.1)',
+                        color: templateStyles?.primaryColor || '#1d4ed8'
                       }}>
                         {skill.name}
                       </div>
@@ -589,7 +600,7 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
       </div>
 
       {/* Page 2 - Additional content (only for single-column layout) */}
-      {layoutType === 'single-column' && (cvData.work.length > 2 || cvData.projects.length > 0) && (
+      {layoutType === 'single-column' && (cvData.projects.length > 0 && isSectionVisible('projects')) && (
         <div className={`${themeClasses.page} border rounded-xl shadow-2xl`} style={{ 
           width: '210mm', 
           height: '297mm',
@@ -603,133 +614,10 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
             paddingLeft: '32px',
             paddingRight: '32px'
           }}>
-            {/* Continued Work Experience */}
-            {cvData.work.length > 2 && (
-              <div className="mb-6">
-                <h5 className={`text-xl font-semibold mb-4 border-b pb-1`} style={{
-                  color: templateStyles?.primaryColor || themeClasses.text.primary,
-                  borderBottomColor: templateStyles?.secondaryColor || themeClasses.border
-                }}>
-                  Work Experience (Continued)
-                </h5>
-                <div className="space-y-4">
-                  {cvData.work.slice(2).map((work, index) => (
-                    <div key={index + 2} className="border-l-4 pl-4" style={{
-                      borderLeftColor: templateStyles?.primaryColor || themeClasses.accent
-                    }}>
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <h6 className="font-semibold text-lg" style={{
-                            color: templateStyles?.primaryColor || themeClasses.text.primary
-                          }}>
-                            {work.position}
-                          </h6>
-                          <p className="text-base" style={{
-                            color: templateStyles?.secondaryColor || themeClasses.text.accent
-                          }}>
-                            {work.name}
-                          </p>
-                        </div>
-                        <span className="text-sm" style={{
-                          color: templateStyles?.secondaryColor || themeClasses.text.muted
-                        }}>
-                          {work.startDate && work.endDate ? `${work.startDate} - ${work.endDate}` : ''}
-                        </span>
-                      </div>
-                      {work.summary && (
-                        <div className="text-sm leading-relaxed" style={{
-                          color: templateStyles?.secondaryColor || themeClasses.text.secondary
-                        }}>
-                          {work.summary.split('\n').map((line, i) => (
-                            <p key={i} className="mb-1">{line}</p>
-                          ))}
-                        </div>
-                      )}
-                      {work.highlights && work.highlights.length > 0 && (
-                        <ul className="text-sm list-disc list-inside space-y-1 mt-2" style={{
-                          color: templateStyles?.secondaryColor || themeClasses.text.secondary
-                        }}>
-                          {work.highlights.map((highlight, i) => (
-                            <li key={i}>{highlight}</li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
 
-            {/* Education - if not shown on page 1 */}
-            {cvData.work.length > 2 && cvData.education.length > 0 && (
-              <div className="mb-6">
-                <h5 className={`text-xl font-semibold mb-4 border-b pb-1`} style={{
-                  color: templateStyles?.primaryColor || themeClasses.text.primary,
-                  borderBottomColor: templateStyles?.secondaryColor || themeClasses.border
-                }}>
-                  Education
-                </h5>
-                <div className="space-y-4">
-                  {cvData.education.map((education, index) => (
-                    <div key={index} className="border-l-4 pl-4" style={{
-                      borderLeftColor: templateStyles?.primaryColor || themeClasses.accent
-                    }}>
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h6 className="font-semibold text-lg" style={{
-                            color: templateStyles?.primaryColor || themeClasses.text.primary
-                          }}>
-                            {education.institution}
-                          </h6>
-                          <p className="text-base" style={{
-                            color: templateStyles?.secondaryColor || themeClasses.text.accent
-                          }}>
-                            {education.studyType} in {education.area}
-                          </p>
-                          {education.score && (
-                            <p className="text-sm" style={{
-                              color: templateStyles?.secondaryColor || themeClasses.text.muted
-                            }}>
-                              Score: {education.score}
-                            </p>
-                          )}
-                        </div>
-                        <span className="text-sm" style={{
-                          color: templateStyles?.secondaryColor || themeClasses.text.muted
-                        }}>
-                          {education.startDate && education.endDate ? `${education.startDate} - ${education.endDate}` : ''}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Skills - if not shown on page 1 */}
-            {cvData.work.length > 2 && cvData.skills.length > 0 && (
-              <div className="mb-6">
-                <h5 className={`text-xl font-semibold mb-4 border-b pb-1`} style={{
-                  color: templateStyles?.primaryColor || themeClasses.text.primary,
-                  borderBottomColor: templateStyles?.secondaryColor || themeClasses.border
-                }}>
-                  Skills
-                </h5>
-                <div className="flex flex-wrap gap-2">
-                  {cvData.skills.map((skill, index) => (
-                    <div key={index} className="px-3 py-2 rounded-full text-sm font-medium" style={{
-                      backgroundColor: templateStyles?.primaryColor ? `${templateStyles.primaryColor}20` : (isDark ? 'rgba(132, 204, 22, 0.2)' : 'rgba(59, 130, 246, 0.1)'),
-                      color: templateStyles?.primaryColor || (isDark ? '#84cc16' : '#1d4ed8')
-                    }}>
-                      {skill.name}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {/* Projects */}
-            {cvData.projects.length > 0 && (
+            {cvData.projects.length > 0 && isSectionVisible('projects') && (
               <div className="mb-6">
                 <h5 className={`text-xl font-semibold mb-4 border-b pb-1`} style={{
                   color: templateStyles?.primaryColor || themeClasses.text.primary,

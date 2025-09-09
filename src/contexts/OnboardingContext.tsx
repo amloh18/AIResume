@@ -18,6 +18,7 @@ type OnboardingAction =
   | { type: 'SET_CURRENT_STEP'; payload: number }
   | { type: 'SET_SELECTED_ROLE'; payload: UserRole }
   | { type: 'UPDATE_CV_DATA'; payload: Partial<CVDataStructure> }
+  | { type: 'SET_CV_DATA'; payload: CVDataStructure }
   | { type: 'SET_AUTHENTICATED'; payload: boolean }
   | { type: 'SET_USER_DATA'; payload: any }
   | { type: 'SET_LOADING'; payload: boolean }
@@ -95,6 +96,12 @@ function onboardingReducer(state: OnboardingState, action: OnboardingAction): On
       return {
         ...state,
         cvData: { ...state.cvData, ...action.payload }
+      };
+    
+    case 'SET_CV_DATA':
+      return {
+        ...state,
+        cvData: action.payload
       };
     
     case 'SET_AUTHENTICATED':

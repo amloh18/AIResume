@@ -6,13 +6,13 @@ import Logo from '../ui/Logo';
 import { Menu, X } from 'lucide-react';
 import LoginModal from '../auth/LoginModal';
 import SignupModal from '../onboarding/AuthModal';
-import BetaSignupModal from './BetaSignupModal';
+
 
 const Navigation = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
-  const [isBetaModalOpen, setIsBetaModalOpen] = useState(false);
+
   const [navbarHeight, setNavbarHeight] = useState(80);
   const [scrolled, setScrolled] = useState(false);
 
@@ -148,9 +148,9 @@ const Navigation = () => {
                     borderColor: 'rgba(132, 204, 22, 0.5)'
                   }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => setIsBetaModalOpen(true)}
+                  onClick={() => setIsSignupModalOpen(true)}
                 >
-                  Join Beta
+                  Get Started
                 </motion.button>
                 <motion.button
                   className="bg-gradient-to-r from-lime-400 to-lime-500 text-black px-6 py-3 rounded-full font-medium text-base hover:shadow-lg hover:shadow-lime-400/25 transition-all"
@@ -220,11 +220,11 @@ const Navigation = () => {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => {
-                  setIsBetaModalOpen(true);
+                  setIsSignupModalOpen(true);
                   setIsMenuOpen(false);
                 }}
               >
-                Join Beta
+                Get Started
               </motion.button>
               <motion.button
                 className="w-full bg-gradient-to-r from-lime-400 to-lime-500 text-black px-4 py-3 rounded-2xl font-medium text-lg hover:shadow-lg hover:shadow-lime-400/25 transition-all"
@@ -258,11 +258,7 @@ const Navigation = () => {
         onSwitchToLogin={handleSwitchToLogin}
       />
 
-      {/* Beta Signup Modal */}
-      <BetaSignupModal
-        isOpen={isBetaModalOpen}
-        onClose={() => setIsBetaModalOpen(false)}
-      />
+
     </>
   );
 };

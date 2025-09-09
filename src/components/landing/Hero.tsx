@@ -5,13 +5,13 @@ import { motion } from 'framer-motion';
 import Lottie from 'lottie-react';
 import Typewriter from '../ui/Typewriter';
 import { Play, ArrowRight, Sparkles } from 'lucide-react';
-import BetaSignupModal from './BetaSignupModal';
+
 
 const Hero = () => {
   const typewriterWords = ['CV', 'Cover Letter', 'Job Tracker'];
   const [scrollY, setScrollY] = useState(0);
   const [animationData, setAnimationData] = useState(null);
-  const [isBetaModalOpen, setIsBetaModalOpen] = useState(false);
+
 
   // Load Lottie animation data
   useEffect(() => {
@@ -211,7 +211,7 @@ const Hero = () => {
               transformStyle: 'preserve-3d',
               perspective: '1000px'
             }}
-            onClick={() => setIsBetaModalOpen(true)}
+            onClick={() => window.location.href = '/onboarding'}
           >
             <motion.div
               className="absolute inset-0 bg-gradient-to-r from-lime-400/10 to-blue-400/10 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -219,7 +219,7 @@ const Hero = () => {
             />
             <div className="relative flex items-center gap-3">
               <Play size={20} />
-              <span>Join Beta</span>
+              <span>Get Started</span>
             </div>
           </motion.button>
         </motion.div>
@@ -305,12 +305,7 @@ const Hero = () => {
         <p className="text-center mt-2 text-sm font-medium">Scroll to explore</p>
       </motion.div>
 
-      {/* Beta Signup Modal */}
-      <BetaSignupModal
-        isOpen={isBetaModalOpen}
-        onClose={() => setIsBetaModalOpen(false)}
-        autoShow={true}
-      />
+
     </section>
   );
 };

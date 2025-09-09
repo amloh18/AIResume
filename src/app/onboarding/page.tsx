@@ -17,6 +17,7 @@ import CompletionStep from '@/components/onboarding/CompletionStep';
 import PersonalInfoStep from '@/components/onboarding/PersonalInfoStep';
 import ExperienceStep from '@/components/onboarding/ExperienceStep';
 import EducationStep from '@/components/onboarding/EducationStep';
+import MasterCVCreationWizard from '@/components/onboarding/MasterCVCreationWizard';
 import { SkeletonText, Skeleton } from '@/components/ui/SkeletonLoader';
 import ErrorDialog from '@/components/ui/ErrorDialog';
 import { validateAndGetMongoDBUserId } from '@/lib/utils/userIdUtils';
@@ -323,9 +324,10 @@ const OnboardingContent: React.FC = () => {
       
       const requestData = {
         userId: userId, // This is now the correct MongoDB user ID
-        title: `${session?.user?.firstName || state.userData?.firstName || 'User'} ${session?.user?.lastName || state.userData?.lastName || ''}'s CV`.trim(),
+        title: `${session?.user?.firstName || state.userData?.firstName || 'User'} ${session?.user?.lastName || state.userData?.lastName || ''}'s Master CV`.trim(),
         cvData: state.cvData, // Fixed: was 'sections', should be 'cvData'
-        type: 'cv'
+        type: 'cv',
+        isMaster: true // Mark as master CV during onboarding
       };
       
       console.log('🚀 Sending CV creation request:', requestData);
@@ -442,7 +444,7 @@ const OnboardingContent: React.FC = () => {
       case 1:
         return <PersonalInfoStep onNext={nextStep} />;
       case 2:
-        return <PersonalInfoStep onNext={nextStep} />; // Step 2 is Personal Information
+        return <MasterCVCreationWizard onComplete={handleComplete} onBack={prevStep} />; // Master CV Creation
       case 3:
         return <ExperienceStep onNext={nextStep} onBack={prevStep} />;
       case 4:

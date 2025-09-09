@@ -56,6 +56,8 @@ export async function GET(request: NextRequest) {
       }
     });
 
+    console.log(`🔍 Journeys API - Found ${cvs.length} CVs and ${coverLetters.length} cover letters for user ${userId}`);
+
     // Transform job applications into journeys
     const journeys = jobApplications.map(job => {
       // Get linked CV using job.cvId
@@ -71,6 +73,7 @@ export async function GET(request: NextRequest) {
       });
       
       // Determine journey status and current step based on database state
+      // Use same strict logic as JobPipelineCardModal
       let status: 'in-progress' | 'completed' = 'in-progress';
       let currentStep = 1;
       let atsScore: number | undefined;
@@ -80,29 +83,47 @@ export async function GET(request: NextRequest) {
       // Step 1: Job Added (always true if we have a job application)
       if (job.jobTitle && job.company) {
         currentStep = 1;
-      }
-
-      // Step 2: CV Created/Linked (check if job has cvId)
-      if (job.cvId && linkedCV) {
-        currentStep = 2;
-        cvId = job.cvId.toString();
         
-        // Step 3: ATS Score Checked (if CV has ATS score data)
-        if (linkedCV.metadata?.atsScore) {
-          currentStep = 3;
-          atsScore = linkedCV.metadata.atsScore;
+        // Step 2: CV Created/Linked (check if job has cvId AND CV exists)
+        if (job.cvId && linkedCV) {
+          currentStep = 2;
+          cvId = job.cvId.toString();
           
-          // Step 4: Cover Letter Created (check if cover letter exists for this job)
-          if (linkedCoverLetter) {
-            currentStep = 4;
-            coverLetterId = linkedCoverLetter._id.toString();
+          // Step 3: ATS Score Checked (check for job-specific ATS score in CV metadata)
+          let hasATSScore = false;
+          if (linkedCV.metadata?.atsScore && linkedCV.metadata?.atsScoreJobId === job._id.toString()) {
+            hasATSScore = true;
+            atsScore = linkedCV.metadata.atsScore;
+          }
+          
+          if (hasATSScore) {
+            currentStep = 3;
             
-            // Step 5: Download (if all previous steps are complete)
-            currentStep = 5;
-            status = 'completed';
+            // Step 4: Cover Letter Created (STRICT check - only if cover letter is linked to this specific job AND in our journey context)
+            // We need to be more careful here - only consider completed if there's a cover letter specifically created for this journey
+            if (linkedCoverLetter) {
+              currentStep = 4;
+              coverLetterId = linkedCoverLetter._id.toString();
+              
+              // Step 5: Download (only if ALL previous steps are verified complete)
+              // For now, we'll only auto-complete to step 5 if the job status is explicitly 'applied'
+              if (job.status === 'applied') {
+                currentStep = 5;
+                status = 'completed';
+              }
+            }
           }
         }
       }
+      
+      console.log(`🔍 Journeys API - Journey ${job._id} calculated:`, {
+        currentStep,
+        status,
+        hasCV: !!linkedCV,
+        hasATS: !!atsScore,
+        hasCoverLetter: !!linkedCoverLetter,
+        jobStatus: job.status
+      });
 
       return {
         id: job._id.toString(),
@@ -122,7 +143,14 @@ export async function GET(request: NextRequest) {
         salary: job.salary,
         applicationDate: job.applicationDate,
         deadline: job.deadline,
-        priority: job.priority
+        priority: job.priority,
+        // Debug info
+        _debug: {
+          linkedCVId: linkedCV?._id,
+          linkedCVMetadata: linkedCV?.metadata,
+          linkedCoverLetterId: linkedCoverLetter?._id,
+          jobStatus: job.status
+        }
       };
     });
 

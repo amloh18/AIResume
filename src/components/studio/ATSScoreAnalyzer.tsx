@@ -2,11 +2,11 @@
 
 import React, { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  TrendingUp, 
-  Target, 
-  CheckCircle, 
-  AlertCircle, 
+import {
+  TrendingUp,
+  Target,
+  CheckCircle,
+  AlertCircle,
   Sparkles,
   RefreshCw,
   BarChart3,
@@ -40,9 +40,9 @@ interface ATSScoreAnalyzerProps {
   onUpdateField?: (path: string, value: any) => void;
 }
 
-export default function ATSScoreAnalyzer({ 
-  cvData, 
-  jobData, 
+export default function ATSScoreAnalyzer({
+  cvData,
+  jobData,
   onScoreUpdate,
   onRestructure,
   onUpdateField
@@ -58,9 +58,9 @@ export default function ATSScoreAnalyzer({
   // Convert CV data to text for analysis
   const getCVText = useCallback(() => {
     if (!cvData) return '';
-    
+
     let cvText = '';
-    
+
     // Add basics
     if (cvData.basics) {
       if (cvData.basics.name) cvText += `Name: ${cvData.basics.name}\n`;
@@ -69,7 +69,7 @@ export default function ATSScoreAnalyzer({
       if (cvData.basics.email) cvText += `Email: ${cvData.basics.email}\n`;
       if (cvData.basics.phone) cvText += `Phone: ${cvData.basics.phone}\n`;
     }
-    
+
     // Add work experience
     if (cvData.work && Array.isArray(cvData.work)) {
       cvText += '\nWork Experience:\n';
@@ -87,7 +87,7 @@ export default function ATSScoreAnalyzer({
         cvText += '\n';
       });
     }
-    
+
     // Add skills
     if (cvData.skills && Array.isArray(cvData.skills)) {
       cvText += 'Skills:\n';
@@ -96,7 +96,7 @@ export default function ATSScoreAnalyzer({
       });
       cvText += '\n';
     }
-    
+
     // Add education
     if (cvData.education && Array.isArray(cvData.education)) {
       cvText += '\nEducation:\n';
@@ -106,7 +106,7 @@ export default function ATSScoreAnalyzer({
         if (edu.studyType) cvText += `Type: ${edu.studyType}\n`;
       });
     }
-    
+
     return cvText;
   }, [cvData]);
 
@@ -115,24 +115,24 @@ export default function ATSScoreAnalyzer({
       console.log('🔍 ATS Analyzer - Missing data:', { hasCvData: !!cvData, hasJobData: !!jobData });
       return;
     }
-    
+
     setIsLoading(true);
     try {
       const cvText = getCVText();
       const jobDescription = jobData.description || jobData.jobDescription || jobData.requirements || jobData.jobRequirements || '';
-      
+
       console.log('🔍 ATS Analyzer - Request data:', {
         cvTextLength: cvText.length,
         jobDescriptionLength: jobDescription.length,
         hasCvText: !!cvText,
         hasJobDescription: !!jobDescription
       });
-      
+
       if (!cvText) {
         console.error('🔍 ATS Analyzer - Missing CV text');
         throw new Error('CV text is required for ATS analysis');
       }
-      
+
       // Create a basic job description if none is provided
       let finalJobDescription = jobDescription;
       if (!jobDescription) {
@@ -141,42 +141,42 @@ export default function ATSScoreAnalyzer({
         finalJobDescription = `${jobTitle} position at ${company}. This role requires relevant experience and skills in the field.`;
         console.log('🔍 ATS Analyzer - Created fallback job description:', finalJobDescription);
       }
-      
+
       const requestBody = {
         cvText,
         jobDescription: finalJobDescription,
         cvData
       };
-      
+
       console.log('🔍 ATS Analyzer - Sending request to API');
-      
+
       const response = await fetch('/api/ats/calculate-score', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody)
       });
-      
+
       console.log('🔍 ATS Analyzer - Response status:', response.status);
-      
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
         console.error('🔍 ATS Analyzer - API error:', errorData);
         throw new Error(errorData.error || 'Failed to calculate ATS score');
       }
-      
+
       const result: ATSResult = await response.json();
       console.log('🔍 ATS Analyzer - Success:', result);
       setAtsResult(result);
-      
+
       // Update parent component
       if (onScoreUpdate) {
         onScoreUpdate(result.score);
       }
-      
+
     } catch (error) {
       console.error('🔍 ATS Analyzer - Error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      
+
       // Set a default result to prevent UI issues
       setAtsResult({
         score: 0,
@@ -191,12 +191,12 @@ export default function ATSScoreAnalyzer({
 
   const restructureCV = useCallback(async (section: 'summary' | 'experience' | 'skills' | 'all') => {
     if (!cvData || !jobData) return;
-    
+
     setIsRestructuring(true);
     try {
       const cvText = getCVText();
       const jobDescription = jobData.description || jobData.jobDescription || jobData.requirements || jobData.jobRequirements || '';
-      
+
       // Create a basic job description if none is provided
       let finalJobDescription = jobDescription;
       if (!jobDescription) {
@@ -204,7 +204,7 @@ export default function ATSScoreAnalyzer({
         const company = jobData.company || 'Technology Company';
         finalJobDescription = `${jobTitle} position at ${company}. This role requires relevant experience and skills in the field.`;
       }
-      
+
       const response = await fetch('/api/ai/restructure-cv', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -214,19 +214,19 @@ export default function ATSScoreAnalyzer({
           section
         })
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to restructure CV');
       }
-      
+
       const result = await response.json();
       setRestructuredContent(result.restructuredContent);
-      
+
       // Update parent component
       if (onRestructure) {
         onRestructure(result.restructuredContent);
       }
-      
+
     } catch (error) {
       console.error('CV restructuring error:', error);
     } finally {
@@ -236,7 +236,7 @@ export default function ATSScoreAnalyzer({
 
   const fillForm = useCallback(async (section: 'basics' | 'work' | 'skills' | 'summary' | 'all') => {
     if (!cvData || !jobData) return;
-    
+
     setIsFormFilling(true);
     try {
       const response = await fetch('/api/ai/fill-form', {
@@ -248,20 +248,20 @@ export default function ATSScoreAnalyzer({
           section
         })
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to fill form');
       }
-      
+
       const result = await response.json();
       setFormFillResult(result);
-      
+
       // Update parent component with filled data
       if (onRestructure) {
         // Apply the filled data to the form
         applyFilledData(result.filledData);
       }
-      
+
     } catch (error) {
       console.error('Form fill error:', error);
     } finally {
@@ -271,7 +271,7 @@ export default function ATSScoreAnalyzer({
 
   const applyFilledData = (filledData: any) => {
     if (!onUpdateField) return;
-    
+
     // Apply filled data to the form fields
     if (filledData.basics) {
       Object.keys(filledData.basics).forEach(key => {
@@ -280,12 +280,12 @@ export default function ATSScoreAnalyzer({
         }
       });
     }
-    
+
     if (filledData.skills) {
       // Replace skills with filled skills
       onUpdateField('skills', filledData.skills);
     }
-    
+
     if (filledData.work) {
       // Replace work experience with filled work
       onUpdateField('work', filledData.work);
@@ -309,127 +309,126 @@ export default function ATSScoreAnalyzer({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+      <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-2">
-          <Target className="w-6 h-6 text-lime-600" />
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <Target className="w-5 h-5 text-lime-600" />
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white">
             ATS Score Analyzer
           </h3>
         </div>
         <button
           onClick={calculateATSScore}
           disabled={isLoading || !cvData || !jobData}
-          className="flex items-center space-x-2 px-4 py-2 bg-lime-600 text-white rounded-lg hover:bg-lime-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="flex items-center space-x-2 px-3 py-1.5 bg-lime-600 text-white rounded-lg hover:bg-lime-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
         >
           {isLoading ? (
-            <RefreshCw className="w-4 h-4 animate-spin" />
+            <RefreshCw className="w-3 h-3 animate-spin" />
           ) : (
-            <BarChart3 className="w-4 h-4" />
+            <BarChart3 className="w-3 h-3" />
           )}
-          <span>{isLoading ? 'Analyzing...' : 'Analyze ATS Score'}</span>
+          <span className="hidden sm:inline">{isLoading ? 'Analyzing...' : 'Analyze'}</span>
         </button>
       </div>
 
       {atsResult && (
         <div className="space-y-6">
-          {/* Score Display */}
-          <div className="bg-gradient-to-r from-lime-50 to-green-50 dark:from-gray-700 dark:to-gray-600 rounded-lg p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-3">
+          {/* Score Display - Compact */}
+          <div className="bg-gradient-to-r from-lime-50 to-green-50 dark:from-gray-700 dark:to-gray-600 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center space-x-2">
                 {getScoreIcon(atsResult.score)}
-                <span className="text-lg font-semibold text-gray-900 dark:text-white">
-                  ATS Compatibility Score
+                <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                  ATS Score
                 </span>
               </div>
-              <div className={`px-3 py-1 rounded-full text-sm font-medium ${getScoreColor(atsResult.score)}`}>
-                {atsResult.score}% Match
+              <div className={`px-2 py-1 rounded-full text-xs font-medium ${getScoreColor(atsResult.score)}`}>
+                {atsResult.score}%
               </div>
             </div>
-            
+
             {/* Progress Bar */}
-            <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-3 mb-4">
+            <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2 mb-3">
               <motion.div
-                className="bg-gradient-to-r from-lime-500 to-green-500 h-3 rounded-full"
+                className="bg-gradient-to-r from-lime-500 to-green-500 h-2 rounded-full"
                 initial={{ width: 0 }}
                 animate={{ width: `${atsResult.score}%` }}
                 transition={{ duration: 1, ease: "easeOut" }}
               />
             </div>
-            
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              {atsResult.score >= 80 
-                ? "Excellent match! Your CV is well-optimized for this position."
+
+            <p className="text-xs text-gray-600 dark:text-gray-400">
+              {atsResult.score >= 80
+                ? "Excellent match! Well-optimized."
                 : atsResult.score >= 60
-                ? "Good match with room for improvement."
-                : "Consider optimizing your CV to better match the job requirements."
+                  ? "Good match with room for improvement."
+                  : "Consider optimizing for better results."
               }
             </p>
           </div>
 
-          {/* Tabs */}
+          {/* Tabs - Compact */}
           <div className="border-b border-gray-200 dark:border-gray-700">
-            <nav className="flex space-x-8">
+            <nav className="flex space-x-4">
               {[
                 { id: 'score', label: 'Score', icon: TrendingUp },
-                { id: 'breakdown', label: 'Breakdown', icon: BarChart3 },
-                { id: 'suggestions', label: 'Suggestions', icon: Lightbulb },
-                { id: 'restructure', label: 'AI Restructure', icon: Sparkles },
-                { id: 'form-fill', label: 'Form Fill', icon: Copy }
+                { id: 'breakdown', label: 'Details', icon: BarChart3 },
+                { id: 'suggestions', label: 'Tips', icon: Lightbulb },
+                { id: 'restructure', label: 'AI Fix', icon: Sparkles },
+                { id: 'form-fill', label: 'Fill', icon: Copy }
               ].map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex items-center space-x-2 py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                    activeTab === tab.id
-                      ? 'border-lime-500 text-lime-600 dark:text-lime-400'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                  }`}
+                  className={`flex items-center space-x-1 py-2 px-1 border-b-2 font-medium text-xs transition-colors ${activeTab === tab.id
+                    ? 'border-lime-500 text-lime-600 dark:text-lime-400'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                    }`}
                 >
-                  <tab.icon className="w-4 h-4" />
-                  <span>{tab.label}</span>
+                  <tab.icon className="w-3 h-3" />
+                  <span className="hidden sm:inline">{tab.label}</span>
                 </button>
               ))}
             </nav>
           </div>
 
-          {/* Tab Content */}
-          <div className="min-h-[300px]">
+          {/* Tab Content - Compact */}
+          <div className="min-h-[200px]">
             {activeTab === 'score' && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <Target className="w-4 h-4 text-blue-600" />
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Keywords</span>
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 gap-3">
+                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                    <div className="flex items-center space-x-2 mb-1">
+                      <Target className="w-3 h-3 text-blue-600" />
+                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Keywords</span>
                     </div>
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                    <div className="text-lg font-bold text-gray-900 dark:text-white">
                       {atsResult.breakdown.keywordMatch}%
                     </div>
                     <div className="text-xs text-gray-500 dark:text-gray-400">
                       {atsResult.details.matchedKeywords.length} matched, {atsResult.details.missingKeywords.length} missing
                     </div>
                   </div>
-                  
-                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <TrendingUp className="w-4 h-4 text-green-600" />
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Experience</span>
+
+                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                    <div className="flex items-center space-x-2 mb-1">
+                      <TrendingUp className="w-3 h-3 text-green-600" />
+                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Experience</span>
                     </div>
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                    <div className="text-lg font-bold text-gray-900 dark:text-white">
                       {atsResult.breakdown.experienceEducation}%
                     </div>
                     <div className="text-xs text-gray-500 dark:text-gray-400">
                       {atsResult.details.experienceYears} years, {atsResult.details.educationLevel}
                     </div>
                   </div>
-                  
-                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <Wand2 className="w-4 h-4 text-purple-600" />
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Action Verbs</span>
+
+                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                    <div className="flex items-center space-x-2 mb-1">
+                      <Wand2 className="w-3 h-3 text-purple-600" />
+                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Action Verbs</span>
                     </div>
-                    <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                    <div className="text-lg font-bold text-gray-900 dark:text-white">
                       {atsResult.breakdown.actionVerbs}%
                     </div>
                     <div className="text-xs text-gray-500 dark:text-gray-400">
@@ -608,7 +607,7 @@ export default function ATSScoreAnalyzer({
                         ✓ Applied to Form
                       </div>
                     </div>
-                    
+
                     <div className="space-y-2">
                       {formFillResult.suggestions.map((suggestion: string, index: number) => (
                         <div

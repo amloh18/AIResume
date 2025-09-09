@@ -15,7 +15,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Eye,
-  Circle
+  Circle,
+  Plus
 } from 'lucide-react';
 
 interface Journey {
@@ -100,7 +101,7 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
   };
 
   const incompleteJourneys = journeys.filter(journey => journey.status === 'in-progress');
-  const journeysPerPage = Math.min(2, incompleteJourneys.length); // Show 1-2 journeys per page
+  const journeysPerPage = 1; // Show 1 journey per page
   const totalPages = Math.ceil(incompleteJourneys.length / journeysPerPage);
 
   const handleDeleteJourney = async (journeyId: string) => {
@@ -206,15 +207,30 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
             {incompleteJourneys.length} incomplete journey{incompleteJourneys.length !== 1 ? 's' : ''}
           </p>
         </div>
-        <motion.button
-          onClick={() => window.location.href = '/dashboard/cv-journey'}
-          className="px-3 py-1.5 bg-lime-500 hover:bg-lime-600 text-black font-medium rounded-lg transition-colors text-sm flex items-center gap-1"
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-        >
-          <Eye className="h-3 w-3" />
-          View All
-        </motion.button>
+        <div className="flex items-center gap-2">
+          <motion.button
+            onClick={() => {
+              // Start new journey - open modal instead of routing
+              const event = new CustomEvent('openCVJourneyModal', { detail: { step: 1 } });
+              window.dispatchEvent(event);
+            }}
+            className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors text-sm flex items-center gap-1"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <Plus className="h-3 w-3" />
+            Start New
+          </motion.button>
+          <motion.button
+            onClick={() => window.location.href = '/dashboard/cv-journey'}
+            className="px-3 py-1.5 bg-lime-500 hover:bg-lime-600 text-black font-medium rounded-lg transition-colors text-sm flex items-center gap-1"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <Eye className="h-3 w-3" />
+            View All
+          </motion.button>
+        </div>
       </div>
 
       {incompleteJourneys.length === 0 ? (
@@ -281,7 +297,7 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
           </div>
         </div>
       ) : (
-        <div className="relative overflow-hidden" style={{ height: `${Math.min(incompleteJourneys.length, 2) * 200}px` }}>
+        <div className="relative overflow-hidden" style={{ height: '200px' }}>
           {/* Navigation Arrows */}
           {totalPages > 1 && (
             <>
@@ -310,11 +326,11 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
           {/* Carousel Container */}
           <motion.div
             className="h-full"
-            animate={{ y: -currentPage * (Math.min(incompleteJourneys.length, 2) * 200) }}
+            animate={{ y: -currentPage * 200 }}
             transition={{ duration: 0.5, ease: "easeInOut" }}
           >
             {Array.from({ length: totalPages }, (_, pageIndex) => (
-              <div key={pageIndex} className="flex flex-col justify-center" style={{ height: `${Math.min(incompleteJourneys.length, 2) * 200}px` }}>
+              <div key={pageIndex} className="flex flex-col justify-center" style={{ height: '200px' }}>
                 <div className="space-y-4">
                   {incompleteJourneys.slice(pageIndex * journeysPerPage, pageIndex * journeysPerPage + journeysPerPage).map((journey, index) => (
                     <motion.div
@@ -344,7 +360,16 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
                           </div>
                           
                           <motion.button
-                            onClick={() => onResumeJourney(journey)}
+                            onClick={() => {
+                              // Open CV Journey Modal instead of routing
+                              const event = new CustomEvent('openCVJourneyModal', { 
+                                detail: { 
+                                  step: journey.currentStep,
+                                  journey: journey
+                                } 
+                              });
+                              window.dispatchEvent(event);
+                            }}
                             className="flex items-center gap-1 px-2 py-1 bg-lime-500 hover:bg-lime-600 text-black font-medium rounded text-xs transition-colors"
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
@@ -374,8 +399,21 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
                         {/* Steps with Preview Cards */}
                         <div className="relative flex justify-between">
                           {steps.map((step, index) => {
-                            const isCompleted = step.id <= journey.currentStep;
-                            const isCurrent = step.id === journey.currentStep;
+                            // Enhanced step status calculation
+                            const getStepStatus = (stepId: number) => {
+                              switch (stepId) {
+                                case 1: return journey.jobTitle && journey.company ? 'completed' : 'pending';
+                                case 2: return journey.cvId ? 'completed' : (journey.currentStep >= 2 ? 'active' : 'pending');
+                                case 3: return (journey.atsScore !== undefined && journey.cvId) ? 'completed' : (journey.currentStep >= 3 && journey.cvId ? 'active' : 'pending');
+                                case 4: return (journey.coverLetterId && journey.coverLetterId.trim() !== '') ? 'completed' : (journey.currentStep >= 4 && journey.atsScore !== undefined ? 'active' : 'pending');
+                                case 5: return journey.status === 'completed' ? 'completed' : (journey.currentStep >= 5 && journey.coverLetterId ? 'active' : 'pending');
+                                default: return 'pending';
+                              }
+                            };
+                            
+                            const stepStatus = getStepStatus(step.id);
+                            const isCompleted = stepStatus === 'completed';
+                            const isCurrent = stepStatus === 'active';
                             const Icon = step.icon;
                             
                             return (

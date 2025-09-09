@@ -7,6 +7,7 @@ export interface ICV extends Document {
   cvData: CVDataStructure;
   status: 'draft' | 'published' | 'archived';
   version: number;
+  isMaster: boolean; // Master CV flag
   // Legacy fields for backward compatibility
   template?: string;
   sections?: {
@@ -280,6 +281,10 @@ const cvSchema = new Schema<ICV>({
     type: Number,
     default: 1
   },
+  isMaster: {
+    type: Boolean,
+    default: false
+  },
   // Legacy fields for backward compatibility
   template: {
     type: String,
@@ -386,13 +391,23 @@ const cvSchema = new Schema<ICV>({
 // Indexes for better query performance
 cvSchema.index({ userId: 1, status: 1 });
 cvSchema.index({ userId: 1, createdAt: -1 });
+cvSchema.index({ userId: 1, isMaster: 1 }); // Index for master CV queries
 cvSchema.index({ 'metadata.tags': 1 });
 cvSchema.index({ 'metadata.isPublic': 1, 'metadata.lastModified': -1 });
 cvSchema.index({ templateId: 1 });
 
-// Update lastModified on save
-cvSchema.pre('save', function(next) {
+// Update lastModified on save and ensure only one master CV per user
+cvSchema.pre('save', async function(next) {
   this.metadata.lastModified = new Date();
+  
+  // If this CV is being set as master, unset any existing master CV for this user
+  if (this.isMaster && this.isModified('isMaster')) {
+    await this.constructor.updateMany(
+      { userId: this.userId, _id: { $ne: this._id } },
+      { $set: { isMaster: false } }
+    );
+  }
+  
   next();
 });
 

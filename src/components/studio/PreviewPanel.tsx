@@ -36,6 +36,7 @@ interface PreviewPanelProps {
   setPaperSize: (size: 'A4' | 'Letter') => void;
   documentType: 'cv' | 'cover-letter';
   sectionOrder?: string[];
+  sectionVisibility?: Record<string, boolean>;
   pagePadding: { top: number; bottom: number };
   setPagePadding: (padding: { top: number; bottom: number }) => void;
   onDocumentTypeChange?: (type: 'cv' | 'cover-letter') => void;
@@ -50,7 +51,8 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
   paperSize,
   setPaperSize,
   documentType,
-  sectionOrder = ['basics', 'experience', 'education', 'skills', 'projects', 'certificates', 'languages'],
+  sectionOrder = ['basics', 'work', 'education', 'skills', 'projects', 'certificates', 'languages'],
+  sectionVisibility = {},
   pagePadding,
   setPagePadding,
   onDocumentTypeChange
@@ -74,11 +76,11 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
 
   const currentDimensions = paperDimensions[paperSize];
 
-  // Calculate total pages based on content height
+  // Calculate total pages based on content height and optimize layout
   useEffect(() => {
     if (contentRef.current) {
       const contentHeight = contentRef.current.scrollHeight;
-      const pageHeight = currentDimensions.height - 64; // Account for padding
+      const pageHeight = currentDimensions.height - (pagePadding.top + pagePadding.bottom);
       const pages = Math.ceil(contentHeight / pageHeight);
       setTotalPages(Math.max(1, pages));
       
@@ -87,7 +89,7 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
         setCurrentPage(1);
       }
     }
-  }, [cvData, currentDimensions.height, currentPage]);
+  }, [cvData, currentDimensions.height, currentPage, pagePadding]);
 
   // Auto-fit to container height
   useEffect(() => {
@@ -181,33 +183,36 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
   const renderCVPreview = () => {
     // Apply template styles if available
     const templateStyles = template?.globalStyles;
-    const customCSS = template?.customCSS;
+    const customCSS = template?.customCSS || template?.globalStyles?.customCSS;
     const templateName = template?.name;
+    
+    console.log('PreviewPanel - Template:', template);
+    console.log('PreviewPanel - Template Styles:', templateStyles);
     
     return (
       <div 
-        className="relative"
+        ref={contentRef}
+        className="relative bg-white shadow-lg mx-auto"
         style={{
-          width: currentDimensions.width * zoom,
-          minHeight: currentDimensions.height * zoom,
+          width: currentDimensions.width,
+          minHeight: currentDimensions.height,
           transform: `scale(${zoom})`,
           transformOrigin: 'top center',
           marginTop: '0',
           marginBottom: '0'
         }}
       >
-        <div className="bg-white mx-auto">
-          <CVPreviewContent 
-            cvData={cvData} 
-            theme={theme}
-            showBadge={false}
-            sectionOrder={sectionOrder}
-            templateStyles={templateStyles}
-            customCSS={customCSS}
-            templateName={templateName}
-            pagePadding={pagePadding}
-          />
-        </div>
+        <CVPreviewContent 
+          cvData={cvData} 
+          theme="light" // Always use light theme for preview
+          showBadge={false}
+          sectionOrder={sectionOrder}
+          sectionVisibility={sectionVisibility}
+          templateStyles={templateStyles}
+          customCSS={customCSS}
+          templateName={templateName}
+          pagePadding={pagePadding}
+        />
       </div>
     );
   };
@@ -234,7 +239,7 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
   };
 
   return (
-    <div className="h-full flex flex-col bg-[#f8fafe] relative">
+    <div className="h-full flex flex-col bg-white relative">
       {/* Document Type Switcher - Centered above the first page */}
       {onDocumentTypeChange && (
         <div className="flex justify-center pt-6 pb-2">
