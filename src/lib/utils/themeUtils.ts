@@ -107,27 +107,64 @@ export const getPageBackground = (pageType: 'dashboard' | 'studio' | 'admin' | '
 };
 
 /**
- * Get theme-aware sidebar classes
+ * Get theme-aware sidebar classes with floating effect
  */
-export const getSidebarClasses = (isOpen: boolean = true) => ({
+export const getSidebarClasses = (isOpen: boolean = true, isMobile: boolean = false) => ({
   container: `
-    fixed lg:sticky top-0 z-50 h-screen pt-8 xl:pt-4
-    bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border border-gray-200 dark:border-gray-700
+    fixed lg:sticky top-0 z-50 h-screen
+    ${isMobile ? 'inset-y-0 left-0' : 'top-4 left-4 bottom-4 h-[calc(100vh-2rem)]'}
+    ${!isMobile ? 'bg-gray-50/95 dark:bg-gray-800/95' : 'bg-white/95 dark:bg-gray-900/95'} 
+    backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50
     transition-all duration-300 ease-in-out
     ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-    w-72 lg:w-16 xl:w-72
-    rounded-lg m-[5px]
+    ${isMobile ? 'w-80' : 'w-72 lg:w-16 xl:w-72'}
+    rounded-2xl shadow-xl shadow-gray-900/10 dark:shadow-black/20
+    ${!isMobile ? 'm-4' : ''}
   `,
   logo: 'text-lime-600 dark:text-lime-400',
-  navItem: 'text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white',
+  navItem: 'text-gray-700 hover:text-gray-900 dark:text-gray-200 dark:hover:text-white',
   navItemActive: 'text-lime-600 dark:text-lime-400 bg-lime-50 dark:bg-lime-900/20'
 });
 
 /**
- * Get theme-aware top bar classes
+ * Get theme-aware top bar classes (always dark)
  */
 export const getTopBarClasses = () => ({
-  container: 'bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-200 dark:border-gray-700',
-  button: 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-800',
-  buttonActive: 'text-lime-600 dark:text-lime-400'
+  container: 'fixed top-0 left-0 right-0 z-[60] bg-gray-900/95 backdrop-blur-xl border-b border-gray-700/50 shadow-lg',
+  content: 'flex items-center justify-between px-6 py-3',
+  button: 'text-gray-300 hover:text-white hover:bg-gray-800/50 transition-colors duration-200 px-3 py-2 rounded-lg',
+  buttonActive: 'text-lime-400 bg-lime-900/20'
 });
+
+/**
+ * Get theme-aware studio layout classes with floating panels
+ */
+export const getStudioLayoutClasses = () => ({
+  container: 'min-h-screen space-y-4',
+  header: 'bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 shadow-lg',
+  leftPanel: 'bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 rounded-2xl shadow-lg',
+  mainArea: 'bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 rounded-2xl shadow-lg',
+  rightPanel: 'bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 rounded-2xl shadow-lg',
+  gap: 'gap-4'
+});
+
+/**
+ * Get responsive sidebar classes for tablet/mobile
+ */
+export const getResponsiveSidebarClasses = (isOpen: boolean = true, screenSize: 'mobile' | 'tablet' | 'desktop' = 'desktop') => {
+  const baseClasses = 'fixed top-0 z-50 h-screen transition-all duration-300 ease-in-out';
+  
+  switch (screenSize) {
+    case 'mobile':
+      return `${baseClasses} ${isOpen ? 'translate-x-0' : '-translate-x-full'} w-80 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-r border-gray-200/50 dark:border-gray-700/50`;
+    
+    case 'tablet':
+      return `${baseClasses} ${isOpen ? 'translate-x-0' : '-translate-x-full'} w-20 bg-gray-50/95 dark:bg-gray-800/95 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 rounded-2xl m-4 shadow-xl`;
+    
+    case 'desktop':
+    default:
+      return getSidebarClasses(isOpen).container;
+  }
+};
+
+

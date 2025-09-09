@@ -12,7 +12,8 @@ import {
   LogOut,
   Shield,
   Route,
-  RefreshCw
+  RefreshCw,
+  CheckCircle
 } from 'lucide-react';
 import { getSidebarClasses } from '@/lib/utils/themeUtils';
 
@@ -123,30 +124,76 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
     }
   };
 
-  const sidebarClasses = getSidebarClasses(isOpen);
+  // Detect screen size for responsive behavior
+  const [screenSize, setScreenSize] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
+  
+  useEffect(() => {
+    const handleResize = () => {
+      const width = window.innerWidth;
+      if (width < 768) {
+        setScreenSize('mobile');
+      } else if (width < 1280) {
+        setScreenSize('tablet');
+      } else {
+        setScreenSize('desktop');
+      }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const getSidebarContainerClasses = () => {
+    const baseClasses = 'fixed z-50 transition-all duration-300 ease-in-out';
+    
+    switch (screenSize) {
+      case 'mobile':
+        return `${baseClasses} inset-y-0 left-0 w-80 ${isOpen ? 'translate-x-0' : '-translate-x-full'} 
+                bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-r border-gray-200/50 dark:border-gray-700/50`;
+      
+      case 'tablet':
+        return `${baseClasses} top-4 left-4 bottom-4 w-20 ${isOpen ? 'translate-x-0' : '-translate-x-full xl:translate-x-0'} 
+                bg-gray-50/95 dark:bg-gray-800/95 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 
+                rounded-2xl shadow-xl shadow-gray-900/10 dark:shadow-black/20`;
+      
+      case 'desktop':
+      default:
+        return `${baseClasses} top-4 left-4 bottom-4 w-72 ${isOpen ? 'translate-x-0' : '-translate-x-full xl:translate-x-0'} 
+                bg-gray-50/95 dark:bg-gray-800/95 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 
+                rounded-2xl shadow-xl shadow-gray-900/10 dark:shadow-black/20`;
+    }
+  };
 
   return (
     <>
       {/* Mobile Overlay */}
-      {isOpen && (
+      {isOpen && screenSize === 'mobile' && (
         <div 
-          className="fixed inset-0 bg-black/50 dark:bg-black/80 backdrop-blur-sm z-40 lg:hidden"
+          className="fixed inset-0 bg-black/50 dark:bg-black/80 backdrop-blur-sm z-40"
           onClick={onClose}
         />
       )}
       
       {/* Sidebar */}
-      <div className={sidebarClasses.container}>
+      <div className={getSidebarContainerClasses()}>
       {/* Logo */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+      <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50">
         <div className="text-center mb-2">
           <button
             onClick={() => router.push('/dashboard')}
             className="text-2xl font-bold mb-2 hover:opacity-90 transition-opacity"
           >
-            <span className="text-lime-600 dark:text-lime-400 drop-shadow-lg">CV</span>
-            <span className="text-gray-700 dark:text-white">CIRCLE</span>
-            <span className="text-lime-400 dark:text-lime-300 text-lg font-medium">.io</span>
+            {screenSize === 'tablet' ? (
+              <div className="w-8 h-8 bg-lime-500 rounded-lg flex items-center justify-center">
+                <CheckCircle size={20} className="text-white" />
+              </div>
+            ) : (
+              <>
+                <span className="text-lime-600 dark:text-lime-400 drop-shadow-lg">CV</span>
+                <span className="text-gray-800 dark:text-white">CIRCLE</span>
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -159,27 +206,30 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
             <motion.button
               key={section.id}
               onClick={() => onSectionChange(section.id)}
-              className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-300 group ${
+              className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-300 group ${
                 activeSection === section.id
-                  ? 'bg-gradient-to-r from-lime-100 to-lime-200 dark:from-lime-400/20 dark:to-lime-500/20 border border-lime-300 dark:border-lime-400/30 text-lime-700 dark:text-lime-400'
-                  : 'text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800'
+                  ? 'bg-gradient-to-r from-lime-100 to-lime-200 dark:from-lime-400/20 dark:to-lime-500/20 border border-lime-300 dark:border-lime-400/30 text-lime-700 dark:text-lime-400 shadow-lg'
+                  : 'text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-gray-700/60'
               }`}
-              whileHover={{ x: 5 }}
+              whileHover={{ x: screenSize === 'tablet' ? 0 : 5, scale: 1.02 }}
               whileTap={{ scale: 0.95 }}
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.1 + index * 0.1 }}
+              title={screenSize === 'tablet' ? section.name : undefined}
             >
               <section.icon 
-                size={18} 
+                size={20} 
                 className={`transition-colors ${
-                  activeSection === section.id ? 'text-lime-600 dark:text-lime-400' : 'text-gray-500 dark:text-gray-300 group-hover:text-gray-700 dark:group-hover:text-white'
+                  activeSection === section.id ? 'text-lime-600 dark:text-lime-400' : 'text-gray-600 dark:text-gray-300 group-hover:text-gray-800 dark:group-hover:text-white'
                 }`}
               />
-              <div className="text-left hidden xl:block">
-                <div className="text-base font-medium">{section.name}</div>
-                <div className="text-sm opacity-60">{section.description}</div>
-              </div>
+              {screenSize !== 'tablet' && (
+                <div className="text-left">
+                  <div className="text-sm font-semibold">{section.name}</div>
+                  <div className="text-xs opacity-70">{section.description}</div>
+                </div>
+              )}
             </motion.button>
           ))}
         </div>
@@ -190,8 +240,9 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
       {/* Footer Actions - Fixed at Bottom */}
       <div className="absolute bottom-0 left-0 right-0 p-6 space-y-3">
         {/* Membership Card */}
+        {screenSize !== 'tablet' && (
         <motion.div
-          className="bg-gradient-to-br from-lime-500/90 to-lime-600/90 rounded-xl p-6 text-white hidden xl:block relative overflow-hidden group cursor-pointer"
+          className="bg-gradient-to-br from-lime-500/90 to-lime-600/90 rounded-xl p-6 text-white relative overflow-hidden group cursor-pointer"
           initial={{ opacity: 0, y: 20 }}
           animate={{ 
             opacity: 1, 
@@ -373,23 +424,27 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
             </div>
           </div>
         </motion.div>
+        )}
 
         {/* Admin Button - Only show for admin users */}
         {isAdmin && (
           <motion.button
             onClick={() => router.push('/admin')}
             className="w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-300 text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 border border-purple-500/20"
-            whileHover={{ x: 5 }}
+            whileHover={{ x: screenSize === 'tablet' ? 0 : 5 }}
             whileTap={{ scale: 0.95 }}
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2 }}
+            title={screenSize === 'tablet' ? 'Admin' : undefined}
           >
             <Shield size={20} />
-            <div className="text-left hidden xl:block">
-              <div className="text-base font-medium">Admin</div>
-              <div className="text-sm opacity-60">System Management</div>
-            </div>
+            {screenSize !== 'tablet' && (
+              <div className="text-left">
+                <div className="text-base font-medium">Admin</div>
+                <div className="text-sm opacity-60">System Management</div>
+              </div>
+            )}
           </motion.button>
         )}
 
@@ -399,9 +454,10 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
           className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg transition-all duration-200 text-sm font-medium shadow-lg hover:shadow-red-500/25"
           whileHover={{ scale: 1.02, boxShadow: "0 10px 25px -5px rgba(239, 68, 68, 0.4)" }}
           whileTap={{ scale: 0.98 }}
+          title={screenSize === 'tablet' ? 'Sign Out' : undefined}
         >
           <LogOut size={16} />
-          <span className="hidden xl:inline">Sign Out</span>
+          {screenSize !== 'tablet' && <span>Sign Out</span>}
         </motion.button>
       </div>
       </div>

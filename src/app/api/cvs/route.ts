@@ -196,10 +196,12 @@ export async function POST(request: NextRequest) {
       cvData,
       jobId,
       templateId,
-      type = 'cv'
+      type = 'cv',
+      isMaster = false,
+      duplicateFromId
     } = body;
 
-    console.log('🔍 Parsed data:', { userId, title, hasData: !!cvData, type });
+    console.log('🔍 Parsed data:', { userId, title, hasData: !!cvData, type, isMaster, duplicateFromId });
 
     if (!userId || !title) {
       console.log('❌ Missing required fields:', { userId: !!userId, title: !!title });
@@ -211,6 +213,22 @@ export async function POST(request: NextRequest) {
         },
         { status: 400 }
       );
+    }
+
+    // Handle CV duplication
+    let sourceCvData = null;
+    if (duplicateFromId) {
+      try {
+        const sourceCV = await CV.findOne({ _id: duplicateFromId, userId: objectIdUserId });
+        if (sourceCV) {
+          sourceCvData = sourceCV.cvData;
+          console.log('✅ Found source CV for duplication:', duplicateFromId);
+        } else {
+          console.log('❌ Source CV not found for duplication:', duplicateFromId);
+        }
+      } catch (error) {
+        console.error('❌ Error finding source CV:', error);
+      }
     }
 
     // Convert userId to ObjectId if it's a string
@@ -279,8 +297,8 @@ export async function POST(request: NextRequest) {
       };
     };
 
-    // Use default CV data if not provided
-    const defaultCvData = sanitizeCvData(cvData) || {
+    // Use source CV data if duplicating, otherwise use provided data or defaults
+    const defaultCvData = sanitizeCvData(sourceCvData || cvData) || {
       basics: {
         name: "Your Name",
         label: "Professional Title",
@@ -325,6 +343,7 @@ export async function POST(request: NextRequest) {
       cvData: defaultCvData,
       status: 'draft',
       version: 1,
+      isMaster: isMaster,
       templateId,
       jobId, // Link to job if provided
       styling: {
@@ -341,7 +360,8 @@ export async function POST(request: NextRequest) {
         viewCount: 0,
         downloadCount: 0,
         type: type, // 'cv' or 'cover_letter'
-        starred: false
+        starred: false,
+        createdFrom: duplicateFromId ? new mongoose.Types.ObjectId(duplicateFromId) : undefined
       }
     });
 

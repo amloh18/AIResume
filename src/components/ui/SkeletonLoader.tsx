@@ -18,7 +18,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
   height, 
   animate = true 
 }) => {
-  const baseClasses = 'bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden';
+  const baseClasses = 'bg-gradient-to-r from-gray-200/80 to-gray-300/60 dark:from-gray-700/80 dark:to-gray-600/60 relative overflow-hidden';
   
   const variantClasses = {
     text: 'rounded',
@@ -50,7 +50,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
     >
       {animate && (
         <motion.div
-          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"
+          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 dark:via-gray-400/20 to-transparent"
           variants={shimmerVariants}
           initial="initial"
           animate="animate"
@@ -79,7 +79,7 @@ export const SkeletonText: React.FC<{ lines?: number; className?: string }> = ({
 );
 
 export const SkeletonCard: React.FC<{ className?: string }> = ({ className = '' }) => (
-  <div className={`bg-black/20 border border-white/10 rounded-xl p-6 ${className}`}>
+  <div className={`bg-white/80 dark:bg-gray-800/80 border border-gray-200/50 dark:border-gray-700/50 rounded-xl p-6 ${className}`}>
     <div className="flex items-center gap-4 mb-4">
       <Skeleton variant="circular" width={48} height={48} />
       <div className="flex-1">
