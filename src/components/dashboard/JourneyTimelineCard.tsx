@@ -26,6 +26,12 @@ interface Journey {
   atsScore?: number;
   cvId?: string;
   coverLetterId?: string;
+  _debug?: {
+    linkedCVId?: string;
+    linkedCVMetadata?: any;
+    linkedCoverLetterId?: string;
+    jobStatus?: string;
+  };
 }
 
 interface JourneyTimelineCardProps {
@@ -50,6 +56,36 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
     { id: 4, label: 'Cover Letter', icon: FileText },
     { id: 5, label: 'Download', icon: Download }
   ];
+
+  // Enhanced step status calculation using same logic as modal
+  const getStepStatus = (stepId: number) => {
+    switch (stepId) {
+      case 1: // Job Added
+        return journey.jobTitle && journey.company ? 'completed' : 'pending';
+      
+      case 2: // CV Created/Linked
+        return journey.cvId ? 'completed' : 
+               (journey.currentStep >= 2 ? 'active' : 'pending');
+      
+      case 3: // ATS Score Checked
+        // Only completed if we have an ATS score AND CV is linked
+        return (journey.atsScore !== undefined && journey.cvId) ? 'completed' :
+               (journey.currentStep >= 3 && journey.cvId ? 'active' : 'pending');
+      
+      case 4: // Cover Letter Created
+        // Only completed if cover letter is explicitly linked to this journey
+        return (journey.coverLetterId && journey.coverLetterId.trim() !== '') ? 'completed' :
+               (journey.currentStep >= 4 && journey.atsScore !== undefined ? 'active' : 'pending');
+      
+      case 5: // Download/Apply
+        // Only completed if journey status is explicitly 'completed'
+        return journey.status === 'completed' ? 'completed' :
+               (journey.currentStep >= 5 && journey.coverLetterId ? 'active' : 'pending');
+      
+      default:
+        return 'pending';
+    }
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -131,9 +167,23 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
         {/* Steps */}
         <div className="relative flex justify-between">
           {steps.map((step, index) => {
-            const isCompleted = step.id <= journey.currentStep;
-            const isCurrent = step.id === journey.currentStep && journey.status === 'in-progress';
+            const stepStatus = getStepStatus(step.id);
+            const isCompleted = stepStatus === 'completed';
+            const isCurrent = stepStatus === 'active';
             const Icon = step.icon;
+            
+            // Debug logging for first step to see what's happening
+            if (step.id === 1) {
+              console.log(`🔍 JourneyCard ${journey.id} - Step status calculation:`, {
+                stepId: step.id,
+                stepStatus,
+                currentStep: journey.currentStep,
+                status: journey.status,
+                cvId: journey.cvId,
+                atsScore: journey.atsScore,
+                coverLetterId: journey.coverLetterId
+              });
+            }
             
             return (
               <div key={step.id} className="flex flex-col items-center relative z-10">
@@ -163,9 +213,16 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                   </p>
                   
                   {/* ATS Score for step 3 */}
-                  {step.id === 3 && journey.atsScore && (
+                  {step.id === 3 && journey.atsScore !== undefined && (
                     <p className="text-xs text-lime-400">
                       {journey.atsScore}%
+                    </p>
+                  )}
+                  
+                  {/* Status indicator for debugging */}
+                  {process.env.NODE_ENV === 'development' && (
+                    <p className="text-xs text-white/30">
+                      {stepStatus}
                     </p>
                   )}
                 </div>

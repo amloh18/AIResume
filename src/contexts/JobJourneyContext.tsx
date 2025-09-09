@@ -132,8 +132,11 @@ export const JobJourneyProvider: React.FC<JobJourneyProviderProps> = ({ children
         ...prev,
         isJourneyActive: true,
         currentJobId: jobId,
-        journeyStatus: 'onboarding',
+        journeyStatus: 'job-added',
         currentStep: 1,
+        atsScore: null, // Reset ATS score for new journey
+        cvId: null, // Reset CV ID for new journey
+        coverLetterId: null, // Reset cover letter ID for new journey
         steps: defaultSteps.map((step, index) => ({
           ...step,
           status: index === 0 ? 'active' : 'pending'

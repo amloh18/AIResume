@@ -216,7 +216,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     <RouteGuard requireAuth={true}>
       <JobJourneyProvider>
         <div className={getPageBackground('dashboard')}>
-          <JourneyStatusBanner />
         {/* Welcome Animation Overlay */}
         <AnimatePresence>
           {showWelcomeAnimation && (
@@ -301,7 +300,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
           </button>
         </div>
 
-        <div className="flex">
+        <div className="flex min-h-screen pt-0">
           {/* Sidebar */}
           <DashboardNavigation
             activeSection={getActiveSection()}
@@ -313,13 +312,15 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
           />
 
           {/* Main Dashboard Area */}
-          <main className="flex-1 px-6 sm:px-8 lg:px-12 py-2 pt-16 xl:pt-8">
-            <div className="max-w-[1500px] mx-auto">
+          <main className="flex-1 xl:ml-80 transition-all duration-300 ease-in-out">
+            <JourneyStatusBanner />
+            <div className="p-4 xl:p-6">
               <motion.div
                 key={pathname}
                 initial={{ opacity: 0, x: 5 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.1, ease: "easeOut" }}
+                className="max-w-[1400px] mx-auto"
               >
                 {children}
               </motion.div>
