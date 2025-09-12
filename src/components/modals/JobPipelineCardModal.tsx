@@ -22,6 +22,7 @@ import {
   Star
 } from 'lucide-react';
 import { useJobJourney } from '@/contexts/JobJourneyContext';
+import { useJourneyLinking } from '@/lib/services/journeyLinkingService';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useUserPlan } from '@/lib/hooks/useUserPlan';
@@ -163,7 +164,7 @@ const JobPipelineCardModal: React.FC<JobPipelineCardModalProps> = ({ isOpen, onC
       console.log('🔍 JobPipelineCardModal - Fetching journey state from database for jobId:', jobId);
       
       // Fetch the specific journey from the database
-      const response = await fetch(`/api/journeys?userId=${userId}&jobId=${jobId}`);
+      const response = await fetch(`/api/cv-journey?userId=${userId}&jobId=${jobId}`);
       if (!response.ok) {
         console.error('❌ Failed to fetch journey state from database');
         return;
@@ -202,7 +203,9 @@ const JobPipelineCardModal: React.FC<JobPipelineCardModalProps> = ({ isOpen, onC
           if (linkedCV) {
             setSelectedCV(linkedCV);
             setCvSelectionSuccess(true);
-            updateCVId(journey.cvId);
+            if (journey.cvId) {
+              updateCVId(journey.cvId);
+            }
             console.log('🔍 JobPipelineCardModal - Restored CV from database:', linkedCV.title);
             
             // Check if CV has ATS score for this job in metadata (priority over journey ATS score)
@@ -219,7 +222,9 @@ const JobPipelineCardModal: React.FC<JobPipelineCardModalProps> = ({ isOpen, onC
           } else {
             // CV exists in database but not loaded yet - mark as selected
             setCvSelectionSuccess(true);
-            updateCVId(journey.cvId);
+            if (journey.cvId) {
+              updateCVId(journey.cvId);
+            }
             console.log('🔍 JobPipelineCardModal - CV linked in database but not found in local arrays:', journey.cvId);
             
             // Still restore ATS score from journey if available
@@ -801,25 +806,38 @@ const JobPipelineCardModal: React.FC<JobPipelineCardModalProps> = ({ isOpen, onC
         return;
       }
 
-      console.log('🔍 JobPipelineCardModal - Selecting CV:', cv.title, 'for job:', jobData.title || jobData.jobTitle);
+      if (!jobId) {
+        console.error('❌ Missing jobId for CV selection');
+        alert('Error: Job ID is missing. Please try again.');
+        return;
+      }
 
-      // Update the job with the linked CV
-      const jobUpdateResponse = await fetch(`/api/jobs/${jobId}?userId=${userId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          cvId: cv.id
-        }),
+      if (!cv?.id) {
+        console.error('❌ Missing CV ID for selection');
+        alert('Error: CV ID is missing. Please try again.');
+        return;
+      }
+
+      console.log('🔍 JobPipelineCardModal - Selecting CV:', cv.title, 'for job:', jobData.title || jobData.jobTitle, 'jobId:', jobId, 'cvId:', cv.id);
+
+      // Use centralized journey linking service
+      const { linkJobToCV } = useJourneyLinking();
+      
+      const result = await linkJobToCV({
+        jobId,
+        cvId: cv.id,
+        userId,
+        journeyName: `Application for ${jobData.title || jobData.jobTitle} at ${jobData.company}`
       });
 
-      if (jobUpdateResponse.ok) {
-        console.log('✅ Job linked to CV successfully');
+      if (result.success) {
+        console.log('✅ Job linked to CV via journey system:', result);
         // Update the local jobData to reflect the CV link
         setJobData((prev: any) => ({ ...prev, cvId: cv.id }));
       } else {
-        console.error('❌ Failed to link job to CV');
+        console.error('❌ Failed to link job to CV:', result.message);
+        alert(`Failed to link CV to job: ${result.message}`);
+        return; // Exit early if linking fails
       }
 
       // Update local state and journey
@@ -839,7 +857,18 @@ const JobPipelineCardModal: React.FC<JobPipelineCardModalProps> = ({ isOpen, onC
       
       console.log('🔍 JobPipelineCardModal - CV selection completed, moved to step 3');
     } catch (error) {
-      console.error('Error selecting CV and moving to next step:', error);
+      console.error('Error selecting CV and moving to next step:', {
+        error: error,
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        jobId,
+        userId: session?.user?.id,
+        cvId: cv?.id,
+        cvTitle: cv?.title
+      });
+      
+      // Show user-friendly error message
+      alert(`An error occurred while linking CV to job: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsSelectingCV(false);
     }

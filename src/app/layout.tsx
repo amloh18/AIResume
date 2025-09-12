@@ -8,6 +8,8 @@ import PerformanceMonitor from '@/components/ui/PerformanceMonitor'
 import SessionManagerProvider from '@/components/providers/SessionManagerProvider'
 import { LoadingProvider } from '@/components/providers/LoadingProvider'
 import { PaymentModalProvider } from '@/contexts/PaymentModalContext'
+import CookieConsent from '@/components/CookieConsent'
+import '@/lib/clear-old-sessions' // Clear old session data
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -37,6 +39,7 @@ export default function RootLayout({
         </ThemeProvider>
         <Analytics />
         <PerformanceMonitor />
+        <CookieConsent />
       </body>
     </html>
   )

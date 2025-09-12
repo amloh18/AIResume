@@ -159,27 +159,27 @@ export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, on
                 onClose();
                 window.location.href = '/dashboard';
               } else {
-                // New user, redirect to onboarding Personal Information page (step 1)
+                // New user, redirect to universal onboarding
                 onClose();
-                window.location.href = '/onboarding?step=1';
+                window.location.href = '/onboarding-universal';
               }
             } catch (error) {
               console.log('Error checking CVs, assuming new user:', error);
-              // If we can't check CVs, assume new user and redirect to onboarding Personal Information page
+              // If we can't check CVs, assume new user and redirect to universal onboarding
               onClose();
-              window.location.href = '/onboarding?step=1';
+              window.location.href = '/onboarding-universal';
             }
           } catch (error) {
             console.log('Error parsing user data, assuming new user:', error);
             // Error parsing user data, assume new user
             onClose();
-            window.location.href = '/onboarding?step=1';
+            window.location.href = '/onboarding-universal';
           }
         } else {
           console.log('No user data in localStorage, assuming new user');
-          // No user data, redirect to onboarding Personal Information page
+          // No user data, redirect to universal onboarding
           onClose();
-          window.location.href = '/onboarding?step=1';
+          window.location.href = '/onboarding-universal';
         }
       } catch (error: any) {
         setError(error.message || 'Failed to sign in with Google. Please try again.');

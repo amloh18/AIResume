@@ -136,6 +136,7 @@ export async function GET(request: NextRequest) {
       id: cv._id,
       title: cv.title,
       status: cv.status,
+      isMaster: cv.isMaster || false,
       starred: cv.metadata?.starred || false,
       lastModified: cv.metadata?.lastModified || cv.updatedAt,
       viewCount: cv.metadata?.viewCount || 0,

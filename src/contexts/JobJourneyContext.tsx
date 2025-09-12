@@ -21,6 +21,7 @@ export interface JobJourneyState {
   company: string | null;
   atsScore: number | null;
   cvId: string | null;
+  cvName: string | null;
   coverLetterId: string | null;
 }
 
@@ -34,6 +35,7 @@ interface JobJourneyContextType {
   updateCurrentJobId: (jobId: string) => void;
   updateAtsScore: (score: number) => void;
   updateCVId: (cvId: string) => void;
+  updateCVName: (cvName: string) => void;
   updateCoverLetterId: (coverLetterId: string) => void;
   resetJourney: () => void;
 }
@@ -81,6 +83,7 @@ const initialState: JobJourneyState = {
   company: null,
   atsScore: null,
   cvId: null,
+  cvName: null,
   coverLetterId: null,
 };
 
@@ -136,6 +139,7 @@ export const JobJourneyProvider: React.FC<JobJourneyProviderProps> = ({ children
         currentStep: 1,
         atsScore: null, // Reset ATS score for new journey
         cvId: null, // Reset CV ID for new journey
+        cvName: null, // Reset CV name for new journey
         coverLetterId: null, // Reset cover letter ID for new journey
         steps: defaultSteps.map((step, index) => ({
           ...step,
@@ -247,6 +251,13 @@ export const JobJourneyProvider: React.FC<JobJourneyProviderProps> = ({ children
     }));
   }, []);
 
+  const updateCVName = useCallback((cvName: string) => {
+    setState(prev => ({
+      ...prev,
+      cvName
+    }));
+  }, []);
+
   const updateCoverLetterId = useCallback((coverLetterId: string) => {
     setState(prev => ({
       ...prev,
@@ -269,6 +280,7 @@ export const JobJourneyProvider: React.FC<JobJourneyProviderProps> = ({ children
     updateCurrentJobId,
     updateAtsScore,
     updateCVId,
+    updateCVName,
     updateCoverLetterId,
     resetJourney,
   }), [
@@ -281,6 +293,7 @@ export const JobJourneyProvider: React.FC<JobJourneyProviderProps> = ({ children
     updateCurrentJobId,
     updateAtsScore,
     updateCVId,
+    updateCVName,
     updateCoverLetterId,
     resetJourney,
   ]);

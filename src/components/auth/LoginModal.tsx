@@ -5,6 +5,8 @@ import { signIn, getSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Mail, Lock, Eye, EyeOff, AlertCircle, User, ArrowRight } from 'lucide-react';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
 import { useFirebaseAuth } from '@/lib/hooks/useFirebaseAuth';
 
 interface LoginModalProps {
@@ -36,14 +38,25 @@ export default function LoginModal({ isOpen, onClose, onSwitchToRegister, onLogi
     setError('');
 
     try {
-      const result = await signIn('credentials', {
-        email,
-        password,
-        redirect: false,
+      // Sign in with Firebase first
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // Check email verification
+      if (!user.emailVerified) {
+        setError('Please verify your email before signing in. Check your inbox for a verification email.');
+        return;
+      }
+
+      // Get Firebase ID token and sign in with NextAuth
+      const idToken = await user.getIdToken();
+      const result = await signIn('firebase', { 
+        idToken, 
+        redirect: false 
       });
 
       if (result?.error) {
-        setError('Invalid email or password');
+        setError('Authentication failed. Please try again.');
       } else if (result?.ok) {
         // Get the session to access user data
         const session = await getSession();
@@ -56,28 +69,51 @@ export default function LoginModal({ isOpen, onClose, onSwitchToRegister, onLogi
             console.log('🔍 CV check result:', result);
             
             if (result.success && result.data.cvs && result.data.cvs.length > 0) {
-              // User has CVs, redirect to dashboard
-              console.log('✅ User has CVs, redirecting to dashboard');
-              onClose();
-              window.location.href = '/dashboard';
+              // Check if user has any master CVs
+              const hasMasterCV = result.data.cvs.some((cv: any) => cv.isMaster === true);
+              
+              if (hasMasterCV) {
+                // User has master CV, redirect to dashboard
+                console.log('✅ User has master CV, redirecting to dashboard');
+                onClose();
+                window.location.href = '/dashboard';
+              } else {
+                // User has CVs but no master CV, redirect to universal onboarding
+                console.log('🆕 User has CVs but no master CV, redirecting to universal onboarding');
+                onClose();
+                window.location.href = '/onboarding-universal';
+              }
             } else {
-              // User exists but no CVs - still redirect to dashboard (they can create CVs there)
-              console.log('🔄 Existing user with no CVs, redirecting to dashboard');
+              // New user, redirect to universal onboarding
+              console.log('🆕 New user, redirecting to universal onboarding');
               onClose();
-              window.location.href = '/dashboard';
+              window.location.href = '/onboarding-universal';
             }
           } catch (error) {
-            console.log('Error checking CVs, redirecting to dashboard:', error);
-            // If we can't check CVs, redirect to dashboard (safer default)
+            console.log('Error checking CVs, assuming new user:', error);
+            // If we can't check CVs, assume new user and redirect to universal onboarding
             onClose();
-            window.location.href = '/dashboard';
+            window.location.href = '/onboarding-universal';
           }
         } else {
           setError('Failed to establish session. Please try again.');
         }
       }
-    } catch (error) {
-      setError('An error occurred. Please try again.');
+    } catch (error: any) {
+      console.error('Sign in error:', error);
+      
+      // Handle specific Firebase errors
+      if (error.code === 'auth/user-not-found') {
+        setError('No account found with this email address');
+      } else if (error.code === 'auth/wrong-password') {
+        setError('Incorrect password');
+      } else if (error.code === 'auth/invalid-email') {
+        setError('Invalid email address');
+      } else if (error.code === 'auth/too-many-requests') {
+        setError('Too many failed attempts. Please try again later');
+      } else {
+        setError(error.message || 'Failed to sign in');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -94,65 +130,59 @@ export default function LoginModal({ isOpen, onClose, onSwitchToRegister, onLogi
         const user = await firebaseSignInWithGoogle();
         console.log('✅ Firebase authentication successful:', user);
         
-        // The useFirebaseAuth hook already handles localStorage storage
-        console.log('⏳ Checking localStorage for user data...');
-        
-        // Check if this is a new user by checking if they have a CV
-        const userData = localStorage.getItem('user');
-        console.log('🔍 User data from localStorage:', userData);
-        
-        if (userData) {
-          try {
-            const parsedUser = JSON.parse(userData);
-            console.log('🔍 Parsed user data:', parsedUser);
-            
-            // Check if user has any CVs
+        // Get Firebase ID token and sign in with NextAuth
+        const idToken = await user.getIdToken();
+        const result = await signIn('firebase', { 
+          idToken, 
+          redirect: false 
+        });
+
+        if (result?.error) {
+          setError('Authentication failed. Please try again.');
+        } else if (result?.ok) {
+          // Get the session to access user data
+          const session = await getSession();
+          if (session?.user) {
+            // Check if user has CVs before deciding where to route
             try {
-              console.log('🔍 Checking CVs for user:', parsedUser.id);
-              const response = await fetch(`/api/cvs?userId=${parsedUser.id}`);
+              console.log('🔍 Checking CVs for NextAuth user:', session.user.id);
+              const response = await fetch(`/api/cvs?userId=${session.user.id}`);
               const result = await response.json();
               console.log('🔍 CV check result:', result);
               
               if (result.success && result.data.cvs && result.data.cvs.length > 0) {
-                // User has CVs, redirect to dashboard
-                console.log('✅ User has CVs, redirecting to dashboard');
-                onClose();
-                window.location.href = '/dashboard';
+                // Check if user has any master CVs
+                const hasMasterCV = result.data.cvs.some((cv: any) => cv.isMaster === true);
+                
+                if (hasMasterCV) {
+                  // User has master CV, redirect to dashboard
+                  console.log('✅ User has master CV, redirecting to dashboard');
+                  onClose();
+                  window.location.href = '/dashboard';
+                } else {
+                  // User has CVs but no master CV, redirect to universal onboarding
+                  console.log('🆕 User has CVs but no master CV, redirecting to universal onboarding');
+                  onClose();
+                  window.location.href = '/onboarding-universal';
+                }
               } else {
-                // User exists but no CVs - still redirect to dashboard (they can create CVs there)
-                console.log('🔄 Existing user with no CVs, redirecting to dashboard');
+                // New user, redirect to universal onboarding
+                console.log('🆕 New user, redirecting to universal onboarding');
                 onClose();
-                window.location.href = '/dashboard';
+                window.location.href = '/onboarding-universal';
               }
             } catch (error) {
               console.log('Error checking CVs, assuming new user:', error);
-              // If we can't check CVs, assume new user and redirect to onboarding Personal Information page (step 2)
+              // If we can't check CVs, assume new user and redirect to universal onboarding
               onClose();
-              window.location.href = '/onboarding?step=2';
+              window.location.href = '/onboarding-universal';
             }
-          } catch (error) {
-            console.log('Error parsing user data, redirecting to dashboard:', error);
-            // Error parsing user data, redirect to dashboard (safer default)
-            onClose();
-            window.location.href = '/dashboard';
+          } else {
+            setError('Failed to establish session. Please try again.');
           }
-        } else {
-          console.log('⚠️ No user data in localStorage, redirecting to dashboard');
-          // No user data, redirect to dashboard (safer default)
-          onClose();
-          window.location.href = '/dashboard';
         }
-        
-        // Ensure modal closes and redirects even if there are issues
-        setTimeout(() => {
-          if (isOpen) {
-            console.log('🔄 Fallback: Closing modal and redirecting to dashboard');
-            onClose();
-            // Use window.location.href for more reliable redirect
-            window.location.href = '/dashboard';
-          }
-        }, 3000);
       } catch (error: any) {
+        console.error('Google sign in error:', error);
         setError(error.message || 'Failed to sign in with Google. Please try again.');
       } finally {
         setIsLoading(false);

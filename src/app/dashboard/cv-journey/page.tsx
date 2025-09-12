@@ -2,14 +2,16 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { motion } from 'framer-motion';
-import { Plus, Briefcase, FileText, CheckCircle, Download, Trash2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Plus, Briefcase, FileText, CheckCircle, Download, Trash2, Filter, SortAsc, MoreVertical, Search, ArrowRight, Star, Clock, Building2 } from 'lucide-react';
 import PageHeader from '@/components/dashboard/PageHeader';
 import { JobJourneyProvider, useJobJourney } from '@/contexts/JobJourneyContext';
 import OnboardingModal from '@/components/modals/OnboardingModal';
 import JobPipelineCardModal from '@/components/modals/JobPipelineCardModal';
 import JourneyStatusBanner from '@/components/JourneyStatusBanner';
 import JourneyTimelineCard from '@/components/dashboard/JourneyTimelineCard';
+import NewJourneyCard from '@/components/dashboard/NewJourneyCard';
+import { useTheme } from '@/lib/contexts/ThemeContext';
 
 interface Journey {
   id: string;
@@ -29,36 +31,69 @@ interface Journey {
 const CVJourneyPageContent: React.FC = () => {
   const { data: session } = useSession();
   const { isJourneyActive, currentJobId, startJourney } = useJobJourney();
+  const { theme, isDark } = useTheme();
   const [journeys, setJourneys] = useState<Journey[]>([]);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showPipelineModal, setShowPipelineModal] = useState(false);
+  const [showNewJourneyCard, setShowNewJourneyCard] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [sortBy, setSortBy] = useState<'lastUpdated' | 'creationDate' | 'jobTitle'>('lastUpdated');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'in-progress' | 'completed'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
+    console.log('🔍 CV Journey Page - useEffect triggered');
+    console.log('🔍 CV Journey Page - Session:', session);
+    console.log('🔍 CV Journey Page - User ID:', session?.user?.id);
+    
     if (session?.user?.id) {
       // Fetch user's journeys from backend
+      console.log('🔍 CV Journey Page - Fetching journeys...');
       fetchJourneys();
+    } else {
+      console.log('🔍 CV Journey Page - No session or user ID, setting timeout');
+      // If no session, stop loading after a short delay
+      const timer = setTimeout(() => {
+        console.log('🔍 CV Journey Page - Timeout reached, stopping loading');
+        setLoading(false);
+      }, 2000);
+      return () => clearTimeout(timer);
     }
   }, [session?.user?.id]);
 
   const fetchJourneys = async () => {
     try {
       const userId = session?.user?.id;
+      console.log('🔍 CV Journey Page - Fetching journeys for user:', userId);
+      console.log('🔍 CV Journey Page - Session data:', session);
+      
       if (!userId) {
         console.error('No user ID available');
+        setLoading(false);
         return;
       }
       
-      const response = await fetch(`/api/journeys?userId=${userId}&status=all`);
+      console.log('🔍 CV Journey Page - Making API call to:', `/api/cv-journey?userId=${userId}&status=all`);
+      const response = await fetch(`/api/cv-journey?userId=${userId}&status=all`);
+      
+      console.log('🔍 CV Journey Page - Response status:', response.status);
+      console.log('🔍 CV Journey Page - Response ok:', response.ok);
+      
       if (!response.ok) {
-        throw new Error('Failed to fetch journeys');
+        const errorText = await response.text();
+        console.error('🔍 CV Journey Page - Response error:', errorText);
+        throw new Error(`Failed to fetch journeys: ${response.status} ${errorText}`);
       }
       
       const result = await response.json();
+      console.log('🔍 CV Journey Page - API result:', result);
+      
       if (result.success) {
         setJourneys(result.data.journeys);
+        console.log('🔍 CV Journey Page - Set journeys:', result.data.journeys);
       } else {
         console.error('Error fetching journeys:', result.message);
       }
@@ -70,9 +105,21 @@ const CVJourneyPageContent: React.FC = () => {
   };
 
   const handleStartNewJourney = () => {
-    // Start a new journey with no jobId to trigger step 1 (Add Job)
-    startJourney('temp');
+    setShowNewJourneyCard(true);
+  };
+
+  const handleJourneyCreated = async (journeyData: {
+    jobId: string;
+    cvId: string;
+    journeyName: string;
+  }) => {
+    // Start the journey with the selected job and CV
+    startJourney(journeyData.jobId);
     setShowPipelineModal(true);
+    setShowNewJourneyCard(false);
+    
+    // Refresh journeys list
+    await fetchJourneys();
   };
 
   const handleResumeJourney = (journey: Journey) => {
@@ -124,12 +171,63 @@ const CVJourneyPageContent: React.FC = () => {
     }
   };
 
+  // Filter and sort journeys
+  const filteredAndSortedJourneys = journeys
+    .filter(journey => {
+      // Filter by status
+      if (filterStatus !== 'all' && journey.status !== filterStatus) {
+        return false;
+      }
+      
+      // Filter by search query
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        return (
+          journey.jobTitle.toLowerCase().includes(query) ||
+          journey.company.toLowerCase().includes(query)
+        );
+      }
+      
+      return true;
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'creationDate':
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        case 'jobTitle':
+          return a.jobTitle.localeCompare(b.jobTitle);
+        case 'lastUpdated':
+        default:
+          return new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime();
+      }
+    });
+
 
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-white">Loading journeys...</div>
+        <div className="text-center">
+          <div className="text-gray-600 dark:text-gray-300 mb-2">Loading journeys...</div>
+          {!session?.user?.id && (
+            <div className="text-sm text-red-500 dark:text-red-400">
+              No user session found. Please log in again.
+            </div>
+          )}
+          <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+            Debug: Session status: {session ? 'Available' : 'Not available'}
+          </div>
+          <button
+            onClick={() => {
+              console.log('Manual refresh clicked');
+              setLoading(true);
+              fetchJourneys();
+            }}
+            className="mt-4 px-4 py-2 bg-lime-500 hover:bg-lime-600 text-black text-sm rounded-lg transition-colors"
+          >
+            Retry
+          </button>
+        </div>
       </div>
     );
   }
@@ -138,57 +236,184 @@ const CVJourneyPageContent: React.FC = () => {
     <div className="space-y-6">
       {/* Page Header */}
       <PageHeader
-        title="CV Journey"
-        description="Track your CV creation progress for each job application"
+        title="CV Journeys"
+        description="Manage your job application journeys and track progress"
         user={session?.user || { name: 'User', email: 'user@example.com' }}
         showSettings={true}
       />
 
-      {/* Start New Journey Card */}
-      <motion.div
-        className="bg-gradient-to-r from-lime-500/10 to-lime-600/10 border border-lime-500/20 rounded-xl p-6"
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-      >
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-semibold text-white mb-2">Start New Journey</h3>
-            <p className="text-white/60">Begin creating a CV for a new job application</p>
+      {/* Controls Bar */}
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+        {/* Search and Filters */}
+        <div className="flex flex-col sm:flex-row gap-3 flex-1">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search journeys..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 pr-4 py-2 w-full sm:w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-lime-500 focus:border-transparent"
+            />
           </div>
-          <motion.button
-            onClick={handleStartNewJourney}
-            className="flex items-center gap-2 px-4 py-2 bg-lime-500 hover:bg-lime-600 text-black font-medium rounded-lg transition-colors"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Plus className="h-4 w-4" />
-            Start New Journey
-          </motion.button>
-        </div>
-      </motion.div>
 
-      {/* Journeys Timeline */}
-      <div className="space-y-6">
-        {journeys.length === 0 ? (
-          <motion.div
-            className="text-center py-12"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+          {/* Filter Toggle */}
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
+              showFilters
+                ? 'bg-lime-50 dark:bg-lime-900/20 border-lime-200 dark:border-lime-800 text-lime-700 dark:text-lime-300'
+                : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+            }`}
           >
-            <div className="text-white/40 text-lg mb-2">No journeys yet</div>
-            <p className="text-white/60">Start your first CV creation journey to see it here</p>
+            <Filter className="h-4 w-4" />
+            <span className="hidden sm:inline">Filter</span>
+          </button>
+        </div>
+
+        {/* Start New Journey Button */}
+        <motion.button
+          onClick={handleStartNewJourney}
+          className="flex items-center gap-2 px-6 py-2 bg-lime-500 hover:bg-lime-600 text-black font-medium rounded-lg transition-colors shadow-sm"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          <Plus className="h-4 w-4" />
+          Start New Journey
+        </motion.button>
+      </div>
+
+      {/* Filters Panel */}
+      <AnimatePresence>
+        {showFilters && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4"
+          >
+            <div className="flex flex-col sm:flex-row gap-4">
+              {/* Sort By */}
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Sort by
+                </label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-lime-500 focus:border-transparent"
+                >
+                  <option value="lastUpdated">Last Updated</option>
+                  <option value="creationDate">Creation Date</option>
+                  <option value="jobTitle">Job Title</option>
+                </select>
+              </div>
+
+              {/* Filter by Status */}
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Status
+                </label>
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value as any)}
+                  className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-lime-500 focus:border-transparent"
+                >
+                  <option value="all">All Journeys</option>
+                  <option value="in-progress">In Progress</option>
+                  <option value="completed">Completed</option>
+                </select>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Journeys Grid */}
+      <div className="space-y-4">
+        {filteredAndSortedJourneys.length === 0 ? (
+          <motion.div
+            className="text-center py-16"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            {journeys.length === 0 ? (
+              // Empty state for new users
+              <div className="max-w-md mx-auto">
+                <div className="w-20 h-20 bg-lime-100 dark:bg-lime-900/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <ArrowRight className="h-10 w-10 text-lime-600 dark:text-lime-400" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                  Start Your First Journey
+                </h3>
+                <p className="text-gray-600 dark:text-gray-300 mb-6">
+                  Create your first CV journey to track your job application progress
+                </p>
+                <motion.button
+                  onClick={handleStartNewJourney}
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-lime-500 hover:bg-lime-600 text-black font-medium rounded-lg transition-colors"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Plus className="h-5 w-5" />
+                  Start New Journey
+                </motion.button>
+              </div>
+            ) : (
+              // No results for filters
+              <div className="max-w-md mx-auto">
+                <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Search className="h-8 w-8 text-gray-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                  No journeys found
+                </h3>
+                <p className="text-gray-600 dark:text-gray-300 mb-4">
+                  Try adjusting your search or filter criteria
+                </p>
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setFilterStatus('all');
+                    setShowFilters(false);
+                  }}
+                  className="text-lime-600 dark:text-lime-400 hover:text-lime-700 dark:hover:text-lime-300 font-medium"
+                >
+                  Clear filters
+                </button>
+              </div>
+            )}
           </motion.div>
         ) : (
-          journeys.map((journey) => (
-            <JourneyTimelineCard
-              key={journey.id}
-              journey={journey}
-              onResume={handleResumeJourney}
-              onDownload={handleDownloadFiles}
-              onDelete={handleDeleteJourney}
-              onShowDeleteConfirm={setShowDeleteConfirm}
-            />
-          ))
+          <div className="grid gap-4">
+            {/* New Journey Card */}
+            {showNewJourneyCard && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                <NewJourneyCard
+                  onJourneyCreated={handleJourneyCreated}
+                  onCancel={() => setShowNewJourneyCard(false)}
+                />
+              </motion.div>
+            )}
+            
+            {/* Existing Journeys */}
+            {filteredAndSortedJourneys.map((journey) => (
+              <JourneyTimelineCard
+                key={journey.id}
+                journey={journey}
+                onResume={handleResumeJourney}
+                onDownload={handleDownloadFiles}
+                onDelete={handleDeleteJourney}
+                onShowDeleteConfirm={setShowDeleteConfirm}
+              />
+            ))}
+          </div>
         )}
       </div>
 
@@ -198,6 +423,7 @@ const CVJourneyPageContent: React.FC = () => {
         onClose={() => setShowOnboarding(false)} 
       />
       
+      
       <JobPipelineCardModal
         key={currentJobId || 'new-journey'}
         isOpen={showPipelineModal}
@@ -206,48 +432,73 @@ const CVJourneyPageContent: React.FC = () => {
       />
 
       {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && (
-        <motion.div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-        >
+      <AnimatePresence>
+        {showDeleteConfirm && (
           <motion.div
-            className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-6 max-w-md w-full mx-4"
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.9, opacity: 0 }}
+            className="fixed inset-0 bg-black/50 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowDeleteConfirm(null)}
           >
-            <div className="text-center">
-              <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Trash2 className="h-6 w-6 text-red-400" />
+            <motion.div
+              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 max-w-md w-full shadow-2xl"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="text-center">
+                <div className="w-12 h-12 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Trash2 className="h-6 w-6 text-red-600 dark:text-red-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                  Delete Journey?
+                </h3>
+                <p className="text-gray-600 dark:text-gray-300 mb-6">
+                  You are about to permanently delete this journey. This action cannot be undone.
+                </p>
+                
+                {/* Journey Details */}
+                {(() => {
+                  const journey = journeys.find(j => j.id === showDeleteConfirm);
+                  return journey ? (
+                    <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-6 text-left">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Building2 className="h-4 w-4 text-gray-500" />
+                        <span className="font-medium text-gray-900 dark:text-white">
+                          {journey.jobTitle}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-600 dark:text-gray-300">
+                        {journey.company}
+                      </p>
+                    </div>
+                  ) : null;
+                })()}
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowDeleteConfirm(null)}
+                    className="flex-1 px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleDeleteJourney(showDeleteConfirm);
+                    }}
+                    disabled={isDeleting}
+                    className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isDeleting ? 'Deleting...' : 'Yes, Delete Journey'}
+                  </button>
+                </div>
               </div>
-              <h3 className="text-lg font-semibold text-white mb-2">Delete Journey</h3>
-              <p className="text-white/60 mb-6">
-                Are you sure you want to delete this journey? This action cannot be undone.
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowDeleteConfirm(null)}
-                  className="flex-1 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => {
-                    handleDeleteJourney(showDeleteConfirm);
-                  }}
-                  disabled={isDeleting}
-                  className="flex-1 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isDeleting ? 'Deleting...' : 'Delete'}
-                </button>
-              </div>
-            </div>
+            </motion.div>
           </motion.div>
-        </motion.div>
-      )}
+        )}
+      </AnimatePresence>
     </div>
   );
 };

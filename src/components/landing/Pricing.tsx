@@ -1,50 +1,69 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Check, Star, ArrowRight, Brain, Users, Crown } from 'lucide-react';
+import { Check, Star, ArrowRight, Brain, Users, Crown, Globe, CreditCard, Shield } from 'lucide-react';
+import { LocationService, LocationData, PricingData } from '@/lib/payment/locationService';
+import LoadingAnimation from '@/components/ui/LoadingAnimation';
 
-const Pricing = () => {
+interface PricingPlan {
+  name: string;
+  originalPrice: number;
+  originalCurrency: string;
+  period: string;
+  description: string;
+  features: string[];
+  notIncluded: string[];
+  popular: boolean;
+  color: string;
+  glowColor: string;
+  icon: any;
+  bestFor?: string;
+}
+
+interface PricingProps {
+  onPlanSelect?: (plan: PricingPlan, pricingData: PricingData) => void;
+}
+
+const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
   const [isAnnual, setIsAnnual] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('essential'); // 'essential' or 'pro'
+  const [locationData, setLocationData] = useState<LocationData | null>(null);
+  const [selectedCurrency, setSelectedCurrency] = useState<string>('GBP');
+  const [loading, setLoading] = useState(true);
 
-  const essentialPlans = [
+  const essentialPlans: PricingPlan[] = [
     {
-      name: 'Free Plan',
-      price: '€0',
+      name: 'Essential Plan',
+      originalPrice: 0,
+      originalCurrency: 'GBP',
       period: '',
-      description: 'First-time users, casual job seekers',
+      description: 'The Foundation for Opportunity. Craft a single, powerful application that passes initial screenings and opens the door.',
       features: [
-        'Create & edit up to 3 CVs',
-        '1 export',
-        'Basic design snippets'
+        '1 Full Application Journey: Craft your CV, Cover Letter, and track one job',
+        'Basic ATS Check: Ensure your CV passes initial automated screeners',
+        '1 PDF Export: Download your finished application'
       ],
-      notIncluded: [
-        'AI Assistant',
-        'Cover Letter Generator',
-        'Job Tracker',
-        'Community Access'
-      ],
+      notIncluded: [],
+      bestFor: 'Testing our tools or for a single, critical application',
       popular: false,
       color: 'from-green-400 to-green-500',
       glowColor: 'from-green-400/20 to-green-500/20',
       icon: Brain
     },
     {
-      name: 'Day Pass',
-      price: '€2.99',
+      name: 'Daily Pass',
+      originalPrice: 2.99,
+      originalCurrency: 'GBP',
       period: 'valid for 24 hours',
-      description: 'Quick job applications, one-day polishers',
+      description: 'The 24-Hour Career Sprint. For when opportunity won\'t wait. Get 24-hour access to our Pro tools.',
       features: [
-        '5 CV exports',
-        'AI Assistant included',
-        'Cover Letter Generation',
-        'Limited Style Snippets'
+        '5 Application Journeys: Tailor applications for up to five key roles',
+        'Pro ATS Optimisation: Rank higher in recruiter searches',
+        'All Export Options: Download in both PDF & Word'
       ],
-      notIncluded: [
-        'Job Tracker',
-        'Community Access'
-      ],
+      notIncluded: [],
+      bestFor: 'A one-day application blitz, a career fair, or acting on urgent job alerts',
       popular: true,
       color: 'from-blue-400 to-blue-500',
       glowColor: 'from-blue-400/20 to-blue-500/20',
@@ -52,66 +71,136 @@ const Pricing = () => {
     }
   ];
 
-  const proPlans = [
+  const proPlans: PricingPlan[] = [
     {
-      name: 'Monthly Pro',
-      price: '€19',
+      name: 'Pro Monthly',
+      originalPrice: 10.99,
+      originalCurrency: 'GBP',
       period: 'per month',
-      description: 'Active job seekers needing all tools',
+      description: 'Your Active Career Campaign. Your command centre for a serious job search.',
       features: [
-        'Unlimited CVs & Exports',
-        'AI Assistant + Cover Letters',
-        'Full Job Tracker Access',
-        'All Style Snippets',
-        'Community Access (read-only)',
-        'Standard Email Support'
+        'Unlimited Applications: Create a unique CV for every role for 30 days',
+        'Pro ATS & All Exports: Maximise your visibility and flexibility',
+        'Priority Support: Get faster assistance from our team'
       ],
       notIncluded: [],
+      bestFor: 'A dedicated professional in an active, month-long job search',
       popular: false,
-      color: 'from-yellow-400 to-yellow-500',
-      glowColor: 'from-yellow-400/20 to-yellow-500/20',
+      color: 'from-purple-400 to-purple-500',
+      glowColor: 'from-purple-400/20 to-purple-500/20',
       icon: Crown
     },
     {
-      name: 'Quarterly Pro',
-      price: '€49',
-      period: 'per 3 months',
-      description: 'Consistent job hunting or portfolio building',
+      name: 'Pro Quarterly',
+      originalPrice: 25.99,
+      originalCurrency: 'GBP',
+      period: 'per quarter',
+      description: 'The Strategic Advantage. The smart choice for a longer search.',
       features: [
-        'Everything in Monthly, plus:',
-        'Mock Interview Access',
-        'Community Participation',
-        'Priority Email Support'
+        '90 Days of Unlimited Use: The ideal timeframe for longer hiring cycles',
+        'All Pro Features Included: Pro ATS, Unlimited Exports & Priority Support',
+        'Future Pro Add-ons: Get our newest features automatically at no extra cost'
       ],
       notIncluded: [],
+      bestFor: 'Senior-level job hunts and securing the best long-term value',
       popular: true,
       color: 'from-orange-400 to-orange-500',
       glowColor: 'from-orange-400/20 to-orange-500/20',
       icon: Users
     },
     {
-              name: 'Yearly Pro',
-      price: '€120',
+      name: 'Pro Yearly',
+      originalPrice: 79.99,
+      originalCurrency: 'GBP',
       period: 'per year',
-      description: 'Long-term career builders or professionals',
+      description: 'The Ultimate Career Investment. A long-term commitment to your professional growth.',
       features: [
-        'All features unlocked, including:',
-        'Early job access in community',
-        'Unlimited everything',
-        'Premium Support',
-        'Future Pro Add-ons included'
+        '365 Days of Unlimited Access: Your premium toolkit is always ready, all year long',
+        'Includes All Pro Features & Future Add-ons',
+        'Maximum Savings: Our absolute best rate, rewarding your commitment'
       ],
       notIncluded: [],
+      bestFor: 'Long-term career builders and professionals seeking maximum savings',
       popular: false,
-      color: 'from-red-400 to-red-500',
-      glowColor: 'from-red-400/20 to-red-500/20',
+      color: 'from-pink-400 to-pink-500',
+      glowColor: 'from-pink-400/20 to-pink-500/20',
       icon: Crown
     }
   ];
 
+  useEffect(() => {
+    initializeLocation();
+  }, []);
+
+  const initializeLocation = async () => {
+    try {
+      const location = await LocationService.getLocationData();
+      setLocationData(location);
+      setSelectedCurrency(location.currency);
+    } catch (error) {
+      console.error('Error initializing location:', error);
+      setLocationData({
+        country: 'United Kingdom',
+        countryCode: 'GB',
+        currency: 'GBP',
+        currencySymbol: '£',
+        paymentPartner: 'stripe',
+        exchangeRate: 1.0
+      });
+      setSelectedCurrency('GBP');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getConvertedPrice = (plan: PricingPlan): PricingData => {
+    if (plan.originalPrice === 0) {
+      return {
+        originalPrice: 0,
+        originalCurrency: plan.originalCurrency,
+        convertedPrice: 0,
+        convertedCurrency: selectedCurrency,
+        exchangeRate: 1,
+        paymentPartner: 'stripe'
+      };
+    }
+
+    // Apply annual discount if selected
+    let price = plan.originalPrice;
+    if (isAnnual && plan.name.includes('Monthly')) {
+      price = plan.originalPrice * 10; // 10 months instead of 12 for annual discount
+    }
+
+    const convertedData = LocationService.convertPrice(price, plan.originalCurrency, selectedCurrency);
+    
+    // Convert the original price to the same currency for consistent display
+    const originalInTargetCurrency = LocationService.convertPrice(plan.originalPrice, plan.originalCurrency, selectedCurrency);
+    
+    return {
+      ...convertedData,
+      originalPrice: originalInTargetCurrency.convertedPrice
+    };
+  };
+
+  const getPaymentPartnerIcon = (currency: string) => {
+    return currency === 'INR' ? Shield : CreditCard;
+  };
+
+  const getPaymentPartnerName = (currency: string) => {
+    return currency === 'INR' ? 'Razorpay' : 'Stripe';
+  };
+
   const plans = useMemo(() => {
     return selectedCategory === 'essential' ? essentialPlans : proPlans;
   }, [selectedCategory]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <LoadingAnimation progress={0.3} showProgressBar={false} />
+      </div>
+    );
+  }
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -154,15 +243,35 @@ const Pricing = () => {
           transition={{ duration: 0.6 }}
           viewport={{ once: true }}
         >
-          <h2 className="text-3xl sm:text-5xl lg:text-6xl font-bold text-white mb-6">
-            Pricing
+          <h2 className="text-3xl sm:text-5xl lg:text-6xl font-bold text-white mb-6 text-center">
+            Invest in Your Career. Choose Your Advantage.
           </h2>
           <p className="text-lg sm:text-xl text-white/70 max-w-3xl mx-auto leading-relaxed">
-            {selectedCategory === 'essential' 
-              ? 'Get started, test the tools, or make a quick move — no long-term commitment needed.'
-              : 'Everything unlocked. Built for power users, pros, and anyone serious about landing the next opportunity.'
-            }
+            The right tools get you noticed. Move forward with confidence by selecting the plan that matches your ambition.
           </p>
+        </motion.div>
+
+        {/* Currency Selector */}
+        <motion.div 
+          className="flex justify-center items-center mb-8"
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          viewport={{ once: true }}
+        >
+          <div className="flex items-center gap-2">
+            <select
+              value={selectedCurrency}
+              onChange={(e) => setSelectedCurrency(e.target.value)}
+              className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {LocationService.getSupportedCurrencies().map((currency) => (
+                <option key={currency.code} value={currency.code} className="bg-gray-800 text-white">
+                  {currency.symbol} {currency.code} - {currency.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </motion.div>
 
         {/* Pricing Toggle */}
@@ -210,16 +319,15 @@ const Pricing = () => {
           whileInView="visible"
           viewport={{ once: true, margin: "-100px" }}
         >
-          <div className={`flex flex-wrap justify-center gap-6 lg:gap-8`} style={{
-            maxWidth: selectedCategory === 'essential' ? '32rem' : '72rem',
-            width: '100%'
-          }}>
+          <div className={`grid gap-6 lg:gap-8 ${selectedCategory === 'essential' ? 'grid-cols-1 md:grid-cols-2 max-w-4xl mx-auto' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 max-w-7xl mx-auto'}`}>
           {plans.map((plan, index) => {
+            const pricingData = getConvertedPrice(plan);
             const IconComponent = plan.icon;
+            const PaymentIcon = getPaymentPartnerIcon(pricingData.convertedCurrency);
             return (
               <motion.div
                 key={`${plan.name}-${selectedCategory}`}
-                className={`relative group ${selectedCategory === 'essential' ? 'w-full md:w-[calc(50%-12px)] lg:w-[calc(50%-16px)]' : 'w-full md:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)]'}`}
+                className="relative group w-full"
                 variants={cardVariants}
                 style={{
                   zIndex: plans.length - index,
@@ -291,12 +399,24 @@ const Pricing = () => {
                     className="text-center mb-6"
                     whileHover={{ scale: 1.05 }}
                   >
-                    <div className="text-5xl font-bold text-white mb-2" style={{
-                      textShadow: '0 0 20px rgba(255, 255, 255, 0.3)'
-                    }}>
-                      {plan.price}
+                    <div className="flex items-center justify-center gap-2 mb-2">
+                      <div className="text-5xl font-bold text-white" style={{
+                        textShadow: '0 0 20px rgba(255, 255, 255, 0.3)'
+                      }}>
+                        {plan.originalPrice === 0 ? 'Free' : LocationService.formatPrice(pricingData.convertedPrice, pricingData.convertedCurrency)}
+                      </div>
+                      {plan.originalPrice > 0 && pricingData.convertedPrice !== pricingData.originalPrice && (
+                        <div className="text-lg text-white/50 line-through">
+                          {LocationService.formatPrice(pricingData.originalPrice, pricingData.convertedCurrency)}
+                        </div>
+                      )}
                     </div>
                     <div className="text-white/60 text-base">{plan.period}</div>
+                    {plan.originalPrice > 0 && pricingData.convertedPrice !== pricingData.originalPrice && (
+                      <div className="text-lime-400 text-sm font-semibold mt-1">
+                        Launch Offer
+                      </div>
+                    )}
                   </motion.div>
 
                   {/* Features */}
@@ -304,17 +424,25 @@ const Pricing = () => {
                     {plan.features.map((feature, fIndex) => (
                       <motion.div 
                         key={`${plan.name}-feature-${fIndex}`}
-                        className="flex items-center"
+                        className="flex items-start"
                         whileHover={{ x: 5 }}
                         transition={{ duration: 0.2 }}
                       >
-                        <div className="w-5 h-5 bg-lime-400 rounded-full flex items-center justify-center mr-3 shadow-lg">
+                        <div className="w-5 h-5 bg-lime-400 rounded-full flex items-center justify-center mr-3 shadow-lg mt-0.5 flex-shrink-0">
                           <Check size={12} className="text-black font-bold" />
                         </div>
-                        <span className="text-white/80 text-base">{feature}</span>
+                        <span className="text-white/80 text-sm leading-relaxed">{feature}</span>
                       </motion.div>
                     ))}
                   </div>
+
+                  {/* Best For */}
+                  {plan.bestFor && (
+                    <div className="mb-6 p-4 bg-white/5 rounded-xl border border-white/10">
+                      <div className="text-lime-400 text-sm font-semibold mb-2">Best for:</div>
+                      <div className="text-white/70 text-sm leading-relaxed">{plan.bestFor}</div>
+                    </div>
+                  )}
 
                   {/* Not Included */}
                   {plan.notIncluded.length > 0 && (
@@ -331,48 +459,53 @@ const Pricing = () => {
                   )}
 
                   {/* Enhanced CTA Button */}
-                  {plan.price !== '€0' && (
-                    <motion.button 
-                      className={`group relative w-full py-4 px-6 rounded-full font-semibold text-base transition-all duration-300 overflow-hidden mt-auto ${
-                        plan.popular
+                  <motion.button 
+                    onClick={() => onPlanSelect?.(plan, pricingData)}
+                    className={`group relative w-full py-4 px-6 rounded-full font-semibold text-base transition-all duration-300 overflow-hidden mt-auto ${
+                      plan.originalPrice === 0
+                        ? 'bg-gradient-to-r from-green-400 to-green-500 text-black shadow-2xl shadow-green-400/25'
+                        : plan.popular
                           ? 'bg-gradient-to-r from-lime-400 to-lime-500 text-black shadow-2xl shadow-lime-400/25'
                           : 'bg-gradient-to-r from-gray-700 to-gray-800 text-white shadow-xl'
-                      }`}
-                      whileHover={{ 
-                        scale: 1.02,
-                        rotateY: 3,
-                        boxShadow: plan.popular 
+                    }`}
+                    whileHover={{ 
+                      scale: 1.02,
+                      rotateY: 3,
+                      boxShadow: plan.originalPrice === 0
+                        ? "0 25px 50px -12px rgba(34, 197, 94, 0.4)"
+                        : plan.popular 
                           ? "0 25px 50px -12px rgba(132, 204, 22, 0.4)"
                           : "0 20px 40px -12px rgba(0, 0, 0, 0.5)"
-                      }}
-                      whileTap={{ scale: 0.95 }}
-                      style={{
-                        transformStyle: 'preserve-3d',
-                        perspective: '1000px'
-                      }}
-                    >
-                      <motion.div
-                        className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
-                          plan.popular 
+                    }}
+                    whileTap={{ scale: 0.95 }}
+                    style={{
+                      transformStyle: 'preserve-3d',
+                      perspective: '1000px'
+                    }}
+                  >
+                    <motion.div
+                      className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
+                        plan.originalPrice === 0
+                          ? 'bg-gradient-to-r from-green-300 to-green-400'
+                          : plan.popular 
                             ? 'bg-gradient-to-r from-lime-300 to-lime-400' 
                             : 'bg-gradient-to-r from-gray-600 to-gray-700'
-                        }`}
-                        style={{ filter: 'blur(20px)' }}
-                      />
+                      }`}
+                      style={{ filter: 'blur(20px)' }}
+                    />
+                    <motion.div
+                      className="relative flex items-center justify-center gap-2"
+                      whileHover={{ x: 5 }}
+                    >
+                      <span>{plan.originalPrice === 0 ? 'Get Started Free' : 'Choose Plan'}</span>
                       <motion.div
-                        className="relative flex items-center justify-center gap-2"
-                        whileHover={{ x: 5 }}
+                        whileHover={{ rotate: 45 }}
+                        transition={{ duration: 0.3 }}
                       >
-                        <span>Subscribe Now</span>
-                        <motion.div
-                          whileHover={{ rotate: 45 }}
-                          transition={{ duration: 0.3 }}
-                        >
-                          <ArrowRight size={16} />
-                        </motion.div>
+                        <ArrowRight size={16} />
                       </motion.div>
-                    </motion.button>
-                  )}
+                    </motion.div>
+                  </motion.button>
 
                 </motion.div>
               </motion.div>

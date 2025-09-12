@@ -1,0 +1,171 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, Cookie, Shield, Settings } from 'lucide-react';
+import { getCookieConsentStatus, setCookieConsentStatus, initializeAnalytics, initializeMarketing } from '@/lib/utils/cookieUtils';
+
+interface CookieConsentProps {
+  onAccept?: () => void;
+  onDecline?: () => void;
+  onClose?: () => void;
+}
+
+const CookieConsent: React.FC<CookieConsentProps> = ({ 
+  onAccept, 
+  onDecline, 
+  onClose 
+}) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  useEffect(() => {
+    // Check if user has already made a choice
+    const cookieConsent = getCookieConsentStatus();
+    if (!cookieConsent) {
+      // Show banner after a short delay for better UX
+      const timer = setTimeout(() => {
+        setIsVisible(true);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  const handleAccept = () => {
+    setIsAnimating(true);
+    setCookieConsentStatus('accepted');
+    // Initialize analytics and marketing tools
+    initializeAnalytics();
+    initializeMarketing();
+    setTimeout(() => {
+      setIsVisible(false);
+      onAccept?.();
+    }, 300);
+  };
+
+  const handleDecline = () => {
+    setIsAnimating(true);
+    setCookieConsentStatus('declined');
+    setTimeout(() => {
+      setIsVisible(false);
+      onDecline?.();
+    }, 300);
+  };
+
+  const handleClose = () => {
+    setIsAnimating(true);
+    setCookieConsentStatus('accepted'); // Default to accept
+    // Initialize analytics and marketing tools
+    initializeAnalytics();
+    initializeMarketing();
+    setTimeout(() => {
+      setIsVisible(false);
+      onClose?.();
+    }, 300);
+  };
+
+  if (!isVisible) return null;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ y: 100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 100, opacity: 0 }}
+        transition={{ 
+          duration: 0.4, 
+          ease: [0.4, 0, 0.2, 1],
+          opacity: { duration: 0.3 }
+        }}
+        className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 border-t border-white/10 backdrop-blur-xl"
+        style={{
+          background: 'rgba(17, 24, 39, 0.95)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)'
+        }}
+      >
+        {/* Glow effect */}
+        <div className="absolute inset-0 bg-gradient-to-r from-lime-400/5 via-blue-400/5 to-lime-400/5" />
+        
+        <div className="relative px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              {/* Content */}
+              <div className="flex items-start gap-4 flex-1">
+                <motion.div
+                  className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-lime-400 to-lime-500 rounded-xl flex items-center justify-center shadow-lg"
+                  whileHover={{ scale: 1.05, rotate: 5 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Cookie size={24} className="text-white" />
+                </motion.div>
+                
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-white mb-2">
+                    We Value Your Privacy
+                  </h3>
+                  <p className="text-white/80 text-sm sm:text-base leading-relaxed max-w-2xl">
+                    We use cookies to enhance your experience, analyze site traffic, and personalize content. 
+                    By continuing to use our site, you consent to our use of cookies. You can manage your 
+                    preferences at any time.
+                  </p>
+                  
+                  {/* Additional info */}
+                  <div className="flex items-center gap-4 mt-3 text-xs text-white/60">
+                    <div className="flex items-center gap-1">
+                      <Shield size={14} />
+                      <span>Secure & Encrypted</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Settings size={14} />
+                      <span>Manage Preferences</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-3 flex-shrink-0">
+                <motion.button
+                  onClick={handleDecline}
+                  className="px-4 py-2 text-sm font-medium text-white/70 hover:text-white transition-colors duration-200 border border-white/20 hover:border-white/40 rounded-lg backdrop-blur-sm"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  disabled={isAnimating}
+                >
+                  Decline
+                </motion.button>
+                
+                <motion.button
+                  onClick={handleAccept}
+                  className="px-6 py-2 text-sm font-medium text-white bg-gradient-to-r from-lime-400 to-lime-500 hover:from-lime-500 hover:to-lime-600 rounded-lg shadow-lg transition-all duration-200 flex items-center gap-2"
+                  whileHover={{ 
+                    scale: 1.02,
+                    boxShadow: "0 10px 25px -5px rgba(132, 204, 22, 0.4)"
+                  }}
+                  whileTap={{ scale: 0.98 }}
+                  disabled={isAnimating}
+                >
+                  Accept All
+                </motion.button>
+                
+                <motion.button
+                  onClick={handleClose}
+                  className="p-2 text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  disabled={isAnimating}
+                  title="Close (Accept)"
+                >
+                  <X size={20} />
+                </motion.button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    </AnimatePresence>
+  );
+};
+
+export default CookieConsent;
