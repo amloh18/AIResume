@@ -22,7 +22,6 @@ import {
   Moon
 } from 'lucide-react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
-import ThemeToggle from '@/components/ui/ThemeToggle';
 
 interface StudioTopBarProps {
   documentType: 'cv' | 'cover-letter';
@@ -154,9 +153,6 @@ const StudioTopBar: React.FC<StudioTopBarProps> = ({
 
       {/* Right Region - Dashboard Header Icons */}
       <div className="flex items-center space-x-3">
-        {/* Theme Toggle */}
-        <ThemeToggle variant="compact" />
-
         {/* Dashboard Header Icons */}
         <div className="flex items-center space-x-2">
           <button className="p-2 transition-colors rounded-lg text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800" title="Notifications">

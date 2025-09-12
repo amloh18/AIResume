@@ -5,6 +5,7 @@ import { createErrorResponse } from '@/lib/db-utils';
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('🔍 Journeys API - GET request received');
     await connectDB();
     
     const { searchParams } = new URL(request.url);
@@ -12,7 +13,10 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status'); // 'in-progress' | 'completed' | 'all'
     const jobId = searchParams.get('jobId'); // Filter by specific job ID
     
+    console.log('🔍 Journeys API - Request params:', { userId, status, jobId });
+    
     if (!userId) {
+      console.log('🔍 Journeys API - No user ID provided');
       return NextResponse.json(
         { success: false, message: 'User ID is required' },
         { status: 400 }
@@ -31,6 +35,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch job applications for the user (including those in 'created' stage)
+    console.log('🔍 Journeys API - Querying job applications with query:', jobQuery);
     const jobApplications = await JobApplication.find(jobQuery).lean();
 
     console.log(`🔍 Journeys API - Found ${jobApplications.length} job applications for user ${userId}`);

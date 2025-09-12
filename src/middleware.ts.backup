@@ -1,0 +1,88 @@
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
+
+export default async function middleware(req: NextRequest) {
+  console.log('🚀 Middleware triggered for:', req.nextUrl.pathname);
+  const { pathname } = req.nextUrl;
+  
+  // Define route categories
+  const publicRoutes = ['/', '/auth', '/auth/signin', '/auth/signup'];
+  const protectedRoutes = ['/dashboard', '/studio'];
+  const apiRoutes = [
+    '/api/auth',
+    '/api/parse-job',
+    '/api/jobs/parsed',
+    '/api/templates',
+    '/api/snippets',
+    '/api/health',
+    '/api/cv/parse',
+    '/api/test-file-upload',
+    '/api/test-parsing'
+  ];
+
+  // Allow all API routes
+  if (apiRoutes.some(route => pathname.startsWith(route))) {
+    return NextResponse.next();
+  }
+
+  // Allow static assets
+  if (pathname.startsWith('/_next') || pathname.startsWith('/public')) {
+    return NextResponse.next();
+  }
+
+  // Allow public routes
+  if (publicRoutes.includes(pathname) || publicRoutes.some(route => pathname.startsWith(route))) {
+    return NextResponse.next();
+  }
+
+  // Check authentication for protected routes
+  if (protectedRoutes.some(route => pathname.startsWith(route))) {
+    console.log('🔍 Middleware - Checking authentication for:', pathname);
+    
+    try {
+      // Check for NextAuth JWT token first
+      const nextAuthToken = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+      console.log('🔍 Middleware - NextAuth token:', nextAuthToken ? 'Found' : 'Not found');
+      
+      if (nextAuthToken) {
+        console.log('✅ Middleware - NextAuth authentication successful');
+        return NextResponse.next();
+      }
+      
+      // Check for custom JWT token in cookies
+      const authToken = req.cookies.get('auth-token')?.value;
+      console.log('🔍 Middleware - Auth token cookie:', authToken ? 'Found' : 'Not found');
+      
+      if (authToken) {
+        console.log('✅ Middleware - JWT token found, allowing access');
+        return NextResponse.next();
+      }
+      
+      // If no valid authentication found, redirect to auth
+      console.log('❌ Middleware - No valid authentication found, redirecting to auth');
+      const callbackUrl = encodeURIComponent(pathname);
+      return NextResponse.redirect(new URL(`/auth?callbackUrl=${callbackUrl}`, req.url));
+    } catch (error) {
+      console.error('❌ Middleware - Auth error:', error);
+      const callbackUrl = encodeURIComponent(pathname);
+      return NextResponse.redirect(new URL(`/auth?callbackUrl=${callbackUrl}`, req.url));
+    }
+  }
+
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api/auth (NextAuth API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public folder
+     */
+    "/((?!api/auth|_next/static|_next/image|favicon.ico|public).*)",
+  ],
+};

@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     const order = searchParams.get('order') || 'desc';
     const limit = searchParams.get('limit');
     const hasInterviewWithin = searchParams.get('hasInterviewWithin');
-    const cvId = searchParams.get('cvId');
+    // cvId removed - relationships now managed through CVJourney
 
     if (!userId) {
       return NextResponse.json(
@@ -70,10 +70,7 @@ export async function GET(request: NextRequest) {
       query['interviews.date'] = { $gte: now, $lte: endDate };
     }
 
-    // Add CV filter
-    if (cvId) {
-      query.cvId = cvId;
-    }
+    // CV filter removed - relationships now managed through CVJourney
 
     // Add job ID filter
     if (jobId) {
@@ -223,14 +220,13 @@ export async function POST(request: NextRequest) {
     
     const body = await request.json();
     console.log('🔍 Job API - Request body:', JSON.stringify(body, null, 2));
-    const { userId, cvId, ...jobData } = body;
+    const { userId, ...jobData } = body; // cvId removed - relationships now managed through CVJourney
 
     console.log('🔍 Job API - Extracted userId:', userId);
-    console.log('🔍 Job API - Extracted cvId:', cvId);
     console.log('🔍 Job API - Job data:', jobData);
 
     if (!userId) {
-      console.log('❌ Job API - Missing required fields:', { userId: !!userId, cvId: !!cvId });
+      console.log('❌ Job API - Missing required fields:', { userId: !!userId });
       return NextResponse.json(
         { success: false, message: 'User ID is required' },
         { status: 400 }
@@ -250,13 +246,11 @@ export async function POST(request: NextRequest) {
 
     console.log('🔍 Job API - Creating JobApplication with data:', {
       userId,
-      cvId,
       ...jobData
     });
 
     const job = new JobApplication({
       userId,
-      cvId,
       ...jobData
     });
 

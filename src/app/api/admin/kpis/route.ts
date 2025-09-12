@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/database';
-import { User, CV, Job, CoverLetter } from '@/models';
+import { User, CV, CoverLetter } from '@/models';
 
 export async function GET(request: NextRequest) {
   try {
@@ -43,10 +43,8 @@ export async function GET(request: NextRequest) {
       totalUsers,
       activeUsers,
       totalCVs,
-      totalJobs,
       totalCoverLetters,
       recentCVs,
-      recentJobs,
       recentCoverLetters
     ] = await Promise.all([
       // Total users
@@ -60,17 +58,11 @@ export async function GET(request: NextRequest) {
       // Total CVs
       CV.countDocuments(),
       
-      // Total jobs
-      Job.countDocuments(),
-      
       // Total cover letters
       CoverLetter.countDocuments(),
       
       // Recent CVs (within date range)
       CV.countDocuments({ createdAt: { $gte: startDate } }),
-      
-      // Recent jobs (within date range)
-      Job.countDocuments({ createdAt: { $gte: startDate } }),
       
       // Recent cover letters (within date range)
       CoverLetter.countDocuments({ createdAt: { $gte: startDate } })
@@ -81,16 +73,9 @@ export async function GET(request: NextRequest) {
     
     const [
       previousCVs,
-      previousJobs,
       previousCoverLetters
     ] = await Promise.all([
       CV.countDocuments({ 
-        createdAt: { 
-          $gte: previousStartDate, 
-          $lt: startDate 
-        } 
-      }),
-      Job.countDocuments({ 
         createdAt: { 
           $gte: previousStartDate, 
           $lt: startDate 
@@ -110,21 +95,18 @@ export async function GET(request: NextRequest) {
 
     // Calculate growth rates
     const cvGrowthRate = previousCVs > 0 ? ((recentCVs - previousCVs) / previousCVs) * 100 : 0;
-    const jobGrowthRate = previousJobs > 0 ? ((recentJobs - previousJobs) / previousJobs) * 100 : 0;
     const coverLetterGrowthRate = previousCoverLetters > 0 ? ((recentCoverLetters - previousCoverLetters) / previousCoverLetters) * 100 : 0;
 
     const kpiData = {
       totalUsers,
       activeUsers,
       totalCVs,
-      totalJobs,
       totalCoverLetters,
       aiUsage,
       revenue,
-      growthRate: Math.round((cvGrowthRate + jobGrowthRate + coverLetterGrowthRate) / 3),
+      growthRate: Math.round((cvGrowthRate + coverLetterGrowthRate) / 2),
       recentActivity: {
         cvs: recentCVs,
-        jobs: recentJobs,
         coverLetters: recentCoverLetters
       }
     };

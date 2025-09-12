@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/database';
-import { User, CV, Job, JobApplication, CoverLetter, Subscription } from '@/models';
+import { User, CV, JobApplication, CoverLetter, Subscription } from '@/models';
 
 export async function DELETE(
   request: NextRequest,
@@ -47,8 +47,6 @@ export async function DELETE(
         // Delete user's CVs
         await CV.deleteMany({ userId: params.userId }, { session: session_db });
         
-        // Delete user's jobs
-        await Job.deleteMany({ userId: params.userId }, { session: session_db });
         
         // Delete user's job applications
         await JobApplication.deleteMany({ userId: params.userId }, { session: session_db });

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Briefcase, FileText, CheckCircle, Download, X, Settings, Mail, Eye } from 'lucide-react';
+import { Briefcase, FileText, CheckCircle, Download, X, Settings, Mail, Eye, ExternalLink } from 'lucide-react';
 import { useJobJourney } from '@/contexts/JobJourneyContext';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
@@ -10,7 +10,7 @@ import CVJourneyModal from '@/components/modals/CVJourneyModal';
 
 const JourneyStatusBanner: React.FC = () => {
   const { state, endJourney } = useJobJourney();
-  const { isJourneyActive, jobTitle, company, currentStep, currentJobId, cvId, atsScore, coverLetterId } = state;
+  const { isJourneyActive, jobTitle, company, currentStep, currentJobId, cvId, cvName, atsScore, coverLetterId } = state;
   const { data: session } = useSession();
   const router = useRouter();
   const [isExpanded, setIsExpanded] = useState(false);
@@ -154,7 +154,7 @@ const JourneyStatusBanner: React.FC = () => {
 
   return (
     <motion.div
-      className="bg-gradient-to-r from-lime-500/10 to-lime-600/10 border-b border-lime-500/20 relative z-30"
+      className="fixed top-0 left-0 right-0 bg-gradient-to-r from-lime-500/10 to-lime-600/10 border-b border-lime-500/20 z-50"
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
@@ -294,9 +294,11 @@ const JourneyStatusBanner: React.FC = () => {
                         <CheckCircle className="h-3 w-3 text-lime-400" />
                       )}
                     </div>
-                    {cvData ? (
+                    {cvId ? (
                       <div>
-                        <p className="text-xs text-white font-medium truncate">{cvData.title}</p>
+                        <p className="text-xs text-white font-medium truncate">
+                          {cvName || cvData?.title || 'CV Document'}
+                        </p>
                         <p className="text-xs text-white/60">CV Document</p>
                         <button
                           onClick={() => handleViewDocument('cv')}

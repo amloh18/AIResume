@@ -19,6 +19,12 @@ const SkillsSection: React.FC<SkillsSectionProps> = ({
   onRemove
 }) => {
   const themeClasses = getThemeClasses;
+  
+  // Debug logging to understand data structure
+  console.log('🔍 SkillsSection - data:', data);
+  
+  // Ensure we have proper data structure
+  const safeData = Array.isArray(data) ? data : [];
 
   return (
     <div className="space-y-4">
@@ -41,7 +47,7 @@ const SkillsSection: React.FC<SkillsSectionProps> = ({
       </div>
 
       <div className="space-y-4">
-        {data.map((skill, index) => (
+        {safeData.map((skill, index) => (
           <div key={index} className={`${themeClasses.card.base} border rounded-lg p-4`}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <input

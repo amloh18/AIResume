@@ -31,45 +31,68 @@ const RouteGuard: React.FC<RouteGuardProps> = ({
     if (hasRedirected) return;
 
     if (requireAuth) {
-      if (status === 'authenticated' && session) {
+      // Check NextAuth session (Firebase-based authentication)
+      const isNextAuthAuthenticated = status === 'authenticated' && session;
+      
+      console.log('🔍 RouteGuard - Authentication check', { 
+        nextAuthStatus: status, 
+        isNextAuthAuthenticated,
+        sessionExists: !!session
+      });
+      
+      if (isNextAuthAuthenticated) {
         setIsAuthorized(true);
         setIsLoading(false);
       } else if (status === 'unauthenticated') {
         // Not authenticated, redirect to login
+        console.log('❌ RouteGuard - User not authenticated, redirecting to auth');
         setHasRedirected(true);
         const callbackUrl = encodeURIComponent(pathname);
         router.push(`${redirectTo}?callbackUrl=${callbackUrl}`);
       }
     } else {
-      // Public route - check if user is authenticated and redirect away from landing
-      if (status === 'authenticated' && session && pathname === '/') {
-        // Logged in user trying to access landing page, redirect to dashboard
-        setHasRedirected(true);
-        router.push('/dashboard');
-        return;
-      }
+      // Public route - allow access regardless of authentication status
+      // Remove the automatic redirect to dashboard for authenticated users
+      // This allows users to visit the landing page even when logged in
       setIsAuthorized(true);
       setIsLoading(false);
     }
   }, [status, session, requireAuth, pathname, redirectTo, router, hasRedirected]);
 
-  // Show skeleton loader while checking authentication
+  // Show loading state while checking authentication
   if (isLoading || status === 'loading') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black flex items-center justify-center">
-        <div className="w-full max-w-4xl mx-auto p-6 space-y-6">
-          <div className="text-center mb-8">
-            <Skeleton variant="text" height={32} width="300px" className="mx-auto mb-4" />
-            <Skeleton variant="text" height={16} width="200px" className="mx-auto" />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Skeleton variant="rounded" height="200px" />
-            <Skeleton variant="rounded" height="200px" />
-            <Skeleton variant="rounded" height="200px" />
+    if (requireAuth) {
+      // Show skeleton loader for protected routes
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black flex items-center justify-center">
+          <div className="w-full max-w-4xl mx-auto p-6 space-y-6">
+            <div className="text-center mb-8">
+              <Skeleton variant="text" height={32} width="300px" className="mx-auto mb-4" />
+              <Skeleton variant="text" height={16} width="200px" className="mx-auto" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Skeleton variant="rounded" height="200px" />
+              <Skeleton variant="rounded" height="200px" />
+              <Skeleton variant="rounded" height="200px" />
+            </div>
           </div>
         </div>
-      </div>
-    );
+      );
+    } else {
+      // Show simple CVCircle logo for public routes (landing page)
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black flex items-center justify-center">
+          <div className="text-center">
+            <div className="mb-8">
+              <span className="text-6xl font-bold">
+                <span className="text-lime-400">CV</span>Circle
+              </span>
+            </div>
+            <div className="w-8 h-8 border-2 border-lime-400 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          </div>
+        </div>
+      );
+    }
   }
 
   // Don't render anything if not authorized (will redirect)

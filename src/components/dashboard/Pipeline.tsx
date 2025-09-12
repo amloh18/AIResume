@@ -86,12 +86,12 @@ import { IJobApplication } from '@/models/JobApplication';
 import PageHeader from './PageHeader';
 import { authenticatedFetch } from '@/lib/utils/apiUtils';
 import { useJobJourney } from '@/contexts/JobJourneyContext';
-import JobPipelineCardModal from '@/components/modals/JobPipelineCardModal';
+import { useJourneyLinking } from '@/lib/services/journeyLinkingService';
 
-interface Job extends Omit<IJobApplication, '_id' | 'userId' | 'cvId'> {
+interface Job extends Omit<IJobApplication, '_id' | 'userId'> {
   id: string;
   userId: string;
-  cvId: string;
+  // cvId removed - relationships now managed through CVJourney
   stageDates?: {
     created?: Date;
     applied?: Date;
@@ -243,9 +243,9 @@ const SortableJobCard: React.FC<SortableJobCardProps> = ({
         
         // Only trigger view if not clicking on action buttons
         if (!(e.target as HTMLElement).closest('button')) {
-          setSelectedJobForJourney(job.id);
-          startJourney(job.id);
-          setShowPipelineModal(true);
+          console.log('🔍 Pipeline - Navigating to journey page instead of modal');
+          // Navigate directly to CV journey page instead of opening modal
+          window.location.href = `/dashboard/cv-journey?jobId=${job.id}`;
         }
       }}
     >
@@ -419,14 +419,14 @@ const JobDetailsModal: React.FC<{
   onEdit: (job: Job) => void;
   onDelete: (jobId: string) => void;
   onDuplicate: (job: Job) => void;
-  onCVUpdate: (jobId: string, cvId: string) => void;
+  onCVUpdate: (jobId: string, cvId: string) => void; // Will be updated to use journey
 }> = ({ job, userCVs, isOpen, onClose, onEdit, onDelete, onDuplicate, onCVUpdate }) => {
   console.log('🔍 JobDetailsModal - Rendering with:', { job: job?.id, isOpen, userCVs: userCVs?.length });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
   if (!job) return null;
 
-  const linkedCV = userCVs.find(cv => cv.id === job.cvId);
+  // linkedCV removed - relationships now managed through CVJourney
   const stageDate = getStageDate(job, job.status || 'created');
 
   return (
@@ -557,69 +557,9 @@ const JobDetailsModal: React.FC<{
                   <div className="bg-white/5 rounded-xl p-4">
                     <h3 className="text-lg font-semibold mb-4">Linked CV</h3>
                     <div className="space-y-3">
-                      {/* CV Selection */}
-                      <div>
-                        <label className="block text-white/60 text-sm mb-2">Select CV</label>
-                        <select
-                          className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:border-lime-400/50 focus:outline-none transition-colors"
-                          value={job.cvId || ''}
-                          onChange={(e) => {
-                            console.log('🔍 Pipeline - CV selection changed:', e.target.value);
-                            const newCvId = e.target.value;
-                            onCVUpdate(job.id, newCvId);
-                          }}
-                        >
-                          <option value="">No CV selected</option>
-                          {userCVs.map((cv) => (
-                            <option key={cv.id || cv._id} value={cv.id || cv._id}>
-                              {cv.title || 'Untitled CV'} ({cv.completionPercentage || 0}% complete)
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                      {/* CV Selection removed - relationships now managed through CVJourney */}
 
-                      {/* Current CV Display */}
-                      {linkedCV ? (
-                        <div className="bg-white/10 rounded-lg p-3">
-                          <div className="flex items-center gap-2 mb-2">
-                            <FileText size={16} className="text-lime-400" />
-                            <span className="text-white font-medium">{linkedCV.title || 'Untitled CV'}</span>
-                          </div>
-                          <div className="text-white/60 text-xs mb-3">
-                            {linkedCV.completionPercentage ? `${linkedCV.completionPercentage}% complete` : 'CV linked'}
-                          </div>
-                          <div className="flex gap-2">
-                            <motion.button
-                              onClick={() => {
-                                console.log('🔍 Pipeline - View CV clicked for:', linkedCV.id);
-                                // Add CV viewing functionality here
-                              }}
-                              className="flex-1 px-3 py-1.5 bg-lime-500 text-black text-xs font-medium rounded-lg hover:bg-lime-400 transition-colors"
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
-                            >
-                              <Link size={12} className="inline mr-1" />
-                              View CV
-                            </motion.button>
-                            <motion.button
-                              onClick={() => {
-                                console.log('🔍 Pipeline - Download CV clicked for:', linkedCV.id);
-                                // Add CV download functionality here
-                              }}
-                              className="px-3 py-1.5 bg-white/10 text-white text-xs font-medium rounded-lg hover:bg-white/20 transition-colors"
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
-                            >
-                              <Download size={12} />
-                            </motion.button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-center py-4">
-                          <FileText size={32} className="text-white/20 mx-auto mb-2" />
-                          <p className="text-white/60 text-sm">No CV linked to this job</p>
-                        </div>
-                      )}
+                      {/* Current CV Display removed - relationships now managed through CVJourney */}
                     </div>
                   </div>
 
@@ -763,10 +703,7 @@ const Pipeline: React.FC = () => {
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
   const [selectedPriority, setSelectedPriority] = useState<'all' | 'high' | 'medium' | 'low'>('all');
 
-  // Job Journey Modal state
-  const [showPipelineModal, setShowPipelineModal] = useState(false);
-  const [selectedJobForJourney, setSelectedJobForJourney] = useState<string | null>(null);
-  const { startJourney } = useJobJourney();
+  // Job Journey removed - navigate directly to journey page
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -1168,32 +1105,36 @@ const Pipeline: React.FC = () => {
       const job = jobs.find(j => j.id === jobId);
       if (!job) return;
 
-      const response = await authenticatedFetch('/api/jobs', {
-        method: 'PUT',
-        body: JSON.stringify({
-          ...job,
-          cvId: cvId,
-          id: jobId
-        })
+      // Use centralized journey linking service
+      const { linkJobToCV } = useJourneyLinking();
+      const userId = session?.user?.id;
+      
+      if (!userId) {
+        console.error('❌ Pipeline - No user ID available');
+        return;
+      }
+
+      const result = await linkJobToCV({
+        jobId,
+        cvId,
+        userId,
+        journeyName: `Application for ${job.jobTitle} at ${job.company}`
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success) {
-          console.log('✅ Pipeline - CV updated successfully:', result.data);
-          setJobs(jobs.map(j => j.id === jobId ? { ...j, cvId: cvId } : j));
-          // Update selectedJob if it's the one being modified
-          if (selectedJob && selectedJob.id === jobId) {
-            setSelectedJob({ ...selectedJob, cvId: cvId });
-          }
-        } else {
-          console.error('❌ Pipeline - Failed to update CV:', result);
+      if (result.success) {
+        console.log('✅ Pipeline - Job linked to CV via journey system:', result);
+        // Note: cvId removed from Job interface - relationships now managed through CVJourney
+        // Update selectedJob if it's the one being modified
+        if (selectedJob && selectedJob.id === jobId) {
+          setSelectedJob({ ...selectedJob });
         }
       } else {
-        console.error('❌ Pipeline - HTTP error updating CV:', response.status);
+        console.error('❌ Pipeline - Failed to link job to CV:', result.message);
+        alert(`Failed to link CV to job: ${result.message}`);
       }
     } catch (error) {
-      console.error('❌ Pipeline - Error updating CV:', error);
+      console.error('❌ Pipeline - Error linking job to CV:', error);
+      alert('Failed to link CV to job. Please try again.');
     }
   };
 
@@ -1259,7 +1200,7 @@ const Pipeline: React.FC = () => {
         ...editingJob,
         ...jobData,
         userId,
-        cvId: jobData.cvId || (userCVs[0]?.id || userCVs[0]?._id),
+        // cvId removed - relationships now managed through CVJourney
         applicationDate: jobData.status === 'applied' ? new Date() : 
                        jobData.status === 'created' ? undefined : editingJob.applicationDate,
         interviews: jobData.interviews || [],
@@ -1349,7 +1290,7 @@ const Pipeline: React.FC = () => {
       attachments: [],
       isArchived: false,
       userId: session?.user?.id || user?.id,
-      cvId: '' // Will be set when saving
+      // cvId removed - relationships now managed through CVJourney
     };
     setEditingJob(newJob as Job);
     setShowJobModal(true);
@@ -1985,22 +1926,7 @@ const Pipeline: React.FC = () => {
                   {/* Right Column */}
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-white/80 text-xs mb-1 font-medium">CV to Use</label>
-                      <select
-                        id="cvId"
-                        defaultValue={editingJob?.cvId || selectedJob?.cvId || (userCVs[0]?.id || userCVs[0]?._id)}
-                        className="w-full px-3 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:border-lime-400/50 focus:outline-none transition-colors"
-                      >
-                        {userCVs.length === 0 ? (
-                          <option value="">No CVs available - Create one first</option>
-                        ) : (
-                          userCVs.map((cv) => (
-                            <option key={cv.id || cv._id} value={cv.id || cv._id}>
-                              {cv.title} ({cv.completionPercentage || 0}% complete)
-                            </option>
-                          ))
-                        )}
-                      </select>
+                      {/* CV selection removed - relationships now managed through CVJourney */}
                       {userCVs.length > 0 && (
                         <div className="mt-1 text-xs text-white/60">
                           {userCVs.length} CV{userCVs.length !== 1 ? 's' : ''} available
@@ -2105,11 +2031,7 @@ const Pipeline: React.FC = () => {
                           return;
                         }
                         
-                        const cvId = (document.getElementById('cvId') as HTMLSelectElement)?.value;
-                        if (!cvId) {
-                          alert('Please select a CV to use for this job application');
-                          return;
-                        }
+                        // cvId removed - relationships now managed through CVJourney
                         
                         const formData = {
                           jobTitle,
@@ -2118,7 +2040,7 @@ const Pipeline: React.FC = () => {
                           jobUrl: (document.getElementById('jobUrl') as HTMLInputElement)?.value?.trim(),
                           jobDescription: (document.getElementById('jobDescription') as HTMLTextAreaElement)?.value?.trim(),
                           sponsorship: (document.getElementById('sponsorship') as HTMLSelectElement)?.value as 'yes' | 'no' | 'unknown',
-                          cvId,
+                          // cvId removed - relationships now managed through CVJourney
                           priority: (document.getElementById('priority') as HTMLSelectElement)?.value as 'low' | 'medium' | 'high',
                           status: (document.getElementById('status') as HTMLSelectElement)?.value as Job['status'],
                           deadline: deadlineValue ? new Date(deadlineValue) : undefined,
@@ -2179,12 +2101,6 @@ const Pipeline: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Job Pipeline Card Modal */}
-      <JobPipelineCardModal
-        isOpen={showPipelineModal}
-        onClose={() => setShowPipelineModal(false)}
-        jobId={selectedJobForJourney}
-      />
 
     </div>
   );

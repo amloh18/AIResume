@@ -1230,4 +1230,262 @@ nav {
   font-optical-sizing: 20;
 }
 
+
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 3.9%;
+    --primary: 0 0% 9%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 96.1%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 0 0% 45.1%;
+    --accent: 0 0% 96.1%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 89.8%;
+    --input: 0 0% 89.8%;
+    --ring: 0 0% 3.9%;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+    --radius: 0.5rem;
+  }
+  .dark {
+    --background: 0 0% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 0 0% 14.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 0 0% 14.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 0 0% 83.1%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
+}
+
+
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* --- Bento Grid Container --- */
+.bento-grid {
+  display: grid;
+  width: 100%;
+  max-width: 1200px;
+  grid-template-columns: repeat(4, 1fr);
+  /* This makes rows equal to column width, creating a square base unit */
+  grid-auto-rows: 1fr;
+  gap: 1.5rem; /* 24px */
+  margin: 0 auto;
+}
+
+/* --- Bento Box General Styling --- */
+.bento-box {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1.5rem; /* 24px */
+  padding: 1.5rem;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  /* This is the key to making each box a perfect square */
+  aspect-ratio: 1 / 1;
+  transition: all 0.3s ease;
+}
+
+.bento-box:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(132, 204, 22, 0.3);
+  transform: translateY(-2px);
+}
+
+/* --- Gradient Glow Border Effect --- */
+.bento-box::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  padding: 2px; /* Controls the thickness of the border */
+  background: linear-gradient(145deg, rgba(132, 204, 22, 0.6), rgba(59, 130, 246, 0.3), rgba(132, 204, 22, 0) 60%);
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.bento-box:hover::before {
+  opacity: 1;
+}
+
+/* --- Spanning Classes for Larger Boxes --- */
+.span-2-col {
+  grid-column: span 2;
+}
+.span-2-row {
+  grid-row: span 2;
+}
+
+/* --- Content Styling --- */
+.box-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.top-left {
+  align-self: flex-start;
+  justify-self: flex-start;
+}
+.bottom-left {
+  margin-top: auto; /* Pushes content to the bottom */
+  align-self: flex-start;
+  justify-self: flex-end;
+}
+
+.category {
+  font-size: 0.875rem; /* 14px */
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
+  font-weight: 500;
+}
+
+h3 {
+  font-size: 1.5rem; /* 24px */
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0.25rem 0;
+}
+
+.description {
+  font-size: 0.875rem; /* 14px */
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Responsive adjustments for bento grid */
+@media (max-width: 1200px) {
+  .bento-grid {
+    grid-template-columns: repeat(3, 1fr);
+    max-width: 900px;
+  }
+  
+  .span-2-col {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 1024px) and (min-width: 769px) {
+  .bento-grid {
+    grid-template-columns: repeat(3, 1fr);
+    max-width: 800px;
+    gap: 1.25rem;
+  }
+  
+  .span-2-col {
+    grid-column: span 2;
+  }
+  
+  .span-2-row {
+    grid-row: span 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .bento-grid {
+    grid-template-columns: repeat(2, 1fr);
+    max-width: 600px;
+    gap: 1rem;
+  }
+  
+  .span-2-col {
+    grid-column: span 1;
+  }
+  
+  .span-2-row {
+    grid-row: span 1;
+  }
+}
+
+@media (max-width: 480px) {
+  .bento-grid {
+    grid-template-columns: repeat(2, 1fr);
+    max-width: calc(100vw - 2rem);
+    gap: 0.5rem;
+    padding: 0;
+    margin: 0 auto;
+  }
+  
+  .span-2-col,
+  .span-2-row {
+    grid-column: span 1;
+    grid-row: span 1;
+  }
+  
+  .bento-box {
+    padding: 0.5rem;
+    min-height: auto;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  .bento-box h3 {
+    font-size: 13px;
+    line-height: 1.2;
+    margin-bottom: 0.25rem;
+  }
+  
+  .bento-box p {
+    font-size: 11px;
+    line-height: 1.3;
+    margin-bottom: 0.25rem;
+  }
+  
+  .bento-box .category {
+    font-size: 10px;
+    margin-bottom: 0.25rem;
+  }
+}
+
  

@@ -3,8 +3,8 @@ import mongoose, { Schema, Document } from 'mongoose';
 export interface ICVJourney extends Document {
   userId: string;
   jobId: string;
-  cvId?: string;
-  coverLetterId?: string;
+  cvId?: string; // Single source of truth for CV-Job relationship
+  coverLetterId?: string; // Single source of truth for CoverLetter-Job relationship
   status: 'in-progress' | 'completed' | 'paused';
   currentStep: number;
   totalSteps: number;

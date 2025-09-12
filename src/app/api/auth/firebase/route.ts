@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/database';
 import { User } from '@/models';
 
+// CORS headers for frontend access
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
 export async function POST(request: NextRequest) {
   try {
     const { idToken, user } = await request.json();
@@ -45,7 +52,7 @@ export async function POST(request: NextRequest) {
       console.log('🔍 User ID string length:', existingUser._id.toString().length);
       console.log('🔍 User ID is valid ObjectId:', /^[0-9a-fA-F]{24}$/.test(existingUser._id.toString()));
       
-      return NextResponse.json(userResponse);
+      return NextResponse.json(userResponse, { headers: corsHeaders });
     } else {
       // Create new user
       const newUser = new User({
@@ -93,13 +100,18 @@ export async function POST(request: NextRequest) {
       console.log('🔍 User ID string length:', newUser._id.toString().length);
       console.log('🔍 User ID is valid ObjectId:', /^[0-9a-fA-F]{24}$/.test(newUser._id.toString()));
       
-      return NextResponse.json(userResponse);
+      return NextResponse.json(userResponse, { headers: corsHeaders });
     }
   } catch (error) {
     console.error('Firebase auth error:', error);
     return NextResponse.json(
       { success: false, message: 'Authentication failed' },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
+}
+
+// Handle OPTIONS request for CORS
+export async function OPTIONS() {
+  return new NextResponse(null, { headers: corsHeaders });
 }

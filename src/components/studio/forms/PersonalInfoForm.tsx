@@ -42,19 +42,43 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
   userId
 }) => {
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  
+  // Debug logging to understand data structure
+  console.log('🔍 PersonalInfoForm - personalInfo:', personalInfo);
+  console.log('🔍 PersonalInfoForm - cvData:', cvData);
+  
+  // Ensure we have proper data structure
+  const safePersonalInfo = {
+    name: personalInfo?.name || cvData?.basics?.name || '',
+    label: personalInfo?.label || cvData?.basics?.label || '',
+    image: personalInfo?.image || cvData?.basics?.image || '',
+    email: personalInfo?.email || cvData?.basics?.email || '',
+    phone: personalInfo?.phone || cvData?.basics?.phone || '',
+    url: personalInfo?.url || cvData?.basics?.url || '',
+    summary: personalInfo?.summary || cvData?.basics?.summary || '',
+    location: {
+      address: personalInfo?.location?.address || cvData?.basics?.location?.address || '',
+      postalCode: personalInfo?.location?.postalCode || cvData?.basics?.location?.postalCode || '',
+      city: personalInfo?.location?.city || cvData?.basics?.location?.city || '',
+      countryCode: personalInfo?.location?.countryCode || cvData?.basics?.location?.countryCode || '',
+      region: personalInfo?.location?.region || cvData?.basics?.location?.region || ''
+    },
+    profiles: personalInfo?.profiles || cvData?.basics?.profiles || []
+  };
+  
   const handleNameChange = (value: string) => {
     onUpdate('name', value);
   };
 
   const handleLocationChange = (field: string, value: string) => {
     onUpdate('location', {
-      ...personalInfo.location,
+      ...safePersonalInfo.location,
       [field]: value
     });
   };
 
   const handleProfileChange = (index: number, field: string, value: string) => {
-    const updatedProfiles = [...personalInfo.profiles];
+    const updatedProfiles = [...safePersonalInfo.profiles];
     updatedProfiles[index] = {
       ...updatedProfiles[index],
       [field]: value
@@ -68,11 +92,11 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
       username: '',
       url: ''
     };
-    onUpdate('profiles', [...personalInfo.profiles, newProfile]);
+    onUpdate('profiles', [...safePersonalInfo.profiles, newProfile]);
   };
 
   const removeProfile = (index: number) => {
-    const updatedProfiles = personalInfo.profiles.filter((_, i) => i !== index);
+    const updatedProfiles = safePersonalInfo.profiles.filter((_, i) => i !== index);
     onUpdate('profiles', updatedProfiles);
   };
 
@@ -129,7 +153,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
           </label>
           <input
             type="text"
-            value={personalInfo.name}
+            value={safePersonalInfo.name}
             onChange={(e) => handleNameChange(e.target.value)}
             className={`w-full px-3 py-2 rounded-lg border ${themeClasses.input.base} ${themeClasses.input.focus} transition-colors`}
             placeholder="John Doe"
@@ -142,7 +166,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
           </label>
           <input
             type="text"
-            value={personalInfo.label}
+            value={safePersonalInfo.label}
             onChange={(e) => onUpdate('label', e.target.value)}
             className={`w-full px-3 py-2 rounded-lg border ${themeClasses.input.base} ${themeClasses.input.focus} transition-colors`}
             placeholder="Software Engineer"
@@ -159,7 +183,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
           </label>
           <input
             type="email"
-            value={personalInfo.email}
+            value={safePersonalInfo.email}
             onChange={(e) => onUpdate('email', e.target.value)}
             className={`w-full px-3 py-2 rounded-lg border ${themeClasses.input.base} ${themeClasses.input.focus} transition-colors`}
             placeholder="john.doe@example.com"
@@ -173,7 +197,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
           </label>
           <input
             type="tel"
-            value={personalInfo.phone}
+            value={safePersonalInfo.phone}
             onChange={(e) => onUpdate('phone', e.target.value)}
             className={`w-full px-3 py-2 rounded-lg border ${themeClasses.input.base} ${themeClasses.input.focus} transition-colors`}
             placeholder="+1 (555) 123-4567"
@@ -190,7 +214,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
           </label>
           <input
             type="url"
-            value={personalInfo.url}
+            value={safePersonalInfo.url}
             onChange={(e) => onUpdate('url', e.target.value)}
             className={`w-full px-3 py-2 rounded-lg border ${themeClasses.input.base} ${themeClasses.input.focus} transition-colors`}
             placeholder="https://johndoe.com"
@@ -205,14 +229,14 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
           <div className="grid grid-cols-2 gap-2">
             <input
               type="text"
-              value={personalInfo.location.city}
+              value={safePersonalInfo.location.city}
               onChange={(e) => handleLocationChange('city', e.target.value)}
               className={`w-full px-3 py-2 rounded-lg border ${themeClasses.input.base} ${themeClasses.input.focus} transition-colors`}
               placeholder="City"
             />
             <input
               type="text"
-              value={personalInfo.location.region}
+              value={safePersonalInfo.location.region}
               onChange={(e) => handleLocationChange('region', e.target.value)}
               className={`w-full px-3 py-2 rounded-lg border ${themeClasses.input.base} ${themeClasses.input.focus} transition-colors`}
               placeholder="State/Region"
@@ -229,7 +253,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
           </label>
           <motion.button
             onClick={generateAISummary}
-            disabled={isGeneratingSummary || !personalInfo.name || !personalInfo.label}
+            disabled={isGeneratingSummary || !safePersonalInfo.name || !safePersonalInfo.label}
             className="flex items-center gap-2 px-3 py-1.5 text-xs bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
@@ -243,7 +267,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
           </motion.button>
         </div>
         <RichTextEditor
-          value={personalInfo.summary}
+          value={safePersonalInfo.summary}
           onChange={(value) => onUpdate('summary', value)}
           placeholder=""
         />
@@ -268,7 +292,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
         </div>
         
         <div className="space-y-3">
-          {personalInfo.profiles.map((profile, index) => (
+          {safePersonalInfo.profiles.map((profile, index) => (
             <motion.div 
               key={index} 
               className={`${themeClasses.card.base} border rounded-lg p-3`}
