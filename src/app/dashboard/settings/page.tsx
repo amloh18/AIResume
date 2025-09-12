@@ -21,7 +21,6 @@ import {
   FileText
 } from 'lucide-react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
-import ThemeToggle from '@/components/ui/ThemeToggle';
 import UserIcon from '@/components/ui/UserIcon';
 import MembershipModal from '@/components/payment/MembershipModal';
 import RouteGuard from '@/components/auth/RouteGuard';
@@ -137,11 +136,68 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
     nationality: user.settings?.nationality || '',
   });
 
+  const [avatar, setAvatar] = useState(user.avatar || user.profilePhoto || '');
+
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [usernameError, setUsernameError] = useState('');
+  const [isCheckingUsername, setIsCheckingUsername] = useState(false);
+  const [usernameStatus, setUsernameStatus] = useState<'idle' | 'available' | 'taken'>('idle');
+  const [usernameTimeout, setUsernameTimeout] = useState<NodeJS.Timeout | null>(null);
+
+  // Cleanup timeout on unmount
+  React.useEffect(() => {
+    return () => {
+      if (usernameTimeout) {
+        clearTimeout(usernameTimeout);
+      }
+    };
+  }, [usernameTimeout]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const checkUsernameAvailability = async (username: string) => {
+    if (!username || username.trim() === '') {
+      setUsernameStatus('idle');
+      setUsernameError('');
+      return;
+    }
+
+    setIsCheckingUsername(true);
+    setUsernameError('');
+
+    try {
+      const response = await fetch('/api/user/check-username', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username }),
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        if (result.available) {
+          setUsernameStatus('available');
+          setUsernameError('');
+        } else {
+          setUsernameStatus('taken');
+          setUsernameError('This username is already taken');
+        }
+      } else {
+        setUsernameStatus('idle');
+        setUsernameError('');
+      }
+    } catch (error) {
+      console.error('Error checking username:', error);
+      setUsernameStatus('idle');
+      setUsernameError('');
+    } finally {
+      setIsCheckingUsername(false);
+    }
   };
 
   const handleSave = async () => {
@@ -152,7 +208,8 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
       const requestData = {
         firstName: formData.firstName,
         lastName: formData.lastName,
-        avatar: user.profilePhoto,
+        username: formData.username,
+        avatar: avatar,
         // Main profile fields
         phone: formData.phone,
         location: formData.location,
@@ -187,35 +244,17 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
 
       if (result.success) {
         setSaveStatus('success');
-        const updatedUser = { ...user, ...formData };
-        onSave(updatedUser);
-        
-        // Update username separately if it changed
-        if (formData.username !== user.username) {
-          const usernameResponse = await fetch('/api/user/update-username', {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              username: formData.username,
-            }),
-          });
-          
-          const usernameResult = await usernameResponse.json();
-          if (!usernameResult.success) {
-            console.error('Username update failed:', usernameResult.error);
-          }
-        }
-        
-        // Clear success status after 3 seconds
+        setUsernameError('');
+        onSave(result.user);
         setTimeout(() => setSaveStatus('idle'), 3000);
       } else {
         setSaveStatus('error');
-        console.error('Save failed:', result.error);
-        if (result.details) {
-          console.error('Validation errors:', result.details);
+        if (result.error === 'Username is already taken') {
+          setUsernameError('This username is already taken. Please choose another one.');
+        } else {
+          setUsernameError('');
         }
+        console.error('Save failed:', result.error);
       }
     } catch (error) {
       setSaveStatus('error');
@@ -226,7 +265,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
   };
 
   return (
-    <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-2xl shadow-lg border border-gray-200/50 dark:border-gray-700/50 p-8 h-full">
+    <div className="p-8 h-full">
       <div className="space-y-8">
         {/* Avatar Section */}
         <div className="flex items-start justify-between py-6 border-b border-gray-200 dark:border-gray-700">
@@ -240,15 +279,49 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <div className="w-16 h-16 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center">
-              <User size={24} className="text-gray-500 dark:text-gray-300" />
+            <div className="w-16 h-16 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center overflow-hidden">
+              {avatar ? (
+                <img 
+                  src={avatar} 
+                  alt="Profile" 
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <User size={24} className="text-gray-500 dark:text-gray-300" />
+              )}
             </div>
-            <button className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+            <input
+              type="file"
+              accept="image/jpeg,image/jpg,image/png"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  // Convert to base64 for now (in production, upload to cloud storage)
+                  const reader = new FileReader();
+                  reader.onload = (event) => {
+                    const result = event.target?.result as string;
+                    setAvatar(result);
+                  };
+                  reader.readAsDataURL(file);
+                }
+              }}
+              className="hidden"
+              id="avatar-upload"
+            />
+            <label 
+              htmlFor="avatar-upload"
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+            >
               Upload Image
-            </button>
-            <button className="p-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 transition-colors">
-              <Trash2 size={16} />
-            </button>
+            </label>
+            {avatar && (
+              <button 
+                onClick={() => setAvatar('')}
+                className="p-2 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+              >
+                <Trash2 size={16} />
+              </button>
+            )}
           </div>
         </div>
 
@@ -297,12 +370,56 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Username
               </label>
-              <input
-                type="text"
-                value={formData.username}
-                onChange={(e) => handleInputChange('username', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white/80 dark:bg-gray-800/80 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  value={formData.username}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    handleInputChange('username', value);
+                    setUsernameError('');
+                    setUsernameStatus('idle');
+                    
+                    // Clear existing timeout
+                    if (usernameTimeout) {
+                      clearTimeout(usernameTimeout);
+                    }
+                    
+                    // Set new timeout for debounced check
+                    const timeoutId = setTimeout(() => {
+                      checkUsernameAvailability(value);
+                    }, 500);
+                    
+                    setUsernameTimeout(timeoutId);
+                  }}
+                  className={`w-full px-3 py-2 pr-10 border rounded-lg bg-white/80 dark:bg-gray-800/80 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
+                    usernameError ? 'border-red-500 dark:border-red-400' : 
+                    usernameStatus === 'available' ? 'border-green-500 dark:border-green-400' :
+                    'border-gray-300 dark:border-gray-600'
+                  }`}
+                  placeholder="Choose a unique username"
+                />
+                {isCheckingUsername && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-lime-500"></div>
+                  </div>
+                )}
+                {!isCheckingUsername && usernameStatus === 'available' && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                      <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  </div>
+                )}
+              </div>
+              {usernameError && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{usernameError}</p>
+              )}
+              {usernameStatus === 'available' && !usernameError && (
+                <p className="mt-1 text-sm text-green-600 dark:text-green-400">Username is available</p>
+              )}
             </div>
             
             <div>
@@ -436,22 +553,6 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
           </div>
         </div>
 
-        {/* Address */}
-        <div className="space-y-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Address</h3>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Address
-            </label>
-            <textarea
-              value={formData.address}
-              onChange={(e) => handleInputChange('address', e.target.value)}
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white/80 dark:bg-gray-800/80 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-            />
-          </div>
-        </div>
       </div>
 
       {/* Action Buttons */}
@@ -505,7 +606,7 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
   const [pushNotifications, setPushNotifications] = useState(true);
 
   return (
-    <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-2xl shadow-lg border border-gray-200/50 dark:border-gray-700/50 p-8 h-full">
+    <div className="p-8 h-full">
       <div className="space-y-8">
         {/* Security Section */}
         <div className="space-y-6">
@@ -591,8 +692,10 @@ const MembershipBilling = ({ user }: { user: User }) => {
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [subscription, setSubscription] = useState<any>(null);
+  const [availablePlans, setAvailablePlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isMembershipModalOpen, setIsMembershipModalOpen] = useState(false);
+  const [showPlanOptions, setShowPlanOptions] = useState(false);
 
   useEffect(() => {
     fetchPaymentData();
@@ -621,6 +724,17 @@ const MembershipBilling = ({ user }: { user: User }) => {
       if (invoiceResponse.ok) {
         const invoiceData = await invoiceResponse.json();
         setInvoices(invoiceData.invoices || []);
+      }
+
+      // Fetch available plans (excluding free plan)
+      const plansResponse = await fetch('/api/pricing-plans');
+      if (plansResponse.ok) {
+        const plansData = await plansResponse.json();
+        // Filter out free plan and inactive plans
+        const filteredPlans = plansData.filter((plan: any) => 
+          plan.key !== 'free' && plan.status === 'active'
+        );
+        setAvailablePlans(filteredPlans);
       }
     } catch (error) {
       console.error('Error fetching payment data:', error);
@@ -675,17 +789,22 @@ const MembershipBilling = ({ user }: { user: User }) => {
   }
 
   return (
-    <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-2xl shadow-lg border border-gray-200/50 dark:border-gray-700/50 p-8 h-full overflow-y-auto">
+    <div className="p-8 h-full overflow-y-auto">
       <div className="space-y-8">
         
-        {/* Current Plan Section */}
-        <div className="bg-gradient-to-r from-lime-50 to-lime-100 dark:from-lime-400/10 dark:to-lime-500/10 border border-lime-200 dark:border-lime-400/20 rounded-xl p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                Current Plan
-              </h3>
-              <div className="flex items-center gap-3">
+        {/* Plan Cards Section */}
+        <div className="space-y-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Subscription Plans</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Current Plan Card */}
+            <div className="bg-gradient-to-r from-lime-50 to-lime-100 dark:from-lime-400/10 dark:to-lime-500/10 border border-lime-200 dark:border-lime-400/20 rounded-xl p-6 relative">
+              <div className="absolute top-4 right-4">
+                <span className="px-3 py-1 bg-lime-500 text-white text-xs font-medium rounded-full">
+                  Current Plan
+                </span>
+              </div>
+              <div className="flex items-center gap-3 mb-4">
                 <div className="w-12 h-12 bg-lime-500 rounded-lg flex items-center justify-center">
                   <CreditCard className="w-6 h-6 text-white" />
                 </div>
@@ -698,26 +817,108 @@ const MembershipBilling = ({ user }: { user: User }) => {
                       {subscription?.status || 'Active'}
                     </span>
                   </p>
-                  {subscription?.endDate && (
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
-                      Next billing: {subscription.endDate}
-                    </p>
-                  )}
-                  {subscription?.planDetails?.features && (
-                    <div className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-                      <p>CVs: {subscription.planDetails.features.maxCVs === -1 ? 'Unlimited' : subscription.planDetails.features.maxCVs}</p>
-                      <p>Exports: {subscription.planDetails.features.maxExports === -1 ? 'Unlimited' : subscription.planDetails.features.maxExports}</p>
-                    </div>
-                  )}
+                </div>
+              </div>
+              {subscription?.endDate && (
+                <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
+                  Next billing: {subscription.endDate}
+                </p>
+              )}
+              {subscription?.planDetails?.features && (
+                <div className="text-sm text-gray-600 dark:text-gray-300">
+                  <p>CVs: {subscription.planDetails.features.maxCVs === -1 ? 'Unlimited' : subscription.planDetails.features.maxCVs}</p>
+                  <p>Exports: {subscription.planDetails.features.maxExports === -1 ? 'Unlimited' : subscription.planDetails.features.maxExports}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Change Plan Card */}
+            <div 
+              className="bg-white/50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl p-6 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              onClick={() => setShowPlanOptions(!showPlanOptions)}
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
+                  <Settings className="w-6 h-6 text-gray-600 dark:text-gray-300" />
+                </div>
+                <div>
+                  <p className="text-xl font-bold text-gray-900 dark:text-white">
+                    Change Plan
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                    Upgrade or downgrade your subscription
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-500 dark:text-gray-400">Click to view options</span>
+                <div className={`transform transition-transform duration-200 ${showPlanOptions ? 'rotate-180' : ''}`}>
+                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
                 </div>
               </div>
             </div>
-            <button
-              onClick={() => setIsMembershipModalOpen(true)}
-              className="px-6 py-3 bg-gradient-to-r from-lime-500 to-lime-600 hover:from-lime-600 hover:to-lime-700 text-white rounded-lg font-medium transition-all duration-300 shadow-lg hover:shadow-xl"
-            >
-              Change Plan
-            </button>
+          </div>
+
+          {/* Plan Options Slide Down */}
+          <div className={`overflow-hidden transition-all duration-300 ${showPlanOptions ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
+            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Available Plans</h4>
+              {availablePlans.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {availablePlans.map((plan) => (
+                    <div key={plan._id} className={`bg-white dark:bg-gray-900 border rounded-lg p-4 relative ${
+                      plan.isPopular ? 'border-lime-200 dark:border-lime-400/20' : 'border-gray-200 dark:border-gray-700'
+                    }`}>
+                      {plan.isPopular && (
+                        <div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
+                          <span className="px-3 py-1 bg-lime-500 text-white text-xs font-medium rounded-full">Popular</span>
+                        </div>
+                      )}
+                      <h5 className="font-semibold text-gray-900 dark:text-white mb-2">{plan.name}</h5>
+                      <p className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                        {formatCurrency(plan.price_monthly || plan.price_one_time || 0, plan.currency)}
+                        <span className="text-sm font-normal text-gray-600 dark:text-gray-300">
+                          /{plan.billingCycle === 'one-time' ? 'one-time' : plan.billingCycle}
+                        </span>
+                      </p>
+                      <div className="text-sm text-gray-600 dark:text-gray-300 space-y-1 mb-4">
+                        <p>• CVs: {plan.maxCVs === -1 ? 'Unlimited' : plan.maxCVs}</p>
+                        <p>• Exports: {plan.maxExports === -1 ? 'Unlimited' : plan.maxExports}</p>
+                        <p>• Storage: {plan.storageLimit}MB</p>
+                        {plan.features && plan.features.length > 0 && (
+                          <div>
+                            {plan.features.slice(0, 3).map((feature: string, index: number) => (
+                              <p key={index}>• {feature}</p>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <button 
+                        className={`w-full px-4 py-2 rounded-lg transition-colors ${
+                          plan.isPopular 
+                            ? 'bg-lime-500 hover:bg-lime-600 text-white' 
+                            : 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        }`}
+                        onClick={() => {
+                          // Handle plan upgrade logic here
+                          console.log('Upgrade to plan:', plan.key);
+                        }}
+                      >
+                        {plan.key.includes('pro') ? `Upgrade to ${plan.name}` : 
+                         plan.key.includes('enterprise') ? 'Contact Sales' : 
+                         `Choose ${plan.name}`}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-gray-600 dark:text-gray-300">No upgrade plans available at the moment.</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -725,55 +926,82 @@ const MembershipBilling = ({ user }: { user: User }) => {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Saved Payment Methods
+              Payment Methods
             </h3>
-            <button className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+            <button className="px-4 py-2 bg-lime-500 hover:bg-lime-600 text-white rounded-lg transition-colors">
               Add Payment Method
             </button>
           </div>
           
           {paymentMethods.length > 0 ? (
-            <div className="grid gap-4">
-              {paymentMethods.map((method) => (
-                <div key={method.id} className="bg-white/50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-                        <CardIcon className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+            <div className="space-y-4">
+              <h4 className="text-md font-medium text-gray-700 dark:text-gray-300">Saved Cards</h4>
+              <div className="flex gap-4 overflow-x-auto pb-4">
+                {paymentMethods.map((method) => (
+                  <div key={method.id} className="w-80 h-48 bg-gradient-to-r from-gray-800 to-gray-900 dark:from-gray-700 dark:to-gray-800 rounded-xl p-4 text-white relative">
+                    {/* Card Design */}
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-5 bg-white rounded flex items-center justify-center">
+                          <span className="text-xs font-bold text-gray-800">{method.brand.toUpperCase()}</span>
+                        </div>
+                        {method.isDefault && (
+                          <span className="px-2 py-1 bg-lime-500 text-white text-xs rounded-full">
+                            Default
+                          </span>
+                        )}
                       </div>
-                      <div>
-                        <p className="font-medium text-gray-900 dark:text-white">
-                          {method.brand.toUpperCase()} •••• {method.last4}
-                        </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-300">
-                          Expires {method.expiryMonth.toString().padStart(2, '0')}/{method.expiryYear}
-                          {method.isDefault && (
-                            <span className="ml-2 px-2 py-1 bg-lime-100 dark:bg-lime-400/20 text-lime-700 dark:text-lime-400 text-xs rounded-full">
-                              Default
-                            </span>
-                          )}
-                        </p>
+                      <div className="flex items-center gap-2">
+                        <button className="p-1 text-gray-300 hover:text-white transition-colors">
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button className="p-1 text-gray-300 hover:text-red-400 transition-colors">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </div>
+                    
+                    <div className="space-y-2">
+                      <div className="text-lg font-mono tracking-wider">
+                        •••• •••• •••• {method.last4}
+                      </div>
+                      <div className="flex justify-between text-sm text-gray-300">
+                        <span>{method.expiryMonth.toString().padStart(2, '0')}/{method.expiryYear}</span>
+                        <span className="uppercase">{method.brand}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <h4 className="text-md font-medium text-gray-700 dark:text-gray-300">No payment methods saved</h4>
+              
+              {/* Mock Card Preview */}
+              <div className="space-y-3">
+                <p className="text-sm text-gray-600 dark:text-gray-400">Add a card to get started</p>
+                <div className="w-80 h-48 bg-gradient-to-r from-gray-800 to-gray-900 dark:from-gray-700 dark:to-gray-800 rounded-xl p-4 text-white relative opacity-50">
+                  {/* Mock Card Design */}
+                  <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-2">
-                      <button className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      <button className="p-2 text-gray-400 hover:text-red-600 transition-colors">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="w-8 h-5 bg-white rounded flex items-center justify-center">
+                        <span className="text-xs font-bold text-gray-800">VISA</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="text-lg font-mono tracking-wider">
+                      •••• •••• •••• 1234
+                    </div>
+                    <div className="flex justify-between text-sm text-gray-300">
+                      <span>12/25</span>
+                      <span className="uppercase">visa</span>
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <CardIcon className="w-12 h-12 mx-auto mb-4 text-gray-400 dark:text-gray-500" />
-              <p className="text-gray-600 dark:text-gray-300 mb-4">No payment methods saved</p>
-              <button className="px-4 py-2 bg-lime-500 hover:bg-lime-600 text-white rounded-lg transition-colors">
-                Add Payment Method
-              </button>
+              </div>
             </div>
           )}
         </div>
@@ -899,7 +1127,7 @@ const ReferralsRewards = () => {
   }
 
   return (
-    <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-2xl shadow-lg border border-gray-200/50 dark:border-gray-700/50 p-8 h-full overflow-y-auto">
+    <div className="p-8 h-full overflow-y-auto">
       <div className="space-y-8">
         <div>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Referrals & Rewards</h3>
@@ -1065,7 +1293,7 @@ const ConnectedAppsIntegrations = () => {
   }
 
   return (
-    <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-2xl shadow-lg border border-gray-200/50 dark:border-gray-700/50 p-8 h-full overflow-y-auto">
+    <div className="p-8 h-full overflow-y-auto">
       <div className="space-y-8">
         <div>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Connected Apps & Integrations</h3>
@@ -1178,7 +1406,7 @@ const SettingsSidebar = ({
   ];
 
   return (
-    <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border border-gray-200 dark:border-gray-700 p-6 h-full overflow-y-auto rounded-tl-lg rounded-bl-lg">
+    <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border border-gray-200 dark:border-gray-700 p-6 h-full overflow-y-auto rounded-tl-lg rounded-bl-lg flex flex-col">
       {/* Personal Section */}
       <div className="mb-8">
         <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-4">
@@ -1206,7 +1434,7 @@ const SettingsSidebar = ({
       </div>
 
       {/* Workspace Section */}
-      <div>
+      <div className="flex-1">
         <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-4">
           WORKSPACE
         </h3>
@@ -1233,6 +1461,36 @@ const SettingsSidebar = ({
               </button>
             );
           })}
+        </div>
+      </div>
+
+      {/* Policy Links Section */}
+      <div className="mt-auto pt-6 border-t border-gray-200 dark:border-gray-700">
+        <div className="space-y-2">
+          <a 
+            href="/privacy-policy" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="block text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+          >
+            Privacy Policy
+          </a>
+          <a 
+            href="/terms" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="block text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+          >
+            Terms of Service
+          </a>
+          <a 
+            href="/cookie-policy" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="block text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+          >
+            Cookie Policy
+          </a>
         </div>
       </div>
     </div>
@@ -1288,8 +1546,6 @@ const SettingsHeader = ({ activeTab, user }: { activeTab: string; user: User | n
           <button aria-label="Notifications" className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white transition-colors">
             <Bell size={18} />
           </button>
-          {/* Theme Toggle */}
-          <ThemeToggle variant="compact" />
           {/* User Profile */}
           <div className="pl-2 ml-1">
             <UserIcon user={displayUser} />
@@ -1356,6 +1612,11 @@ const SettingsContent = () => {
         if (result.success && result.user) {
           console.log('Profile updated successfully');
           setUser(result.user);
+          
+          // Dispatch custom event to notify other components of user data update
+          window.dispatchEvent(new CustomEvent('userProfileUpdated', { 
+            detail: { user: result.user } 
+          }));
         }
       } else {
         console.error('Failed to update profile');
@@ -1368,7 +1629,7 @@ const SettingsContent = () => {
   const renderTabContent = () => {
     if (loading || !user) {
       return (
-        <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-2xl shadow-lg border border-gray-200/50 dark:border-gray-700/50 p-8 h-full">
+        <div className="p-8 h-full">
           <div className="flex items-center justify-center h-64">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-lime-500"></div>
           </div>
@@ -1389,7 +1650,7 @@ const SettingsContent = () => {
         return <ConnectedAppsIntegrations />;
       case 'workspace':
         return (
-          <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl p-8 h-full">
+          <div className="p-8 h-full">
             <div className="max-w-7xl mx-auto">
               <div className="text-center py-12">
                 <Users size={48} className="mx-auto mb-4 text-gray-400 dark:text-gray-500" />
@@ -1403,7 +1664,7 @@ const SettingsContent = () => {
         );
       default:
         return (
-          <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl p-8 h-full">
+          <div className="p-8 h-full">
             <div className="max-w-7xl mx-auto">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Coming Soon</h3>
               <p className="text-gray-600 dark:text-gray-300">This section is currently under development.</p>
@@ -1415,21 +1676,19 @@ const SettingsContent = () => {
 
   return (
     <RouteGuard requireAuth={true}>
-      <div className="h-screen w-full -mx-6 sm:-mx-8 lg:-mx-12 -my-2 -mt-16 xl:-mt-8 bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-black dark:to-gray-900">
-        {/* Full Width Header */}
-        <div className="w-full m-2">
-          <SettingsHeader activeTab={activeTab} user={user} />
-        </div>
+      <div className="fixed top-4 left-80 right-4 bottom-4 space-y-6">
+        {/* Header */}
+        <SettingsHeader activeTab={activeTab} user={user} />
         
         {/* Main Layout */}
-        <div className="flex h-[calc(100vh-120px)] w-full">
+        <div className="flex h-[calc(100vh-180px)] w-full">
           {/* Settings Sidebar */}
-          <div className="w-80 sticky top-0 h-[calc(100vh-120px)] ml-2 mb-2">
+          <div className="w-80 sticky top-0 h-[calc(100vh-180px)]">
             <SettingsSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
           </div>
           
           {/* Content Area */}
-          <div className="flex-1 pl-0 rounded-tr-lg rounded-br-lg sticky top-0 h-[calc(100vh-120px)] overflow-y-auto w-full mr-2 mb-2 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border border-gray-200 dark:border-gray-700">
+          <div className="flex-1 sticky top-0 h-[calc(100vh-180px)] overflow-y-auto w-full bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border border-gray-200 dark:border-gray-700 rounded-tr-2xl rounded-br-2xl">
             {/* Main Content */}
             {renderTabContent()}
           </div>

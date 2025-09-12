@@ -2,39 +2,13 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import Lottie from 'lottie-react';
+import Image from 'next/image';
 import Typewriter from '../ui/Typewriter';
 import { Play, ArrowRight, Sparkles } from 'lucide-react';
-
 
 const Hero = () => {
   const typewriterWords = ['CV', 'Cover Letter', 'Job Tracker'];
   const [scrollY, setScrollY] = useState(0);
-  const [animationData, setAnimationData] = useState(null);
-
-
-  // Load Lottie animation data
-  useEffect(() => {
-    const loadAnimation = async () => {
-      try {
-        const response = await fetch('/Scene.json', {
-          headers: {
-            'Cache-Control': 'public, max-age=31536000, immutable',
-          },
-        });
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        setAnimationData(data);
-      } catch (error) {
-        console.error('Failed to load Lottie animation:', error);
-        // Fallback to a simple loading state
-        setAnimationData(null);
-      }
-    };
-    loadAnimation();
-  }, []);
 
   useEffect(() => {
     let ticking = false;
@@ -52,74 +26,7 @@ const Hero = () => {
   }, []);
 
   return (
-    <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-black via-gray-900 to-black">
-      {/* Enhanced Background Effects */}
-      <div className="absolute inset-0">
-        {/* Animated Gradient Orbs - Optimized */}
-        <motion.div 
-          className="absolute top-1/4 left-1/4 w-96 h-96 bg-lime-400/10 rounded-full blur-3xl gpu-accelerated"
-          animate={{
-            scale: [1, 1.1, 1],
-            opacity: [0.2, 0.4, 0.2],
-            x: [0, 20, 0],
-            y: [0, -15, 0],
-          }}
-          transition={{
-            duration: 12,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-          style={{ willChange: 'transform, opacity' }}
-        />
-        <motion.div 
-          className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl gpu-accelerated"
-          animate={{
-            scale: [1.1, 1, 1.1],
-            opacity: [0.3, 0.5, 0.3],
-            x: [0, -20, 0],
-            y: [0, 20, 0],
-          }}
-          transition={{
-            duration: 12,
-            repeat: Infinity,
-            ease: "easeInOut",
-            delay: 3
-          }}
-          style={{ willChange: 'transform, opacity' }}
-        />
-        
-        {/* Reduced Raining Particles for Performance */}
-        <div className="absolute inset-0">
-          {[...Array(40)].map((_, i) => (
-            <motion.div
-              key={i}
-              className="absolute w-1 h-1 bg-lime-400/40 rounded-full"
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 20}%`,
-                willChange: 'transform, opacity'
-              }}
-              animate={{
-                y: [0, 600],
-                opacity: [0, 0.8, 0.2, 0],
-                scale: [0, 1, 0.6, 0],
-              }}
-              transition={{
-                duration: 4 + Math.random() * 2,
-                repeat: Infinity,
-                delay: Math.random() * 4,
-                ease: "linear"
-              }}
-            />
-          ))}
-        </div>
-        
-        {/* Grid Lines with 3D Effect */}
-        <div className="absolute inset-0">
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent transform rotate-12"></div>
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/3 to-transparent transform -rotate-12"></div>
-        </div>
-      </div>
+    <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16 sm:pt-20 lg:pt-24">
 
       {/* Content */}
       <div className="relative z-10 text-center px-4 sm:px-6 lg:px-8 w-full max-w-7xl mx-auto" style={{ paddingTop: 'var(--navbar-height, 80px)' }}>
@@ -224,9 +131,9 @@ const Hero = () => {
           </motion.button>
         </motion.div>
 
-        {/* Hero Image Preview */}
+        {/* Hero Banner with Parallax Effect */}
         <motion.div
-          className="relative w-full mx-auto mt-12 -mb-32"
+          className="relative w-full mx-auto mt-8 sm:mt-12 -mb-16 sm:-mb-32"
           initial={{ opacity: 0, y: 40, scale: 0.9 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.8, delay: 0.7, ease: "easeOut" }}
@@ -246,34 +153,210 @@ const Hero = () => {
               willChange: 'transform'
             }}
           >
-            <div className="relative w-full aspect-[16/10] rounded-2xl overflow-hidden">
-              {/* Lottie Animation */}
-              {animationData ? (
-                <Lottie
-                  animationData={animationData}
-                  className="w-full h-full object-contain"
-                  loop={true}
-                  autoplay={true}
-                  speed={0.5}
-                  style={{
-                    filter: 'drop-shadow(0 10px 20px rgba(132, 204, 22, 0.2))',
-                  }}
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lime-400"></div>
+            <div className="relative w-full aspect-[16/10] sm:aspect-[16/10] rounded-2xl overflow-hidden">
+              <Image
+                src="/images/Herobanner.png"
+                alt="CV Circle Dashboard"
+                fill
+                className="object-contain drop-shadow-2xl scale-110 sm:scale-100"
+                priority
+                style={{
+                  filter: 'drop-shadow(0 10px 20px rgba(132, 204, 22, 0.2))',
+                }}
+              />
+            </div>
+
+            {/* Animated Annotations */}
+            <div className="absolute inset-0 pointer-events-none">
+              
+              {/* Annotation 1: CV Health Score - Top Left */}
+              <motion.div
+                className="absolute top-[15%] left-[8%] z-50"
+                style={{ transform: 'translate(100px, 100px)' }}
+                initial={{ opacity: 0, scale: 0 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.6, delay: 1.5 }}
+              >
+                <div className="relative">
+                  {/* Curved Arrow Path - From center to top-left */}
+                  <svg className="absolute w-32 h-16" viewBox="0 0 128 64">
+                    <motion.path
+                      d="M 128 32 Q 96 64 64 32 Q 32 0 0 32"
+                      stroke="#84cc16"
+                      strokeWidth="2"
+                      fill="none"
+                      strokeDasharray="4 4"
+                      initial={{ pathLength: 0 }}
+                      animate={{ pathLength: 1 }}
+                      transition={{ duration: 1, delay: 2 }}
+                    />
+                    {/* Arrow Head pointing to CV Health Score */}
+                    <motion.polygon
+                      points="8,28 0,32 8,36"
+                      fill="#84cc16"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.3, delay: 2.8 }}
+                    />
+                  </svg>
+                  {/* Text */}
+                  <motion.div
+                    className="absolute bg-lime-400/90 backdrop-blur-sm text-black px-3 py-1 rounded-full text-sm font-semibold whitespace-nowrap"
+                    style={{ left: '140px', top: '20px' }}
+                    animate={{
+                      opacity: [0, 1],
+                      y: [10, 0],
+                    }}
+                    transition={{ duration: 0.5, delay: 2.2 }}
+                  >
+                    CV Health Score
+                  </motion.div>
                 </div>
-              )}
+              </motion.div>
+
+              {/* Annotation 2: AI Job Whisperer - Left Side */}
+              <motion.div
+                className="absolute top-[35%] left-[2%] z-50"
+                style={{ transform: 'translate(100px, 100px)' }}
+                initial={{ opacity: 0, scale: 0 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.6, delay: 1.8 }}
+              >
+                <div className="relative">
+                  {/* Curved Arrow Path - From center to left */}
+                  <svg className="absolute w-40 h-20" viewBox="0 0 160 80">
+                    <motion.path
+                      d="M 160 40 Q 120 80 80 40 Q 40 0 0 40"
+                      stroke="#84cc16"
+                      strokeWidth="2"
+                      fill="none"
+                      strokeDasharray="4 4"
+                      initial={{ pathLength: 0 }}
+                      animate={{ pathLength: 1 }}
+                      transition={{ duration: 1, delay: 2.3 }}
+                    />
+                    {/* Arrow Head pointing to AI Job Whisperer */}
+                    <motion.polygon
+                      points="8,36 0,40 8,44"
+                      fill="#84cc16"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.3, delay: 3.1 }}
+                    />
+                  </svg>
+                  {/* Text */}
+                  <motion.div
+                    className="absolute bg-lime-400/90 backdrop-blur-sm text-black px-3 py-1 rounded-full text-sm font-semibold whitespace-nowrap"
+                    style={{ left: '170px', top: '30px' }}
+                    animate={{
+                      opacity: [0, 1],
+                      y: [10, 0],
+                    }}
+                    transition={{ duration: 0.5, delay: 2.5 }}
+                  >
+                    AI Job Whisperer
+                  </motion.div>
+                </div>
+              </motion.div>
+
+              {/* Annotation 3: CV Tips - Right Side */}
+              <motion.div
+                className="absolute top-[35%] right-[2%] z-50"
+                style={{ transform: 'translate(-100px, 0px)' }}
+                initial={{ opacity: 0, scale: 0 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.6, delay: 2.1 }}
+              >
+                <div className="relative">
+                  {/* Curved Arrow Path - From center to right */}
+                  <svg className="absolute w-40 h-20" viewBox="0 0 160 80">
+                    <motion.path
+                      d="M 0 40 Q 40 80 80 40 Q 120 0 160 40"
+                      stroke="#84cc16"
+                      strokeWidth="2"
+                      fill="none"
+                      strokeDasharray="4 4"
+                      initial={{ pathLength: 0 }}
+                      animate={{ pathLength: 1 }}
+                      transition={{ duration: 1, delay: 2.6 }}
+                    />
+                    {/* Arrow Head pointing to CV Tips */}
+                    <motion.polygon
+                      points="152,36 160,40 152,44"
+                      fill="#84cc16"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.3, delay: 3.4 }}
+                    />
+                  </svg>
+                  {/* Text */}
+                  <motion.div
+                    className="absolute bg-lime-400/90 backdrop-blur-sm text-black px-3 py-1 rounded-full text-sm font-semibold whitespace-nowrap"
+                    style={{ right: '170px', top: '30px' }}
+                    animate={{
+                      opacity: [0, 1],
+                      y: [10, 0],
+                    }}
+                    transition={{ duration: 0.5, delay: 2.8 }}
+                  >
+                    CV Tips & Actions
+                  </motion.div>
+                </div>
+              </motion.div>
+
+              {/* Annotation 4: Status Cards - Top Center */}
+              <motion.div
+                className="absolute top-[5%] left-1/2 transform -translate-x-1/2 z-50"
+                style={{ transform: 'translate(-50%, 100px)' }}
+                initial={{ opacity: 0, scale: 0 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.6, delay: 2.4 }}
+              >
+                <div className="relative">
+                  {/* Curved Arrow Path - From center to top */}
+                  <svg className="absolute w-20 h-24" viewBox="0 0 80 96">
+                    <motion.path
+                      d="M 40 96 Q 40 76 40 56 Q 40 36 40 16 Q 40 0 40 0"
+                      stroke="#84cc16"
+                      strokeWidth="2"
+                      fill="none"
+                      strokeDasharray="4 4"
+                      initial={{ pathLength: 0 }}
+                      animate={{ pathLength: 1 }}
+                      transition={{ duration: 1, delay: 2.9 }}
+                    />
+                    {/* Arrow Head pointing to Status Cards */}
+                    <motion.polygon
+                      points="36,8 40,0 44,8"
+                      fill="#84cc16"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.3, delay: 3.7 }}
+                    />
+                  </svg>
+                  {/* Text */}
+                  <motion.div
+                    className="absolute bg-lime-400/90 backdrop-blur-sm text-black px-3 py-1 rounded-full text-sm font-semibold whitespace-nowrap"
+                    style={{ left: '50%', top: '100px', transform: 'translateX(-50%)' }}
+                    animate={{
+                      opacity: [0, 1],
+                      y: [10, 0],
+                    }}
+                    transition={{ duration: 0.5, delay: 3.1 }}
+                  >
+                    Job Application Status
+                  </motion.div>
+                </div>
+              </motion.div>
+
             </div>
           </motion.div>
-          
-
         </motion.div>
       </div>
 
       {/* Enhanced Scroll Indicator */}
       <motion.div 
-        className="absolute bottom-8 left-1/2 transform -translate-x-1/2 text-white/60"
+        className="absolute bottom-8 left-1/2 transform -translate-x-1/2 text-white/60 z-[9999]"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 1, delay: 2 }}
@@ -302,7 +385,6 @@ const Hero = () => {
             }}
           />
         </motion.div>
-        <p className="text-center mt-2 text-sm font-medium">Scroll to explore</p>
       </motion.div>
 
 

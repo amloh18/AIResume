@@ -2,7 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IJobApplication extends Document {
   userId: mongoose.Types.ObjectId;
-  cvId?: mongoose.Types.ObjectId;
+  // cvId removed - relationships now managed through CVJourney
   jobTitle: string;
   company: string;
   jobUrl?: string;
@@ -61,11 +61,7 @@ const jobApplicationSchema = new Schema<IJobApplication>({
     required: true,
     index: true
   },
-  cvId: {
-    type: Schema.Types.ObjectId,
-    ref: 'CV',
-    required: false
-  },
+  // cvId removed - relationships now managed through CVJourney
   jobTitle: {
     type: String,
     required: [true, 'Job title is required'],

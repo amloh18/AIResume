@@ -44,7 +44,7 @@ export async function GET(
       postedDate: job.postedDate,
       applicationDeadline: job.applicationDeadline,
       status: job.status,
-      cvId: job.cvId, // Include cvId field for CV linking
+      // cvId removed - relationships now managed through CVJourney
       userId: job.userId,
       createdAt: job.createdAt,
       updatedAt: job.updatedAt

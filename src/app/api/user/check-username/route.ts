@@ -8,64 +8,59 @@ export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     
-    if (!session?.user?.email) {
+    // Check for Firebase user ID in headers or query params
+    const firebaseUserId = request.headers.get('x-firebase-user-id') || 
+                          request.nextUrl.searchParams.get('firebaseUserId');
+    
+    let userEmail: string | undefined;
+    let userId: string | undefined;
+    
+    if (session?.user?.email) {
+      // NextAuth user
+      userEmail = session.user.email;
+    } else if (firebaseUserId) {
+      // Firebase user - get user by Firebase UID
+      await connectDB();
+      const firebaseUser = await User.findOne({ firebaseUid: firebaseUserId });
+      if (firebaseUser) {
+        userEmail = firebaseUser.email;
+        userId = firebaseUser._id.toString();
+      }
+    }
+    
+    if (!userEmail) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
       );
     }
 
+    const body = await request.json();
+    const { username } = body;
+
+    if (!username || username.trim() === '') {
+      return NextResponse.json({
+        success: true,
+        available: true,
+        message: 'Empty username is allowed'
+      });
+    }
+
     await connectDB();
 
-    const { username } = await request.json();
-
-    if (!username) {
+    // Find current user
+    const currentUser = await User.findOne({ email: userEmail });
+    if (!currentUser) {
       return NextResponse.json(
-        { success: false, error: 'Username is required' },
-        { status: 400 }
+        { success: false, error: 'User not found' },
+        { status: 404 }
       );
     }
 
-    // Validate username format
-    const usernameRegex = /^[a-zA-Z0-9_-]+$/;
-    if (!usernameRegex.test(username)) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Username can only contain letters, numbers, hyphens, and underscores',
-          available: false 
-        },
-        { status: 400 }
-      );
-    }
-
-    // Check username length
-    if (username.length < 3) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Username must be at least 3 characters long',
-          available: false 
-        },
-        { status: 400 }
-      );
-    }
-
-    if (username.length > 30) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Username cannot exceed 30 characters',
-          available: false 
-        },
-        { status: 400 }
-      );
-    }
-
-    // Check if username is already taken
+    // Check if username is already taken by another user
     const existingUser = await User.findOne({ 
-      username: username.toLowerCase(),
-      email: { $ne: session.user.email } // Exclude current user
+      username: username.toLowerCase().trim(),
+      _id: { $ne: currentUser._id }
     });
 
     const isAvailable = !existingUser;

@@ -4,6 +4,8 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Eye, EyeOff, Mail, Lock, Loader2 } from 'lucide-react';
+import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
+import { auth, googleProvider } from '@/lib/firebase';
 import LoadingAnimation from '@/components/ui/LoadingAnimation';
 
 const LoginForm = () => {
@@ -30,26 +32,69 @@ const LoginForm = () => {
     setError('');
 
     try {
-      const result = await signIn('credentials', {
-        email,
-        password,
-        redirect: false,
+      // Sign in with Firebase first
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // Check email verification
+      if (!user.emailVerified) {
+        setError('Please verify your email before signing in. Check your inbox for a verification email.');
+        return;
+      }
+
+      // Get Firebase ID token and sign in with NextAuth
+      const idToken = await user.getIdToken();
+      const result = await signIn('firebase', { 
+        idToken, 
+        redirect: false 
       });
 
       if (result?.error) {
-        setError('Invalid email or password');
+        setError('Authentication failed. Please try again.');
       } else if (result?.ok) {
         router.push(callbackUrl);
       }
-    } catch (error) {
-      setError('An error occurred. Please try again.');
+    } catch (error: any) {
+      console.error('Sign in error:', error);
+      
+      // Handle specific Firebase errors
+      if (error.code === 'auth/user-not-found') {
+        setError('No account found with this email address');
+      } else if (error.code === 'auth/wrong-password') {
+        setError('Incorrect password');
+      } else if (error.code === 'auth/invalid-email') {
+        setError('Invalid email address');
+      } else if (error.code === 'auth/too-many-requests') {
+        setError('Too many failed attempts. Please try again later');
+      } else {
+        setError(error.message || 'Failed to sign in');
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleGoogleSignIn = () => {
-    signIn('google', { callbackUrl });
+  const handleGoogleSignIn = async () => {
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+
+      // Get Firebase ID token and sign in with NextAuth
+      const idToken = await user.getIdToken();
+      await signIn('firebase', { 
+        idToken, 
+        callbackUrl: callbackUrl 
+      });
+
+    } catch (error: any) {
+      console.error('Google sign in error:', error);
+      setError(error.message || 'Failed to sign in with Google');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (status === 'loading') {

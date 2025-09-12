@@ -7,7 +7,7 @@ import UserProfileDialog from './UserProfileDialog';
 
 interface UserIconProps {
   user: {
-    name?: string;
+    name: string;
     email: string;
     username?: string;
     profilePhoto?: string;

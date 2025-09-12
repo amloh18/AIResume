@@ -3,13 +3,14 @@ import bcrypt from 'bcryptjs';
 
 export interface IUser extends Document {
   email: string;
-  password?: string;
-  firebaseUid?: string;
+  password?: string; // Optional - only for non-Firebase users
+  firebaseUid?: string; // Required for Firebase users
   firstName: string;
   lastName: string;
   username?: string;
   avatar?: string;
   role: 'user' | 'admin';
+  userRole?: 'Student' | 'Professional' | 'Recruiter'; // New field for onboarding role selection
   isEmailVerified: boolean;
   emailVerificationToken?: string;
   emailVerificationExpires?: Date;
@@ -21,6 +22,7 @@ export interface IUser extends Document {
   usage: {
     cvJourneyCount: number; // Total CV journeys completed
     cvCreatedCount: number; // Total CVs created
+    journeysCreated: number; // Total journeys created (for new onboarding)
     exportCount: number; // Total exports/downloads
     atsCheckCount: number; // Total ATS checks performed
     lastResetDate: Date; // Last time usage was reset (for day pass)
@@ -43,7 +45,7 @@ export interface IUser extends Document {
     endDate?: Date;
     currentPeriodStart?: Date;
     currentPeriodEnd?: Date;
-    provider: 'stripe' | 'razorpay';
+    provider: 'stripe' | 'razorpay' | 'admin';
     providerSubscriptionId?: string;
     providerCustomerId?: string;
     interval: 'one-time' | 'monthly' | 'quarterly' | 'yearly';
@@ -83,12 +85,16 @@ const userSchema = new Schema<IUser>({
     required: function(this: any) {
       return !this.firebaseUid; // Password is required only if not using Firebase
     },
-    minlength: [8, 'Password must be at least 8 characters long']
+    minlength: [8, 'Password must be at least 8 characters long'],
+    select: false // Don't include password in queries by default
   },
   firebaseUid: {
     type: String,
     unique: true,
-    sparse: true // Allows multiple null values
+    sparse: true, // Allows multiple null values
+    required: function(this: any) {
+      return !this.password; // Firebase UID is required if no password (Firebase user)
+    }
   },
   firstName: {
     type: String,
@@ -104,6 +110,8 @@ const userSchema = new Schema<IUser>({
   },
   username: {
     type: String,
+    unique: true,
+    sparse: true, // Allows multiple null values
     trim: true,
     lowercase: true,
     minlength: [3, 'Username must be at least 3 characters long'],
@@ -118,6 +126,11 @@ const userSchema = new Schema<IUser>({
     type: String,
     enum: ['user', 'admin'],
     default: 'user'
+  },
+  userRole: {
+    type: String,
+    enum: ['Student', 'Professional', 'Recruiter'],
+    required: false
   },
   isEmailVerified: {
     type: Boolean,
@@ -146,6 +159,11 @@ const userSchema = new Schema<IUser>({
       min: 0
     },
     cvCreatedCount: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    journeysCreated: {
       type: Number,
       default: 0,
       min: 0
@@ -230,7 +248,7 @@ const userSchema = new Schema<IUser>({
     currentPeriodEnd: Date,
     provider: {
       type: String,
-      enum: ['stripe', 'razorpay'],
+      enum: ['stripe', 'razorpay', 'admin'],
       default: 'stripe'
     },
     providerSubscriptionId: String,
@@ -298,7 +316,7 @@ const userSchema = new Schema<IUser>({
     gender: {
       type: String,
       trim: true,
-      enum: ['male', 'female', 'other', 'prefer-not-to-say']
+      enum: ['male', 'female', 'other', 'prefer-not-to-say', '']
     },
     nationality: {
       type: String,
@@ -339,8 +357,10 @@ userSchema.methods.comparePassword = async function(candidatePassword: string): 
   return bcrypt.compare(candidatePassword, this.password);
 };
 
-// Indexes for better query performance
-userSchema.index({ username: 1 }, { unique: true, sparse: true });
+// Indexes for better query performance and data integrity
 userSchema.index({ 'subscription.status': 1 });
+userSchema.index({ firebaseUid: 1 }, { unique: true, sparse: true }); // Unique index on firebaseUid
+userSchema.index({ email: 1 }, { unique: true }); // Unique index on email
+userSchema.index({ username: 1 }, { unique: true, sparse: true }); // Unique index on username
 
 export default mongoose.models.User || mongoose.model<IUser>('User', userSchema); 

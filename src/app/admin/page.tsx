@@ -31,6 +31,7 @@ import PricingPlanManager from '@/components/admin/PricingPlanManager';
 import AIAnalytics from '@/components/admin/AIAnalytics';
 import SystemHealth from '@/components/admin/SystemHealth';
 import RecentActivity from '@/components/admin/RecentActivity';
+import TestimonialManager from '@/components/admin/TestimonialManager';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 
 interface AdminPageProps {}
@@ -53,8 +54,8 @@ const AdminPage: React.FC<AdminPageProps> = () => {
     console.log('User email:', session?.user?.email);
     
     if (!session) {
-      console.log('❌ No session, redirecting to login');
-      router.push('/auth/login?callbackUrl=/admin');
+      console.log('❌ No session, redirecting to signin');
+      router.push('/auth/signin?callbackUrl=/admin');
       return;
     }
 
@@ -87,6 +88,7 @@ const AdminPage: React.FC<AdminPageProps> = () => {
     { id: 'users', label: 'User Management', icon: People },
     { id: 'pricing', label: 'Pricing Plans', icon: FileText },
     { id: 'ai', label: 'AI Analytics', icon: DashboardIcon },
+    { id: 'testimonials', label: 'Testimonials', icon: Bell },
     { id: 'system', label: 'System Health', icon: Settings },
   ];
 
@@ -102,6 +104,8 @@ const AdminPage: React.FC<AdminPageProps> = () => {
         return <PricingPlanManager />;
       case 'ai':
         return <AIAnalytics />;
+      case 'testimonials':
+        return <TestimonialManager />;
       case 'system':
         return <SystemHealth />;
       default:

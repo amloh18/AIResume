@@ -109,7 +109,7 @@ export async function PUT(request: NextRequest) {
     await connectDB();
 
     const body = await request.json();
-    const { firstName, lastName, avatar, phone, location, website, linkedin, github, summary, settings } = body;
+    const { firstName, lastName, username, avatar, phone, location, website, linkedin, github, summary, settings } = body;
 
     // Find user
     const user = await User.findOne({ email: userEmail });
@@ -118,6 +118,27 @@ export async function PUT(request: NextRequest) {
         { success: false, error: 'User not found' },
         { status: 404 }
       );
+    }
+
+    // Check username uniqueness if username is being updated
+    if (username !== undefined && username !== user.username) {
+      if (username.trim() === '') {
+        // Allow empty username
+        user.username = undefined;
+      } else {
+        // Check if username is already taken by another user
+        const existingUser = await User.findOne({ 
+          username: username.toLowerCase().trim(),
+          _id: { $ne: user._id }
+        });
+        if (existingUser) {
+          return NextResponse.json(
+            { success: false, error: 'Username is already taken' },
+            { status: 400 }
+          );
+        }
+        user.username = username.toLowerCase().trim();
+      }
     }
 
     // Update allowed fields

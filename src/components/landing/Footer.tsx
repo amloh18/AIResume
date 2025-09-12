@@ -1,11 +1,16 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import Logo from '../ui/Logo';
-import { Twitter, Linkedin, Github, MessageCircle, Mail, ArrowRight, Heart } from 'lucide-react';
+import { Twitter, Linkedin, Github, MessageCircle, Mail, ArrowRight, Heart, CheckCircle, AlertCircle } from 'lucide-react';
 
 const Footer = () => {
+  const [email, setEmail] = useState('');
+  const [isSubscribing, setIsSubscribing] = useState(false);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [statusMessage, setStatusMessage] = useState('');
+
   const quickLinks = [
     { name: 'Features', href: '#features' },
     { name: 'Pricing', href: '#pricing' },
@@ -27,6 +32,48 @@ const Footer = () => {
         behavior: 'smooth',
         block: 'start'
       });
+    }
+  };
+
+  const handleNewsletterSubscription = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!email || !email.includes('@')) {
+      setSubscriptionStatus('error');
+      setStatusMessage('Please enter a valid email address');
+      return;
+    }
+
+    setIsSubscribing(true);
+    setSubscriptionStatus('idle');
+
+    try {
+      const response = await fetch('/api/newsletter/subscribe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email,
+          source: 'footer'
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSubscriptionStatus('success');
+        setStatusMessage(data.message);
+        setEmail('');
+      } else {
+        setSubscriptionStatus('error');
+        setStatusMessage(data.error || 'Failed to subscribe');
+      }
+    } catch (error) {
+      setSubscriptionStatus('error');
+      setStatusMessage('Network error. Please try again.');
+    } finally {
+      setIsSubscribing(false);
     }
   };
 
@@ -103,7 +150,7 @@ const Footer = () => {
             viewport={{ once: true }}
           >
             <h3 className="text-2xl font-bold text-white">Quick Links</h3>
-            <ul className="space-y-4">
+            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {quickLinks.map((link, index) => (
                 <motion.li 
                   key={index}
@@ -144,7 +191,7 @@ const Footer = () => {
             <p className="text-white/70 text-lg">
               Get the latest updates on new features and job search tips.
             </p>
-            <div className="space-y-6">
+            <form onSubmit={handleNewsletterSubscription} className="space-y-6">
               <motion.div 
                 className="flex group"
                 whileHover={{ scale: 1.02 }}
@@ -155,18 +202,23 @@ const Footer = () => {
               >
                 <motion.input
                   type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   placeholder="Enter your email"
                   className="flex-1 bg-white/5 border border-white/10 rounded-l-2xl px-6 py-4 text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors duration-300 backdrop-blur-sm"
                   whileFocus={{ scale: 1.02 }}
+                  disabled={isSubscribing}
                 />
                 <motion.button 
-                  className="group relative bg-gradient-to-r from-lime-400 to-lime-500 text-black px-8 py-4 rounded-r-2xl font-semibold hover:shadow-2xl hover:shadow-lime-400/25 transition-all duration-300 overflow-hidden"
+                  type="submit"
+                  disabled={isSubscribing}
+                  className="group relative bg-gradient-to-r from-lime-400 to-lime-500 text-black px-4 sm:px-6 lg:px-8 py-4 rounded-r-2xl font-semibold hover:shadow-2xl hover:shadow-lime-400/25 transition-all duration-300 overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed min-w-fit whitespace-nowrap"
                   whileHover={{ 
-                    scale: 1.05,
-                    rotateY: 5,
-                    boxShadow: "0 20px 40px -12px rgba(132, 204, 22, 0.4)"
+                    scale: isSubscribing ? 1 : 1.05,
+                    rotateY: isSubscribing ? 0 : 5,
+                    boxShadow: isSubscribing ? "none" : "0 20px 40px -12px rgba(132, 204, 22, 0.4)"
                   }}
-                  whileTap={{ scale: 0.95 }}
+                  whileTap={{ scale: isSubscribing ? 1 : 0.95 }}
                   style={{
                     transformStyle: 'preserve-3d',
                     perspective: '1000px'
@@ -178,23 +230,54 @@ const Footer = () => {
                   />
                   <motion.div
                     className="relative flex items-center justify-center gap-2"
-                    whileHover={{ x: 5 }}
+                    whileHover={{ x: isSubscribing ? 0 : 5 }}
                   >
-                    <Mail size={18} />
-                    <span>Subscribe</span>
-                    <motion.div
-                      whileHover={{ rotate: 45 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <ArrowRight size={16} />
-                    </motion.div>
+                    {isSubscribing ? (
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      >
+                        <Mail size={16} className="sm:w-[18px] sm:h-[18px]" />
+                      </motion.div>
+                    ) : (
+                      <Mail size={16} className="sm:w-[18px] sm:h-[18px]" />
+                    )}
+                    <span className="text-sm sm:text-base">{isSubscribing ? 'Subscribing...' : 'Subscribe'}</span>
+                    {!isSubscribing && (
+                      <motion.div
+                        whileHover={{ rotate: 45 }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <ArrowRight size={14} className="sm:w-4 sm:h-4" />
+                      </motion.div>
+                    )}
                   </motion.div>
                 </motion.button>
               </motion.div>
+              
+              {/* Status Message */}
+              {statusMessage && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={`flex items-center gap-2 text-sm ${
+                    subscriptionStatus === 'success' 
+                      ? 'text-lime-400' 
+                      : subscriptionStatus === 'error' 
+                        ? 'text-red-400' 
+                        : 'text-white/60'
+                  }`}
+                >
+                  {subscriptionStatus === 'success' && <CheckCircle size={16} />}
+                  {subscriptionStatus === 'error' && <AlertCircle size={16} />}
+                  {statusMessage}
+                </motion.div>
+              )}
+              
               <p className="text-sm text-white/40">
                 We respect your privacy. Unsubscribe at any time.
               </p>
-            </div>
+            </form>
           </motion.div>
         </div>
 

@@ -24,6 +24,12 @@ const CertificatesSection: React.FC<CertificatesSectionProps> = ({
 }) => {
   const themeClasses = getThemeClasses;
   const [generatingIndex, setGeneratingIndex] = useState<number | null>(null);
+  
+  // Debug logging to understand data structure
+  console.log('🔍 CertificatesSection - data:', data);
+  
+  // Ensure we have proper data structure
+  const safeData = Array.isArray(data) ? data : [];
 
   const generateAIDescription = async (index: number, certificateItem: any) => {
     if (!userId) return;
@@ -77,7 +83,7 @@ const CertificatesSection: React.FC<CertificatesSectionProps> = ({
       </div>
 
       <div className="space-y-4">
-        {data.map((certificate, index) => (
+        {safeData.map((certificate, index) => (
           <div key={index} className={`${themeClasses.card.base} border rounded-lg p-4`}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <input

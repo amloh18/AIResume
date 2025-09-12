@@ -46,6 +46,7 @@ import { useCreateCV } from '@/lib/utils/cvCreationUtils';
 import CVPreviewContent from '@/components/studio/CVPreviewContent';
 import PageHeader from './PageHeader';
 import { authenticatedFetch } from '@/lib/utils/apiUtils';
+import { useJourneyLinking } from '@/lib/services/journeyLinkingService';
 
 interface CV {
   id: string;
@@ -57,7 +58,7 @@ interface CV {
   thumbnail: string;
   description?: string;
   cvData?: any; // CV data structure for preview
-  connectedJobs?: Job[];
+  // connectedJobs removed - relationships now managed through CVJourney
 
   completionPercentage?: number;
 }
@@ -83,7 +84,7 @@ interface CoverLetter {
   thumbnail: string;
   description?: string;
   coverLetterData?: any;
-  connectedJobs?: Job[];
+  // connectedJobs removed - relationships now managed through CVJourney
   completionPercentage?: number;
   content?: string;
   metadata?: {
@@ -245,6 +246,24 @@ const Canvas: React.FC = () => {
   const [deletingCVId, setDeletingCVId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'cv' | 'coverLetter'>('cv');
   const [coverLetters, setCoverLetters] = useState<CoverLetter[]>([]);
+  const [availableJobs, setAvailableJobs] = useState<Job[]>([]);
+  const [linkingJobCVId, setLinkingJobCVId] = useState<string | null>(null);
+  const [toasts, setToasts] = useState<Array<{
+    id: string;
+    type: 'success' | 'error' | 'info';
+    message: string;
+    duration?: number;
+  }>>([]);
+  const [notifications, setNotifications] = useState<Array<{
+    id: string;
+    type: 'success' | 'error' | 'info' | 'warning';
+    title: string;
+    message: string;
+    timestamp: Date;
+    read: boolean;
+  }>>([]);
+  const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
+  const [userProfile, setUserProfile] = useState<any>(null);
   
   // Modal state
   const [modalConfig, setModalConfig] = useState<{
@@ -270,18 +289,71 @@ const Canvas: React.FC = () => {
     setModalConfig(prev => ({ ...prev, isOpen: false }));
   };
 
+  // Toast notification functions
+  const addToast = (type: 'success' | 'error' | 'info', message: string, duration: number = 4000) => {
+    const id = Math.random().toString(36).substr(2, 9);
+    const newToast = { id, type, message, duration };
+    setToasts(prev => [...prev, newToast]);
+
+    // Auto remove toast after duration
+    setTimeout(() => {
+      removeToast(id);
+    }, duration);
+  };
+
+  const removeToast = (id: string) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id));
+  };
+
+  // Notification functions
+  const addNotification = (type: 'success' | 'error' | 'info' | 'warning', title: string, message: string) => {
+    const id = Math.random().toString(36).substr(2, 9);
+    const newNotification = {
+      id,
+      type,
+      title,
+      message,
+      timestamp: new Date(),
+      read: false
+    };
+    setNotifications(prev => [newNotification, ...prev]);
+  };
+
+  const markNotificationAsRead = (id: string) => {
+    setNotifications(prev => 
+      prev.map(notification => 
+        notification.id === id 
+          ? { ...notification, read: true }
+          : notification
+      )
+    );
+  };
+
+  const markAllNotificationsAsRead = () => {
+    setNotifications(prev => 
+      prev.map(notification => ({ ...notification, read: true }))
+    );
+  };
+
+  const removeNotification = (id: string) => {
+    setNotifications(prev => prev.filter(notification => notification.id !== id));
+  };
+
   // Load CVs and Cover Letters from API
   useEffect(() => {
     // Check NextAuth session first
     if (session?.user?.id) {
       loadCVs(session.user.id);
       loadCoverLetters();
+      fetchAvailableJobs();
+      fetchUserProfile();
     } else {
       // Fallback to Firebase user data
       const userId = getUserIdFromLocalStorage();
       if (userId) {
         loadCVs(userId);
         loadCoverLetters();
+        fetchAvailableJobs();
       } else {
         console.log('No user ID available, cannot load CVs and Cover Letters');
         setLoading(false);
@@ -335,37 +407,7 @@ const Canvas: React.FC = () => {
           
           const cvId = cv.id || cv._id;
           
-          // Load connected jobs
-          let connectedJobs: Job[] = [];
-          try {
-            console.log('🔍 Canvas - Loading jobs for CV:', cvId, 'User:', userIdToUse);
-            const jobsUrl = `/api/jobs?userId=${userIdToUse}&cvId=${cvId}`;
-            console.log('🔍 Canvas - Jobs API URL:', jobsUrl);
-            
-            const jobsResponse = await fetch(jobsUrl);
-            console.log('🔍 Canvas - Jobs response status:', jobsResponse.status);
-            
-            const jobsResult = await jobsResponse.json();
-            console.log('🔍 Canvas - Jobs API result:', jobsResult);
-            
-            if (jobsResult.success && jobsResult.data && jobsResult.data.jobs) {
-              console.log('🔍 Canvas - Found jobs:', jobsResult.data.jobs.length);
-              connectedJobs = jobsResult.data.jobs.map((job: any) => ({
-                id: job.id || job._id,
-                title: job.jobTitle,
-                company: job.company,
-                location: typeof job.location === 'string' ? job.location : job.location?.city || 'Remote',
-                status: job.status,
-                appliedDate: job.applicationDate,
-                salary: job.salary ? `${job.salary.min || ''} - ${job.salary.max || ''} ${job.salary.currency || ''}` : undefined,
-                description: job.jobDescription
-              }));
-            } else {
-              console.log('🔍 Canvas - No jobs found or API error:', jobsResult);
-            }
-          } catch (error) {
-            console.error('Error loading connected jobs for CV:', cvId, error);
-          }
+          // Connected jobs removed - relationships now managed through CVJourney
           
 
           
@@ -379,7 +421,7 @@ const Canvas: React.FC = () => {
             thumbnail: cv.thumbnail || '/api/placeholder/300/200',
                             description: cv.description || '',
             cvData: cv.cvData || null, // Include CV data for preview
-            connectedJobs,
+            // connectedJobs removed - relationships now managed through CVJourney
             completionPercentage: calculateCompletionPercentage(cv)
           };
         }));
@@ -423,7 +465,7 @@ const Canvas: React.FC = () => {
           thumbnail: '/api/cover-letters/thumbnail/' + (cl.id || cl._id),
           description: cl.metadata?.targetCompany ? `For ${cl.metadata.targetCompany}` : 'Cover letter',
           coverLetterData: cl.content,
-          connectedJobs: cl.connectedJobs || [],
+          // connectedJobs removed - relationships now managed through CVJourney
           completionPercentage: cl.completionPercentage || 0
         }));
         
@@ -657,7 +699,7 @@ const Canvas: React.FC = () => {
   const handleCVClick = (cv: CV) => {
     console.log('🔍 Canvas - CV clicked:', cv.id);
     console.log('🔍 Canvas - CV data:', cv.cvData);
-    console.log('🔍 Canvas - Connected jobs:', cv.connectedJobs);
+    // connectedJobs removed - relationships now managed through CVJourney
     
     setSelectedCV(cv);
     setShowModal(true);
@@ -736,16 +778,10 @@ const Canvas: React.FC = () => {
     setEditingTitle('');
   };
 
-  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState<string | null>(null);
-
-  const confirmDeleteCV = (cvId: string) => {
-    setShowDeleteConfirmation(cvId);
-  };
 
   const deleteCV = async (cvId: string) => {
     try {
       setDeletingCVId(cvId);
-      setShowDeleteConfirmation(null);
       
       // Get user ID from session or Firebase
       let userId = session?.user?.id;
@@ -825,116 +861,86 @@ const Canvas: React.FC = () => {
       if (result.success) {
         // Remove the CV from the local state
         setCvs(cvs.filter(cv => cv.id !== cvId));
-        // Show success message
-        showModalDialog({
-          title: 'Success',
-          message: 'CV deleted successfully!',
-          type: 'success'
-        });
+        // Show success toast and notification
+        addToast('success', 'CV deleted successfully!');
+        addNotification('success', 'CV Deleted', 'Your CV has been successfully deleted.');
       } else {
         console.error('Failed to delete CV:', result.message);
-        showModalDialog({
-          title: 'Delete Failed',
-          message: `Failed to delete CV: ${result.message}`,
-          type: 'error'
-        });
+        addToast('error', `Failed to delete CV: ${result.message}`);
+        addNotification('error', 'Delete Failed', `Failed to delete CV: ${result.message}`);
       }
     } catch (error) {
       console.error('Error deleting CV:', error);
-      showModalDialog({
-        title: 'Delete Error',
-        message: 'Error deleting CV. Please try again.',
-        type: 'error'
-      });
+      addToast('error', 'Error deleting CV. Please try again.');
     } finally {
       setDeletingCVId(null);
     }
   };
 
-  const unlinkJobFromCV = async (cvId: string, jobId: string) => {
+  // Fetch available jobs for linking
+  const fetchAvailableJobs = async () => {
     try {
-      // Get user ID from session or Firebase
-      let userId = session?.user?.id;
-      
-      if (!userId) {
-        const userData = localStorage.getItem('user');
-        if (userData) {
-          try {
-            const parsedUser = JSON.parse(userData);
-            if (parsedUser.firebaseUid) {
-              userId = parsedUser.id || parsedUser._id;
-            }
-          } catch (error) {
-            console.error('Error parsing user data:', error);
-          }
+      const userId = session?.user?.id || getUserIdFromLocalStorage();
+      if (!userId) return;
+
+      const response = await authenticatedFetch(`/api/jobs?userId=${userId}`);
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.jobs) {
+          setAvailableJobs(result.jobs);
         }
       }
-      
-      if (!userId) {
-        showModalDialog({
-          title: 'Authentication Error',
-          message: 'Please log in again to continue.',
-          type: 'error'
-        });
-        return;
-      }
-
-      // Update local state immediately for better UX
-      setCvs(prevCvs => 
-        prevCvs.map(cv => 
-          cv.id === cvId 
-            ? { 
-                ...cv, 
-                connectedJobs: cv.connectedJobs?.filter(job => job.id !== jobId) || [] 
-              }
-            : cv
-        )
-      );
-
-      // Update selected CV if it's the one being modified
-      if (selectedCV && selectedCV.id === cvId) {
-        setSelectedCV(prev => 
-          prev ? {
-            ...prev,
-            connectedJobs: prev.connectedJobs?.filter(job => job.id !== jobId) || []
-          } : null
-        );
-      }
-
-      // Make API call to update CV (remove jobId from connected jobs)
-      const response = await authenticatedFetch(`/api/cvs/${cvId}`, {
-        method: 'PUT',
-        body: JSON.stringify({
-          userId: userId,
-          unlinkJobId: jobId // Signal to remove this job from connected jobs
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Error unlinking job:', errorData);
-        
-        showModalDialog({
-          title: 'Unlink Failed',
-          message: 'Failed to unlink job from CV. Please try again.',
-          type: 'error'
-        });
-      } else {
-        showModalDialog({
-          title: 'Success',
-          message: 'Job unlinked from CV successfully.',
-          type: 'success'
-        });
-      }
     } catch (error) {
-      console.error('Error unlinking job from CV:', error);
-      showModalDialog({
-        title: 'Unlink Error',
-        message: 'Error unlinking job from CV. Please try again.',
-        type: 'error'
-      });
+      console.error('Error fetching available jobs:', error);
     }
   };
+
+  // Fetch user profile from database
+  const fetchUserProfile = async () => {
+    try {
+      const response = await authenticatedFetch('/api/user');
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.user) {
+          setUserProfile(result.user);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    }
+  };
+
+  // Link job to CV using centralized journey linking service
+  const linkJobToCV = async (cvId: string, jobId: string) => {
+    try {
+      const userId = session?.user?.id || getUserIdFromLocalStorage();
+      if (!userId) return;
+
+      // Use centralized journey linking service
+      const { linkJobToCV: linkJobToCVService } = useJourneyLinking();
+      
+      const result = await linkJobToCVService({
+        jobId,
+        cvId,
+        userId,
+        journeyName: `Application for ${jobId}`
+      });
+
+      if (result.success) {
+        // Refresh CVs to show updated job links
+        loadCVs();
+        setLinkingJobCVId(null);
+        showModalDialog('Success', 'Job linked to CV successfully via journey system!', 'success');
+      } else {
+        showModalDialog('Error', `Failed to link job to CV: ${result.message}`, 'error');
+      }
+    } catch (error) {
+      console.error('Error linking job to CV:', error);
+      showModalDialog('Error', 'Failed to link job to CV', 'error');
+    }
+  };
+
+  // unlinkJobFromCV removed - relationships now managed through CVJourney
 
   const getCompletionColor = (percentage: number) => {
     if (percentage >= 80) return 'from-green-400 to-green-500';
@@ -1105,8 +1111,18 @@ const Canvas: React.FC = () => {
       <PageHeader
         title="CV Studio"
         description="Create, edit, and manage professional CVs"
-        user={session?.user || { name: 'User', email: 'user@example.com' }}
+        user={{
+          name: userProfile?.firstName + ' ' + userProfile?.lastName || session?.user?.name || 'User',
+          email: userProfile?.email || session?.user?.email || 'user@example.com',
+          username: userProfile?.username || session?.user?.username,
+          profilePhoto: userProfile?.avatar || session?.user?.image || session?.user?.profilePhoto,
+          designation: userProfile?.designation || session?.user?.designation
+        }}
         showSettings={true}
+        notifications={notifications}
+        onMarkAsRead={markNotificationAsRead}
+        onMarkAllAsRead={markAllNotificationsAsRead}
+        onRemoveNotification={removeNotification}
       />
 
       {/* Tab Navigation */}
@@ -1240,7 +1256,7 @@ const Canvas: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
+        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
           {/* Create New CV Card - Always First */}
           <motion.div
             className="bg-gradient-to-br from-lime-400/10 to-blue-400/10 border-2 border-dashed border-lime-400/30 rounded-2xl p-8 flex flex-col items-center justify-center text-center hover:border-lime-400/50 hover:from-lime-400/15 hover:to-blue-400/15 transition-all duration-300 cursor-pointer group"
@@ -1328,12 +1344,21 @@ const Canvas: React.FC = () => {
             cvs.map((cv, index) => (
             <motion.div
               key={cv.id}
-              className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden hover:bg-white/10 transition-all duration-300 group cursor-pointer"
+              className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden hover:bg-white/10 transition-all duration-300 group cursor-pointer focus:outline-none focus:ring-2 focus:ring-lime-400 focus:ring-opacity-50"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 + index * 0.1 }}
               whileHover={{ y: -5, scale: 1.02 }}
               onClick={() => handleCVClick(cv)}
+              onKeyDown={(e) => {
+                if (e.key === ' ' || e.key === 'Enter') {
+                  e.preventDefault();
+                  handleCVClick(cv);
+                }
+              }}
+              tabIndex={0}
+              role="button"
+              aria-label={`Open CV: ${cv.title}`}
             >
               {/* CV Stats Section */}
               <div className="relative h-48 bg-gray-50 overflow-hidden">
@@ -1513,39 +1538,7 @@ const Canvas: React.FC = () => {
                 {/* Cover Letter Linked Status */}
 
 
-                {/* Linked Job - Show if CV has connected jobs */}
-                {cv.connectedJobs && cv.connectedJobs.length > 0 && (
-                  <div className="mb-3">
-                    <div className="bg-blue-400/10 border border-blue-400/20 rounded-lg p-2">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Briefcase size={12} className="text-blue-400" />
-                        <span className="text-blue-400 text-xs font-medium">Linked Job</span>
-                      </div>
-                      <div className="text-white text-xs font-medium truncate">
-                        {cv.connectedJobs[0].title}
-                      </div>
-                      <div className="text-white/60 text-xs truncate">
-                        {cv.connectedJobs[0].company} • {typeof cv.connectedJobs[0].location === 'string' ? cv.connectedJobs[0].location : cv.connectedJobs[0].location?.city || 'Remote'}
-                      </div>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-                          cv.connectedJobs[0].status === 'applied' ? 'bg-blue-400/20 text-blue-400' :
-                          cv.connectedJobs[0].status === 'screening' ? 'bg-yellow-400/20 text-yellow-400' :
-                          cv.connectedJobs[0].status === 'interview' ? 'bg-orange-400/20 text-orange-400' :
-                          cv.connectedJobs[0].status === 'offer' ? 'bg-green-400/20 text-green-400' :
-                          'bg-red-400/20 text-red-400'
-                        }`}>
-                          {cv.connectedJobs[0].status.charAt(0).toUpperCase() + cv.connectedJobs[0].status.slice(1)}
-                        </span>
-                        {cv.connectedJobs.length > 1 && (
-                          <span className="text-white/40 text-xs">
-                            +{cv.connectedJobs.length - 1} more
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
+                {/* Linked Job section removed - relationships now managed through CVJourney */}
 
 
 
@@ -1567,6 +1560,65 @@ const Canvas: React.FC = () => {
                     <Edit size={14} />
                     Edit
                   </motion.button>
+                  
+                  {/* Link Job Dropdown */}
+                  <div className="relative">
+                    <motion.button
+                      className="p-2 text-blue-400/60 hover:text-blue-400 transition-colors"
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setLinkingJobCVId(cv.id);
+                      }}
+                      title="Link Job"
+                    >
+                      <Link size={16} />
+                    </motion.button>
+                    
+                    {/* Job Linking Dropdown */}
+                    {linkingJobCVId === cv.id && (
+                      <div className="absolute top-full right-0 mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
+                        <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+                          <h3 className="text-sm font-medium text-gray-900 dark:text-white">Link Job to CV</h3>
+                        </div>
+                        <div className="p-3">
+                          <select
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            onChange={(e) => {
+                              if (e.target.value) {
+                                linkJobToCV(cv.id, e.target.value);
+                              }
+                            }}
+                            defaultValue=""
+                          >
+                            <option value="">Select a job to link...</option>
+                            {availableJobs.map((job) => (
+                              <option key={job.id} value={job.id}>
+                                {job.company} - {job.title}
+                              </option>
+                            ))}
+                          </select>
+                          {availableJobs.length === 0 && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                              No jobs available. Add jobs in the Job Tracker first.
+                            </p>
+                          )}
+                        </div>
+                        <div className="p-3 border-t border-gray-200 dark:border-gray-700">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setLinkingJobCVId(null);
+                            }}
+                            className="w-full px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   
                   <motion.button
                     className="p-2 text-white/60 hover:text-white transition-colors"
@@ -1596,7 +1648,7 @@ const Canvas: React.FC = () => {
                     whileTap={{ scale: 0.9 }}
                     onClick={(e) => {
                       e.stopPropagation();
-                      confirmDeleteCV(cv.id);
+                      deleteCV(cv.id);
                     }}
                     disabled={deletingCVId === cv.id}
                   >
@@ -1745,20 +1797,7 @@ const Canvas: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
               >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-gradient-to-br from-red-400/20 to-red-500/20 rounded-lg flex items-center justify-center">
-                    <Target size={16} className="text-red-400" />
-                  </div>
-                  <div>
-                    <p className="text-white/60 text-xs">Connected Jobs</p>
-                    <p className="text-lg font-bold text-white">{coverLetters.reduce((sum, cl) => sum + (cl.connectedJobs?.length || 0), 0)}</p>
-                  </div>
-                </div>
-                {coverLetters.reduce((sum, cl) => sum + (cl.connectedJobs?.length || 0), 0) === 0 && (
-                  <div className="mt-2 p-2 bg-red-400/10 border border-red-400/20 rounded-lg">
-                    <p className="text-red-400 text-xs">Connect to jobs!</p>
-                  </div>
-                )}
+                {/* Connected Jobs statistics removed - relationships now managed through CVJourney */}
               </motion.div>
             </div>
 
@@ -2019,14 +2058,7 @@ const Canvas: React.FC = () => {
                               }
                             }}
                           >
-                            <option value="">Select a job to link...</option>
-                            {selectedCV.connectedJobs && selectedCV.connectedJobs.length > 0 ? (
-                                                              selectedCV.connectedJobs.map((job: any) => (
-                                  <option key={job.id} value={job.id}>
-                                    {job.company} - {job.title}
-                                  </option>
-                                ))
-                            ) : (
+                            <option value="">Job linking removed - use journey system</option>
                               <option value="" disabled>No jobs available</option>
                             )}
                           </select>
@@ -2046,36 +2078,7 @@ const Canvas: React.FC = () => {
                         </motion.button>
                       </div>
                       
-                      {/* Show linked jobs */}
-                      {selectedCV.connectedJobs && selectedCV.connectedJobs.length > 0 && (
-                        <div className="space-y-2">
-                          <h4 className="text-white font-medium text-sm">Currently Linked:</h4>
-                          {selectedCV.connectedJobs.map((job: any) => (
-                            <div key={job.id} className="flex items-center gap-2 p-2 bg-white/5 border border-white/10 rounded-lg">
-                              <div className="w-8 h-8 bg-blue-400/20 rounded border border-blue-400/30 flex items-center justify-center">
-                                <Briefcase size={12} className="text-blue-400" />
-                              </div>
-                                                              <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <p className="text-white text-sm truncate">{job.company} - {job.title}</p>
-                                    <span className={`px-2 py-1 rounded text-xs font-medium ${getJobStatusColor(job.status)}`}>
-                                      {job.status}
-                                    </span>
-                                  </div>
-                                </div>
-                              <button 
-                                className="p-1 text-red-400/60 hover:text-red-400 transition-colors"
-                                onClick={() => {
-                                  console.log('🔍 Canvas - Unlink job:', job.id);
-                                  unlinkJobFromCV(selectedCV.id, job.id);
-                                }}
-                              >
-                                <X size={12} />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                      {/* Linked jobs section removed - relationships now managed through CVJourney */}
                     </div>
 
 
@@ -2087,21 +2090,6 @@ const Canvas: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Delete Confirmation Modal */}
-      <AnimatePresence>
-        {showDeleteConfirmation && (
-          <Modal
-            isOpen={!!showDeleteConfirmation}
-            onClose={() => setShowDeleteConfirmation(null)}
-            title="Delete CV"
-            message="Are you sure you want to delete this CV? This will permanently remove it and all associated data."
-            type="confirmation"
-            onConfirm={() => deleteCV(showDeleteConfirmation)}
-            confirmText="Delete CV"
-            cancelText="Cancel"
-          />
-        )}
-      </AnimatePresence>
 
       {/* Main Modal for Errors and Success Messages */}
       <Modal
@@ -2114,6 +2102,57 @@ const Canvas: React.FC = () => {
         confirmText={modalConfig.confirmText}
         cancelText={modalConfig.cancelText}
       />
+
+      {/* Toast Notifications */}
+      <div className="fixed bottom-4 right-4 z-50 space-y-2">
+        <AnimatePresence>
+          {toasts.map((toast) => (
+            <motion.div
+              key={toast.id}
+              initial={{ opacity: 0, x: 300, scale: 0.8 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{ opacity: 0, x: 300, scale: 0.8 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className={`min-w-80 max-w-md w-auto bg-white dark:bg-gray-800 border-l-4 shadow-lg rounded-lg p-4 ${
+                toast.type === 'success' ? 'border-l-green-500' :
+                toast.type === 'error' ? 'border-l-red-500' :
+                'border-l-blue-500'
+              }`}
+            >
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  {toast.type === 'success' && (
+                    <CheckCircle className="h-5 w-5 text-green-500" />
+                  )}
+                  {toast.type === 'error' && (
+                    <AlertCircle className="h-5 w-5 text-red-500" />
+                  )}
+                  {toast.type === 'info' && (
+                    <AlertTriangle className="h-5 w-5 text-blue-500" />
+                  )}
+                </div>
+                <div className="ml-3 w-0 flex-1">
+                  <p className={`text-sm font-medium ${
+                    toast.type === 'success' ? 'text-green-800 dark:text-green-200' :
+                    toast.type === 'error' ? 'text-red-800 dark:text-red-200' :
+                    'text-blue-800 dark:text-blue-200'
+                  }`}>
+                    {toast.message}
+                  </p>
+                </div>
+                <div className="ml-4 flex-shrink-0 flex">
+                  <button
+                    className="inline-flex text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 focus:outline-none"
+                    onClick={() => removeToast(toast.id)}
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
     </div>
   );
 };

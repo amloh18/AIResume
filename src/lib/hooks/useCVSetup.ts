@@ -37,7 +37,18 @@ export const useCVSetup = () => {
         return;
       }
       
-      if (status === 'unauthenticated') {
+      // Check for custom session if NextAuth session is not available
+      const customSession = typeof window !== 'undefined' ? sessionStorage.getItem('user') : null;
+      const isCustomAuthenticated = !!customSession;
+      const isAuthenticated = status === 'authenticated' || isCustomAuthenticated;
+      
+      console.log('🔍 useCVSetup - Authentication check', { 
+        nextAuthStatus: status, 
+        isCustomAuthenticated, 
+        isAuthenticated 
+      });
+      
+      if (!isAuthenticated) {
         console.log('🔍 useCVSetup - User not authenticated');
         setIsChecking(false);
         hasCheckedRef.current = true;
@@ -68,8 +79,8 @@ export const useCVSetup = () => {
         console.log('🔍 useCVSetup - Session status:', status);
         
         if (userId) {
-          console.log('🔍 useCVSetup - Making API call to:', `/api/cvs?userId=${userId}`);
-          const response = await fetch(`/api/cvs?userId=${userId}`);
+          console.log('🔍 useCVSetup - Making API call to:', `/api/cvs?userId=${userId}&projection=full`);
+          const response = await fetch(`/api/cvs?userId=${userId}&projection=full`);
           console.log('🔍 useCVSetup - CV API response status:', response.status);
           
           if (response.ok) {
@@ -96,18 +107,21 @@ export const useCVSetup = () => {
             const userCVs = data.data?.cvs || [];
             console.log('🔍 useCVSetup - User CVs found:', userCVs.length);
             
-            // Set hasCV based on actual CV count
-            const userHasCVs = userCVs.length > 0;
-            setHasCV(userHasCVs);
+            // Check if user has any master CVs
+            const hasMasterCV = userCVs.some((cv: any) => cv.isMaster === true);
+            console.log('🔍 useCVSetup - User has master CV:', hasMasterCV);
             
-            // If user has CVs, clear any onboarding flags
-            if (userHasCVs && typeof window !== 'undefined') {
-              console.log('✅ User has CVs, clearing onboarding flags');
+            // Set hasCV based on master CV existence
+            setHasCV(hasMasterCV);
+            
+            // If user has master CV, clear any onboarding flags
+            if (hasMasterCV && typeof window !== 'undefined') {
+              console.log('✅ User has master CV, clearing onboarding flags');
               sessionStorage.removeItem('fromOnboarding');
               sessionStorage.removeItem('needsCVSetup');
             }
             
-            console.log('🔍 useCVSetup - Final hasCV state:', userHasCVs);
+            console.log('🔍 useCVSetup - Final hasCV state:', hasMasterCV);
           } else {
             console.error('❌ useCVSetup - API call failed:', response.status);
             setHasCV(false);
@@ -128,7 +142,7 @@ export const useCVSetup = () => {
     };
 
     checkUserCV();
-  }, [session, status, router]);
+  }, [session, status]); // Removed router from dependencies to prevent unnecessary re-runs
 
   // Reset check when session changes significantly
   useEffect(() => {

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Sparkles, CheckCircle, LogOut, X } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -9,8 +9,7 @@ import { signOut as firebaseSignOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { OnboardingProvider, useOnboarding } from '@/contexts/OnboardingContext';
 import RoleSelection from '@/components/onboarding/RoleSelection';
-import SignupModal from '@/components/onboarding/AuthModal';
-import LoginModal from '@/components/auth/LoginModal';
+// Removed modal imports - using unified auth page instead
 import CVUpload from '@/components/cv-parser/CVUpload';
 import InteractiveCVForm from '@/components/cv-parser/InteractiveCVForm';
 import CompletionStep from '@/components/onboarding/CompletionStep';
@@ -18,16 +17,17 @@ import PersonalInfoStep from '@/components/onboarding/PersonalInfoStep';
 import ExperienceStep from '@/components/onboarding/ExperienceStep';
 import EducationStep from '@/components/onboarding/EducationStep';
 import MasterCVCreationWizard from '@/components/onboarding/MasterCVCreationWizard';
+import Link from 'next/link';
 import { SkeletonText, Skeleton } from '@/components/ui/SkeletonLoader';
 import ErrorDialog from '@/components/ui/ErrorDialog';
 import { validateAndGetMongoDBUserId } from '@/lib/utils/userIdUtils';
 
 const OnboardingContent: React.FC = () => {
   const { state, dispatch, nextStep, prevStep } = useOnboarding();
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [showLoginModal, setShowLoginModal] = useState(false);
+  // Removed modal states - using unified auth page instead
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingCVs, setIsCheckingCVs] = useState(false);
+  const isCheckingCVsRef = useRef(false);
   const [errorDialog, setErrorDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -45,7 +45,7 @@ const OnboardingContent: React.FC = () => {
 
   useEffect(() => {
     // Prevent multiple CV checks
-    if (isCheckingCVs) return;
+    if (isCheckingCVsRef.current) return;
     
     console.log('🔍 useEffect - session?.user:', session?.user);
     console.log('🔍 useEffect - localStorage user:', typeof window !== 'undefined' ? localStorage.getItem('user') : 'N/A');
@@ -69,15 +69,22 @@ const OnboardingContent: React.FC = () => {
       
       // Check if user already has CVs before proceeding
       const checkExistingCVs = async () => {
-        if (isCheckingCVs) return;
+        if (isCheckingCVsRef.current) return;
+        isCheckingCVsRef.current = true;
         setIsCheckingCVs(true);
         
         try {
           const response = await fetch(`/api/cvs?userId=${session.user.id}`);
           const result = await response.json();
           
-          if (result.success && result.data.cvs && result.data.cvs.length > 0) {
-            // User has CVs, redirect to dashboard
+          // Check if user came here via callback URL (they specifically want to access onboarding)
+          const cameFromCallbackUrl = typeof window !== 'undefined' && 
+            (window.location.search.includes('step=') || 
+             document.referrer.includes('callbackUrl') ||
+             sessionStorage.getItem('fromLogin') === 'true');
+          
+          if (result.success && result.data.cvs && result.data.cvs.length > 0 && !cameFromCallbackUrl) {
+            // User has CVs and didn't come via callback URL, redirect to dashboard
             console.log('✅ User already has CVs, redirecting to dashboard');
             if (typeof window !== 'undefined') {
               sessionStorage.removeItem('needsCVSetup');
@@ -85,6 +92,8 @@ const OnboardingContent: React.FC = () => {
             }
             router.push('/dashboard');
             return;
+          } else if (cameFromCallbackUrl) {
+            console.log('🔗 User came via callback URL or login, allowing access to onboarding');
           }
           
           // Skip to Personal Information step (step 2) if user is already authenticated
@@ -97,6 +106,7 @@ const OnboardingContent: React.FC = () => {
           console.error('Error checking existing CVs:', error);
           // Continue with onboarding if we can't check
         } finally {
+          isCheckingCVsRef.current = false;
           setIsCheckingCVs(false);
         }
       };
@@ -130,7 +140,8 @@ const OnboardingContent: React.FC = () => {
             
             // Check if user already has CVs before proceeding
             const checkExistingCVs = async () => {
-              if (isCheckingCVs) return;
+              if (isCheckingCVsRef.current) return;
+              isCheckingCVsRef.current = true;
               setIsCheckingCVs(true);
               
               try {
@@ -158,6 +169,7 @@ const OnboardingContent: React.FC = () => {
                 console.error('Error checking existing CVs:', error);
                 // Continue with onboarding if we can't check
               } finally {
+                isCheckingCVsRef.current = false;
                 setIsCheckingCVs(false);
               }
             };
@@ -171,21 +183,12 @@ const OnboardingContent: React.FC = () => {
         }
       }
     }
-  }, [session, dispatch, state.currentStep, stepParam, isCheckingCVs]); // Added isCheckingCVs to dependencies
+  }, [session, dispatch, state.currentStep, stepParam]); // Removed isCheckingCVs to prevent infinite loop
 
   const handleRoleSelect = (role: any) => {
     dispatch({ type: 'SET_SELECTED_ROLE', payload: role });
-    setShowAuthModal(true);
-  };
-
-  const handleSwitchToLogin = () => {
-    setShowAuthModal(false);
-    setShowLoginModal(true);
-  };
-
-  const handleSwitchToSignup = () => {
-    setShowLoginModal(false);
-    setShowAuthModal(true);
+    // User is already authenticated, move to next step instead of redirecting to auth
+    nextStep();
   };
 
   const handleErrorDialogClose = () => {
@@ -197,110 +200,66 @@ const OnboardingContent: React.FC = () => {
     handleComplete();
   };
 
-  const handleAuthSuccess = async (userData: any) => {
-    dispatch({ type: 'SET_AUTHENTICATED', payload: true });
-    dispatch({ type: 'SET_USER_DATA', payload: userData });
-    setShowAuthModal(false);
-    setShowLoginModal(false);
-    
-    // Check if user has CVs before deciding where to route
-    try {
-      console.log('🔍 Checking CVs for user:', userData.id);
-      const response = await fetch(`/api/cvs?userId=${userData.id}`);
-      const result = await response.json();
-      console.log('🔍 CV check result:', result);
-      
-      if (result.success && result.data.cvs && result.data.cvs.length > 0) {
-        // User has CVs, redirect to dashboard
-        console.log('✅ User has CVs, redirecting to dashboard');
-        router.push('/dashboard');
-      } else {
-        // New user, continue with onboarding
-        console.log('🆕 New user, continuing with onboarding');
-        // Set flag for new user CV setup (only on client side)
-        if (typeof window !== 'undefined') {
-          sessionStorage.setItem('needsCVSetup', 'true');
-        }
-        nextStep();
-      }
-    } catch (error) {
-      console.log('Error checking CVs, continuing with onboarding:', error);
-      // If we can't check CVs, continue with onboarding
-      if (typeof window !== 'undefined') {
-        sessionStorage.setItem('needsCVSetup', 'true');
-      }
-      nextStep();
-    }
-  };
-
-  const handleLoginSuccess = async (userData: any) => {
-    dispatch({ type: 'SET_AUTHENTICATED', payload: true });
-    dispatch({ type: 'SET_USER_DATA', payload: userData });
-    setShowAuthModal(false);
-    setShowLoginModal(false);
-    
-    // Check if user has CVs before deciding where to route
-    try {
-      console.log('🔍 Checking CVs for user:', userData.id);
-      const response = await fetch(`/api/cvs?userId=${userData.id}`);
-      const result = await response.json();
-      console.log('🔍 CV check result:', result);
-      
-      if (result.success && result.data.cvs && result.data.cvs.length > 0) {
-        // User has CVs, redirect to dashboard
-        console.log('✅ User has CVs, redirecting to dashboard');
-        router.push('/dashboard');
-      } else {
-        // New user, continue with onboarding
-        console.log('🆕 New user, continuing with onboarding');
-        // Set flag for new user CV setup (only on client side)
-        if (typeof window !== 'undefined') {
-          sessionStorage.setItem('needsCVSetup', 'true');
-        }
-        nextStep();
-      }
-    } catch (error) {
-      console.log('Error checking CVs, continuing with onboarding:', error);
-      // If we can't check CVs, continue with onboarding
-      if (typeof window !== 'undefined') {
-        sessionStorage.setItem('needsCVSetup', 'true');
-      }
-      nextStep();
-    }
-  };
+  // Removed auth success handlers - handled by unified auth page
 
   const handleComplete = async () => {
     setIsLoading(true);
     
     try {
-      // Get user ID from session or state or localStorage
-      let userId = session?.user?.id || state.userData?.id;
+      // For credentials login, prioritize localStorage over NextAuth session
+      let userId = null;
       
-      // If no userId from session/state, try localStorage (only on client side)
-      if (!userId && typeof window !== 'undefined') {
-        const userData = localStorage.getItem('user');
-        console.log('🔍 Raw localStorage userData:', userData);
-        if (userData) {
+      // First try auth-session from localStorage (credentials login)
+      if (typeof window !== 'undefined') {
+        const authSession = localStorage.getItem('auth-session');
+        console.log('🔍 Raw auth-session:', authSession);
+        if (authSession) {
           try {
-            const parsedUser = JSON.parse(userData);
-            console.log('🔍 Parsed user data:', parsedUser);
-            userId = parsedUser.id;
-            console.log('🔍 Extracted userId from localStorage:', userId);
+            const sessionData = JSON.parse(authSession);
+            console.log('🔍 Parsed session data:', sessionData);
+            userId = sessionData.user?.id || sessionData.user?._id;
+            console.log('🔍 Extracted userId from auth-session:', userId);
           } catch (error) {
-            console.error('Error parsing user data:', error);
+            console.error('Error parsing auth-session:', error);
+          }
+        }
+        
+        // Fallback to sessionStorage user data
+        if (!userId) {
+          const userData = sessionStorage.getItem('user');
+          console.log('🔍 Raw sessionStorage userData:', userData);
+          if (userData) {
+            try {
+              const parsedUser = JSON.parse(userData);
+              console.log('🔍 Parsed user data from sessionStorage:', parsedUser);
+              userId = parsedUser.id || parsedUser._id;
+              console.log('🔍 Extracted userId from sessionStorage:', userId);
+            } catch (error) {
+              console.error('Error parsing user data from sessionStorage:', error);
+            }
           }
         }
       }
       
-      console.log('🔍 Session user:', session?.user);
-      console.log('🔍 State userData:', state.userData);
-      console.log('🔍 Selected userId:', userId);
+      // Fallback to NextAuth session (OAuth login) or onboarding state
+      if (!userId) {
+        userId = session?.user?.id || state.userData?.id;
+        console.log('🔍 Fallback userId from session/state:', userId);
+        console.log('🔍 Session user:', session?.user);
+        console.log('🔍 State userData:', state.userData);
+      }
+      
+      console.log('🔍 Final selected userId:', userId);
       console.log('🔍 userId type:', typeof userId);
       console.log('🔍 userId length:', userId?.toString().length);
       console.log('🔍 userId value:', JSON.stringify(userId));
       
       // Ensure user is authenticated
       if (!userId) {
+        console.error('❌ No user ID found in any source');
+        console.error('❌ Session:', session);
+        console.error('❌ State:', state);
+        console.error('❌ LocalStorage user:', typeof window !== 'undefined' ? localStorage.getItem('user') : 'N/A');
         throw new Error('User must be authenticated to create a CV. Please log in or sign up first.');
       }
       
@@ -661,25 +620,7 @@ const OnboardingContent: React.FC = () => {
         </div>
       </div>
 
-      {/* Auth Modals - Only show for non-authenticated users */}
-      {!session?.user && !(typeof window !== 'undefined' && localStorage.getItem('user')) && (
-        <>
-          <SignupModal
-            isOpen={showAuthModal}
-            onClose={() => setShowAuthModal(false)}
-            onSuccess={handleAuthSuccess}
-            selectedRole={state.selectedRole?.id}
-            onSwitchToLogin={handleSwitchToLogin}
-          />
-          
-          <LoginModal
-            isOpen={showLoginModal}
-            onClose={() => setShowLoginModal(false)}
-            onSwitchToRegister={handleSwitchToSignup}
-            onLogin={handleLoginSuccess}
-          />
-        </>
-      )}
+      {/* Auth handled by unified auth page */}
 
       {/* Error Dialog */}
       <ErrorDialog

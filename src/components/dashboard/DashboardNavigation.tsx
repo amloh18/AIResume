@@ -2,14 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { signOut, useSession } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { 
   FileText, 
   Briefcase, 
   MessageSquare, 
   BarChart3,
-  LogOut,
   Shield,
   Route,
   RefreshCw,
@@ -37,6 +36,7 @@ interface DashboardNavigationProps {
   };
   isOpen?: boolean;
   onClose?: () => void;
+  isBannerVisible?: boolean;
 }
 
 const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
@@ -45,7 +45,8 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
   onMembershipClick,
   user,
   isOpen = true,
-  onClose
+  onClose,
+  isBannerVisible = false
 }) => {
   const { data: session } = useSession();
   const router = useRouter();
@@ -85,9 +86,9 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
 
   const sections = [
     { id: 'analytics', name: 'Analytics', icon: BarChart3, description: 'Progress Tracking' },
-    { id: 'pipeline', name: 'Job Tracker', icon: Briefcase, description: 'Track Applications' },
-    { id: 'cv-journey', name: 'CV Journey', icon: Route, description: 'Guided CV Creation' },
-    { id: 'canvas', name: 'CV Studio', icon: FileText, description: 'Saved CV/Cover Letters' },
+    { id: 'pipeline', name: 'Job Tracker', icon: Briefcase, description: 'Track Applications', tourId: 'job-tracker' },
+    { id: 'cv-journey', name: 'CV Journey', icon: Route, description: 'Guided CV Creation', tourId: 'cv-journey' },
+    { id: 'canvas', name: 'CV Studio', icon: FileText, description: 'Saved CV/Cover Letters', tourId: 'cv-studio' },
     { id: 'quillbox', name: 'Snippets', icon: MessageSquare, description: 'Content Library' }
   ];
 
@@ -100,17 +101,6 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
       .slice(0, 2);
   };
 
-  const handleLogout = async () => {
-    // Clear localStorage
-    localStorage.removeItem('user');
-    // Clear sessionStorage
-    sessionStorage.clear();
-    // Sign out from NextAuth
-    await signOut({ 
-      redirect: true,
-      callbackUrl: '/'
-    });
-  };
 
   const refreshSubscriptionData = async () => {
     setIsRefreshing(true);
@@ -145,7 +135,8 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
   }, []);
 
   const getSidebarContainerClasses = () => {
-    const baseClasses = 'fixed z-50 transition-all duration-300 ease-in-out';
+    const baseClasses = 'fixed z-40 transition-all duration-300 ease-in-out';
+    const topOffset = isBannerVisible ? 'top-20' : 'top-4';
     
     switch (screenSize) {
       case 'mobile':
@@ -153,13 +144,13 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
                 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-r border-gray-200/50 dark:border-gray-700/50`;
       
       case 'tablet':
-        return `${baseClasses} top-4 left-4 bottom-4 w-20 ${isOpen ? 'translate-x-0' : '-translate-x-full xl:translate-x-0'} 
+        return `${baseClasses} ${topOffset} left-4 bottom-4 w-20 ${isOpen ? 'translate-x-0' : '-translate-x-full xl:translate-x-0'} 
                 bg-gray-50/95 dark:bg-gray-800/95 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 
                 rounded-2xl shadow-xl shadow-gray-900/10 dark:shadow-black/20`;
       
       case 'desktop':
       default:
-        return `${baseClasses} top-4 left-4 bottom-4 w-72 ${isOpen ? 'translate-x-0' : '-translate-x-full xl:translate-x-0'} 
+        return `${baseClasses} ${topOffset} left-4 bottom-4 w-72 ${isOpen ? 'translate-x-0' : '-translate-x-full xl:translate-x-0'} 
                 bg-gray-50/95 dark:bg-gray-800/95 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 
                 rounded-2xl shadow-xl shadow-gray-900/10 dark:shadow-black/20`;
     }
@@ -206,6 +197,7 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
             <motion.button
               key={section.id}
               onClick={() => onSectionChange(section.id)}
+              data-tour={section.tourId}
               className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-300 group ${
                 activeSection === section.id
                   ? 'bg-gradient-to-r from-lime-100 to-lime-200 dark:from-lime-400/20 dark:to-lime-500/20 border border-lime-300 dark:border-lime-400/30 text-lime-700 dark:text-lime-400 shadow-lg'
@@ -448,17 +440,6 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
           </motion.button>
         )}
 
-        {/* Logout Button */}
-        <motion.button
-          onClick={handleLogout}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg transition-all duration-200 text-sm font-medium shadow-lg hover:shadow-red-500/25"
-          whileHover={{ scale: 1.02, boxShadow: "0 10px 25px -5px rgba(239, 68, 68, 0.4)" }}
-          whileTap={{ scale: 0.98 }}
-          title={screenSize === 'tablet' ? 'Sign Out' : undefined}
-        >
-          <LogOut size={16} />
-          {screenSize !== 'tablet' && <span>Sign Out</span>}
-        </motion.button>
       </div>
       </div>
     </>

@@ -4,9 +4,13 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Shield, Lock, Eye, Database, Users, Globe, Mail, Phone } from 'lucide-react';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 import Logo from '@/components/ui/Logo';
+import UserIcon from '@/components/ui/UserIcon';
 
 const PrivacyPolicy: React.FC = () => {
+  const { data: session, status } = useSession();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-white">
       {/* Header */}
@@ -23,6 +27,35 @@ const PrivacyPolicy: React.FC = () => {
               <Link href="/cookie-policy" className="text-white/60 hover:text-white transition-colors">
                 Cookie Policy
               </Link>
+              
+              {/* User Authentication Section */}
+              <div className="flex items-center space-x-3 ml-4 pl-4 border-l border-white/20">
+                {status === 'loading' ? (
+                  <div className="w-8 h-8 bg-white/20 rounded-full animate-pulse"></div>
+                ) : session?.user ? (
+                  <UserIcon user={{
+                    name: session.user.name || session.user.firstName + ' ' + session.user.lastName,
+                    email: session.user.email || '',
+                    username: session.user.username,
+                    profilePhoto: session.user.image
+                  }} />
+                ) : (
+                  <div className="flex items-center space-x-2">
+                    <Link 
+                      href="/auth/signin" 
+                      className="px-4 py-2 text-white/80 hover:text-white transition-colors"
+                    >
+                      Sign In
+                    </Link>
+                    <Link 
+                      href="/auth/signup" 
+                      className="px-4 py-2 bg-lime-500 hover:bg-lime-600 text-white rounded-lg transition-colors"
+                    >
+                      Sign Up
+                    </Link>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

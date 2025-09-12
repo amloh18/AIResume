@@ -20,7 +20,10 @@ import {
   Copy,
   Send,
   Gift,
-  X
+  X,
+  Activity,
+  Award,
+  TrendingUp
 } from 'lucide-react';
 import MembershipModal from '@/components/payment/MembershipModal';
 
@@ -63,9 +66,16 @@ const UserManagement: React.FC = () => {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [isMembershipModalOpen, setIsMembershipModalOpen] = useState(false);
   const [selectedUserForModal, setSelectedUserForModal] = useState<User | null>(null);
+  const [metrics, setMetrics] = useState({
+    totalUsers: 0,
+    activeUsers: 0,
+    jobsLanded: 0,
+    successRate: 0
+  });
 
   useEffect(() => {
     fetchUsers();
+    fetchMetrics();
   }, []);
 
   const fetchUsers = async () => {
@@ -79,6 +89,24 @@ const UserManagement: React.FC = () => {
       console.error('Error fetching users:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchMetrics = async () => {
+    try {
+      const response = await fetch('/api/metrics');
+      if (response.ok) {
+        const data = await response.json();
+        // Parse the metrics from the API response
+        setMetrics({
+          totalUsers: users.length,
+          activeUsers: parseInt(data.activeUsers.replace(/[^\d]/g, '')) || 0,
+          jobsLanded: parseInt(data.jobsLanded.replace(/[^\d]/g, '')) || 0,
+          successRate: parseInt(data.successRate.replace(/[^\d]/g, '')) || 0
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching metrics:', error);
     }
   };
 
@@ -229,6 +257,57 @@ const UserManagement: React.FC = () => {
           <span className="text-sm text-gray-600 dark:text-gray-300">
             {filteredUsers.length} of {users.length} users
           </span>
+        </div>
+      </div>
+
+      {/* Metrics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Total Users</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{metrics.totalUsers.toLocaleString()}</p>
+            </div>
+            <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
+              <Users size={24} className="text-blue-600 dark:text-blue-400" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Active Users</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{metrics.activeUsers.toLocaleString()}+</p>
+            </div>
+            <div className="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
+              <Activity size={24} className="text-green-600 dark:text-green-400" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Jobs Landed</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{metrics.jobsLanded.toLocaleString()}+</p>
+            </div>
+            <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center">
+              <Award size={24} className="text-purple-600 dark:text-purple-400" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Success Rate</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{metrics.successRate}%</p>
+            </div>
+            <div className="w-12 h-12 bg-lime-100 dark:bg-lime-900 rounded-lg flex items-center justify-center">
+              <TrendingUp size={24} className="text-lime-600 dark:text-lime-400" />
+            </div>
+          </div>
         </div>
       </div>
 

@@ -751,16 +751,26 @@ const Analytics: React.FC = () => {
     }
   }, [session]);
 
-  // Add event listener for CV Journey Modal
+  // Listen for user profile updates
   useEffect(() => {
-    const handleOpenCVJourneyModal = (event: any) => {
-      setModalStep(event.detail.step || 1);
-      setShowCVJourneyModal(true);
+    const handleUserProfileUpdate = (event: CustomEvent) => {
+      const updatedUser = event.detail.user;
+      setUser(prev => ({
+        ...prev,
+        name: updatedUser.firstName + ' ' + updatedUser.lastName,
+        email: updatedUser.email,
+        username: updatedUser.username,
+        profilePhoto: updatedUser.avatar || updatedUser.profilePhoto
+      }));
     };
 
-    window.addEventListener('openCVJourneyModal', handleOpenCVJourneyModal);
-    return () => window.removeEventListener('openCVJourneyModal', handleOpenCVJourneyModal);
+    window.addEventListener('userProfileUpdated', handleUserProfileUpdate as EventListener);
+    
+    return () => {
+      window.removeEventListener('userProfileUpdated', handleUserProfileUpdate as EventListener);
+    };
   }, []);
+
 
   useEffect(() => {
     if (user?.id || user?._id) {
@@ -1062,6 +1072,39 @@ const Analytics: React.FC = () => {
           window.location.href = `/dashboard/cv-journey`;
         }}
       />
+
+      {/* Master CV Section */}
+      <div className="bg-white/5 border border-white/10 rounded-xl p-6" data-tour="master-cv">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-white">Your Master CV</h2>
+          <MasterCVBadge />
+        </div>
+        <div className="text-center py-8">
+          <div className="w-16 h-16 bg-gradient-to-br from-lime-400/20 to-lime-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <FileText size={32} className="text-lime-400" />
+          </div>
+          <h3 className="text-xl font-semibold text-white mb-2">Master CV Ready!</h3>
+          <p className="text-white/60 mb-4">
+            Your comprehensive CV is ready to be duplicated and customized for any job application.
+          </p>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={() => window.location.href = '/studio'}
+              className="px-4 py-2 bg-lime-500 hover:bg-lime-600 text-black font-medium rounded-lg transition-colors flex items-center gap-2"
+            >
+              <Edit size={16} />
+              Edit CV
+            </button>
+            <button
+              onClick={() => window.location.href = '/dashboard/canvas'}
+              className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white font-medium rounded-lg transition-colors flex items-center gap-2"
+            >
+              <Eye size={16} />
+              View All CVs
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* Main Grid Layout - 2 columns */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

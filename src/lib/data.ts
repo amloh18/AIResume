@@ -1,6 +1,6 @@
 import { connectToDatabase } from './database';
 import User from '@/models/User';
-import CVData from '@/models/CVData';
+import CV from '@/models/CV';
 
 // User Profile interface for public profiles
 export interface UserProfile {
@@ -81,7 +81,7 @@ export async function getUserProfile(username: string): Promise<UserProfile | nu
     }
     
     // Get user's CV data for profile information
-    const cvData = await CVData.findOne({ userId: user._id }).select('basics work projects skills education');
+    const cv = await CV.findOne({ userId: user._id, isMaster: true }).select('cvData');
     
     // Create a basic profile even if CV data doesn't exist
     const profile: UserProfile = {
@@ -91,15 +91,15 @@ export async function getUserProfile(username: string): Promise<UserProfile | nu
       lastName: user.lastName,
       avatar: user.avatar || undefined,
       banner: undefined, // Can be added to User model later
-      jobTitle: cvData?.basics?.label || 'Professional',
-      location: cvData?.basics?.location ? 
-        `${cvData.basics.location.city}, ${cvData.basics.location.region}` : 
+      jobTitle: cv?.cvData?.basics?.label || 'Professional',
+      location: cv?.cvData?.basics?.location ? 
+        `${cv.cvData.basics.location.city}, ${cv.cvData.basics.location.region}` : 
         undefined,
-      professionalSummary: cvData?.basics?.summary || `${user.firstName} ${user.lastName} is a professional with experience in their field.`,
+      professionalSummary: cv?.cvData?.basics?.summary || `${user.firstName} ${user.lastName} is a professional with experience in their field.`,
       isPublicProfile: true, // Default to public, can be added to User model
       allowMessage: true, // Default to true, can be added to User model
       allowVideoCall: false, // Default to false, can be added to User model
-      experiences: (cvData?.work || []).map((work: any, index: number) => ({
+      experiences: (cv?.cvData?.work || []).map((work: any, index: number) => ({
         id: `exp-${index}`,
         jobTitle: work.position,
         company: work.name,
@@ -108,7 +108,7 @@ export async function getUserProfile(username: string): Promise<UserProfile | nu
         description: work.summary,
         highlights: work.highlights || []
       })),
-      portfolioProjects: (cvData?.projects || []).map((project: any, index: number) => ({
+      portfolioProjects: (cv?.cvData?.projects || []).map((project: any, index: number) => ({
         id: `proj-${index}`,
         title: project.name,
         description: project.description,
@@ -116,19 +116,19 @@ export async function getUserProfile(username: string): Promise<UserProfile | nu
         projectUrl: project.url,
         technologies: [] // Can be extracted from description or added as separate field
       })),
-      skills: (cvData?.skills || []).map((skill: any, index: number) => ({
+      skills: (cv?.cvData?.skills || []).map((skill: any, index: number) => ({
         name: skill.name,
         level: skill.level,
         category: 'Technical' // Default category, can be added to skill model
       })),
-      education: (cvData?.education || []).map((edu: any, index: number) => ({
+      education: (cv?.cvData?.education || []).map((edu: any, index: number) => ({
         institution: edu.institution,
         degree: edu.studyType,
         field: edu.area,
         startDate: edu.startDate,
         endDate: edu.endDate
       })),
-      socialLinks: (cvData?.basics?.profiles || []).map((profile: any) => ({
+      socialLinks: (cv?.cvData?.basics?.profiles || []).map((profile: any) => ({
         platform: profile.network,
         url: profile.url,
         username: profile.username

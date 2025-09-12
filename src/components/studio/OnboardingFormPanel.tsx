@@ -466,7 +466,7 @@ const OnboardingFormPanel: React.FC<OnboardingFormPanelProps> = ({
   const handleDragEnd = (event: any) => {
     const { active, over } = event;
     
-    console.log('🔍 Drag end event:', { active, over });
+    console.log('🔍 Drag end event:', { activeId: active?.id, overId: over?.id });
 
     if (active.id !== over.id) {
       console.log('🔍 Reordering sections:', { from: active.id, to: over.id });
@@ -499,7 +499,7 @@ const OnboardingFormPanel: React.FC<OnboardingFormPanelProps> = ({
   };
 
   const handleDragStart = (event: any) => {
-    console.log('🔍 Drag start event:', event);
+    console.log('🔍 Drag start event:', event.active?.id || 'unknown');
   };
 
   // Create a mock onboarding context that works with the Studio's data

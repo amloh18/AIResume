@@ -7,45 +7,63 @@ import { FileText, Mail, BarChart3, Palette, Users, Brain, ArrowRight } from 'lu
 const Features = () => {
   const features = [
     {
-      number: '01',
-      title: 'CV Studio',
-      description: 'Transform your career story with our intuitive CV builder. Features real-time inline editing and AI-powered content suggestions. Create stunning resumes that stand out with drag-and-drop sections, custom styling, and industry-specific formatting that gets you noticed by recruiters.',
+      id: 'cv-studio',
+      category: 'CV Studio',
+      title: 'Professional Builder',
+      description: 'Transform your career story with our intuitive CV builder. Features real-time inline editing and AI-powered content suggestions.',
       icon: FileText,
+      size: 'normal',
+      contentPosition: 'top-left',
       color: 'from-lime-400 to-lime-500'
     },
     {
-      number: '02',
-      title: 'Cover Letter Creator',
-      description: 'Generate compelling, personalized cover letters in seconds. Simply paste a job URL and our AI analyzes the requirements, matching them with your CV data to create tailored letters. Each letter is uniquely crafted to highlight your relevant skills and experience for maximum impact.',
+      id: 'cover-letter',
+      category: 'Cover Letter Creator',
+      title: 'AI-Powered Letters',
+      description: 'Generate compelling, personalized cover letters in seconds. Simply paste a job URL and our AI analyzes the requirements.',
       icon: Mail,
+      size: 'normal',
+      contentPosition: 'top-left',
       color: 'from-blue-400 to-blue-500'
     },
     {
-      number: '03',
-      title: 'Job Tracker',
-      description: 'Master your job search with intelligent tracking and organization. Our smart system fetches job details from URLs, categorizes applications, and provides a visual Kanban board to track your progress from application to offer. Never lose track of opportunities again.',
+      id: 'job-tracker',
+      category: 'Job Tracker',
+      title: 'Smart Organization',
+      description: 'Master your job search with intelligent tracking and organization. Our smart system fetches job details from URLs.',
       icon: BarChart3,
+      size: 'span-2-col span-2-row',
+      contentPosition: 'split',
       color: 'from-purple-400 to-purple-500'
     },
     {
-      number: '04',
-      title: 'Style Snippets',
-      description: 'Personalize your CV with our curated collection of professional style snippets. Choose from industry-specific designs, color schemes, and formatting options. Each snippet is crafted by design experts to ensure your CV maintains professional standards while reflecting your unique personality.',
+      id: 'style-snippets',
+      category: 'Style Snippets',
+      title: 'Design Excellence',
+      description: 'Personalize your CV with our curated collection of professional style snippets. Choose from industry-specific designs.',
       icon: Palette,
+      size: 'span-2-col span-2-row',
+      contentPosition: 'split',
       color: 'from-pink-400 to-pink-500'
     },
     {
-      number: '05',
-      title: 'Community Support',
-      description: 'Connect with industry professionals, HR experts, and career coaches in our vibrant community. Get personalized feedback on your resume, participate in mock interviews, and access exclusive job opportunities shared by our network of recruiters and hiring managers.',
+      id: 'community-support',
+      category: 'Community Support',
+      title: 'Expert Network',
+      description: 'Connect with industry professionals, HR experts, and career coaches in our vibrant community.',
       icon: Users,
+      size: 'normal',
+      contentPosition: 'bottom-left',
       color: 'from-cyan-400 to-cyan-500'
     },
     {
-      number: '06',
-      title: 'AI Career Assistant',
-      description: 'Leverage cutting-edge AI to accelerate your career growth. Our intelligent assistant provides personalized career advice, suggests skill improvements, identifies trending job markets, and offers strategic guidance based on your career goals and industry insights.',
+      id: 'ai-assistant',
+      category: 'AI Career Assistant',
+      title: 'Intelligent Guidance',
+      description: 'Leverage cutting-edge AI to accelerate your career growth. Our intelligent assistant provides personalized career advice.',
       icon: Brain,
+      size: 'normal',
+      contentPosition: 'bottom-left',
       color: 'from-orange-400 to-orange-500'
     }
   ];
@@ -75,7 +93,7 @@ const Features = () => {
   };
 
   return (
-    <section id="features" className="relative py-32 bg-gradient-to-b from-black to-gray-900 overflow-hidden">
+    <section id="features" className="relative py-32 bg-gradient-to-b from-gray-900 to-black overflow-hidden">
       {/* Enhanced Background Effects */}
       <div className="absolute inset-0">
         <div className="absolute inset-0 bg-gradient-to-br from-lime-400/5 to-blue-400/5"></div>
@@ -91,18 +109,18 @@ const Features = () => {
           transition={{ duration: 0.8, ease: "easeOut" }}
           viewport={{ once: true, margin: "-50px" }}
         >
-          <h2 className="text-4xl sm:text-6xl font-bold text-white mb-8">
-            Everything you need to{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-lime-500">
-              succeed
-            </span>
-          </h2>
+                 <h2 className="text-4xl sm:text-6xl font-bold text-white mb-8 text-center">
+                   Everything you need to{' '}
+                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-lime-500">
+                     succeed
+                   </span>
+                 </h2>
           <p className="text-xl text-white/70 max-w-3xl mx-auto leading-relaxed">
             Powerful tools designed to streamline your job search process and help you stand out from the competition.
           </p>
         </motion.div>
 
-        {/* Enhanced Features Grid with Overlapping Cards */}
+        {/* MagicBento Grid Layout */}
         <motion.div 
           className="relative"
           variants={containerVariants}
@@ -110,104 +128,93 @@ const Features = () => {
           whileInView="visible"
           viewport={{ once: true, margin: "-100px" }}
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 relative">
+          <div className="bento-grid">
             {features.map((feature, index) => {
               const IconComponent = feature.icon;
+              
               return (
-                <motion.div
-                  key={index}
-                  className="group relative"
-                  variants={cardVariants}
-                  transition={{
-                    duration: 0.6,
-                    ease: "easeOut"
-                  }}
-                  style={{
-                    zIndex: features.length - index,
-                    willChange: 'transform, opacity'
-                  }}
-                >
-                  <motion.div
-                    className="relative bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-xl border border-white/10 rounded-3xl p-8 h-full card-hover"
-                    whileHover={{
-                      scale: 1.01,
-                      y: -3,
-                      boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.2)"
-                    }}
-                    whileTap={{ scale: 0.99 }}
-                    style={{ willChange: 'transform' }}
-                    transition={{ duration: 0.2, ease: "easeOut" }}
-                  >
-                    {/* Glow Effect */}
-                    <motion.div
-                      className={`absolute inset-0 rounded-3xl bg-gradient-to-br ${feature.color} opacity-0 group-hover:opacity-20 transition-opacity duration-500`}
-                      style={{ filter: 'blur(20px)' }}
-                    />
-                    
-                    {/* Number and Icon Row */}
-                    <div className="flex justify-between items-start mb-6">
-                      {/* Number with 3D Effect */}
-                      <motion.div 
-                        className="text-7xl font-bold text-white/5"
-                        whileHover={{ 
-                          scale: 1.1,
-                          rotateY: 10,
-                          textShadow: "0 0 30px rgba(255, 255, 255, 0.3)"
-                        }}
-                        style={{
-                          transformStyle: 'preserve-3d',
-                          perspective: '1000px'
-                        }}
-                      >
-                        {feature.number}
-                      </motion.div>
-                      
-                      {/* Icon with Gradient */}
-                      <motion.div 
-                        className={`w-16 h-16 bg-gradient-to-br ${feature.color} rounded-2xl flex items-center justify-center shadow-2xl`}
-                        whileHover={{ 
-                          scale: 1.1,
-                          rotateY: 15,
-                          boxShadow: "0 20px 40px -12px rgba(0, 0, 0, 0.5)"
-                        }}
-                        style={{
-                          transformStyle: 'preserve-3d',
-                          perspective: '1000px'
-                        }}
-                      >
-                        <IconComponent size={32} className="text-white" />
-                      </motion.div>
+                       <motion.div
+                         key={feature.id}
+                         className={`bento-box ${feature.size} group`}
+                         id={feature.id}
+                         variants={cardVariants}
+                         transition={{
+                           duration: 0.6,
+                           ease: "easeOut"
+                         }}
+                         style={{
+                           zIndex: features.length - index,
+                           willChange: 'transform, opacity'
+                         }}
+                         whileHover={{
+                           scale: 1.02,
+                           y: -4,
+                           transition: { duration: 0.3 }
+                         }}
+                       >
+                         {/* Infused Number */}
+                         <motion.div
+                           className="absolute top-4 right-4 w-16 h-16 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/20"
+                           whileHover={{
+                             scale: 1.05,
+                             backgroundColor: "rgba(255, 255, 255, 0.15)"
+                           }}
+                           transition={{ duration: 0.3 }}
+                         >
+                           <motion.div
+                             className="text-2xl font-bold text-gray-200 group-hover:text-lime-400 transition-colors duration-300"
+                             whileHover={{
+                               scale: 1.1,
+                               textShadow: "0 0 15px rgba(132, 204, 22, 0.6)"
+                             }}
+                             transition={{ duration: 0.2 }}
+                           >
+                             {index + 1}
+                           </motion.div>
+                         </motion.div>
+
+                         {/* Icon */}
+                         <motion.div
+                           className={`w-12 h-12 bg-gradient-to-br ${feature.color} rounded-xl flex items-center justify-center shadow-2xl mb-4`}
+                           whileHover={{
+                             scale: 1.1,
+                             rotateY: 15,
+                             boxShadow: "0 20px 40px -12px rgba(0, 0, 0, 0.5)"
+                           }}
+                           style={{
+                             transformStyle: 'preserve-3d',
+                             perspective: '1000px'
+                           }}
+                         >
+                           <IconComponent size={24} className="text-white" />
+                         </motion.div>
+
+                  {feature.contentPosition === 'split' ? (
+                    <>
+                      <div className="box-content top-left">
+                        <p className="category">{feature.category}</p>
+                      </div>
+                      <div className="box-content bottom-left">
+                        <h3 className="group-hover:text-lime-400 transition-colors">{feature.title}</h3>
+                        <p className="description">{feature.description}</p>
+                      </div>
+                    </>
+                  ) : (
+                    <div className={`box-content ${feature.contentPosition}`}>
+                      <p className="category">{feature.category}</p>
+                      <h3 className="group-hover:text-lime-400 transition-colors">{feature.title}</h3>
+                      <p className="description">{feature.description}</p>
                     </div>
-                    
-                    {/* Title */}
-                    <h3 className="text-2xl font-bold text-white mb-4 group-hover:text-lime-400 transition-colors">
-                      {feature.title}
-                    </h3>
-                    
-                    {/* Description */}
-                    <p className="text-white/70 leading-relaxed mb-6 text-sm">
-                      {feature.description}
-                    </p>
-                    
-                    {/* Arrow Indicator */}
-                    <motion.div
-                      className="absolute bottom-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                      whileHover={{ x: 5, rotate: 45 }}
-                    >
-                      <ArrowRight 
-                        size={24} 
-                        className="text-lime-400 drop-shadow-[0_0_8px_rgba(132,204,22,0.8)]" 
-                      />
-                    </motion.div>
-                    
-                    {/* Border Glow on Hover */}
-                    <motion.div
-                      className="absolute inset-0 rounded-3xl border-2 border-transparent group-hover:border-lime-400/30 transition-all"
-                      style={{
-                        background: 'linear-gradient(45deg, transparent, transparent)',
-                        mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-                        maskComposite: 'exclude'
-                      }}
+                  )}
+
+                  {/* Arrow Indicator */}
+                  <motion.div
+                    className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity"
+                    whileHover={{ x: 5, rotate: 45 }}
+                  >
+                    <ArrowRight 
+                      size={20} 
+                      className="text-lime-400 drop-shadow-[0_0_8px_rgba(132,204,22,0.8)]" 
                     />
                   </motion.div>
                 </motion.div>
