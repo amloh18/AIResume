@@ -61,12 +61,47 @@ const UserProfileDialog: React.FC<UserProfileDialogProps> = ({
   }, [isOpen, onClose, triggerRef]);
 
   const handleLogout = async () => {
-    // Clear localStorage
-    localStorage.removeItem('user');
-    // Clear sessionStorage
-    sessionStorage.clear();
-    // Sign out from NextAuth
-    await signOut({ callbackUrl: '/' });
+    try {
+      console.log('🔍 Starting logout process...');
+      
+      // Clear localStorage
+      localStorage.removeItem('user');
+      console.log('✅ Cleared localStorage');
+      
+      // Clear sessionStorage
+      sessionStorage.clear();
+      console.log('✅ Cleared sessionStorage');
+      
+      // Check if user is from Firebase (has user data in localStorage)
+      const userData = localStorage.getItem('user');
+      if (userData) {
+        console.log('🔍 Firebase user detected, signing out from Firebase...');
+        // Firebase user - sign out from Firebase
+        try {
+          const { signOut: signOutFirebase } = await import('firebase/auth');
+          const { auth } = await import('@/lib/firebase');
+          await signOutFirebase(auth);
+          console.log('✅ Signed out from Firebase');
+        } catch (error) {
+          console.error('❌ Error signing out from Firebase:', error);
+        }
+      }
+      
+      // Sign out from NextAuth
+      console.log('🔍 Signing out from NextAuth...');
+      await signOut({ callbackUrl: '/' });
+      console.log('✅ Signed out from NextAuth');
+      
+      // Force page reload to ensure all state is cleared
+      window.location.href = '/';
+      
+    } catch (error) {
+      console.error('❌ Error during logout:', error);
+      // Fallback - clear storage and redirect
+      localStorage.removeItem('user');
+      sessionStorage.clear();
+      window.location.href = '/';
+    }
   };
 
   const getUserInitials = (name: string) => {

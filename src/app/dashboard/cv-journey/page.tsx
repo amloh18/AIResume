@@ -1,18 +1,36 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import { useFirebaseAuth } from '@/lib/hooks/useFirebaseAuth';
+import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Briefcase, FileText, CheckCircle, Download, Trash2, Filter, SortAsc, MoreVertical, Search, ArrowRight, Star, Clock, Building2 } from 'lucide-react';
-import PageHeader from '@/components/dashboard/PageHeader';
 import { JobJourneyProvider, useJobJourney } from '@/contexts/JobJourneyContext';
-import OnboardingModal from '@/components/modals/OnboardingModal';
-import JobPipelineCardModal from '@/components/modals/JobPipelineCardModal';
-import JourneyStatusBanner from '@/components/JourneyStatusBanner';
-import JourneyTimelineCard from '@/components/dashboard/JourneyTimelineCard';
-import NewJourneyCard from '@/components/dashboard/NewJourneyCard';
 import { useTheme } from '@/lib/contexts/ThemeContext';
+
+// Lazy load heavy components
+import dynamic from 'next/dynamic';
+
+const PageHeader = dynamic(() => import('@/components/dashboard/PageHeader'), {
+  loading: () => <div className="h-16 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg" />
+});
+
+const OnboardingModal = dynamic(() => import('@/components/modals/OnboardingModal'), {
+  ssr: false
+});
+
+const JourneyStatusBanner = dynamic(() => import('@/components/JourneyStatusBanner'), {
+  loading: () => <div className="h-20 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg mb-4" />
+});
+
+const JourneyTimelineCard = dynamic(() => import('@/components/dashboard/JourneyTimelineCard'), {
+  loading: () => <div className="h-32 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg mb-4" />
+});
+
+const NewJourneyCard = dynamic(() => import('@/components/dashboard/NewJourneyCard'), {
+  loading: () => <div className="h-40 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg mb-4" />
+});
 
 interface Journey {
   id: string;
@@ -32,11 +50,20 @@ interface Journey {
 const CVJourneyPageContent: React.FC = () => {
   const { data: session } = useSession();
   const { user, loading: authLoading } = useFirebaseAuth();
-  const { startJourney } = useJobJourney();
+  const searchParams = useSearchParams();
+  const { 
+    startJourney, 
+    updateJobInfo, 
+    updateCurrentStep, 
+    updateCurrentJobId, 
+    updateAtsScore, 
+    updateCVId, 
+    updateCoverLetterId,
+    updateJourneyStatus 
+  } = useJobJourney();
   const { theme, isDark } = useTheme();
   const [journeys, setJourneys] = useState<Journey[]>([]);
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [showPipelineModal, setShowPipelineModal] = useState(false);
   const [showNewJourneyCard, setShowNewJourneyCard] = useState(false);
   const [currentJobId, setCurrentJobId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -48,111 +75,170 @@ const CVJourneyPageContent: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
 
-  // Fetch user profile from database (same as Canvas)
-  const fetchUserProfile = async () => {
-    try {
-      const response = await fetch('/api/user');
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success && result.user) {
-          setUserProfile(result.user);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-    }
-  };
+  // Cache for API responses
+  const [cache, setCache] = useState<{
+    journeys?: Journey[];
+    userProfile?: any;
+    lastFetch?: number;
+  }>({});
 
-  useEffect(() => {
-    console.log('🔍 CV Journey Page - useEffect triggered');
-    console.log('🔍 CV Journey Page - Session:', session);
-    console.log('🔍 CV Journey Page - Firebase User:', user);
-    
-    // Check NextAuth session first (same as Canvas)
-    if (session?.user?.id) {
-      console.log('🔍 CV Journey Page - Using NextAuth session, fetching journeys...');
-      fetchJourneys(session.user.id);
-      fetchUserProfile();
-    } else if (user?.uid) {
-      // Fallback to Firebase user data (same as Canvas)
-      console.log('🔍 CV Journey Page - Using Firebase user, fetching journeys...');
-      fetchJourneys(user.uid);
-      fetchUserProfile();
-    } else if (!authLoading) {
-      console.log('🔍 CV Journey Page - No user ID, setting timeout');
-      // If no user, stop loading after a short delay
-      const timer = setTimeout(() => {
-        console.log('🔍 CV Journey Page - Timeout reached, stopping loading');
-        setLoading(false);
-      }, 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [session?.user?.id, user?.uid, authLoading]);
+  // Memoized user ID
+  const userId = useMemo(() => {
+    return session?.user?.id || user?.uid;
+  }, [session?.user?.id, user?.uid]);
 
-  const fetchJourneys = async (userId?: string) => {
+  // Optimized parallel data fetching
+  const fetchAllData = useCallback(async (userId: string) => {
+    const cacheKey = `data_${userId}`;
+    const now = Date.now();
+    const CACHE_DURATION = 30000; // 30 seconds cache
+
+    // Check cache first
+    if (cache[cacheKey] && cache[cacheKey].lastFetch && (now - cache[cacheKey].lastFetch) < CACHE_DURATION) {
+      setJourneys(cache[cacheKey].journeys || []);
+      setUserProfile(cache[cacheKey].userProfile || null);
+      setLoading(false);
+      return;
+    }
+
     try {
-      const userIdToUse = userId || user?.uid;
-      console.log('🔍 CV Journey Page - Fetching journeys for user:', userIdToUse);
-      console.log('🔍 CV Journey Page - User data:', user);
-      
-      if (!userIdToUse) {
-        console.error('No user ID available');
-        setLoading(false);
-        return;
+      // Parallel API calls for better performance
+      const [journeysResponse, userResponse] = await Promise.all([
+        fetch(`/api/journeys?userId=${userId}&status=all`),
+        fetch('/api/user')
+      ]);
+
+      const [journeysResult, userResult] = await Promise.all([
+        journeysResponse.json(),
+        userResponse.json()
+      ]);
+
+      // Process journeys data
+      if (journeysResult.success) {
+        const journeysData = journeysResult.data.journeys || [];
+        setJourneys(journeysData);
+        
+        // Update cache
+        setCache(prev => ({
+          ...prev,
+          [cacheKey]: {
+            journeys: journeysData,
+            userProfile: userResult.success ? userResult.user : null,
+            lastFetch: now
+          }
+        }));
       }
-      
-      console.log('🔍 CV Journey Page - Making API call to:', `/api/journeys?userId=${userIdToUse}&status=all`);
-      const response = await fetch(`/api/journeys?userId=${userIdToUse}&status=all`);
-      
-      console.log('🔍 CV Journey Page - Response status:', response.status);
-      console.log('🔍 CV Journey Page - Response ok:', response.ok);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('🔍 CV Journey Page - Response error:', errorText);
-        throw new Error(`Failed to fetch journeys: ${response.status} ${errorText}`);
+
+      // Process user profile data
+      if (userResult.success && userResult.user) {
+        setUserProfile(userResult.user);
       }
-      
-      const result = await response.json();
-      console.log('🔍 CV Journey Page - API result:', result);
-      
-      if (result.success) {
-        setJourneys(result.data.journeys);
-        console.log('🔍 CV Journey Page - Set journeys:', result.data.journeys);
-      } else {
-        console.error('Error fetching journeys:', result.message);
-      }
+
     } catch (error) {
-      console.error('Error fetching journeys:', error);
+      console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [cache]);
+
+  useEffect(() => {
+    if (userId) {
+      fetchAllData(userId);
+    } else if (!authLoading) {
+      // If no user, stop loading after a short delay
+      const timer = setTimeout(() => {
+        setLoading(false);
+      }, 1000); // Reduced from 2000ms to 1000ms
+      return () => clearTimeout(timer);
+    }
+  }, [userId, authLoading, fetchAllData]);
+
+  // Refresh journeys data (for after creating/deleting journeys)
+  const refreshJourneys = useCallback(async () => {
+    if (userId) {
+      // Clear cache and fetch fresh data
+      setCache(prev => {
+        const newCache = { ...prev };
+        delete newCache[`data_${userId}`];
+        return newCache;
+      });
+      await fetchAllData(userId);
+    }
+  }, [userId, fetchAllData]);
+
+  const handleResumeJourney = useCallback((journey: Journey) => {
+    console.log('🔍 CV Journey Page - Resuming journey:', journey);
+    
+    // Map journey status to JourneyStatus type
+    const mapJourneyStatus = (status: string): 'onboarding' | 'job-added' | 'cv-created' | 'ats-checked' | 'cover-letter-created' | 'completed' => {
+      switch (status) {
+        case 'in-progress':
+          // Determine the appropriate status based on current step and linked documents
+          if (journey.currentStep >= 5) return 'completed';
+          if (journey.coverLetterId) return 'cover-letter-created';
+          if (journey.atsScore) return 'ats-checked';
+          if (journey.cvId) return 'cv-created';
+          return 'job-added';
+        case 'completed':
+          return 'completed';
+        default:
+          return 'job-added';
+      }
+    };
+    
+    // Resume the journey with complete state restoration
+    updateCurrentJobId(journey.jobId);
+    updateJobInfo(journey.jobTitle, journey.company);
+    updateCurrentStep(journey.currentStep);
+    updateJourneyStatus(mapJourneyStatus(journey.status));
+    
+    // Restore linked documents if they exist
+    if (journey.cvId) {
+      updateCVId(journey.cvId);
+    }
+    if (journey.coverLetterId) {
+      updateCoverLetterId(journey.coverLetterId);
+    }
+    if (journey.atsScore) {
+      updateAtsScore(journey.atsScore);
+    }
+    
+    console.log('✅ CV Journey Page - Journey resumed with complete state');
+  }, [updateCurrentJobId, updateJobInfo, updateCurrentStep, updateJourneyStatus, updateCVId, updateCoverLetterId, updateAtsScore]);
+
+  // Handle resume parameter from URL
+  useEffect(() => {
+    const resumeJourneyId = searchParams.get('resume');
+    if (resumeJourneyId && journeys.length > 0) {
+      const journeyToResume = journeys.find(j => j.id === resumeJourneyId);
+      if (journeyToResume) {
+        console.log('🔍 CV Journey Page - Auto-resuming journey from URL:', journeyToResume);
+        handleResumeJourney(journeyToResume);
+        // Clean up URL parameter
+        const url = new URL(window.location.href);
+        url.searchParams.delete('resume');
+        window.history.replaceState({}, '', url.toString());
+      }
+    }
+  }, [journeys, searchParams, handleResumeJourney]);
 
   const handleStartNewJourney = () => {
     setShowNewJourneyCard(true);
   };
 
-  const handleJourneyCreated = async (journeyData: {
+
+  const handleJourneyCreated = useCallback(async (journeyData: {
     jobId: string;
     cvId: string;
     journeyName: string;
   }) => {
     // Start the journey with the selected job and CV
     startJourney(journeyData.jobId);
-    setShowPipelineModal(true);
     setShowNewJourneyCard(false);
     
     // Refresh journeys list
-    await fetchJourneys();
-  };
-
-  const handleResumeJourney = (journey: Journey) => {
-    console.log('🔍 CV Journey Page - Resuming journey:', journey);
-    console.log('🔍 CV Journey Page - Job ID:', journey.jobId);
-    startJourney(journey.jobId);
-    setShowPipelineModal(true);
-  };
+    await refreshJourneys();
+  }, [startJourney, refreshJourneys]);
 
   const handleDownloadFiles = (journey: Journey) => {
     // TODO: Implement download functionality
@@ -196,36 +282,38 @@ const CVJourneyPageContent: React.FC = () => {
     }
   };
 
-  // Filter and sort journeys
-  const filteredAndSortedJourneys = journeys
-    .filter(journey => {
-      // Filter by status
-      if (filterStatus !== 'all' && journey.status !== filterStatus) {
-        return false;
-      }
-      
-      // Filter by search query
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        return (
-          journey.jobTitle.toLowerCase().includes(query) ||
-          journey.company.toLowerCase().includes(query)
-        );
-      }
-      
-      return true;
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case 'creationDate':
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-        case 'jobTitle':
-          return a.jobTitle.localeCompare(b.jobTitle);
-        case 'lastUpdated':
-        default:
-          return new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime();
-      }
-    });
+  // Memoized filtering and sorting for better performance
+  const filteredAndSortedJourneys = useMemo(() => {
+    return journeys
+      .filter(journey => {
+        // Filter by status
+        if (filterStatus !== 'all' && journey.status !== filterStatus) {
+          return false;
+        }
+        
+        // Filter by search query
+        if (searchQuery) {
+          const query = searchQuery.toLowerCase();
+          return (
+            journey.jobTitle.toLowerCase().includes(query) ||
+            journey.company.toLowerCase().includes(query)
+          );
+        }
+        
+        return true;
+      })
+      .sort((a, b) => {
+        switch (sortBy) {
+          case 'creationDate':
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          case 'jobTitle':
+            return a.jobTitle.localeCompare(b.jobTitle);
+          case 'lastUpdated':
+          default:
+            return new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime();
+        }
+      });
+  }, [journeys, filterStatus, searchQuery, sortBy]);
 
 
 
@@ -246,7 +334,7 @@ const CVJourneyPageContent: React.FC = () => {
             onClick={() => {
               console.log('Manual refresh clicked');
               setLoading(true);
-              fetchJourneys();
+              refreshJourneys();
             }}
             className="mt-4 px-4 py-2 bg-lime-500 hover:bg-lime-600 text-black text-sm rounded-lg transition-colors"
           >
@@ -303,16 +391,28 @@ const CVJourneyPageContent: React.FC = () => {
           </button>
         </div>
 
-        {/* Start New Journey Button */}
-        <motion.button
-          onClick={handleStartNewJourney}
-          className="flex items-center gap-2 px-6 py-2 bg-lime-500 hover:bg-lime-600 text-black font-medium rounded-lg transition-colors shadow-sm"
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-        >
-          <Plus className="h-4 w-4" />
-          Start New Journey
-        </motion.button>
+        {/* Action Buttons */}
+        <div className="flex gap-3">
+          <motion.button
+            onClick={() => startJourney(currentJobId || '')}
+            className="flex items-center gap-2 px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors shadow-sm"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <Briefcase className="h-4 w-4" />
+            Resume Journey
+          </motion.button>
+          
+          <motion.button
+            onClick={handleStartNewJourney}
+            className="flex items-center gap-2 px-6 py-2 bg-lime-500 hover:bg-lime-600 text-black font-medium rounded-lg transition-colors shadow-sm"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <Plus className="h-4 w-4" />
+            Start New Journey
+          </motion.button>
+        </div>
       </div>
 
       {/* Filters Panel */}
@@ -455,12 +555,6 @@ const CVJourneyPageContent: React.FC = () => {
       />
       
       
-      <JobPipelineCardModal
-        key={currentJobId || 'new-journey'}
-        isOpen={showPipelineModal}
-        onClose={() => setShowPipelineModal(false)}
-        jobId={currentJobId}
-      />
 
       {/* Delete Confirmation Modal */}
       <AnimatePresence>

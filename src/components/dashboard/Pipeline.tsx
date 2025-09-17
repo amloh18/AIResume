@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   DndContext,
@@ -47,7 +47,14 @@ import {
   MoreVertical,
   ExternalLink,
   MessageSquare,
+  X,
+  User,
   FileText,
+  Info,
+  Shield,
+  Zap,
+  Save,
+  Check,
   Users,
   TrendingUp,
   Target,
@@ -55,7 +62,6 @@ import {
   Phone,
   Mail,
   Globe,
-  User,
   Briefcase as BriefcaseIcon,
   Clock as ClockIcon,
   CheckCircle as CheckCircleIcon,
@@ -63,16 +69,13 @@ import {
   AlertCircle as AlertCircleIcon,
   CalendarDays,
   BarChart3,
-  Zap,
   Award,
   TrendingDown,
   Activity,
-  Info,
   Grid3X3,
   List,
   ChevronUp,
   ChevronDown,
-  X,
   RefreshCw,
   Copy,
   AlertTriangle,
@@ -703,6 +706,11 @@ const Pipeline: React.FC = () => {
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
   const [selectedPriority, setSelectedPriority] = useState<'all' | 'high' | 'medium' | 'low'>('all');
 
+  // Auto-save and form state management
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastSavedDataRef = useRef<any>(null);
+
   // Job Journey removed - navigate directly to journey page
 
   const sensors = useSensors(
@@ -727,6 +735,150 @@ const Pipeline: React.FC = () => {
   ];
 
   const { data: session, status } = useSession();
+
+  // Character counter functionality for enhanced modal
+  useEffect(() => {
+    const updateCharacterCounts = () => {
+      const jobTitleInput = document.getElementById('jobTitle') as HTMLInputElement;
+      const companyInput = document.getElementById('company') as HTMLInputElement;
+      const jobDescriptionInput = document.getElementById('jobDescription') as HTMLTextAreaElement;
+      const notesInput = document.getElementById('notes') as HTMLTextAreaElement;
+
+      if (jobTitleInput) {
+        const count = jobTitleInput.value.length;
+        const countElement = document.getElementById('jobTitleCount');
+        if (countElement) countElement.textContent = count.toString();
+      }
+
+      if (companyInput) {
+        const count = companyInput.value.length;
+        const countElement = document.getElementById('companyCount');
+        if (countElement) countElement.textContent = count.toString();
+      }
+
+      if (jobDescriptionInput) {
+        const count = jobDescriptionInput.value.length;
+        const countElement = document.getElementById('jobDescriptionCount');
+        if (countElement) countElement.textContent = count.toString();
+      }
+
+      if (notesInput) {
+        const count = notesInput.value.length;
+        const countElement = document.getElementById('notesCount');
+        if (countElement) countElement.textContent = count.toString();
+      }
+    };
+
+    // Add event listeners when modal is open
+    if (showJobModal) {
+      const inputs = ['jobTitle', 'company', 'jobDescription', 'notes'];
+      inputs.forEach(id => {
+        const input = document.getElementById(id);
+        if (input) {
+          input.addEventListener('input', updateCharacterCounts);
+        }
+      });
+
+      // Initial count update
+      updateCharacterCounts();
+
+      // Cleanup function
+      return () => {
+        inputs.forEach(id => {
+          const input = document.getElementById(id);
+          if (input) {
+            input.removeEventListener('input', updateCharacterCounts);
+          }
+        });
+      };
+    }
+  }, [showJobModal]);
+
+  // Auto-save functionality
+  useEffect(() => {
+    const setupAutoSave = () => {
+      if (!showJobModal || !editingJob) return;
+
+      const formInputs = [
+        'jobTitle', 'company', 'location', 'jobUrl', 'jobDescription',
+        'priority', 'status', 'deadline', 'applicationDate', 'sponsorship',
+        'salaryMin', 'salaryMax', 'salaryCurrency', 'salaryPeriod', 'tags', 'notes'
+      ];
+
+      const handleFormChange = () => {
+        setHasUnsavedChanges(true);
+        
+        // Clear existing timeout
+        if (autoSaveTimeoutRef.current) {
+          clearTimeout(autoSaveTimeoutRef.current);
+        }
+
+        // Set new timeout for auto-save (5 seconds after last change)
+        autoSaveTimeoutRef.current = setTimeout(() => {
+          const formData = getFormData();
+          if (formData && JSON.stringify(formData) !== JSON.stringify(lastSavedDataRef.current)) {
+            console.log('🔄 Auto-saving job data...');
+            handleSaveJob(formData, true); // true indicates auto-save
+          }
+        }, 5000);
+      };
+
+      // Add event listeners to all form inputs
+      formInputs.forEach(id => {
+        const input = document.getElementById(id);
+        if (input) {
+          input.addEventListener('input', handleFormChange);
+          input.addEventListener('change', handleFormChange);
+        }
+      });
+
+      // Cleanup function
+      return () => {
+        if (autoSaveTimeoutRef.current) {
+          clearTimeout(autoSaveTimeoutRef.current);
+        }
+        formInputs.forEach(id => {
+          const input = document.getElementById(id);
+          if (input) {
+            input.removeEventListener('input', handleFormChange);
+            input.removeEventListener('change', handleFormChange);
+          }
+        });
+      };
+    };
+
+    setupAutoSave();
+  }, [showJobModal, editingJob]);
+
+  // Helper function to get form data
+  const getFormData = () => {
+    const deadlineValue = (document.getElementById('deadline') as HTMLInputElement)?.value;
+    const applicationDateValue = (document.getElementById('applicationDate') as HTMLInputElement)?.value;
+    const jobTitle = (document.getElementById('jobTitle') as HTMLInputElement)?.value?.trim();
+    const company = (document.getElementById('company') as HTMLInputElement)?.value?.trim();
+    const tagsValue = (document.getElementById('tags') as HTMLInputElement)?.value?.trim();
+
+    return {
+      jobTitle,
+      company,
+      location: (document.getElementById('location') as HTMLInputElement)?.value?.trim(),
+      jobUrl: (document.getElementById('jobUrl') as HTMLInputElement)?.value?.trim(),
+      jobDescription: (document.getElementById('jobDescription') as HTMLTextAreaElement)?.value?.trim(),
+      sponsorship: (document.getElementById('sponsorship') as HTMLSelectElement)?.value as 'yes' | 'no' | 'unknown',
+      priority: (document.getElementById('priority') as HTMLSelectElement)?.value as 'low' | 'medium' | 'high',
+      status: (document.getElementById('status') as HTMLSelectElement)?.value as Job['status'],
+      deadline: deadlineValue ? new Date(deadlineValue) : undefined,
+      applicationDate: applicationDateValue ? new Date(applicationDateValue) : undefined,
+      notes: (document.getElementById('notes') as HTMLTextAreaElement)?.value?.trim(),
+      tags: tagsValue ? tagsValue.split(',').map(tag => tag.trim()).filter(tag => tag) : [],
+      salary: {
+        min: (document.getElementById('salaryMin') as HTMLInputElement)?.value ? parseInt((document.getElementById('salaryMin') as HTMLInputElement).value) : undefined,
+        max: (document.getElementById('salaryMax') as HTMLInputElement)?.value ? parseInt((document.getElementById('salaryMax') as HTMLInputElement).value) : undefined,
+        currency: (document.getElementById('salaryCurrency') as HTMLSelectElement)?.value || 'USD',
+        period: (document.getElementById('salaryPeriod') as HTMLSelectElement)?.value as 'hourly' | 'monthly' | 'yearly' || 'yearly'
+      }
+    };
+  };
 
   // Load user and jobs on component mount
   useEffect(() => {
@@ -757,7 +909,7 @@ const Pipeline: React.FC = () => {
         const transformedJobs = jobsData.map((job: any) => {
           // Ensure status is a valid enum value
           let validStatus = job.status || 'created';
-          if (typeof validStatus === 'string' && !['created', 'applied', 'interview', 'offer', 'rejected'].includes(validStatus)) {
+          if (typeof validStatus === 'string' && !['created', 'applied', 'screening', 'interview', 'offer', 'rejected', 'accepted', 'withdrawn'].includes(validStatus)) {
             validStatus = 'created';
           }
           
@@ -1182,10 +1334,12 @@ const Pipeline: React.FC = () => {
     }
   };
 
-  const handleSaveJob = async (jobData: Partial<Job>) => {
+  const handleSaveJob = async (jobData: Partial<Job>, isAutoSave: boolean = false) => {
     if (!editingJob) return;
     
-    setIsSaving(true);
+    if (!isAutoSave) {
+      setIsSaving(true);
+    }
     
     try {
       // Get user ID from session
@@ -1208,7 +1362,7 @@ const Pipeline: React.FC = () => {
         attachments: jobData.attachments || [],
         isArchived: jobData.isArchived || false,
         // Ensure status is a valid enum value
-        status: (jobData.status && ['created', 'applied', 'interview', 'offer', 'rejected'].includes(jobData.status)) ? jobData.status : 'created',
+        status: (jobData.status && ['created', 'applied', 'screening', 'interview', 'offer', 'rejected', 'accepted', 'withdrawn'].includes(jobData.status)) ? jobData.status : 'created',
       };
 
       const method = editingJob.id && jobs.some(job => job.id === editingJob.id) ? 'PUT' : 'POST';
@@ -1232,7 +1386,7 @@ const Pipeline: React.FC = () => {
         console.log('✅ Pipeline - Save response success:', result);
         
         if (result.success) {
-          const savedJob = { ...result.data, id: result.data.id || editingJob.id };
+          const savedJob = { ...result.data, id: result.data.id || result.data._id || editingJob.id };
           
           if (method === 'PUT') {
             // Update existing job
@@ -1242,15 +1396,20 @@ const Pipeline: React.FC = () => {
             setJobs([...jobs, savedJob]);
           }
           
-          // Close modal and reset state
-          setShowJobModal(false);
-          setEditingJob(null);
+          // Update auto-save state
+          lastSavedDataRef.current = jobData;
+          setHasUnsavedChanges(false);
           
-          // Show success message
-          alert('Job saved successfully!');
-          
-          // Refresh jobs list
-          loadJobs(userId);
+          if (!isAutoSave) {
+            // Close modal and reset state only for manual saves
+            setShowJobModal(false);
+            setEditingJob(null);
+            
+            // Show success message
+            alert('Job saved successfully!');
+          } else {
+            console.log('✅ Auto-save completed successfully');
+          }
         } else {
           console.error('API returned success: false:', result);
           alert(`Failed to save job: ${result.message || 'Unknown error'}`);
@@ -1271,7 +1430,9 @@ const Pipeline: React.FC = () => {
       console.error('Error saving job:', error);
       alert('Error saving job. Please try again.');
     } finally {
-      setIsSaving(false);
+      if (!isAutoSave) {
+        setIsSaving(false);
+      }
     }
   };
 
@@ -1822,7 +1983,7 @@ const Pipeline: React.FC = () => {
         </div>
       )}
 
-      {/* Job Modal */}
+      {/* Enhanced Job Modal */}
       <AnimatePresence>
         {showJobModal && (selectedJob || editingJob) && (
           <motion.div
@@ -1832,245 +1993,444 @@ const Pipeline: React.FC = () => {
             exit={{ opacity: 0 }}
           >
             <motion.div
-              className="bg-gray-900 border border-white/10 rounded-xl p-4 w-full max-w-[1500px] max-h-[85vh] overflow-y-auto"
+              className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-4 w-full max-w-[1000px] max-h-[85vh] overflow-y-auto shadow-2xl"
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
             >
               <div className="text-white">
+                {/* Glassmorphism Header */}
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold">
-                    {editingJob ? 'Add/Edit Job' : 'Job Details'}
-                  </h2>
-                  <motion.button
-                    onClick={() => setShowJobModal(false)}
-                    className="p-2 text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                  >
-                    <X size={20} />
-                  </motion.button>
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 bg-lime-500/20 backdrop-blur-sm rounded-lg border border-lime-500/30">
+                      <Briefcase size={16} className="text-lime-400" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-white">
+                        {editingJob ? 'Add/Edit Job Application' : 'Job Details'}
+                      </h2>
+                      <p className="text-white/70 text-xs">
+                        {editingJob ? 'Create or update your job application details' : 'View job application information'}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    {/* Unsaved Changes Warning */}
+                    {hasUnsavedChanges && editingJob && (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="flex items-center gap-1.5 px-2 py-1 bg-orange-500/20 backdrop-blur-sm border border-orange-500/30 rounded-lg"
+                      >
+                        <div className="w-1.5 h-1.5 bg-orange-400 rounded-full animate-pulse"></div>
+                        <span className="text-orange-300 text-xs font-medium">Unsaved</span>
+                      </motion.div>
+                    )}
+                    
+                    {/* Auto-save indicator */}
+                    {editingJob && (
+                      <div className="flex items-center gap-1 text-white/50 text-xs">
+                        <Shield size={10} />
+                        <span>Auto-save</span>
+                      </div>
+                    )}
+                    
+                    <motion.button
+                      onClick={() => {
+                        if (hasUnsavedChanges && editingJob) {
+                          const confirmClose = confirm('You have unsaved changes. Are you sure you want to close?');
+                          if (!confirmClose) return;
+                        }
+                        setShowJobModal(false);
+                        setHasUnsavedChanges(false);
+                        setEditingJob(null);
+                      }}
+                      className="p-1.5 text-white/70 hover:text-white hover:bg-white/20 backdrop-blur-sm rounded-lg border border-white/20 transition-all"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <X size={18} />
+                    </motion.button>
+                  </div>
                 </div>
                 
-                {/* Link Parser */}
+                {/* Quick Job Import Section */}
                 {editingJob && (
-                  <div className="mb-4 p-3 bg-lime-500/10 border border-lime-500/20 rounded-lg">
+                  <div className="mb-4 p-3 bg-gradient-to-r from-lime-500/10 to-emerald-500/10 backdrop-blur-sm border border-lime-500/20 rounded-xl">
                     <div className="flex items-center gap-2 mb-2">
                       <ExternalLink size={14} className="text-lime-400" />
                       <span className="text-lime-400 font-medium text-sm">Quick Job Import</span>
+                      <div className="ml-auto px-1.5 py-0.5 bg-lime-500/20 backdrop-blur-sm rounded-full border border-lime-500/30">
+                        <span className="text-lime-300 text-xs font-medium">AI</span>
+                      </div>
                     </div>
                     <div className="flex gap-2">
                       <input
                         type="url"
                         id="jobUrlParser"
-                        placeholder="Paste job posting URL (LinkedIn, Indeed, etc.)"
-                        className="flex-1 px-3 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white text-xs focus:border-lime-400/50 focus:outline-none transition-colors"
+                        placeholder="Paste job posting URL (LinkedIn, Indeed, Glassdoor, etc.)"
+                        className="flex-1 px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white text-sm focus:border-lime-400/50 focus:outline-none transition-colors placeholder-white/50"
                       />
-                      <motion.button
-                        onClick={handleParseJobUrl}
-                        className="px-3 py-1.5 bg-lime-500 text-black font-medium rounded-lg text-xs hover:bg-lime-400 transition-colors"
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                      >
+                    <motion.button
+                      onClick={handleParseJobUrl}
+                      className="px-4 py-2 bg-gradient-to-r from-lime-500 to-lime-600 text-black font-medium rounded-lg text-sm hover:from-lime-400 hover:to-lime-500 transition-all shadow-lg"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <div className="flex items-center gap-1">
+                        <Zap size={12} />
                         Parse
-                      </motion.button>
+                      </div>
+                    </motion.button>
                     </div>
-                    <p className="text-lime-300 text-xs mt-1">
-                      Supports LinkedIn, Indeed, Glassdoor, and other major job boards
+                    <p className="text-white/60 text-xs mt-1 flex items-center gap-1">
+                      <Shield size={10} />
+                      Supports LinkedIn, Indeed, Glassdoor with AI parsing
                     </p>
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                  {/* Left Column */}
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-white/80 text-xs mb-1 font-medium">Job Title *</label>
-                      <input
-                        type="text"
-                        id="jobTitle"
-                        defaultValue={editingJob?.jobTitle || selectedJob?.jobTitle}
-                        className="w-full px-3 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:border-lime-400/50 focus:outline-none transition-colors"
-                        placeholder="e.g., Senior Frontend Developer"
-                      />
+                {/* Glassmorphism Form Layout */}
+                <div className="space-y-4">
+                  {/* Basic Information Section */}
+                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/20">
+                    <div className="flex items-center gap-1.5 mb-3">
+                      <User size={14} className="text-lime-400" />
+                      <h3 className="text-base font-semibold text-white">Basic Information</h3>
                     </div>
-                    <div>
-                      <label className="block text-white/80 text-xs mb-1 font-medium">Company *</label>
-                      <input
-                        type="text"
-                        id="company"
-                        defaultValue={editingJob?.company || selectedJob?.company}
-                        className="w-full px-3 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:border-lime-400/50 focus:outline-none transition-colors"
-                        placeholder="e.g., TechCorp Inc."
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-white/80 text-xs mb-1 font-medium">Location</label>
-                      <input
-                        type="text"
-                        id="location"
-                        defaultValue={editingJob?.location || selectedJob?.location}
-                        className="w-full px-3 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:border-lime-400/50 focus:outline-none transition-colors"
-                        placeholder="e.g., San Francisco, CA"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-white/80 text-xs mb-1 font-medium">Job URL</label>
-                      <input
-                        type="url"
-                        id="jobUrl"
-                        defaultValue={editingJob?.jobUrl || selectedJob?.jobUrl}
-                        className="w-full px-3 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:border-lime-400/50 focus:outline-none transition-colors"
-                        placeholder="https://company.com/careers/job"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Right Column */}
-                  <div className="space-y-3">
-                    <div>
-                      {/* CV selection removed - relationships now managed through CVJourney */}
-                      {userCVs.length > 0 && (
-                        <div className="mt-1 text-xs text-white/60">
-                          {userCVs.length} CV{userCVs.length !== 1 ? 's' : ''} available
+                    
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-white/80 text-xs mb-1.5 font-medium flex items-center gap-1">
+                            Job Title <span className="text-red-400">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            id="jobTitle"
+                            defaultValue={editingJob?.jobTitle || selectedJob?.jobTitle}
+                            className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white text-sm focus:border-lime-400/50 focus:outline-none transition-colors placeholder-white/50"
+                            placeholder="e.g., Senior Frontend Developer"
+                            maxLength={100}
+                          />
+                          <div className="text-xs text-lime-300 mt-1">
+                            <span id="jobTitleCount">0</span>/100 characters
+                          </div>
                         </div>
-                      )}
+                        
+                        <div>
+                          <label className="block text-white/80 text-xs mb-1.5 font-medium flex items-center gap-1">
+                            Company <span className="text-red-400">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            id="company"
+                            defaultValue={editingJob?.company || selectedJob?.company}
+                            className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white text-sm focus:border-lime-400/50 focus:outline-none transition-colors placeholder-white/50"
+                            placeholder="e.g., TechCorp Inc."
+                            maxLength={100}
+                          />
+                          <div className="text-xs text-lime-300 mt-1">
+                            <span id="companyCount">0</span>/100 characters
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-white/80 text-xs mb-1.5 font-medium">Location</label>
+                          <input
+                            type="text"
+                            id="location"
+                            defaultValue={editingJob?.location || selectedJob?.location}
+                            className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white text-sm focus:border-lime-400/50 focus:outline-none transition-colors placeholder-white/50"
+                            placeholder="e.g., San Francisco, CA (Remote/Hybrid)"
+                            maxLength={100}
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="block text-white/80 text-xs mb-1.5 font-medium">Job URL</label>
+                          <input
+                            type="url"
+                            id="jobUrl"
+                            defaultValue={editingJob?.jobUrl || selectedJob?.jobUrl}
+                            className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white text-sm focus:border-lime-400/50 focus:outline-none transition-colors placeholder-white/50"
+                            placeholder="https://company.com/careers/job"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                        <div>
+                          <label className="block text-white/80 text-xs mb-1.5 font-medium">Priority Level</label>
+                          <select
+                            id="priority"
+                            defaultValue={editingJob?.priority || selectedJob?.priority || 'medium'}
+                            className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white text-sm focus:border-lime-400/50 focus:outline-none transition-colors"
+                          >
+                            <option value="low" className="bg-gray-800">🟢 Low</option>
+                            <option value="medium" className="bg-gray-800">🟡 Medium</option>
+                            <option value="high" className="bg-gray-800">🔴 High</option>
+                          </select>
+                        </div>
+                        
+                        <div>
+                          <label className="block text-white/80 text-xs mb-1.5 font-medium">Status</label>
+                          <select
+                            id="status"
+                            defaultValue={editingJob?.status || selectedJob?.status || 'created'}
+                            className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white text-sm focus:border-lime-400/50 focus:outline-none transition-colors"
+                          >
+                            <option value="created" className="bg-gray-800">📝 Created</option>
+                            <option value="applied" className="bg-gray-800">📤 Applied</option>
+                            <option value="screening" className="bg-gray-800">🔍 Screening</option>
+                            <option value="interview" className="bg-gray-800">💼 Interview</option>
+                            <option value="offer" className="bg-gray-800">🎉 Offer</option>
+                            <option value="rejected" className="bg-gray-800">❌ Rejected</option>
+                            <option value="accepted" className="bg-gray-800">✅ Accepted</option>
+                            <option value="withdrawn" className="bg-gray-800">↩️ Withdrawn</option>
+                          </select>
+                        </div>
+                        
+                        <div>
+                          <label className="block text-white/80 text-xs mb-1.5 font-medium">Application Date</label>
+                          <input
+                            type="date"
+                            id="applicationDate"
+                            defaultValue={editingJob?.applicationDate ? new Date(editingJob.applicationDate).toISOString().split('T')[0] : 
+                                         selectedJob?.applicationDate ? new Date(selectedJob.applicationDate).toISOString().split('T')[0] : ''}
+                            className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white text-sm focus:border-lime-400/50 focus:outline-none transition-colors"
+                          />
+                        </div>
+                        
+                        <div>
+                          <label className="block text-white/80 text-xs mb-1.5 font-medium">Deadline</label>
+                          <input
+                            type="date"
+                            id="deadline"
+                            defaultValue={editingJob?.deadline ? new Date(editingJob.deadline).toISOString().split('T')[0] : 
+                                         selectedJob?.deadline ? new Date(selectedJob.deadline).toISOString().split('T')[0] : ''}
+                            className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white text-sm focus:border-lime-400/50 focus:outline-none transition-colors"
+                          />
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-white/80 text-xs mb-1 font-medium">Priority</label>
-                      <select
-                        id="priority"
-                        defaultValue={editingJob?.priority || selectedJob?.priority || 'medium'}
-                        className="w-full px-3 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:border-lime-400/50 focus:outline-none transition-colors"
-                      >
-                        <option value="low">Low</option>
-                        <option value="medium">Medium</option>
-                        <option value="high">High</option>
-                      </select>
+                  </div>
+
+                  {/* Salary Information Section */}
+                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/20">
+                    <div className="flex items-center gap-1.5 mb-3">
+                      <DollarSign size={14} className="text-lime-400" />
+                      <h3 className="text-base font-semibold text-white">Salary Information</h3>
                     </div>
-                    <div>
-                      <label className="block text-white/80 text-xs mb-1 font-medium">Status</label>
-                      <select
-                        id="status"
-                        defaultValue={editingJob?.status || selectedJob?.status || 'created'}
-                        className="w-full px-3 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:border-lime-400/50 focus:outline-none transition-colors"
-                      >
-                        <option value="created">Created</option>
-                        <option value="applied">Applied</option>
-                        <option value="interview">Interview</option>
-                        <option value="offer">Offer</option>
-                        <option value="rejected">Rejected</option>
-                      </select>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                      <div>
+                        <label className="block text-white/80 text-xs mb-1.5 font-medium">Min Salary</label>
+                        <input
+                          type="number"
+                          id="salaryMin"
+                          defaultValue={editingJob?.salary?.min || selectedJob?.salary?.min}
+                          className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white text-sm focus:border-white/40 focus:outline-none transition-colors placeholder-white/50"
+                          placeholder="80000"
+                          min="0"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-white/80 text-xs mb-1.5 font-medium">Max Salary</label>
+                        <input
+                          type="number"
+                          id="salaryMax"
+                          defaultValue={editingJob?.salary?.max || selectedJob?.salary?.max}
+                          className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white text-sm focus:border-white/40 focus:outline-none transition-colors placeholder-white/50"
+                          placeholder="120000"
+                          min="0"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-white/80 text-xs mb-1.5 font-medium">Currency</label>
+                        <select
+                          id="salaryCurrency"
+                          defaultValue={editingJob?.salary?.currency || selectedJob?.salary?.currency || 'USD'}
+                          className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white text-sm focus:border-white/40 focus:outline-none transition-colors"
+                        >
+                          <option value="USD" className="bg-gray-800">🇺🇸 USD</option>
+                          <option value="EUR" className="bg-gray-800">🇪🇺 EUR</option>
+                          <option value="GBP" className="bg-gray-800">🇬🇧 GBP</option>
+                          <option value="CAD" className="bg-gray-800">🇨🇦 CAD</option>
+                          <option value="AUD" className="bg-gray-800">🇦🇺 AUD</option>
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-white/80 text-xs mb-1.5 font-medium">Period</label>
+                        <select
+                          id="salaryPeriod"
+                          defaultValue={editingJob?.salary?.period || selectedJob?.salary?.period || 'yearly'}
+                          className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white text-sm focus:border-white/40 focus:outline-none transition-colors"
+                        >
+                          <option value="hourly" className="bg-gray-800">Per Hour</option>
+                          <option value="monthly" className="bg-gray-800">Per Month</option>
+                          <option value="yearly" className="bg-gray-800">Per Year</option>
+                        </select>
+                      </div>
                     </div>
+                  </div>
+
+                  {/* Job Description Section */}
+                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/20">
+                    <div className="flex items-center gap-1.5 mb-3">
+                      <FileText size={14} className="text-lime-400" />
+                      <h3 className="text-base font-semibold text-white">Job Description</h3>
+                    </div>
+                    
                     <div>
-                      <label className="block text-white/80 text-xs mb-1 font-medium">Deadline (Optional)</label>
-                      <input
-                        type="date"
-                        id="deadline"
-                        defaultValue={editingJob?.deadline ? new Date(editingJob.deadline).toISOString().split('T')[0] : 
-                                     selectedJob?.deadline ? new Date(selectedJob.deadline).toISOString().split('T')[0] : ''}
-                        className="w-full px-3 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:border-lime-400/50 focus:outline-none transition-colors"
+                      <textarea
+                        id="jobDescription"
+                        defaultValue={editingJob?.jobDescription || selectedJob?.jobDescription}
+                        className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white text-sm focus:border-lime-400/50 focus:outline-none transition-colors placeholder-white/50 resize-none"
+                        placeholder="Paste or enter the job description here..."
+                        rows={4}
+                        maxLength={5000}
                       />
+                      <div className="flex justify-between items-center mt-1">
+                        <div className="text-xs text-lime-300">
+                          <span id="jobDescriptionCount">0</span>/5000 characters
+                        </div>
+                        <div className="text-xs text-white/50">
+                          Rich text supported
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <label className="block text-white/80 text-xs mb-1 font-medium">Sponsorship</label>
-                      <select
-                        id="sponsorship"
-                        defaultValue={editingJob?.sponsorship || selectedJob?.sponsorship || 'unknown'}
-                        className="w-full px-3 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:border-lime-400/50 focus:outline-none transition-colors"
-                      >
-                        <option value="unknown">Unknown</option>
-                        <option value="yes">Yes</option>
-                        <option value="no">No</option>
-                      </select>
+                  </div>
+
+                  {/* Additional Information Section */}
+                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/20">
+                    <div className="flex items-center gap-1.5 mb-3">
+                      <Info size={14} className="text-lime-400" />
+                      <h3 className="text-base font-semibold text-white">Additional Information</h3>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-white/80 text-xs mb-1.5 font-medium">Visa Sponsorship</label>
+                        <select
+                          id="sponsorship"
+                          defaultValue={editingJob?.sponsorship || selectedJob?.sponsorship || 'unknown'}
+                          className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white text-sm focus:border-white/40 focus:outline-none transition-colors"
+                        >
+                          <option value="unknown" className="bg-gray-800">❓ Unknown</option>
+                          <option value="yes" className="bg-gray-800">✅ Yes</option>
+                          <option value="no" className="bg-gray-800">❌ No</option>
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-white/80 text-xs mb-1.5 font-medium">Tags</label>
+                        <input
+                          type="text"
+                          id="tags"
+                          defaultValue={editingJob?.tags?.join(', ') || selectedJob?.tags?.join(', ')}
+                          className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white text-sm focus:border-white/40 focus:outline-none transition-colors placeholder-white/50"
+                          placeholder="remote, startup, fintech"
+                        />
+                        <div className="text-xs text-lime-300 mt-1">
+                          Comma separated tags
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-3">
+                      <label className="block text-white/80 text-xs mb-1.5 font-medium">Notes</label>
+                      <textarea
+                        id="notes"
+                        defaultValue={editingJob?.notes || selectedJob?.notes}
+                        className="w-full px-3 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white text-sm focus:border-lime-400/50 focus:outline-none transition-colors placeholder-white/50 resize-none"
+                        placeholder="Add any additional notes about this job application..."
+                        rows={2}
+                        maxLength={2000}
+                      />
+                      <div className="text-xs text-lime-300 mt-1">
+                        <span id="notesCount">0</span>/2000 characters
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Job Description Section - Full Width */}
-                <div className="mt-4">
-                  <label className="block text-white/80 text-xs mb-1 font-medium">Job Description</label>
-                  <textarea
-                    id="jobDescription"
-                    defaultValue={editingJob?.jobDescription || selectedJob?.jobDescription}
-                    className="w-full px-3 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white h-24 resize-none focus:border-lime-400/50 focus:outline-none transition-colors text-sm"
-                    placeholder="Paste or enter the job description here..."
-                  />
-                </div>
-
-                {/* Notes Section - Full Width */}
-                <div className="mt-4">
-                  <label className="block text-white/80 text-xs mb-1 font-medium">Notes</label>
-                  <textarea
-                    id="notes"
-                    defaultValue={editingJob?.notes || selectedJob?.notes}
-                    className="w-full px-3 py-1.5 bg-white/10 border border-white/20 rounded-lg text-white h-20 resize-none focus:border-lime-400/50 focus:outline-none transition-colors text-sm"
-                    placeholder="Add any notes about this job application..."
-                  />
-                </div>
-                <div className="flex items-center justify-end gap-3 mt-4">
-                  <motion.button
-                    onClick={() => setShowJobModal(false)}
-                    className="px-3 py-1.5 text-white/60 hover:text-white transition-colors text-sm"
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    Cancel
-                  </motion.button>
-                  {editingJob && (
-                    <motion.button
-                      onClick={() => {
-                        const deadlineValue = (document.getElementById('deadline') as HTMLInputElement)?.value;
-                        const jobTitle = (document.getElementById('jobTitle') as HTMLInputElement)?.value?.trim();
-                        const company = (document.getElementById('company') as HTMLInputElement)?.value?.trim();
-                        
-                        // Validate required fields
-                        if (!jobTitle) {
-                          alert('Job Title is required');
-                          return;
-                        }
-                        if (!company) {
-                          alert('Company is required');
-                          return;
-                        }
-                        
-                        // cvId removed - relationships now managed through CVJourney
-                        
-                        const formData = {
-                          jobTitle,
-                          company,
-                          location: (document.getElementById('location') as HTMLInputElement)?.value?.trim(),
-                          jobUrl: (document.getElementById('jobUrl') as HTMLInputElement)?.value?.trim(),
-                          jobDescription: (document.getElementById('jobDescription') as HTMLTextAreaElement)?.value?.trim(),
-                          sponsorship: (document.getElementById('sponsorship') as HTMLSelectElement)?.value as 'yes' | 'no' | 'unknown',
-                          // cvId removed - relationships now managed through CVJourney
-                          priority: (document.getElementById('priority') as HTMLSelectElement)?.value as 'low' | 'medium' | 'high',
-                          status: (document.getElementById('status') as HTMLSelectElement)?.value as Job['status'],
-                          deadline: deadlineValue ? new Date(deadlineValue) : undefined,
-                          notes: (document.getElementById('notes') as HTMLTextAreaElement)?.value?.trim(),
-                        };
-                        
-                        console.log('🔍 Job Form - Form data to save:', formData);
-                        handleSaveJob(formData);
-                      }}
-                      disabled={isSaving}
-                      className="px-4 py-1.5 bg-gradient-to-r from-lime-400 to-lime-500 text-black font-medium rounded-lg disabled:opacity-50 text-sm"
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      {isSaving ? 'Saving...' : 'Save Job'}
-                    </motion.button>
-                  )}
-                  {selectedJob && (
+                {/* Glassmorphism Action Buttons */}
+                <div className="flex items-center justify-between mt-6 pt-4 border-t border-white/20">
+                  <div className="flex items-center gap-1.5 text-white/50 text-xs">
+                    <Shield size={12} />
+                    <span>Secure & encrypted</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
                     <motion.button
                       onClick={() => setShowJobModal(false)}
-                      className="px-4 py-1.5 bg-gradient-to-r from-lime-400 to-lime-500 text-black font-medium rounded-lg text-sm"
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
+                      className="px-4 py-2 text-white/60 hover:text-white transition-colors text-sm font-medium"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
                     >
-                      Close
+                      Cancel
                     </motion.button>
-                  )}
+                    
+                    {editingJob && (
+                      <motion.button
+                        onClick={() => {
+                          const formData = getFormData();
+                          
+                          // Enhanced validation
+                          if (!formData.jobTitle) {
+                            alert('Job Title is required');
+                            return;
+                          }
+                          if (!formData.company) {
+                            alert('Company is required');
+                            return;
+                          }
+                          
+                          console.log('🔍 Enhanced Job Form - Form data to save:', formData);
+                          handleSaveJob(formData);
+                        }}
+                        disabled={isSaving}
+                        className="px-6 py-2 bg-gradient-to-r from-lime-500 to-lime-600 text-black font-semibold rounded-lg disabled:opacity-50 text-sm hover:from-lime-400 hover:to-lime-500 transition-all shadow-lg"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          {isSaving ? (
+                            <>
+                              <div className="w-3 h-3 border-2 border-black/30 border-t-black rounded-full animate-spin"></div>
+                              Saving...
+                            </>
+                          ) : (
+                            <>
+                              <Save size={14} />
+                              Save Job
+                            </>
+                          )}
+                        </div>
+                      </motion.button>
+                    )}
+                    
+                    {selectedJob && (
+                      <motion.button
+                        onClick={() => setShowJobModal(false)}
+                        className="px-6 py-2 bg-gradient-to-r from-lime-500 to-lime-600 text-black font-semibold rounded-lg text-sm hover:from-lime-400 hover:to-lime-500 transition-all shadow-lg"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <Check size={14} />
+                          Close
+                        </div>
+                      </motion.button>
+                    )}
+                  </div>
                 </div>
               </div>
             </motion.div>

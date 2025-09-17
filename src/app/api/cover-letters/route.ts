@@ -130,34 +130,9 @@ export async function POST(request: NextRequest) {
 
     await coverLetter.save();
 
-    // Link Cover Letter to CV Journey if jobId is provided
-    if (jobId) {
-      try {
-        const { CVJourney } = await import('@/models');
-        console.log('🔍 Cover Letter API - Linking Cover Letter to CV Journey for job:', jobId);
-        
-        const cvJourney = await CVJourney.findOne({ 
-          userId: userId, 
-          jobId: jobId 
-        });
-        
-        if (cvJourney) {
-          cvJourney.coverLetterId = coverLetter._id.toString();
-          cvJourney.currentStep = 4; // Move to cover letter step
-          cvJourney.steps[3].status = 'completed'; // Mark cover letter creation as completed
-          cvJourney.metadata.updatedAt = new Date();
-          cvJourney.metadata.lastAccessedAt = new Date();
-          
-          await cvJourney.save();
-          console.log('✅ Cover Letter API - Cover Letter linked to CV Journey successfully');
-        } else {
-          console.log('⚠️ Cover Letter API - No CV Journey found for job:', jobId);
-        }
-      } catch (cvJourneyError) {
-        console.error('❌ Cover Letter API - Failed to link Cover Letter to CV Journey:', cvJourneyError);
-        // Don't fail cover letter creation if CV Journey linking fails
-      }
-    }
+    // Note: Cover Letter-to-Journey linking is now handled by ApplicationPackageService
+    // Cover letters are created as freestanding documents and linked to journeys separately
+    // This enforces the "Application Package" model where documents belong to specific packages
 
     return NextResponse.json({
       success: true,

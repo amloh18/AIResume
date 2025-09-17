@@ -8,6 +8,7 @@ export interface ICV extends Document {
   status: 'draft' | 'published' | 'archived';
   version: number;
   isMaster: boolean; // Master CV flag
+  journeyId?: mongoose.Types.ObjectId | string; // Links tailored CV to specific CV Journey (Application Package)
   // Legacy fields for backward compatibility
   template?: string;
   sections?: {
@@ -284,6 +285,11 @@ const cvSchema = new Schema<ICV>({
     type: Boolean,
     default: false
   },
+  journeyId: {
+    type: Schema.Types.Mixed, // Allow both ObjectId and string
+    index: true, // Index for efficient journey-based queries
+    default: null // null means CV is freestanding (not part of an application package)
+  },
   // Legacy fields for backward compatibility
   template: {
     type: String,
@@ -405,6 +411,17 @@ cvSchema.pre('save', async function(next) {
       { userId: this.userId, _id: { $ne: this._id } },
       { $set: { isMaster: false } }
     );
+  }
+  
+  // Enforce Application Package Model constraints:
+  // 1. Master CVs cannot have journeyId (they are templates)
+  if (this.isMaster && this.journeyId) {
+    throw new Error('Master CVs cannot be linked to a journey. Master CVs must remain as templates.');
+  }
+  
+  // 2. Tailored CVs with journeyId cannot be changed to master
+  if (this.journeyId && this.isMaster) {
+    throw new Error('A CV linked to a journey cannot be set as master. Tailored CVs belong to specific application packages.');
   }
   
   next();

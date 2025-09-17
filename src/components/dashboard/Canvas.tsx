@@ -47,6 +47,7 @@ import CVPreviewContent from '@/components/studio/CVPreviewContent';
 import PageHeader from './PageHeader';
 import { authenticatedFetch } from '@/lib/utils/apiUtils';
 import { useJourneyLinking } from '@/lib/services/journeyLinkingService';
+import { ApplicationPackageService } from '@/lib/services/applicationPackageService';
 import MasterCVCard from './MasterCVCard';
 import MasterCVCardUpdated from './MasterCVCardUpdated';
 import CVCard from './CVCard';
@@ -254,63 +255,68 @@ const Canvas: React.FC = () => {
 
   const handleDuplicateMasterCV = async (masterCV: any) => {
     try {
-      console.log('🔍 Duplicating master CV:', masterCV);
+      console.log('🔍 Duplicating master CV using ApplicationPackageService:', masterCV);
+      
+      const userId = session?.user?.id || getUserIdFromLocalStorage();
+      if (!userId) {
+        addToast('error', 'User not authenticated');
+        return;
+      }
 
-      // Create duplicate CV
-      const response = await fetch('/api/cvs/master', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: session?.user?.id,
-          jobTitle: 'Untitled Job',
-          company: 'Company'
-        }),
+      // Use ApplicationPackageService to properly duplicate CV
+      const duplicateResult = await ApplicationPackageService.duplicateCV({
+        sourceCvId: masterCV.id,
+        userId,
+        newTitle: `${masterCV.title} (Copy)`
       });
 
-      const result = await response.json();
-
-      if (result.success && result.data?.cv) {
-        const duplicatedCV = result.data.cv;
-        // Navigate to studio with duplicated CV
-        window.location.href = `/studio?cvId=${duplicatedCV.id}`;
-        console.log('✅ Master CV duplicated successfully');
+      if (duplicateResult.success && duplicateResult.data?.cvId) {
+        const duplicatedCVId = duplicateResult.data.cvId;
+        
+        // Navigate to studio with duplicated CV (freestanding, ready for job linking)
+        window.location.href = `/studio?cvId=${duplicatedCVId}&mode=document-first`;
+        
+        console.log('✅ Master CV duplicated successfully:', duplicatedCVId);
+        addToast('success', 'Master CV duplicated successfully! You can now link it to a job.');
       } else {
-        throw new Error(result.message || 'Failed to duplicate master CV');
+        throw new Error(duplicateResult.message || 'Failed to duplicate master CV');
       }
     } catch (error) {
       console.error('❌ Error duplicating master CV:', error);
+      addToast('error', 'Failed to duplicate master CV');
     }
   };
 
   // CV Card handlers
   const handleDuplicateCV = async (cv: CV) => {
     try {
-      console.log('🔍 Duplicating CV:', cv);
+      console.log('🔍 Duplicating CV using ApplicationPackageService:', cv);
+      
+      const userId = session?.user?.id || getUserIdFromLocalStorage();
+      if (!userId) {
+        addToast('error', 'User not authenticated');
+        return;
+      }
 
-      // Create duplicate CV
-      const response = await fetch('/api/cvs/duplicate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          cvId: cv.id,
-          userId: session?.user?.id || getUserIdFromLocalStorage()
-        }),
+      // Use ApplicationPackageService to properly duplicate CV
+      const duplicateResult = await ApplicationPackageService.duplicateCV({
+        sourceCvId: cv.id,
+        userId,
+        newTitle: `${cv.title} (Copy)`
       });
 
-      const result = await response.json();
-
-      if (result.success && result.data?.cv) {
-        const duplicatedCV = result.data.cv;
-        // Refresh CVs list
+      if (duplicateResult.success && duplicateResult.data?.cvId) {
+        // Refresh CVs list to show the new freestanding duplicate
         loadCVs();
-        addToast('success', 'CV duplicated successfully!');
-        console.log('✅ CV duplicated successfully');
+        addToast('success', 'CV duplicated successfully! The copy is ready to be linked to a new job.');
+        console.log('✅ CV duplicated successfully as freestanding document:', duplicateResult.data.cvId);
+        
+        // If the source CV was linked to a journey, inform user about the duplication principle
+        if (cv.journeyId) {
+          addToast('info', 'A new freestanding copy was created. You can now link it to a different job application.', 5000);
+        }
       } else {
-        throw new Error(result.message || 'Failed to duplicate CV');
+        throw new Error(duplicateResult.message || 'Failed to duplicate CV');
       }
     } catch (error) {
       console.error('❌ Error duplicating CV:', error);

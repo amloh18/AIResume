@@ -5,6 +5,7 @@ export interface ICoverLetter extends Document {
   title: string;
   content: string;
   status: 'draft' | 'final' | 'archived';
+  journeyId?: string; // Links cover letter to specific CV Journey (Application Package)
   // cvId and jobId removed - relationships now managed through CVJourney
   metadata: {
     targetCompany?: string;
@@ -39,6 +40,11 @@ const coverLetterSchema = new Schema<ICoverLetter>({
     enum: ['draft', 'final', 'archived'],
     default: 'draft',
     index: true
+  },
+  journeyId: {
+    type: String,
+    index: true, // Index for efficient journey-based queries
+    default: null // null means cover letter is freestanding (not part of an application package)
   },
   // cvId and jobId removed - relationships now managed through CVJourney
   metadata: {
