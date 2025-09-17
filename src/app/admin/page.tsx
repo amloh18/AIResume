@@ -8,7 +8,6 @@ import {
   Users as People,
   FileText,
   Settings,
-  BarChart3 as Analytics,
   LayoutTemplate as Template,
   LogOut,
   Menu,
@@ -64,20 +63,52 @@ const AdminPage: React.FC<AdminPageProps> = () => {
   }, [session, status, router]);
 
   const handleLogout = async () => {
-    // Clear localStorage
-    localStorage.removeItem('user');
-    // Clear sessionStorage
-    sessionStorage.clear();
-    // Sign out from NextAuth
-    await signOut({ 
-      redirect: true,
-      callbackUrl: '/'
-    });
+    try {
+      console.log('🔍 Starting admin logout process...');
+      
+      // Clear localStorage
+      localStorage.removeItem('user');
+      console.log('✅ Cleared localStorage');
+      
+      // Clear sessionStorage
+      sessionStorage.clear();
+      console.log('✅ Cleared sessionStorage');
+      
+      // Check if user is from Firebase (has user data in localStorage)
+      const userData = localStorage.getItem('user');
+      if (userData) {
+        console.log('🔍 Firebase user detected, signing out from Firebase...');
+        // Firebase user - sign out from Firebase
+        try {
+          const { signOut: signOutFirebase } = await import('firebase/auth');
+          const { auth } = await import('@/lib/firebase');
+          await signOutFirebase(auth);
+          console.log('✅ Signed out from Firebase');
+        } catch (error) {
+          console.error('❌ Error signing out from Firebase:', error);
+        }
+      }
+      
+      // Sign out from NextAuth
+      console.log('🔍 Signing out from NextAuth...');
+      await signOut({ 
+        redirect: true,
+        callbackUrl: '/'
+      });
+      console.log('✅ Signed out from NextAuth');
+      
+    } catch (error) {
+      console.error('❌ Error during admin logout:', error);
+      // Fallback - clear storage and redirect
+      localStorage.removeItem('user');
+      sessionStorage.clear();
+      window.location.href = '/';
+    }
   };
 
   const menuItems = [
-    { id: 'kpis', label: 'General KPIs', icon: Analytics },
-    { id: 'cv-journey-kpis', label: 'CV Journey KPIs', icon: BarChart3 },
+    { id: 'kpis', label: 'General KPIs', icon: DashboardIcon },
+    { id: 'cv-journey-kpis', label: 'CV Journey KPIs', icon: DashboardIcon },
     { id: 'templates', label: 'Template Manager', icon: Template },
     { id: 'users', label: 'User Management', icon: People },
     { id: 'pricing', label: 'Pricing Plans', icon: FileText },

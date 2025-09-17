@@ -17,7 +17,7 @@ export interface IJobApplication extends Document {
   };
   status: 'created' | 'applied' | 'screening' | 'interview' | 'offer' | 'rejected' | 'accepted' | 'withdrawn';
   priority: 'low' | 'medium' | 'high';
-  applicationDate: Date;
+  applicationDate?: Date;
   deadline?: Date;
   notes?: string;
   contacts: Array<{
@@ -122,9 +122,7 @@ const jobApplicationSchema = new Schema<IJobApplication>({
   },
   applicationDate: {
     type: Date,
-    required: function() {
-      return this.status !== 'created';
-    }
+    required: false
   },
   deadline: {
     type: Date,

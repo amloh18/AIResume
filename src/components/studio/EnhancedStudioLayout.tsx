@@ -274,10 +274,47 @@ const EnhancedStudioLayout: React.FC<EnhancedStudioLayoutProps> = ({
   };
 
   const handleLogout = async () => {
-    await signOut({ 
-      redirect: true,
-      callbackUrl: '/'
-    });
+    try {
+      console.log('🔍 Starting studio logout process...');
+      
+      // Clear localStorage
+      localStorage.removeItem('user');
+      console.log('✅ Cleared localStorage');
+      
+      // Clear sessionStorage
+      sessionStorage.clear();
+      console.log('✅ Cleared sessionStorage');
+      
+      // Check if user is from Firebase (has user data in localStorage)
+      const userData = localStorage.getItem('user');
+      if (userData) {
+        console.log('🔍 Firebase user detected, signing out from Firebase...');
+        // Firebase user - sign out from Firebase
+        try {
+          const { signOut: signOutFirebase } = await import('firebase/auth');
+          const { auth } = await import('@/lib/firebase');
+          await signOutFirebase(auth);
+          console.log('✅ Signed out from Firebase');
+        } catch (error) {
+          console.error('❌ Error signing out from Firebase:', error);
+        }
+      }
+      
+      // Sign out from NextAuth
+      console.log('🔍 Signing out from NextAuth...');
+      await signOut({ 
+        redirect: true,
+        callbackUrl: '/'
+      });
+      console.log('✅ Signed out from NextAuth');
+      
+    } catch (error) {
+      console.error('❌ Error during studio logout:', error);
+      // Fallback - clear storage and redirect
+      localStorage.removeItem('user');
+      sessionStorage.clear();
+      window.location.href = '/';
+    }
   };
 
   const handleTitleEdit = () => {

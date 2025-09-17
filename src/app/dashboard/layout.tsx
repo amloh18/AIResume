@@ -268,7 +268,13 @@ const DashboardContent: React.FC<{ children: React.ReactNode }> = ({ children })
       </AnimatePresence>
 
       {/* Mobile Menu Toggle */}
-      <div className="xl:hidden fixed top-4 left-4 z-50 flex gap-2">
+      <motion.div 
+        className="xl:hidden fixed left-4 z-50 flex gap-2"
+        animate={{ 
+          top: isBannerVisible ? '3rem' : '1rem'
+        }}
+        transition={{ duration: 0.3, ease: 'easeInOut' }}
+      >
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
           className="p-2 bg-white/80 dark:bg-gray-800 backdrop-blur-xl border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
@@ -284,7 +290,7 @@ const DashboardContent: React.FC<{ children: React.ReactNode }> = ({ children })
         >
           {theme === 'light' ? <Moon size={24} /> : <Sun size={24} />}
         </button>
-      </div>
+      </motion.div>
 
 
       {/* Journey Status Banner - Full Width Above Everything */}
@@ -307,17 +313,64 @@ const DashboardContent: React.FC<{ children: React.ReactNode }> = ({ children })
         onComplete={() => setShowTour(false)} 
       />
       
-      <div className={`flex min-h-screen transition-all duration-300 ${isBannerVisible ? 'pt-16' : 'pt-0'}`}>
-        {/* Sidebar */}
-        <DashboardNavigation
-          activeSection={getActiveSection()}
-          onSectionChange={handleSectionChange}
-          onMembershipClick={() => {}}
-          user={userData}
-          isOpen={sidebarOpen}
-          onClose={() => setSidebarOpen(false)}
-          isBannerVisible={isBannerVisible}
-        />
+      <div className={`flex min-h-screen transition-all duration-300 ${isBannerVisible ? 'pt-8' : 'pt-0'}`}>
+        {/* Desktop Sidebar */}
+        <motion.div
+          className="hidden xl:block"
+          animate={{ 
+            marginTop: isBannerVisible ? '2rem' : '0rem'
+          }}
+          transition={{ duration: 0.3, ease: 'easeInOut' }}
+        >
+          <DashboardNavigation
+            activeSection={getActiveSection()}
+            onSectionChange={handleSectionChange}
+            onMembershipClick={() => {}}
+            user={userData}
+            isOpen={sidebarOpen}
+            onClose={() => setSidebarOpen(false)}
+            isBannerVisible={isBannerVisible}
+          />
+        </motion.div>
+
+        {/* Mobile Sidebar Overlay */}
+        <AnimatePresence>
+          {sidebarOpen && (
+            <motion.div
+              className="xl:hidden fixed inset-0 z-40"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSidebarOpen(false)}
+            >
+              <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+              <motion.div
+                className="absolute top-0 left-0 h-full w-80 max-w-[85vw] bg-white dark:bg-gray-900 shadow-2xl"
+                initial={{ x: -320 }}
+                animate={{ x: 0 }}
+                exit={{ x: -320 }}
+                transition={{ duration: 0.3, ease: 'easeInOut' }}
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  marginTop: isBannerVisible ? '2rem' : '0rem'
+                }}
+              >
+                <DashboardNavigation
+                  activeSection={getActiveSection()}
+                  onSectionChange={(section) => {
+                    handleSectionChange(section);
+                    setSidebarOpen(false);
+                  }}
+                  onMembershipClick={() => {}}
+                  user={userData}
+                  isOpen={sidebarOpen}
+                  onClose={() => setSidebarOpen(false)}
+                  isBannerVisible={isBannerVisible}
+                />
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Main Dashboard Area */}
         <main className="flex-1 xl:ml-80 transition-all duration-300 ease-in-out">

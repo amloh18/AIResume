@@ -12,12 +12,14 @@ import {
   ArrowRight,
   Sparkles,
   Building,
-  Calendar
+  Calendar,
+  Copy
 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useJobJourney } from '@/contexts/JobJourneyContext';
 import { useFirebaseAuth } from '@/lib/hooks/useFirebaseAuth';
+import { ApplicationPackageService } from '@/lib/services/applicationPackageService';
 
 interface Job {
   id: string;
@@ -34,6 +36,8 @@ interface CV {
   status: string;
   createdAt: string;
   lastModified: string;
+  isMaster?: boolean;
+  journeyId?: string | null;
 }
 
 interface NewJourneyCardProps {
@@ -66,8 +70,11 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
   const [cvSearchQuery, setCvSearchQuery] = useState('');
   const [jobs, setJobs] = useState<Job[]>([]);
   const [cvs, setCVs] = useState<CV[]>([]);
+  const [masterCVs, setMasterCVs] = useState<CV[]>([]);
+  const [freestandingCVs, setFreestandingCVs] = useState<CV[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isCreatingDuplicate, setIsCreatingDuplicate] = useState(false);
 
   // Fetch jobs and CVs when component mounts
   useEffect(() => {
@@ -97,7 +104,6 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
 
   const fetchCVs = async () => {
     try {
-      // Use same authentication logic as CV Journey page
       const userId = session?.user?.id || user?.uid;
       if (!userId) return;
 
@@ -105,7 +111,20 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
       if (response.ok) {
         const result = await response.json();
         if (result.success) {
-          setCVs(result.data.cvs || []);
+          const allCVs = result.data.cvs || [];
+          
+          // Separate CVs according to Application Package model
+          const masters = allCVs.filter((cv: CV) => cv.isMaster === true);
+          const freestanding = allCVs.filter((cv: CV) => 
+            cv.isMaster !== true && (cv.journeyId === null || cv.journeyId === undefined)
+          );
+          
+          console.log('🔍 NewJourneyCard - Master CVs:', masters.length);
+          console.log('🔍 NewJourneyCard - Freestanding CVs:', freestanding.length);
+          
+          setCVs(allCVs);
+          setMasterCVs(masters);
+          setFreestandingCVs(freestanding);
         }
       }
     } catch (error) {
@@ -118,7 +137,13 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
     job.company.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const filteredCVs = cvs.filter(cv =>
+  // Only show freestanding CVs for direct selection (not Master CVs)
+  const filteredFreestandingCVs = freestandingCVs.filter(cv =>
+    cv.title.toLowerCase().includes(cvSearchQuery.toLowerCase())
+  );
+  
+  // Filter Master CVs for duplication option
+  const filteredMasterCVs = masterCVs.filter(cv =>
     cv.title.toLowerCase().includes(cvSearchQuery.toLowerCase())
   );
 
@@ -138,12 +163,62 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
     setCurrentStep(3);
     setError(null);
   };
+  
+  const handleDuplicateMasterCV = async (masterCV: CV) => {
+    try {
+      setIsCreatingDuplicate(true);
+      setError(null);
+      
+      const userId = session?.user?.id || user?.uid;
+      if (!userId) {
+        setError('User not authenticated');
+        return;
+      }
+
+      console.log('🔄 NewJourneyCard - Duplicating Master CV:', masterCV.title);
+      
+      // Use ApplicationPackageService to properly duplicate the Master CV
+      const duplicateResult = await ApplicationPackageService.duplicateCV({
+        sourceCvId: masterCV.id,
+        userId,
+        newTitle: `${masterCV.title} (Copy for ${selectedJob?.jobTitle})`
+      });
+
+      if (duplicateResult.success && duplicateResult.data?.cvId) {
+        console.log('✅ NewJourneyCard - Master CV duplicated successfully:', duplicateResult.data.cvId);
+        
+        // Create a CV object for the duplicated CV
+        const duplicatedCV: CV = {
+          id: duplicateResult.data.cvId,
+          title: `${masterCV.title} (Copy for ${selectedJob?.jobTitle})`,
+          status: 'draft',
+          createdAt: new Date().toISOString(),
+          lastModified: new Date().toISOString(),
+          isMaster: false,
+          journeyId: null
+        };
+        
+        // Select the duplicated CV and proceed
+        setSelectedCV(duplicatedCV);
+        setCurrentStep(3);
+        
+        // Refresh CVs to show the new duplicate
+        await fetchCVs();
+      } else {
+        setError(duplicateResult.message || 'Failed to duplicate Master CV');
+      }
+    } catch (error) {
+      console.error('❌ NewJourneyCard - Error duplicating Master CV:', error);
+      setError('Failed to duplicate Master CV. Please try again.');
+    } finally {
+      setIsCreatingDuplicate(false);
+    }
+  };
 
   const handleCreateJourney = async () => {
     console.log('🔍 NewJourneyCard - handleCreateJourney called');
     console.log('🔍 NewJourneyCard - selectedJob:', selectedJob);
     console.log('🔍 NewJourneyCard - selectedCV:', selectedCV);
-    console.log('🔍 NewJourneyCard - session:', session);
     
     if (!selectedJob || !selectedCV) {
       console.log('❌ NewJourneyCard - Missing job or CV');
@@ -155,10 +230,9 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
     setError(null);
 
     try {
-      const journeyName = journeyName.trim() || `${selectedJob.jobTitle} at ${selectedJob.company}`;
-      console.log('🔍 NewJourneyCard - Creating journey with name:', journeyName);
+      const finalJourneyName = journeyName.trim() || `${selectedJob.jobTitle} at ${selectedJob.company}`;
+      console.log('🔍 NewJourneyCard - Creating journey with name:', finalJourneyName);
       
-      // Use same authentication logic as CV Journey page
       const userId = session?.user?.id || user?.uid;
       if (!userId) {
         console.log('❌ NewJourneyCard - No user ID available');
@@ -166,58 +240,56 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
         return;
       }
 
-      const requestBody = {
-        userId: userId,
+      // Step 1: Create Application Package using the corrected service
+      console.log('🎯 NewJourneyCard - Creating Application Package');
+      const packageResult = await ApplicationPackageService.createNewPackage({
+        userId,
         jobId: selectedJob.id,
-        cvId: selectedCV.id,
-        journeyName: journeyName,
-        currentStep: 2, // CV step completed
-        status: 'in-progress'
-      };
-      
-      console.log('🔍 NewJourneyCard - Request body:', requestBody);
-      
-      // Create the journey using the journey linking service
-      const response = await fetch('/api/cv-journey', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody)
+        journeyName: finalJourneyName
       });
 
-      console.log('🔍 NewJourneyCard - Response status:', response.status);
-      console.log('🔍 NewJourneyCard - Response ok:', response.ok);
-      
-      if (response.ok) {
-        const result = await response.json();
-        console.log('🔍 NewJourneyCard - Response result:', result);
-        if (result.success) {
-          console.log('✅ NewJourneyCard - Journey created successfully');
-          // Start the journey in the context
-          startJourney(selectedJob.id);
-          
-          // Call the callback if provided
-          if (onJourneyCreated) {
-            console.log('🔍 NewJourneyCard - Calling onJourneyCreated callback');
-            onJourneyCreated({
-              jobId: selectedJob.id,
-              cvId: selectedCV.id,
-              journeyName: journeyName
-            });
-          }
-          
-          // Reset the card
-          resetCard();
-        } else {
-          console.log('❌ NewJourneyCard - Journey creation failed:', result.message);
-          setError(result.message || 'Failed to create journey');
-        }
-      } else {
-        const errorText = await response.text();
-        console.log('❌ NewJourneyCard - Response error:', errorText);
-        setError('Failed to create journey');
+      if (!packageResult.success || !packageResult.data?.journeyId) {
+        setError(packageResult.message || 'Failed to create application package');
+        return;
       }
+
+      const journeyId = packageResult.data.journeyId;
+      console.log('✅ NewJourneyCard - Application Package created:', journeyId);
+
+      // Step 2: Lock the selected CV to the package
+      console.log('🔒 NewJourneyCard - Locking CV to package');
+      const lockResult = await ApplicationPackageService.lockDocumentToPackage(
+        selectedCV.id,
+        journeyId,
+        'cv',
+        userId
+      );
+
+      if (!lockResult.success) {
+        setError(lockResult.message || 'Failed to link CV to application package');
+        return;
+      }
+
+      console.log('✅ NewJourneyCard - CV locked to package successfully');
+      
+      // Start the journey in the context
+      startJourney(selectedJob.id);
+      
+      // Call the callback if provided
+      if (onJourneyCreated) {
+        console.log('🔍 NewJourneyCard - Calling onJourneyCreated callback');
+        onJourneyCreated({
+          jobId: selectedJob.id,
+          cvId: selectedCV.id,
+          journeyName: finalJourneyName
+        });
+      }
+      
+      // Reset the card
+      resetCard();
+      
     } catch (error) {
-      console.error('Error creating journey:', error);
+      console.error('❌ NewJourneyCard - Error creating journey:', error);
       setError('An error occurred while creating the journey');
     } finally {
       setLoading(false);
@@ -445,35 +517,77 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
                 </div>
 
                 {/* CVs List */}
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {filteredCVs.length === 0 ? (
+                <div className="space-y-4 max-h-64 overflow-y-auto">
+                  {/* Freestanding CVs Section */}
+                  {filteredFreestandingCVs.length > 0 && (
+                    <div className="space-y-2">
+                      <h5 className="text-sm font-medium text-gray-700 dark:text-white/70 border-b border-gray-200 dark:border-white/20 pb-1">
+                        Available CVs
+                      </h5>
+                      {filteredFreestandingCVs.map((cv) => (
+                        <motion.button
+                          key={cv.id}
+                          onClick={() => handleCVSelect(cv)}
+                          className={`w-full p-4 text-left rounded-lg border transition-all ${
+                            selectedCV?.id === cv.id
+                              ? 'border-blue-500 bg-blue-500/20'
+                              : 'border-gray-300 dark:border-white/20 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10'
+                          }`}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          <div className="flex items-center gap-3">
+                            <FileText className="h-5 w-5 text-blue-400" />
+                            <div className="flex-1">
+                              <h5 className="text-gray-900 dark:text-white font-medium">{cv.title}</h5>
+                              <p className="text-gray-600 dark:text-white/60 text-sm">Modified: {new Date(cv.lastModified).toLocaleDateString()}</p>
+                            </div>
+                          </div>
+                        </motion.button>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {/* Master CVs Section */}
+                  {filteredMasterCVs.length > 0 && (
+                    <div className="space-y-2">
+                      <h5 className="text-sm font-medium text-gray-700 dark:text-white/70 border-b border-gray-200 dark:border-white/20 pb-1 flex items-center gap-2">
+                        <Sparkles className="h-4 w-4 text-yellow-500" />
+                        Master CVs (Click to Duplicate)
+                      </h5>
+                      {filteredMasterCVs.map((cv) => (
+                        <motion.button
+                          key={cv.id}
+                          onClick={() => handleDuplicateMasterCV(cv)}
+                          disabled={isCreatingDuplicate}
+                          className="w-full p-4 text-left rounded-lg border border-yellow-300 dark:border-yellow-500/30 bg-yellow-50 dark:bg-yellow-500/10 hover:bg-yellow-100 dark:hover:bg-yellow-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                          whileHover={{ scale: isCreatingDuplicate ? 1 : 1.02 }}
+                          whileTap={{ scale: isCreatingDuplicate ? 1 : 0.98 }}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-1">
+                              <Sparkles className="h-5 w-5 text-yellow-500" />
+                              <Copy className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                            </div>
+                            <div className="flex-1">
+                              <h5 className="text-gray-900 dark:text-white font-medium">{cv.title}</h5>
+                              <p className="text-gray-600 dark:text-white/60 text-sm">
+                                {isCreatingDuplicate ? 'Creating duplicate...' : 'Click to duplicate for this journey'}
+                              </p>
+                            </div>
+                          </div>
+                        </motion.button>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {/* No CVs Found */}
+                  {filteredFreestandingCVs.length === 0 && filteredMasterCVs.length === 0 && (
                     <div className="text-center py-8 text-gray-600 dark:text-white/60">
                       <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
                       <p>No CVs found</p>
-                      <p className="text-sm">Create a CV first</p>
+                      <p className="text-sm">Create a CV first or check your search terms</p>
                     </div>
-                  ) : (
-                    filteredCVs.map((cv) => (
-                      <motion.button
-                        key={cv.id}
-                        onClick={() => handleCVSelect(cv)}
-                        className={`w-full p-4 text-left rounded-lg border transition-all ${
-                          selectedCV?.id === cv.id
-                            ? 'border-blue-500 bg-blue-500/20'
-                            : 'border-gray-300 dark:border-white/20 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10'
-                        }`}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        <div className="flex items-center gap-3">
-                          <FileText className="h-5 w-5 text-blue-400" />
-                          <div>
-                            <h5 className="text-gray-900 dark:text-white font-medium">{cv.title}</h5>
-                            <p className="text-gray-600 dark:text-white/60 text-sm">Modified: {new Date(cv.lastModified).toLocaleDateString()}</p>
-                          </div>
-                        </div>
-                      </motion.button>
-                    ))
                   )}
                 </div>
 
