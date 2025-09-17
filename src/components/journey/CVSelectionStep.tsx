@@ -29,7 +29,7 @@ const CVSelectionStep: React.FC<CVSelectionStepProps> = ({
   onCVSelected,
   onBack
 }) => {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [cvs, setCvs] = useState<CV[]>([]);
   const [masterCV, setMasterCV] = useState<CV | null>(null);
   const [loading, setLoading] = useState(true);

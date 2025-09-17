@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Trash2, GraduationCap, Sparkles, RefreshCw } from 'lucide-react';
 import { getThemeClasses } from '@/lib/utils/themeUtils';
+import ProfessionalTextField from '@/components/ui/ProfessionalTextField';
 
 interface EducationSectionProps {
   data: any[];
@@ -147,12 +148,13 @@ const EducationSection: React.FC<EducationSectionProps> = ({
                   <span>{generatingIndex === index ? 'Generating...' : 'AI Generate'}</span>
                 </motion.button>
               </div>
-              <textarea
+              <ProfessionalTextField
                 value={education.description || ''}
-                onChange={(e) => onUpdate(`education.${index}.description`, e.target.value)}
-                className={`w-full px-3 py-2 rounded-lg border ${themeClasses.input.base} ${themeClasses.input.focus} resize-none`}
+                onChange={(value) => onUpdate(`education.${index}.description`, value)}
                 placeholder="Describe your education, achievements, relevant coursework, or projects. Use AI to generate content based on your degree and institution..."
                 rows={4}
+                fieldId={`education-${index}`}
+                showFullToolbar={true}
               />
             </div>
 

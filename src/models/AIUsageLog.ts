@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IAIUsageLog extends Document {
-  userId: mongoose.Types.ObjectId;
+  userId: mongoose.Types.ObjectId | string;
   apiEndpoint: string;
   tokensUsed: {
     prompt: number;
@@ -21,8 +21,7 @@ export interface IAIUsageLog extends Document {
 
 const aiUsageLogSchema = new Schema<IAIUsageLog>({
   userId: {
-    type: Schema.Types.ObjectId,
-    ref: 'User',
+    type: Schema.Types.Mixed, // Allow both ObjectId and string
     required: true,
     index: true
   },
@@ -95,7 +94,7 @@ aiUsageLogSchema.virtual('costPerToken').get(function() {
 
 // Static method to get usage statistics
 aiUsageLogSchema.statics.getUsageStats = async function(options: {
-  userId?: mongoose.Types.ObjectId;
+  userId?: mongoose.Types.ObjectId | string;
   startDate?: Date;
   endDate?: Date;
   apiEndpoint?: string;

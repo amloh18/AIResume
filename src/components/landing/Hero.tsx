@@ -78,7 +78,7 @@ const Hero = () => {
           style={{ willChange: 'transform, opacity' }}
         >
           <motion.a
-            href="/onboarding"
+            href="/sign-up"
             className="group relative inline-block bg-gradient-to-r from-lime-400 to-lime-500 text-black px-10 py-5 rounded-full font-semibold text-lg shadow-2xl hover:shadow-lime-400/50 transition-all overflow-hidden btn-hover"
             whileHover={{ 
               scale: 1.02,
@@ -118,7 +118,7 @@ const Hero = () => {
               transformStyle: 'preserve-3d',
               perspective: '1000px'
             }}
-            onClick={() => window.location.href = '/onboarding'}
+            onClick={() => window.location.href = '/sign-up'}
           >
             <motion.div
               className="absolute inset-0 bg-gradient-to-r from-lime-400/10 to-blue-400/10 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -267,6 +267,7 @@ const Hero = () => {
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.6, delay: 2.1 }}
               >
+               
                 <div className="relative">
                   {/* Curved Arrow Path - From center to right */}
                   <svg className="absolute w-40 h-20" viewBox="0 0 160 80">

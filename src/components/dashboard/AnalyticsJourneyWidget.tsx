@@ -63,20 +63,28 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
         return;
       }
       
+      console.log('🔍 AnalyticsJourneyWidget - Fetching journeys for user:', userId);
       const response = await fetch(`/api/cv-journey?userId=${userId}&status=in-progress`);
+      console.log('🔍 AnalyticsJourneyWidget - Response status:', response.status);
+      
       if (!response.ok) {
         throw new Error('Failed to fetch journeys');
       }
       
       const result = await response.json();
+      console.log('🔍 AnalyticsJourneyWidget - API result:', result);
+      
       if (result.success) {
         console.log('🔍 AnalyticsJourneyWidget - Journeys fetched:', result.data.journeys);
-        setJourneys(result.data.journeys);
+        console.log('🔍 AnalyticsJourneyWidget - Number of journeys:', result.data.journeys?.length || 0);
+        setJourneys(result.data.journeys || []);
       } else {
         console.error('Error fetching journeys:', result.message);
+        setJourneys([]);
       }
     } catch (error) {
       console.error('Error fetching journeys:', error);
+      setJourneys([]);
     } finally {
       setLoading(false);
     }
@@ -206,55 +214,69 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
 
   if (loading) {
     return (
-      <div className="bg-white/5 border-2 border-dashed border-white/20 rounded-xl p-6">
-        <div className="animate-pulse">
-          <div className="h-6 bg-white/10 rounded mb-4"></div>
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-20 bg-white/10 rounded"></div>
-            ))}
+      <div className="glass-widget-premium glass-shimmer rounded-xl p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1">CV Journeys</h2>
+            <p className="text-gray-600 dark:text-white/60 text-sm">Loading your career progress...</p>
           </div>
+        </div>
+        
+        <div className="text-center py-6">
+          <div className="w-16 h-16 bg-gradient-to-br from-blue-400/20 to-blue-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <div className="w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Loading CV Journeys</h3>
+          <p className="text-gray-600 dark:text-white/60 text-sm">
+            Fetching your career application progress...
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white/5 border-2 border-dashed border-white/20 rounded-xl p-6" style={{ borderDasharray: '16 12' } as React.CSSProperties}>
-      <div className="flex items-center justify-between mb-6">
+    <div className="glass-widget-premium glass-shimmer rounded-xl p-6">
+      <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-lg font-bold text-white mb-1">CV Journeys</h2>
-          <p className="text-white/60 text-sm">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1">CV Journeys</h2>
+          <p className="text-gray-600 dark:text-white/60 text-sm">
             {incompleteJourneys.length} incomplete journey{incompleteJourneys.length !== 1 ? 's' : ''}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <motion.button
-            onClick={() => setShowNewJourneyCard(true)}
-            className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors text-sm flex items-center gap-1"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <Plus className="h-3 w-3" />
-            Start New
-          </motion.button>
-          <motion.button
-            onClick={() => window.location.href = '/dashboard/cv-journey'}
-            className="px-3 py-1.5 bg-lime-500 hover:bg-lime-600 text-black font-medium rounded-lg transition-colors text-sm flex items-center gap-1"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <Eye className="h-3 w-3" />
-            View All
-          </motion.button>
-        </div>
+        {incompleteJourneys.length > 0 && (
+          <div className="flex items-center gap-2">
+            <motion.button
+              onClick={() => {
+                console.log('🔍 AnalyticsJourneyWidget - Start New button clicked');
+                setShowNewJourneyCard(true);
+                console.log('🔍 AnalyticsJourneyWidget - showNewJourneyCard set to true');
+              }}
+              className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors text-sm flex items-center gap-1"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <Plus className="h-3 w-3" />
+              Start New
+            </motion.button>
+            <motion.button
+              onClick={() => window.location.href = '/dashboard/cv-journey'}
+              className="px-3 py-1.5 bg-lime-500 hover:bg-lime-600 text-black font-medium rounded-lg transition-colors text-sm flex items-center gap-1"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <Eye className="h-3 w-3" />
+              View All
+            </motion.button>
+          </div>
+        )}
       </div>
 
       {incompleteJourneys.length === 0 ? (
         <div className="space-y-4">
           {/* Single Skeleton Card */}
           <motion.div
-            className="bg-white/5 border border-white/10 rounded-lg p-4"
+            className="glass-card-premium rounded-lg p-4"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
@@ -263,29 +285,29 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
             <div className="flex items-start justify-between mb-3">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <div className="w-4 h-4 bg-white/10 rounded animate-pulse"></div>
-                  <div className="h-4 bg-white/10 rounded w-32 animate-pulse"></div>
+                  <div className="w-4 h-4 bg-gray-200 dark:bg-white/10 rounded animate-pulse"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-white/10 rounded w-32 animate-pulse"></div>
                 </div>
-                <div className="h-3 bg-white/10 rounded w-24 animate-pulse"></div>
+                <div className="h-3 bg-gray-200 dark:bg-white/10 rounded w-24 animate-pulse"></div>
               </div>
               
               <div className="flex items-center gap-2">
-                <div className="w-16 h-6 bg-white/10 rounded-full animate-pulse"></div>
-                <div className="w-16 h-6 bg-white/10 rounded animate-pulse"></div>
-                <div className="w-6 h-6 bg-white/10 rounded animate-pulse"></div>
+                <div className="w-16 h-6 bg-gray-200 dark:bg-white/10 rounded-full animate-pulse"></div>
+                <div className="w-16 h-6 bg-gray-200 dark:bg-white/10 rounded animate-pulse"></div>
+                <div className="w-6 h-6 bg-gray-200 dark:bg-white/10 rounded animate-pulse"></div>
               </div>
             </div>
 
             {/* Timeline Skeleton */}
             <div className="relative mb-3">
-              <div className="absolute top-4 left-0 right-0 h-0.5 bg-white/10"></div>
+              <div className="absolute top-4 left-0 right-0 h-0.5 bg-gray-200 dark:bg-white/10"></div>
               <div className="relative flex justify-between">
                 {[1, 2, 3, 4, 5].map((step) => (
                   <div key={step} className="flex flex-col items-center relative z-10">
-                    <div className="w-6 h-6 bg-white/10 rounded-full animate-pulse"></div>
+                    <div className="w-6 h-6 bg-gray-200 dark:bg-white/10 rounded-full animate-pulse"></div>
                     <div className="mt-2">
-                      <div className="w-16 h-4 bg-white/10 rounded animate-pulse"></div>
-                      <div className="w-12 h-3 bg-white/10 rounded mt-1 animate-pulse"></div>
+                      <div className="w-16 h-4 bg-gray-200 dark:bg-white/10 rounded animate-pulse"></div>
+                      <div className="w-12 h-3 bg-gray-200 dark:bg-white/10 rounded mt-1 animate-pulse"></div>
                     </div>
                   </div>
                 ))}
@@ -295,19 +317,19 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
             {/* Progress Info Skeleton */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1">
-                <div className="w-3 h-3 bg-white/10 rounded animate-pulse"></div>
-                <div className="w-20 h-3 bg-white/10 rounded animate-pulse"></div>
+                <div className="w-3 h-3 bg-gray-200 dark:bg-white/10 rounded animate-pulse"></div>
+                <div className="w-20 h-3 bg-gray-200 dark:bg-white/10 rounded animate-pulse"></div>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-16 h-3 bg-white/10 rounded animate-pulse"></div>
+                <div className="w-16 h-3 bg-gray-200 dark:bg-white/10 rounded animate-pulse"></div>
               </div>
             </div>
           </motion.div>
           
           {/* Empty State Message */}
           <div className="text-center py-4">
-            <div className="text-white/40 text-sm mb-1">No incomplete journeys</div>
-            <p className="text-white/60 text-xs">All your CV journeys are complete!</p>
+            <div className="text-gray-600 dark:text-white/60 text-sm mb-1">No incomplete journeys</div>
+            <p className="text-gray-500 dark:text-white/50 text-xs">All your CV journeys are complete!</p>
           </div>
         </div>
       ) : (
@@ -318,21 +340,21 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
               <motion.button
                 onClick={prevPage}
                 disabled={currentPage === 0}
-                className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-2 bg-gray-200 dark:bg-white/10 hover:bg-gray-300 dark:hover:bg-white/20 text-gray-700 dark:text-white rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
               >
                 <ChevronLeft className="h-4 w-4" />
               </motion.button>
               
-              <div className="text-white/60 text-sm">
+              <div className="text-gray-600 dark:text-white/60 text-sm">
                 {currentPage + 1} of {totalPages}
               </div>
               
               <motion.button
                 onClick={nextPage}
                 disabled={currentPage === totalPages - 1}
-                className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-2 bg-gray-200 dark:bg-white/10 hover:bg-gray-300 dark:hover:bg-white/20 text-gray-700 dark:text-white rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
               >
@@ -351,9 +373,13 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.3 }}
               >
+                {console.log('🔍 AnalyticsJourneyWidget - Rendering NewJourneyCard')}
                 <NewJourneyCard
                   onJourneyCreated={handleJourneyCreated}
-                  onCancel={() => setShowNewJourneyCard(false)}
+                  onCancel={() => {
+                    console.log('🔍 AnalyticsJourneyWidget - NewJourneyCard cancelled');
+                    setShowNewJourneyCard(false);
+                  }}
                 />
               </motion.div>
             )}
@@ -385,7 +411,7 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
 
       {/* Pagination Dots */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-center mt-4 pt-4 border-t border-white/10">
+        <div className="flex items-center justify-center mt-4 pt-4 border-t border-gray-200 dark:border-white/10">
           <div className="flex items-center gap-2">
             {Array.from({ length: totalPages }, (_, index) => (
               <motion.button
@@ -394,7 +420,7 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
                 className={`w-2 h-2 rounded-full transition-all duration-300 ${
                   currentPage === index 
                     ? 'bg-lime-500 scale-125' 
-                    : 'bg-white/30 hover:bg-white/50'
+                    : 'bg-gray-300 dark:bg-white/30 hover:bg-gray-400 dark:hover:bg-white/50'
                 }`}
                 whileHover={{ scale: 1.2 }}
                 whileTap={{ scale: 0.9 }}

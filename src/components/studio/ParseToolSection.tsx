@@ -132,7 +132,7 @@ const ParseToolSection: React.FC<ParseToolSectionProps> = ({ onCVParsed, isActiv
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".pdf,.docx,.doc,.txt"
+                accept=".pdf,.docx,.doc,.rtf,.txt"
                 onChange={handleFileSelect}
                 className="hidden"
               />

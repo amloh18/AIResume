@@ -449,7 +449,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 <div className={`p-3 rounded-lg border ${
                   getStepStatus(1) === 'completed' 
                     ? 'bg-lime-500/10 border-lime-500/30' 
-                    : 'bg-white/5 border-white/10'
+                    : 'bg-gray-100 dark:bg-white/5 border-gray-200 dark:border-white/10'
                 }`}>
                   <div className="flex items-center gap-2 mb-2">
                     <Briefcase className="h-4 w-4 text-blue-400" />
@@ -468,7 +468,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 <div className={`p-3 rounded-lg border ${
                   getStepStatus(2) === 'completed' 
                     ? 'bg-lime-500/10 border-lime-500/30' 
-                    : 'bg-white/5 border-white/10'
+                    : 'bg-gray-100 dark:bg-white/5 border-gray-200 dark:border-white/10'
                 }`}>
                   <div className="flex items-center gap-2 mb-2">
                     <FileText className="h-4 w-4 text-green-400" />
@@ -527,7 +527,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 <div className={`p-3 rounded-lg border ${
                   getStepStatus(3) === 'completed' 
                     ? 'bg-lime-500/10 border-lime-500/30' 
-                    : 'bg-white/5 border-white/10'
+                    : 'bg-gray-100 dark:bg-white/5 border-gray-200 dark:border-white/10'
                 }`}>
                   <div className="flex items-center gap-2 mb-2">
                     <Settings className="h-4 w-4 text-purple-400" />
@@ -577,7 +577,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 <div className={`p-3 rounded-lg border ${
                   getStepStatus(4) === 'completed' 
                     ? 'bg-lime-500/10 border-lime-500/30' 
-                    : 'bg-white/5 border-white/10'
+                    : 'bg-gray-100 dark:bg-white/5 border-gray-200 dark:border-white/10'
                 }`}>
                   <div className="flex items-center gap-2 mb-2">
                     <Mail className="h-4 w-4 text-orange-400" />
@@ -638,7 +638,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 <div className={`p-3 rounded-lg border ${
                   getStepStatus(5) === 'completed' 
                     ? 'bg-lime-500/10 border-lime-500/30' 
-                    : 'bg-white/5 border-white/10'
+                    : 'bg-gray-100 dark:bg-white/5 border-gray-200 dark:border-white/10'
                 }`}>
                   <div className="flex items-center gap-2 mb-2">
                     <Download className="h-4 w-4 text-lime-400" />
@@ -667,7 +667,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="mt-3 p-3 bg-white/5 border border-white/10 rounded-lg"
+            className="mt-3 p-3 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg"
           >
             <div className="flex items-center justify-between mb-2">
               <h4 className="text-sm font-medium text-white">Select CV</h4>
@@ -683,7 +683,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 <motion.button
                   key={cv.id}
                   onClick={() => handleSelectCV(cv.id)}
-                  className="w-full p-2 text-left bg-white/5 hover:bg-white/10 rounded border border-white/10 transition-colors"
+                  className="w-full p-2 text-left bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 rounded border border-gray-200 dark:border-white/10 transition-colors"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
@@ -710,7 +710,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="mt-3 p-3 bg-white/5 border border-white/10 rounded-lg"
+            className="mt-3 p-3 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg"
           >
             <div className="flex items-center justify-between mb-2">
               <h4 className="text-sm font-medium text-white">Select Cover Letter</h4>
@@ -726,7 +726,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 <motion.button
                   key={cl.id}
                   onClick={() => handleSelectCoverLetter(cl.id)}
-                  className="w-full p-2 text-left bg-white/5 hover:bg-white/10 rounded border border-white/10 transition-colors"
+                  className="w-full p-2 text-left bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 rounded border border-gray-200 dark:border-white/10 transition-colors"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >

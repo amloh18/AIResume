@@ -122,3 +122,4 @@ export function initializeMarketing(): void {
   // This is a placeholder for when you add marketing tools
   console.log('Marketing tools initialized with user consent');
 }
+

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Trash2, Briefcase, Sparkles, RefreshCw } from 'lucide-react';
 import { getThemeClasses } from '@/lib/utils/themeUtils';
+import ProfessionalTextField from '@/components/ui/ProfessionalTextField';
 
 interface WorkExperienceSectionProps {
   data: any[];
@@ -139,12 +140,13 @@ const WorkExperienceSection: React.FC<WorkExperienceSectionProps> = ({
                   <span>{generatingIndex === index ? 'Generating...' : 'AI Generate'}</span>
                 </motion.button>
               </div>
-              <textarea
+              <ProfessionalTextField
                 value={work.summary || ''}
-                onChange={(e) => onUpdate(`work.${index}.summary`, e.target.value)}
-                className={`w-full px-3 py-2 rounded-lg border ${themeClasses.input.base} ${themeClasses.input.focus}`}
-                rows={4}
+                onChange={(value) => onUpdate(`work.${index}.summary`, value)}
                 placeholder="Describe your role, responsibilities, and key achievements. Use AI to generate content based on job title and company..."
+                rows={4}
+                fieldId={`work-experience-${index}`}
+                showFullToolbar={true}
               />
             </div>
 

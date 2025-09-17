@@ -5,6 +5,7 @@ export interface IUser extends Document {
   email: string;
   password?: string; // Optional - only for non-Firebase users
   firebaseUid?: string; // Required for Firebase users
+  clerkId?: string; // Required for Clerk users
   firstName: string;
   lastName: string;
   username?: string;
@@ -28,13 +29,18 @@ export interface IUser extends Document {
     lastResetDate: Date; // Last time usage was reset (for day pass)
     deviceFingerprint?: string; // Device identifier for tracking
   };
-  // Profile information from onboarding
+  // Core Profile Information (frequently accessed)
   phone?: string;
   location?: string;
   website?: string;
   linkedin?: string;
   github?: string;
   summary?: string;
+  company?: string;
+  jobTitle?: string;
+  industry?: string;
+  experience?: 'entry' | 'mid' | 'senior' | 'executive';
+  
   // Admin tracking fields
   lastLogin?: Date;
   region?: string;
@@ -52,20 +58,16 @@ export interface IUser extends Document {
     seats: number;
     storageUsed: number;
   };
+  // Basic UI Settings (frequently accessed, kept in User table)
   settings: {
     theme: 'light' | 'dark' | 'auto';
     notifications: {
       email: boolean;
       push: boolean;
     };
-    // Additional profile settings
-    company?: string;
-    address?: string;
-    timezone?: string;
-    languagePreference?: string;
-    dateOfBirth?: string;
-    gender?: string;
-    nationality?: string;
+    // Basic preferences only - detailed settings moved to UserSettings
+    timezone: string;
+    languagePreference: string;
   };
   createdAt: Date;
   updatedAt: Date;
@@ -82,9 +84,7 @@ const userSchema = new Schema<IUser>({
   },
   password: {
     type: String,
-    required: function(this: any) {
-      return !this.firebaseUid; // Password is required only if not using Firebase
-    },
+    required: false, // Make password optional - validation will be handled in pre-save hook
     minlength: [8, 'Password must be at least 8 characters long'],
     select: false // Don't include password in queries by default
   },
@@ -92,9 +92,13 @@ const userSchema = new Schema<IUser>({
     type: String,
     unique: true,
     sparse: true, // Allows multiple null values
-    required: function(this: any) {
-      return !this.password; // Firebase UID is required if no password (Firebase user)
-    }
+    required: false // Firebase UID is optional - can be used for Firebase auth users
+  },
+  clerkId: {
+    type: String,
+    unique: true,
+    sparse: true, // Allows multiple null values
+    required: false
   },
   firstName: {
     type: String,
@@ -218,6 +222,26 @@ const userSchema = new Schema<IUser>({
     trim: true,
     maxlength: [1000, 'Summary cannot exceed 1000 characters']
   },
+  company: {
+    type: String,
+    trim: true,
+    maxlength: [100, 'Company name cannot exceed 100 characters']
+  },
+  jobTitle: {
+    type: String,
+    trim: true,
+    maxlength: [100, 'Job title cannot exceed 100 characters']
+  },
+  industry: {
+    type: String,
+    trim: true,
+    maxlength: [100, 'Industry cannot exceed 100 characters']
+  },
+  experience: {
+    type: String,
+    enum: ['entry', 'mid', 'senior', 'executive'],
+    default: 'mid'
+  },
   // Admin tracking fields
   lastLogin: {
     type: Date,
@@ -283,45 +307,16 @@ const userSchema = new Schema<IUser>({
         default: true
       }
     },
-    // Additional profile settings
-    phone: {
-      type: String,
-      trim: true,
-      maxlength: [20, 'Phone number cannot exceed 20 characters']
-    },
-    company: {
-      type: String,
-      trim: true,
-      maxlength: [100, 'Company name cannot exceed 100 characters']
-    },
-    address: {
-      type: String,
-      trim: true,
-      maxlength: [200, 'Address cannot exceed 200 characters']
-    },
+    // Basic preferences only - detailed settings moved to UserSettings
     timezone: {
       type: String,
       trim: true,
-      default: 'UTC +07:00 - Asia / Jakarta'
+      default: 'UTC'
     },
     languagePreference: {
       type: String,
       trim: true,
-      default: 'English'
-    },
-    dateOfBirth: {
-      type: String,
-      trim: true
-    },
-    gender: {
-      type: String,
-      trim: true,
-      enum: ['male', 'female', 'other', 'prefer-not-to-say', '']
-    },
-    nationality: {
-      type: String,
-      trim: true,
-      maxlength: [50, 'Nationality cannot exceed 50 characters']
+      default: 'en'
     }
   }
 }, {
@@ -338,13 +333,25 @@ const userSchema = new Schema<IUser>({
   }
 });
 
-// Hash password before saving (only for non-Firebase users)
+// Validate and hash password before saving
 userSchema.pre('save', async function(next) {
-  if (!this.isModified('password') || !this.password) return next();
-  
   try {
-    const salt = await bcrypt.genSalt(12);
-    this.password = await bcrypt.hash(this.password, salt);
+    // Validate that user has at least one authentication method
+    const hasPassword = !!this.password;
+    const hasFirebaseUid = !!this.firebaseUid;
+    const hasClerkId = !!this.clerkId;
+    const isGoogleOAuth = this.isEmailVerified && !hasPassword && !hasFirebaseUid && !hasClerkId;
+    
+    if (!hasPassword && !hasFirebaseUid && !hasClerkId && !isGoogleOAuth) {
+      return next(new Error('User must have either a password, Firebase UID, Clerk ID, or be a verified Google OAuth user'));
+    }
+    
+    // Hash password if it exists and is modified
+    if (this.isModified('password') && this.password) {
+      const salt = await bcrypt.genSalt(12);
+      this.password = await bcrypt.hash(this.password, salt);
+    }
+    
     next();
   } catch (error: any) {
     next(error);
@@ -359,8 +366,6 @@ userSchema.methods.comparePassword = async function(candidatePassword: string): 
 
 // Indexes for better query performance and data integrity
 userSchema.index({ 'subscription.status': 1 });
-userSchema.index({ firebaseUid: 1 }, { unique: true, sparse: true }); // Unique index on firebaseUid
-userSchema.index({ email: 1 }, { unique: true }); // Unique index on email
-userSchema.index({ username: 1 }, { unique: true, sparse: true }); // Unique index on username
+// Note: Unique indexes are already defined in the schema fields above
 
 export default mongoose.models.User || mongoose.model<IUser>('User', userSchema); 

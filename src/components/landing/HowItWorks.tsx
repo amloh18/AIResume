@@ -367,7 +367,7 @@ const HowItWorks = () => {
                 transition={{ duration: 0.4, delay: 0.4 }}
               >
                 <motion.a
-                  href="/onboarding"
+                  href="/master-cv-onboarding"
                   className="group relative inline-block bg-gradient-to-r from-lime-400 to-lime-500 text-black px-4 py-2 sm:px-6 sm:py-3 rounded-full font-semibold text-sm sm:text-base shadow-lg hover:shadow-lime-400/50 transition-all overflow-hidden"
                   whileHover={{ 
                     scale: 1.05,

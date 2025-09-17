@@ -40,6 +40,7 @@ interface PreviewPanelProps {
   pagePadding: { top: number; bottom: number };
   setPagePadding: (padding: { top: number; bottom: number }) => void;
   onDocumentTypeChange?: (type: 'cv' | 'cover-letter') => void;
+  isMasterCV?: boolean;
 }
 
 const PreviewPanel: React.FC<PreviewPanelProps> = ({
@@ -55,7 +56,8 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
   sectionVisibility = {},
   pagePadding,
   setPagePadding,
-  onDocumentTypeChange
+  onDocumentTypeChange,
+  isMasterCV = false
 }) => {
   console.log('PreviewPanel received cvData:', cvData);
   
@@ -239,7 +241,7 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
   };
 
   return (
-    <div className="h-full flex flex-col bg-white relative">
+    <div className="h-full flex flex-col bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 rounded-2xl shadow-lg relative">
       {/* Document Type Switcher - Centered above the first page */}
       {onDocumentTypeChange && (
         <div className="flex justify-center pt-6 pb-2">
@@ -255,12 +257,16 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
               CV
             </button>
             <button
-              onClick={() => onDocumentTypeChange('cover-letter')}
+              onClick={() => !isMasterCV && onDocumentTypeChange('cover-letter')}
+              disabled={isMasterCV}
               className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
                 documentType === 'cover-letter'
                   ? 'bg-lime-600 text-white'
+                  : isMasterCV
+                  ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed'
                   : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100'
               }`}
+              title={isMasterCV ? 'Cover letters cannot be created for Master CV' : 'Switch to Cover Letter'}
             >
               Cover Letter
             </button>

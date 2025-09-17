@@ -1,22 +1,109 @@
 import nodemailer from 'nodemailer';
 
-// Email service configuration
+// Enhanced email service configuration with multiple provider support
+interface EmailConfig {
+  host: string;
+  port: number;
+  secure: boolean;
+  auth: {
+    user: string;
+    pass: string;
+  };
+}
+
+// Email service configuration with multiple providers
+const getEmailConfig = (): EmailConfig | null => {
+  // Check for Gmail configuration
+  if (process.env.EMAIL_SERVER_HOST && process.env.EMAIL_SERVER_USER && process.env.EMAIL_SERVER_PASSWORD) {
+    return {
+      host: process.env.EMAIL_SERVER_HOST,
+      port: parseInt(process.env.EMAIL_SERVER_PORT || '587'),
+      secure: process.env.EMAIL_SERVER_PORT === '465',
+      auth: {
+        user: process.env.EMAIL_SERVER_USER,
+        pass: process.env.EMAIL_SERVER_PASSWORD,
+      },
+    };
+  }
+
+  // Check for SendGrid configuration
+  if (process.env.SENDGRID_API_KEY && process.env.SENDGRID_FROM_EMAIL) {
+    return {
+      host: 'smtp.sendgrid.net',
+      port: 587,
+      secure: false,
+      auth: {
+        user: 'apikey',
+        pass: process.env.SENDGRID_API_KEY,
+      },
+    };
+  }
+
+  // Check for Mailgun configuration
+  if (process.env.MAILGUN_API_KEY && process.env.MAILGUN_DOMAIN) {
+    return {
+      host: `smtp.mailgun.org`,
+      port: 587,
+      secure: false,
+      auth: {
+        user: `postmaster@${process.env.MAILGUN_DOMAIN}`,
+        pass: process.env.MAILGUN_API_KEY,
+      },
+    };
+  }
+
+  // Check for AWS SES configuration
+  if (process.env.AWS_SES_ACCESS_KEY_ID && process.env.AWS_SES_SECRET_ACCESS_KEY && process.env.AWS_SES_REGION) {
+    return {
+      host: `email-smtp.${process.env.AWS_SES_REGION}.amazonaws.com`,
+      port: 587,
+      secure: false,
+      auth: {
+        user: process.env.AWS_SES_ACCESS_KEY_ID,
+        pass: process.env.AWS_SES_SECRET_ACCESS_KEY,
+      },
+    };
+  }
+
+  console.warn('⚠️ No email service configured. Please set up one of the following:');
+  console.warn('   - Gmail: EMAIL_SERVER_HOST, EMAIL_SERVER_USER, EMAIL_SERVER_PASSWORD');
+  console.warn('   - SendGrid: SENDGRID_API_KEY, SENDGRID_FROM_EMAIL');
+  console.warn('   - Mailgun: MAILGUN_API_KEY, MAILGUN_DOMAIN');
+  console.warn('   - AWS SES: AWS_SES_ACCESS_KEY_ID, AWS_SES_SECRET_ACCESS_KEY, AWS_SES_REGION');
+  
+  return null;
+};
+
+// Create email transporter
 const createTransporter = () => {
-  // Check if we have email service configuration
-  if (!process.env.EMAIL_SERVER_HOST || !process.env.EMAIL_SERVER_USER || !process.env.EMAIL_SERVER_PASSWORD) {
-    console.warn('⚠️ Email service not configured. Email verification will not work.');
+  const config = getEmailConfig();
+  
+  if (!config) {
     return null;
   }
 
-  return nodemailer.createTransporter({
-    host: process.env.EMAIL_SERVER_HOST,
-    port: parseInt(process.env.EMAIL_SERVER_PORT || '587'),
-    secure: false, // true for 465, false for other ports
-    auth: {
-      user: process.env.EMAIL_SERVER_USER,
-      pass: process.env.EMAIL_SERVER_PASSWORD,
-    },
-  });
+  return nodemailer.createTransporter(config);
+};
+
+// Get sender email address
+const getSenderEmail = (): string => {
+  if (process.env.SENDGRID_FROM_EMAIL) {
+    return process.env.SENDGRID_FROM_EMAIL;
+  }
+  
+  if (process.env.MAILGUN_DOMAIN) {
+    return `noreply@${process.env.MAILGUN_DOMAIN}`;
+  }
+  
+  if (process.env.AWS_SES_FROM_EMAIL) {
+    return process.env.AWS_SES_FROM_EMAIL;
+  }
+  
+  if (process.env.EMAIL_SERVER_USER) {
+    return process.env.EMAIL_SERVER_USER;
+  }
+  
+  return 'noreply@cvcircle.com';
 };
 
 // Send email verification
@@ -29,8 +116,9 @@ export async function sendEmailVerification(email: string, verificationLink: str
   }
 
   try {
+    const senderEmail = getSenderEmail();
     const mailOptions = {
-      from: `"Circle CV" <${process.env.EMAIL_SERVER_USER}>`,
+      from: `"Circle CV" <${senderEmail}>`,
       to: email,
       subject: 'Verify Your Circle CV Account',
       html: `
@@ -87,8 +175,9 @@ export async function sendPasswordResetEmail(email: string, resetLink: string, f
   }
 
   try {
+    const senderEmail = getSenderEmail();
     const mailOptions = {
-      from: `"Circle CV" <${process.env.EMAIL_SERVER_USER}>`,
+      from: `"Circle CV" <${senderEmail}>`,
       to: email,
       subject: 'Reset Your Circle CV Password',
       html: `
@@ -148,7 +237,7 @@ export async function testEmailService() {
   if (!transporter) {
     return {
       success: false,
-      error: 'Email service not configured. Please set EMAIL_SERVER_HOST, EMAIL_SERVER_USER, and EMAIL_SERVER_PASSWORD environment variables.'
+      error: 'Email service not configured. Please set up one of the supported email providers.'
     };
   }
 
@@ -158,4 +247,32 @@ export async function testEmailService() {
   } catch (error: any) {
     return { success: false, error: error.message };
   }
+}
+
+// Get email service status
+export function getEmailServiceStatus() {
+  const config = getEmailConfig();
+  
+  if (!config) {
+    return {
+      configured: false,
+      provider: 'none',
+      message: 'No email service configured'
+    };
+  }
+
+  let provider = 'unknown';
+  if (config.host.includes('gmail.com')) provider = 'Gmail';
+  else if (config.host.includes('sendgrid')) provider = 'SendGrid';
+  else if (config.host.includes('mailgun')) provider = 'Mailgun';
+  else if (config.host.includes('amazonaws')) provider = 'AWS SES';
+
+  return {
+    configured: true,
+    provider,
+    host: config.host,
+    port: config.port,
+    secure: config.secure,
+    message: `Email service configured with ${provider}`
+  };
 }

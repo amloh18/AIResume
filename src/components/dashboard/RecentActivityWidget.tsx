@@ -49,7 +49,7 @@ const RecentActivityWidget: React.FC<RecentActivityWidgetProps> = ({
 
   if (loading) {
     return (
-      <div className={`bg-white/5 border border-white/10 rounded-xl p-6 ${className}`}>
+      <div className={`frosted-glass-widget rounded-xl p-6 ${className}`}>
         {showHeader && (
           <h3 className="text-white font-medium text-sm mb-4 flex items-center gap-2">
             <Activity size={14} className="text-blue-400" />
@@ -70,7 +70,7 @@ const RecentActivityWidget: React.FC<RecentActivityWidgetProps> = ({
 
   if (error) {
     return (
-      <div className={`bg-white/5 border border-white/10 rounded-xl p-6 ${className}`}>
+      <div className={`frosted-glass-widget rounded-xl p-6 ${className}`}>
         {showHeader && (
           <h3 className="text-white font-medium text-sm mb-4 flex items-center gap-2">
             <Activity size={14} className="text-blue-400" />
@@ -91,7 +91,7 @@ const RecentActivityWidget: React.FC<RecentActivityWidgetProps> = ({
   }
 
   return (
-    <div className={`bg-white/5 border border-white/10 rounded-xl p-6 ${className}`}>
+    <div className={`frosted-glass-widget rounded-xl p-6 ${className}`}>
       {showHeader && (
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-white font-medium text-sm flex items-center gap-2">

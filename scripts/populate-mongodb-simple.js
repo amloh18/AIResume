@@ -128,7 +128,7 @@ async function populateDatabase() {
     await client.connect();
     console.log('✅ Connected to MongoDB\n');
     
-    const db = client.db();
+    const db = client.db('cvcircle');
     
     // Clear existing data
     console.log('🧹 Clearing existing data...');

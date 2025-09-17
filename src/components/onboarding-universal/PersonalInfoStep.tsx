@@ -187,7 +187,7 @@ export default function PersonalInfoStep({ cvData, onUpdate, onNext }: PersonalI
                           <input
                             ref={fileInputRef}
                             type="file"
-                            accept=".pdf,.doc,.docx,.txt"
+                            accept=".pdf,.doc,.docx,.rtf,.txt"
                             onChange={handleFileSelect}
                             className="hidden"
                           />
@@ -195,7 +195,7 @@ export default function PersonalInfoStep({ cvData, onUpdate, onNext }: PersonalI
                             <Upload size={48} className="text-white/40 mx-auto" />
                             <div>
                               <p className="text-white font-medium text-lg">Drop your CV here or click to browse</p>
-                              <p className="text-white/60">Supports PDF, DOC, DOCX, and TXT files</p>
+                              <p className="text-white/60">Supports PDF, DOC, DOCX, RTF, and TXT files</p>
                             </div>
                             <button
                               onClick={() => fileInputRef.current?.click()}

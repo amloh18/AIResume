@@ -21,7 +21,7 @@ interface UseRecentActivityReturn {
 }
 
 export const useRecentActivity = (limit: number = 5): UseRecentActivityReturn => {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -61,8 +61,8 @@ export const useRecentActivity = (limit: number = 5): UseRecentActivityReturn =>
             timestamp: activity.createdAt,
             description: activity.description,
             actionable: false,
-            actionText: null,
-            actionUrl: null
+            actionText: undefined,
+            actionUrl: undefined
           }));
           setActivities(transformedActivities);
         } else {
@@ -76,8 +76,8 @@ export const useRecentActivity = (limit: number = 5): UseRecentActivityReturn =>
               timestamp: new Date().toISOString(),
               description: 'Created Product Manager CV',
               actionable: false,
-              actionText: null,
-              actionUrl: null
+              actionText: undefined,
+              actionUrl: undefined
             },
             {
               id: '2',
@@ -87,8 +87,8 @@ export const useRecentActivity = (limit: number = 5): UseRecentActivityReturn =>
               timestamp: new Date(Date.now() - 86400000).toISOString(),
               description: 'Updated Software Engineer CV',
               actionable: false,
-              actionText: null,
-              actionUrl: null
+              actionText: undefined,
+              actionUrl: undefined
             },
             {
               id: '3',
@@ -98,8 +98,8 @@ export const useRecentActivity = (limit: number = 5): UseRecentActivityReturn =>
               timestamp: new Date(Date.now() - 172800000).toISOString(),
               description: 'Published Designer CV',
               actionable: false,
-              actionText: null,
-              actionUrl: null
+              actionText: undefined,
+              actionUrl: undefined
             }
           ]);
         }
@@ -119,8 +119,8 @@ export const useRecentActivity = (limit: number = 5): UseRecentActivityReturn =>
           timestamp: new Date().toISOString(),
           description: 'Created Product Manager CV',
           actionable: false,
-          actionText: null,
-          actionUrl: null
+          actionText: undefined,
+          actionUrl: undefined
         },
         {
           id: '2',
@@ -130,8 +130,8 @@ export const useRecentActivity = (limit: number = 5): UseRecentActivityReturn =>
           timestamp: new Date(Date.now() - 86400000).toISOString(),
           description: 'Updated Software Engineer CV',
           actionable: false,
-          actionText: null,
-          actionUrl: null
+          actionText: undefined,
+          actionUrl: undefined
         },
         {
           id: '3',
@@ -141,8 +141,8 @@ export const useRecentActivity = (limit: number = 5): UseRecentActivityReturn =>
           timestamp: new Date(Date.now() - 172800000).toISOString(),
           description: 'Published Designer CV',
           actionable: false,
-          actionText: null,
-          actionUrl: null
+          actionText: undefined,
+          actionUrl: undefined
         }
       ]);
     } finally {

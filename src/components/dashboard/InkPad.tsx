@@ -285,7 +285,7 @@ const InkPad: React.FC = () => {
           {/* Stats Cards */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <motion.div
-          className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6"
+          className="frosted-glass-card rounded-2xl p-6"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
@@ -302,7 +302,7 @@ const InkPad: React.FC = () => {
         </motion.div>
 
         <motion.div
-          className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6"
+          className="frosted-glass-card rounded-2xl p-6"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
@@ -319,7 +319,7 @@ const InkPad: React.FC = () => {
         </motion.div>
 
         <motion.div
-          className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6"
+          className="frosted-glass-card rounded-2xl p-6"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
@@ -336,7 +336,7 @@ const InkPad: React.FC = () => {
         </motion.div>
 
         <motion.div
-          className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6"
+          className="frosted-glass-card rounded-2xl p-6"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
@@ -369,7 +369,7 @@ const InkPad: React.FC = () => {
           {coverLetters.map((letter, index) => (
             <motion.div
               key={letter.id || letter._id || `letter-${index}`}
-              className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-all duration-300 group"
+              className="frosted-glass-card rounded-2xl p-6 hover:bg-gray-200 dark:hover:bg-white/10 transition-all duration-300 group"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.6 + index * 0.1 }}
@@ -378,7 +378,7 @@ const InkPad: React.FC = () => {
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
-                    <h3 className="font-semibold text-white group-hover:text-lime-400 transition-colors">
+                    <h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-lime-400 transition-colors">
                       {letter.title}
                     </h3>
                     <div className={`px-2 py-1 rounded-lg text-xs font-medium ${getStatusColor(letter.status)}`}>
@@ -389,7 +389,7 @@ const InkPad: React.FC = () => {
                     )}
                   </div>
                   
-                  <div className="flex items-center gap-4 text-white/60 text-sm mb-3">
+                  <div className="flex items-center gap-4 text-gray-600 dark:text-white/60 text-sm mb-3">
                     <div className="flex items-center gap-1">
                       <Building size={14} />
                       <span>{letter.company}</span>
@@ -408,14 +408,14 @@ const InkPad: React.FC = () => {
                     <div className={`px-3 py-1 rounded-lg text-xs font-medium bg-gradient-to-r ${getToneColor(letter.tone)} text-white`}>
                       {letter.tone}
                     </div>
-                    <div className="text-white/40 text-sm">
+                    <div className="text-gray-500 dark:text-white/40 text-sm">
                       {letter.length} length
                     </div>
                   </div>
                   
-                  <p className="text-white/80 text-sm mb-4 line-clamp-3">{letter.content}</p>
+                  <p className="text-gray-700 dark:text-white/80 text-sm mb-4 line-clamp-3">{letter.content}</p>
                   
-                  <div className="flex items-center gap-4 text-white/40 text-sm">
+                  <div className="flex items-center gap-4 text-gray-500 dark:text-white/40 text-sm">
                     <div className="flex items-center gap-1">
                       <Clock size={14} />
                       <span>{letter.lastModified}</span>
@@ -488,7 +488,7 @@ const InkPad: React.FC = () => {
         {/* Right Column - Sidebar */}
         <div className="space-y-6">
           {/* Quick Actions */}
-          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+          <div className="frosted-glass-widget rounded-xl p-6">
             <h3 className="text-white font-medium text-sm mb-4 flex items-center gap-2">
               <Sparkles size={14} className="text-purple-400" />
               Quick Actions
@@ -522,7 +522,7 @@ const InkPad: React.FC = () => {
           </div>
 
           {/* Writing Tips */}
-          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+          <div className="frosted-glass-widget rounded-xl p-6">
             <h3 className="text-white font-medium text-sm mb-4 flex items-center gap-2">
               <Lightbulb size={14} className="text-yellow-400" />
               Writing Tips
@@ -544,7 +544,7 @@ const InkPad: React.FC = () => {
           </div>
 
           {/* Tone Templates */}
-          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+          <div className="frosted-glass-widget rounded-xl p-6">
             <h3 className="text-white font-medium text-sm mb-4 flex items-center gap-2">
               <MessageSquare size={14} className="text-purple-400" />
               Tone Templates
@@ -565,7 +565,7 @@ const InkPad: React.FC = () => {
           </div>
 
           {/* Recent Activity */}
-          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+          <div className="frosted-glass-widget rounded-xl p-6">
             <h3 className="text-white font-medium text-sm mb-4 flex items-center gap-2">
               <Activity size={14} className="text-blue-400" />
               Recent Activity

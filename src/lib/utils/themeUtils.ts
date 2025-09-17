@@ -3,19 +3,19 @@
  */
 
 export const getThemeClasses = {
-  // Background classes - Professional dark theme
+  // Background classes - Professional theme with frosted glass
   background: {
-    primary: 'bg-white dark:bg-gray-900',
-    secondary: 'bg-gray-50 dark:bg-gray-800',
-    tertiary: 'bg-gray-100 dark:bg-gray-700',
-    card: 'bg-white dark:bg-gray-800',
-    cardHover: 'bg-gray-50 dark:bg-gray-700',
-    widget: 'bg-white dark:bg-gray-800',
-    widgetHover: 'bg-gray-50 dark:bg-gray-700',
+    primary: 'bg-gray-50 dark:bg-gray-900',
+    secondary: 'bg-gray-100 dark:bg-gray-800',
+    tertiary: 'bg-gray-200 dark:bg-gray-700',
+    card: 'bg-white/80 dark:bg-gray-800 backdrop-blur-xl border border-white/20 dark:border-gray-700/50',
+    cardHover: 'bg-white/90 dark:bg-gray-700 backdrop-blur-xl border border-white/30 dark:border-gray-600/50',
+    widget: 'bg-white/70 dark:bg-gray-800 backdrop-blur-xl border border-white/20 dark:border-gray-700/50',
+    widgetHover: 'bg-white/80 dark:bg-gray-700 backdrop-blur-xl border border-white/30 dark:border-gray-600/50',
     overlay: 'bg-black/50 dark:bg-black/80',
-    gradient: 'bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800',
+    gradient: 'bg-gradient-to-br from-gray-100 to-gray-50 dark:from-gray-900 dark:to-gray-800',
     gradientDark: 'bg-gradient-to-br from-gray-900 via-black to-gray-900',
-    gradientLight: 'bg-gradient-to-br from-gray-50 via-white to-gray-100'
+    gradientLight: 'bg-gradient-to-br from-gray-100 via-gray-50 to-gray-200'
   },
 
   // Text classes - Professional dark theme
@@ -58,17 +58,17 @@ export const getThemeClasses = {
 
   // Card classes
   card: {
-    base: 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
-    hover: 'hover:shadow-lg hover:shadow-gray-200/50 dark:hover:shadow-gray-900/50',
+    base: 'bg-white/80 dark:bg-gray-800 backdrop-blur-xl border border-white/20 dark:border-gray-700/50',
+    hover: 'hover:shadow-lg hover:shadow-gray-200/50 dark:hover:shadow-gray-900/50 hover:bg-white/90 dark:hover:bg-gray-700',
     elevated: 'shadow-md shadow-gray-200/50 dark:shadow-gray-900/50'
   },
 
   // Modal classes
   modal: {
     overlay: 'bg-black/50 dark:bg-black/70',
-    content: 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700',
-    header: 'border-b border-gray-200 dark:border-gray-700',
-    footer: 'border-t border-gray-200 dark:border-gray-700'
+    content: 'bg-white/95 dark:bg-gray-800 backdrop-blur-xl border border-white/20 dark:border-gray-700/50',
+    header: 'border-b border-white/20 dark:border-gray-700/50',
+    footer: 'border-t border-white/20 dark:border-gray-700/50'
   },
 
   // Navigation classes
@@ -94,15 +94,15 @@ export const getThemeShadow = {
 export const getPageBackground = (pageType: 'dashboard' | 'studio' | 'admin' | 'auth') => {
   switch (pageType) {
     case 'dashboard':
-      return 'min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-black dark:to-gray-900';
+      return 'min-h-screen bg-gradient-to-br from-gray-100 via-gray-50 to-gray-200 dark:from-gray-900 dark:via-black dark:to-gray-900';
     case 'studio':
-      return 'min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-black dark:to-gray-900';
+      return 'min-h-screen bg-gradient-to-br from-gray-100 via-gray-50 to-gray-200 dark:from-gray-900 dark:via-black dark:to-gray-900';
     case 'admin':
-      return 'min-h-screen bg-gray-50 dark:bg-gray-900';
+      return 'min-h-screen bg-gray-100 dark:bg-gray-900';
     case 'auth':
-      return 'min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-black dark:to-gray-900';
+      return 'min-h-screen bg-gradient-to-br from-gray-100 via-gray-50 to-gray-200 dark:from-gray-900 dark:via-black dark:to-gray-900';
     default:
-      return 'min-h-screen bg-white dark:bg-gray-900';
+      return 'min-h-screen bg-gray-50 dark:bg-gray-900';
   }
 };
 
@@ -113,8 +113,8 @@ export const getSidebarClasses = (isOpen: boolean = true, isMobile: boolean = fa
   container: `
     fixed lg:sticky top-0 z-50 h-screen
     ${isMobile ? 'inset-y-0 left-0' : 'top-4 left-4 bottom-4 h-[calc(100vh-2rem)]'}
-    ${!isMobile ? 'bg-gray-50/95 dark:bg-gray-800/95' : 'bg-white/95 dark:bg-gray-900/95'} 
-    backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50
+    ${!isMobile ? 'bg-white/90 dark:bg-gray-800/95' : 'bg-white/95 dark:bg-gray-900/95'} 
+    backdrop-blur-xl border border-white/20 dark:border-gray-700/50
     transition-all duration-300 ease-in-out
     ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
     ${isMobile ? 'w-80' : 'w-72 lg:w-16 xl:w-72'}
@@ -141,10 +141,10 @@ export const getTopBarClasses = () => ({
  */
 export const getStudioLayoutClasses = () => ({
   container: 'min-h-screen space-y-4',
-  header: 'bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 shadow-lg',
-  leftPanel: 'bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 rounded-2xl shadow-lg',
-  mainArea: 'bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 rounded-2xl shadow-lg',
-  rightPanel: 'bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 rounded-2xl shadow-lg',
+  header: 'bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 shadow-lg',
+  leftPanel: 'bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 rounded-2xl shadow-lg',
+  mainArea: 'bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 rounded-2xl shadow-lg',
+  rightPanel: 'bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 rounded-2xl shadow-lg',
   gap: 'gap-4'
 });
 
@@ -156,15 +156,13 @@ export const getResponsiveSidebarClasses = (isOpen: boolean = true, screenSize: 
   
   switch (screenSize) {
     case 'mobile':
-      return `${baseClasses} ${isOpen ? 'translate-x-0' : '-translate-x-full'} w-80 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-r border-gray-200/50 dark:border-gray-700/50`;
+      return `${baseClasses} ${isOpen ? 'translate-x-0' : '-translate-x-full'} w-80 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-r border-white/20 dark:border-gray-700/50`;
     
     case 'tablet':
-      return `${baseClasses} ${isOpen ? 'translate-x-0' : '-translate-x-full'} w-20 bg-gray-50/95 dark:bg-gray-800/95 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 rounded-2xl m-4 shadow-xl`;
+      return `${baseClasses} ${isOpen ? 'translate-x-0' : '-translate-x-full'} w-20 bg-white/90 dark:bg-gray-800/95 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 rounded-2xl m-4 shadow-xl`;
     
     case 'desktop':
     default:
       return getSidebarClasses(isOpen).container;
   }
 };
-
-

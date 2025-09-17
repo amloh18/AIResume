@@ -63,20 +63,20 @@ const GoogleOneTap = () => {
                 console.log('🆕 User has CVs but no master CV, redirecting to onboarding');
                 sessionStorage.setItem('needsCVSetup', 'true');
                 sessionStorage.setItem('fromRegistration', 'true');
-                router.push('/onboarding-universal');
+                router.push('/master-cv-onboarding');
               }
             } else {
               // New user, redirect to onboarding
               console.log('🆕 New user, redirecting to onboarding');
               sessionStorage.setItem('needsCVSetup', 'true');
               sessionStorage.setItem('fromRegistration', 'true');
-              router.push('/onboarding-universal');
+              router.push('/master-cv-onboarding');
             }
           } catch (error) {
             console.log('Error checking CVs, redirecting to onboarding:', error);
             sessionStorage.setItem('needsCVSetup', 'true');
             sessionStorage.setItem('fromRegistration', 'true');
-            router.push('/onboarding-universal');
+            router.push('/master-cv-onboarding');
           }
         }
       } else if (result?.error) {

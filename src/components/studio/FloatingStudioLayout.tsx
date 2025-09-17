@@ -7,13 +7,14 @@ import {
   Download,
   Save,
   X,
-  Sun,
-  Moon,
-  Edit3
+  Edit3,
+  Home,
+  Menu
 } from 'lucide-react';
-import { useTheme } from '@/lib/contexts/ThemeContext';
 import { useRouter } from 'next/navigation';
 import { getStudioLayoutClasses } from '@/lib/utils/themeUtils';
+import UserIcon from '@/components/ui/UserIcon';
+import { useSession } from 'next-auth/react';
 
 
 interface FloatingStudioLayoutProps {
@@ -40,16 +41,19 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
   onTitleUpdate
 }) => {
   const router = useRouter();
+  const { data: session } = useSession();
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const { theme, toggleTheme } = useTheme();
+  const [tempTitle, setTempTitle] = useState(documentTitle);
+  const [isMobile, setIsMobile] = useState(false);
   const layoutClasses = getStudioLayoutClasses();
 
   // Handle responsive behavior
   useEffect(() => {
     const handleResize = () => {
       const width = window.innerWidth;
+      setIsMobile(width < 1024);
       if (width < 1024) {
         setRightPanelOpen(false);
       } else {
@@ -61,6 +65,11 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Update tempTitle when documentTitle changes
+  useEffect(() => {
+    setTempTitle(documentTitle);
+  }, [documentTitle]);
 
   const handleBackToDashboard = () => {
     router.push('/dashboard');
@@ -89,152 +98,312 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
       {/* Main Studio Container */}
       <div className="h-screen overflow-hidden flex flex-col">
 
-        {/* Floating Header Panel */}
-        <motion.div
-          className="mx-4 mt-4 mb-2 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 shadow-lg rounded-2xl p-4"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          <div className="flex items-center justify-between">
-            {/* Left Section */}
-            <div className="flex items-center gap-4">
-              <motion.button
-                onClick={handleBackToDashboard}
-                className="flex items-center gap-2 px-3 py-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <ChevronLeft size={18} />
-                <span className="hidden sm:inline">Dashboard</span>
-              </motion.button>
-
-              {/* CV Circle Logo / Studio */}
-              <div className="flex items-center space-x-3">
-                <div className="text-lg font-bold">
-                  <span className="text-lime-600 dark:text-lime-400">CV</span>
-                  <span className="text-gray-700 dark:text-gray-300">CIRCLE</span>
-                </div>
-                <div className="text-gray-400">/</div>
-                <div className="px-2 py-1 bg-lime-100 dark:bg-lime-900/20 rounded-lg">
-                  <span className="text-sm font-medium text-lime-700 dark:text-lime-300">Studio</span>
-                </div>
-              </div>
-
-              {/* Document Title */}
-              <div className="flex items-center gap-3">
-                {isEditingTitle ? (
-                  <input
-                    type="text"
-                    value={documentTitle}
-                    onChange={(e) => onTitleUpdate && onTitleUpdate(e.target.value)}
-                    onBlur={() => setIsEditingTitle(false)}
-                    onKeyDown={(e) => e.key === 'Enter' && setIsEditingTitle(false)}
-                    className="text-xl font-bold bg-transparent border-b-2 border-lime-500 outline-none px-2 py-1 text-gray-900 dark:text-white"
-                    placeholder="Untitled CV"
-                    autoFocus
-                  />
-                ) : (
-                  <div className="flex items-center space-x-2">
-                    <div className="px-3 py-2 bg-gradient-to-r from-lime-50 to-green-50 dark:from-lime-900/20 dark:to-green-900/20 rounded-xl border border-lime-200 dark:border-lime-700">
-                      <span className="text-xl font-bold text-lime-800 dark:text-lime-200">{documentTitle}</span>
-                    </div>
-                    {onTitleUpdate && (
-                      <button
-                        onClick={() => setIsEditingTitle(true)}
-                        className="p-2 text-gray-400 hover:text-lime-600 dark:hover:text-lime-400 transition-colors rounded-lg hover:bg-lime-50 dark:hover:bg-lime-900/20"
-                      >
-                        <Edit3 className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
-                )}
-                <div className={`text-sm px-2 py-1 rounded-full ${getSaveStatusColor() === 'text-green-500' ? 'bg-green-100 text-green-700' : getSaveStatusColor() === 'text-yellow-500' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600'}`}>
-                  {getSaveStatusText()}
-                </div>
-              </div>
-            </div>
-
-            {/* Center Section */}
-            <div className="flex-1 flex items-center justify-center">
-              {headerContent}
-            </div>
-
-            {/* Right Section */}
-            <div className="flex items-center gap-2">
-              {/* Theme Toggle */}
-              <motion.button
-                onClick={toggleTheme}
-                className="p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                title="Toggle theme"
-              >
-                {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-              </motion.button>
-
-
-
-              {/* Action Buttons */}
-              <div className="flex items-center gap-2">
-                {onSave && (
-                  <motion.button
-                    onClick={onSave}
-                    disabled={saveStatus === 'saving'}
-                    className="flex items-center gap-2 px-3 py-2 bg-lime-500 hover:bg-lime-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <Save size={16} />
-                    <span className="hidden sm:inline">Save</span>
-                  </motion.button>
-                )}
-
-
-
-                {onDownload && (
-                  <motion.button
-                    onClick={onDownload}
-                    className="flex items-center gap-2 px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <Download size={16} />
-                    <span className="hidden sm:inline">Export</span>
-                  </motion.button>
-                )}
-              </div>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Main Content Area - 50/50 Split Layout */}
-        <div className="flex-1 flex gap-4 min-h-0 p-4">
-
-          {/* Left Panel - 50% width */}
+        {/* Header - Different for Mobile vs Desktop */}
+        {isMobile ? (
+          /* Mobile Header */
           <motion.div
-            className={`${layoutClasses.leftPanel} w-1/2 flex-shrink-0 overflow-hidden`}
-            layout
+            className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50 shadow-lg p-4"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            {leftPanel}
-          </motion.div>
+            <div className="flex items-center justify-between">
+              {/* Left Section - Hamburger Menu + Logo */}
+              <div className="flex items-center gap-3">
+                <motion.button
+                  onClick={() => setMobileMenuOpen(true)}
+                  className="flex items-center gap-2 px-3 py-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Menu size={20} strokeWidth={1.5} />
+                </motion.button>
 
-          {/* Right Panel - 50% width */}
-          <AnimatePresence>
-            {rightPanelOpen && rightPanel && (
-              <motion.div
-                className={`${layoutClasses.rightPanel} w-1/2 flex-shrink-0 overflow-y-auto`}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                transition={{ duration: 0.3 }}
-              >
-                {rightPanel}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+                {/* CV Circle Logo / Studio */}
+                <div className="flex items-center space-x-2">
+                  <div className="text-lg font-bold">
+                    <span className="text-lime-600 dark:text-lime-400">CV</span>
+                    <span className="text-gray-700 dark:text-gray-300">CIRCLE</span>
+                  </div>
+                  <div className="text-gray-400 text-sm">/</div>
+                  <div className="text-sm font-semibold text-lime-700 dark:text-lime-300">Studio</div>
+                </div>
+              </div>
+
+              {/* Center Section - Document Title with Edit */}
+              <div className="flex-1 flex items-center justify-center px-4">
+                <div className="flex items-center gap-2 max-w-xs">
+                  {isEditingTitle ? (
+                    <input
+                      type="text"
+                      value={tempTitle}
+                      onChange={(e) => setTempTitle(e.target.value)}
+                      onBlur={() => {
+                        onTitleUpdate?.(tempTitle);
+                        setIsEditingTitle(false);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          onTitleUpdate?.(tempTitle);
+                          setIsEditingTitle(false);
+                        } else if (e.key === 'Escape') {
+                          setTempTitle(documentTitle);
+                          setIsEditingTitle(false);
+                        }
+                      }}
+                      className="text-sm font-medium bg-transparent border-b border-lime-500 outline-none px-2 py-1 text-gray-700 dark:text-gray-300 text-center w-full"
+                      placeholder="Untitled CV"
+                      autoFocus
+                    />
+                  ) : (
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm font-medium text-gray-600 dark:text-gray-400 truncate">{documentTitle}</span>
+                      {onTitleUpdate && (
+                        <button
+                          onClick={() => {
+                            setTempTitle(documentTitle);
+                            setIsEditingTitle(true);
+                          }}
+                          className="p-1 text-gray-400 hover:text-lime-600 dark:hover:text-lime-400 transition-colors rounded flex-shrink-0"
+                        >
+                          <Edit3 className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Right Section - Save Button + User */}
+              <div className="flex items-center gap-2">
+                {/* Save Button */}
+                <motion.button
+                  onClick={onSave}
+                  disabled={saveStatus === 'saving'}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-all duration-200 ${
+                    saveStatus === 'saving' 
+                      ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200' 
+                      : saveStatus === 'error'
+                      ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                      : 'bg-green-100 text-green-700 hover:bg-green-200'
+                  }`}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  {saveStatus === 'saving' ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border border-yellow-600 border-t-transparent" />
+                      <Save size={16} />
+                    </>
+                  ) : saveStatus === 'error' ? (
+                    <>
+                      <div className="h-2 w-2 bg-red-600 rounded-full" />
+                      <Save size={16} />
+                    </>
+                  ) : (
+                    <>
+                      <div className="h-2 w-2 bg-green-600 rounded-full" />
+                      <Save size={16} />
+                    </>
+                  )}
+                </motion.button>
+
+                {/* User Icon */}
+                {session?.user && (
+                  <UserIcon 
+                    user={{
+                      name: session.user.name || 'User',
+                      email: session.user.email || 'user@example.com',
+                      profilePhoto: session.user.image,
+                      designation: 'CV Creator'
+                    }}
+                  />
+                )}
+              </div>
+            </div>
+          </motion.div>
+        ) : (
+          /* Desktop Floating Header Panel */
+          <motion.div
+            className="mx-4 mt-4 mb-2 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 shadow-lg rounded-2xl p-4"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <div className="flex items-center justify-between">
+              {/* Left Section */}
+              <div className="flex items-center gap-4">
+                <motion.button
+                  onClick={handleBackToDashboard}
+                  className="flex items-center gap-2 px-3 py-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Home size={18} strokeWidth={1.5} />
+                </motion.button>
+
+                {/* CV Circle Logo / Studio */}
+                <div className="flex items-center space-x-3">
+                  <div className="text-2xl font-bold">
+                    <span className="text-lime-600 dark:text-lime-400">CV</span>
+                    <span className="text-gray-700 dark:text-gray-300">CIRCLE</span>
+                  </div>
+                  <div className="text-gray-400 text-xl">/</div>
+                  <div className="text-xl font-semibold text-lime-700 dark:text-lime-300">Studio</div>
+                </div>
+
+                {/* Document Title */}
+                <div className="flex items-center gap-3">
+                  {isEditingTitle ? (
+                    <input
+                      type="text"
+                      value={tempTitle}
+                      onChange={(e) => setTempTitle(e.target.value)}
+                      onBlur={() => {
+                        onTitleUpdate?.(tempTitle);
+                        setIsEditingTitle(false);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          onTitleUpdate?.(tempTitle);
+                          setIsEditingTitle(false);
+                        } else if (e.key === 'Escape') {
+                          setTempTitle(documentTitle);
+                          setIsEditingTitle(false);
+                        }
+                      }}
+                      className="text-sm font-medium bg-transparent border-b border-lime-500 outline-none px-2 py-1 text-gray-700 dark:text-gray-300"
+                      placeholder="Untitled CV"
+                      autoFocus
+                    />
+                  ) : (
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm font-medium text-gray-600 dark:text-gray-400">{documentTitle}</span>
+                      {onTitleUpdate && (
+                        <button
+                          onClick={() => {
+                            setTempTitle(documentTitle);
+                            setIsEditingTitle(true);
+                          }}
+                          className="p-1 text-gray-400 hover:text-lime-600 dark:hover:text-lime-400 transition-colors rounded"
+                        >
+                          <Edit3 className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  <button
+                    onClick={onSave}
+                    disabled={saveStatus === 'saving'}
+                    className={`text-xs px-3 py-1 rounded-full font-medium transition-all duration-200 hover:scale-105 disabled:cursor-not-allowed disabled:hover:scale-100 ${
+                      saveStatus === 'saving' 
+                        ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200' 
+                        : saveStatus === 'error'
+                        ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                        : 'bg-green-100 text-green-700 hover:bg-green-200'
+                    }`}
+                    title={saveStatus === 'saving' ? 'Saving...' : saveStatus === 'error' ? 'Save failed - Click to retry' : 'Click to save'}
+                  >
+                    {saveStatus === 'saving' ? (
+                      <div className="flex items-center gap-1">
+                        <div className="animate-spin rounded-full h-3 w-3 border border-yellow-600 border-t-transparent" />
+                        <span>Saving</span>
+                      </div>
+                    ) : saveStatus === 'error' ? (
+                      <div className="flex items-center gap-1">
+                        <div className="h-2 w-2 bg-red-600 rounded-full" />
+                        <span>Save Failed</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1">
+                        <div className="h-2 w-2 bg-green-600 rounded-full" />
+                        <span>Saved</span>
+                      </div>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Center Section */}
+              <div className="flex-1 flex items-center justify-center">
+                {headerContent}
+              </div>
+
+              {/* Right Section */}
+              <div className="flex items-center gap-2">
+                {/* Action Buttons */}
+                <div className="flex items-center gap-2">
+                  {onDownload && (
+                    <motion.button
+                      onClick={onDownload}
+                      className="flex items-center gap-2 px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <Download size={16} />
+                      <span className="hidden sm:inline">Export</span>
+                    </motion.button>
+                  )}
+                </div>
+
+                {/* User Icon */}
+                {session?.user && (
+                  <UserIcon 
+                    user={{
+                      name: session.user.name || 'User',
+                      email: session.user.email || 'user@example.com',
+                      profilePhoto: session.user.image,
+                      designation: 'CV Creator'
+                    }}
+                  />
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Main Content Area - Different Layout for Mobile vs Desktop */}
+        {isMobile ? (
+          /* Mobile Layout: Right Panel First, Then Left Panel Below */
+          <div className="flex-1 flex flex-col min-h-0 p-4 gap-4">
+            {/* Right Panel - Full Width */}
+            <div className="flex-shrink-0 h-1/2 overflow-hidden">
+              {rightPanel}
+            </div>
+
+            {/* Left Panel - Full Width Below */}
+            <div className="flex-shrink-0 h-1/2 overflow-hidden">
+              {leftPanel}
+            </div>
+          </div>
+        ) : (
+          /* Desktop Layout - 50/50 Split */
+          <div className="flex-1 flex gap-4 min-h-0 p-4 pr-8">
+            {/* Left Panel - 50% width */}
+            <motion.div
+              className={`${layoutClasses.leftPanel} w-1/2 flex-shrink-0 overflow-hidden`}
+              layout
+              transition={{ duration: 0.3 }}
+            >
+              {leftPanel}
+            </motion.div>
+
+            {/* Right Panel - 50% width */}
+            <AnimatePresence>
+              {rightPanelOpen && rightPanel && (
+                <motion.div
+                  className="w-1/2 flex-shrink-0 overflow-hidden"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {rightPanel}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
       </div>
 
       {/* Mobile Menu Overlay */}
@@ -274,6 +443,30 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
                   <ChevronLeft size={18} />
                   <span>{rightPanelOpen ? 'Hide' : 'Show'} Right Panel</span>
                 </button>
+                
+                <button
+                  onClick={() => {
+                    handleBackToDashboard();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                  <Home size={18} />
+                  <span>Back to Dashboard</span>
+                </button>
+
+                {onDownload && (
+                  <button
+                    onClick={() => {
+                      onDownload();
+                      setMobileMenuOpen(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  >
+                    <Download size={18} />
+                    <span>Export Document</span>
+                  </button>
+                )}
               </div>
             </motion.div>
           </motion.div>

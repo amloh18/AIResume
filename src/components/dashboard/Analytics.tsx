@@ -6,6 +6,7 @@ import {
   FileText, Briefcase, PenTool, TrendingUp, Target, Sparkles, Zap, 
   Lightbulb, Plus, Edit, Eye, Trash2, Calendar, CheckCircle, Heart
 } from 'lucide-react';
+// import { useSession } from 'next-auth/react'; // Removed - using Clerk now
 import { useSession } from 'next-auth/react';
 import { useCreateCV } from '@/lib/utils/cvCreationUtils';
 import AnalyticsJourneyWidget from './AnalyticsJourneyWidget';
@@ -14,14 +15,16 @@ import MasterCVBadge from './MasterCVBadge';
 import { authenticatedFetch } from '@/lib/utils/apiUtils';
 import CVJourneyModal from '@/components/modals/CVJourneyModal';
 
-// 1. The At-a-Glance "My Status" Section - Fused CV Health Score + Quick Actions
-const MyStatusSection: React.FC<{ 
+// 1. Combined CV Management Section - CV Health Score + Master CV Management + Quick Actions
+const CVManagementSection: React.FC<{ 
   cvHealthScore: number; 
+  cvs: any[];
   onImproveScore: () => void;
   onCreateCV: () => void;
   onAddJob: () => void;
   onWriteCoverLetter: () => void;
-}> = ({ cvHealthScore, onImproveScore, onCreateCV, onAddJob, onWriteCoverLetter }) => {
+  onSetMasterCV: (cvId: string) => void;
+}> = ({ cvHealthScore, cvs, onImproveScore, onCreateCV, onAddJob, onWriteCoverLetter, onSetMasterCV }) => {
   const getStatus = (score: number) => {
     if (score >= 80) return { label: 'Excellent', color: 'text-green-400' };
     if (score >= 60) return { label: 'Good', color: 'text-yellow-400' };
@@ -32,59 +35,275 @@ const MyStatusSection: React.FC<{
   const circumference = 2 * Math.PI * 45;
   const strokeDashoffset = circumference * (1 - cvHealthScore / 100);
 
+  // Find master CV
+  console.log('🔍 CVManagementSection - Received CVs:', cvs);
+  console.log('🔍 CVManagementSection - CVs length:', cvs.length);
+  const masterCV = cvs.find(cv => cv.isMaster);
+  const otherCVs = cvs.filter(cv => !cv.isMaster);
+  console.log('🔍 CVManagementSection - Master CV:', masterCV);
+  console.log('🔍 CVManagementSection - Other CVs:', otherCVs);
+
+  const calculateCompletionPercentage = (cv: any): number => {
+    if (cv.status === 'published') return 100;
+    if (cv.status === 'archived') return 0;
+    
+    let totalScore = 0;
+    let maxScore = 0;
+    
+    const sectionWeights = { personalInfo: 25, experience: 30, education: 20, skills: 15, projects: 10 };
+    
+    if (cv.cvData?.basics) {
+      const basics = cv.cvData.basics;
+      const personalInfoScore = calculatePersonalInfoScore(basics);
+      totalScore += (personalInfoScore * sectionWeights.personalInfo) / 100;
+    }
+    maxScore += sectionWeights.personalInfo;
+    
+    if (cv.cvData?.work) {
+      const experienceScore = calculateExperienceScore(cv.cvData.work);
+      totalScore += (experienceScore * sectionWeights.experience) / 100;
+    }
+    maxScore += sectionWeights.experience;
+    
+    if (cv.cvData?.education) {
+      const educationScore = calculateEducationScore(cv.cvData.education);
+      totalScore += (educationScore * sectionWeights.education) / 100;
+    }
+    maxScore += sectionWeights.education;
+    
+    if (cv.cvData?.skills) {
+      const skillsScore = calculateSkillsScore(cv.cvData.skills);
+      totalScore += (skillsScore * sectionWeights.skills) / 100;
+    }
+    maxScore += sectionWeights.skills;
+    
+    if (cv.cvData?.projects) {
+      const projectsScore = calculateProjectsScore(cv.cvData.projects);
+      totalScore += (projectsScore * sectionWeights.projects) / 100;
+    }
+    maxScore += sectionWeights.projects;
+    
+    const completionPercentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
+    return Math.max(0, Math.min(100, completionPercentage));
+  };
+
+  const calculatePersonalInfoScore = (basics: any): number => {
+    let score = 0;
+    let maxScore = 5;
+    if (basics.name && basics.name.trim()) score += 1;
+    if (basics.email && basics.email.trim()) score += 1;
+    if (basics.phone && basics.phone.trim()) score += 1;
+    if (basics.location && (basics.location.city || basics.location.address)) score += 1;
+    if (basics.summary && basics.summary.trim()) score += 1;
+    return (score / maxScore) * 100;
+  };
+  
+  const calculateExperienceScore = (work: any[]): number => {
+    if (!Array.isArray(work) || work.length === 0) return 0;
+    let totalScore = 0;
+    const maxEntries = 3;
+    work.slice(0, maxEntries).forEach(entry => {
+      let entryScore = 0;
+      let maxEntryScore = 4;
+      if (entry.name && entry.name.trim()) entryScore += 1;
+      if (entry.position && entry.position.trim()) entryScore += 1;
+      if (entry.startDate && entry.startDate.trim()) entryScore += 1;
+      if (entry.summary && entry.summary.trim()) entryScore += 1;
+      totalScore += (entryScore / maxEntryScore) * 100;
+    });
+    return Math.min(100, totalScore / Math.min(work.length, maxEntries));
+  };
+  
+  const calculateEducationScore = (education: any[]): number => {
+    if (!Array.isArray(education) || education.length === 0) return 0;
+    let totalScore = 0;
+    const maxEntries = 2;
+    education.slice(0, maxEntries).forEach(entry => {
+      let entryScore = 0;
+      let maxEntryScore = 4;
+      if (entry.institution && entry.institution.trim()) entryScore += 1;
+      if (entry.area && entry.area.trim()) entryScore += 1;
+      if (entry.studyType && entry.studyType.trim()) entryScore += 1;
+      if (entry.startDate && entry.startDate.trim()) entryScore += 1;
+      totalScore += (entryScore / maxEntryScore) * 100;
+    });
+    return Math.min(100, totalScore / Math.min(education.length, maxEntries));
+  };
+  
+  const calculateSkillsScore = (skills: any[]): number => {
+    if (!Array.isArray(skills) || skills.length === 0) return 0;
+    let totalScore = 0;
+    const maxSkills = 5;
+    skills.slice(0, maxSkills).forEach(skill => {
+      let skillScore = 0;
+      let maxSkillScore = 2;
+      if (skill.name && skill.name.trim()) skillScore += 1;
+      if (skill.keywords && Array.isArray(skill.keywords) && skill.keywords.length > 0) skillScore += 1;
+      totalScore += (skillScore / maxSkillScore) * 100;
+    });
+    return Math.min(100, totalScore / Math.min(skills.length, maxSkills));
+  };
+  
+  const calculateProjectsScore = (projects: any[]): number => {
+    if (!Array.isArray(projects) || projects.length === 0) return 0;
+    let totalScore = 0;
+    const maxProjects = 2;
+    projects.slice(0, maxProjects).forEach(project => {
+      let projectScore = 0;
+      let maxProjectScore = 3;
+      if (project.name && project.name.trim()) projectScore += 1;
+      if (project.description && project.description.trim()) projectScore += 1;
+      if (project.url && project.url.trim()) projectScore += 1;
+      totalScore += (projectScore / maxProjectScore) * 100;
+    });
+    return Math.min(100, totalScore / Math.min(projects.length, maxProjects));
+  };
+
   return (
-    <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-      <h2 className="text-lg font-bold text-white mb-4">My Status</h2>
+    <div className="glass-widget-premium glass-shimmer rounded-xl p-6">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-lg font-bold text-gray-900 dark:text-white">CV Management</h2>
+        <div className="flex items-center gap-2">
+          <MasterCVBadge />
+        </div>
+      </div>
       
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* CV Health Score */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* CV Health Score (Master CV Only) */}
         <div className="text-center">
-      <div className="relative w-32 h-32 mx-auto mb-4">
-        <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 100 100">
+          <div className="relative w-32 h-32 mx-auto mb-4">
+            <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 100 100">
               <circle cx="50" cy="50" r="45" stroke="currentColor" strokeWidth="10" fill="none" className="text-gray-200 dark:text-white/10" />
-          <defs>
-            <linearGradient id="cvHealthGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#ef4444" />
-              <stop offset="100%" stopColor="#f97316" />
-            </linearGradient>
-          </defs>
+              <defs>
+                <linearGradient id="cvHealthGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#ef4444" />
+                  <stop offset="100%" stopColor="#f97316" />
+                </linearGradient>
+              </defs>
               <circle cx="50" cy="50" r="45" stroke="url(#cvHealthGradient)" strokeWidth="10" fill="none" 
                 strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} 
                 className="transition-all duration-1000 ease-out" strokeLinecap="round" />
-        </svg>
-        <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-lg font-bold text-white">{cvHealthScore}%</span>
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-lg font-bold text-gray-900 dark:text-white">{cvHealthScore}%</span>
+            </div>
+          </div>
+          <p className="text-gray-600 dark:text-white/60 text-sm mb-1">Master CV Health</p>
+          <p className={`text-sm font-medium ${status.color}`}>{status.label}</p>
         </div>
-      </div>
-      <p className="text-white/60 text-sm mb-1">CV Health Score</p>
-      <p className={`text-sm font-medium ${status.color}`}>{status.label}</p>
-    </div>
+
+        {/* Master CV Management */}
+        <div className="space-y-3">
+          <h3 className="text-gray-900 dark:text-white font-medium text-sm flex items-center gap-2">
+            <FileText size={14} className="text-lime-400" />
+            Master CV
+          </h3>
+          {masterCV ? (
+            <div className="glass-card-premium rounded-lg p-3">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-gray-900 dark:text-white font-medium text-sm truncate">{masterCV.title || 'Untitled CV'}</h4>
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-lime-400 rounded-full"></div>
+                  <span className="text-xs text-lime-400 font-medium">Master</span>
+                </div>
+              </div>
+              <div className="flex items-center justify-between text-xs text-gray-600 dark:text-white/60">
+                <span>Progress: {calculateCompletionPercentage(masterCV)}%</span>
+                <span>{new Date(masterCV.updatedAt || masterCV.createdAt).toLocaleDateString()}</span>
+              </div>
+              <div className="mt-2">
+                <div className="w-full bg-gray-200 dark:bg-white/10 rounded-full h-1.5">
+                  <div className={`h-1.5 rounded-full transition-all duration-300 ${
+                    calculateCompletionPercentage(masterCV) >= 80 ? 'bg-green-400' : 
+                    calculateCompletionPercentage(masterCV) >= 60 ? 'bg-yellow-400' : 
+                    calculateCompletionPercentage(masterCV) >= 40 ? 'bg-orange-400' : 'bg-red-400'
+                  }`} style={{ width: `${calculateCompletionPercentage(masterCV)}%` }}></div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="glass-card-premium rounded-lg p-3 text-center">
+              <p className="text-gray-600 dark:text-white/60 text-xs mb-2">No Master CV Set</p>
+              <p className="text-gray-500 dark:text-white/50 text-xs">Select a CV below to make it your master</p>
+            </div>
+          )}
+        </div>
 
         {/* Quick Actions */}
         <div className="space-y-3">
-          <h3 className="text-white font-medium text-sm flex items-center gap-2">
+          <h3 className="text-gray-900 dark:text-white font-medium text-sm flex items-center gap-2">
             <Zap size={14} className="text-yellow-400" />
             Quick Actions
           </h3>
           <div className="space-y-2">
             <motion.button onClick={onImproveScore}
-              className="w-full p-3 bg-gradient-to-r from-lime-100 to-lime-200 dark:from-lime-400/20 dark:to-lime-500/20 border border-lime-300 dark:border-lime-400/30 text-lime-700 dark:text-lime-400 rounded-lg font-medium hover:from-lime-200 hover:to-lime-300 dark:hover:from-lime-400/30 dark:hover:to-lime-500/30 transition-all duration-300 flex items-center justify-center gap-2 text-sm"
+              className="w-full p-2.5 bg-gradient-to-r from-lime-100 to-lime-200 dark:from-lime-400/20 dark:to-lime-500/20 border border-lime-300 dark:border-lime-400/30 text-lime-700 dark:text-lime-400 rounded-lg font-medium hover:from-lime-200 hover:to-lime-300 dark:hover:from-lime-400/30 dark:hover:to-lime-500/30 transition-all duration-300 flex items-center justify-center gap-2 text-xs"
               whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              <Sparkles size={14} /> Improve CV Score
+              <Sparkles size={12} /> Improve Score
+            </motion.button>
+            <motion.button onClick={onCreateCV}
+              className="w-full p-2.5 glass-card-premium text-gray-700 dark:text-white/80 rounded-lg flex items-center justify-center gap-2 text-xs"
+              whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Plus size={12} /> New CV
             </motion.button>
             <motion.button onClick={onAddJob}
-              className="w-full p-3 bg-white/5 text-white/80 rounded-lg hover:bg-white/10 transition-all duration-300 flex items-center justify-center gap-2 text-sm"
+              className="w-full p-2.5 glass-card-premium text-gray-700 dark:text-white/80 rounded-lg flex items-center justify-center gap-2 text-xs"
               whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              <Plus size={14} /> Add Job
+              <Briefcase size={12} /> Add Job
             </motion.button>
             <motion.button onClick={onWriteCoverLetter}
-              className="w-full p-3 bg-white/5 text-white/80 rounded-lg hover:bg-white/10 transition-all duration-300 flex items-center justify-center gap-2 text-sm"
+              className="w-full p-2.5 glass-card-premium text-gray-700 dark:text-white/80 rounded-lg flex items-center justify-center gap-2 text-xs"
               whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              <PenTool size={14} /> Write Cover Letter
+              <PenTool size={12} /> Cover Letter
             </motion.button>
           </div>
         </div>
       </div>
+
+      {/* All CVs List Row */}
+      {cvs.length > 0 && (
+        <div className="mt-6">
+          <h3 className="text-gray-900 dark:text-white font-medium text-sm flex items-center gap-2 mb-3">
+            <FileText size={14} className="text-blue-400" />
+            All CVs ({cvs.length})
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {cvs.map((cv) => (
+              <div key={cv.id || cv._id} className={`glass-card-premium rounded-lg p-3 cursor-pointer hover:bg-gray-200 dark:hover:bg-white/10 transition-all duration-200 ${
+                cv.isMaster ? 'ring-1 ring-lime-400/30 bg-lime-400/5' : ''
+              }`}
+                onClick={() => onSetMasterCV(cv.id || cv._id)}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h5 className="text-gray-900 dark:text-white font-medium text-sm truncate">{cv.title || 'Untitled CV'}</h5>
+                      {cv.isMaster && (
+                        <div className="flex items-center gap-1">
+                          <div className="w-1.5 h-1.5 bg-lime-400 rounded-full"></div>
+                          <span className="text-xs text-lime-400 font-medium">Master</span>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-gray-500 dark:text-white/50 text-xs">{calculateCompletionPercentage(cv)}% complete</p>
+                  </div>
+                  {!cv.isMaster && (
+                    <button className="text-blue-400 hover:text-blue-300 text-xs font-medium">
+                      Set Master
+                    </button>
+                  )}
+                </div>
+                <div className="w-full bg-gray-200 dark:bg-white/10 rounded-full h-1.5">
+                  <div className={`h-1.5 rounded-full transition-all duration-300 ${
+                    calculateCompletionPercentage(cv) >= 80 ? 'bg-green-400' : 
+                    calculateCompletionPercentage(cv) >= 60 ? 'bg-yellow-400' : 
+                    calculateCompletionPercentage(cv) >= 40 ? 'bg-orange-400' : 'bg-red-400'
+                  }`} style={{ width: `${calculateCompletionPercentage(cv)}%` }}></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -115,20 +334,20 @@ const ApplicationHub: React.FC<{
   const stats = getApplicationStats();
 
   return (
-    <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-      <h2 className="text-lg font-bold text-white mb-4">Application Hub</h2>
+    <div className="glass-widget-premium glass-shimmer rounded-xl p-6">
+      <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Application Hub</h2>
       
       {/* Tab Navigation */}
       <div className="flex items-center gap-2 mb-6">
         <motion.button onClick={() => setActiveTab('timeline')}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
-            activeTab === 'timeline' ? 'bg-blue-400/20 text-blue-400 border border-blue-400/30' : 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'
+            activeTab === 'timeline' ? 'bg-blue-400/20 text-blue-400 border border-blue-400/30' : 'glass-card-premium text-gray-600 dark:text-white/60'
           }`} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
           <Calendar size={14} className="inline mr-2" /> Timeline
         </motion.button>
         <motion.button onClick={() => setActiveTab('cvs')}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
-            activeTab === 'cvs' ? 'bg-blue-400/20 text-blue-400 border border-blue-400/30' : 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'
+            activeTab === 'cvs' ? 'bg-blue-400/20 text-blue-400 border border-blue-400/30' : 'glass-card-premium text-gray-600 dark:text-white/60'
           }`} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
           <FileText size={14} className="inline mr-2" /> Incomplete CVs ({drafts.length})
       </motion.button>
@@ -137,21 +356,21 @@ const ApplicationHub: React.FC<{
       {activeTab === 'timeline' ? (
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4 mb-4">
-            <div className="p-3 bg-white/5 rounded-lg text-center">
+            <div className="p-3 glass-card-premium rounded-lg text-center">
               <div className="text-lg font-bold text-blue-400">{stats.applicationsThisWeek}</div>
-              <div className="text-white/60 text-xs">This Week</div>
+              <div className="text-gray-600 dark:text-white/60 text-xs">This Week</div>
           </div>
-            <div className="p-3 bg-white/5 rounded-lg text-center">
+            <div className="p-3 glass-card-premium rounded-lg text-center">
               <div className="text-lg font-bold text-green-400">{stats.successRate}%</div>
-              <div className="text-white/60 text-xs">Success Rate</div>
+              <div className="text-gray-600 dark:text-white/60 text-xs">Success Rate</div>
         </div>
     </div>
           <div className="space-y-2">
-            <div className="flex items-center justify-between text-white/80 text-sm">
+            <div className="flex items-center justify-between text-gray-700 dark:text-white/80 text-sm">
               <span>Average Response Time</span>
               <span className="text-green-400 font-medium">8 days</span>
   </div>
-            <div className="flex items-center justify-between text-white/80 text-sm">
+            <div className="flex items-center justify-between text-gray-700 dark:text-white/80 text-sm">
               <span>Next Follow-up Due</span>
               <span className="text-blue-400 font-medium">2 days</span>
         </div>
@@ -160,7 +379,7 @@ const ApplicationHub: React.FC<{
       ) : (
         <div className="space-y-4">
           {drafts.length > 0 ? drafts.map((draft) => (
-            <div key={draft.id} className="p-4 bg-white/5 border border-white/10 rounded-lg">
+            <div key={draft.id} className="p-4 glass-card-premium rounded-lg">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-lime-400/20">
@@ -168,20 +387,20 @@ const ApplicationHub: React.FC<{
       </div>
       <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <h4 className="text-white font-medium text-sm">{draft.title}</h4>
+                      <h4 className="text-gray-900 dark:text-white font-medium text-sm">{draft.title}</h4>
                       {draft.isMaster && <MasterCVBadge variant="compact" />}
                     </div>
-                    <p className="text-white/40 text-xs">Progress: {draft.progress}%</p>
+                    <p className="text-gray-600 dark:text-white/40 text-xs">Progress: {draft.progress}%</p>
         </div>
       </div>
-                <div className="text-white/40 text-xs">{draft.lastEdited.toLocaleDateString()}</div>
+                <div className="text-gray-600 dark:text-white/40 text-xs">{draft.lastEdited.toLocaleDateString()}</div>
         </div>
               <div className="mb-4">
-                <div className="flex justify-between text-white/60 text-xs mb-1">
+                <div className="flex justify-between text-gray-600 dark:text-white/60 text-xs mb-1">
                   <span>Progress</span>
                   <span>{draft.progress}%</span>
       </div>
-                <div className="w-full bg-white/10 rounded-full h-2">
+                <div className="w-full bg-gray-200 dark:bg-white/10 rounded-full h-2">
                   <div className={`h-2 rounded-full transition-all duration-300 ${
                     draft.progress >= 80 ? 'bg-green-400' : draft.progress >= 60 ? 'bg-yellow-400' : draft.progress >= 40 ? 'bg-orange-400' : 'bg-red-400'
                   }`} style={{ width: `${draft.progress}%` }}></div>
@@ -208,8 +427,8 @@ const ApplicationHub: React.FC<{
           )) : (
             <div className="text-center py-8">
               <CheckCircle size={32} className="text-green-400 mx-auto mb-3" />
-              <h3 className="text-white font-medium text-sm mb-2">All CVs Complete!</h3>
-              <p className="text-white/60 text-xs">Great job! All your CVs are ready for applications.</p>
+              <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-2">All CVs Complete!</h3>
+              <p className="text-gray-600 dark:text-white/60 text-xs">Great job! All your CVs are ready for applications.</p>
             </div>
           )}
         </div>
@@ -235,55 +454,55 @@ const IntelligenceDashboard: React.FC<{
   };
 
   return (
-    <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-      <h2 className="text-lg font-bold text-white mb-4">Intelligence Dashboard</h2>
+    <div className="glass-widget-premium glass-shimmer rounded-xl p-6">
+      <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Intelligence Dashboard</h2>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Career Predictions */}
         <div>
-      <h3 className="text-white font-medium text-sm mb-4 flex items-center gap-2">
+      <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-4 flex items-center gap-2">
         <Target size={14} className="text-purple-400" />
         Career Predictions
       </h3>
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
-          <div className="text-center p-3 bg-white/5 rounded-lg">
+          <div className="text-center p-3 bg-gray-100 dark:bg-white/5 rounded-lg">
             <div className="text-2xl font-bold text-purple-400">{predictions?.nextWeekInterviews || 0}</div>
-            <div className="text-white/60 text-xs">Interviews Next Week</div>
+            <div className="text-gray-600 dark:text-white/60 text-xs">Interviews Next Week</div>
           </div>
-          <div className="text-center p-3 bg-white/5 rounded-lg">
+          <div className="text-center p-3 bg-gray-100 dark:bg-white/5 rounded-lg">
             <div className="text-2xl font-bold text-green-400">{predictions?.successProbability || 0}%</div>
-            <div className="text-white/60 text-xs">Success Probability</div>
+            <div className="text-gray-600 dark:text-white/60 text-xs">Success Probability</div>
           </div>
         </div>
             
-        <div className="p-3 bg-white/5 rounded-lg">
+        <div className="p-3 glass-card-premium rounded-lg">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
-              <span className="text-white text-sm">Monthly Goal Progress</span>
+              <span className="text-gray-900 dark:text-white text-sm">Monthly Goal Progress</span>
               {!isEditingGoal && (
                     <button onClick={() => setIsEditingGoal(true)} className="text-blue-400 hover:text-blue-300 text-xs">Edit</button>
               )}
             </div>
-            <span className="text-white/60 text-xs">{predictions?.monthlyGoalProgress || 0}%</span>
+            <span className="text-gray-600 dark:text-white/60 text-xs">{predictions?.monthlyGoalProgress || 0}%</span>
           </div>
           {isEditingGoal ? (
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                     <input type="number" min="1" max="100" value={newGoal} onChange={(e) => setNewGoal(parseInt(e.target.value) || 20)}
-                      className="flex-1 px-2 py-1 bg-white/10 border border-white/20 rounded text-white text-xs" placeholder="Set monthly goal" />
+                      className="flex-1 px-2 py-1 bg-gray-200 dark:bg-white/10 border border-gray-300 dark:border-white/20 rounded text-gray-900 dark:text-white text-xs" placeholder="Set monthly goal" />
                     <button onClick={handleUpdateGoal} className="px-2 py-1 bg-blue-400 text-black text-xs rounded hover:bg-blue-300">Save</button>
                     <button onClick={() => { setIsEditingGoal(false); setNewGoal(predictions?.monthlyGoal || 20); }}
-                      className="px-2 py-1 bg-white/10 text-white text-xs rounded hover:bg-white/20">Cancel</button>
+                      className="px-2 py-1 bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-white text-xs rounded hover:bg-gray-300 dark:hover:bg-white/20">Cancel</button>
               </div>
             </div>
           ) : (
             <>
-              <div className="w-full bg-white/10 rounded-full h-2">
+              <div className="w-full bg-gray-200 dark:bg-white/10 rounded-full h-2">
                     <div className="bg-gradient-to-r from-lime-400 to-lime-500 h-2 rounded-full transition-all duration-500"
                       style={{ width: `${Math.min(100, predictions?.monthlyGoalProgress || 0)}%` }}></div>
               </div>
-              <div className="flex justify-between text-white/60 text-xs mt-1">
+              <div className="flex justify-between text-gray-600 dark:text-white/60 text-xs mt-1">
                 <span>{predictions?.jobsThisMonth || 0} / {predictions?.monthlyGoal || 20} jobs</span>
                 <span>Goal: {predictions?.monthlyGoal || 20} jobs/month</span>
               </div>
@@ -295,24 +514,24 @@ const IntelligenceDashboard: React.FC<{
 
         {/* Market Intelligence */}
         <div>
-    <h3 className="text-white font-medium text-sm mb-4 flex items-center gap-2">
+    <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-4 flex items-center gap-2">
       <TrendingUp size={14} className="text-blue-400" />
       Market Intelligence
     </h3>
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3">
-        <div className="text-center p-3 bg-white/5 rounded-lg">
+        <div className="text-center p-3 bg-gray-100 dark:bg-white/5 rounded-lg">
           <div className="text-lg font-bold text-green-400">{marketIntelligence?.salaryTrend || '+8%'}</div>
-          <div className="text-white/60 text-xs">Salary Trend</div>
+          <div className="text-gray-600 dark:text-white/60 text-xs">Salary Trend</div>
         </div>
-        <div className="text-center p-3 bg-white/5 rounded-lg">
+        <div className="text-center p-3 bg-gray-100 dark:bg-white/5 rounded-lg">
           <div className="text-lg font-bold text-blue-400">{marketIntelligence?.remoteOpportunities || '+45%'}</div>
-          <div className="text-white/60 text-xs">Remote Jobs</div>
+          <div className="text-gray-600 dark:text-white/60 text-xs">Remote Jobs</div>
         </div>
       </div>
             
       <div>
-        <p className="text-white/80 text-xs font-medium mb-2">Top Skills in Demand:</p>
+        <p className="text-gray-700 dark:text-white/80 text-xs font-medium mb-2">Top Skills in Demand:</p>
         <div className="flex flex-wrap gap-1">
           {marketIntelligence?.topSkills?.map((skill: string, index: number) => (
                   <span key={index} className="px-2 py-1 bg-blue-400/20 text-blue-400 text-xs rounded-full">{skill}</span>
@@ -321,7 +540,7 @@ const IntelligenceDashboard: React.FC<{
       </div>
             
       <div>
-        <p className="text-white/80 text-xs font-medium mb-2">Hot Companies Hiring:</p>
+        <p className="text-gray-700 dark:text-white/80 text-xs font-medium mb-2">Hot Companies Hiring:</p>
         <div className="flex flex-wrap gap-1">
           {marketIntelligence?.hotCompanies?.map((company: string, index: number) => (
                   <span key={index} className="px-2 py-1 bg-green-400/20 text-green-400 text-xs rounded-full">{company}</span>
@@ -355,15 +574,15 @@ const PerformanceInsights: React.FC<{
   const kpis = calculateKPIs();
 
   return (
-  <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+  <div className="glass-widget-premium glass-shimmer rounded-xl p-6">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-lg font-bold text-white">Performance Insights</h2>
+        <h2 className="text-lg font-bold text-gray-900 dark:text-white">Performance Insights</h2>
         <div className="flex items-center gap-2">
-          <span className="text-white/60 text-sm">Period:</span>
+          <span className="text-gray-600 dark:text-white/60 text-sm">Period:</span>
           {['Day', 'Week', 'Month'].map((period) => (
             <motion.button key={period} onClick={() => onPeriodChange(period.toLowerCase())}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-300 ${
-                selectedPeriod === period.toLowerCase() ? 'bg-lime-400/20 text-lime-400 border border-lime-400/30' : 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'
+                selectedPeriod === period.toLowerCase() ? 'bg-lime-400/20 text-lime-400 border border-lime-400/30' : 'glass-card-premium text-gray-600 dark:text-white/60'
               }`} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
               {period}
               </motion.button>
@@ -373,59 +592,59 @@ const PerformanceInsights: React.FC<{
       
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4 hover:bg-white/10 transition-all duration-300">
+        <div className="glass-card-premium glass-float rounded-xl p-4">
           <div className="flex items-center justify-between mb-3">
             <div className="p-2 rounded-lg bg-blue-500/20">
               <Briefcase size={20} className="text-blue-400" />
             </div>
             <span className="text-xs font-medium text-green-400">+12%</span>
           </div>
-          <div className="text-2xl font-bold text-white mb-1">{kpis.totalJobs}</div>
-          <div className="text-white/60 text-sm">Total Jobs</div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{kpis.totalJobs}</div>
+          <div className="text-gray-600 dark:text-white/60 text-sm">Total Jobs</div>
         </div>
         
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4 hover:bg-white/10 transition-all duration-300">
+        <div className="glass-card-premium glass-float rounded-xl p-4">
           <div className="flex items-center justify-between mb-3">
             <div className="p-2 rounded-lg bg-green-500/20">
               <TrendingUp size={20} className="text-green-400" />
             </div>
             <span className="text-xs font-medium text-green-400">+5%</span>
           </div>
-          <div className="text-2xl font-bold text-white mb-1">{kpis.successRate}%</div>
-          <div className="text-white/60 text-sm">Success Rate</div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{kpis.successRate}%</div>
+          <div className="text-gray-600 dark:text-white/60 text-sm">Success Rate</div>
         </div>
         
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4 hover:bg-white/10 transition-all duration-300">
+        <div className="glass-card-premium glass-float rounded-xl p-4">
           <div className="flex items-center justify-between mb-3">
             <div className="p-2 rounded-lg bg-purple-500/20">
               <Target size={20} className="text-purple-400" />
             </div>
             <span className="text-xs font-medium text-green-400">+8%</span>
           </div>
-          <div className="text-2xl font-bold text-white mb-1">{kpis.interviewRate}%</div>
-          <div className="text-white/60 text-sm">Interview Rate</div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{kpis.interviewRate}%</div>
+          <div className="text-gray-600 dark:text-white/60 text-sm">Interview Rate</div>
         </div>
         
-        <div className="bg-white/5 border border-white/10 rounded-xl p-4 hover:bg-white/10 transition-all duration-300">
+        <div className="glass-card-premium glass-float rounded-xl p-4">
           <div className="flex items-center justify-between mb-3">
             <div className="p-2 rounded-lg bg-lime-500/20">
               <Heart size={20} className="text-lime-400" />
             </div>
             <span className="text-xs font-medium text-green-400">+10%</span>
           </div>
-          <div className="text-2xl font-bold text-white mb-1">{kpis.cvHealth}%</div>
-          <div className="text-white/60 text-sm">CV Health</div>
+          <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{kpis.cvHealth}%</div>
+          <div className="text-gray-600 dark:text-white/60 text-sm">CV Health</div>
         </div>
       </div>
 
       {/* Performance Trends */}
       {analyticsData?.performanceTrends && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="p-4 bg-white/5 rounded-lg">
-            <h3 className="text-white font-medium text-sm mb-3">Application Success Insights</h3>
+          <div className="p-4 glass-card-premium rounded-lg">
+            <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-3">Application Success Insights</h3>
             <div className="space-y-2">
               {analyticsData.performanceTrends.applicationSuccessRate?.insights?.map((insight: string, index: number) => (
-                <div key={index} className="flex items-center gap-2 text-white/70 text-xs">
+                <div key={index} className="flex items-center gap-2 text-gray-700 dark:text-white/70 text-xs">
                   <div className="w-1 h-1 bg-lime-400 rounded-full"></div>
                   <span>{insight}</span>
                 </div>
@@ -433,11 +652,11 @@ const PerformanceInsights: React.FC<{
             </div>
           </div>
           
-          <div className="p-4 bg-white/5 rounded-lg">
-            <h3 className="text-white font-medium text-sm mb-3">CV Optimization Tips</h3>
+          <div className="p-4 glass-card-premium rounded-lg">
+            <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-3">CV Optimization Tips</h3>
             <div className="space-y-2">
               {analyticsData.performanceTrends.cvEffectiveness?.improvements?.map((improvement: string, index: number) => (
-                <div key={index} className="flex items-center gap-2 text-white/70 text-xs">
+                <div key={index} className="flex items-center gap-2 text-gray-700 dark:text-white/70 text-xs">
                   <div className="w-1 h-1 bg-blue-400 rounded-full"></div>
                   <span>{improvement}</span>
                 </div>
@@ -500,9 +719,9 @@ const RecentJobsWidget: React.FC<{
     .slice(0, 5);
 
   return (
-    <div className="bg-white/5 border border-white/10 rounded-xl p-6">
+    <div className="glass-widget-premium glass-shimmer rounded-xl p-6">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-lg font-bold text-white">Last 5 Jobs</h2>
+        <h2 className="text-lg font-bold text-gray-900 dark:text-white">Last 5 Jobs</h2>
         <motion.button 
           onClick={() => window.location.href = '/dashboard/pipeline'}
           className="px-3 py-1.5 bg-blue-400/20 text-blue-400 rounded-lg text-sm font-medium hover:bg-blue-400/30 transition-all duration-300 flex items-center gap-2"
@@ -517,18 +736,18 @@ const RecentJobsWidget: React.FC<{
             <motion.div 
               key={job.id || job._id}
               onClick={() => onViewJob(job.id || job._id)}
-              className="p-4 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-all duration-300 cursor-pointer"
+              className="p-4 glass-card-premium rounded-lg cursor-pointer"
               whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-start gap-3 flex-1">
-                  <div className="p-2 rounded-lg bg-white/10">
-                    <Briefcase size={16} className="text-white/80" />
+                  <div className="p-2 rounded-lg bg-gray-200 dark:bg-white/10">
+                    <Briefcase size={16} className="text-gray-600 dark:text-white/80" />
                   </div>
                                      <div className="flex-1 min-w-0">
-                     <h4 className="text-white font-medium text-sm mb-1 truncate">{job.jobTitle}</h4>
-                     <p className="text-white/60 text-xs mb-1">{job.company}</p>
+                     <h4 className="text-gray-900 dark:text-white font-medium text-sm mb-1 truncate">{job.jobTitle}</h4>
+                     <p className="text-gray-600 dark:text-white/60 text-xs mb-1">{job.company}</p>
                      {job.location && (
-                       <p className="text-white/40 text-xs">{job.location}</p>
+                       <p className="text-gray-500 dark:text-white/40 text-xs">{job.location}</p>
                      )}
                    </div>
                 </div>
@@ -536,11 +755,11 @@ const RecentJobsWidget: React.FC<{
                   <span className={`text-xs font-medium ${getStatusColor(job.status)}`}>
                     {getStatusIcon(job.status)} {job.status}
                   </span>
-                  <span className="text-white/40 text-xs">{formatDate(job.createdAt)}</span>
+                  <span className="text-gray-500 dark:text-white/40 text-xs">{formatDate(job.createdAt)}</span>
                 </div>
               </div>
               
-                             <div className="flex items-center justify-between text-white/60 text-xs">
+                             <div className="flex items-center justify-between text-gray-600 dark:text-white/60 text-xs">
                  {job.salary && (job.salary.min || job.salary.max) && (
                    <div className="flex items-center gap-2">
                      <span>💰</span>
@@ -566,9 +785,9 @@ const RecentJobsWidget: React.FC<{
         </div>
       ) : (
         <div className="text-center py-8">
-          <Briefcase size={32} className="text-white/40 mx-auto mb-3" />
-          <h3 className="text-white font-medium text-sm mb-2">No Jobs Yet</h3>
-          <p className="text-white/60 text-xs mb-4">Start tracking your job applications to see your last 5 jobs here.</p>
+          <Briefcase size={32} className="text-gray-400 dark:text-white/40 mx-auto mb-3" />
+          <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-2">No Jobs Yet</h3>
+          <p className="text-gray-600 dark:text-white/60 text-xs mb-4">Start tracking your job applications to see your last 5 jobs here.</p>
           <motion.button 
             onClick={() => window.location.href = '/dashboard/pipeline'}
             className="px-4 py-2 bg-blue-400/20 text-blue-400 rounded-lg text-sm font-medium hover:bg-blue-400/30 transition-all duration-300"
@@ -610,6 +829,29 @@ const Analytics: React.FC = () => {
       }
     } catch (error) {
       console.error('Error updating monthly goal:', error);
+    }
+  };
+
+  const handleSetMasterCV = async (cvId: string) => {
+    try {
+      const response = await authenticatedFetch('/api/cvs/set-master', {
+        method: 'PUT',
+        body: JSON.stringify({ cvId }),
+      });
+      if (response.ok) {
+        // Reload CVs to reflect the change
+        const userId = user?.id || user?._id || session?.user?.id;
+        if (userId) {
+          const cvsResponse = await authenticatedFetch(`/api/cvs?userId=${userId}`);
+          const cvsResult = await cvsResponse.json();
+          if (cvsResult.success) {
+            const cvData = Array.isArray(cvsResult.data?.cvs) ? cvsResult.data.cvs : [];
+            setCvs(cvData);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error setting master CV:', error);
     }
   };
 
@@ -732,6 +974,7 @@ const Analytics: React.FC = () => {
   useEffect(() => {
     // Check NextAuth session first
     if (session?.user) {
+      console.log('🔍 Analytics - NextAuth session found:', session.user);
       setUser(session.user);
       loadData(session.user.id);
     } else {
@@ -740,6 +983,7 @@ const Analytics: React.FC = () => {
       if (userData) {
         try {
           const parsedUser = JSON.parse(userData);
+          console.log('🔍 Analytics - Firebase user data:', parsedUser);
           if (parsedUser.firebaseUid) {
             setUser(parsedUser);
             loadData(parsedUser.id || parsedUser._id);
@@ -747,6 +991,8 @@ const Analytics: React.FC = () => {
         } catch (error) {
           console.error('Error parsing Firebase user data:', error);
         }
+      } else {
+        console.log('🔍 Analytics - No user data found in localStorage');
       }
     }
   }, [session]);
@@ -792,6 +1038,7 @@ const Analytics: React.FC = () => {
 
   const loadData = async (userId: string) => {
     try {
+      console.log('🔍 Analytics - loadData called with userId:', userId);
       setLoading(true);
       
       const analyticsResponse = await authenticatedFetch(`/api/analytics?userId=${userId}&period=${selectedPeriod}`);
@@ -807,10 +1054,14 @@ const Analytics: React.FC = () => {
         setJobs(jobData);
       }
 
+      console.log('🔍 Analytics - Fetching CVs for userId:', userId);
       const cvsResponse = await authenticatedFetch(`/api/cvs?userId=${userId}`);
       const cvsResult = await cvsResponse.json();
+      console.log('🔍 Analytics - CV API response:', cvsResult);
       if (cvsResult.success) {
         const cvData = Array.isArray(cvsResult.data?.cvs) ? cvsResult.data.cvs : [];
+        console.log('🔍 Analytics - CV data received:', cvData);
+        console.log('🔍 Analytics - Number of CVs:', cvData.length);
         setCvs(cvData);
         
         const incompleteCVs = cvData
@@ -1073,60 +1324,30 @@ const Analytics: React.FC = () => {
         }}
       />
 
-      {/* Master CV Section */}
-      <div className="bg-white/5 border border-white/10 rounded-xl p-6" data-tour="master-cv">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-white">Your Master CV</h2>
-          <MasterCVBadge />
-        </div>
-        <div className="text-center py-8">
-          <div className="w-16 h-16 bg-gradient-to-br from-lime-400/20 to-lime-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <FileText size={32} className="text-lime-400" />
-          </div>
-          <h3 className="text-xl font-semibold text-white mb-2">Master CV Ready!</h3>
-          <p className="text-white/60 mb-4">
-            Your comprehensive CV is ready to be duplicated and customized for any job application.
-          </p>
-          <div className="flex gap-3 justify-center">
-            <button
-              onClick={() => window.location.href = '/studio'}
-              className="px-4 py-2 bg-lime-500 hover:bg-lime-600 text-black font-medium rounded-lg transition-colors flex items-center gap-2"
-            >
-              <Edit size={16} />
-              Edit CV
-            </button>
-            <button
-              onClick={() => window.location.href = '/dashboard/canvas'}
-              className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white font-medium rounded-lg transition-colors flex items-center gap-2"
-            >
-              <Eye size={16} />
-              View All CVs
-            </button>
-          </div>
-        </div>
-      </div>
+      {/* CV Management Section */}
+      <CVManagementSection
+        cvHealthScore={cvHealthScore}
+        cvs={cvs}
+        onImproveScore={() => window.location.href = '/studio'}
+        onCreateCV={async () => {
+          try {
+            const userId = user?.id || user?._id || session?.user?.id;
+            if (userId) {
+              await createCV({ userId });
+            }
+          } catch (error) {
+            console.error('Error creating CV:', error);
+          }
+        }}
+        onAddJob={() => window.location.href = '/dashboard/pipeline'}
+        onWriteCoverLetter={() => window.location.href = '/studio?type=cover_letter'}
+        onSetMasterCV={handleSetMasterCV}
+      />
 
       {/* Main Grid Layout - 2 columns */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Column 1: My Status + Application Hub + Last 5 Jobs */}
+        {/* Column 1: Application Hub + Last 5 Jobs */}
         <div className="space-y-6">
-          <MyStatusSection
-            cvHealthScore={cvHealthScore}
-            onImproveScore={() => window.location.href = '/studio'}
-            onCreateCV={async () => {
-                    try {
-                      const userId = user?.id || user?._id || session?.user?.id;
-                      if (userId) {
-                  await createCV({ userId });
-                      }
-                    } catch (error) {
-                      console.error('Error creating CV:', error);
-                    }
-                  }}
-            onAddJob={() => window.location.href = '/dashboard/pipeline'}
-            onWriteCoverLetter={() => window.location.href = '/studio?type=cover_letter'}
-          />
-          
           <ApplicationHub
             drafts={drafts}
             jobs={jobs}
@@ -1169,4 +1390,4 @@ const Analytics: React.FC = () => {
   );
 };
 
-export default Analytics; 
+export default Analytics;

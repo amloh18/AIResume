@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { useFirebaseAuth } from '@/lib/hooks/useFirebaseAuth';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Briefcase, FileText, CheckCircle, Download, Trash2, Filter, SortAsc, MoreVertical, Search, ArrowRight, Star, Clock, Building2 } from 'lucide-react';
 import PageHeader from '@/components/dashboard/PageHeader';
@@ -30,13 +31,16 @@ interface Journey {
 
 const CVJourneyPageContent: React.FC = () => {
   const { data: session } = useSession();
-  const { isJourneyActive, currentJobId, startJourney } = useJobJourney();
+  const { user, loading: authLoading } = useFirebaseAuth();
+  const { startJourney } = useJobJourney();
   const { theme, isDark } = useTheme();
   const [journeys, setJourneys] = useState<Journey[]>([]);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showPipelineModal, setShowPipelineModal] = useState(false);
   const [showNewJourneyCard, setShowNewJourneyCard] = useState(false);
+  const [currentJobId, setCurrentJobId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [userProfile, setUserProfile] = useState<any>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [sortBy, setSortBy] = useState<'lastUpdated' | 'creationDate' | 'jobTitle'>('lastUpdated');
@@ -44,40 +48,61 @@ const CVJourneyPageContent: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
 
+  // Fetch user profile from database (same as Canvas)
+  const fetchUserProfile = async () => {
+    try {
+      const response = await fetch('/api/user');
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.user) {
+          setUserProfile(result.user);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    }
+  };
+
   useEffect(() => {
     console.log('🔍 CV Journey Page - useEffect triggered');
     console.log('🔍 CV Journey Page - Session:', session);
-    console.log('🔍 CV Journey Page - User ID:', session?.user?.id);
+    console.log('🔍 CV Journey Page - Firebase User:', user);
     
+    // Check NextAuth session first (same as Canvas)
     if (session?.user?.id) {
-      // Fetch user's journeys from backend
-      console.log('🔍 CV Journey Page - Fetching journeys...');
-      fetchJourneys();
-    } else {
-      console.log('🔍 CV Journey Page - No session or user ID, setting timeout');
-      // If no session, stop loading after a short delay
+      console.log('🔍 CV Journey Page - Using NextAuth session, fetching journeys...');
+      fetchJourneys(session.user.id);
+      fetchUserProfile();
+    } else if (user?.uid) {
+      // Fallback to Firebase user data (same as Canvas)
+      console.log('🔍 CV Journey Page - Using Firebase user, fetching journeys...');
+      fetchJourneys(user.uid);
+      fetchUserProfile();
+    } else if (!authLoading) {
+      console.log('🔍 CV Journey Page - No user ID, setting timeout');
+      // If no user, stop loading after a short delay
       const timer = setTimeout(() => {
         console.log('🔍 CV Journey Page - Timeout reached, stopping loading');
         setLoading(false);
       }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [session?.user?.id]);
+  }, [session?.user?.id, user?.uid, authLoading]);
 
-  const fetchJourneys = async () => {
+  const fetchJourneys = async (userId?: string) => {
     try {
-      const userId = session?.user?.id;
-      console.log('🔍 CV Journey Page - Fetching journeys for user:', userId);
-      console.log('🔍 CV Journey Page - Session data:', session);
+      const userIdToUse = userId || user?.uid;
+      console.log('🔍 CV Journey Page - Fetching journeys for user:', userIdToUse);
+      console.log('🔍 CV Journey Page - User data:', user);
       
-      if (!userId) {
+      if (!userIdToUse) {
         console.error('No user ID available');
         setLoading(false);
         return;
       }
       
-      console.log('🔍 CV Journey Page - Making API call to:', `/api/cv-journey?userId=${userId}&status=all`);
-      const response = await fetch(`/api/cv-journey?userId=${userId}&status=all`);
+      console.log('🔍 CV Journey Page - Making API call to:', `/api/journeys?userId=${userIdToUse}&status=all`);
+      const response = await fetch(`/api/journeys?userId=${userIdToUse}&status=all`);
       
       console.log('🔍 CV Journey Page - Response status:', response.status);
       console.log('🔍 CV Journey Page - Response ok:', response.ok);
@@ -137,7 +162,7 @@ const CVJourneyPageContent: React.FC = () => {
   const handleDeleteJourney = async (journeyId: string) => {
     try {
       setIsDeleting(true);
-      const userId = session?.user?.id;
+      const userId = user?.uid;
       if (!userId) {
         console.error('No user ID available');
         return;
@@ -145,7 +170,7 @@ const CVJourneyPageContent: React.FC = () => {
 
       console.log('🔍 CV Journey Page - Deleting journey:', journeyId);
       
-      // Call the API to delete the journey (job) from database
+      // Call the Journeys API to delete the journey (job)
       const response = await fetch(`/api/journeys?journeyId=${journeyId}&userId=${userId}`, {
         method: 'DELETE',
       });
@@ -207,16 +232,16 @@ const CVJourneyPageContent: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="text-gray-600 dark:text-gray-300 mb-2">Loading journeys...</div>
-          {!session?.user?.id && (
-            <div className="text-sm text-red-500 dark:text-red-400">
-              No user session found. Please log in again.
+          <div className="text-center">
+            <div className="text-gray-600 dark:text-gray-300 mb-2">Loading journeys...</div>
+            {!user?.uid && !authLoading && (
+              <div className="text-sm text-red-500 dark:text-red-400">
+                No user session found. Please log in again.
+              </div>
+            )}
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+              Debug: User status: {user ? 'Available' : 'Not available'}
             </div>
-          )}
-          <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-            Debug: Session status: {session ? 'Available' : 'Not available'}
-          </div>
           <button
             onClick={() => {
               console.log('Manual refresh clicked');
@@ -238,7 +263,13 @@ const CVJourneyPageContent: React.FC = () => {
       <PageHeader
         title="CV Journeys"
         description="Manage your job application journeys and track progress"
-        user={session?.user || { name: 'User', email: 'user@example.com' }}
+        user={{
+          name: userProfile?.firstName + ' ' + userProfile?.lastName || session?.user?.name || user?.displayName || 'User',
+          email: userProfile?.email || session?.user?.email || user?.email || 'user@example.com',
+          username: userProfile?.username || session?.user?.username || user?.email?.split('@')[0],
+          profilePhoto: userProfile?.avatar || session?.user?.image || session?.user?.profilePhoto || user?.photoURL,
+          designation: userProfile?.designation || session?.user?.designation || 'Software Developer'
+        }}
         showSettings={true}
       />
 

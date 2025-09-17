@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { auth, googleProvider } from '@/lib/firebase';
-import { signIn } from 'next-auth/react';
+import { signIn, getSession } from 'next-auth/react';
+import { signInWithEmail } from '@/lib/unified-auth';
 
 interface SignInFormData {
   email: string;
@@ -33,33 +34,39 @@ export default function SignInForm() {
     setError('');
 
     try {
-      // Sign in with Firebase
-      const userCredential = await signInWithEmailAndPassword(
-        auth, 
-        formData.email, 
-        formData.password
-      );
-      const user = userCredential.user;
+      // Use unified authentication (tries Firebase first, falls back to NextAuth)
+      const result = await signInWithEmail(formData.email, formData.password);
 
-      // Check email verification
-      if (!user.emailVerified) {
-        setError('Please verify your email before signing in. Check your inbox for a verification email.');
-        return;
-      }
-
-      // Get Firebase ID token and sign in with NextAuth
-      const idToken = await user.getIdToken();
-      const result = await signIn('firebase', { 
-        idToken, 
-        redirect: false 
-      });
-
-      if (result?.error) {
-        console.error('NextAuth signin error:', result.error);
-        setError('Authentication failed. Please try again.');
-      } else if (result?.ok) {
-        // Redirect manually after successful signin
-        window.location.href = '/dashboard';
+      if (result.success) {
+        console.log(`✅ Authentication successful via ${result.method}`);
+        
+        // Check if user has CVs before deciding where to route
+        try {
+          // Get session to access user data
+          const session = await getSession();
+          if (session?.user) {
+            console.log('🔍 Checking CVs for user:', session.user.id);
+            const response = await fetch(`/api/cvs?userId=${session.user.id}&projection=count`);
+            const cvResult = await response.json();
+            
+            if (cvResult.success && cvResult.count > 0) {
+              console.log('✅ User has CVs, redirecting to dashboard');
+              window.location.href = '/dashboard';
+            } else {
+              console.log('📝 User needs onboarding, redirecting to master CV onboarding');
+              window.location.href = '/master-cv-onboarding';
+            }
+          } else {
+            // Fallback to dashboard if no session data
+            window.location.href = '/dashboard';
+          }
+        } catch (error) {
+          console.error('❌ Error checking CV status:', error);
+          // Default to dashboard if we can't check
+          window.location.href = '/dashboard';
+        }
+      } else {
+        setError(result.error || 'Authentication failed. Please try again.');
       }
 
     } catch (error: any) {

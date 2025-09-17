@@ -1,7 +1,7 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IJobApplication extends Document {
-  userId: mongoose.Types.ObjectId;
+  userId: mongoose.Types.ObjectId | string;
   // cvId removed - relationships now managed through CVJourney
   jobTitle: string;
   company: string;
@@ -56,8 +56,7 @@ export interface IJobApplication extends Document {
 
 const jobApplicationSchema = new Schema<IJobApplication>({
   userId: {
-    type: Schema.Types.ObjectId,
-    ref: 'User',
+    type: Schema.Types.Mixed, // Allow both ObjectId and string
     required: true,
     index: true
   },

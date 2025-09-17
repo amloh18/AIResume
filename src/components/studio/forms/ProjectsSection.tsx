@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Trash2, FolderOpen, Sparkles, RefreshCw } from 'lucide-react';
 import { getThemeClasses } from '@/lib/utils/themeUtils';
+import ProfessionalTextField from '@/components/ui/ProfessionalTextField';
 
 interface ProjectsSectionProps {
   data: any[];
@@ -122,12 +123,13 @@ const ProjectsSection: React.FC<ProjectsSectionProps> = ({
                   <span>{generatingIndex === index ? 'Generating...' : 'AI Generate'}</span>
                 </motion.button>
               </div>
-              <textarea
+              <ProfessionalTextField
                 value={project.description || ''}
-                onChange={(e) => onUpdate(`projects.${index}.description`, e.target.value)}
-                className={`w-full px-3 py-2 rounded-lg border ${themeClasses.input.base} ${themeClasses.input.focus}`}
-                rows={4}
+                onChange={(value) => onUpdate(`projects.${index}.description`, value)}
                 placeholder="Describe the project, technologies used, your role, and key achievements. Use AI to generate content based on project name..."
+                rows={4}
+                fieldId={`project-${index}`}
+                showFullToolbar={true}
               />
             </div>
 

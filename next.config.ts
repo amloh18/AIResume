@@ -61,6 +61,11 @@ const nextConfig: NextConfig = {
       tls: false,
     };
 
+    // Module resolution aliases
+    config.resolve.alias = {
+      ...config.resolve.alias,
+    };
+
     // Optimize bundle size
     if (!dev && !isServer) {
       config.optimization.splitChunks = {
@@ -70,6 +75,12 @@ const nextConfig: NextConfig = {
             test: /[\\/]node_modules[\\/]/,
             name: 'vendors',
             chunks: 'all',
+          },
+          clerk: {
+            test: /[\\/]node_modules[\\/]@clerk[\\/]/,
+            name: 'clerk',
+            chunks: 'all',
+            priority: 10,
           },
         },
       };
@@ -101,4 +112,4 @@ const nextConfig: NextConfig = {
   },
 }
 
-export default nextConfig 
+export default nextConfig

@@ -57,12 +57,10 @@ const FAQ = () => {
   ];
 
   const toggleItem = (id: number) => {
-    console.log('FAQ toggle clicked for id:', id, 'current openItems:', openItems);
     setOpenItems(prev => {
       const newItems = prev.includes(id) 
         ? prev.filter(item => item !== id)
         : [...prev, id];
-      console.log('New openItems:', newItems);
       return newItems;
     });
   };
@@ -121,10 +119,6 @@ const FAQ = () => {
           </p>
         </motion.div>
 
-        {/* Debug Info */}
-        <div className="mb-4 p-4 bg-gray-800 rounded-lg">
-          <p className="text-white text-sm">Debug: Open Items: {JSON.stringify(openItems)}</p>
-        </div>
 
         {/* FAQ Accordion */}
         <motion.div
@@ -156,12 +150,11 @@ const FAQ = () => {
                     className="w-full px-8 py-6 text-left flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:ring-offset-2 focus:ring-offset-gray-900 hover:bg-white/5 transition-colors duration-200"
                     onClick={(e) => {
                       e.preventDefault();
-                      console.log('Button clicked for item:', item.id);
                       toggleItem(item.id);
                     }}
                   >
                     <h3 className="text-lg sm:text-xl font-semibold text-white pr-4 group-hover:text-lime-400 transition-colors duration-300">
-                      {item.question} {isOpen ? '(OPEN)' : '(CLOSED)'}
+                      {item.question}
                     </h3>
                     <div
                       className={`flex-shrink-0 w-8 h-8 bg-gradient-to-br from-lime-400 to-lime-500 rounded-full flex items-center justify-center shadow-lg transition-transform duration-300 ${

@@ -93,6 +93,27 @@ export async function PUT(
       return NextResponse.json({ error: 'Job not found' }, { status: 404 });
     }
 
+    // Update CV journeys with new job data if job title or company changed
+    if (body.jobTitle || body.company) {
+      try {
+        const { CVJourney } = await import('@/models');
+        await CVJourney.updateMany(
+          { jobId: resolvedParams.id },
+          { 
+            $set: { 
+              jobTitle: job.jobTitle,
+              company: job.company,
+              'metadata.updatedAt': new Date()
+            }
+          }
+        );
+        console.log(`Updated CV journeys with new job data for job ${resolvedParams.id}`);
+      } catch (error) {
+        console.error('Error updating CV journeys with job data:', error);
+        // Don't fail the job update if journey update fails
+      }
+    }
+
     return NextResponse.json({ job });
   } catch (error) {
     console.error('Error updating job:', error);

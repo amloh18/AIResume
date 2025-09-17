@@ -200,7 +200,7 @@ const CVParserButton: React.FC<CVParserButtonProps> = ({
                           </button>
                         </div>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          Supports PDF, DOC, DOCX, and TXT files up to 10MB
+                          Supports PDF, DOC, DOCX, RTF, and TXT files up to 10MB
                         </p>
                       </div>
                     </div>
@@ -382,7 +382,7 @@ const CVParserButton: React.FC<CVParserButtonProps> = ({
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".pdf,.doc,.docx,.txt"
+                accept=".pdf,.doc,.docx,.rtf,.txt"
                 onChange={handleFileInputChange}
                 className="hidden"
               />

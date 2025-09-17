@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/database';
 import JobApplication from '@/models/JobApplication';
 import { createErrorResponse } from '@/lib/db-utils';
+import mongoose from 'mongoose';
 
 export async function GET(request: NextRequest) {
   try {
@@ -25,8 +26,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Create base query
-    let query: any = { userId, isArchived: false };
+    // Create base query - handle both ObjectId and string types
+    let query: any;
+    if (/^[0-9a-fA-F]{24}$/.test(userId)) {
+      // MongoDB ObjectId format (24 hex chars)
+      query = { userId: new mongoose.Types.ObjectId(userId), isArchived: false };
+    } else {
+      // NextAuth string format - use as string
+      query = { userId: userId, isArchived: false };
+    }
 
     // Add status filter
     if (status && status !== 'all') {
@@ -92,14 +100,26 @@ export async function GET(request: NextRequest) {
     // Execute query
     const jobs = await jobsQuery.lean();
 
-    // Calculate counts for different statuses
+    // Calculate counts for different statuses - handle both ID types
     const counts = await Promise.all([
-      JobApplication.countDocuments({ userId, isArchived: false }),
-      JobApplication.countDocuments({ userId, status: 'created', isArchived: false }),
-      JobApplication.countDocuments({ userId, status: 'applied', isArchived: false }),
-      JobApplication.countDocuments({ userId, status: 'interview', isArchived: false }),
-      JobApplication.countDocuments({ userId, status: 'offer', isArchived: false }),
-      JobApplication.countDocuments({ userId, status: 'rejected', isArchived: false })
+      /^[0-9a-fA-F]{24}$/.test(userId) 
+        ? JobApplication.countDocuments({ userId: new mongoose.Types.ObjectId(userId), isArchived: false })
+        : JobApplication.countDocuments({ userId: userId, isArchived: false }),
+      /^[0-9a-fA-F]{24}$/.test(userId) 
+        ? JobApplication.countDocuments({ userId: new mongoose.Types.ObjectId(userId), status: 'created', isArchived: false })
+        : JobApplication.countDocuments({ userId: userId, status: 'created', isArchived: false }),
+      /^[0-9a-fA-F]{24}$/.test(userId) 
+        ? JobApplication.countDocuments({ userId: new mongoose.Types.ObjectId(userId), status: 'applied', isArchived: false })
+        : JobApplication.countDocuments({ userId: userId, status: 'applied', isArchived: false }),
+      /^[0-9a-fA-F]{24}$/.test(userId) 
+        ? JobApplication.countDocuments({ userId: new mongoose.Types.ObjectId(userId), status: 'interview', isArchived: false })
+        : JobApplication.countDocuments({ userId: userId, status: 'interview', isArchived: false }),
+      /^[0-9a-fA-F]{24}$/.test(userId) 
+        ? JobApplication.countDocuments({ userId: new mongoose.Types.ObjectId(userId), status: 'offer', isArchived: false })
+        : JobApplication.countDocuments({ userId: userId, status: 'offer', isArchived: false }),
+      /^[0-9a-fA-F]{24}$/.test(userId) 
+        ? JobApplication.countDocuments({ userId: new mongoose.Types.ObjectId(userId), status: 'rejected', isArchived: false })
+        : JobApplication.countDocuments({ userId: userId, status: 'rejected', isArchived: false })
     ]);
 
     const [total, created, applied, interview, offer, rejected] = counts;
@@ -132,11 +152,21 @@ export async function GET(request: NextRequest) {
       }
       
       const previousCounts = await Promise.all([
-        JobApplication.countDocuments({ userId, createdAt: { $gte: previousStartDate, $lt: previousEndDate }, isArchived: false }),
-        JobApplication.countDocuments({ userId, status: 'created', createdAt: { $gte: previousStartDate, $lt: previousEndDate }, isArchived: false }),
-        JobApplication.countDocuments({ userId, status: 'applied', createdAt: { $gte: previousStartDate, $lt: previousEndDate }, isArchived: false }),
-        JobApplication.countDocuments({ userId, status: 'interview', createdAt: { $gte: previousStartDate, $lt: previousEndDate }, isArchived: false }),
-        JobApplication.countDocuments({ userId, status: 'offer', createdAt: { $gte: previousStartDate, $lt: previousEndDate }, isArchived: false })
+        /^[0-9a-fA-F]{24}$/.test(userId) 
+          ? JobApplication.countDocuments({ userId: new mongoose.Types.ObjectId(userId), createdAt: { $gte: previousStartDate, $lt: previousEndDate }, isArchived: false })
+          : JobApplication.countDocuments({ userId: userId, createdAt: { $gte: previousStartDate, $lt: previousEndDate }, isArchived: false }),
+        /^[0-9a-fA-F]{24}$/.test(userId) 
+          ? JobApplication.countDocuments({ userId: new mongoose.Types.ObjectId(userId), status: 'created', createdAt: { $gte: previousStartDate, $lt: previousEndDate }, isArchived: false })
+          : JobApplication.countDocuments({ userId: userId, status: 'created', createdAt: { $gte: previousStartDate, $lt: previousEndDate }, isArchived: false }),
+        /^[0-9a-fA-F]{24}$/.test(userId) 
+          ? JobApplication.countDocuments({ userId: new mongoose.Types.ObjectId(userId), status: 'applied', createdAt: { $gte: previousStartDate, $lt: previousEndDate }, isArchived: false })
+          : JobApplication.countDocuments({ userId: userId, status: 'applied', createdAt: { $gte: previousStartDate, $lt: previousEndDate }, isArchived: false }),
+        /^[0-9a-fA-F]{24}$/.test(userId) 
+          ? JobApplication.countDocuments({ userId: new mongoose.Types.ObjectId(userId), status: 'interview', createdAt: { $gte: previousStartDate, $lt: previousEndDate }, isArchived: false })
+          : JobApplication.countDocuments({ userId: userId, status: 'interview', createdAt: { $gte: previousStartDate, $lt: previousEndDate }, isArchived: false }),
+        /^[0-9a-fA-F]{24}$/.test(userId) 
+          ? JobApplication.countDocuments({ userId: new mongoose.Types.ObjectId(userId), status: 'offer', createdAt: { $gte: previousStartDate, $lt: previousEndDate }, isArchived: false })
+          : JobApplication.countDocuments({ userId: userId, status: 'offer', createdAt: { $gte: previousStartDate, $lt: previousEndDate }, isArchived: false })
       ]);
       
       const [prevTotal, prevCreated, prevApplied, prevInterview, prevOffer] = previousCounts;
@@ -264,6 +294,43 @@ export async function POST(request: NextRequest) {
     
     await job.save();
     console.log('✅ Job API - Job saved successfully with ID:', job._id);
+
+    // Automatically create CV Journey for this job
+    try {
+      const { CVJourney } = await import('@/models');
+      console.log('🔍 Job API - Creating CV Journey for job:', job._id);
+      
+      const cvJourney = new CVJourney({
+        userId,
+        jobId: job._id.toString(),
+        cvId: null, // Will be populated when CV is created
+        coverLetterId: null, // Will be populated when cover letter is created
+        status: 'in-progress',
+        currentStep: 1,
+        totalSteps: 5,
+        atsScore: null,
+        jobTitle: job.jobTitle,
+        company: job.company,
+        steps: [
+          { stepId: 1, name: 'Add Job', status: 'completed' },
+          { stepId: 2, name: 'Create CV', status: 'pending' },
+          { stepId: 3, name: 'ATS Score', status: 'pending' },
+          { stepId: 4, name: 'Cover Letter', status: 'pending' },
+          { stepId: 5, name: 'Download', status: 'pending' }
+        ],
+        metadata: {
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          lastAccessedAt: new Date()
+        }
+      });
+
+      await cvJourney.save();
+      console.log('✅ Job API - CV Journey created successfully with ID:', cvJourney._id);
+    } catch (cvJourneyError) {
+      console.error('❌ Job API - Failed to create CV Journey:', cvJourneyError);
+      // Don't fail the job creation if CV Journey creation fails
+    }
 
     // Log activity
     try {

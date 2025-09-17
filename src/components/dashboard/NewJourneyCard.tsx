@@ -2,11 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Plus, 
-  Briefcase, 
-  FileText, 
-  CheckCircle, 
+import {
+  Plus,
+  Briefcase,
+  FileText,
+  CheckCircle,
   X,
   Search,
   ArrowRight,
@@ -17,6 +17,7 @@ import {
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useJobJourney } from '@/contexts/JobJourneyContext';
+import { useFirebaseAuth } from '@/lib/hooks/useFirebaseAuth';
 
 interface Job {
   id: string;
@@ -50,7 +51,9 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
   onCancel,
   className = ''
 }) => {
+  console.log('🔍 NewJourneyCard - Component initialized');
   const { data: session } = useSession();
+  const { user } = useFirebaseAuth();
   const router = useRouter();
   const { startJourney } = useJobJourney();
   
@@ -76,7 +79,8 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
 
   const fetchJobs = async () => {
     try {
-      const userId = session?.user?.id;
+      // Use same authentication logic as CV Journey page
+      const userId = session?.user?.id || user?.uid;
       if (!userId) return;
 
       const response = await fetch(`/api/jobs?userId=${userId}&status=all`);
@@ -93,7 +97,8 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
 
   const fetchCVs = async () => {
     try {
-      const userId = session?.user?.id;
+      // Use same authentication logic as CV Journey page
+      const userId = session?.user?.id || user?.uid;
       if (!userId) return;
 
       const response = await fetch(`/api/cvs?userId=${userId}`);
@@ -135,7 +140,13 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
   };
 
   const handleCreateJourney = async () => {
+    console.log('🔍 NewJourneyCard - handleCreateJourney called');
+    console.log('🔍 NewJourneyCard - selectedJob:', selectedJob);
+    console.log('🔍 NewJourneyCard - selectedCV:', selectedCV);
+    console.log('🔍 NewJourneyCard - session:', session);
+    
     if (!selectedJob || !selectedCV) {
+      console.log('❌ NewJourneyCard - Missing job or CV');
       setError('Please select both a job and CV');
       return;
     }
@@ -145,29 +156,48 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
 
     try {
       const journeyName = journeyName.trim() || `${selectedJob.jobTitle} at ${selectedJob.company}`;
+      console.log('🔍 NewJourneyCard - Creating journey with name:', journeyName);
+      
+      // Use same authentication logic as CV Journey page
+      const userId = session?.user?.id || user?.uid;
+      if (!userId) {
+        console.log('❌ NewJourneyCard - No user ID available');
+        setError('User authentication required');
+        return;
+      }
+
+      const requestBody = {
+        userId: userId,
+        jobId: selectedJob.id,
+        cvId: selectedCV.id,
+        journeyName: journeyName,
+        currentStep: 2, // CV step completed
+        status: 'in-progress'
+      };
+      
+      console.log('🔍 NewJourneyCard - Request body:', requestBody);
       
       // Create the journey using the journey linking service
       const response = await fetch('/api/cv-journey', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: session?.user?.id,
-          jobId: selectedJob.id,
-          cvId: selectedCV.id,
-          journeyName: journeyName,
-          currentStep: 2, // CV step completed
-          status: 'in-progress'
-        })
+        body: JSON.stringify(requestBody)
       });
 
+      console.log('🔍 NewJourneyCard - Response status:', response.status);
+      console.log('🔍 NewJourneyCard - Response ok:', response.ok);
+      
       if (response.ok) {
         const result = await response.json();
+        console.log('🔍 NewJourneyCard - Response result:', result);
         if (result.success) {
+          console.log('✅ NewJourneyCard - Journey created successfully');
           // Start the journey in the context
           startJourney(selectedJob.id);
           
           // Call the callback if provided
           if (onJourneyCreated) {
+            console.log('🔍 NewJourneyCard - Calling onJourneyCreated callback');
             onJourneyCreated({
               jobId: selectedJob.id,
               cvId: selectedCV.id,
@@ -178,9 +208,12 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
           // Reset the card
           resetCard();
         } else {
+          console.log('❌ NewJourneyCard - Journey creation failed:', result.message);
           setError(result.message || 'Failed to create journey');
         }
       } else {
+        const errorText = await response.text();
+        console.log('❌ NewJourneyCard - Response error:', errorText);
         setError('Failed to create journey');
       }
     } catch (error) {
@@ -215,7 +248,7 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
 
   return (
     <motion.div
-      className={`bg-gradient-to-r from-blue-500/10 to-blue-600/10 border border-blue-500/20 rounded-xl overflow-hidden hover:shadow-lg dark:hover:shadow-gray-900/20 transition-all duration-300 group ${className}`}
+      className={`frosted-glass-card bg-gradient-to-r from-blue-500/10 to-blue-600/10 border border-blue-500/20 rounded-xl overflow-hidden hover:shadow-lg dark:hover:shadow-gray-900/20 transition-all duration-300 group ${className}`}
       whileHover={{ y: -2 }}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -230,8 +263,8 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
                 <Plus className="h-5 w-5 text-blue-400" />
               </div>
               <div>
-                <h3 className="text-sm font-medium text-white">Start New Journey</h3>
-                <p className="text-xs text-white/60">Create a CV journey for your job application</p>
+                <h3 className="text-sm font-medium text-gray-900 dark:text-white">Start New Journey</h3>
+                <p className="text-xs text-gray-600 dark:text-white/60">Create a CV journey for your job application</p>
               </div>
             </div>
             <motion.button
@@ -251,8 +284,8 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-lg font-bold text-white">Start New Journey</h3>
-              <p className="text-sm text-white/60">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">Start New Journey</h3>
+              <p className="text-sm text-gray-600 dark:text-white/60">
                 Step {currentStep} of 3: {
                   currentStep === 1 ? 'Select Job' : 
                   currentStep === 2 ? 'Select CV' : 
@@ -262,7 +295,7 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
             </div>
             <button
               onClick={handleCancel}
-              className="p-2 text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+              className="p-2 text-gray-600 dark:text-white/60 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-white/10 rounded-lg transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -276,7 +309,7 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                     step <= currentStep
                       ? 'bg-blue-500 text-white'
-                      : 'bg-white/20 text-white/60'
+                      : 'bg-gray-200 dark:bg-white/20 text-gray-600 dark:text-white/60'
                   }`}>
                     {step < currentStep ? (
                       <CheckCircle className="h-4 w-4" />
@@ -292,7 +325,7 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
                 </div>
               ))}
             </div>
-            <div className="flex justify-between text-xs text-white/60">
+            <div className="flex justify-between text-xs text-gray-600 dark:text-white/60">
               <span>Select Job</span>
               <span>Select CV</span>
               <span>Name Journey</span>
@@ -321,26 +354,26 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
                 className="space-y-4"
               >
                 <div>
-                  <h4 className="text-white font-semibold mb-2">Select an Opportunity</h4>
-                  <p className="text-white/60 text-sm mb-4">Choose a job from your tracker</p>
+                  <h4 className="text-gray-900 dark:text-white font-semibold mb-2">Select an Opportunity</h4>
+                  <p className="text-gray-600 dark:text-white/60 text-sm mb-4">Choose a job from your tracker</p>
                 </div>
 
                 {/* Search */}
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/40" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-white/40" />
                   <input
                     type="text"
                     placeholder="Search jobs..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-2 bg-gray-200 dark:bg-white/10 border border-gray-300 dark:border-white/20 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/40 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
 
                 {/* Jobs List */}
                 <div className="space-y-2 max-h-48 overflow-y-auto">
                   {filteredJobs.length === 0 ? (
-                    <div className="text-center py-8 text-white/60">
+                    <div className="text-center py-8 text-gray-600 dark:text-white/60">
                       <Briefcase className="h-12 w-12 mx-auto mb-3 opacity-50" />
                       <p>No jobs found</p>
                       <p className="text-sm">Add a job to your tracker first</p>
@@ -353,7 +386,7 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
                         className={`w-full p-4 text-left rounded-lg border transition-all ${
                           selectedJob?.id === job.id
                             ? 'border-blue-500 bg-blue-500/20'
-                            : 'border-white/20 bg-white/5 hover:bg-white/10'
+                            : 'border-gray-300 dark:border-white/20 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10'
                         }`}
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
@@ -361,8 +394,8 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
                         <div className="flex items-center gap-3">
                           <Building className="h-5 w-5 text-blue-400" />
                           <div>
-                            <h5 className="text-white font-medium">{job.jobTitle}</h5>
-                            <p className="text-white/60 text-sm">{job.company}</p>
+                            <h5 className="text-gray-900 dark:text-white font-medium">{job.jobTitle}</h5>
+                            <p className="text-gray-600 dark:text-white/60 text-sm">{job.company}</p>
                           </div>
                         </div>
                       </motion.button>
@@ -395,26 +428,26 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
                 className="space-y-4"
               >
                 <div>
-                  <h4 className="text-white font-semibold mb-2">Select a CV</h4>
-                  <p className="text-white/60 text-sm mb-4">Choose a CV for this journey</p>
+                  <h4 className="text-gray-900 dark:text-white font-semibold mb-2">Select a CV</h4>
+                  <p className="text-gray-600 dark:text-white/60 text-sm mb-4">Choose a CV for this journey</p>
                 </div>
 
                 {/* Search */}
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/40" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-white/40" />
                   <input
                     type="text"
                     placeholder="Search CVs..."
                     value={cvSearchQuery}
                     onChange={(e) => setCvSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-2 bg-gray-200 dark:bg-white/10 border border-gray-300 dark:border-white/20 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/40 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
 
                 {/* CVs List */}
                 <div className="space-y-2 max-h-48 overflow-y-auto">
                   {filteredCVs.length === 0 ? (
-                    <div className="text-center py-8 text-white/60">
+                    <div className="text-center py-8 text-gray-600 dark:text-white/60">
                       <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
                       <p>No CVs found</p>
                       <p className="text-sm">Create a CV first</p>
@@ -427,7 +460,7 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
                         className={`w-full p-4 text-left rounded-lg border transition-all ${
                           selectedCV?.id === cv.id
                             ? 'border-blue-500 bg-blue-500/20'
-                            : 'border-white/20 bg-white/5 hover:bg-white/10'
+                            : 'border-gray-300 dark:border-white/20 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10'
                         }`}
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
@@ -435,8 +468,8 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
                         <div className="flex items-center gap-3">
                           <FileText className="h-5 w-5 text-blue-400" />
                           <div>
-                            <h5 className="text-white font-medium">{cv.title}</h5>
-                            <p className="text-white/60 text-sm">Modified: {new Date(cv.lastModified).toLocaleDateString()}</p>
+                            <h5 className="text-gray-900 dark:text-white font-medium">{cv.title}</h5>
+                            <p className="text-gray-600 dark:text-white/60 text-sm">Modified: {new Date(cv.lastModified).toLocaleDateString()}</p>
                           </div>
                         </div>
                       </motion.button>
@@ -447,7 +480,7 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
                 <div className="flex gap-2 mt-4">
                   <motion.button
                     onClick={() => setCurrentStep(1)}
-                    className="flex-1 px-4 py-2 bg-white/10 hover:bg-white/20 text-white font-medium rounded-lg transition-colors"
+                    className="flex-1 px-4 py-2 bg-gray-200 dark:bg-white/10 hover:bg-gray-300 dark:hover:bg-white/20 text-gray-700 dark:text-white font-medium rounded-lg transition-colors"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
@@ -479,44 +512,44 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
                 className="space-y-4"
               >
                 <div>
-                  <h4 className="text-white font-semibold mb-2">Name Your Journey</h4>
-                  <p className="text-white/60 text-sm mb-4">Give your journey a memorable name</p>
+                  <h4 className="text-gray-900 dark:text-white font-semibold mb-2">Name Your Journey</h4>
+                  <p className="text-gray-600 dark:text-white/60 text-sm mb-4">Give your journey a memorable name</p>
                 </div>
 
                 {/* Selected Items Summary */}
-                <div className="space-y-3 p-4 bg-white/5 rounded-lg border border-white/10">
+                <div className="space-y-3 p-4 bg-gray-100 dark:bg-white/5 rounded-lg border border-gray-200 dark:border-white/10">
                   <div className="flex items-center gap-3">
                     <Building className="h-4 w-4 text-blue-400" />
                     <div>
-                      <p className="text-white font-medium">{selectedJob?.jobTitle}</p>
-                      <p className="text-white/60 text-sm">{selectedJob?.company}</p>
+                      <p className="text-gray-900 dark:text-white font-medium">{selectedJob?.jobTitle}</p>
+                      <p className="text-gray-600 dark:text-white/60 text-sm">{selectedJob?.company}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
                     <FileText className="h-4 w-4 text-blue-400" />
                     <div>
-                      <p className="text-white font-medium">{selectedCV?.title}</p>
-                      <p className="text-white/60 text-sm">CV</p>
+                      <p className="text-gray-900 dark:text-white font-medium">{selectedCV?.title}</p>
+                      <p className="text-gray-600 dark:text-white/60 text-sm">CV</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Journey Name Input */}
                 <div>
-                  <label className="block text-white font-medium mb-2">Journey Name</label>
+                  <label className="block text-gray-900 dark:text-white font-medium mb-2">Journey Name</label>
                   <input
                     type="text"
                     value={journeyName}
                     onChange={(e) => setJourneyName(e.target.value)}
                     placeholder={`${selectedJob?.jobTitle} at ${selectedJob?.company}`}
-                    className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 bg-gray-200 dark:bg-white/10 border border-gray-300 dark:border-white/20 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/40 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
 
                 <div className="flex gap-2 mt-6">
                   <motion.button
                     onClick={() => setCurrentStep(2)}
-                    className="flex-1 px-4 py-2 bg-white/10 hover:bg-white/20 text-white font-medium rounded-lg transition-colors"
+                    className="flex-1 px-4 py-2 bg-gray-200 dark:bg-white/10 hover:bg-gray-300 dark:hover:bg-white/20 text-gray-700 dark:text-white font-medium rounded-lg transition-colors"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >

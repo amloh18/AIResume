@@ -12,7 +12,7 @@ import {
   FileText
 } from 'lucide-react';
 import { getThemeClasses } from '@/lib/utils/themeUtils';
-import { industryTemplates, getTemplatesByCategory } from '@/data/industryTemplates';
+// Removed hardcoded templates import - now fetching from database
 import { Template } from '@/lib/stores/templateStore';
 
 interface TemplateContentProps {
@@ -29,16 +29,43 @@ const TemplateContent: React.FC<TemplateContentProps> = ({
   const themeClasses = getThemeClasses;
   
   const [templates, setTemplates] = useState<Template[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Load templates from our industry templates data
-    setTemplates(industryTemplates);
+    // Fetch templates from API instead of using hardcoded data
+    const fetchTemplates = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const response = await fetch('/api/templates?isActive=true');
+        const data = await response.json();
+        
+        if (response.ok) {
+          setTemplates(data.templates || []);
+        } else {
+          setError(data.error || 'Failed to fetch templates');
+        }
+      } catch (err) {
+        console.error('Error fetching templates:', err);
+        setError('Failed to load templates');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTemplates();
   }, []);
 
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
-  const categories = ['All', 'Professional', 'Creative', 'Minimal', 'Executive', 'Technology', 'Academic', 'Healthcare', 'Finance', 'Marketing'];
+  const categories = ['All', 'Professional', 'Modern', 'Creative'];
 
-  const filteredTemplates = getTemplatesByCategory(selectedCategory);
+  // Filter templates based on selected category
+  const filteredTemplates = templates.filter(template => {
+    if (selectedCategory === 'All') return true;
+    return template.categories?.includes(selectedCategory) || template.category === selectedCategory.toLowerCase();
+  });
 
   const handleTemplateSelect = (template: any) => {
     if (onTemplateSelect) {
@@ -86,9 +113,29 @@ const TemplateContent: React.FC<TemplateContentProps> = ({
         ))}
       </div>
 
+      {/* Loading State */}
+      {loading && (
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-lime-600 mx-auto mb-4"></div>
+          <p className="text-gray-500">Loading templates...</p>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <div className="text-center py-8">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <FileText className="h-8 w-8 text-red-600" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Error loading templates</h3>
+          <p className="text-gray-500">{error}</p>
+        </div>
+      )}
+
       {/* Templates Grid - 2/3 Column Layout */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-        {filteredTemplates.map((template) => (
+      {!loading && !error && (
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+          {filteredTemplates.map((template) => (
           <motion.div
             key={template.id}
             className={`${themeClasses.card.base} rounded-lg border p-3 cursor-pointer transition-all ${
@@ -213,7 +260,8 @@ const TemplateContent: React.FC<TemplateContentProps> = ({
             </div>
           </motion.div>
         ))}
-      </div>
+        </div>
+      )}
 
       {/* Template Tips */}
       <div className={`p-4 rounded-lg ${themeClasses.background.tertiary} border-l-4 border-blue-500`}>

@@ -33,7 +33,7 @@ async function testLogin() {
     await client.connect();
     console.log('✅ Connected to MongoDB\n');
     
-    const db = client.db();
+    const db = client.db('cvcircle');
     
     // Test credentials
     const testEmail = 'test@example.com';

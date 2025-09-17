@@ -3,7 +3,7 @@
 import React, { useState, Suspense, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { 
+import {
   User,
   Trash2,
   Shield,
@@ -18,7 +18,9 @@ import {
   Calendar,
   DollarSign,
   CreditCard as CardIcon,
-  FileText
+  FileText,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import UserIcon from '@/components/ui/UserIcon';
@@ -72,6 +74,21 @@ interface User {
   teamMembers?: any[];
   permissions?: any[];
   roles?: any[];
+  location?: string;
+  website?: string;
+  linkedin?: string;
+  github?: string;
+  summary?: string;
+  avatar?: string;
+  settings?: {
+    company?: string;
+    address?: string;
+    timezone?: string;
+    languagePreference?: string;
+    dateOfBirth?: string;
+    gender?: string;
+    nationality?: string;
+  };
   subscription?: {
     planName: string;
     status: string;
@@ -1498,10 +1515,9 @@ const SettingsSidebar = ({
 };
 
 // Settings Header Component
-const SettingsHeader = ({ activeTab, user }: { activeTab: string; user: User | null }) => {
+const SettingsHeader = ({ activeTab, user, session }: { activeTab: string; user: User | null; session: any }) => {
   const router = useRouter();
   const { theme, toggleTheme } = useTheme();
-  const { data: session } = useSession();
 
   const getTabDescription = (tab: string) => {
     switch (tab) {
@@ -1516,15 +1532,15 @@ const SettingsHeader = ({ activeTab, user }: { activeTab: string; user: User | n
   };
 
   const displayUser = user ? {
-    name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || session?.user?.name || 'User',
-    email: user.email || session?.user?.email || 'user@example.com',
-    username: user.username,
-    profilePhoto: user.avatar || session?.user?.image,
+    name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || session?.user?.name || 'User',
+    email: user?.email || session?.user?.email || 'user@example.com',
+    username: user?.username,
+    profilePhoto: user?.profilePhoto || session?.user?.image,
     designation: 'Software Developer'
   } : {
-    name: session?.user?.firstName || session?.user?.name || 'User',
+    name: session?.user?.name || 'User',
     email: session?.user?.email || 'user@example.com',
-    username: session?.user?.username,
+    username: undefined,
     profilePhoto: session?.user?.image,
     designation: 'Software Developer'
   };
@@ -1542,10 +1558,21 @@ const SettingsHeader = ({ activeTab, user }: { activeTab: string; user: User | n
         </div>
         {/* Actions - Same as Analytics page header but without Settings icon */}
         <div className="flex items-center gap-2">
+          {/* Theme Toggle */}
+          <button
+            onClick={toggleTheme}
+            aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
+            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white transition-colors"
+            title={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
+          >
+            {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+          </button>
+
           {/* Notifications */}
           <button aria-label="Notifications" className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white transition-colors">
             <Bell size={18} />
           </button>
+
           {/* User Profile */}
           <div className="pl-2 ml-1">
             <UserIcon user={displayUser} />
@@ -1558,11 +1585,11 @@ const SettingsHeader = ({ activeTab, user }: { activeTab: string; user: User | n
 
 // Main Settings Content Component
 const SettingsContent = () => {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState('account');
-  const [user, setUser] = useState<User | null>(null);
+  const [userData, setUserData] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Handle URL tab parameter
@@ -1582,7 +1609,7 @@ const SettingsContent = () => {
         if (response.ok) {
           const data = await response.json();
           if (data.success && data.user) {
-            setUser(data.user);
+            setUserData(data.user);
           }
         } else {
           console.error('Failed to fetch user data');
@@ -1611,7 +1638,7 @@ const SettingsContent = () => {
         const result = await response.json();
         if (result.success && result.user) {
           console.log('Profile updated successfully');
-          setUser(result.user);
+          setUserData(result.user);
           
           // Dispatch custom event to notify other components of user data update
           window.dispatchEvent(new CustomEvent('userProfileUpdated', { 
@@ -1627,7 +1654,7 @@ const SettingsContent = () => {
   };
 
   const renderTabContent = () => {
-    if (loading || !user) {
+    if (loading || !userData) {
       return (
         <div className="p-8 h-full">
           <div className="flex items-center justify-center h-64">
@@ -1639,11 +1666,11 @@ const SettingsContent = () => {
 
     switch (activeTab) {
       case 'account':
-        return <AccountProfile user={user} onSave={handleSaveUser} />;
+        return <AccountProfile user={userData} onSave={handleSaveUser} />;
       case 'security':
-        return <SecurityAndNotifications user={user} />;
+        return <SecurityAndNotifications user={userData} />;
       case 'membership':
-        return <MembershipBilling user={user} />;
+        return <MembershipBilling user={userData} />;
       case 'referrals':
         return <ReferralsRewards />;
       case 'integrations':
@@ -1678,7 +1705,7 @@ const SettingsContent = () => {
     <RouteGuard requireAuth={true}>
       <div className="fixed top-4 left-80 right-4 bottom-4 space-y-6">
         {/* Header */}
-        <SettingsHeader activeTab={activeTab} user={user} />
+        <SettingsHeader activeTab={activeTab} user={userData} session={session} />
         
         {/* Main Layout */}
         <div className="flex h-[calc(100vh-180px)] w-full">

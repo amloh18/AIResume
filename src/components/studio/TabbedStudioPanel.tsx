@@ -78,32 +78,44 @@ const TabbedStudioPanel: React.FC<TabbedStudioPanelProps> = ({
   return (
     <div className="h-full flex flex-col">
       {/* Tab Navigation */}
-      <div className={`${themeClasses.card.base} rounded-lg border ${themeClasses.border.primary} mb-4 flex-shrink-0`}>
-        <div className="flex border-b border-gray-200 dark:border-gray-700">
+      <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl border border-gray-200/60 dark:border-gray-700/60 rounded-xl shadow-lg shadow-gray-200/50 dark:shadow-gray-900/50 mb-6 flex-shrink-0 overflow-hidden">
+        <div className="flex">
           {tabs.map((tab) => (
-            <button
+            <motion.button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`
-                flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium transition-colors relative
+                flex-1 flex items-center justify-center gap-3 px-6 py-4 text-sm font-semibold transition-all duration-200 relative
                 ${activeTab === tab.id 
-                  ? 'text-lime-600 dark:text-lime-400' 
-                  : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100'
+                  ? 'text-lime-600 dark:text-lime-400 bg-lime-50/50 dark:bg-lime-900/20' 
+                  : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50/50 dark:hover:bg-gray-700/50'
                 }
               `}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
             >
-              <tab.icon className="w-4 h-4" />
+              <div className={`p-1.5 rounded-lg transition-all duration-200 ${
+                activeTab === tab.id 
+                  ? 'bg-lime-100 dark:bg-lime-900/30' 
+                  : 'bg-gray-100 dark:bg-gray-700'
+              }`}>
+                <tab.icon className={`w-4 h-4 ${
+                  activeTab === tab.id 
+                    ? 'text-lime-600 dark:text-lime-400' 
+                    : 'text-gray-500 dark:text-gray-400'
+                }`} />
+              </div>
               <span>{tab.label}</span>
               
               {/* Active tab indicator */}
               {activeTab === tab.id && (
                 <motion.div
-                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-lime-600 dark:bg-lime-400"
+                  className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-lime-500 to-lime-600 rounded-t-full"
                   layoutId="activeTab"
-                  transition={{ duration: 0.2 }}
+                  transition={{ duration: 0.3, ease: 'easeInOut' }}
                 />
               )}
-            </button>
+            </motion.button>
           ))}
         </div>
       </div>
@@ -112,10 +124,10 @@ const TabbedStudioPanel: React.FC<TabbedStudioPanelProps> = ({
       <div className="flex-1 overflow-y-auto min-h-0">
         <motion.div
           key={activeTab}
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2 }}
-          className="p-4"
+          transition={{ duration: 0.3, ease: 'easeOut' }}
+          className="p-6"
         >
           {tabs.find(tab => tab.id === activeTab)?.content}
         </motion.div>

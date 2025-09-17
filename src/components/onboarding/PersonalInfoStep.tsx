@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, FileText, User, Mail, Phone, MapPin, Globe, ArrowRight, X, RotateCcw, CheckCircle } from 'lucide-react';
 import { useOnboarding } from '@/contexts/OnboardingContext';
@@ -16,7 +16,21 @@ export default function PersonalInfoStep({ onNext }: PersonalInfoStepProps) {
   const [uploadError, setUploadError] = useState('');
   const [showUpload, setShowUpload] = useState(false);
   const [isFlipped, setIsFlipped] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Reset navigation state when component mounts or when step changes
+  useEffect(() => {
+    setIsNavigating(false);
+  }, [state.currentStep]);
+
+  // Ensure card stays flipped if user has filled in basic info
+  useEffect(() => {
+    if (state.cvData.basics.name && state.cvData.basics.email && !isFlipped) {
+      console.log('🔍 PersonalInfoStep - Auto-flipping card to form side');
+      setIsFlipped(true);
+    }
+  }, [state.cvData.basics.name, state.cvData.basics.email, isFlipped]);
 
   const handleFileUpload = async (file: File) => {
     setIsUploading(true);
@@ -39,15 +53,15 @@ export default function PersonalInfoStep({ onNext }: PersonalInfoStepProps) {
       
       const result = await response.json();
       
-      if (result.personalInfo) {
-        // The direct parsing API returns the correct format
+      if (result.basics) {
+        // The direct parsing API returns the correct CVDataStructure format
         // Just update the onboarding context
         dispatch({ type: 'UPDATE_CV_DATA', payload: result });
         setShowUpload(false);
         
         // Show success message briefly, then flip the card
         setTimeout(() => {
-          if (!isFlipped) {
+          if (!isFlipped && !isNavigating) {
             setIsFlipped(true);
           }
         }, 2000); // Give user time to see the success message
@@ -97,14 +111,46 @@ export default function PersonalInfoStep({ onNext }: PersonalInfoStepProps) {
   };
 
   const handleNext = () => {
-    // Validate required fields
-    if (!state.cvData.basics.name || !state.cvData.basics.email) {
+    console.log('🔍 PersonalInfoStep - handleNext called');
+    console.log('🔍 PersonalInfoStep - name:', state.cvData.basics.name);
+    console.log('🔍 PersonalInfoStep - email:', state.cvData.basics.email);
+    console.log('🔍 PersonalInfoStep - isNavigating:', isNavigating);
+    console.log('🔍 PersonalInfoStep - isFlipped:', isFlipped);
+    
+    // Prevent multiple clicks
+    if (isNavigating) {
+      console.log('⚠️ PersonalInfoStep - Already navigating, ignoring click');
       return;
     }
-    onNext();
+    
+    // Validate required fields
+    if (!state.cvData.basics.name || !state.cvData.basics.email) {
+      console.log('❌ PersonalInfoStep - Validation failed, required fields missing');
+      return;
+    }
+    
+    console.log('✅ PersonalInfoStep - Validation passed, calling onNext');
+    setIsNavigating(true);
+    
+    // Ensure card stays flipped during navigation
+    if (!isFlipped) {
+      console.log('🔍 PersonalInfoStep - Ensuring card is flipped before navigation');
+      setIsFlipped(true);
+    }
+    
+    // Add a small delay to ensure state updates are processed
+    setTimeout(() => {
+      onNext();
+    }, 100);
   };
 
   const handleFlip = () => {
+    // Don't flip if we're navigating
+    if (isNavigating) {
+      console.log('⚠️ PersonalInfoStep - Skipping flip, navigation in progress');
+      return;
+    }
+    
     setIsFlipped(!isFlipped);
     setShowUpload(false);
     setUploadError('');
@@ -369,11 +415,20 @@ export default function PersonalInfoStep({ onNext }: PersonalInfoStepProps) {
                   <div className="mt-8 text-center">
                     <button
                       onClick={handleNext}
-                      disabled={!state.cvData.basics.name || !state.cvData.basics.email}
+                      disabled={!state.cvData.basics.name || !state.cvData.basics.email || isNavigating}
                       className="bg-gradient-to-r from-lime-400 to-lime-500 text-black px-8 py-4 rounded-xl font-semibold text-lg hover:from-lime-300 hover:to-lime-400 transition-all duration-200 shadow-lg shadow-lime-400/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto"
                     >
-                      Continue to Experience
-                      <ArrowRight size={20} />
+                      {isNavigating ? (
+                        <>
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-black"></div>
+                          Continuing...
+                        </>
+                      ) : (
+                        <>
+                          Continue to Experience
+                          <ArrowRight size={20} />
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>

@@ -2,14 +2,14 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  X, 
-  Briefcase, 
-  FileText, 
-  CheckCircle, 
-  Download, 
-  Plus, 
-  ExternalLink, 
+import {
+  X,
+  Briefcase,
+  FileText,
+  CheckCircle,
+  Download,
+  Plus,
+  ExternalLink,
   ArrowRight,
   Sparkles,
   Search,
@@ -27,7 +27,7 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useUserPlan } from '@/lib/hooks/useUserPlan';
 import ATSScoreAnalyzer from '@/components/studio/ATSScoreAnalyzer';
-import AddJobModal from './AddJobModal';
+import JobModal from './JobModal';
 import CVSelectionStep from '@/components/journey/CVSelectionStep';
 
 interface JobPipelineCardModalProps {
@@ -60,10 +60,10 @@ interface CoverLetter {
 
 const JobPipelineCardModal: React.FC<JobPipelineCardModalProps> = ({ isOpen, onClose, jobId, onJourneyUpdated }) => {
   const router = useRouter();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const { state, updateJourneyStatus, updateJobInfo, updateCurrentStep, updateCVId, updateCoverLetterId, updateAtsScore, updateCurrentJobId, endJourney } = useJobJourney();
   const { hasAI } = useUserPlan();
-  const [showAddJobModal, setShowAddJobModal] = useState(false);
+  const [showJobModal, setShowJobModal] = useState(false);
   const [jobData, setJobData] = useState<any>(null);
   const [isLoadingJob, setIsLoadingJob] = useState(false);
   const [userCVs, setUserCVs] = useState<CV[]>([]);
@@ -1897,10 +1897,11 @@ const JobPipelineCardModal: React.FC<JobPipelineCardModalProps> = ({ isOpen, onC
           </motion.div>
 
           {/* Add Job Modal */}
-          <AddJobModal
-            isOpen={showAddJobModal}
-            onClose={() => setShowAddJobModal(false)}
-            onJobAdded={handleJobAdded}
+          <JobModal
+            isOpen={showJobModal}
+            onClose={() => setShowJobModal(false)}
+            onJobSaved={handleJobAdded}
+            userId={session?.user?.id || ''}
           />
 
           {/* CV Selection Modal */}

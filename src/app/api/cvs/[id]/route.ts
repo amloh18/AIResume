@@ -26,8 +26,9 @@ export async function GET(
     }
 
     const cvId = toObjectId(id);
+    const userIdObjectId = toObjectId(userId);
     
-    const cv = await CV.findOne({ _id: cvId, userId });
+    const cv = await CV.findOne({ _id: cvId, userId: userIdObjectId });
     
     if (!cv) {
       return NextResponse.json(
@@ -94,10 +95,11 @@ export async function PUT(
     }
 
     const cvId = toObjectId(id);
-    console.log('🔍 CV UPDATE API - CV ID:', cvId, 'User ID:', userId);
+    const userIdObjectId = toObjectId(userId);
+    console.log('🔍 CV UPDATE API - CV ID:', cvId, 'User ID:', userIdObjectId);
     
     // Find CV and ensure user owns it
-    const cv = await CV.findOne({ _id: cvId, userId });
+    const cv = await CV.findOne({ _id: cvId, userId: userIdObjectId });
     console.log('🔍 CV UPDATE API - CV found:', !!cv);
     
     if (!cv) {

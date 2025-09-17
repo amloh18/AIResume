@@ -96,8 +96,8 @@ export async function POST(request: NextRequest) {
     const validatedEmail = validateEmail(email);
     console.log('✅ Email validated:', validatedEmail);
 
-    // Find user by email
-    const user = await User.findOne({ email: validatedEmail });
+    // Find user by email (include password field for comparison)
+    const user = await User.findOne({ email: validatedEmail }).select('+password');
     if (!user) {
       console.log('❌ User not found for email:', validatedEmail);
       return NextResponse.json(

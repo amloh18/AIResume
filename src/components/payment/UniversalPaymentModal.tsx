@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Check, CreditCard, Zap, Star, Shield, Crown, Gift } from 'lucide-react';
-import { useSession } from 'next-auth/react';
+// import { useSession } from 'next-auth/react'; // Removed - using Clerk now
 import { PricingPlan } from '@/types/pricing';
 
 interface UniversalPaymentModalProps {
@@ -31,7 +31,8 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
   returnUrl,
   triggerContext
 }) => {
-  const { data: session } = useSession();
+  // const { data: session } = useSession(); // Removed - using Clerk now
+  const session = null; // Temporary - will replace with Clerk user
   const [step, setStep] = useState(1);
   const [selectedPlan, setSelectedPlan] = useState<PricingPlan | null>(null);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');

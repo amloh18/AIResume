@@ -414,8 +414,9 @@ export default function ComprehensiveATSAnalyzer({
         <div className="mb-4">
           <JobSelector
             selectedJobId={selectedJobId}
-            onJobSelect={onJobSelection}
+            onJobSelection={onJobSelection}
             userId={userId}
+            autoLoadedFromJourney={!!journeyState.currentJobId}
           />
         </div>
       )}

@@ -29,9 +29,9 @@ const CardNav = ({
     if (onCtaClick) {
       onCtaClick();
     } else {
-      // Default action - redirect to onboarding
+      // Default action - redirect to sign-in
       if (typeof window !== 'undefined') {
-        window.location.href = '/onboarding';
+        window.location.href = '/sign-in';
       }
     }
   };

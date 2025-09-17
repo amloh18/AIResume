@@ -47,6 +47,9 @@ import CVPreviewContent from '@/components/studio/CVPreviewContent';
 import PageHeader from './PageHeader';
 import { authenticatedFetch } from '@/lib/utils/apiUtils';
 import { useJourneyLinking } from '@/lib/services/journeyLinkingService';
+import MasterCVCard from './MasterCVCard';
+import MasterCVCardUpdated from './MasterCVCardUpdated';
+import CVCard from './CVCard';
 
 interface CV {
   id: string;
@@ -238,6 +241,116 @@ const Canvas: React.FC = () => {
     }
   };
 
+  // Master CV handlers
+  const handleEditMasterCV = async (masterCV: any) => {
+    try {
+      console.log('🔍 Editing master CV:', masterCV);
+      // Navigate to studio with master CV
+      window.location.href = `/studio?cvId=${masterCV.id}&master=true`;
+    } catch (error) {
+      console.error('❌ Error editing master CV:', error);
+    }
+  };
+
+  const handleDuplicateMasterCV = async (masterCV: any) => {
+    try {
+      console.log('🔍 Duplicating master CV:', masterCV);
+
+      // Create duplicate CV
+      const response = await fetch('/api/cvs/master', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: session?.user?.id,
+          jobTitle: 'Untitled Job',
+          company: 'Company'
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success && result.data?.cv) {
+        const duplicatedCV = result.data.cv;
+        // Navigate to studio with duplicated CV
+        window.location.href = `/studio?cvId=${duplicatedCV.id}`;
+        console.log('✅ Master CV duplicated successfully');
+      } else {
+        throw new Error(result.message || 'Failed to duplicate master CV');
+      }
+    } catch (error) {
+      console.error('❌ Error duplicating master CV:', error);
+    }
+  };
+
+  // CV Card handlers
+  const handleDuplicateCV = async (cv: CV) => {
+    try {
+      console.log('🔍 Duplicating CV:', cv);
+
+      // Create duplicate CV
+      const response = await fetch('/api/cvs/duplicate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          cvId: cv.id,
+          userId: session?.user?.id || getUserIdFromLocalStorage()
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success && result.data?.cv) {
+        const duplicatedCV = result.data.cv;
+        // Refresh CVs list
+        loadCVs();
+        addToast('success', 'CV duplicated successfully!');
+        console.log('✅ CV duplicated successfully');
+      } else {
+        throw new Error(result.message || 'Failed to duplicate CV');
+      }
+    } catch (error) {
+      console.error('❌ Error duplicating CV:', error);
+      addToast('error', 'Failed to duplicate CV');
+    }
+  };
+
+  const handleDownloadCV = async (cv: CV) => {
+    try {
+      console.log('🔍 Downloading CV:', cv);
+      // Open download URL in new tab
+      window.open(`/api/cvs/download/${cv.id}`, '_blank');
+    } catch (error) {
+      console.error('❌ Error downloading CV:', error);
+      addToast('error', 'Failed to download CV');
+    }
+  };
+
+  const handleShareCV = async (cv: CV) => {
+    try {
+      console.log('🔍 Sharing CV:', cv);
+      // Copy shareable link to clipboard
+      const shareUrl = `${window.location.origin}/shared/cv/${cv.id}`;
+      await navigator.clipboard.writeText(shareUrl);
+      addToast('success', 'Share link copied to clipboard!');
+    } catch (error) {
+      console.error('❌ Error sharing CV:', error);
+      addToast('error', 'Failed to share CV');
+    }
+  };
+
+  const handleDeleteCV = async (cv: CV) => {
+    try {
+      console.log('🔍 Deleting CV:', cv);
+      await deleteCV(cv.id);
+    } catch (error) {
+      console.error('❌ Error deleting CV:', error);
+    }
+  };
+
   const [selectedCV, setSelectedCV] = useState<CV | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -341,6 +454,13 @@ const Canvas: React.FC = () => {
 
   // Load CVs and Cover Letters from API
   useEffect(() => {
+    // Check if user is returning from onboarding
+    const fromOnboarding = typeof window !== 'undefined' && sessionStorage.getItem('fromOnboarding') === 'true';
+    if (fromOnboarding) {
+      console.log('🔍 Canvas - User returning from onboarding, refreshing data');
+      sessionStorage.removeItem('fromOnboarding'); // Clear the flag
+    }
+    
     // Check NextAuth session first
     if (session?.user?.id) {
       loadCVs(session.user.id);
@@ -389,10 +509,14 @@ const Canvas: React.FC = () => {
       }
       
       console.log('Loading CVs for user:', userIdToUse);
+      console.log('🔍 Canvas - User ID type:', typeof userIdToUse);
+      console.log('🔍 Canvas - User ID length:', userIdToUse?.toString().length);
       
       const response = await authenticatedFetch(`/api/cvs?userId=${userIdToUse}`);
       const result = await response.json();
       console.log('🔍 Canvas - CV API response:', result);
+      console.log('🔍 Canvas - Response success:', result.success);
+      console.log('🔍 Canvas - Response data keys:', result.data ? Object.keys(result.data) : 'No data');
       
       if (result.success) {
         const cvData = result.data.cvs || result.data.data || [];
@@ -422,13 +546,17 @@ const Canvas: React.FC = () => {
                             description: cv.description || '',
             cvData: cv.cvData || null, // Include CV data for preview
             // connectedJobs removed - relationships now managed through CVJourney
-            completionPercentage: calculateCompletionPercentage(cv)
+            completionPercentage: calculateCompletionPercentage(cv),
+            isMaster: cv.isMaster || false // Include master flag
           };
         }));
         
-        console.log('🔍 Canvas - Setting CVs:', enrichedCVs.length);
-        console.log('🔍 Canvas - First CV sample:', enrichedCVs[0]);
-        setCvs(enrichedCVs);
+        // Filter out master CV from regular CV list (it will be displayed in MasterCVCard)
+        const regularCVs = enrichedCVs.filter(cv => !cv.isMaster);
+        
+        console.log('🔍 Canvas - Setting CVs:', regularCVs.length);
+        console.log('🔍 Canvas - First CV sample:', regularCVs[0]);
+        setCvs(regularCVs);
       } else {
         console.log('🔍 Canvas - API returned success: false');
         setCvs([]);
@@ -733,7 +861,7 @@ const Canvas: React.FC = () => {
         showModalDialog({
           title: 'Authentication Error',
           message: 'Please log in again to continue.',
-          type: 'error'
+          type: 'error' as const
         });
         return;
       }
@@ -1039,7 +1167,7 @@ const Canvas: React.FC = () => {
             {/* Stats Cards Skeleton */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {Array.from({ length: 4 }).map((_, index) => (
-                <div key={index} className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-4">
+                <div key={index} className="frosted-glass-card rounded-xl p-4">
                   <div className="h-4 w-20 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded mb-2">
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
                   </div>
@@ -1058,7 +1186,7 @@ const Canvas: React.FC = () => {
 
               <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
                 {Array.from({ length: 4 }).map((_, index) => (
-                  <div key={index} className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden">
+                  <div key={index} className="frosted-glass-card rounded-2xl overflow-hidden">
                     {/* CV Preview Skeleton */}
                     <div className="h-48 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden">
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
@@ -1085,7 +1213,7 @@ const Canvas: React.FC = () => {
           {/* Right Column - Sidebar Skeleton */}
           <div className="space-y-6">
             {Array.from({ length: 3 }).map((_, index) => (
-              <div key={index} className="bg-white/5 border border-white/10 rounded-xl p-6">
+              <div key={index} className="frosted-glass-widget rounded-xl p-6">
                 <div className="h-5 w-32 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded mb-4">
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
                 </div>
@@ -1114,9 +1242,9 @@ const Canvas: React.FC = () => {
         user={{
           name: userProfile?.firstName + ' ' + userProfile?.lastName || session?.user?.name || 'User',
           email: userProfile?.email || session?.user?.email || 'user@example.com',
-          username: userProfile?.username || session?.user?.username,
-          profilePhoto: userProfile?.avatar || session?.user?.image || session?.user?.profilePhoto,
-          designation: userProfile?.designation || session?.user?.designation
+          username: userProfile?.username || session?.user?.username || '',
+          profilePhoto: userProfile?.avatar || session?.user?.image || '',
+          designation: userProfile?.designation || ''
         }}
         showSettings={true}
         notifications={notifications}
@@ -1130,7 +1258,7 @@ const Canvas: React.FC = () => {
         <motion.button
           onClick={() => setActiveTab('cv')}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
-            activeTab === 'cv' ? 'bg-lime-400/20 text-lime-400 border border-lime-400/30' : 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'
+            activeTab === 'cv' ? 'bg-lime-400/20 text-lime-400 border border-lime-400/30' : 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-white/60 border border-gray-200 dark:border-white/10 hover:bg-gray-200 dark:hover:bg-white/10'
           }`}
           whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
         >
@@ -1140,7 +1268,7 @@ const Canvas: React.FC = () => {
         <motion.button
           onClick={() => setActiveTab('coverLetter')}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
-            activeTab === 'coverLetter' ? 'bg-blue-400/20 text-blue-400 border border-blue-400/30' : 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'
+            activeTab === 'coverLetter' ? 'bg-blue-400/20 text-blue-400 border border-blue-400/30' : 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-white/60 border border-gray-200 dark:border-white/10 hover:bg-gray-200 dark:hover:bg-white/10'
           }`}
           whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
         >
@@ -1158,7 +1286,7 @@ const Canvas: React.FC = () => {
             {/* Stats Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         <motion.div
-          className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-4"
+          className="frosted-glass-card rounded-xl p-4"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
@@ -1180,7 +1308,7 @@ const Canvas: React.FC = () => {
         </motion.div>
 
         <motion.div
-          className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-4"
+          className="frosted-glass-card rounded-xl p-4"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
@@ -1202,7 +1330,7 @@ const Canvas: React.FC = () => {
         </motion.div>
 
         <motion.div
-          className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-4"
+          className="frosted-glass-card rounded-xl p-4"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
@@ -1224,7 +1352,7 @@ const Canvas: React.FC = () => {
         </motion.div>
 
         <motion.div
-          className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-4"
+          className="frosted-glass-card rounded-xl p-4"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
@@ -1257,83 +1385,18 @@ const Canvas: React.FC = () => {
         </div>
 
         <div className="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
-          {/* Create New CV Card - Always First */}
-          <motion.div
-            className="bg-gradient-to-br from-lime-400/10 to-blue-400/10 border-2 border-dashed border-lime-400/30 rounded-2xl p-8 flex flex-col items-center justify-center text-center hover:border-lime-400/50 hover:from-lime-400/15 hover:to-blue-400/15 transition-all duration-300 cursor-pointer group"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            whileHover={{ y: -5, scale: 1.02 }}
-            onClick={() => window.location.href = '/studio'}
-          >
-            <div className="w-20 h-20 bg-gradient-to-br from-lime-400/20 to-lime-500/20 rounded-full flex items-center justify-center mb-6 group-hover:from-lime-400/30 group-hover:to-lime-500/30 transition-all duration-300">
-              <Plus size={32} className="text-lime-400" />
-            </div>
-            
-            <h3 className="text-lg font-bold text-white mb-3">Create New CV</h3>
-            <p className="text-white/60 mb-6 max-w-sm">
-              Start building your professional CV with our intuitive editor. Choose from beautiful templates and customize every detail.
-            </p>
-            
-            <div className="flex items-center gap-4 text-white/40 text-sm mb-6">
-              <div className="flex items-center gap-2">
-                <CheckCircle size={16} className="text-lime-400" />
-                <span>Professional Templates</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle size={16} className="text-lime-400" />
-                <span>Easy Customization</span>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-3">
-              <motion.button
-                className="px-6 py-3 bg-gradient-to-r from-lime-400 to-lime-500 text-black font-semibold rounded-xl hover:from-lime-300 hover:to-lime-400 transition-all duration-300 flex items-center gap-2 group-hover:scale-105"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  try {
-                    const userData = localStorage.getItem('user');
-                    const userId = userData ? JSON.parse(userData).id || JSON.parse(userData)._id : '6889b151d17daa1eaee91a5c';
-                    await createCV({
-                      userId
-                    });
-                  } catch (error) {
-                    console.error('Error creating CV:', error);
-                  }
-                }}
-              >
-                <Plus size={18} />
-                Create New
-              </motion.button>
-              
-              <motion.button
-                className="px-6 py-3 bg-white/10 text-white font-semibold rounded-xl hover:bg-white/20 transition-all duration-300 flex items-center gap-2 border border-white/20"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  window.location.href = '/onboarding?mode=import';
-                }}
-              >
-                <FileText size={18} />
-                Import CV
-              </motion.button>
-            </div>
-            
-            <div className="mt-6 p-4 bg-white/5 rounded-lg border border-white/10">
-              <div className="flex items-center gap-3 text-white/60 text-sm">
-                <Sparkles size={16} className="text-lime-400" />
-                <span>AI-powered suggestions to help you create the perfect CV</span>
-              </div>
-            </div>
-          </motion.div>
+          {/* Master CV Card - Always First */}
+          <MasterCVCardUpdated
+            onEditMasterCV={handleEditMasterCV}
+            onDuplicateMasterCV={handleDuplicateMasterCV}
+            userId={session?.user?.id || ''}
+            onToggleStar={toggleStar}
+          />
 
           {loading ? (
             // Loading skeleton
             Array.from({ length: 4 }).map((_, index) => (
-              <div key={index} className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 animate-pulse">
+              <div key={index} className="frosted-glass-card rounded-2xl p-6 animate-pulse">
                 <div className="h-48 bg-white/10 rounded-lg mb-4"></div>
                 <div className="h-4 bg-white/10 rounded mb-2"></div>
                 <div className="h-3 bg-white/10 rounded w-2/3"></div>
@@ -1342,32 +1405,29 @@ const Canvas: React.FC = () => {
           ) : (
             // CV Cards
             cvs.map((cv, index) => (
-            <motion.div
-              key={cv.id}
-              className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden hover:bg-white/10 transition-all duration-300 group cursor-pointer focus:outline-none focus:ring-2 focus:ring-lime-400 focus:ring-opacity-50"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 + index * 0.1 }}
-              whileHover={{ y: -5, scale: 1.02 }}
-              onClick={() => handleCVClick(cv)}
-              onKeyDown={(e) => {
-                if (e.key === ' ' || e.key === 'Enter') {
-                  e.preventDefault();
-                  handleCVClick(cv);
-                }
-              }}
-              tabIndex={0}
-              role="button"
-              aria-label={`Open CV: ${cv.title}`}
-            >
-              {/* CV Stats Section */}
-              <div className="relative h-48 bg-gray-50 overflow-hidden">
-                {/* Status Badge */}
-                <div className={`absolute top-4 left-4 px-2 py-1 rounded-lg text-xs font-medium ${getStatusColor(cv.status)} z-10`}>
-                  {cv.status}
-                </div>
-                
-                {/* Star Button */}
+              <motion.div
+                key={cv.id}
+                className="relative frosted-glass-card rounded-2xl overflow-hidden hover:bg-gray-200 dark:hover:bg-white/10 transition-all duration-300 group"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                whileHover={{ y: -5 }}
+              >
+                <CVCard
+                  cv={cv}
+                  onEdit={handleCVClick}
+                  onDuplicate={handleDuplicateCV}
+                  onDownload={handleDownloadCV}
+                  onShare={handleShareCV}
+                  onDelete={handleDeleteCV}
+                  onToggleStar={toggleStar}
+                  onTitleEdit={(cvId, newTitle) => setEditingTitle(newTitle)}
+                  editingCVId={editingCVId}
+                  editingTitle={editingTitle}
+                  onStartEditing={startEditing}
+                  onSaveTitle={saveTitle}
+                  onCancelEditing={cancelEditing}
+                />
                 <motion.button
                   className="absolute top-4 right-4 p-2 rounded-lg bg-black/20 backdrop-blur-sm text-white/60 hover:text-yellow-400 transition-colors z-10"
                   whileHover={{ scale: 1.1 }}
@@ -1396,7 +1456,7 @@ const Canvas: React.FC = () => {
                           <p className="text-gray-700 text-xs">{cv.cvData.basics.phone}</p>
                         )}
                       </div>
-                      
+
                       {/* Professional Summary */}
                       {cv.cvData.basics?.summary && (
                         <div className="mb-2">
@@ -1407,7 +1467,7 @@ const Canvas: React.FC = () => {
                           </p>
                         </div>
                       )}
-                      
+
                       {/* Work Experience - First entry */}
                       {cv.cvData.work && cv.cvData.work.length > 0 && (
                         <div>
@@ -1443,16 +1503,16 @@ const Canvas: React.FC = () => {
                         </h1>
                         <p className="text-gray-700 text-xs">CV Document</p>
                       </div>
-                      
+
                       <div className="mb-2">
                         <h2 className="text-sm font-semibold text-gray-800 mb-1 border-b border-gray-400 pb-1">Status</h2>
                         <p className="text-gray-800 text-xs">
-                          {cv.status === 'draft' ? 'Draft in progress' : 
-                           cv.status === 'published' ? 'Published and ready' : 
+                          {cv.status === 'draft' ? 'Draft in progress' :
+                           cv.status === 'published' ? 'Published and ready' :
                            'Archived'}
                         </p>
                       </div>
-                      
+
                       {cv.completionPercentage !== undefined && (
                         <div>
                           <h2 className="text-sm font-semibold text-gray-800 mb-1 border-b border-gray-400 pb-1">Progress</h2>
@@ -1464,204 +1524,200 @@ const Canvas: React.FC = () => {
                     </div>
                   )}
                 </div>
-              </div>
 
-              {/* CV Info */}
-              <div className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    {/* Inline Editable Title */}
-                    {editingCVId === cv.id ? (
-                      <div className="flex items-center gap-2 mb-1">
-                        <input
-                          type="text"
-                          value={editingTitle}
-                          onChange={(e) => setEditingTitle(e.target.value)}
-                          className="flex-1 bg-white/10 border border-white/20 rounded-lg px-3 py-1 text-white text-sm font-semibold focus:outline-none focus:border-lime-400"
-                          autoFocus
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
+                {/* CV Info */}
+                <div className="p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      {/* Inline Editable Title */}
+                      {editingCVId === cv.id ? (
+                        <div className="flex items-center gap-2 mb-1">
+                          <input
+                            type="text"
+                            value={editingTitle}
+                            onChange={(e) => setEditingTitle(e.target.value)}
+                            className="flex-1 bg-white/10 border border-white/20 rounded-lg px-3 py-1 text-white text-sm font-semibold focus:outline-none focus:border-lime-400"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                saveTitle(cv.id);
+                              } else if (e.key === 'Escape') {
+                                cancelEditing();
+                              }
+                            }}
+                          />
+                          <motion.button
+                            onClick={(e) => {
+                              e.stopPropagation();
                               saveTitle(cv.id);
-                            } else if (e.key === 'Escape') {
+                            }}
+                            className="p-1 text-lime-400 hover:text-lime-300 transition-colors"
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                          >
+                            <Check size={14} />
+                          </motion.button>
+                          <motion.button
+                            onClick={(e) => {
+                              e.stopPropagation();
                               cancelEditing();
-                            }
-                          }}
-                        />
-                        <motion.button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            saveTitle(cv.id);
-                          }}
-                          className="p-1 text-lime-400 hover:text-lime-300 transition-colors"
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
-                        >
-                          <Check size={14} />
-                        </motion.button>
-                        <motion.button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            cancelEditing();
-                          }}
-                          className="p-1 text-white/60 hover:text-white transition-colors"
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
-                        >
-                          <X size={14} />
-                        </motion.button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold text-white group-hover:text-lime-400 transition-colors flex-1">
-                          {cv.title}
-                        </h3>
-                        <motion.button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            startEditing(cv);
-                          }}
-                          className="p-1 text-white/40 hover:text-white transition-colors opacity-0 group-hover:opacity-100"
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
-                        >
-                          <Pencil size={14} />
-                        </motion.button>
-                      </div>
-                    )}
+                            }}
+                            className="p-1 text-white/60 hover:text-white transition-colors"
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                          >
+                            <X size={14} />
+                          </motion.button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-semibold text-white group-hover:text-lime-400 transition-colors flex-1">
+                            {cv.title}
+                          </h3>
+                          <motion.button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              startEditing(cv);
+                            }}
+                            className="p-1 text-white/40 hover:text-white transition-colors opacity-0 group-hover:opacity-100"
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
+                          >
+                            <Pencil size={14} />
+                          </motion.button>
+                        </div>
+                      )}
 
-                    {cv.description && (
-                      <p className="text-white/40 text-xs mt-1 line-clamp-2">{cv.description}</p>
-                    )}
+                      {cv.description && (
+                        <p className="text-white/40 text-xs mt-1 line-clamp-2">{cv.description}</p>
+                      )}
+                    </div>
                   </div>
-                </div>
 
-                {/* Cover Letter Linked Status */}
+                  {/* Cover Letter Linked Status */}
 
+                  {/* Linked Job section removed - relationships now managed through CVJourney */}
 
-                {/* Linked Job section removed - relationships now managed through CVJourney */}
-
-
-
-                {/* Action Buttons */}
-                <div className="flex items-center gap-2">
-                  <motion.button
-                    className="flex-1 px-3 py-2 bg-gradient-to-r from-lime-400/20 to-lime-500/20 border border-lime-400/30 text-lime-400 rounded-lg text-sm font-medium hover:from-lime-400/30 hover:to-lime-500/30 transition-all duration-300 flex items-center justify-center gap-2"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      // Store CV session data and route to studio
-                      sessionStorage.setItem('editingCVId', cv.id);
-                      sessionStorage.setItem('editingCVTitle', cv.title);
-                      sessionStorage.setItem('editingCVData', JSON.stringify(cv));
-                      window.location.href = `/studio?type=cv&cvId=${cv.id}`;
-                    }}
-                  >
-                    <Edit size={14} />
-                    Edit
-                  </motion.button>
-                  
-                  {/* Link Job Dropdown */}
-                  <div className="relative">
+                  {/* Action Buttons */}
+                  <div className="flex items-center gap-2">
                     <motion.button
-                      className="p-2 text-blue-400/60 hover:text-blue-400 transition-colors"
+                      className="flex-1 px-3 py-2 bg-gradient-to-r from-lime-400/20 to-lime-500/20 border border-lime-400/30 text-lime-400 rounded-lg text-sm font-medium hover:from-lime-400/30 hover:to-lime-500/30 transition-all duration-300 flex items-center justify-center gap-2"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Store CV session data and route to studio
+                        sessionStorage.setItem('editingCVId', cv.id);
+                        sessionStorage.setItem('editingCVTitle', cv.title);
+                        sessionStorage.setItem('editingCVData', JSON.stringify(cv));
+                        window.location.href = `/studio?type=cv&cvId=${cv.id}`;
+                      }}
+                    >
+                      <Edit size={14} />
+                      Edit
+                    </motion.button>
+
+                    {/* Link Job Dropdown */}
+                    <div className="relative">
+                      <motion.button
+                        className="p-2 text-blue-400/60 hover:text-blue-400 transition-colors"
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setLinkingJobCVId(cv.id);
+                        }}
+                        title="Link Job"
+                      >
+                        <Link size={16} />
+                      </motion.button>
+
+                      {/* Job Linking Dropdown */}
+                      {linkingJobCVId === cv.id && (
+                        <div className="absolute top-full right-0 mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
+                          <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+                            <h3 className="text-sm font-medium text-gray-900 dark:text-white">Link Job to CV</h3>
+                          </div>
+                          <div className="p-3">
+                            <select
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              onChange={(e) => {
+                                if (e.target.value) {
+                                  linkJobToCV(cv.id, e.target.value);
+                                }
+                              }}
+                              defaultValue=""
+                            >
+                              <option value="">Select a job to link...</option>
+                              {availableJobs.map((job) => (
+                                <option key={job.id} value={job.id}>
+                                  {job.company} - {job.title}
+                                </option>
+                              ))}
+                            </select>
+                            {availableJobs.length === 0 && (
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                                No jobs available. Add jobs in the Job Tracker first.
+                              </p>
+                            )}
+                          </div>
+                          <div className="p-3 border-t border-gray-200 dark:border-gray-700">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setLinkingJobCVId(null);
+                              }}
+                              className="w-full px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <motion.button
+                      className="p-2 text-white/60 hover:text-white transition-colors"
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
                       onClick={(e) => {
                         e.stopPropagation();
-                        setLinkingJobCVId(cv.id);
                       }}
-                      title="Link Job"
                     >
-                      <Link size={16} />
+                      <Share2 size={16} />
                     </motion.button>
-                    
-                    {/* Job Linking Dropdown */}
-                    {linkingJobCVId === cv.id && (
-                      <div className="absolute top-full right-0 mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
-                        <div className="p-3 border-b border-gray-200 dark:border-gray-700">
-                          <h3 className="text-sm font-medium text-gray-900 dark:text-white">Link Job to CV</h3>
-                        </div>
-                        <div className="p-3">
-                          <select
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            onChange={(e) => {
-                              if (e.target.value) {
-                                linkJobToCV(cv.id, e.target.value);
-                              }
-                            }}
-                            defaultValue=""
-                          >
-                            <option value="">Select a job to link...</option>
-                            {availableJobs.map((job) => (
-                              <option key={job.id} value={job.id}>
-                                {job.company} - {job.title}
-                              </option>
-                            ))}
-                          </select>
-                          {availableJobs.length === 0 && (
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                              No jobs available. Add jobs in the Job Tracker first.
-                            </p>
-                          )}
-                        </div>
-                        <div className="p-3 border-t border-gray-200 dark:border-gray-700">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setLinkingJobCVId(null);
-                            }}
-                            className="w-full px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    )}
+
+                    <motion.button
+                      className="p-2 text-white/60 hover:text-white transition-colors"
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                      }}
+                    >
+                      <Download size={16} />
+                    </motion.button>
+
+                    <motion.button
+                      className="p-2 text-red-400/60 hover:text-red-400 transition-colors"
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteCV(cv.id);
+                      }}
+                      disabled={deletingCVId === cv.id}
+                    >
+                      {deletingCVId === cv.id ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-400"></div>
+                      ) : (
+                        <Trash2 size={16} />
+                      )}
+                    </motion.button>
                   </div>
-                  
-                  <motion.button
-                    className="p-2 text-white/60 hover:text-white transition-colors"
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                    }}
-                  >
-                    <Share2 size={16} />
-                  </motion.button>
-                  
-                  <motion.button
-                    className="p-2 text-white/60 hover:text-white transition-colors"
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                    }}
-                  >
-                    <Download size={16} />
-                  </motion.button>
-                  
-                  <motion.button
-                    className="p-2 text-red-400/60 hover:text-red-400 transition-colors"
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteCV(cv.id);
-                    }}
-                    disabled={deletingCVId === cv.id}
-                  >
-                    {deletingCVId === cv.id ? (
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-400"></div>
-                    ) : (
-                      <Trash2 size={16} />
-                    )}
-                  </motion.button>
                 </div>
-              </div>
-            </motion.div>
-          ))
+              </motion.div>
+            ))
           )}
         </div>
         </div>
@@ -1671,8 +1727,8 @@ const Canvas: React.FC = () => {
         <div className="space-y-6">
 
           {/* CV Tips */}
-          <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-            <h3 className="text-white font-medium text-sm mb-4 flex items-center gap-2">
+          <div className="frosted-glass-widget rounded-xl p-6">
+            <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-4 flex items-center gap-2">
               <Lightbulb size={14} className="text-yellow-400" />
               CV Tips
             </h3>
@@ -1726,7 +1782,7 @@ const Canvas: React.FC = () => {
               </motion.div>
 
               <motion.div
-                className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-4"
+                className="frosted-glass-card rounded-xl p-4"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
@@ -1748,7 +1804,7 @@ const Canvas: React.FC = () => {
               </motion.div>
 
               <motion.div
-                className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-4"
+                className="frosted-glass-card rounded-xl p-4"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
@@ -1770,7 +1826,7 @@ const Canvas: React.FC = () => {
               </motion.div>
 
               <motion.div
-                className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-4"
+                className="frosted-glass-card rounded-xl p-4"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
@@ -1792,7 +1848,7 @@ const Canvas: React.FC = () => {
               </motion.div>
 
               <motion.div
-                className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl p-4"
+                className="frosted-glass-card rounded-xl p-4"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
@@ -1819,7 +1875,7 @@ const Canvas: React.FC = () => {
                 {coverLetters.map((coverLetter) => (
                   <motion.div
                     key={coverLetter.id}
-                    className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden hover:bg-white/10 transition-all duration-300"
+                    className="frosted-glass-card rounded-2xl overflow-hidden hover:bg-gray-200 dark:hover:bg-white/10 transition-all duration-300"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     whileHover={{ y: -5 }}
@@ -1889,8 +1945,8 @@ const Canvas: React.FC = () => {
           {/* Right Column - Sidebar */}
           <div className="space-y-6">
             {/* Cover Letter Tips */}
-            <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-              <h3 className="text-white font-medium text-sm mb-4 flex items-center gap-2">
+            <div className="frosted-glass-widget rounded-xl p-6">
+              <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-4 flex items-center gap-2">
                 <Lightbulb size={14} className="text-blue-400" />
                 Cover Letter Tips
               </h3>
@@ -1955,13 +2011,13 @@ const Canvas: React.FC = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Left Column: CV Preview */}
                     <div className="space-y-4">
-                      <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                         <FileText size={20} className="text-lime-400" />
                         CV Preview
                       </h3>
                       
                     {/* CV Preview - Using CVPreviewContent component */}
-                      <div className="bg-white/5 border border-white/10 rounded-xl p-4 h-96 overflow-hidden">
+                      <div className="bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl p-4 h-96 overflow-hidden">
                         {selectedCV.cvData ? (
                           <div className="h-full flex items-center justify-center">
                             <div className="transform scale-[0.35] origin-center">
@@ -1975,7 +2031,7 @@ const Canvas: React.FC = () => {
                             </div>
                           </div>
                         ) : (
-                          <div className="flex items-center justify-center h-full text-white/60">
+                          <div className="flex items-center justify-center h-full text-gray-600 dark:text-white/60">
                             <div className="text-center">
                               <FileText size={48} className="mx-auto mb-4 opacity-50" />
                               <p className="text-lg font-medium">No CV data available</p>
@@ -2059,8 +2115,7 @@ const Canvas: React.FC = () => {
                             }}
                           >
                             <option value="">Job linking removed - use journey system</option>
-                              <option value="" disabled>No jobs available</option>
-                            )}
+                            <option value="" disabled>No jobs available</option>
                           </select>
                         </div>
                         <motion.button
@@ -2157,4 +2212,4 @@ const Canvas: React.FC = () => {
   );
 };
 
-export default Canvas; 
+export default Canvas;

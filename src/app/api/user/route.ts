@@ -7,14 +7,14 @@ import { User } from '@/models';
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     // Check for Firebase user ID in headers or query params
-    const firebaseUserId = request.headers.get('x-firebase-user-id') || 
+    const firebaseUserId = request.headers.get('x-firebase-user-id') ||
                           request.nextUrl.searchParams.get('firebaseUserId');
-    
+
     let userEmail: string | undefined;
     let userId: string | undefined;
-    
+
     if (session?.user?.email) {
       // NextAuth user
       userEmail = session.user.email;
@@ -176,7 +176,7 @@ export async function PUT(request: NextRequest) {
     try {
       await user.save();
       console.log('User saved successfully');
-    } catch (saveError) {
+    } catch (saveError: any) {
       console.error('Save error:', saveError);
       // Check if it's a validation error
       if (saveError.name === 'ValidationError') {

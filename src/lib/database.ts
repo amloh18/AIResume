@@ -25,6 +25,17 @@ if (!MONGODB_URI && typeof window === 'undefined') {
 // Fallback to default if still not found
 MONGODB_URI = MONGODB_URI || 'mongodb://localhost:27017/cvcircle';
 
+// Ensure the URI includes a database name
+if (MONGODB_URI && !MONGODB_URI.includes('/cvcircle') && !MONGODB_URI.includes('/test') && !MONGODB_URI.includes('/admin')) {
+  // Add /cvcircle to the URI if no database name is specified
+  if (MONGODB_URI.endsWith('/') || MONGODB_URI.includes('?')) {
+    MONGODB_URI = MONGODB_URI.replace(/(\?.*)$/, '/cvcircle$1');
+  } else {
+    MONGODB_URI = MONGODB_URI + '/cvcircle';
+  }
+  console.log('🔧 Added database name to MongoDB URI');
+}
+
 console.log('🔍 Current MONGODB_URI:', MONGODB_URI ? MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@') : 'undefined');
 
 if (!MONGODB_URI) {

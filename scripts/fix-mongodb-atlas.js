@@ -55,7 +55,7 @@ async function testMongoDBConnection(uri) {
     console.log('✅ MongoDB connection successful!');
     
     // Test a simple operation
-    const db = client.db();
+    const db = client.db('cvcircle');
     await db.admin().ping();
     console.log('✅ Database ping successful!');
     

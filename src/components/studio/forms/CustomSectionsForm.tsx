@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Trash2, Plus, ChevronDown, ChevronUp } from 'lucide-react';
+import ProfessionalTextField from '@/components/ui/ProfessionalTextField';
 
 interface CustomSection {
   id: string;
@@ -97,15 +98,14 @@ const CustomSectionsForm: React.FC<CustomSectionsFormProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Content
-                    </label>
-                    <textarea
+                    <ProfessionalTextField
                       value={section.content}
-                      onChange={(e) => onUpdate(section.id, { content: e.target.value })}
-                      rows={4}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      onChange={(value) => onUpdate(section.id, { content: value })}
                       placeholder="Describe your custom section..."
+                      rows={4}
+                      label="Content"
+                      fieldId={`custom-section-${section.id}`}
+                      showFullToolbar={true}
                     />
                   </div>
                 </div>
