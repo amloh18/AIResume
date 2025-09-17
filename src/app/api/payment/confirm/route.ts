@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { auth } from '@clerk/nextjs';
+// Removed - using Clerk now
 import connectDB from '@/lib/database';
 import { User, PricingPlan, DiscountCode, Subscription } from '@/models';
 import StripeService from '@/lib/payment/stripe';

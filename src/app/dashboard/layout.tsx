@@ -43,7 +43,7 @@ const DashboardContent: React.FC<{ children: React.ReactNode }> = ({ children })
   const { state } = useJobJourney();
   const isBannerVisible = state.isJourneyActive;
 
-  const [user, setUser] = useState({
+  const [userData, setUserData] = useState({
     name: 'User',
     email: 'user@example.com',
     username: undefined,
@@ -64,7 +64,7 @@ const DashboardContent: React.FC<{ children: React.ReactNode }> = ({ children })
   useEffect(() => {
     const handleUserProfileUpdate = (event: CustomEvent) => {
       const updatedUser = event.detail.user;
-      setUser(prev => ({
+      setUserData(prev => ({
         ...prev,
         name: updatedUser.firstName + ' ' + updatedUser.lastName,
         email: updatedUser.email,
@@ -93,7 +93,7 @@ const DashboardContent: React.FC<{ children: React.ReactNode }> = ({ children })
             console.log('🔍 Dashboard Layout - User data fetched:', userData);
             
             if (userData.success && userData.user) {
-              setUser(prev => ({
+              setUserData(prev => ({
                 ...prev,
                 name: userData.user.firstName + ' ' + userData.user.lastName,
                 email: userData.user.email,
@@ -172,7 +172,7 @@ const DashboardContent: React.FC<{ children: React.ReactNode }> = ({ children })
               
               if (needsCVSetup) {
                 console.log('🔄 Dashboard Layout - needsCVSetup is true, redirecting to onboarding');
-                router.push('/onboarding');
+                router.push('/master-cv-onboarding');
                 return;
               }
             }
@@ -268,18 +268,38 @@ const DashboardContent: React.FC<{ children: React.ReactNode }> = ({ children })
       </AnimatePresence>
 
       {/* Mobile Menu Toggle */}
-      <div className="xl:hidden fixed top-4 left-4 z-50">
+      <div className="xl:hidden fixed top-4 left-4 z-50 flex gap-2">
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
           className="p-2 bg-white/80 dark:bg-gray-800 backdrop-blur-xl border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
         >
           {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
+
+        {/* Theme Toggle Button */}
+        <button
+          onClick={toggleTheme}
+          className="p-2 bg-white/80 dark:bg-gray-800 backdrop-blur-xl border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          title={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
+        >
+          {theme === 'light' ? <Moon size={24} /> : <Sun size={24} />}
+        </button>
       </div>
 
 
       {/* Journey Status Banner - Full Width Above Everything */}
-      <JourneyStatusBanner />
+      <AnimatePresence>
+        {isBannerVisible && (
+          <motion.div
+            initial={{ opacity: 0, y: -50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -50 }}
+            transition={{ duration: 0.3 }}
+          >
+            <JourneyStatusBanner />
+          </motion.div>
+        )}
+      </AnimatePresence>
       
       {/* Post-Onboarding Tour */}
       <PostOnboardingTour 
@@ -293,7 +313,7 @@ const DashboardContent: React.FC<{ children: React.ReactNode }> = ({ children })
           activeSection={getActiveSection()}
           onSectionChange={handleSectionChange}
           onMembershipClick={() => {}}
-          user={user}
+          user={userData}
           isOpen={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
           isBannerVisible={isBannerVisible}

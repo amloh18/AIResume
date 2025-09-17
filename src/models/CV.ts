@@ -2,7 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 import { CVDataStructure } from '@/types/cv';
 
 export interface ICV extends Document {
-  userId: mongoose.Types.ObjectId;
+  userId: mongoose.Types.ObjectId | string;
   title: string;
   cvData: CVDataStructure;
   status: 'draft' | 'published' | 'archived';
@@ -99,8 +99,7 @@ export interface ICV extends Document {
 
 const cvSchema = new Schema<ICV>({
   userId: {
-    type: Schema.Types.ObjectId,
-    ref: 'User',
+    type: Schema.Types.Mixed, // Allow both ObjectId and string
     required: true,
     index: true
   },

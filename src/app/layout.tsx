@@ -5,11 +5,9 @@ import './globals.css'
 import SessionProvider from '@/components/providers/SessionProvider'
 import { ThemeProvider } from '@/lib/contexts/ThemeContext'
 import PerformanceMonitor from '@/components/ui/PerformanceMonitor'
-import SessionManagerProvider from '@/components/providers/SessionManagerProvider'
 import { LoadingProvider } from '@/components/providers/LoadingProvider'
 import { PaymentModalProvider } from '@/contexts/PaymentModalContext'
 import CookieConsent from '@/components/CookieConsent'
-import '@/lib/clear-old-sessions' // Clear old session data
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -26,21 +24,19 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <ThemeProvider>
-          <SessionProvider>
-            <SessionManagerProvider>
-              <LoadingProvider>
-                <PaymentModalProvider>
-                  {children}
-                </PaymentModalProvider>
-              </LoadingProvider>
-            </SessionManagerProvider>
-          </SessionProvider>
-        </ThemeProvider>
+        <SessionProvider>
+          <ThemeProvider>
+            <LoadingProvider>
+              <PaymentModalProvider>
+                {children}
+              </PaymentModalProvider>
+            </LoadingProvider>
+          </ThemeProvider>
+        </SessionProvider>
         <Analytics />
         <PerformanceMonitor />
         <CookieConsent />
       </body>
     </html>
   )
-} 
+}

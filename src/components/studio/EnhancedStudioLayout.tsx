@@ -16,8 +16,6 @@ import {
   Brain,
   Crown,
   Home,
-  Sun,
-  Moon,
   Bell,
   LogOut,
   Edit3,
@@ -94,7 +92,7 @@ const EnhancedStudioLayout: React.FC<EnhancedStudioLayoutProps> = ({
   const { hasAI } = useUserPlan();
   const { currentJob } = useJobStore();
   const { selectedTemplate } = useTemplateStore();
-  const { theme, toggleTheme } = useTheme();
+  const { theme } = useTheme();
   const router = useRouter();
   
   // Layout state
@@ -550,12 +548,6 @@ const EnhancedStudioLayout: React.FC<EnhancedStudioLayoutProps> = ({
               )}
             </button>
             
-            <button
-              onClick={toggleTheme}
-              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-            </button>
             
             <button className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors relative">
               <Bell className="h-5 w-5" />

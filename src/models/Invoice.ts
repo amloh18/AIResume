@@ -1,7 +1,7 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IInvoice extends Document {
-  userId: mongoose.Types.ObjectId;
+  userId: mongoose.Types.ObjectId | string;
   invoiceNumber: string;
   amount: number;
   currency: string;
@@ -22,8 +22,7 @@ export interface IInvoice extends Document {
 
 const invoiceSchema = new Schema<IInvoice>({
   userId: {
-    type: Schema.Types.ObjectId,
-    ref: 'User',
+    type: Schema.Types.Mixed, // Allow both ObjectId and string
     required: [true, 'User ID is required']
   },
   invoiceNumber: {

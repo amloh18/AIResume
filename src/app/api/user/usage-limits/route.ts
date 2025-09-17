@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { auth } from '@clerk/nextjs';
+// Removed - using Clerk now
 import usageLimitsService from '@/lib/services/usageLimitsService';
 
 export async function GET(request: NextRequest) {

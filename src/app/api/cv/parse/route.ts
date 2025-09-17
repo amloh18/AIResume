@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { CVDataStructure } from '@/types/cv';
 // @ts-ignore - pdf-parse doesn't have types
 let pdfParse: any;
 let mammoth: any;
 let createWorker: any = null;
+let docParser: any = null;
+let rtfParser: any = null;
 
 // Dynamic imports to avoid issues with pdf-parse
 try {
@@ -32,6 +35,20 @@ try {
     recognize: () => Promise.resolve({ data: { text: 'OCR not available in this environment' } }),
     terminate: () => Promise.resolve()
   });
+}
+
+try {
+  docParser = require('doc-parser');
+  console.log('doc-parser loaded successfully');
+} catch (error) {
+  console.warn('doc-parser not available:', error);
+}
+
+try {
+  rtfParser = require('rtf-parser');
+  console.log('rtf-parser loaded successfully');
+} catch (error) {
+  console.warn('rtf-parser not available:', error);
 }
 
 interface PersonalInfo {
@@ -81,23 +98,16 @@ interface Project {
   current: boolean;
 }
 
-interface CVData {
-  personalInfo: PersonalInfo;
-  education: Education[];
-  experience: Experience[];
-  skills: Skills[];
-  projects: Project[];
-}
+// Using CVDataStructure from @/types/cv instead of custom interface
 
 // Add GET method for testing
 export async function GET() {
   console.log('CV Parse API test endpoint called');
   
   const testData = getEmptyStructure();
-  testData.personalInfo.firstName = 'Test';
-  testData.personalInfo.lastName = 'User';
-  testData.personalInfo.email = 'test@example.com';
-  testData.personalInfo.summary = 'This is a test CV structure to verify the API is working.';
+  testData.basics.name = 'Test User';
+  testData.basics.email = 'test@example.com';
+  testData.basics.summary = 'This is a test CV structure to verify the API is working.';
   
   return NextResponse.json({
     ...testData,
@@ -161,7 +171,7 @@ export async function POST(request: NextRequest) {
     console.log('Returning parsed data to client');
     
     // Check if we got filename-based data
-    if (parsedData.personalInfo.summary && parsedData.personalInfo.summary.includes('CV parsing encountered an issue')) {
+    if (parsedData.basics.summary && parsedData.basics.summary.includes('CV parsing encountered an issue')) {
       console.log('WARNING: Using filename-based fallback data');
     }
     
@@ -197,45 +207,136 @@ async function parseDocument(file: File) {
     console.log('Buffer created, size:', buffer.length);
     
     // Extract text based on file type with individual error handling
-    if (fileType === 'application/pdf') {
-      if (pdfParse) {
-        try {
-          console.log('Attempting PDF parsing...');
-          const pdfData = await pdfParse(buffer);
-          extractedText = pdfData.text || '';
-          console.log('PDF parsing successful, text length:', extractedText.length);
+        if (fileType === 'application/pdf') {
+          console.log('Processing PDF file...');
           
-          // If no text extracted, try alternative method
-          if (!extractedText || extractedText.trim().length === 0) {
-            console.log('No text extracted from PDF, trying alternative parsing...');
-            // Try to extract text from PDF pages
+          // Method 1: Try pdf-parse first (most reliable)
+          if (pdfParse) {
             try {
-              const pdfjsLib = require('pdfjs-dist');
-              const loadingTask = pdfjsLib.getDocument({ data: buffer });
-              const pdf = await loadingTask.promise;
-              const textContent = [];
+              console.log('Attempting PDF parsing with pdf-parse...');
+              const pdfData = await pdfParse(buffer, {
+                // Add options to improve parsing
+                max: 0, // Parse all pages
+                version: 'v1.10.100' // Use specific version
+              });
+              extractedText = pdfData.text || '';
+              console.log('PDF parsing successful, text length:', extractedText.length);
               
-              for (let i = 1; i <= Math.min(pdf.numPages, 5); i++) {
-                const page = await pdf.getPage(i);
-                const content = await page.getTextContent();
-                const pageText = content.items.map((item: any) => item.str).join(' ');
-                textContent.push(pageText);
+              // If we got good text, use it
+              if (extractedText && extractedText.trim().length > 50) {
+                console.log('✅ PDF parsing successful with pdf-parse');
+                return await parseTextToStructuredData(extractedText);
               }
-              
-              extractedText = textContent.join('\n');
-              console.log('Alternative PDF parsing successful, text length:', extractedText.length);
-            } catch (altError) {
-              console.error('Alternative PDF parsing failed:', altError);
-              throw new Error('PDF parsing is currently unavailable. Please copy and paste your CV content as text instead.');
+            } catch (pdfError) {
+              console.warn('pdf-parse failed:', pdfError.message);
+              // Try with different options
+              try {
+                console.log('Retrying pdf-parse with different options...');
+                const pdfData = await pdfParse(buffer, {
+                  max: 10, // Limit to 10 pages
+                  version: 'default'
+                });
+                extractedText = pdfData.text || '';
+                if (extractedText && extractedText.trim().length > 50) {
+                  console.log('✅ PDF parsing successful on retry');
+                  return await parseTextToStructuredData(extractedText);
+                }
+              } catch (retryError) {
+                console.warn('pdf-parse retry failed:', retryError.message);
+              }
             }
           }
-        } catch (pdfError) {
-          console.error('PDF parsing failed:', pdfError);
-          throw new Error('PDF parsing is currently unavailable. Please copy and paste your CV content as text instead.');
+      
+      // Method 2: Try pdfjs-dist as fallback
+      try {
+        console.log('Attempting PDF parsing with pdfjs-dist...');
+        const pdfjsLib = require('pdfjs-dist/legacy/build/pdf');
+        const loadingTask = pdfjsLib.getDocument({ 
+          data: buffer,
+          useSystemFonts: true,
+          disableFontFace: true
+        });
+        const pdf = await loadingTask.promise;
+        const textContent = [];
+        
+        // Process up to 10 pages or all pages if fewer
+        const maxPages = Math.min(pdf.numPages, 10);
+        console.log(`Processing ${maxPages} pages out of ${pdf.numPages} total pages`);
+        
+        for (let i = 1; i <= maxPages; i++) {
+          try {
+            const page = await pdf.getPage(i);
+            const content = await page.getTextContent();
+            const pageText = content.items
+              .map((item: any) => item.str)
+              .filter((str: string) => str && str.trim().length > 0)
+              .join(' ');
+            
+            if (pageText.trim().length > 0) {
+              textContent.push(pageText);
+            }
+          } catch (pageError) {
+            console.warn(`Failed to process page ${i}:`, pageError.message);
+          }
         }
-      } else {
-        console.log('PDF parsing library not available');
-        throw new Error('PDF parsing is currently unavailable. Please copy and paste your CV content as text instead.');
+        
+        extractedText = textContent.join('\n');
+        console.log('PDF parsing with pdfjs-dist successful, text length:', extractedText.length);
+        
+        if (extractedText && extractedText.trim().length > 50) {
+          console.log('✅ PDF parsing successful with pdfjs-dist');
+          return await parseTextToStructuredData(extractedText);
+        }
+      } catch (pdfjsError) {
+        console.warn('pdfjs-dist failed:', pdfjsError.message);
+      }
+      
+      // Method 3: Try pdf2pic + OCR as last resort (if available)
+      try {
+        console.log('Attempting PDF to image conversion + OCR...');
+        const pdf2pic = require('pdf2pic');
+        const convert = pdf2pic.fromBuffer(buffer, {
+          density: 100,
+          saveFilename: 'temp',
+          savePath: '/tmp',
+          format: 'png',
+          width: 2000,
+          height: 2000
+        });
+        
+        const results = await convert.bulk(-1, { responseType: 'base64' });
+        
+        if (results && results.length > 0 && createWorker) {
+          console.log(`Converting ${results.length} pages to text via OCR...`);
+          const worker = await createWorker('eng');
+          
+          for (const result of results.slice(0, 3)) { // Limit to first 3 pages
+            try {
+              const { data: { text } } = await worker.recognize(`data:image/png;base64,${result.base64}`);
+              if (text && text.trim().length > 0) {
+                extractedText += text + '\n';
+              }
+            } catch (ocrError) {
+              console.warn('OCR failed for page:', ocrError.message);
+            }
+          }
+          
+          await worker.terminate();
+          console.log('PDF OCR parsing successful, text length:', extractedText.length);
+          
+          if (extractedText && extractedText.trim().length > 50) {
+            console.log('✅ PDF parsing successful with OCR');
+            return await parseTextToStructuredData(extractedText);
+          }
+        }
+      } catch (ocrError) {
+        console.warn('PDF OCR parsing failed:', ocrError.message);
+      }
+      
+      // If all methods failed, provide helpful error message
+      if (!extractedText || extractedText.trim().length < 10) {
+        console.error('All PDF parsing methods failed');
+        throw new Error('Unable to extract text from PDF. This might be a scanned PDF or image-based PDF. Please try:\n\n1. Converting to DOCX format\n2. Copy-pasting the text content\n3. Using a text-based PDF');
       }
     } else if (fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
       if (mammoth) {
@@ -255,6 +356,44 @@ async function parseDocument(file: File) {
       } else {
         console.log('DOCX parsing library not available');
         throw new Error('Failed to parse CV with AI. Please try again or check your file format.');
+      }
+    } else if (fileType === 'application/msword') {
+      if (docParser) {
+        try {
+          console.log('Attempting DOC parsing...');
+          const result = await docParser(buffer);
+          extractedText = result.text || '';
+          console.log('DOC parsing successful, text length:', extractedText.length);
+          
+          if (!extractedText || extractedText.trim().length === 0) {
+            throw new Error('Failed to parse DOC file. Please try converting to DOCX or PDF format.');
+          }
+        } catch (docError) {
+          console.error('DOC parsing failed:', docError);
+          throw new Error('Failed to parse DOC file. Please try converting to DOCX or PDF format.');
+        }
+      } else {
+        console.log('DOC parsing library not available');
+        throw new Error('DOC parsing is currently unavailable. Please convert your file to DOCX or PDF format.');
+      }
+    } else if (fileType === 'application/rtf' || fileType === 'text/rtf') {
+      if (rtfParser) {
+        try {
+          console.log('Attempting RTF parsing...');
+          const result = await rtfParser(buffer);
+          extractedText = result.text || '';
+          console.log('RTF parsing successful, text length:', extractedText.length);
+          
+          if (!extractedText || extractedText.trim().length === 0) {
+            throw new Error('Failed to parse RTF file. Please try converting to DOCX or PDF format.');
+          }
+        } catch (rtfError) {
+          console.error('RTF parsing failed:', rtfError);
+          throw new Error('Failed to parse RTF file. Please try converting to DOCX or PDF format.');
+        }
+      } else {
+        console.log('RTF parsing library not available');
+        throw new Error('RTF parsing is currently unavailable. Please convert your file to DOCX or PDF format.');
       }
     } else if (fileType.startsWith('image/')) {
       if (createWorker) {
@@ -321,7 +460,7 @@ async function parseDocument(file: File) {
 }
 
 // Create basic structure from filename when all parsing fails
-function createBasicStructureFromFilename(filename: string): CVData {
+function createBasicStructureFromFilename(filename: string): CVDataStructure {
   const result = getEmptyStructure();
   
   // Try to extract name from filename
@@ -329,17 +468,16 @@ function createBasicStructureFromFilename(filename: string): CVData {
   const nameMatch = nameWithoutExt.match(/([a-zA-Z]+)[-_\s]+([a-zA-Z]+)/);
   
   if (nameMatch) {
-    result.personalInfo.firstName = nameMatch[1];
-    result.personalInfo.lastName = nameMatch[2];
+    result.basics.name = `${nameMatch[1]} ${nameMatch[2]}`;
     
     // Add a helpful message in summary
-    result.personalInfo.summary = 'CV parsing encountered an issue. Please update your information manually.';
+    result.basics.summary = 'CV parsing encountered an issue. Please update your information manually.';
   }
   
   return result;
 }
 
-function parseTextToStructuredData(text: string) {
+function parseTextToStructuredData(text: string): CVDataStructure {
   const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
   
   const result = getEmptyStructure();
@@ -347,39 +485,105 @@ function parseTextToStructuredData(text: string) {
   // Add debugging
   console.log('Parsing text with', lines.length, 'lines');
   
-  // Extract personal information
+  // Extract personal information and map to basics
   const personalInfo = extractPersonalInfo(text);
   console.log('Extracted personal info:', personalInfo);
-  result.personalInfo = { ...result.personalInfo, ...personalInfo };
   
-  // Extract sections
-  result.education = extractEducation(text);
-  console.log('Extracted education:', result.education);
+  // Map personal info to basics structure
+  result.basics.name = `${personalInfo.firstName || ''} ${personalInfo.lastName || ''}`.trim();
+  result.basics.email = personalInfo.email || '';
+  result.basics.phone = personalInfo.phone || '';
+  result.basics.summary = personalInfo.summary || '';
   
-  result.experience = extractExperience(text);
-  console.log('Extracted experience:', result.experience);
+  // Add LinkedIn profile if found
+  if (personalInfo.linkedin) {
+    result.basics.profiles.push({
+      network: 'LinkedIn',
+      username: personalInfo.linkedin.replace('linkedin.com/in/', ''),
+      url: `https://${personalInfo.linkedin}`
+    });
+  }
   
-  result.skills = extractSkills(text);
-  console.log('Extracted skills:', result.skills);
+  // Extract sections and map to correct structure
+  try {
+    const educationData = extractEducation(text);
+    console.log('Extracted education:', educationData);
+    result.education = educationData.map(edu => ({
+      institution: edu.institution,
+      url: '',
+      area: edu.field,
+      studyType: edu.degree,
+      startDate: edu.startDate,
+      endDate: edu.endDate,
+      score: '',
+      courses: []
+    }));
+  } catch (error) {
+    console.error('Error extracting education:', error);
+    result.education = [];
+  }
   
-  result.projects = extractProjects(text);
-  console.log('Extracted projects:', result.projects);
+  try {
+    const experienceData = extractExperience(text);
+    console.log('Extracted experience:', experienceData);
+    result.work = experienceData.map(exp => ({
+      name: exp.company,
+      position: exp.position,
+      url: '',
+      startDate: exp.startDate,
+      endDate: exp.endDate,
+      summary: exp.description,
+      highlights: exp.achievements
+    }));
+  } catch (error) {
+    console.error('Error extracting experience:', error);
+    result.work = [];
+  }
+  
+  try {
+    const skillsData = extractSkills(text);
+    console.log('Extracted skills:', skillsData);
+    result.skills = skillsData.map(skill => ({
+      name: skill.category,
+      level: '',
+      keywords: skill.skills
+    }));
+  } catch (error) {
+    console.error('Error extracting skills:', error);
+    result.skills = [];
+  }
+  
+  try {
+    const projectsData = extractProjects(text);
+    console.log('Extracted projects:', projectsData);
+    result.projects = projectsData.map(proj => ({
+      name: proj.title,
+      startDate: proj.startDate || '',
+      endDate: proj.endDate || '',
+      description: proj.description,
+      highlights: proj.technologies || [],
+      url: proj.url || ''
+    }));
+  } catch (error) {
+    console.error('Error extracting projects:', error);
+    result.projects = [];
+  }
   
   return result;
 }
 
 // Helper function to check if parsed data is empty
-function isEmptyParsedData(data: CVData): boolean {
-  const hasPersonalInfo = data.personalInfo.firstName || data.personalInfo.lastName || data.personalInfo.email;
+function isEmptyParsedData(data: CVDataStructure): boolean {
+  const hasPersonalInfo = data.basics.name || data.basics.email;
   const hasEducation = data.education.length > 0;
-  const hasExperience = data.experience.length > 0;
+  const hasExperience = data.work.length > 0;
   const hasSkills = data.skills.length > 0;
   const hasProjects = data.projects.length > 0;
   
   console.log('Checking if parsed data is empty:');
-  console.log('- hasPersonalInfo:', hasPersonalInfo, '(firstName:', data.personalInfo.firstName, 'lastName:', data.personalInfo.lastName, 'email:', data.personalInfo.email, ')');
+  console.log('- hasPersonalInfo:', hasPersonalInfo, '(name:', data.basics.name, 'email:', data.basics.email, ')');
   console.log('- hasEducation:', hasEducation, '(count:', data.education.length, ')');
-  console.log('- hasExperience:', hasExperience, '(count:', data.experience.length, ')');
+  console.log('- hasExperience:', hasExperience, '(count:', data.work.length, ')');
   console.log('- hasSkills:', hasSkills, '(count:', data.skills.length, ')');
   console.log('- hasProjects:', hasProjects, '(count:', data.projects.length, ')');
   
@@ -390,74 +594,102 @@ function isEmptyParsedData(data: CVData): boolean {
 }
 
 // Create sample data with any extracted information
-function createSampleDataWithExtractedInfo(text: string): CVData {
+function createSampleDataWithExtractedInfo(text: string): CVDataStructure {
   const result = getEmptyStructure();
   
   // Try to extract at least basic info
   const personalInfo = extractPersonalInfo(text);
-  result.personalInfo = { ...result.personalInfo, ...personalInfo };
+  
+  // Map personal info to basics structure
+  result.basics.name = `${personalInfo.firstName || ''} ${personalInfo.lastName || ''}`.trim();
+  result.basics.email = personalInfo.email || '';
+  result.basics.phone = personalInfo.phone || '';
+  result.basics.summary = personalInfo.summary || '';
+  
+  // Add LinkedIn profile if found
+  if (personalInfo.linkedin) {
+    result.basics.profiles.push({
+      network: 'LinkedIn',
+      username: personalInfo.linkedin.replace('linkedin.com/in/', ''),
+      url: `https://${personalInfo.linkedin}`
+    });
+  }
   
   // If we still don't have a name, try to get it from the first few lines
-  if (!result.personalInfo.firstName && !result.personalInfo.lastName) {
+  if (!result.basics.name) {
     const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
     for (const line of lines.slice(0, 3)) {
       if (line.length < 50 && line.split(' ').length >= 2 && line.split(' ').length <= 4) {
-        const words = line.split(' ');
-        result.personalInfo.firstName = words[0];
-        result.personalInfo.lastName = words.slice(1).join(' ');
+        result.basics.name = line;
         break;
       }
     }
   }
   
   // Add a sample education entry if we found a name
-  if (result.personalInfo.firstName || result.personalInfo.lastName) {
+  if (result.basics.name) {
     result.education.push({
       institution: 'University (Please update)',
-      degree: 'Degree (Please update)',
-      field: 'Field of Study (Please update)',
+      url: '',
+      area: 'Field of Study (Please update)',
+      studyType: 'Degree (Please update)',
       startDate: '2020',
       endDate: '2024',
-      current: false,
-      description: 'Please update with your education details'
+      score: '',
+      courses: []
     });
     
     // Add a sample experience entry
-    result.experience.push({
-      company: 'Company Name (Please update)',
+    result.work.push({
+      name: 'Company Name (Please update)',
       position: 'Position (Please update)',
-      location: 'Location (Please update)',
+      url: '',
       startDate: '2023',
       endDate: 'Present',
-      current: true,
-      description: 'Please update with your work experience details',
-      achievements: ['Achievement 1 (Please update)', 'Achievement 2 (Please update)']
+      summary: 'Please update with your work experience details',
+      highlights: ['Achievement 1 (Please update)', 'Achievement 2 (Please update)']
     });
     
     // Add sample skills
     result.skills.push({
-      category: 'Technical Skills',
-      skills: ['Skill 1 (Please update)', 'Skill 2 (Please update)', 'Skill 3 (Please update)']
+      name: 'Technical Skills',
+      level: '',
+      keywords: ['Skill 1 (Please update)', 'Skill 2 (Please update)', 'Skill 3 (Please update)']
     });
   }
   
   return result;
 }
 
-function getEmptyStructure(): CVData {
+function getEmptyStructure(): CVDataStructure {
   return {
-    personalInfo: {
-      firstName: '',
-      lastName: '',
+    basics: {
+      name: '',
+      label: '',
+      image: '',
       email: '',
       phone: '',
-      location: '',
-      linkedin: '',
-      summary: ''
+      url: '',
+      summary: '',
+      location: {
+        address: '',
+        postalCode: '',
+        city: '',
+        countryCode: '',
+        region: ''
+      },
+      profiles: []
     },
+    work: [],
+    volunteer: [],
     education: [],
-    experience: [],
+    awards: [],
+    certificates: [],
+    publications: [],
     skills: [],
+    languages: [],
+    interests: [],
+    references: [],
     projects: []
   };
 }
@@ -481,11 +713,26 @@ export function extractPersonalInfo(text: string): Partial<PersonalInfo> {
     console.log('Found phone:', personalInfo.phone);
   }
   
-  // Extract LinkedIn
-  const linkedinMatch = text.match(/linkedin\.com\/in\/[\w-]+/i);
-  if (linkedinMatch) {
-    personalInfo.linkedin = linkedinMatch[0];
-    console.log('Found LinkedIn:', personalInfo.linkedin);
+  // Extract LinkedIn URL (improved)
+  const linkedinPatterns = [
+    /https?:\/\/linkedin\.com\/in\/[\w-]+/i,
+    /linkedin\.com\/in\/[\w-]+/i,
+    /linkedin\.com\/pub\/[\w-]+/i,
+    /https?:\/\/linkedin\.com\/pub\/[\w-]+/i
+  ];
+  
+  for (const pattern of linkedinPatterns) {
+    const linkedinMatch = text.match(pattern);
+    if (linkedinMatch) {
+      let linkedinUrl = linkedinMatch[0];
+      // Ensure it has https:// protocol
+      if (!linkedinUrl.startsWith('http')) {
+        linkedinUrl = 'https://' + linkedinUrl;
+      }
+      personalInfo.linkedin = linkedinUrl;
+      console.log('Found LinkedIn:', personalInfo.linkedin);
+      break;
+    }
   }
   
   // Extract name (improved logic)
@@ -518,6 +765,49 @@ export function extractPersonalInfo(text: string): Partial<PersonalInfo> {
     if (location.length < 50 && !location.includes('\n')) {
       personalInfo.location = location;
       console.log('Found location:', personalInfo.location);
+    }
+  }
+  
+  // Extract summary/professional summary with synonyms
+  const summarySynonyms = [
+    'summary', 'professional summary', 'profile', 'objective', 'career objective',
+    'professional profile', 'about', 'about me', 'overview', 'introduction',
+    'executive summary', 'career summary', 'professional overview'
+  ];
+  
+  for (const synonym of summarySynonyms) {
+    const summaryRegex = new RegExp(`(${synonym.replace(/\s+/g, '\\s+')}):?\\s*([^\\n]+(?:\\n(?![A-Z][A-Z\\s]*:)[^\\n]+)*)`, 'i');
+    const summaryMatch = text.match(summaryRegex);
+    
+    if (summaryMatch && summaryMatch[2]) {
+      let summary = summaryMatch[2].trim();
+      
+      // Clean up the summary - remove extra whitespace and limit length
+      summary = summary.replace(/\s+/g, ' ').substring(0, 500);
+      
+      // Make sure it's not just a single word or too short
+      if (summary.length > 20 && summary.split(' ').length > 3) {
+        personalInfo.summary = summary;
+        console.log('Found summary with synonym "' + synonym + '":', summary.substring(0, 100) + '...');
+        break;
+      }
+    }
+  }
+  
+  // If no explicit summary found, try to extract from the first substantial paragraph
+  if (!personalInfo.summary) {
+    const paragraphs = text.split('\n\n').map(p => p.trim()).filter(p => p.length > 50);
+    for (const paragraph of paragraphs.slice(0, 3)) {
+      // Skip if it looks like contact info or education
+      if (!paragraph.toLowerCase().includes('email') && 
+          !paragraph.toLowerCase().includes('phone') &&
+          !paragraph.toLowerCase().includes('university') &&
+          !paragraph.toLowerCase().includes('college') &&
+          paragraph.split(' ').length > 10) {
+        personalInfo.summary = paragraph.substring(0, 500);
+        console.log('Found summary from paragraph:', personalInfo.summary.substring(0, 100) + '...');
+        break;
+      }
     }
   }
   
@@ -565,22 +855,79 @@ export function extractEducation(text: string): Education[] {
     }
     
     if (inEducationSection) {
-      // Look for degree patterns
+      // Look for degree patterns with better parsing
       if (/\b(bachelor|master|phd|doctorate|diploma|certificate|b\.?s\.?|m\.?s\.?|m\.?a\.?|b\.?a\.?)\b/i.test(originalLine)) {
         if (currentEducation && isValidEducation(currentEducation)) {
           education.push(completeEducation(currentEducation));
           console.log('Added education entry:', currentEducation);
         }
+        
+        // Parse the education line more intelligently
+        const educationLine = originalLine;
+        let institution = '';
+        let degree = '';
+        let field = '';
+        
+        // Extract dates first (improved)
+        const datePatterns = [
+          /\b(19|20)\d{2}[-/]\s*(19|20)\d{2}\b/,
+          /\b(19|20)\d{2}\s*[-–]\s*(19|20)\d{2}\b/,
+          /\b(19|20)\d{2}\s*to\s*(19|20)\d{2}\b/i,
+          /\b(19|20)\d{2}\s*-\s*(19|20)\d{2}\b/
+        ];
+        
+        let startDate = '';
+        let endDate = '';
+        
+        for (const pattern of datePatterns) {
+          const dateMatch = educationLine.match(pattern);
+          if (dateMatch && dateMatch[1] && dateMatch[2]) {
+            startDate = dateMatch[1];
+            endDate = dateMatch[2];
+            console.log('Found education dates:', startDate, '-', endDate);
+            break;
+          }
+        }
+        
+        // Try to parse "Degree in Field, University" format
+        const degreeInFieldMatch = educationLine.match(/^([^,]+),\s*([^,]+)(?:,\s*(.+))?$/);
+        if (degreeInFieldMatch) {
+          degree = degreeInFieldMatch[1].trim();
+          institution = degreeInFieldMatch[2].trim();
+          if (degreeInFieldMatch[3]) {
+            field = degreeInFieldMatch[3].trim();
+          }
+        } else {
+          // Try to extract degree type
+          const degreeMatch = educationLine.match(/\b(bachelor|master|phd|doctorate|diploma|certificate|b\.?s\.?|m\.?s\.?|m\.?a\.?|b\.?a\.?)\b/i);
+          if (degreeMatch) {
+            degree = degreeMatch[0];
+            // Try to extract field from "in Field" pattern
+            const fieldMatch = educationLine.match(/in\s+([^,]+)/i);
+            if (fieldMatch) {
+              field = fieldMatch[1].trim();
+            }
+            // Extract institution (everything else)
+            const remaining = educationLine.replace(degree, '').replace(/in\s+[^,]+/i, '').replace(/\b(19|20)\d{2}[-/]\s*(19|20)\d{2}\b/, '').trim();
+            if (remaining) {
+              institution = remaining.replace(/^[,\s]+|[,\s]+$/g, '');
+            }
+          } else {
+            // Fallback: use the whole line as degree
+            degree = educationLine;
+          }
+        }
+        
         currentEducation = {
-          institution: '',
-          degree: originalLine,
-          field: '',
-          startDate: '',
-          endDate: '',
+          institution: institution,
+          degree: degree,
+          field: field,
+          startDate: startDate,
+          endDate: endDate,
           current: false,
           description: ''
         };
-        console.log('Found degree:', originalLine);
+        console.log('Parsed education:', { institution, degree, field, startDate, endDate });
       }
       
       // Look for institution names (more flexible)
@@ -637,13 +984,15 @@ export function extractEducation(text: string): Education[] {
 
 export function extractExperience(text: string): Experience[] {
   const experience: Experience[] = [];
-  const experienceKeywords = ['experience', 'work', 'employment', 'career', 'professional'];
+  const experienceKeywords = ['experience', 'work', 'employment', 'career', 'professional', 'relevant work', 'work history', 'employment history'];
   const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
   
   console.log('Extracting experience from', lines.length, 'lines');
   
   let inExperienceSection = false;
   let currentExperience: Partial<Experience> | null = null;
+  let descriptionLines: string[] = [];
+  let isCollectingDescription = false;
   
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].toLowerCase();
@@ -664,36 +1013,138 @@ export function extractExperience(text: string): Experience[] {
     }
     
     // Check if we're leaving experience section
-    if (inExperienceSection && (line.includes('education') || line.includes('skills') || line.includes('projects'))) {
+    if (inExperienceSection && (line.includes('education') || line.includes('skills') || line.includes('projects') || line.includes('certificates') || line.includes('awards'))) {
       inExperienceSection = false;
       if (currentExperience && isValidExperience(currentExperience)) {
+        // Add accumulated description
+        if (descriptionLines.length > 0) {
+          currentExperience.description = descriptionLines.join(' ');
+        }
         experience.push(completeExperience(currentExperience));
         console.log('Added experience entry:', currentExperience);
         currentExperience = null;
+        descriptionLines = [];
+        isCollectingDescription = false;
       }
       continue;
     }
     
     if (inExperienceSection) {
-      // Look for job titles and companies (more flexible)
-      if (originalLine.length < 150 && 
-          (/\b(manager|developer|engineer|analyst|coordinator|specialist|director|lead|consultant|designer|architect|scientist|researcher|teacher|professor|assistant|coordinator|supervisor|executive|officer|representative|associate|junior|senior|principal|chief|head|vice|president|ceo|cto|cfo|coo)\b/i.test(originalLine) ||
-           /\b(software|web|frontend|backend|fullstack|data|machine learning|ai|artificial intelligence|devops|cloud|mobile|ios|android|react|angular|vue|node|python|java|javascript|typescript|php|ruby|go|rust|swift|kotlin)\b/i.test(originalLine))) {
+      // Look for job titles and companies with better parsing (improved for multiple experiences)
+      const jobTitlePatterns = [
+        // Job titles
+        /\b(manager|developer|engineer|analyst|coordinator|specialist|director|lead|consultant|designer|architect|scientist|researcher|teacher|professor|assistant|supervisor|executive|officer|representative|associate|junior|senior|principal|chief|head|vice|president|ceo|cto|cfo|coo|intern|trainee|apprentice)\b/i,
+        // Tech roles
+        /\b(software|web|frontend|backend|fullstack|data|machine learning|ai|artificial intelligence|devops|cloud|mobile|ios|android|react|angular|vue|node|python|java|javascript|typescript|php|ruby|go|rust|swift|kotlin|database|sql|nosql|api|microservices|kubernetes|docker|aws|azure|gcp)\b/i,
+        // Company indicators
+        /\b(inc|ltd|llc|corp|company|technologies|solutions|systems|services|group|consulting|partners|enterprises|ventures|holdings|international|global|digital|software|tech|it|startup|agency|firm|organization|institute|university|college|school|hospital|clinic|bank|financial|insurance|retail|manufacturing|construction|real estate|media|marketing|advertising|sales|customer service|hr|human resources|operations|logistics|supply chain|quality|compliance|legal|finance|accounting|audit|tax|business|strategy|management|administration|support|help desk|technical|maintenance|security|networking|infrastructure|platform|application|product|project|program|initiative|campaign|research|development|innovation|transformation|optimization|automation|integration|implementation|deployment|migration|upgrade|maintenance|support|troubleshooting|testing|qa|quality assurance|validation|verification|documentation|training|mentoring|coaching|leadership|team|collaboration|communication|presentation|reporting|analysis|planning|strategy|budget|forecast|metrics|kpi|dashboard|report|presentation|proposal|proposal|contract|agreement|negotiation|vendor|supplier|client|customer|stakeholder|partner|collaborator|colleague|peer|subordinate|supervisor|manager|director|vp|vice president|president|ceo|cto|cfo|coo|founder|co-founder|owner|entrepreneur|freelancer|contractor|consultant|advisor|mentor|coach|trainer|instructor|professor|teacher|researcher|scientist|engineer|developer|programmer|coder|architect|designer|analyst|specialist|coordinator|administrator|assistant|representative|officer|executive|director|manager|supervisor|lead|senior|junior|principal|chief|head|vice|president|ceo|cto|cfo|coo|intern|trainee|apprentice)\b/i
+      ];
+      
+      const isJobTitle = originalLine.length < 200 && 
+          (jobTitlePatterns.some(pattern => pattern.test(originalLine)) ||
+           // Look for bullet points or numbered items that might be job entries
+           /^[•\-\*\d+\.]/.test(originalLine) ||
+           // Look for lines with dates that might be job entries
+           /\b(19|20)\d{2}\b/.test(originalLine) ||
+           // Look for company names
+           /\b[A-Z][a-z]+\s+(Inc|Ltd|LLC|Corp|Company|Technologies|Solutions|Systems|Services|Group|Consulting|Partners|Enterprises|Ventures|Holdings|International|Global|Digital|Software|Tech|IT|Startup|Agency|Firm|Organization|Institute|University|College|School|Hospital|Clinic|Bank|Financial|Insurance|Retail|Manufacturing|Construction|Real Estate|Media|Marketing|Advertising|Sales|Customer Service|HR|Human Resources|Operations|Logistics|Supply Chain|Quality|Compliance|Legal|Finance|Accounting|Audit|Tax|Business|Strategy|Management|Administration|Support|Help Desk|Technical|Maintenance|Security|Networking|Infrastructure|Platform|Application|Product|Project|Program|Initiative|Campaign|Research|Development|Innovation|Transformation|Optimization|Automation|Integration|Implementation|Deployment|Migration|Upgrade|Maintenance|Support|Troubleshooting|Testing|QA|Quality Assurance|Validation|Verification|Documentation|Training|Mentoring|Coaching|Leadership|Team|Collaboration|Communication|Presentation|Reporting|Analysis|Planning|Strategy|Budget|Forecast|Metrics|KPI|Dashboard|Report|Presentation|Proposal|Proposal|Contract|Agreement|Negotiation|Vendor|Supplier|Client|Customer|Stakeholder|Partner|Collaborator|Colleague|Peer|Subordinate|Supervisor|Manager|Director|VP|Vice President|President|CEO|CTO|CFO|COO|Founder|Co-founder|Owner|Entrepreneur|Freelancer|Contractor|Consultant|Advisor|Mentor|Coach|Trainer|Instructor|Professor|Teacher|Researcher|Scientist|Engineer|Developer|Programmer|Coder|Architect|Designer|Analyst|Specialist|Coordinator|Administrator|Assistant|Representative|Officer|Executive|Director|Manager|Supervisor|Lead|Senior|Junior|Principal|Chief|Head|Vice|President|CEO|CTO|CFO|COO|Intern|Trainee|Apprentice)\b/.test(originalLine));
+      
+      if (isJobTitle) {
         if (currentExperience && isValidExperience(currentExperience)) {
           experience.push(completeExperience(currentExperience));
           console.log('Added experience entry:', currentExperience);
         }
+        
+        // Parse the experience line more intelligently
+        const experienceLine = originalLine;
+        let company = '';
+        let position = '';
+        
+        // Extract dates first (improved)
+        const datePatterns = [
+          /\b(19|20)\d{2}[-/]\s*(19|20)\d{2}\b/,
+          /\b(19|20)\d{2}\s*[-–]\s*(19|20)\d{2}\b/,
+          /\b(19|20)\d{2}\s*to\s*(19|20)\d{2}\b/i,
+          /\b(19|20)\d{2}\s*-\s*(19|20)\d{2}\b/,
+          /\b\d{1,2}\/\d{1,2}\/\d{4}\s*[-–]\s*\d{1,2}\/\d{1,2}\/\d{4}\b/,
+          /\b\d{1,2}-\d{1,2}-\d{4}\s*[-–]\s*\d{1,2}-\d{1,2}-\d{4}\b/
+        ];
+        
+        let startDate = '';
+        let endDate = '';
+        
+        for (const pattern of datePatterns) {
+          const dateMatch = experienceLine.match(pattern);
+          if (dateMatch && dateMatch[1] && dateMatch[2]) {
+            if (pattern.source.includes('\\d{1,2}')) {
+              // Handle DD/MM/YYYY or DD-MM-YYYY format
+              const startParts = dateMatch[1].split(/[\/-]/);
+              const endParts = dateMatch[2].split(/[\/-]/);
+              if (startParts.length === 3 && endParts.length === 3) {
+                startDate = startParts[2]; // Year
+                endDate = endParts[2]; // Year
+              }
+            } else {
+              // Handle YYYY format
+              startDate = dateMatch[1];
+              endDate = dateMatch[2];
+            }
+            console.log('Found experience dates:', startDate, '-', endDate);
+            break;
+          }
+        }
+        
+        // Try to parse "Company, Position" format
+        const companyPositionMatch = experienceLine.match(/^([^,]+),\s*([^,]+)$/);
+        if (companyPositionMatch) {
+          company = companyPositionMatch[1].trim();
+          position = companyPositionMatch[2].trim();
+        } else {
+          // Try to parse "Position at Company" format
+          const positionAtMatch = experienceLine.match(/^(.+?)\s+at\s+(.+)$/i);
+          if (positionAtMatch) {
+            position = positionAtMatch[1].trim();
+            company = positionAtMatch[2].trim();
+          } else {
+            // Try to parse "Position - Company" format
+            const positionDashMatch = experienceLine.match(/^(.+?)\s*-\s*(.+)$/);
+            if (positionDashMatch) {
+              position = positionDashMatch[1].trim();
+              company = positionDashMatch[2].trim();
+            } else {
+              // Fallback: use the whole line as position
+              position = experienceLine;
+            }
+          }
+        }
+        
         currentExperience = {
-          company: '',
-          position: originalLine,
+          company: company,
+          position: position,
           location: '',
-          startDate: '',
-          endDate: '',
+          startDate: startDate,
+          endDate: endDate,
           current: false,
           description: '',
           achievements: []
         };
-        console.log('Found position:', originalLine);
+        console.log('Parsed experience:', { company, position, startDate, endDate });
+        isCollectingDescription = true;
+        descriptionLines = [];
+      } else if (currentExperience && isCollectingDescription) {
+        // Collect description lines
+        if (originalLine.length > 10 && !originalLine.includes('•') && !originalLine.includes('-') && !originalLine.includes('*')) {
+          descriptionLines.push(originalLine);
+          console.log('Added description line:', originalLine);
+        } else if (originalLine.includes('•') || originalLine.includes('-') || originalLine.includes('*')) {
+          // This might be an achievement or bullet point
+          const achievement = originalLine.replace(/^[•\-\*\s]+/, '').trim();
+          if (achievement.length > 5) {
+            currentExperience.achievements = currentExperience.achievements || [];
+            currentExperience.achievements.push(achievement);
+            console.log('Added achievement:', achievement);
+          }
+        }
       }
       
       // Look for company names (more flexible)
@@ -826,35 +1277,64 @@ export function extractSkills(text: string): Skills[] {
 
 function extractProjects(text: string): Project[] {
   const projects: Project[] = [];
-  const projectKeywords = ['projects', 'portfolio', 'work samples'];
+  const projectKeywords = ['projects', 'portfolio', 'work samples', 'project experience', 'personal projects', 'academic projects', 'key projects', 'notable projects', 'selected projects'];
   const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+  
+  console.log('Extracting projects from', lines.length, 'lines');
   
   let inProjectsSection = false;
   let currentProject: Partial<Project> | null = null;
+  let descriptionLines: string[] = [];
+  let isCollectingDescription = false;
   
-  for (const line of lines) {
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
     const lowerLine = line.toLowerCase();
     
     // Check if we're entering projects section
-    if (projectKeywords.some(keyword => lowerLine.includes(keyword)) && line.length < 30) {
+    if (projectKeywords.some(keyword => lowerLine.includes(keyword)) && line.length < 50) {
       inProjectsSection = true;
+      console.log('Entering projects section:', line);
       continue;
     }
     
     // Check if we're leaving projects section
-    if (inProjectsSection && (lowerLine.includes('experience') || lowerLine.includes('education') || lowerLine.includes('skills'))) {
+    if (inProjectsSection && (lowerLine.includes('experience') || lowerLine.includes('education') || lowerLine.includes('skills') || lowerLine.includes('certificates'))) {
       inProjectsSection = false;
       if (currentProject && isValidProject(currentProject)) {
         projects.push(completeProject(currentProject));
+        console.log('Added project entry:', currentProject);
         currentProject = null;
       }
       continue;
     }
     
     if (inProjectsSection && line.length > 0) {
-      if (!currentProject) {
+      // Look for project titles (lines that look like project names)
+      const isProjectTitle = line.length < 100 && 
+          (line.includes('Project') || 
+           line.includes('App') || 
+           line.includes('System') || 
+           line.includes('Website') || 
+           line.includes('Application') ||
+           line.includes('Dashboard') ||
+           line.includes('Tool') ||
+           line.includes('Platform') ||
+           // Look for bullet points or numbered items
+           /^[•\-\*\d+\.]/.test(line) ||
+           // Look for lines that start with capital letters and don't contain common words
+           (/^[A-Z]/.test(line) && !lowerLine.includes('the') && !lowerLine.includes('and') && !lowerLine.includes('with')));
+      
+      if (isProjectTitle) {
+        // Save previous project if exists
+        if (currentProject && isValidProject(currentProject)) {
+          projects.push(completeProject(currentProject));
+          console.log('Added project entry:', currentProject);
+        }
+        
+        // Start new project
         currentProject = {
-          title: line,
+          title: line.replace(/^[•\-\*\d+\.]\s*/, '').trim(), // Remove bullet points
           description: '',
           technologies: [],
           url: '',
@@ -863,16 +1343,33 @@ function extractProjects(text: string): Project[] {
           endDate: '',
           current: false
         };
-      } else {
-        currentProject.description += (currentProject.description ? ' ' : '') + line;
+        console.log('Found project title:', currentProject.title);
+      } else if (currentProject) {
+        // This is likely a description or technology line
+        if (line.length > 20) {
+          // Look for technologies
+          const techKeywords = ['javascript', 'python', 'java', 'react', 'angular', 'vue', 'node', 'express', 'mongodb', 'mysql', 'postgresql', 'aws', 'azure', 'docker', 'kubernetes', 'git', 'github', 'html', 'css', 'bootstrap', 'tailwind', 'typescript', 'php', 'ruby', 'go', 'rust', 'swift', 'kotlin', 'android', 'ios', 'flutter', 'react native'];
+          const foundTechs = techKeywords.filter(tech => lowerLine.includes(tech));
+          
+          if (foundTechs.length > 0) {
+            currentProject.technologies = [...(currentProject.technologies || []), ...foundTechs];
+            console.log('Found technologies:', foundTechs);
+          } else {
+            // Add to description
+            currentProject.description += (currentProject.description ? ' ' : '') + line;
+          }
+        }
       }
     }
   }
   
+  // Add final project if exists
   if (currentProject && isValidProject(currentProject)) {
     projects.push(completeProject(currentProject));
+    console.log('Added final project entry:', currentProject);
   }
   
+  console.log('Total projects found:', projects.length);
   return projects;
 }
 

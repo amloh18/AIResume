@@ -14,9 +14,9 @@ interface RouteTransitionConfig {
 // Define which route transitions should show loading animations
 const ROUTE_TRANSITIONS: RouteTransitionConfig[] = [
   // Full CVCircle animation for major transitions
-  { from: '/auth/signin', to: '/onboarding', type: 'full' },
-  { from: '/auth/signup', to: '/onboarding', type: 'full' },
-  { from: '/onboarding', to: '/dashboard', type: 'full' },
+  { from: '/auth/signin', to: '/master-cv-onboarding', type: 'full' },
+  { from: '/auth/signup', to: '/master-cv-onboarding', type: 'full' },
+  { from: '/master-cv-onboarding', to: '/dashboard', type: 'full' },
   { from: '/dashboard', to: '/studio', type: 'full' },
   
   // Minimal loading for dashboard page switches

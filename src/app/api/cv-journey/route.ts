@@ -3,6 +3,35 @@ import connectDB from '@/lib/database';
 import { CVJourney } from '@/models';
 import { createErrorResponse } from '@/lib/db-utils';
 
+// Utility function to update job data in CV journeys
+async function updateJobDataInJourneys(jobId: string) {
+  try {
+    const { JobApplication } = await import('@/models');
+    const job = await JobApplication.findById(jobId);
+    
+    if (!job) {
+      console.warn(`Job ${jobId} not found for journey update`);
+      return;
+    }
+
+    // Update all journeys for this job
+    const result = await CVJourney.updateMany(
+      { jobId },
+      { 
+        $set: { 
+          jobTitle: job.jobTitle,
+          company: job.company,
+          'metadata.updatedAt': new Date()
+        }
+      }
+    );
+
+    console.log(`Updated ${result.modifiedCount} journeys with job data for job ${jobId}`);
+  } catch (error) {
+    console.error('Error updating job data in journeys:', error);
+  }
+}
+
 // GET - Get CV journeys for a user
 export async function GET(request: NextRequest) {
   try {
@@ -11,6 +40,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     const jobId = searchParams.get('jobId');
+    const cvId = searchParams.get('cvId');
+    const coverLetterId = searchParams.get('coverLetterId');
     const status = searchParams.get('status');
     
     if (!userId) {
@@ -25,6 +56,14 @@ export async function GET(request: NextRequest) {
     
     if (jobId) {
       query.jobId = jobId;
+    }
+    
+    if (cvId) {
+      query.cvId = cvId;
+    }
+    
+    if (coverLetterId) {
+      query.coverLetterId = coverLetterId;
     }
     
     if (status && status !== 'all') {
@@ -95,6 +134,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Fetch job data to get job title and company
+    const { JobApplication } = await import('@/models');
+    const job = await JobApplication.findById(jobId);
+    
+    if (!job) {
+      return NextResponse.json(
+        { success: false, message: 'Job not found' },
+        { status: 404 }
+      );
+    }
+
     // Check if journey already exists for this job
     let journey = await CVJourney.findOne({ userId, jobId });
 
@@ -105,6 +155,10 @@ export async function POST(request: NextRequest) {
       if (atsScore !== undefined) journey.atsScore = atsScore;
       if (currentStep !== undefined) journey.currentStep = currentStep;
       if (status !== undefined) journey.status = status;
+      
+      // Update job title and company from job data
+      journey.jobTitle = job.jobTitle;
+      journey.company = job.company;
       
       journey.metadata.updatedAt = new Date();
       journey.metadata.lastAccessedAt = new Date();
@@ -142,8 +196,8 @@ export async function POST(request: NextRequest) {
         currentStep: currentStep || 1,
         totalSteps: 5,
         atsScore: atsScore || null,
-        jobTitle: journeyName || 'Untitled Job',
-        company: 'Unknown Company',
+        jobTitle: job.jobTitle,
+        company: job.company,
         steps: [
           { stepId: 1, name: 'Add Job', status: 'completed' },
           { stepId: 2, name: 'Create CV', status: cvId ? 'completed' : 'pending' },
@@ -184,6 +238,40 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('Create/Update CV journey error:', error);
+    const errorResponse = createErrorResponse(error);
+    
+    return NextResponse.json(
+      errorResponse,
+      { status: errorResponse.statusCode || 500 }
+    );
+  }
+}
+
+// PUT - Update job data in CV journeys (refresh from job)
+export async function PUT(request: NextRequest) {
+  try {
+    await connectDB();
+    
+    const body = await request.json();
+    const { jobId } = body;
+
+    if (!jobId) {
+      return NextResponse.json(
+        { success: false, message: 'Job ID is required' },
+        { status: 400 }
+      );
+    }
+
+    // Update job data in all journeys for this job
+    await updateJobDataInJourneys(jobId);
+
+    return NextResponse.json({
+      success: true,
+      message: 'Job data updated in CV journeys'
+    });
+
+  } catch (error: any) {
+    console.error('Update job data in journeys error:', error);
     const errorResponse = createErrorResponse(error);
     
     return NextResponse.json(

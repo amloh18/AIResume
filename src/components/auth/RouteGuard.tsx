@@ -11,10 +11,10 @@ interface RouteGuardProps {
   redirectTo?: string;
 }
 
-const RouteGuard: React.FC<RouteGuardProps> = ({ 
-  children, 
-  requireAuth = true, 
-  redirectTo = '/auth/signin' 
+const RouteGuard: React.FC<RouteGuardProps> = ({
+  children,
+  requireAuth = true,
+  redirectTo = '/sign-in'
 }) => {
   const { data: session, status } = useSession();
   const router = useRouter();

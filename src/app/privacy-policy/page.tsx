@@ -34,21 +34,21 @@ const PrivacyPolicy: React.FC = () => {
                   <div className="w-8 h-8 bg-white/20 rounded-full animate-pulse"></div>
                 ) : session?.user ? (
                   <UserIcon user={{
-                    name: session.user.name || session.user.firstName + ' ' + session.user.lastName,
+                    name: session.user.name || '',
                     email: session.user.email || '',
-                    username: session.user.username,
+                    username: undefined,
                     profilePhoto: session.user.image
                   }} />
                 ) : (
                   <div className="flex items-center space-x-2">
-                    <Link 
-                      href="/auth/signin" 
+                    <Link
+                      href="/sign-in"
                       className="px-4 py-2 text-white/80 hover:text-white transition-colors"
                     >
                       Sign In
                     </Link>
-                    <Link 
-                      href="/auth/signup" 
+                    <Link
+                      href="/sign-up"
                       className="px-4 py-2 bg-lime-500 hover:bg-lime-600 text-white rounded-lg transition-colors"
                     >
                       Sign Up

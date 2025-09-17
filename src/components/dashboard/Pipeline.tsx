@@ -132,7 +132,7 @@ const KPIWidget: React.FC<{ title: string; value: string | number; icon: React.R
   change 
 }) => (
   <motion.div 
-    className={`${color} p-4 rounded-xl border border-gray-200 dark:border-gray-700`}
+    className={`frosted-glass-card p-4 rounded-xl ${color}`}
     whileHover={{ y: -2, scale: 1.02 }}
     transition={{ type: "spring", stiffness: 300 }}
   >
@@ -226,7 +226,7 @@ const SortableJobCard: React.FC<SortableJobCardProps> = ({
     <motion.div
       ref={setNodeRef}
       style={style}
-      className={`relative bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all duration-200 flex flex-col ${
+      className={`relative frosted-glass-card rounded-xl hover:bg-gray-200 dark:hover:bg-white/10 transition-all duration-200 flex flex-col ${
         isDragging ? 'opacity-80 rotate-1 scale-110 shadow-2xl' : ''
       } ${
         isCompact 
@@ -402,7 +402,7 @@ const DroppableZone: React.FC<{ id: string; children: React.ReactNode }> = ({ id
     <div
       ref={setNodeRef}
       className={`flex-1 min-h-[400px] overflow-y-auto p-2 space-y-2 transition-colors duration-200 ${
-        isOver ? 'bg-white/5 border-2 border-dashed border-white/20 rounded-lg' : ''
+        isOver ? 'frosted-glass-widget border-2 border-dashed border-gray-200 dark:border-white/20 rounded-lg' : ''
       }`}
     >
       {children}
@@ -465,7 +465,7 @@ const JobDetailsModal: React.FC<{
                 {/* Main Job Details */}
                                   <div className="xl:col-span-2 space-y-6">
                   {/* Status and Progress - Horizontal Timeline */}
-                  <div className="bg-white/5 rounded-xl p-4">
+                  <div className="frosted-glass-widget rounded-xl p-4">
                     <h3 className="text-lg font-semibold mb-4">Application Progress</h3>
                     <div className="relative">
                       {/* Timeline Line */}
@@ -504,7 +504,7 @@ const JobDetailsModal: React.FC<{
                   </div>
 
                   {/* Job Details */}
-                  <div className="bg-white/5 rounded-xl p-4">
+                  <div className="frosted-glass-widget rounded-xl p-4">
                     <h3 className="text-lg font-semibold mb-4">Job Details</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
@@ -531,7 +531,7 @@ const JobDetailsModal: React.FC<{
                   </div>
 
                   {/* Job Description */}
-                  <div className="bg-white/5 rounded-xl p-4">
+                  <div className="frosted-glass-widget rounded-xl p-4">
                     <h3 className="text-lg font-semibold mb-4">Job Description</h3>
                     {job.jobDescription ? (
                       <div className="text-white/80 text-sm leading-relaxed whitespace-pre-wrap max-h-48 overflow-y-auto">
@@ -544,7 +544,7 @@ const JobDetailsModal: React.FC<{
 
                   {/* Notes */}
                   {job.notes && (
-                    <div className="bg-white/5 rounded-xl p-4">
+                    <div className="frosted-glass-widget rounded-xl p-4">
                       <h3 className="text-lg font-semibold mb-4">Notes</h3>
                       <p className="text-white/80 text-sm leading-relaxed">{job.notes}</p>
                     </div>
@@ -554,7 +554,7 @@ const JobDetailsModal: React.FC<{
                 {/* Sidebar - CV and Cover Letter */}
                 <div className="space-y-6">
                   {/* Linked CV */}
-                  <div className="bg-white/5 rounded-xl p-4">
+                  <div className="frosted-glass-widget rounded-xl p-4">
                     <h3 className="text-lg font-semibold mb-4">Linked CV</h3>
                     <div className="space-y-3">
                       {/* CV Selection removed - relationships now managed through CVJourney */}
@@ -564,7 +564,7 @@ const JobDetailsModal: React.FC<{
                   </div>
 
                   {/* Cover Letter */}
-                  <div className="bg-white/5 rounded-xl p-4">
+                  <div className="frosted-glass-widget rounded-xl p-4">
                     <h3 className="text-lg font-semibold mb-4">Cover Letter</h3>
                     <div className="text-center py-8">
                       <MessageSquare size={48} className="text-white/20 mx-auto mb-3" />
@@ -580,7 +580,7 @@ const JobDetailsModal: React.FC<{
                   </div>
 
                   {/* Quick Actions */}
-                  <div className="bg-white/5 rounded-xl p-4">
+                  <div className="frosted-glass-widget rounded-xl p-4">
                     <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       <motion.button
@@ -1449,7 +1449,7 @@ const Pipeline: React.FC = () => {
         </div>
 
         {/* Controls Skeleton */}
-        <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
+        <div className="p-4 frosted-glass-widget rounded-xl">
           <div className="h-10 w-full bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded-lg">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
           </div>
@@ -1460,7 +1460,7 @@ const Pipeline: React.FC = () => {
           {Array.from({ length: 5 }).map((_, stageIndex) => (
             <div key={stageIndex} className="flex flex-col">
               {/* Stage Header Skeleton */}
-              <div className="bg-white/5 border border-white/10 rounded-xl p-4 mb-4">
+              <div className="frosted-glass-widget rounded-xl p-4 mb-4">
                 <div className="h-6 w-24 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
                 </div>
@@ -1469,7 +1469,7 @@ const Pipeline: React.FC = () => {
               {/* Job Cards Skeleton */}
               <div className="space-y-3">
                 {Array.from({ length: 2 }).map((_, cardIndex) => (
-                  <div key={cardIndex} className="bg-white/5 border border-white/10 rounded-xl p-4 h-48">
+                  <div key={cardIndex} className="frosted-glass-card rounded-xl p-4 h-48">
                     <div className="space-y-2">
                       <div className="h-4 w-3/4 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
@@ -1505,12 +1505,15 @@ const Pipeline: React.FC = () => {
       <PageHeader
         title="Job Tracker"
         description="Track applications and manage career progress"
-        user={session?.user || { name: 'User', email: 'user@example.com' }}
+        user={{
+          name: session?.user?.name || 'User',
+          email: session?.user?.email || 'user@example.com'
+        }}
         showSettings={true}
       />
 
       {/* Controls Row */}
-      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 p-4 bg-white/5 border border-white/10 rounded-xl">
+      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 p-4 frosted-glass-widget rounded-xl">
         {/* Search and Period */}
         <div className="flex-1 w-full space-y-3">
           <div className="relative">
@@ -1550,7 +1553,7 @@ const Pipeline: React.FC = () => {
                 className={`px-2 py-1 rounded text-xs font-medium transition-all duration-300 border ${
                   selectedPriority === priority.key
                     ? priority.color
-                    : 'bg-white/5 text-white/60 border-white/10 hover:bg-white/10'
+                    : 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-white/60 border-gray-200 dark:border-white/10 hover:bg-gray-200 dark:hover:bg-white/10'
                 }`}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -1711,7 +1714,7 @@ const Pipeline: React.FC = () => {
         </DndContext>
       ) : (
         /* List View */
-        <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+        <div className="frosted-glass-widget rounded-xl overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-white/10">
@@ -1729,7 +1732,7 @@ const Pipeline: React.FC = () => {
                 {filteredAndSortedJobs.map((job) => (
                   <motion.tr
                     key={job.id}
-                    className="border-b border-white/10 hover:bg-white/5 transition-colors cursor-pointer"
+                    className="border-b border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
                     onClick={() => {
                       setSelectedJob(job);
                       setShowJobDetails(true);
@@ -2106,4 +2109,4 @@ const Pipeline: React.FC = () => {
   );
 };
 
-export default Pipeline; 
+export default Pipeline;

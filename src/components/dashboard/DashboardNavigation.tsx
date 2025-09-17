@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useSession } from 'next-auth/react';
+// import { useSession  } from 'next-auth/react'; // Removed - using Clerk now
 import { useRouter } from 'next/navigation';
 import { 
   FileText, 
@@ -48,7 +48,8 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
   onClose,
   isBannerVisible = false
 }) => {
-  const { data: session } = useSession();
+  // const { data: session } = useSession(); // Removed - using Clerk now
+  const session = null; // Temporary - will replace with Clerk user
   const router = useRouter();
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [subscription, setSubscription] = useState<any>(null);
@@ -177,7 +178,7 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
           >
             {screenSize === 'tablet' ? (
               <div className="w-8 h-8 bg-lime-500 rounded-lg flex items-center justify-center">
-                <CheckCircle size={20} className="text-white" />
+                <CheckCircle size={20} className="text-gray-900 dark:text-white" />
               </div>
             ) : (
               <>
@@ -265,7 +266,7 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
           
           {/* Subtle Pulse Animation */}
           <motion.div
-            className="absolute inset-0 bg-white/5 rounded-xl"
+            className="absolute inset-0 bg-gray-100 dark:bg-white/5 rounded-xl"
             animate={{ 
               opacity: [0.3, 0.6, 0.3],
               scale: [1, 1.02, 1]
@@ -307,7 +308,7 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
               {/* Debug: Show actual subscription data - temporarily visible */}
               <div className="text-sm bg-white/10 border border-white/20 p-3 rounded-lg">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-semibold text-white">Subscription Status</span>
+                  <span className="font-semibold text-gray-900 dark:text-white">Subscription Status</span>
                   <button
                     onClick={refreshSubscriptionData}
                     disabled={isRefreshing}
@@ -319,15 +320,15 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
                 </div>
                 <div className="space-y-1 text-xs">
                   <div className="flex justify-between">
-                    <span className="text-white/80">Plan:</span>
+                    <span className="text-gray-700 dark:text-white/80">Plan:</span>
                     <span className="text-lime-300 font-medium">{user.subscription?.planName || 'No Plan'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-white/80">Status:</span>
+                    <span className="text-gray-700 dark:text-white/80">Status:</span>
                     <span className="text-green-300 font-medium">{user.subscription?.status || 'Unknown'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-white/80">End Date:</span>
+                    <span className="text-gray-700 dark:text-white/80">End Date:</span>
                     <span className="text-blue-300 font-medium">{user.subscription?.endDate || 'N/A'}</span>
                   </div>
                 </div>
@@ -372,20 +373,20 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
               ) : (
                 // Free User Content
                 <>
-                  <div className="text-sm opacity-90">
+                  <div className="text-sm text-gray-700 dark:text-white opacity-90">
                     Stop staring at blank pages. Unlock AI-powered summaries, unlimited ATS checks, and instant cover letters.
                   </div>
                   
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm">
+                    <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-white">
                       <span className="text-yellow-300">🔒</span>
                       <span>AI-powered summaries</span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm">
+                    <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-white">
                       <span className="text-yellow-300">🔒</span>
                       <span>Unlimited ATS checks</span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm">
+                    <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-white">
                       <span className="text-yellow-300">🔒</span>
                       <span>Instant cover letters</span>
                     </div>
@@ -397,7 +398,7 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
                         e.stopPropagation();
                         router.push('/dashboard/settings?tab=membership');
                       }}
-                      className="flex-1 bg-white/20 hover:bg-white/30 text-sm py-2 rounded-lg transition-colors"
+                      className="flex-1 bg-gray-200 dark:bg-white/20 hover:bg-gray-300 dark:hover:bg-white/30 text-gray-700 dark:text-white text-sm py-2 rounded-lg transition-colors"
                     >
                       Learn more
                     </button>

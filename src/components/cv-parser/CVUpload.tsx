@@ -408,10 +408,12 @@ const CVUpload: React.FC<CVUploadProps> = ({ onCVParsed, onClose }) => {
                 className="space-y-6"
               >
                 {/* File Type Icons */}
-                <div className="flex justify-center space-x-8 mb-8">
+                <div className="flex justify-center space-x-6 mb-8">
                   {[
                     { icon: FileText, label: 'PDF', color: 'text-red-400' },
                     { icon: File, label: 'DOCX', color: 'text-blue-400' },
+                    { icon: File, label: 'DOC', color: 'text-purple-400' },
+                    { icon: FileText, label: 'RTF', color: 'text-orange-400' },
                     { icon: Image, label: 'Image', color: 'text-green-400' }
                   ].map((fileType, index) => (
                     <motion.div
@@ -464,7 +466,7 @@ const CVUpload: React.FC<CVUploadProps> = ({ onCVParsed, onClose }) => {
                     </div>
                     
                     <p className="text-white/40 text-sm">
-                      Supports PDF, DOCX, JPG, PNG (Max 10MB)
+                      Supports PDF, DOC, DOCX, RTF, JPG, PNG (Max 10MB)
                     </p>
                   </motion.div>
                 </motion.div>

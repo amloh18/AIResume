@@ -17,6 +17,7 @@ interface JobATSSectionProps {
   onScoreUpdate: (score: number) => void;
   onRestructure?: (restructuredContent: string) => void;
   onUpdateField?: (path: string, value: any) => void;
+  autoLoadedFromJourney?: boolean;
 }
 
 const JobATSSection: React.FC<JobATSSectionProps> = ({
@@ -28,7 +29,8 @@ const JobATSSection: React.FC<JobATSSectionProps> = ({
   atsScore,
   onScoreUpdate,
   onRestructure,
-  onUpdateField
+  onUpdateField,
+  autoLoadedFromJourney = false
 }) => {
   const themeClasses = getThemeClasses;
   const [isExpanded, setIsExpanded] = useState(true);
@@ -106,8 +108,9 @@ const JobATSSection: React.FC<JobATSSectionProps> = ({
           <div className="mb-4">
             <JobSelector
               selectedJobId={selectedJobId}
-              onJobSelect={onJobSelection}
+              onJobSelection={onJobSelection}
               userId={userId}
+              autoLoadedFromJourney={autoLoadedFromJourney}
             />
           </div>
 

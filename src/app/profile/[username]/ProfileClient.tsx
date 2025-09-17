@@ -13,8 +13,8 @@ interface ProfileClientProps {
 
 const ProfileClient: React.FC<ProfileClientProps> = ({ profile }) => {
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
-  const { data: session } = useSession();
-  
+  const { data: session, status } = useSession();
+
   // Check if current user is the profile owner
   const isOwner = session?.user?.email === profile.email;
 

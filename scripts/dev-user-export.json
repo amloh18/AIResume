@@ -1,0 +1,42 @@
+{
+  "_id": "68c9ee1c45f7d814195f3c29",
+  "email": "dev@cvcircle.io",
+  "firstName": "Dev",
+  "lastName": "User",
+  "role": "admin",
+  "userRole": "Professional",
+  "isEmailVerified": true,
+  "currentPlanKey": "pro_monthly",
+  "monthlyGoal": 50,
+  "usage": {
+    "cvJourneyCount": 0,
+    "cvCreatedCount": 0,
+    "journeysCreated": 0,
+    "exportCount": 0,
+    "atsCheckCount": 0,
+    "lastResetDate": "2025-09-16T23:09:16.387Z",
+    "deviceFingerprint": "dev-user"
+  },
+  "lastLogin": "2025-09-16T23:09:16.387Z",
+  "subscription": {
+    "planKey": "pro_monthly",
+    "status": "active",
+    "startDate": "2025-09-16T23:09:16.387Z",
+    "provider": "admin",
+    "interval": "monthly",
+    "seats": 5,
+    "storageUsed": 0
+  },
+  "settings": {
+    "notifications": {
+      "email": true,
+      "push": true
+    },
+    "theme": "auto",
+    "timezone": "UTC +07:00 - Asia / Jakarta",
+    "languagePreference": "English"
+  },
+  "createdAt": "2025-09-16T23:09:16.392Z",
+  "updatedAt": "2025-09-16T23:09:16.392Z",
+  "hasPassword": false
+}

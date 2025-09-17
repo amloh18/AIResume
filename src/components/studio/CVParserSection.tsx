@@ -139,7 +139,7 @@ const CVParserSection: React.FC<CVParserSectionProps> = ({
         >
           <input
             type="file"
-            accept=".pdf,.doc,.docx"
+            accept=".pdf,.doc,.docx,.rtf"
             onChange={handleFileSelect}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
             disabled={parseStatus === 'parsing'}

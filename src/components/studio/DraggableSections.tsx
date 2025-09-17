@@ -16,7 +16,9 @@ import {
   Award,
   Globe,
   Plus,
-  Minus
+  Minus,
+  Upload,
+  TrendingUp
 } from 'lucide-react';
 import { getThemeClasses } from '@/lib/utils/themeUtils';
 
@@ -84,54 +86,131 @@ const DraggableSections: React.FC<DraggableSectionsProps> = ({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Global Controls */}
-      <div className={`${themeClasses.card.base} rounded-lg p-4 border ${themeClasses.border.primary}`}>
-        <div className="flex items-center justify-between">
-          <h3 className={`text-lg font-semibold ${themeClasses.text.primary}`}>
-            CV Sections
-          </h3>
-          <div className="flex items-center gap-2">
-            <motion.button
-              onClick={onToggleAllSections}
-              className={`flex items-center gap-2 px-3 py-1.5 text-sm ${themeClasses.button.secondary} rounded-lg transition-colors`}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              {allCollapsed ? (
-                <>
-                  <Plus className="w-4 h-4" />
-                  Expand All
-                </>
-              ) : (
-                <>
-                  <Minus className="w-4 h-4" />
-                  Collapse All
-                </>
-              )}
-            </motion.button>
+      <div className="bg-gradient-to-r from-white/90 to-gray-50/90 dark:from-gray-800/90 dark:to-gray-900/90 backdrop-blur-xl border border-gray-200/60 dark:border-gray-700/60 rounded-xl p-6 shadow-lg shadow-gray-200/50 dark:shadow-gray-900/50">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-gradient-to-br from-lime-500 to-lime-600 rounded-lg shadow-md">
+              <TrendingUp className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                CV Sections
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Organize and customize your CV structure
+              </p>
+            </div>
+          </div>
+          <motion.button
+            onClick={onToggleAllSections}
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
+              allCollapsed 
+                ? 'bg-lime-600 hover:bg-lime-700 text-white shadow-md hover:shadow-lg' 
+                : 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'
+            }`}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            {allCollapsed ? (
+              <>
+                <Plus className="w-4 h-4" />
+                Expand All
+              </>
+            ) : (
+              <>
+                <Minus className="w-4 h-4" />
+                Collapse All
+              </>
+            )}
+          </motion.button>
+        </div>
+        <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+          <div className="flex items-center gap-1">
+            <GripVertical className="w-3 h-3" />
+            <span>Drag to reorder</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <ChevronDown className="w-3 h-3" />
+            <span>Click to expand</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <Eye className="w-3 h-3" />
+            <span>Toggle visibility</span>
           </div>
         </div>
-        <p className={`text-sm ${themeClasses.text.tertiary} mt-1`}>
-          Drag sections to reorder • Click to expand/collapse • Toggle visibility
-        </p>
+      </div>
+
+      {/* CV Parser Section */}
+      <div className="bg-gradient-to-r from-blue-50/90 to-indigo-50/90 dark:from-blue-900/20 dark:to-indigo-900/20 backdrop-blur-xl border border-blue-200/60 dark:border-blue-700/60 rounded-xl p-6 shadow-lg shadow-blue-200/50 dark:shadow-blue-900/50">
+        <div className="flex items-center gap-4 mb-4">
+          <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-md">
+            <Upload className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h4 className="text-lg font-bold text-gray-900 dark:text-white">
+              CV Parser
+            </h4>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Upload your existing CV to automatically populate sections
+            </p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <input
+            type="file"
+            accept=".pdf,.doc,.docx"
+            className="hidden"
+            id="cv-upload"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                // Handle file upload logic here
+                console.log('CV file selected:', file.name);
+              }
+            }}
+          />
+          <motion.label
+            htmlFor="cv-upload"
+            className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-sm font-medium rounded-lg transition-all duration-200 cursor-pointer shadow-md hover:shadow-lg"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <Upload className="w-4 h-4" />
+            Upload CV File
+          </motion.label>
+          <motion.button
+            onClick={() => {
+              // Handle drag & drop area toggle
+              console.log('Toggle drag area');
+            }}
+            className="flex items-center justify-center gap-2 px-4 py-3 bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg transition-all duration-200 border border-gray-200 dark:border-gray-600 shadow-md hover:shadow-lg"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <div className="w-4 h-4 border-2 border-dashed border-gray-400 dark:border-gray-500 rounded"></div>
+            Drag & Drop Area
+          </motion.button>
+        </div>
+        <div className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+          Supported formats: PDF, DOC, DOCX • Max size: 10MB
+        </div>
       </div>
 
       {/* Draggable Sections */}
-      <div className="space-y-2">
+      <div className="space-y-4">
         {sections.map((section, index) => (
           <motion.div
             key={section.id}
-            className={`${themeClasses.card.base} rounded-lg border-2 transition-all duration-200 ${
+            className={`group relative bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl border-2 transition-all duration-300 rounded-xl shadow-lg hover:shadow-xl ${
               draggedSection === section.id 
-                ? 'border-lime-400 shadow-lg scale-105' 
+                ? 'border-lime-400 shadow-2xl scale-105 bg-lime-50/50 dark:bg-lime-900/20' 
                 : section.isExpanded
-                ? 'border-lime-500 shadow-md'
+                ? 'border-lime-500 shadow-xl bg-lime-50/30 dark:bg-lime-900/10'
                 : section.isVisible
-                ? 'border-gray-300 dark:border-gray-600 hover:border-lime-300 dark:hover:border-lime-600'
-                : 'border-gray-200 dark:border-gray-700'
-            } ${
-              !section.isVisible ? 'opacity-60' : ''
+                ? 'border-gray-200 dark:border-gray-700 hover:border-lime-300 dark:hover:border-lime-600 hover:bg-lime-50/20 dark:hover:bg-lime-900/10'
+                : 'border-gray-200 dark:border-gray-700 opacity-60'
             }`}
             draggable
             onDragStart={(e) => handleDragStart(e, section.id)}
@@ -143,32 +222,43 @@ const DraggableSections: React.FC<DraggableSectionsProps> = ({
             transition={{ delay: index * 0.05 }}
           >
             {/* Section Header */}
-            <div className="p-4">
+            <div className="p-6">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-4">
                   {/* Drag Handle */}
-                  <div className="cursor-grab active:cursor-grabbing">
-                    <GripVertical className={`w-4 h-4 ${themeClasses.text.tertiary}`} />
+                  <div className="cursor-grab active:cursor-grabbing p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                    <GripVertical className="w-4 h-4 text-gray-400 dark:text-gray-500" />
                   </div>
                   
                   {/* Section Icon */}
-                  <div className={`p-2 rounded-lg ${
+                  <div className={`p-3 rounded-xl shadow-md transition-all duration-200 ${
                     section.isVisible 
-                      ? 'bg-lime-100 dark:bg-lime-900/20' 
+                      ? 'bg-gradient-to-br from-lime-500 to-lime-600 shadow-lime-200 dark:shadow-lime-900/50' 
                       : 'bg-gray-100 dark:bg-gray-700'
                   }`}>
-                    <section.icon className={`w-4 h-4 ${
+                    <section.icon className={`w-5 h-5 ${
                       section.isVisible 
-                        ? 'text-lime-600 dark:text-lime-400' 
-                        : 'text-gray-400'
+                        ? 'text-white' 
+                        : 'text-gray-400 dark:text-gray-500'
                     }`} />
                   </div>
                   
                   {/* Section Title */}
                   <div>
-                    <h4 className={`font-medium ${themeClasses.text.primary}`}>
+                    <h4 className={`text-lg font-bold ${
+                      section.isVisible 
+                        ? 'text-gray-900 dark:text-white' 
+                        : 'text-gray-500 dark:text-gray-400'
+                    }`}>
                       {section.title}
                     </h4>
+                    <p className={`text-sm ${
+                      section.isVisible 
+                        ? 'text-gray-600 dark:text-gray-400' 
+                        : 'text-gray-400 dark:text-gray-500'
+                    }`}>
+                      {section.isExpanded ? 'Expanded' : 'Collapsed'} • {section.isVisible ? 'Visible' : 'Hidden'}
+                    </p>
                   </div>
                 </div>
 
@@ -177,13 +267,13 @@ const DraggableSections: React.FC<DraggableSectionsProps> = ({
                   {/* Visibility Toggle */}
                   <motion.button
                     onClick={() => onSectionVisibilityToggle(section.id)}
-                    className={`p-1.5 rounded-lg transition-colors ${
+                    className={`p-2.5 rounded-lg transition-all duration-200 ${
                       section.isVisible
-                        ? 'text-lime-600 dark:text-lime-400 hover:bg-lime-100 dark:hover:bg-lime-900/20'
-                        : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                        ? 'bg-lime-100 dark:bg-lime-900/30 text-lime-600 dark:text-lime-400 hover:bg-lime-200 dark:hover:bg-lime-900/50 shadow-md'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
                     }`}
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                     title={section.isVisible ? 'Hide section' : 'Show section'}
                   >
                     {section.isVisible ? (
@@ -196,9 +286,13 @@ const DraggableSections: React.FC<DraggableSectionsProps> = ({
                   {/* Expand/Collapse Toggle */}
                   <motion.button
                     onClick={() => onSectionToggle(section.id)}
-                    className={`p-1.5 rounded-lg transition-colors ${themeClasses.text.tertiary} hover:bg-gray-100 dark:hover:bg-gray-700`}
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
+                    className={`p-2.5 rounded-lg transition-all duration-200 ${
+                      section.isExpanded
+                        ? 'bg-lime-100 dark:bg-lime-900/30 text-lime-600 dark:text-lime-400 hover:bg-lime-200 dark:hover:bg-lime-900/50 shadow-md'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                     title={section.isExpanded ? 'Collapse section' : 'Expand section'}
                   >
                     {section.isExpanded ? (
@@ -221,7 +315,7 @@ const DraggableSections: React.FC<DraggableSectionsProps> = ({
                   transition={{ duration: 0.3, ease: 'easeInOut' }}
                   className="overflow-hidden"
                 >
-                  <div className="px-4 pb-4 border-t border-gray-200 dark:border-gray-700 pt-4">
+                  <div className="px-6 pb-6 border-t border-gray-200/60 dark:border-gray-700/60 pt-6 bg-gray-50/50 dark:bg-gray-900/50">
                     {section.component}
                   </div>
                 </motion.div>
@@ -232,28 +326,55 @@ const DraggableSections: React.FC<DraggableSectionsProps> = ({
       </div>
 
       {/* Section Order Preview */}
-      <div className={`${themeClasses.card.base} rounded-lg p-4 border ${themeClasses.border.primary}`}>
-        <h4 className={`text-sm font-medium ${themeClasses.text.primary} mb-3`}>
-          Preview Order
-        </h4>
-        <div className="flex flex-wrap gap-2">
+      <div className="bg-gradient-to-r from-purple-50/90 to-pink-50/90 dark:from-purple-900/20 dark:to-pink-900/20 backdrop-blur-xl border border-purple-200/60 dark:border-purple-700/60 rounded-xl p-6 shadow-lg shadow-purple-200/50 dark:shadow-purple-900/50">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg shadow-md">
+            <Eye className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <h4 className="text-lg font-bold text-gray-900 dark:text-white">
+              Preview Order
+            </h4>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              See how your CV sections will appear
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-3">
           {sections
             .filter(section => section.isVisible)
             .map((section, index) => (
-              <div
+              <motion.div
                 key={section.id}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium shadow-md transition-all duration-200 ${
                   index === 0 
-                    ? 'bg-lime-100 dark:bg-lime-900/20 text-lime-700 dark:text-lime-300'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                    ? 'bg-gradient-to-r from-lime-500 to-lime-600 text-white shadow-lime-200 dark:shadow-lime-900/50'
+                    : 'bg-white/80 dark:bg-gray-800/80 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600'
                 }`}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: index * 0.1 }}
+                whileHover={{ scale: 1.05 }}
               >
-                <section.icon className="w-3 h-3" />
+                <section.icon className="w-4 h-4" />
                 <span>{section.title}</span>
-                <span className="text-gray-400">#{index + 1}</span>
-              </div>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                  index === 0 
+                    ? 'bg-white/20 text-white' 
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+                }`}>
+                  #{index + 1}
+                </span>
+              </motion.div>
             ))}
         </div>
+        {sections.filter(section => section.isVisible).length === 0 && (
+          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+            <EyeOff className="w-8 h-8 mx-auto mb-2 opacity-50" />
+            <p>No sections visible</p>
+            <p className="text-xs">Toggle visibility to see sections in preview</p>
+          </div>
+        )}
       </div>
     </div>
   );

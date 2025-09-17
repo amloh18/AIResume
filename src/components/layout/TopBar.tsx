@@ -3,7 +3,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Bell, Settings, User, Menu, X } from 'lucide-react';
-import { useSession, signOut } from 'next-auth/react';
+// import { useSession, signOut  } from 'next-auth/react'; // Removed - using Clerk now
 import { useRouter } from 'next/navigation';
 import { getTopBarClasses } from '@/lib/utils/themeUtils';
 
@@ -18,7 +18,8 @@ const TopBar: React.FC<TopBarProps> = ({
   isMenuOpen = false,
   showMenuButton = true
 }) => {
-  const { data: session } = useSession();
+  // const { data: session } = useSession(); // Removed - using Clerk now
+  const session = null; // Temporary - will replace with Clerk user
   const router = useRouter();
   const topBarClasses = getTopBarClasses();
 

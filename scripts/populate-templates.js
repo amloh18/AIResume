@@ -1,8 +1,8 @@
 const mongoose = require('mongoose');
-require('dotenv').config();
+require('dotenv').config({ path: '.env.local' });
 
 // Import models
-const Template = require('../src/models/Template');
+const Template = require('../src/models/Template.ts').default;
 
 // Default CV template sections
 const cvSections = [
@@ -301,12 +301,17 @@ async function populateTemplates() {
     await Template.deleteMany({});
     console.log('Cleared existing templates');
 
-    // Create CV Template
-    const cvTemplate = new Template({
-      name: 'Modern CV',
-      description: 'A clean, professional CV template with modern styling',
+    // Create Modern Professional Template
+    const modernProfessionalTemplate = new Template({
+      name: 'Modern Professional',
+      description: 'A clean, modern professional CV template with contemporary styling',
       category: 'cv',
+      categories: ['Professional', 'Modern'],
+      tier: 'free',
       isDefault: true,
+      isActive: true,
+      isPublished: true,
+      globalAccess: true,
       globalStyles: {
         fontFamily: 'Inter, system-ui, sans-serif',
         primaryColor: '#2563eb',
@@ -321,81 +326,40 @@ async function populateTemplates() {
       availableSections: cvSections
     });
 
-    // Create Portfolio Template
-    const portfolioTemplate = new Template({
-      name: 'Creative Portfolio',
-      description: 'A modern portfolio template for showcasing your work',
-      category: 'portfolio',
-      isDefault: true,
-      globalStyles: {
-        fontFamily: 'Poppins, system-ui, sans-serif',
-        primaryColor: '#7c3aed',
-        secondaryColor: '#6b7280',
-        backgroundColor: '#ffffff',
-        fontSize: '16px',
-        lineHeight: '1.7',
-        spacing: '32px',
-        borderRadius: '12px',
-        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-      },
-      availableSections: portfolioSections
-    });
-
-    // Create Cover Letter Template
-    const coverLetterTemplate = new Template({
-      name: 'Professional Cover Letter',
-      description: 'A traditional cover letter template for job applications',
-      category: 'cover-letter',
-      isDefault: true,
-      globalStyles: {
-        fontFamily: 'Times New Roman, serif',
-        primaryColor: '#000000',
-        secondaryColor: '#374151',
-        backgroundColor: '#ffffff',
-        fontSize: '12pt',
-        lineHeight: '1.5',
-        spacing: '20px',
-        borderRadius: '0px',
-        boxShadow: 'none'
-      },
-      availableSections: coverLetterSections
-    });
-
-    // Create Minimalist CV Template
-    const minimalistCvTemplate = new Template({
-      name: 'Minimalist CV',
-      description: 'A clean, minimalist CV template focusing on content',
+    // Create Tech Modern Template
+    const techModernTemplate = new Template({
+      name: 'Tech Modern',
+      description: 'A modern tech-focused CV template with sleek design for technology professionals',
       category: 'cv',
+      categories: ['Professional', 'Modern'],
+      tier: 'free',
       isDefault: false,
+      isActive: true,
+      isPublished: true,
+      globalAccess: true,
       globalStyles: {
-        fontFamily: 'Roboto, system-ui, sans-serif',
-        primaryColor: '#1f2937',
+        fontFamily: 'JetBrains Mono, Consolas, monospace',
+        primaryColor: '#10b981',
         secondaryColor: '#6b7280',
         backgroundColor: '#ffffff',
         fontSize: '13px',
         lineHeight: '1.5',
         spacing: '20px',
-        borderRadius: '4px',
-        boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
+        borderRadius: '6px',
+        boxShadow: '0 2px 4px 0 rgba(0, 0, 0, 0.1)'
       },
-      availableSections: cvSections.filter(section => 
-        ['personal_info', 'experience', 'education', 'skills'].includes(section.key)
-      )
+      availableSections: cvSections
     });
 
-    // Save all templates
+    // Save templates
     await Promise.all([
-      cvTemplate.save(),
-      portfolioTemplate.save(),
-      coverLetterTemplate.save(),
-      minimalistCvTemplate.save()
+      modernProfessionalTemplate.save(),
+      techModernTemplate.save()
     ]);
 
     console.log('Successfully created templates:');
-    console.log('- Modern CV (default)');
-    console.log('- Creative Portfolio (default)');
-    console.log('- Professional Cover Letter (default)');
-    console.log('- Minimalist CV');
+    console.log('- Modern Professional (default)');
+    console.log('- Tech Modern');
 
     // Display template details
     const templates = await Template.find({});

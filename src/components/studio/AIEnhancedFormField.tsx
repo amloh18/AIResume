@@ -17,6 +17,7 @@ import { useUserPlan } from '@/lib/hooks/useUserPlan';
 import { AIAssistantService } from '@/lib/services/aiAssistantService';
 import { CVDataStructure } from '@/types/cv';
 import { Job } from '@/lib/stores/jobStore';
+import ProfessionalTextField from '@/components/ui/ProfessionalTextField';
 
 interface AIEnhancedFormFieldProps {
   type: 'input' | 'textarea';
@@ -191,15 +192,16 @@ const AIEnhancedFormField: React.FC<AIEnhancedFormFieldProps> = ({
 
     if (type === 'textarea') {
       return (
-        <textarea
+        <ProfessionalTextField
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={onChange}
           placeholder={placeholder}
           rows={rows}
-          className={`${baseClasses} resize-none`}
-          disabled={disabled}
-          required={required}
           maxLength={maxLength}
+          required={required}
+          disabled={disabled}
+          fieldId={`ai-field-${fieldType || 'textarea'}`}
+          showFullToolbar={true}
         />
       );
     }
