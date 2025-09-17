@@ -19,12 +19,16 @@ function StudioPageContent() {
   const type = searchParams.get('type'); // 'cv' or 'cover_letter'
   const cvId = searchParams.get('cvId');
   const coverLetterId = searchParams.get('coverLetterId');
-  const jobId = searchParams.get('jobId');
-  const mode = searchParams.get('mode'); // 'cv-onboarding', 'ats-edit', 'cover-letter-edit'
-  const cvJourneyId = searchParams.get('cvJourneyId'); // CV Journey ID for linking documents
+  const jobId = searchParams.get('jobId'); // DEPRECATED: Direct jobId usage violates Application Package model
+  const journeyId = searchParams.get('journeyId'); // PRIMARY: Journey ID for proper context loading
+  const mode = searchParams.get('mode'); // 'cv-onboarding', 'ats-edit', 'cover-letter-edit', 'document-first'
+  const cvJourneyId = searchParams.get('cvJourneyId'); // LEGACY: Being replaced by journeyId
 
   // Determine which ID to use based on type
   const documentId = type === 'cover_letter' ? coverLetterId : cvId;
+  
+  // Determine document type - default to 'cv' if not specified
+  const documentType = type === 'cover_letter' ? 'cover-letter' : 'cv';
 
   // Show loading state while session is loading
   if (status === 'loading') {
@@ -51,7 +55,10 @@ function StudioPageContent() {
   }
 
   console.log('🔍 Studio Page - Session user ID:', session.user.id);
-  console.log('🔍 Studio Page - URL params:', { type, cvId, coverLetterId, jobId, mode, cvJourneyId });
+  console.log('🔍 Studio Page - URL params:', { type, cvId, coverLetterId, jobId, journeyId, mode, cvJourneyId });
+  
+  // Determine the primary context ID (prefer journeyId for proper Application Package loading)
+  const primaryJourneyId = journeyId || cvJourneyId;
 
   return (
     <RouteGuard requireAuth={true}>
@@ -59,13 +66,14 @@ function StudioPageContent() {
         <div className={getPageBackground('studio')}>
           <JourneyStatusBanner />
           <CVStudio
-            jobId={jobId}
-            cvId={type === 'cv' ? documentId : null}
-            coverLetterId={type === 'cover_letter' ? documentId : null}
-            documentType={type === 'cover_letter' ? 'cover-letter' : 'cv'}
+            journeyId={primaryJourneyId}
+            jobId={jobId} // DEPRECATED: Kept for backwards compatibility
+            cvId={cvId} // Pass cvId directly from URL parameter
+            coverLetterId={coverLetterId} // Pass coverLetterId directly from URL parameter
+            documentType={documentType}
             userId={session.user.id}
             mode={mode}
-            cvJourneyId={cvJourneyId}
+            cvJourneyId={cvJourneyId} // LEGACY: Kept for backwards compatibility
           />
         </div>
       </JobJourneyProvider>

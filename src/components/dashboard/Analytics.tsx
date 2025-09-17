@@ -13,7 +13,6 @@ import AnalyticsJourneyWidget from './AnalyticsJourneyWidget';
 import PageHeader from './PageHeader';
 import MasterCVBadge from './MasterCVBadge';
 import { authenticatedFetch } from '@/lib/utils/apiUtils';
-import CVJourneyModal from '@/components/modals/CVJourneyModal';
 
 // 1. Combined CV Management Section - CV Health Score + Master CV Management + Quick Actions
 const CVManagementSection: React.FC<{ 
@@ -308,7 +307,7 @@ const CVManagementSection: React.FC<{
   );
 };
 
-// 2. The "Application Hub" - Fused Incomplete CVs + Application Timeline
+// 2. The "Application Hub" - Enhanced with Application Analytics and Trends
 const ApplicationHub: React.FC<{ 
   drafts: any[];
   jobs: any[];
@@ -316,22 +315,82 @@ const ApplicationHub: React.FC<{
   onPreviewDraft: (draftId: string) => void;
   onDiscardDraft: (draftId: string) => void;
 }> = ({ drafts, jobs, onResumeDraft, onPreviewDraft, onDiscardDraft }) => {
-  const [activeTab, setActiveTab] = useState<'timeline' | 'cvs'>('timeline');
+  const [activeTab, setActiveTab] = useState<'analytics' | 'cvs'>('analytics');
 
   const getApplicationStats = () => {
+    const now = new Date();
     const thisWeekJobs = jobs.filter(job => {
       const jobDate = new Date(job.createdAt);
-      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       return jobDate >= weekAgo;
     });
 
+    const thisMonthJobs = jobs.filter(job => {
+      const jobDate = new Date(job.createdAt);
+      return jobDate.getMonth() === now.getMonth() && jobDate.getFullYear() === now.getFullYear();
+    });
+
+    const lastMonthJobs = jobs.filter(job => {
+      const jobDate = new Date(job.createdAt);
+      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      return jobDate >= lastMonth && jobDate < thisMonth;
+    });
+
+    const responsiveJobs = jobs.filter(job => job.status !== 'created' && job.status !== 'applied');
+    const averageResponseTime = responsiveJobs.length > 0 ? 
+      Math.round(responsiveJobs.reduce((sum, job) => {
+        const applicationDate = new Date(job.applicationDate || job.createdAt);
+        const responseDate = new Date(job.lastStatusUpdate || job.updatedAt);
+        return sum + Math.abs(responseDate.getTime() - applicationDate.getTime()) / (1000 * 60 * 60 * 24);
+      }, 0) / responsiveJobs.length) : 0;
+
+    const statusDistribution = jobs.reduce((acc, job) => {
+      acc[job.status] = (acc[job.status] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
     return {
       applicationsThisWeek: thisWeekJobs.length,
-      successRate: jobs.length > 0 ? Math.round((jobs.filter(job => job.status === 'interview' || job.status === 'offer' || job.status === 'accepted').length / jobs.length) * 100) : 0
+      applicationsThisMonth: thisMonthJobs.length,
+      lastMonthApplications: lastMonthJobs.length,
+      monthlyGrowth: lastMonthJobs.length > 0 ? 
+        Math.round(((thisMonthJobs.length - lastMonthJobs.length) / lastMonthJobs.length) * 100) : 
+        thisMonthJobs.length > 0 ? 100 : 0,
+      successRate: jobs.length > 0 ? Math.round((jobs.filter(job => job.status === 'interview' || job.status === 'offer' || job.status === 'accepted').length / jobs.length) * 100) : 0,
+      responseRate: jobs.length > 0 ? Math.round((responsiveJobs.length / jobs.length) * 100) : 0,
+      averageResponseTime,
+      statusDistribution,
+      upcomingFollowUps: jobs.filter(job => {
+        if (!job.followUpDate) return false;
+        const followUpDate = new Date(job.followUpDate);
+        const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+        return followUpDate <= threeDaysFromNow && followUpDate >= now;
+      }).length
     };
   };
 
+  const getWeeklyTrend = () => {
+    const weeks = [];
+    const now = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const weekStart = new Date(now.getTime() - i * 7 * 24 * 60 * 60 * 1000);
+      const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
+      const weekJobs = jobs.filter(job => {
+        const jobDate = new Date(job.createdAt);
+        return jobDate >= weekStart && jobDate < weekEnd;
+      });
+      weeks.push({
+        week: `Week ${i === 0 ? 'Current' : `-${i}`}`,
+        applications: weekJobs.length,
+        responses: weekJobs.filter(job => job.status !== 'created' && job.status !== 'applied').length
+      });
+    }
+    return weeks;
+  };
+
   const stats = getApplicationStats();
+  const weeklyTrend = getWeeklyTrend();
 
   return (
     <div className="glass-widget-premium glass-shimmer rounded-xl p-6">
@@ -339,11 +398,11 @@ const ApplicationHub: React.FC<{
       
       {/* Tab Navigation */}
       <div className="flex items-center gap-2 mb-6">
-        <motion.button onClick={() => setActiveTab('timeline')}
+        <motion.button onClick={() => setActiveTab('analytics')}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
-            activeTab === 'timeline' ? 'bg-blue-400/20 text-blue-400 border border-blue-400/30' : 'glass-card-premium text-gray-600 dark:text-white/60'
+            activeTab === 'analytics' ? 'bg-blue-400/20 text-blue-400 border border-blue-400/30' : 'glass-card-premium text-gray-600 dark:text-white/60'
           }`} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-          <Calendar size={14} className="inline mr-2" /> Timeline
+          <TrendingUp size={14} className="inline mr-2" /> Analytics
         </motion.button>
         <motion.button onClick={() => setActiveTab('cvs')}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
@@ -353,28 +412,104 @@ const ApplicationHub: React.FC<{
       </motion.button>
     </div>
 
-      {activeTab === 'timeline' ? (
+      {activeTab === 'analytics' ? (
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4 mb-4">
+          {/* Key Metrics */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
             <div className="p-3 glass-card-premium rounded-lg text-center">
-              <div className="text-lg font-bold text-blue-400">{stats.applicationsThisWeek}</div>
-              <div className="text-gray-600 dark:text-white/60 text-xs">This Week</div>
-          </div>
+              <div className="text-lg font-bold text-blue-400">{stats.applicationsThisMonth}</div>
+              <div className="text-gray-600 dark:text-white/60 text-xs">This Month</div>
+              {stats.monthlyGrowth !== 0 && (
+                <div className={`text-xs font-medium ${stats.monthlyGrowth > 0 ? 'text-green-400' : 'text-red-400'}`}>
+                  {stats.monthlyGrowth > 0 ? '+' : ''}{stats.monthlyGrowth}%
+                </div>
+              )}
+            </div>
             <div className="p-3 glass-card-premium rounded-lg text-center">
               <div className="text-lg font-bold text-green-400">{stats.successRate}%</div>
               <div className="text-gray-600 dark:text-white/60 text-xs">Success Rate</div>
-        </div>
-    </div>
+            </div>
+            <div className="p-3 glass-card-premium rounded-lg text-center">
+              <div className="text-lg font-bold text-purple-400">{stats.responseRate}%</div>
+              <div className="text-gray-600 dark:text-white/60 text-xs">Response Rate</div>
+            </div>
+            <div className="p-3 glass-card-premium rounded-lg text-center">
+              <div className="text-lg font-bold text-orange-400">{stats.averageResponseTime}</div>
+              <div className="text-gray-600 dark:text-white/60 text-xs">Avg Response (days)</div>
+            </div>
+          </div>
+
+          {/* Weekly Trend Chart */}
+          <div className="glass-card-premium rounded-lg p-4">
+            <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-3">Weekly Application Trend</h3>
+            <div className="space-y-2">
+              {weeklyTrend.map((week, index) => (
+                <div key={index} className="flex items-center gap-3">
+                  <div className="w-16 text-xs text-gray-600 dark:text-white/60">{week.week.replace('Week ', 'W')}</div>
+                  <div className="flex-1 flex items-center gap-2">
+                    <div className="flex-1 bg-gray-200 dark:bg-white/10 rounded-full h-2">
+                      <div 
+                        className="bg-gradient-to-r from-blue-400 to-blue-500 h-2 rounded-full transition-all duration-500"
+                        style={{ width: `${Math.min(100, (week.applications / Math.max(...weeklyTrend.map(w => w.applications), 1)) * 100)}%` }}
+                      ></div>
+                    </div>
+                    <div className="text-xs text-gray-600 dark:text-white/60 w-8">{week.applications}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Application Status Distribution */}
+          <div className="glass-card-premium rounded-lg p-4">
+            <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-3">Application Status Overview</h3>
+            <div className="space-y-2">
+              {Object.entries(stats.statusDistribution).map(([status, count]) => {
+                const countNum = count as number;
+                const percentage = jobs.length > 0 ? Math.round((countNum / jobs.length) * 100) : 0;
+                const statusColors = {
+                  'created': 'bg-yellow-400',
+                  'applied': 'bg-blue-400',
+                  'screening': 'bg-orange-400',
+                  'interview': 'bg-purple-400',
+                  'offer': 'bg-green-400',
+                  'accepted': 'bg-emerald-400',
+                  'rejected': 'bg-red-400',
+                  'withdrawn': 'bg-gray-400'
+                };
+                return (
+                  <div key={status} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-3 h-3 rounded-full ${statusColors[status as keyof typeof statusColors] || 'bg-gray-400'}`}></div>
+                      <span className="text-xs text-gray-700 dark:text-white/70 capitalize">{status}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="text-xs text-gray-600 dark:text-white/60">{countNum}</div>
+                      <div className="text-xs text-gray-500 dark:text-white/50">({percentage}%)</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Action Items */}
           <div className="space-y-2">
             <div className="flex items-center justify-between text-gray-700 dark:text-white/80 text-sm">
-              <span>Average Response Time</span>
-              <span className="text-green-400 font-medium">8 days</span>
-  </div>
-            <div className="flex items-center justify-between text-gray-700 dark:text-white/80 text-sm">
-              <span>Next Follow-up Due</span>
-              <span className="text-blue-400 font-medium">2 days</span>
-        </div>
-        </div>
+              <span>Follow-ups Due (Next 3 Days)</span>
+              <span className={`font-medium ${stats.upcomingFollowUps > 0 ? 'text-orange-400' : 'text-green-400'}`}>
+                {stats.upcomingFollowUps || 'None'}
+              </span>
+            </div>
+            {stats.averageResponseTime > 0 && (
+              <div className="flex items-center justify-between text-gray-700 dark:text-white/80 text-sm">
+                <span>Response Performance</span>
+                <span className={`font-medium ${stats.averageResponseTime <= 7 ? 'text-green-400' : stats.averageResponseTime <= 14 ? 'text-yellow-400' : 'text-orange-400'}`}>
+                  {stats.averageResponseTime <= 7 ? 'Excellent' : stats.averageResponseTime <= 14 ? 'Good' : 'Needs Improvement'}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
       ) : (
         <div className="space-y-4">
@@ -437,12 +572,13 @@ const ApplicationHub: React.FC<{
 );
 };
 
-// 3. The "Intelligence Dashboard" - Fused Career Predictions + Market Intelligence
+// 3. The "Intelligence Dashboard" - Enhanced Market Intelligence + AI Insights
 const IntelligenceDashboard: React.FC<{ 
   predictions: any;
   marketIntelligence: any;
+  jobs: any[];
   onUpdateGoal?: (goal: number) => void;
-}> = ({ predictions, marketIntelligence, onUpdateGoal }) => {
+}> = ({ predictions, marketIntelligence, jobs, onUpdateGoal }) => {
   const [isEditingGoal, setIsEditingGoal] = useState(false);
   const [newGoal, setNewGoal] = useState(predictions?.monthlyGoal || 20);
 
@@ -453,108 +589,221 @@ const IntelligenceDashboard: React.FC<{
     }
   };
 
+  // Generate AI-powered insights based on user's job data
+  const generateInsights = () => {
+    const insights = [];
+    const now = new Date();
+    const thisMonth = jobs.filter(job => {
+      const jobDate = new Date(job.createdAt);
+      return jobDate.getMonth() === now.getMonth() && jobDate.getFullYear() === now.getFullYear();
+    });
+
+    // Application pace analysis
+    const weeklyAverage = thisMonth.length / 4;
+    if (weeklyAverage < 2) {
+      insights.push({
+        type: 'action',
+        icon: '🚀',
+        title: 'Increase Application Rate',
+        message: `You're applying to ${weeklyAverage.toFixed(1)} jobs/week. Aim for 3-5 for better results.`,
+        priority: 'high'
+      });
+    } else if (weeklyAverage > 5) {
+      insights.push({
+        type: 'success',
+        icon: '🎯',
+        title: 'Great Application Pace',
+        message: `${weeklyAverage.toFixed(1)} applications/week is excellent. Focus on quality follow-ups.`,
+        priority: 'medium'
+      });
+    }
+
+    // Response rate analysis
+    const responsiveJobs = jobs.filter(job => job.status !== 'created' && job.status !== 'applied');
+    const responseRate = jobs.length > 0 ? (responsiveJobs.length / jobs.length) * 100 : 0;
+    
+    if (responseRate < 20) {
+      insights.push({
+        type: 'warning',
+        icon: '📝',
+        title: 'Improve Application Quality',
+        message: `${responseRate.toFixed(0)}% response rate suggests CV optimization needed.`,
+        priority: 'high'
+      });
+    }
+
+    // Industry diversification
+    const companies = Array.from(new Set(jobs.map(job => job.company)));
+    const industries = Array.from(new Set(jobs.map(job => job.industry).filter(Boolean)));
+    
+    if (companies.length > 10 && industries.length < 3) {
+      insights.push({
+        type: 'suggestion',
+        icon: '🌟',
+        title: 'Diversify Industries',
+        message: `Consider exploring ${3 - industries.length} more industries to increase opportunities.`,
+        priority: 'medium'
+      });
+    }
+
+    // Salary optimization
+    const jobsWithSalary = jobs.filter(job => job.salary?.min || job.salary?.max);
+    if (jobsWithSalary.length > 5) {
+      const avgSalary = jobsWithSalary.reduce((sum, job) => {
+        const salary = job.salary?.min || job.salary?.max || 0;
+        return sum + salary;
+      }, 0) / jobsWithSalary.length;
+      
+      insights.push({
+        type: 'info',
+        icon: '💰',
+        title: 'Salary Insights',
+        message: `Average target salary: $${(avgSalary / 1000).toFixed(0)}k. Market shows 8% growth.`,
+        priority: 'low'
+      });
+    }
+
+    return insights.slice(0, 4); // Show top 4 insights
+  };
+
+  const insights = generateInsights();
+
   return (
     <div className="glass-widget-premium glass-shimmer rounded-xl p-6">
       <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Intelligence Dashboard</h2>
       
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Career Predictions */}
+      <div className="space-y-6">
+        {/* AI-Powered Insights */}
         <div>
-      <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-4 flex items-center gap-2">
-        <Target size={14} className="text-purple-400" />
-        Career Predictions
-      </h3>
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-3">
-          <div className="text-center p-3 bg-gray-100 dark:bg-white/5 rounded-lg">
-            <div className="text-2xl font-bold text-purple-400">{predictions?.nextWeekInterviews || 0}</div>
-            <div className="text-gray-600 dark:text-white/60 text-xs">Interviews Next Week</div>
-          </div>
-          <div className="text-center p-3 bg-gray-100 dark:bg-white/5 rounded-lg">
-            <div className="text-2xl font-bold text-green-400">{predictions?.successProbability || 0}%</div>
-            <div className="text-gray-600 dark:text-white/60 text-xs">Success Probability</div>
-          </div>
-        </div>
-            
-        <div className="p-3 glass-card-premium rounded-lg">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <span className="text-gray-900 dark:text-white text-sm">Monthly Goal Progress</span>
-              {!isEditingGoal && (
-                    <button onClick={() => setIsEditingGoal(true)} className="text-blue-400 hover:text-blue-300 text-xs">Edit</button>
-              )}
-            </div>
-            <span className="text-gray-600 dark:text-white/60 text-xs">{predictions?.monthlyGoalProgress || 0}%</span>
-          </div>
-          {isEditingGoal ? (
+          <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-3 flex items-center gap-2">
+            <Lightbulb size={14} className="text-yellow-400" />
+            AI Insights
+          </h3>
+          {insights.length > 0 ? (
             <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                    <input type="number" min="1" max="100" value={newGoal} onChange={(e) => setNewGoal(parseInt(e.target.value) || 20)}
-                      className="flex-1 px-2 py-1 bg-gray-200 dark:bg-white/10 border border-gray-300 dark:border-white/20 rounded text-gray-900 dark:text-white text-xs" placeholder="Set monthly goal" />
-                    <button onClick={handleUpdateGoal} className="px-2 py-1 bg-blue-400 text-black text-xs rounded hover:bg-blue-300">Save</button>
-                    <button onClick={() => { setIsEditingGoal(false); setNewGoal(predictions?.monthlyGoal || 20); }}
-                      className="px-2 py-1 bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-white text-xs rounded hover:bg-gray-300 dark:hover:bg-white/20">Cancel</button>
-              </div>
+              {insights.map((insight, index) => (
+                <div key={index} className={`p-3 rounded-lg border-l-4 ${
+                  insight.priority === 'high' ? 'bg-red-400/10 border-red-400' :
+                  insight.priority === 'medium' ? 'bg-yellow-400/10 border-yellow-400' :
+                  'bg-blue-400/10 border-blue-400'
+                }`}>
+                  <div className="flex items-start gap-2">
+                    <span className="text-lg">{insight.icon}</span>
+                    <div className="flex-1">
+                      <h4 className="text-gray-900 dark:text-white font-medium text-xs mb-1">{insight.title}</h4>
+                      <p className="text-gray-600 dark:text-white/70 text-xs">{insight.message}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           ) : (
-            <>
-              <div className="w-full bg-gray-200 dark:bg-white/10 rounded-full h-2">
-                    <div className="bg-gradient-to-r from-lime-400 to-lime-500 h-2 rounded-full transition-all duration-500"
-                      style={{ width: `${Math.min(100, predictions?.monthlyGoalProgress || 0)}%` }}></div>
-              </div>
-              <div className="flex justify-between text-gray-600 dark:text-white/60 text-xs mt-1">
-                <span>{predictions?.jobsThisMonth || 0} / {predictions?.monthlyGoal || 20} jobs</span>
-                <span>Goal: {predictions?.monthlyGoal || 20} jobs/month</span>
-              </div>
-            </>
+            <div className="p-3 glass-card-premium rounded-lg text-center">
+              <p className="text-gray-600 dark:text-white/60 text-xs">Add more job applications to receive personalized insights</p>
+            </div>
           )}
         </div>
-            </div>
-        </div>
 
-        {/* Market Intelligence */}
-        <div>
-    <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-4 flex items-center gap-2">
-      <TrendingUp size={14} className="text-blue-400" />
-      Market Intelligence
-    </h3>
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3">
-        <div className="text-center p-3 bg-gray-100 dark:bg-white/5 rounded-lg">
-          <div className="text-lg font-bold text-green-400">{marketIntelligence?.salaryTrend || '+8%'}</div>
-          <div className="text-gray-600 dark:text-white/60 text-xs">Salary Trend</div>
-        </div>
-        <div className="text-center p-3 bg-gray-100 dark:bg-white/5 rounded-lg">
-          <div className="text-lg font-bold text-blue-400">{marketIntelligence?.remoteOpportunities || '+45%'}</div>
-          <div className="text-gray-600 dark:text-white/60 text-xs">Remote Jobs</div>
-        </div>
-      </div>
-            
-      <div>
-        <p className="text-gray-700 dark:text-white/80 text-xs font-medium mb-2">Top Skills in Demand:</p>
-        <div className="flex flex-wrap gap-1">
-          {marketIntelligence?.topSkills?.map((skill: string, index: number) => (
-                  <span key={index} className="px-2 py-1 bg-blue-400/20 text-blue-400 text-xs rounded-full">{skill}</span>
-          ))}
-        </div>
-      </div>
-            
-      <div>
-        <p className="text-gray-700 dark:text-white/80 text-xs font-medium mb-2">Hot Companies Hiring:</p>
-        <div className="flex flex-wrap gap-1">
-          {marketIntelligence?.hotCompanies?.map((company: string, index: number) => (
-                  <span key={index} className="px-2 py-1 bg-green-400/20 text-green-400 text-xs rounded-full">{company}</span>
-                ))}
+        {/* Market Intelligence & Predictions */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Career Predictions */}
+          <div>
+            <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-3 flex items-center gap-2">
+              <Target size={14} className="text-purple-400" />
+              Goal Progress
+            </h3>
+            <div className="space-y-3">
+              <div className="p-3 glass-card-premium rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-900 dark:text-white text-sm">Monthly Goal</span>
+                    {!isEditingGoal && (
+                      <button onClick={() => setIsEditingGoal(true)} className="text-blue-400 hover:text-blue-300 text-xs">Edit</button>
+                    )}
+                  </div>
+                  <span className="text-gray-600 dark:text-white/60 text-xs">{predictions?.monthlyGoalProgress || 0}%</span>
+                </div>
+                {isEditingGoal ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <input type="number" min="1" max="100" value={newGoal} onChange={(e) => setNewGoal(parseInt(e.target.value) || 20)}
+                        className="flex-1 px-2 py-1 bg-gray-200 dark:bg-white/10 border border-gray-300 dark:border-white/20 rounded text-gray-900 dark:text-white text-xs" placeholder="Set monthly goal" />
+                      <button onClick={handleUpdateGoal} className="px-2 py-1 bg-blue-400 text-black text-xs rounded hover:bg-blue-300">Save</button>
+                      <button onClick={() => { setIsEditingGoal(false); setNewGoal(predictions?.monthlyGoal || 20); }}
+                        className="px-2 py-1 bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-white text-xs rounded hover:bg-gray-300 dark:hover:bg-white/20">Cancel</button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="w-full bg-gray-200 dark:bg-white/10 rounded-full h-2">
+                      <div className="bg-gradient-to-r from-lime-400 to-lime-500 h-2 rounded-full transition-all duration-500"
+                        style={{ width: `${Math.min(100, predictions?.monthlyGoalProgress || 0)}%` }}></div>
+                    </div>
+                    <div className="flex justify-between text-gray-600 dark:text-white/60 text-xs mt-1">
+                      <span>{predictions?.jobsThisMonth || 0} / {predictions?.monthlyGoal || 20} jobs</span>
+                      <span>{Math.max(0, (predictions?.monthlyGoal || 20) - (predictions?.jobsThisMonth || 0))} remaining</span>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div className="text-center p-2 bg-gray-100 dark:bg-white/5 rounded-lg">
+                  <div className="text-lg font-bold text-purple-400">{predictions?.nextWeekInterviews || 0}</div>
+                  <div className="text-gray-600 dark:text-white/60 text-xs">Expected Interviews</div>
+                </div>
+                <div className="text-center p-2 bg-gray-100 dark:bg-white/5 rounded-lg">
+                  <div className="text-lg font-bold text-green-400">{predictions?.successProbability || 0}%</div>
+                  <div className="text-gray-600 dark:text-white/60 text-xs">Success Rate</div>
+                </div>
               </div>
             </div>
+          </div>
+
+          {/* Market Intelligence */}
+          <div>
+            <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-3 flex items-center gap-2">
+              <TrendingUp size={14} className="text-blue-400" />
+              Market Trends
+            </h3>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="text-center p-2 bg-gray-100 dark:bg-white/5 rounded-lg">
+                  <div className="text-lg font-bold text-green-400">{marketIntelligence?.salaryTrend || '+8%'}</div>
+                  <div className="text-gray-600 dark:text-white/60 text-xs">Salary Growth</div>
+                </div>
+                <div className="text-center p-2 bg-gray-100 dark:bg-white/5 rounded-lg">
+                  <div className="text-lg font-bold text-blue-400">{marketIntelligence?.remoteOpportunities || '+45%'}</div>
+                  <div className="text-gray-600 dark:text-white/60 text-xs">Remote Jobs</div>
+                </div>
+              </div>
+                    
+              <div>
+                <p className="text-gray-700 dark:text-white/80 text-xs font-medium mb-2">High-Demand Skills:</p>
+                <div className="flex flex-wrap gap-1">
+                  {(marketIntelligence?.topSkills || ['React', 'TypeScript', 'Node.js', 'Python', 'AWS']).map((skill: string, index: number) => (
+                    <span key={index} className="px-2 py-1 bg-blue-400/20 text-blue-400 text-xs rounded-full">{skill}</span>
+                  ))}
+                </div>
+              </div>
+                    
+              <div>
+                <p className="text-gray-700 dark:text-white/80 text-xs font-medium mb-2">Active Hiring:</p>
+                <div className="flex flex-wrap gap-1">
+                  {(marketIntelligence?.hotCompanies || ['Google', 'Microsoft', 'Amazon', 'Meta']).map((company: string, index: number) => (
+                    <span key={index} className="px-2 py-1 bg-green-400/20 text-green-400 text-xs rounded-full">{company}</span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
-  </div>
-);
+  );
 };
 
-// 4. The "Performance Insights" Section - Fused Performance Insights + Application Success Insights
+// 4. The "Performance Insights" Section - Enhanced with Conversion Funnel and Actionable Insights
 const PerformanceInsights: React.FC<{ 
   analyticsData: any;
   jobs: any[];
@@ -562,19 +811,59 @@ const PerformanceInsights: React.FC<{
   selectedPeriod: string;
   onPeriodChange: (period: string) => void;
 }> = ({ analyticsData, jobs, cvs, selectedPeriod, onPeriodChange }) => {
-  const calculateKPIs = () => {
+  const calculatePerformanceMetrics = () => {
+    const applicationFunnel = {
+      applied: jobs.filter(job => job.status === 'applied' || job.status !== 'created').length,
+      screening: jobs.filter(job => job.status === 'screening').length,
+      interview: jobs.filter(job => job.status === 'interview').length,
+      offer: jobs.filter(job => job.status === 'offer' || job.status === 'accepted').length
+    };
+
+    const conversionRates = {
+      applyToScreen: applicationFunnel.applied > 0 ? Math.round((applicationFunnel.screening / applicationFunnel.applied) * 100) : 0,
+      screenToInterview: applicationFunnel.screening > 0 ? Math.round((applicationFunnel.interview / applicationFunnel.screening) * 100) : 0,
+      interviewToOffer: applicationFunnel.interview > 0 ? Math.round((applicationFunnel.offer / applicationFunnel.interview) * 100) : 0,
+      overallSuccess: jobs.length > 0 ? Math.round((applicationFunnel.offer / jobs.length) * 100) : 0
+    };
+
+    // Time-based performance
+    const now = new Date();
+    const periodFilter = (date: Date) => {
+      if (selectedPeriod === 'day') return date.toDateString() === now.toDateString();
+      if (selectedPeriod === 'week') return (now.getTime() - date.getTime()) <= 7 * 24 * 60 * 60 * 1000;
+      if (selectedPeriod === 'month') return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+      return true;
+    };
+
+    const periodJobs = jobs.filter(job => periodFilter(new Date(job.createdAt)));
+    const periodApplications = periodJobs.length;
+    const periodResponses = periodJobs.filter(job => job.status !== 'created' && job.status !== 'applied').length;
+
+    // Performance trends
+    const responseTime = jobs.filter(job => job.lastStatusUpdate).reduce((avg, job) => {
+      const applied = new Date(job.applicationDate || job.createdAt);
+      const response = new Date(job.lastStatusUpdate);
+      return avg + Math.abs(response.getTime() - applied.getTime()) / (1000 * 60 * 60 * 24);
+    }, 0) / Math.max(1, jobs.filter(job => job.lastStatusUpdate).length);
+
     return {
-      totalJobs: Array.isArray(jobs) ? jobs.length : 0,
-      successRate: Array.isArray(jobs) && jobs.length > 0 ? Math.round((jobs.filter(job => job.status === 'interview' || job.status === 'offer' || job.status === 'accepted').length / jobs.length) * 100) : 0,
-      interviewRate: Array.isArray(jobs) && jobs.length > 0 ? Math.round((jobs.filter(job => job.status === 'interview').length / jobs.length) * 100) : 0,
-      cvHealth: Array.isArray(cvs) && cvs.length > 0 ? Math.round(cvs.reduce((sum, cv) => sum + (cv.progress || 0), 0) / cvs.length) : 0
+      applicationFunnel,
+      conversionRates,
+      periodApplications,
+      periodResponses,
+      responseTime: Math.round(responseTime),
+      productivity: {
+        applicationsPerWeek: periodApplications,
+        qualityScore: conversionRates.overallSuccess,
+        improvement: Math.max(0, conversionRates.overallSuccess - 15) // Benchmark against 15% industry average
+      }
     };
   };
 
-  const kpis = calculateKPIs();
+  const metrics = calculatePerformanceMetrics();
 
   return (
-  <div className="glass-widget-premium glass-shimmer rounded-xl p-6">
+    <div className="glass-widget-premium glass-shimmer rounded-xl p-6">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-lg font-bold text-gray-900 dark:text-white">Performance Insights</h2>
         <div className="flex items-center gap-2">
@@ -585,95 +874,147 @@ const PerformanceInsights: React.FC<{
                 selectedPeriod === period.toLowerCase() ? 'bg-lime-400/20 text-lime-400 border border-lime-400/30' : 'glass-card-premium text-gray-600 dark:text-white/60'
               }`} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
               {period}
-              </motion.button>
+            </motion.button>
           ))}
-        </div>
-    </div>
-      
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="glass-card-premium glass-float rounded-xl p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="p-2 rounded-lg bg-blue-500/20">
-              <Briefcase size={20} className="text-blue-400" />
-            </div>
-            <span className="text-xs font-medium text-green-400">+12%</span>
-          </div>
-          <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{kpis.totalJobs}</div>
-          <div className="text-gray-600 dark:text-white/60 text-sm">Total Jobs</div>
-        </div>
-        
-        <div className="glass-card-premium glass-float rounded-xl p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="p-2 rounded-lg bg-green-500/20">
-              <TrendingUp size={20} className="text-green-400" />
-            </div>
-            <span className="text-xs font-medium text-green-400">+5%</span>
-          </div>
-          <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{kpis.successRate}%</div>
-          <div className="text-gray-600 dark:text-white/60 text-sm">Success Rate</div>
-        </div>
-        
-        <div className="glass-card-premium glass-float rounded-xl p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="p-2 rounded-lg bg-purple-500/20">
-              <Target size={20} className="text-purple-400" />
-            </div>
-            <span className="text-xs font-medium text-green-400">+8%</span>
-          </div>
-          <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{kpis.interviewRate}%</div>
-          <div className="text-gray-600 dark:text-white/60 text-sm">Interview Rate</div>
-        </div>
-        
-        <div className="glass-card-premium glass-float rounded-xl p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="p-2 rounded-lg bg-lime-500/20">
-              <Heart size={20} className="text-lime-400" />
-            </div>
-            <span className="text-xs font-medium text-green-400">+10%</span>
-          </div>
-          <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{kpis.cvHealth}%</div>
-          <div className="text-gray-600 dark:text-white/60 text-sm">CV Health</div>
         </div>
       </div>
 
-      {/* Performance Trends */}
-      {analyticsData?.performanceTrends && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="p-4 glass-card-premium rounded-lg">
-            <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-3">Application Success Insights</h3>
-            <div className="space-y-2">
-              {analyticsData.performanceTrends.applicationSuccessRate?.insights?.map((insight: string, index: number) => (
-                <div key={index} className="flex items-center gap-2 text-gray-700 dark:text-white/70 text-xs">
-                  <div className="w-1 h-1 bg-lime-400 rounded-full"></div>
-                  <span>{insight}</span>
+      {/* Application Conversion Funnel */}
+      <div className="mb-6">
+        <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-3 flex items-center gap-2">
+          <TrendingUp size={14} className="text-blue-400" />
+          Application Conversion Funnel
+        </h3>
+        <div className="glass-card-premium rounded-lg p-4">
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { label: 'Applied', count: metrics.applicationFunnel.applied, color: 'bg-blue-400', width: '100%' },
+              { label: 'Screening', count: metrics.applicationFunnel.screening, color: 'bg-orange-400', width: `${metrics.conversionRates.applyToScreen}%` },
+              { label: 'Interview', count: metrics.applicationFunnel.interview, color: 'bg-purple-400', width: `${metrics.conversionRates.screenToInterview}%` },
+              { label: 'Offer', count: metrics.applicationFunnel.offer, color: 'bg-green-400', width: `${metrics.conversionRates.interviewToOffer}%` }
+            ].map((stage, index) => (
+              <div key={index} className="text-center">
+                <div className="text-lg font-bold text-gray-900 dark:text-white mb-1">{stage.count}</div>
+                <div className="text-xs text-gray-600 dark:text-white/60 mb-2">{stage.label}</div>
+                <div className="w-full bg-gray-200 dark:bg-white/10 rounded-full h-2">
+                  <div 
+                    className={`${stage.color} h-2 rounded-full transition-all duration-500`}
+                    style={{ width: stage.width }}
+                  ></div>
                 </div>
-              ))}
-            </div>
+                {index > 0 && (
+                  <div className="text-xs text-gray-500 dark:text-white/50 mt-1">
+                    {index === 1 ? metrics.conversionRates.applyToScreen : 
+                     index === 2 ? metrics.conversionRates.screenToInterview : 
+                     metrics.conversionRates.interviewToOffer}% conversion
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
-          
-          <div className="p-4 glass-card-premium rounded-lg">
-            <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-3">CV Optimization Tips</h3>
-            <div className="space-y-2">
-              {analyticsData.performanceTrends.cvEffectiveness?.improvements?.map((improvement: string, index: number) => (
-                <div key={index} className="flex items-center gap-2 text-gray-700 dark:text-white/70 text-xs">
-                  <div className="w-1 h-1 bg-blue-400 rounded-full"></div>
-                  <span>{improvement}</span>
-                </div>
-              ))}
+        </div>
+      </div>
+
+      {/* Performance Metrics */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="glass-card-premium rounded-xl p-4 text-center">
+          <div className="text-2xl font-bold text-blue-400 mb-1">{metrics.periodApplications}</div>
+          <div className="text-gray-600 dark:text-white/60 text-xs">Applications This {selectedPeriod}</div>
+        </div>
+        
+        <div className="glass-card-premium rounded-xl p-4 text-center">
+          <div className="text-2xl font-bold text-green-400 mb-1">{metrics.conversionRates.overallSuccess}%</div>
+          <div className="text-gray-600 dark:text-white/60 text-xs">Overall Success Rate</div>
+          {metrics.productivity.improvement > 0 && (
+            <div className="text-xs text-green-400 font-medium">+{metrics.productivity.improvement}% vs Industry</div>
+          )}
+        </div>
+        
+        <div className="glass-card-premium rounded-xl p-4 text-center">
+          <div className="text-2xl font-bold text-purple-400 mb-1">{metrics.periodResponses}</div>
+          <div className="text-gray-600 dark:text-white/60 text-xs">Responses Received</div>
+          <div className="text-xs text-gray-500 dark:text-white/50">
+            {metrics.periodApplications > 0 ? Math.round((metrics.periodResponses / metrics.periodApplications) * 100) : 0}% response rate
+          </div>
+        </div>
+        
+        <div className="glass-card-premium rounded-xl p-4 text-center">
+          <div className="text-2xl font-bold text-orange-400 mb-1">{metrics.responseTime}</div>
+          <div className="text-gray-600 dark:text-white/60 text-xs">Avg Response Time (days)</div>
+          <div className={`text-xs font-medium ${metrics.responseTime <= 7 ? 'text-green-400' : metrics.responseTime <= 14 ? 'text-yellow-400' : 'text-red-400'}`}>
+            {metrics.responseTime <= 7 ? 'Excellent' : metrics.responseTime <= 14 ? 'Good' : 'Slow'}
+          </div>
+        </div>
+      </div>
+
+      {/* Actionable Insights */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="p-4 glass-card-premium rounded-lg">
+          <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-3">Performance Analysis</h3>
+          <div className="space-y-2">
+            {metrics.conversionRates.applyToScreen < 20 && (
+              <div className="flex items-center gap-2 text-gray-700 dark:text-white/70 text-xs">
+                <div className="w-1 h-1 bg-red-400 rounded-full"></div>
+                <span>Low screening rate - consider improving CV targeting</span>
+              </div>
+            )}
+            {metrics.conversionRates.screenToInterview < 30 && metrics.applicationFunnel.screening > 0 && (
+              <div className="flex items-center gap-2 text-gray-700 dark:text-white/70 text-xs">
+                <div className="w-1 h-1 bg-orange-400 rounded-full"></div>
+                <span>Interview conversion needs improvement - optimize phone screening approach</span>
+              </div>
+            )}
+            {metrics.responseTime > 14 && (
+              <div className="flex items-center gap-2 text-gray-700 dark:text-white/70 text-xs">
+                <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
+                <span>Follow up more promptly - faster responses improve success rates</span>
+              </div>
+            )}
+            {metrics.productivity.improvement > 0 && (
+              <div className="flex items-center gap-2 text-gray-700 dark:text-white/70 text-xs">
+                <div className="w-1 h-1 bg-green-400 rounded-full"></div>
+                <span>Above industry average - maintain current application quality</span>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        <div className="p-4 glass-card-premium rounded-lg">
+          <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-3">Next Actions</h3>
+          <div className="space-y-2">
+            {metrics.periodApplications < 3 && selectedPeriod === 'week' && (
+              <div className="flex items-center gap-2 text-gray-700 dark:text-white/70 text-xs">
+                <div className="w-1 h-1 bg-blue-400 rounded-full"></div>
+                <span>Increase application volume - aim for 5-7 applications per week</span>
+              </div>
+            )}
+            {metrics.conversionRates.overallSuccess < 15 && (
+              <div className="flex items-center gap-2 text-gray-700 dark:text-white/70 text-xs">
+                <div className="w-1 h-1 bg-lime-400 rounded-full"></div>
+                <span>Focus on quality over quantity - tailor applications more specifically</span>
+              </div>
+            )}
+            <div className="flex items-center gap-2 text-gray-700 dark:text-white/70 text-xs">
+              <div className="w-1 h-1 bg-purple-400 rounded-full"></div>
+              <span>Track follow-ups systematically for better response rates</span>
+            </div>
+            <div className="flex items-center gap-2 text-gray-700 dark:text-white/70 text-xs">
+              <div className="w-1 h-1 bg-green-400 rounded-full"></div>
+              <span>Continue building your professional network</span>
             </div>
           </div>
         </div>
-      )}
-  </div>
-);
+      </div>
+    </div>
+  );
 };
 
-// 5. The "Recent Jobs" Widget - Shows list view of recent 5 jobs
+// 5. The "Recent Jobs" Widget - Enhanced with Application Timeline and Status Distribution
 const RecentJobsWidget: React.FC<{ 
   jobs: any[];
   onViewJob: (jobId: string) => void;
 }> = ({ jobs, onViewJob }) => {
+  const [activeView, setActiveView] = useState<'timeline' | 'status'>('timeline');
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'applied': return 'text-blue-400';
@@ -715,13 +1056,18 @@ const RecentJobsWidget: React.FC<{
   };
 
   const lastJobs = jobs
-    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 5);
+
+  const statusDistribution = jobs.reduce((acc, job) => {
+    acc[job.status] = (acc[job.status] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
 
   return (
     <div className="glass-widget-premium glass-shimmer rounded-xl p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-lg font-bold text-gray-900 dark:text-white">Last 5 Jobs</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-bold text-gray-900 dark:text-white">Recent Applications</h2>
         <motion.button 
           onClick={() => window.location.href = '/dashboard/pipeline'}
           className="px-3 py-1.5 bg-blue-400/20 text-blue-400 rounded-lg text-sm font-medium hover:bg-blue-400/30 transition-all duration-300 flex items-center gap-2"
@@ -729,10 +1075,27 @@ const RecentJobsWidget: React.FC<{
           <Briefcase size={14} /> View All
         </motion.button>
       </div>
+
+      {/* Tab Navigation */}
+      <div className="flex items-center gap-2 mb-4">
+        <motion.button onClick={() => setActiveView('timeline')}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-300 ${
+            activeView === 'timeline' ? 'bg-blue-400/20 text-blue-400 border border-blue-400/30' : 'glass-card-premium text-gray-600 dark:text-white/60'
+          }`} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+          Timeline
+        </motion.button>
+        <motion.button onClick={() => setActiveView('status')}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-300 ${
+            activeView === 'status' ? 'bg-blue-400/20 text-blue-400 border border-blue-400/30' : 'glass-card-premium text-gray-600 dark:text-white/60'
+          }`} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+          Status Overview
+        </motion.button>
+      </div>
       
-      {lastJobs.length > 0 ? (
-        <div className="space-y-3">
-          {lastJobs.map((job) => (
+      {activeView === 'timeline' ? (
+        lastJobs.length > 0 ? (
+          <div className="space-y-3">
+            {lastJobs.map((job) => (
             <motion.div 
               key={job.id || job._id}
               onClick={() => onViewJob(job.id || job._id)}
@@ -783,17 +1146,73 @@ const RecentJobsWidget: React.FC<{
             </motion.div>
           ))}
         </div>
+        ) : (
+          <div className="text-center py-8">
+            <Briefcase size={32} className="text-gray-400 dark:text-white/40 mx-auto mb-3" />
+            <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-2">No Jobs Yet</h3>
+            <p className="text-gray-600 dark:text-white/60 text-xs mb-4">Start tracking your job applications to see your recent applications here.</p>
+            <motion.button 
+              onClick={() => window.location.href = '/dashboard/pipeline'}
+              className="px-4 py-2 bg-blue-400/20 text-blue-400 rounded-lg text-sm font-medium hover:bg-blue-400/30 transition-all duration-300"
+              whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              Add Your First Job
+            </motion.button>
+          </div>
+        )
       ) : (
-        <div className="text-center py-8">
-          <Briefcase size={32} className="text-gray-400 dark:text-white/40 mx-auto mb-3" />
-          <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-2">No Jobs Yet</h3>
-          <p className="text-gray-600 dark:text-white/60 text-xs mb-4">Start tracking your job applications to see your last 5 jobs here.</p>
-          <motion.button 
-            onClick={() => window.location.href = '/dashboard/pipeline'}
-            className="px-4 py-2 bg-blue-400/20 text-blue-400 rounded-lg text-sm font-medium hover:bg-blue-400/30 transition-all duration-300"
-            whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            Add Your First Job
-          </motion.button>
+        // Status Overview
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="glass-card-premium rounded-lg p-4 text-center">
+              <div className="text-2xl font-bold text-blue-400 mb-1">{jobs.length}</div>
+              <div className="text-gray-600 dark:text-white/60 text-xs">Total Applications</div>
+            </div>
+            <div className="glass-card-premium rounded-lg p-4 text-center">
+              <div className="text-2xl font-bold text-green-400 mb-1">
+                {jobs.length > 0 ? Math.round(((statusDistribution.interview || 0) + (statusDistribution.offer || 0) + (statusDistribution.accepted || 0)) / jobs.length * 100) : 0}%
+              </div>
+              <div className="text-gray-600 dark:text-white/60 text-xs">Success Rate</div>
+            </div>
+          </div>
+
+          <div className="glass-card-premium rounded-lg p-4">
+            <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-3">Application Status Breakdown</h3>
+            <div className="space-y-3">
+              {Object.entries(statusDistribution).map(([status, count]) => {
+                const countNum = count as number;
+                const percentage = jobs.length > 0 ? Math.round((countNum / jobs.length) * 100) : 0;
+                const statusColors = {
+                  'created': 'bg-yellow-400',
+                  'applied': 'bg-blue-400',
+                  'screening': 'bg-orange-400',
+                  'interview': 'bg-purple-400',
+                  'offer': 'bg-green-400',
+                  'accepted': 'bg-emerald-400',
+                  'rejected': 'bg-red-400',
+                  'withdrawn': 'bg-gray-400'
+                };
+                return (
+                  <div key={status} className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-4 h-4 rounded-full ${statusColors[status as keyof typeof statusColors] || 'bg-gray-400'}`}></div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-700 dark:text-white/70 capitalize font-medium">{status}</span>
+                          <span className="text-sm text-gray-600 dark:text-white/60">{countNum} ({percentage}%)</span>
+                        </div>
+                        <div className="w-full bg-gray-200 dark:bg-white/10 rounded-full h-2 mt-1">
+                          <div 
+                            className={`${statusColors[status as keyof typeof statusColors] || 'bg-gray-400'} h-2 rounded-full transition-all duration-500`}
+                            style={{ width: `${percentage}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -811,8 +1230,6 @@ const Analytics: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState('week');
   const [drafts, setDrafts] = useState<any[]>([]);
-  const [showCVJourneyModal, setShowCVJourneyModal] = useState(false);
-  const [modalStep, setModalStep] = useState(1);
 
   const handleUpdateMonthlyGoal = async (newGoal: number) => {
     try {
@@ -1001,7 +1418,7 @@ const Analytics: React.FC = () => {
   useEffect(() => {
     const handleUserProfileUpdate = (event: CustomEvent) => {
       const updatedUser = event.detail.user;
-      setUser(prev => ({
+      setUser((prev: any) => ({
         ...prev,
         name: updatedUser.firstName + ' ' + updatedUser.lastName,
         email: updatedUser.email,
@@ -1309,9 +1726,9 @@ const Analytics: React.FC = () => {
       {/* CV Journey Widget */}
       <AnalyticsJourneyWidget
         onResumeJourney={(journey) => {
-          // TODO: Implement resume journey functionality
+          // Navigate to CV Journey page and resume the specific journey
           console.log('Resume journey:', journey);
-          window.location.href = `/dashboard/cv-journey`;
+          window.location.href = `/dashboard/cv-journey?resume=${journey.id}`;
         }}
         onDeleteJourney={(journeyId) => {
           // TODO: Implement delete journey functionality
@@ -1367,6 +1784,7 @@ const Analytics: React.FC = () => {
           <IntelligenceDashboard
             predictions={analyticsData?.predictions || {}} 
             marketIntelligence={analyticsData?.marketIntelligence || {}}
+            jobs={jobs}
             onUpdateGoal={handleUpdateMonthlyGoal}
           />
 
@@ -1380,12 +1798,6 @@ const Analytics: React.FC = () => {
         </div>
       </div>
 
-      {/* CV Journey Modal */}
-      <CVJourneyModal
-        isOpen={showCVJourneyModal}
-        onClose={() => setShowCVJourneyModal(false)}
-        initialStep={modalStep}
-      />
     </div>
   );
 };

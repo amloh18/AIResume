@@ -127,10 +127,15 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
             
             // Find and set the linked CV
             if (journey.cvId) {
-              console.log('Looking for CV with ID:', journey.cvId);
-              console.log('Available CVs:', cvs.map(cv => ({ id: cv.id, title: cv.title })));
+              console.log('🔍 JourneyTimelineCard - Looking for CV with ID:', journey.cvId);
+              console.log('🔍 JourneyTimelineCard - Available CVs:', cvs.map(cv => ({ id: cv.id, title: cv.title })));
               const linked = cvs.find((cv: CV) => String(cv.id) === String(journey.cvId));
-              console.log('Found linked CV:', linked);
+              console.log('🔍 JourneyTimelineCard - Found linked CV:', linked);
+              if (linked) {
+                console.log('✅ JourneyTimelineCard - CV found with title:', linked.title);
+              } else {
+                console.log('❌ JourneyTimelineCard - CV not found in user CVs list');
+              }
               setLinkedCV(linked || null);
             }
           }
@@ -159,7 +164,44 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
     if (session?.user?.id) {
       loadUserDocuments();
     }
-  }, [session?.user?.id, journey.cvId, journey.coverLetterId]);
+  }, [session?.user?.id, journey.cvId, journey.coverLetterId]); // Include journey IDs to reload when they change
+
+  // Separate effect to update linked CV when journey.cvId changes
+  React.useEffect(() => {
+    if (journey.cvId && userCVs.length > 0) {
+      const linked = userCVs.find((cv: CV) => String(cv.id) === String(journey.cvId));
+      setLinkedCV(linked || null);
+    } else if (journey.cvId && userCVs.length === 0) {
+      // If we have a CV ID but no CVs loaded yet, try to fetch the specific CV
+      const fetchSpecificCV = async () => {
+        try {
+          const response = await fetch(`/api/cvs/${journey.cvId}`);
+          if (response.ok) {
+            const result = await response.json();
+            if (result.success && result.data?.cv) {
+              console.log('✅ JourneyTimelineCard - Fetched specific CV:', result.data.cv.title);
+              setLinkedCV(result.data.cv);
+            }
+          }
+        } catch (error) {
+          console.error('❌ JourneyTimelineCard - Error fetching specific CV:', error);
+        }
+      };
+      fetchSpecificCV();
+    } else {
+      setLinkedCV(null);
+    }
+  }, [journey.cvId, userCVs]);
+
+  // Separate effect to update linked cover letter when journey.coverLetterId changes
+  React.useEffect(() => {
+    if (journey.coverLetterId && userCoverLetters.length > 0) {
+      const linked = userCoverLetters.find((cl: CoverLetter) => String(cl.id) === String(journey.coverLetterId));
+      setLinkedCoverLetter(linked || null);
+    } else {
+      setLinkedCoverLetter(null);
+    }
+  }, [journey.coverLetterId, userCoverLetters]);
 
   // Close menu when clicking outside
   React.useEffect(() => {
@@ -338,10 +380,32 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                     }`}
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.95 }}
+                    animate={status === 'active' ? {
+                      scale: [1, 1.1, 1],
+                      opacity: [0.8, 1, 0.8]
+                    } : {}}
+                    transition={status === 'active' ? {
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    } : {}}
                     title={steps.find(s => s.id === stepId)?.label}
                   >
                     {status === 'completed' ? (
                       <CheckCircle className="h-4 w-4" />
+                    ) : status === 'active' ? (
+                      <motion.div
+                        className="w-3 h-3 bg-lime-300 rounded-full"
+                        animate={{
+                          scale: [1, 1.2, 1],
+                          opacity: [0.7, 1, 0.7]
+                        }}
+                        transition={{
+                          duration: 1.5,
+                          repeat: Infinity,
+                          ease: "easeInOut"
+                        }}
+                      />
                     ) : (
                       stepId
                     )}
@@ -480,22 +544,20 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                   {journey.cvId ? (
                     <div>
                       <p className="text-xs text-white font-medium truncate">
-                        {linkedCV?.title || 'CV Linked'}
+                        {linkedCV?.title || `CV ${journey.cvId.slice(-6)}`}
                       </p>
                       <p className="text-xs text-white/60">
-                        {linkedCV ? 'Ready for editing' : 'CV Document'}
+                        {linkedCV ? 'Ready for editing' : 'Document linked'}
                       </p>
-                      {linkedCV && (
-                        <motion.button
-                          onClick={() => router.push(`/studio?cvId=${linkedCV.id}`)}
-                          className="mt-1 text-xs text-lime-400 hover:text-lime-300 flex items-center gap-1"
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                        >
-                          <ExternalLink className="h-3 w-3" />
-                          Edit
-                        </motion.button>
-                      )}
+                      <motion.button
+                        onClick={() => router.push(`/studio?journeyId=${journey.id}&cvId=${journey.cvId}`)}
+                        className="mt-1 text-xs text-lime-400 hover:text-lime-300 flex items-center gap-1"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        Edit
+                      </motion.button>
                     </div>
                   ) : (
                     <div className="space-y-1">
@@ -589,22 +651,20 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                   {journey.coverLetterId ? (
                     <div>
                       <p className="text-xs text-white font-medium truncate">
-                        {linkedCoverLetter?.title || 'Cover Letter Ready'}
+                        {linkedCoverLetter?.title || `Cover Letter ${journey.coverLetterId.slice(-6)}`}
                       </p>
                       <p className="text-xs text-white/60">
-                        {linkedCoverLetter ? 'Ready for download' : 'Cover Letter'}
+                        {linkedCoverLetter ? 'Ready for download' : 'Document linked'}
                       </p>
-                      {linkedCoverLetter && (
-                        <motion.button
-                          onClick={() => router.push(`/studio?type=cover_letter&id=${linkedCoverLetter.id}`)}
-                          className="mt-1 text-xs text-lime-400 hover:text-lime-300 flex items-center gap-1"
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                        >
-                          <ExternalLink className="h-3 w-3" />
-                          Edit
-                        </motion.button>
-                      )}
+                      <motion.button
+                        onClick={() => router.push(`/studio?journeyId=${journey.id}&type=cover_letter&coverLetterId=${journey.coverLetterId}`)}
+                        className="mt-1 text-xs text-lime-400 hover:text-lime-300 flex items-center gap-1"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        Edit
+                      </motion.button>
                     </div>
                   ) : liveProgress.atsScore !== undefined ? (
                     <div className="space-y-1">

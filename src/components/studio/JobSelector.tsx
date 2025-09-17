@@ -17,7 +17,7 @@ import {
   ExternalLink,
   RefreshCw
 } from 'lucide-react';
-import JobModal from '@/components/modals/JobModal';
+import AddEditJobModal from '@/components/modals/AddEditJobModal';
 
 interface Job {
   id: string;
@@ -512,8 +512,8 @@ const JobSelector: React.FC<JobSelectorProps> = ({
         )}
       </AnimatePresence>
       
-      {/* Job Modal */}
-      <JobModal
+      {/* Add/Edit Job Modal */}
+      <AddEditJobModal
         isOpen={showJobModal}
         onClose={() => setShowJobModal(false)}
         onJobSaved={handleJobSaved}

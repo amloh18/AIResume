@@ -23,7 +23,11 @@ export async function GET(
     });
 
     if (!job) {
-      return NextResponse.json({ error: 'Job not found' }, { status: 404 });
+      return NextResponse.json({ 
+        success: false,
+        message: 'Job not found',
+        error: 'Job not found' 
+      }, { status: 404 });
     }
 
     // Transform the job data to match the expected format
@@ -50,7 +54,11 @@ export async function GET(
       updatedAt: job.updatedAt
     };
 
-    return NextResponse.json({ job: transformedJob });
+    return NextResponse.json({ 
+      success: true,
+      data: { job: transformedJob },
+      job: transformedJob // Keep for backwards compatibility
+    });
   } catch (error) {
     console.error('Error fetching job:', error);
     return NextResponse.json(

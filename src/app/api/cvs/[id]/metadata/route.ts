@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/database';
 import CV from '@/models/CV';
+import { toObjectId } from '@/lib/db-utils';
 
 export async function PUT(
   request: NextRequest,
@@ -21,8 +22,12 @@ export async function PUT(
       );
     }
     
+    // Convert string IDs to ObjectIds for database query
+    const cvObjectId = toObjectId(cvId);
+    const userObjectId = toObjectId(userId);
+    
     // Find the CV and verify ownership
-    const cv = await CV.findOne({ _id: cvId, userId });
+    const cv = await CV.findOne({ _id: cvObjectId, userId: userObjectId });
     
     if (!cv) {
       return NextResponse.json(
@@ -46,7 +51,7 @@ export async function PUT(
     console.log('🔍 CV Metadata Update - Update data:', updateData);
     
     const updatedCV = await CV.findByIdAndUpdate(
-      cvId,
+      cvObjectId,
       { $set: updateData },
       { new: true }
     );

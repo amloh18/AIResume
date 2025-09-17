@@ -5,7 +5,6 @@ import { createErrorResponse } from '@/lib/db-utils';
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('🔍 Journeys API - GET request received');
     await connectDB();
     
     const { searchParams } = new URL(request.url);
@@ -13,10 +12,7 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status'); // 'in-progress' | 'completed' | 'all'
     const jobId = searchParams.get('jobId'); // Filter by specific job ID
     
-    console.log('🔍 Journeys API - Request params:', { userId, status, jobId });
-    
     if (!userId) {
-      console.log('🔍 Journeys API - No user ID provided');
       return NextResponse.json(
         { success: false, message: 'User ID is required' },
         { status: 400 }
@@ -36,42 +32,27 @@ export async function GET(request: NextRequest) {
       journeyQuery.status = status;
     }
 
-    // Fetch CV Journeys for the user
-    console.log('🔍 Journeys API - Querying CV Journeys with query:', journeyQuery);
-    const cvJourneys = await CVJourney.find(journeyQuery).sort({ createdAt: -1 }).lean();
-
-    console.log(`🔍 Journeys API - Found ${cvJourneys.length} CV Journeys for user ${userId}`);
+    // Fetch CV Journeys for the user with optimized query
+    const cvJourneys = await CVJourney.find(journeyQuery)
+      .select('_id jobId jobTitle company status currentStep totalSteps createdAt updatedAt atsScore cvId coverLetterId')
+      .sort({ updatedAt: -1 })
+      .lean();
 
     // Transform CV Journeys into the expected format
-    const journeys = cvJourneys.map(journey => {
-      console.log(`🔍 Journeys API - Processing CV Journey ${journey._id}:`, {
-        jobId: journey.jobId,
-        jobTitle: journey.jobTitle,
-        company: journey.company,
-        cvId: journey.cvId,
-        coverLetterId: journey.coverLetterId,
-        status: journey.status,
-        currentStep: journey.currentStep,
-        atsScore: journey.atsScore
-      });
-
-      return {
-        id: journey._id.toString(),
-        jobId: journey.jobId,
-        jobTitle: journey.jobTitle,
-        company: journey.company,
-        status: journey.status,
-        currentStep: journey.currentStep,
-        totalSteps: journey.totalSteps || 5,
-        createdAt: journey.createdAt,
-        updatedAt: journey.updatedAt,
-        atsScore: journey.atsScore,
-        cvId: journey.cvId,
-        coverLetterId: journey.coverLetterId
-      };
-    });
-
-    console.log(`🔍 Journeys API - Returning ${journeys.length} journeys`);
+    const journeys = cvJourneys.map(journey => ({
+      id: journey._id.toString(),
+      jobId: journey.jobId,
+      jobTitle: journey.jobTitle,
+      company: journey.company,
+      status: journey.status,
+      currentStep: journey.currentStep,
+      totalSteps: journey.totalSteps || 5,
+      createdAt: journey.createdAt,
+      updatedAt: journey.updatedAt,
+      atsScore: journey.atsScore,
+      cvId: journey.cvId,
+      coverLetterId: journey.coverLetterId
+    }));
 
     return NextResponse.json({
       success: true,

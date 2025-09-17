@@ -38,7 +38,7 @@ export class CVJourneyLookupService {
         const journey = data.data.journeys[0];
         console.log('✅ Found journey for CV:', journey);
         return {
-          journeyId: journey.id,
+          journeyId: journey.journeyId,
           cvId: journey.cvId,
           coverLetterId: journey.coverLetterId,
           jobId: journey.jobId,
@@ -77,7 +77,7 @@ export class CVJourneyLookupService {
         const journey = data.data.journeys[0];
         console.log('✅ Found journey for cover letter:', journey);
         return {
-          journeyId: journey.id,
+          journeyId: journey.journeyId,
           cvId: journey.cvId,
           coverLetterId: journey.coverLetterId,
           jobId: journey.jobId,
@@ -116,7 +116,7 @@ export class CVJourneyLookupService {
         const journey = data.data.journeys[0];
         console.log('✅ Found journey for job:', journey);
         return {
-          journeyId: journey.id,
+          journeyId: journey.journeyId,
           cvId: journey.cvId,
           coverLetterId: journey.coverLetterId,
           jobId: journey.jobId,

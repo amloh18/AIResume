@@ -29,11 +29,30 @@ export async function GET(request: NextRequest) {
     // Create base query - handle both ObjectId and string types
     let query: any;
     if (/^[0-9a-fA-F]{24}$/.test(userId)) {
-      // MongoDB ObjectId format (24 hex chars)
-      query = { userId: new mongoose.Types.ObjectId(userId), isArchived: false };
+      // MongoDB ObjectId format (24 hex chars) - try both ObjectId and string
+      query = { 
+        $or: [
+          { userId: new mongoose.Types.ObjectId(userId) },
+          { userId: userId }
+        ],
+        $and: [
+          {
+            $or: [
+              { isArchived: false },
+              { isArchived: { $exists: false } }
+            ]
+          }
+        ]
+      };
     } else {
       // NextAuth string format - use as string
-      query = { userId: userId, isArchived: false };
+      query = { 
+        userId: userId, 
+        $or: [
+          { isArchived: false },
+          { isArchived: { $exists: false } }
+        ]
+      };
     }
 
     // Add status filter
@@ -82,7 +101,12 @@ export async function GET(request: NextRequest) {
 
     // Add job ID filter
     if (jobId) {
-      query._id = jobId;
+      // Convert jobId to ObjectId if it's a valid ObjectId string
+      if (/^[0-9a-fA-F]{24}$/.test(jobId)) {
+        query._id = new mongoose.Types.ObjectId(jobId);
+      } else {
+        query._id = jobId;
+      }
     }
 
     // Build the query
@@ -100,26 +124,46 @@ export async function GET(request: NextRequest) {
     // Execute query
     const jobs = await jobsQuery.lean();
 
-    // Calculate counts for different statuses - handle both ID types
+    // Helper function to create count query
+    const createCountQuery = (additionalFilters: any = {}) => {
+      if (/^[0-9a-fA-F]{24}$/.test(userId)) {
+        // MongoDB ObjectId format - try both ObjectId and string
+        return {
+          $or: [
+            { userId: new mongoose.Types.ObjectId(userId) },
+            { userId: userId }
+          ],
+          $and: [
+            {
+              $or: [
+                { isArchived: false },
+                { isArchived: { $exists: false } }
+              ]
+            },
+            additionalFilters
+          ]
+        };
+      } else {
+        // NextAuth string format
+        return {
+          userId: userId,
+          $or: [
+            { isArchived: false },
+            { isArchived: { $exists: false } }
+          ],
+          ...additionalFilters
+        };
+      }
+    };
+
+    // Calculate counts for different statuses
     const counts = await Promise.all([
-      /^[0-9a-fA-F]{24}$/.test(userId) 
-        ? JobApplication.countDocuments({ userId: new mongoose.Types.ObjectId(userId), isArchived: false })
-        : JobApplication.countDocuments({ userId: userId, isArchived: false }),
-      /^[0-9a-fA-F]{24}$/.test(userId) 
-        ? JobApplication.countDocuments({ userId: new mongoose.Types.ObjectId(userId), status: 'created', isArchived: false })
-        : JobApplication.countDocuments({ userId: userId, status: 'created', isArchived: false }),
-      /^[0-9a-fA-F]{24}$/.test(userId) 
-        ? JobApplication.countDocuments({ userId: new mongoose.Types.ObjectId(userId), status: 'applied', isArchived: false })
-        : JobApplication.countDocuments({ userId: userId, status: 'applied', isArchived: false }),
-      /^[0-9a-fA-F]{24}$/.test(userId) 
-        ? JobApplication.countDocuments({ userId: new mongoose.Types.ObjectId(userId), status: 'interview', isArchived: false })
-        : JobApplication.countDocuments({ userId: userId, status: 'interview', isArchived: false }),
-      /^[0-9a-fA-F]{24}$/.test(userId) 
-        ? JobApplication.countDocuments({ userId: new mongoose.Types.ObjectId(userId), status: 'offer', isArchived: false })
-        : JobApplication.countDocuments({ userId: userId, status: 'offer', isArchived: false }),
-      /^[0-9a-fA-F]{24}$/.test(userId) 
-        ? JobApplication.countDocuments({ userId: new mongoose.Types.ObjectId(userId), status: 'rejected', isArchived: false })
-        : JobApplication.countDocuments({ userId: userId, status: 'rejected', isArchived: false })
+      JobApplication.countDocuments(createCountQuery()),
+      JobApplication.countDocuments(createCountQuery({ status: 'created' })),
+      JobApplication.countDocuments(createCountQuery({ status: 'applied' })),
+      JobApplication.countDocuments(createCountQuery({ status: 'interview' })),
+      JobApplication.countDocuments(createCountQuery({ status: 'offer' })),
+      JobApplication.countDocuments(createCountQuery({ status: 'rejected' }))
     ]);
 
     const [total, created, applied, interview, offer, rejected] = counts;
@@ -152,21 +196,11 @@ export async function GET(request: NextRequest) {
       }
       
       const previousCounts = await Promise.all([
-        /^[0-9a-fA-F]{24}$/.test(userId) 
-          ? JobApplication.countDocuments({ userId: new mongoose.Types.ObjectId(userId), createdAt: { $gte: previousStartDate, $lt: previousEndDate }, isArchived: false })
-          : JobApplication.countDocuments({ userId: userId, createdAt: { $gte: previousStartDate, $lt: previousEndDate }, isArchived: false }),
-        /^[0-9a-fA-F]{24}$/.test(userId) 
-          ? JobApplication.countDocuments({ userId: new mongoose.Types.ObjectId(userId), status: 'created', createdAt: { $gte: previousStartDate, $lt: previousEndDate }, isArchived: false })
-          : JobApplication.countDocuments({ userId: userId, status: 'created', createdAt: { $gte: previousStartDate, $lt: previousEndDate }, isArchived: false }),
-        /^[0-9a-fA-F]{24}$/.test(userId) 
-          ? JobApplication.countDocuments({ userId: new mongoose.Types.ObjectId(userId), status: 'applied', createdAt: { $gte: previousStartDate, $lt: previousEndDate }, isArchived: false })
-          : JobApplication.countDocuments({ userId: userId, status: 'applied', createdAt: { $gte: previousStartDate, $lt: previousEndDate }, isArchived: false }),
-        /^[0-9a-fA-F]{24}$/.test(userId) 
-          ? JobApplication.countDocuments({ userId: new mongoose.Types.ObjectId(userId), status: 'interview', createdAt: { $gte: previousStartDate, $lt: previousEndDate }, isArchived: false })
-          : JobApplication.countDocuments({ userId: userId, status: 'interview', createdAt: { $gte: previousStartDate, $lt: previousEndDate }, isArchived: false }),
-        /^[0-9a-fA-F]{24}$/.test(userId) 
-          ? JobApplication.countDocuments({ userId: new mongoose.Types.ObjectId(userId), status: 'offer', createdAt: { $gte: previousStartDate, $lt: previousEndDate }, isArchived: false })
-          : JobApplication.countDocuments({ userId: userId, status: 'offer', createdAt: { $gte: previousStartDate, $lt: previousEndDate }, isArchived: false })
+        JobApplication.countDocuments(createCountQuery({ createdAt: { $gte: previousStartDate, $lt: previousEndDate } })),
+        JobApplication.countDocuments(createCountQuery({ status: 'created', createdAt: { $gte: previousStartDate, $lt: previousEndDate } })),
+        JobApplication.countDocuments(createCountQuery({ status: 'applied', createdAt: { $gte: previousStartDate, $lt: previousEndDate } })),
+        JobApplication.countDocuments(createCountQuery({ status: 'interview', createdAt: { $gte: previousStartDate, $lt: previousEndDate } })),
+        JobApplication.countDocuments(createCountQuery({ status: 'offer', createdAt: { $gte: previousStartDate, $lt: previousEndDate } }))
       ]);
       
       const [prevTotal, prevCreated, prevApplied, prevInterview, prevOffer] = previousCounts;

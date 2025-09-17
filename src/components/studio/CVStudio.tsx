@@ -48,23 +48,25 @@ import ActionBlockerDialog from '@/components/modals/ActionBlockerDialog';
 import { CVJourneyLookupService, CVJourneyInfo } from '@/lib/services/cvJourneyLookupService';
 
 interface CVStudioProps {
-  jobId?: string | null;
+  journeyId?: string | null; // PRIMARY: Journey ID for proper Application Package context
+  jobId?: string | null; // DEPRECATED: Direct jobId usage violates Application Package model
   cvId?: string | null;
   coverLetterId?: string | null;
   documentType?: 'cv' | 'cover-letter';
   userId: string;
-  mode?: string | null; // 'cv-onboarding', 'ats-edit', 'cover-letter-edit'
-  cvJourneyId?: string | null;
+  mode?: string | null; // 'cv-onboarding', 'ats-edit', 'cover-letter-edit', 'document-first'
+  cvJourneyId?: string | null; // LEGACY: Being replaced by journeyId
 }
 
 const CVStudio: React.FC<CVStudioProps> = ({
-  jobId,
+  journeyId,
+  jobId, // DEPRECATED
   cvId,
   coverLetterId,
   documentType: initialDocumentType = 'cv',
   userId,
   mode,
-  cvJourneyId
+  cvJourneyId // LEGACY
 }) => {
   const router = useRouter();
   // const { data: session } = useSession(); // Removed - using Clerk now
@@ -180,21 +182,39 @@ const CVStudio: React.FC<CVStudioProps> = ({
 
       let journey: CVJourneyInfo | null = null;
 
-      // If cvJourneyId is provided, use it directly
-      if (cvJourneyId) {
-        console.log('🔍 Using provided cvJourneyId:', cvJourneyId);
-        // We could fetch the journey details here if needed
-        journey = {
-          journeyId: cvJourneyId,
-          cvId: cvId || undefined,
-          coverLetterId: coverLetterId || undefined,
-          jobId: jobId || '',
-          userId,
-          status: 'in-progress',
-          currentStep: 1
-        };
+      // CORRECTED APPROACH: Prioritize journeyId for proper Application Package context
+      const primaryJourneyId = journeyId || cvJourneyId;
+      
+      if (primaryJourneyId) {
+        console.log('🎯 CVStudio - Loading context from journey ID (Application Package):', primaryJourneyId);
+        
+        try {
+          // Fetch the complete journey data from the journey ID
+          const response = await fetch(`/api/cv-journey/${primaryJourneyId}?userId=${userId}`);
+          if (response.ok) {
+            const result = await response.json();
+            if (result.success && result.data?.journey) {
+              const journeyData = result.data.journey;
+              journey = {
+                journeyId: primaryJourneyId,
+                cvId: journeyData.cvId || undefined,
+                coverLetterId: journeyData.coverLetterId || undefined,
+                jobId: journeyData.jobId || '',
+                userId,
+                status: journeyData.status || 'in-progress',
+                currentStep: journeyData.currentStep || 1,
+                jobTitle: journeyData.jobTitle,
+                company: journeyData.company
+              };
+              console.log('✅ CVStudio - Journey context loaded successfully:', journey);
+            }
+          }
+        } catch (error) {
+          console.error('❌ CVStudio - Error loading journey context:', error);
+        }
       } else {
-        // Try to find existing journey by CV ID, cover letter ID, or job ID
+        // FALLBACK: Legacy approach for backwards compatibility
+        console.log('🔍 CVStudio - No journey ID provided, using legacy context discovery');
         journey = await CVJourneyLookupService.getJourneyInfoForStudio(
           cvId,
           coverLetterId,
@@ -764,7 +784,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
   // Initialize CV journey on component mount
   useEffect(() => {
     initializeCVJourney();
-  }, [cvId, coverLetterId, jobId, cvJourneyId, userId]);
+  }, [journeyId, cvId, coverLetterId, jobId, cvJourneyId, userId]);
 
   // Handle journey mode and initialization
   useEffect(() => {

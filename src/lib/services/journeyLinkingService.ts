@@ -1,8 +1,17 @@
 /**
- * Centralized Journey Linking Service
+ * Journey Linking Service (DEPRECATED)
  * 
- * This service handles all job-CV linking operations through the CV Journey system,
- * eliminating duplication across different components.
+ * WARNING: This service is deprecated due to architectural flaws.
+ * It implements direct CV-to-Job linking which violates the "Application Package" model.
+ * 
+ * USE ApplicationPackageService INSTEAD.
+ * 
+ * Problems with this service:
+ * - Allows many-to-many CV-to-Job relationships (violates Application Package model)
+ * - Updates existing journeys instead of creating new ones (prevents multiple applications per job)
+ * - Creates data relationship conflicts and limitations
+ * 
+ * @deprecated Use ApplicationPackageService for new implementations
  */
 
 import { useJobJourney } from '@/contexts/JobJourneyContext';
@@ -24,15 +33,23 @@ export interface JourneyLinkResult {
 export class JourneyLinkingService {
   /**
    * Link a job to a CV through the CV Journey system
-   * This creates or updates a journey for the job-CV pair
+   * @deprecated This method violates the Application Package model. Use ApplicationPackageService instead.
+   * 
+   * This method is problematic because:
+   * 1. It updates existing journeys instead of creating new ones
+   * 2. It prevents multiple applications for the same job
+   * 3. It creates many-to-many relationships between CVs and jobs
    */
   static async linkJobToCV(data: JourneyLinkData): Promise<JourneyLinkResult> {
+    console.warn('⚠️ DEPRECATED: JourneyLinkingService.linkJobToCV is deprecated. Use ApplicationPackageService instead.');
+    
     try {
-      console.log('🔍 JourneyLinkingService - Linking job to CV:', data);
+      console.log('🔍 JourneyLinkingService - Linking job to CV (deprecated):', data);
 
       const { jobId, cvId, userId, journeyName } = data;
 
-      // Check if a journey already exists for this job
+      // FLAWED LOGIC: This checks for existing journey and updates it
+      // This prevents multiple applications for the same job
       const existingJourney = await this.getJourneyByJobId(jobId, userId);
       
       if (existingJourney) {

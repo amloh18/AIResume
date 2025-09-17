@@ -417,34 +417,9 @@ export async function POST(request: NextRequest) {
 
     const cvResponse = cv.toJSON();
 
-    // Link CV to CV Journey if jobId is provided
-    if (jobId && !isMaster) {
-      try {
-        const { CVJourney } = await import('@/models');
-        console.log('🔍 CV API - Linking CV to CV Journey for job:', jobId);
-        
-        const cvJourney = await CVJourney.findOne({ 
-          userId: objectIdUserId.toString(), 
-          jobId: jobId 
-        });
-        
-        if (cvJourney) {
-          cvJourney.cvId = cvResponse.id;
-          cvJourney.currentStep = 2; // Move to CV creation step
-          cvJourney.steps[1].status = 'completed'; // Mark CV creation as completed
-          cvJourney.metadata.updatedAt = new Date();
-          cvJourney.metadata.lastAccessedAt = new Date();
-          
-          await cvJourney.save();
-          console.log('✅ CV API - CV linked to CV Journey successfully');
-        } else {
-          console.log('⚠️ CV API - No CV Journey found for job:', jobId);
-        }
-      } catch (cvJourneyError) {
-        console.error('❌ CV API - Failed to link CV to CV Journey:', cvJourneyError);
-        // Don't fail CV creation if CV Journey linking fails
-      }
-    }
+    // Note: CV-to-Journey linking is now handled by ApplicationPackageService
+    // CVs are created as freestanding documents and linked to journeys separately
+    // This enforces the "Application Package" model where documents belong to specific packages
 
     // Log activity
     try {

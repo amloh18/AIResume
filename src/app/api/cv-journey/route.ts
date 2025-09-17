@@ -136,14 +136,28 @@ export async function POST(request: NextRequest) {
 
     // Fetch job data to get job title and company
     const { JobApplication } = await import('@/models');
-    const job = await JobApplication.findById(jobId);
+    console.log('🔍 CV Journey API - Fetching job with ID:', jobId);
+    
+    let job;
+    try {
+      job = await JobApplication.findById(jobId);
+    } catch (error) {
+      console.error('❌ CV Journey API - Error fetching job:', error);
+      return NextResponse.json(
+        { success: false, message: 'Invalid job ID format' },
+        { status: 400 }
+      );
+    }
     
     if (!job) {
+      console.error('❌ CV Journey API - Job not found with ID:', jobId);
       return NextResponse.json(
         { success: false, message: 'Job not found' },
         { status: 404 }
       );
     }
+    
+    console.log('✅ CV Journey API - Job found:', { id: job._id, title: job.jobTitle, company: job.company });
 
     // Check if journey already exists for this job
     let journey = await CVJourney.findOne({ userId, jobId });
@@ -187,6 +201,17 @@ export async function POST(request: NextRequest) {
       });
     } else {
       // Create new journey
+      console.log('🔍 CV Journey API - Creating new journey with data:', {
+        userId,
+        jobId,
+        cvId: cvId || null,
+        coverLetterId: coverLetterId || null,
+        status,
+        currentStep: currentStep || 1,
+        jobTitle: job.jobTitle,
+        company: job.company
+      });
+      
       const newJourney = new CVJourney({
         userId,
         jobId,
@@ -212,15 +237,19 @@ export async function POST(request: NextRequest) {
         }
       });
 
+      console.log('🔍 CV Journey API - Attempting to save journey...');
       await newJourney.save();
+      console.log('✅ CV Journey API - Journey saved successfully with ID:', newJourney._id);
 
+      console.log('✅ CV Journey API - New journey created successfully:', newJourney._id);
+      
       return NextResponse.json({
         success: true,
         message: 'Journey created successfully',
         data: {
           journey: {
             id: newJourney._id.toString(),
-            journeyId: newJourney.journeyId,
+            _id: newJourney._id.toString(), // Include both for compatibility
             userId: newJourney.userId,
             jobId: newJourney.jobId,
             cvId: newJourney.cvId,
@@ -230,14 +259,49 @@ export async function POST(request: NextRequest) {
             totalSteps: newJourney.totalSteps,
             atsScore: newJourney.atsScore,
             jobTitle: newJourney.jobTitle,
-            company: newJourney.company
+            company: newJourney.company,
+            steps: newJourney.steps,
+            metadata: newJourney.metadata
           }
         }
       });
     }
 
   } catch (error: any) {
-    console.error('Create/Update CV journey error:', error);
+    console.error('❌ CV Journey API - Create/Update error:', error);
+    console.error('❌ CV Journey API - Error stack:', error.stack);
+    console.error('❌ CV Journey API - Error details:', {
+      name: error.name,
+      message: error.message,
+      code: error.code,
+      errors: error.errors
+    });
+    
+    // Handle specific Mongoose validation errors
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map((err: any) => ({
+        field: err.path,
+        message: err.message,
+        value: err.value
+      }));
+      
+      return NextResponse.json({
+        success: false,
+        message: 'Validation failed',
+        errors: validationErrors,
+        statusCode: 400
+      }, { status: 400 });
+    }
+    
+    // Handle MongoDB duplicate key errors
+    if (error.code === 11000) {
+      return NextResponse.json({
+        success: false,
+        message: 'Journey already exists for this job',
+        statusCode: 409
+      }, { status: 409 });
+    }
+    
     const errorResponse = createErrorResponse(error);
     
     return NextResponse.json(
