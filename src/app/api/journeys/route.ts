@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/database';
-import { JobApplication, CV, CoverLetter } from '@/models';
+import { JobApplication, CV, CoverLetter, CVJourney } from '@/models';
 import { createErrorResponse } from '@/lib/db-utils';
 
 export async function GET(request: NextRequest) {
@@ -23,170 +23,174 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Build query for job applications
-    let jobQuery: any = { 
-      userId, 
-      isArchived: false 
-    };
+    // Build query for CV Journeys
+    let journeyQuery: any = { userId };
     
     // Add jobId filter if provided
     if (jobId) {
-      jobQuery._id = jobId;
+      journeyQuery.jobId = jobId;
     }
 
-    // Fetch job applications for the user (including those in 'created' stage)
-    console.log('🔍 Journeys API - Querying job applications with query:', jobQuery);
-    const jobApplications = await JobApplication.find(jobQuery).lean();
+    // Add status filter if provided
+    if (status && status !== 'all') {
+      journeyQuery.status = status;
+    }
 
-    console.log(`🔍 Journeys API - Found ${jobApplications.length} job applications for user ${userId}`);
-    console.log(`🔍 Journeys API - Job statuses:`, jobApplications.map(job => ({ id: job._id, status: job.status, jobTitle: job.jobTitle, company: job.company })));
+    // Fetch CV Journeys for the user
+    console.log('🔍 Journeys API - Querying CV Journeys with query:', journeyQuery);
+    const cvJourneys = await CVJourney.find(journeyQuery).sort({ createdAt: -1 }).lean();
 
-    // Fetch CVs for the user
-    const cvs = await CV.find({ userId }).lean();
+    console.log(`🔍 Journeys API - Found ${cvJourneys.length} CV Journeys for user ${userId}`);
 
-    // Fetch Cover Letters for the user
-    const coverLetters = await CoverLetter.find({ userId }).lean();
-
-    // Create a map of CVs by ID for quick lookup
-    const cvMap = new Map();
-    cvs.forEach(cv => {
-      cvMap.set(cv._id.toString(), cv);
-    });
-
-    // Create a map of Cover Letters by jobId for quick lookup
-    const coverLetterMap = new Map();
-    coverLetters.forEach(coverLetter => {
-      if (coverLetter.jobId) {
-        coverLetterMap.set(coverLetter.jobId, coverLetter);
-      }
-    });
-
-    console.log(`🔍 Journeys API - Found ${cvs.length} CVs and ${coverLetters.length} cover letters for user ${userId}`);
-
-    // Transform job applications into journeys
-    const journeys = jobApplications.map(job => {
-      // Get linked CV using job.cvId
-      const linkedCV = job.cvId ? cvMap.get(job.cvId.toString()) : null;
-      const linkedCoverLetter = coverLetterMap.get(job._id.toString());
-      
-      console.log(`🔍 Journeys API - Processing job ${job._id}:`, {
-        jobTitle: job.jobTitle,
-        company: job.company,
-        cvId: job.cvId,
-        linkedCV: linkedCV ? { id: linkedCV._id, title: linkedCV.title, atsScore: linkedCV.metadata?.atsScore } : null,
-        linkedCoverLetter: linkedCoverLetter ? { id: linkedCoverLetter._id, title: linkedCoverLetter.title } : null
-      });
-      
-      // Determine journey status and current step based on database state
-      // Use same strict logic as JobPipelineCardModal
-      let status: 'in-progress' | 'completed' = 'in-progress';
-      let currentStep = 1;
-      let atsScore: number | undefined;
-      let cvId: string | undefined;
-      let coverLetterId: string | undefined;
-
-      // Step 1: Job Added (always true if we have a job application)
-      if (job.jobTitle && job.company) {
-        currentStep = 1;
-        
-        // Step 2: CV Created/Linked (check if job has cvId AND CV exists)
-        if (job.cvId && linkedCV) {
-          currentStep = 2;
-          cvId = job.cvId.toString();
-          
-          // Step 3: ATS Score Checked (check for job-specific ATS score in CV metadata)
-          let hasATSScore = false;
-          if (linkedCV.metadata?.atsScore && linkedCV.metadata?.atsScoreJobId === job._id.toString()) {
-            hasATSScore = true;
-            atsScore = linkedCV.metadata.atsScore;
-          }
-          
-          if (hasATSScore) {
-            currentStep = 3;
-            
-            // Step 4: Cover Letter Created (STRICT check - only if cover letter is linked to this specific job AND in our journey context)
-            // We need to be more careful here - only consider completed if there's a cover letter specifically created for this journey
-            if (linkedCoverLetter) {
-              currentStep = 4;
-              coverLetterId = linkedCoverLetter._id.toString();
-              
-              // Step 5: Download (only if ALL previous steps are verified complete)
-              // For now, we'll only auto-complete to step 5 if the job status is explicitly 'applied'
-              if (job.status === 'applied') {
-                currentStep = 5;
-                status = 'completed';
-              }
-            }
-          }
-        }
-      }
-      
-      console.log(`🔍 Journeys API - Journey ${job._id} calculated:`, {
-        currentStep,
-        status,
-        hasCV: !!linkedCV,
-        hasATS: !!atsScore,
-        hasCoverLetter: !!linkedCoverLetter,
-        jobStatus: job.status
+    // Transform CV Journeys into the expected format
+    const journeys = cvJourneys.map(journey => {
+      console.log(`🔍 Journeys API - Processing CV Journey ${journey._id}:`, {
+        jobId: journey.jobId,
+        jobTitle: journey.jobTitle,
+        company: journey.company,
+        cvId: journey.cvId,
+        coverLetterId: journey.coverLetterId,
+        status: journey.status,
+        currentStep: journey.currentStep,
+        atsScore: journey.atsScore
       });
 
       return {
-        id: job._id.toString(),
-        jobId: job._id.toString(),
-        jobTitle: job.jobTitle,
-        company: job.company,
-        status,
-        currentStep,
-        totalSteps: 5,
-        createdAt: job.createdAt,
-        updatedAt: job.updatedAt,
-        atsScore,
-        cvId,
-        coverLetterId,
-        // Additional job data
-        location: job.location,
-        salary: job.salary,
-        applicationDate: job.applicationDate,
-        deadline: job.deadline,
-        priority: job.priority,
-        // Debug info
-        _debug: {
-          linkedCVId: linkedCV?._id,
-          linkedCVMetadata: linkedCV?.metadata,
-          linkedCoverLetterId: linkedCoverLetter?._id,
-          jobStatus: job.status
-        }
+        id: journey._id.toString(),
+        jobId: journey.jobId,
+        jobTitle: journey.jobTitle,
+        company: journey.company,
+        status: journey.status,
+        currentStep: journey.currentStep,
+        totalSteps: journey.totalSteps || 5,
+        createdAt: journey.createdAt,
+        updatedAt: journey.updatedAt,
+        atsScore: journey.atsScore,
+        cvId: journey.cvId,
+        coverLetterId: journey.coverLetterId
       };
     });
 
-    // Filter by status if specified
-    let filteredJourneys = journeys;
-    if (status && status !== 'all') {
-      filteredJourneys = journeys.filter(journey => journey.status === status);
-    }
-
-    // Sort by creation date (newest first)
-    filteredJourneys.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
-    // Calculate counts
-    const totalJourneys = journeys.length;
-    const inProgressJourneys = journeys.filter(j => j.status === 'in-progress').length;
-    const completedJourneys = journeys.filter(j => j.status === 'completed').length;
+    console.log(`🔍 Journeys API - Returning ${journeys.length} journeys`);
 
     return NextResponse.json({
       success: true,
       data: {
-        journeys: filteredJourneys,
-        counts: {
-          total: totalJourneys,
-          inProgress: inProgressJourneys,
-          completed: completedJourneys
-        }
+        journeys
       }
     });
 
   } catch (error: any) {
-    console.error('Get journeys error:', error);
+    console.error('Journeys API error:', error);
+    const errorResponse = createErrorResponse(error);
+    
+    return NextResponse.json(
+      errorResponse,
+      { status: errorResponse.statusCode || 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    console.log('🔍 Journeys API - POST request received');
+    await connectDB();
+    
+    const body = await request.json();
+    const { userId, jobId, cvId, coverLetterId, journeyName } = body;
+
+    if (!userId || !jobId) {
+      return NextResponse.json(
+        { success: false, message: 'User ID and Job ID are required' },
+        { status: 400 }
+      );
+    }
+
+    // Check if journey already exists for this job
+    let journey = await CVJourney.findOne({ userId, jobId });
+
+    if (journey) {
+      // Update existing journey
+      if (cvId !== undefined) journey.cvId = cvId;
+      if (coverLetterId !== undefined) journey.coverLetterId = coverLetterId;
+      
+      journey.metadata.updatedAt = new Date();
+      journey.metadata.lastAccessedAt = new Date();
+      
+      await journey.save();
+      
+      return NextResponse.json({
+        success: true,
+        message: 'Journey updated successfully',
+        data: {
+          journey: {
+            id: journey._id.toString(),
+            jobId: journey.jobId,
+            cvId: journey.cvId,
+            coverLetterId: journey.coverLetterId,
+            status: journey.status,
+            currentStep: journey.currentStep,
+            jobTitle: journey.jobTitle,
+            company: journey.company
+          }
+        }
+      });
+    } else {
+      // Create new journey
+      const newJourney = new CVJourney({
+        userId,
+        jobId,
+        cvId: cvId || null,
+        coverLetterId: coverLetterId || null,
+        status: 'in-progress',
+        currentStep: 1,
+        totalSteps: 5,
+        atsScore: null,
+        jobTitle: '', // Will be populated from job data
+        company: '', // Will be populated from job data
+        steps: [
+          { stepId: 1, name: 'Add Job', status: 'completed' },
+          { stepId: 2, name: 'Create CV', status: cvId ? 'completed' : 'pending' },
+          { stepId: 3, name: 'ATS Score', status: 'pending' },
+          { stepId: 4, name: 'Cover Letter', status: 'pending' },
+          { stepId: 5, name: 'Download', status: 'pending' }
+        ],
+        metadata: {
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          lastAccessedAt: new Date()
+        }
+      });
+
+      // Fetch job data to populate job title and company
+      const job = await JobApplication.findById(jobId);
+      if (job) {
+        newJourney.jobTitle = job.jobTitle;
+        newJourney.company = job.company;
+      }
+
+      await newJourney.save();
+
+      return NextResponse.json({
+        success: true,
+        message: 'Journey created successfully',
+        data: {
+          journey: {
+            id: newJourney._id.toString(),
+            jobId: newJourney.jobId,
+            cvId: newJourney.cvId,
+            coverLetterId: newJourney.coverLetterId,
+            status: newJourney.status,
+            currentStep: newJourney.currentStep,
+            jobTitle: newJourney.jobTitle,
+            company: newJourney.company
+          }
+        }
+      });
+    }
+
+  } catch (error: any) {
+    console.error('Create/Update journey error:', error);
     const errorResponse = createErrorResponse(error);
     
     return NextResponse.json(
@@ -198,69 +202,34 @@ export async function GET(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    console.log('🔍 Journeys API - DELETE request received');
     await connectDB();
     
-    const { searchParams } = new URL(request.url);
-    const journeyId = searchParams.get('journeyId'); // This is actually the jobId
-    const userId = searchParams.get('userId');
-    
-    if (!journeyId) {
+    const body = await request.json();
+    const { journeyId, userId } = body;
+
+    if (!journeyId || !userId) {
       return NextResponse.json(
-        { success: false, message: 'Journey ID is required' },
+        { success: false, message: 'Journey ID and User ID are required' },
         { status: 400 }
       );
     }
 
-    if (!userId) {
-      return NextResponse.json(
-        { success: false, message: 'User ID is required' },
-        { status: 400 }
-      );
-    }
-
-    console.log(`🔍 Journeys API - Deleting journey (job) with ID: ${journeyId} for user: ${userId}`);
-
-    // First, find any CVs linked to this job
-    const linkedCVs = await CV.find({
-      linkedJobId: journeyId,
-      userId: userId
-    });
-
-    console.log(`🔍 Journeys API - Found ${linkedCVs.length} CVs linked to job ${journeyId}`);
-
-    // Delete the job application from the database
-    const result = await JobApplication.findOneAndDelete({
-      _id: journeyId,
-      userId: userId
+    const result = await CVJourney.findOneAndDelete({ 
+      _id: journeyId, 
+      userId 
     });
 
     if (!result) {
       return NextResponse.json(
-        { success: false, message: 'Journey not found or already deleted' },
+        { success: false, message: 'Journey not found' },
         { status: 404 }
       );
     }
 
-    // Optionally, you can also delete linked CVs if you want to completely remove all related data
-    // Uncomment the following lines if you want to delete linked CVs as well:
-    /*
-    if (linkedCVs.length > 0) {
-      const cvDeleteResult = await CV.deleteMany({
-        linkedJobId: journeyId,
-        userId: userId
-      });
-      console.log(`🔍 Journeys API - Deleted ${cvDeleteResult.deletedCount} linked CVs`);
-    }
-    */
-
-    console.log(`🔍 Journeys API - Successfully deleted journey (job): ${journeyId}`);
-
     return NextResponse.json({
       success: true,
-      message: 'Journey deleted successfully',
-      data: {
-        deletedJourneyId: journeyId
-      }
+      message: 'Journey deleted successfully'
     });
 
   } catch (error: any) {

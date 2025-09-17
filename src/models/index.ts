@@ -12,4 +12,5 @@ export { default as Invoice, type IInvoice } from './Invoice';
 
 export { default as CoverLetter, type ICoverLetter } from './CoverLetter';
 export { default as Testimonial, type ITestimonial } from './Testimonial';
-export { default as Newsletter, type INewsletter } from './Newsletter'; 
+export { default as Newsletter, type INewsletter } from './Newsletter';
+export { CVJourney, type ICVJourney } from './CVJourney'; 

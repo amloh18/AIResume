@@ -25,3 +25,8 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 export default clientPromise;
+
+// Export function for backward compatibility
+export const connectToDatabase = async () => {
+  return await clientPromise;
+};

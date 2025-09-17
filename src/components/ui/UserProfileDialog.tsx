@@ -5,12 +5,12 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
-import { 
-  User, 
-  Settings, 
-  LogOut, 
-  Sun, 
-  Moon, 
+import {
+  User,
+  Settings,
+  LogOut,
+  Sun,
+  Moon,
   ChevronDown,
   Mail,
   Briefcase

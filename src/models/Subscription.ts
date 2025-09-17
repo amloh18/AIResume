@@ -1,7 +1,7 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface ISubscription extends Document {
-  userId: mongoose.Types.ObjectId;
+  userId: mongoose.Types.ObjectId | string;
   planId: mongoose.Types.ObjectId;
   status: 'active' | 'inactive' | 'cancelled' | 'past_due' | 'unpaid';
   startDate: Date;
@@ -29,8 +29,7 @@ export interface ISubscription extends Document {
 
 const subscriptionSchema = new Schema<ISubscription>({
   userId: {
-    type: Schema.Types.ObjectId,
-    ref: 'User',
+    type: Schema.Types.Mixed, // Allow both ObjectId and string
     required: [true, 'User ID is required']
   },
   planId: {

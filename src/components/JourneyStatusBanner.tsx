@@ -4,14 +4,14 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Briefcase, FileText, CheckCircle, Download, X, Settings, Mail, Eye, ExternalLink } from 'lucide-react';
 import { useJobJourney } from '@/contexts/JobJourneyContext';
-import { useSession } from 'next-auth/react';
+import { useFirebaseAuth } from '@/lib/hooks/useFirebaseAuth';
 import { useRouter } from 'next/navigation';
 import CVJourneyModal from '@/components/modals/CVJourneyModal';
 
 const JourneyStatusBanner: React.FC = () => {
   const { state, endJourney } = useJobJourney();
   const { isJourneyActive, jobTitle, company, currentStep, currentJobId, cvId, cvName, atsScore, coverLetterId } = state;
-  const { data: session } = useSession();
+  const { user } = useFirebaseAuth();
   const router = useRouter();
   const [isExpanded, setIsExpanded] = useState(false);
   const [showJourneyModal, setShowJourneyModal] = useState(false);
@@ -23,12 +23,12 @@ const JourneyStatusBanner: React.FC = () => {
   // Load linked documents data
   useEffect(() => {
     const loadLinkedData = async () => {
-      if (!session?.user?.id) return;
+      if (!user?.uid) return;
 
       try {
         // Load job data
         if (currentJobId && currentJobId !== 'temp') {
-          const jobResponse = await fetch(`/api/jobs/${currentJobId}?userId=${session.user.id}`);
+          const jobResponse = await fetch(`/api/jobs/${currentJobId}?userId=${user.uid}`);
           if (jobResponse.ok) {
             const jobResult = await jobResponse.json();
             setJobData(jobResult.job);
@@ -37,7 +37,7 @@ const JourneyStatusBanner: React.FC = () => {
 
         // Load CV data
         if (cvId) {
-          const cvResponse = await fetch(`/api/cvs/${cvId}?userId=${session.user.id}`);
+          const cvResponse = await fetch(`/api/cvs/${cvId}?userId=${user.uid}`);
           if (cvResponse.ok) {
             const cvResult = await cvResponse.json();
             setCvData(cvResult.cv);
@@ -46,7 +46,7 @@ const JourneyStatusBanner: React.FC = () => {
 
         // Load cover letter data
         if (coverLetterId) {
-          const coverLetterResponse = await fetch(`/api/cover-letters/${coverLetterId}?userId=${session.user.id}`);
+          const coverLetterResponse = await fetch(`/api/cover-letters/${coverLetterId}?userId=${user.uid}`);
           if (coverLetterResponse.ok) {
             const coverLetterResult = await coverLetterResponse.json();
             setCoverLetterData(coverLetterResult.coverLetter);
@@ -58,7 +58,7 @@ const JourneyStatusBanner: React.FC = () => {
     };
 
     loadLinkedData();
-  }, [currentJobId, cvId, coverLetterId, session?.user?.id]);
+  }, [currentJobId, cvId, coverLetterId, user?.uid]);
 
   if (!isJourneyActive) {
     return null;
@@ -154,7 +154,7 @@ const JourneyStatusBanner: React.FC = () => {
 
   return (
     <motion.div
-      className="fixed top-0 left-0 right-0 bg-gradient-to-r from-lime-500/10 to-lime-600/10 border-b border-lime-500/20 z-50"
+      className="fixed top-0 left-0 right-0 bg-gradient-to-r from-lime-500/10 to-lime-600/10 border-b border-lime-500/20 z-50 backdrop-blur-sm"
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
@@ -167,11 +167,11 @@ const JourneyStatusBanner: React.FC = () => {
             <div className="flex items-center gap-2">
               <Briefcase className="h-5 w-5 text-lime-400" />
               <div>
-                <h3 className="text-sm font-medium text-white">
+                <h3 className="text-sm font-medium text-gray-900 dark:text-white">
                   {jobData?.title || jobTitle || 'Untitled Job'}
                 </h3>
                 {(jobData?.company || company) && (
-                  <p className="text-xs text-white/60">{jobData?.company || company}</p>
+                  <p className="text-xs text-gray-600 dark:text-white/60">{jobData?.company || company}</p>
                 )}
               </div>
             </div>
@@ -189,7 +189,7 @@ const JourneyStatusBanner: React.FC = () => {
                         ? 'bg-lime-500 text-black' 
                         : status === 'active' 
                         ? 'bg-lime-400 text-black' 
-                        : 'bg-white/20 text-white/60 hover:bg-white/30'
+                        : 'bg-gray-200 dark:bg-white/20 text-gray-600 dark:text-white/60 hover:bg-gray-300 dark:hover:bg-white/30'
                     }`}
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.95 }}
@@ -208,7 +208,7 @@ const JourneyStatusBanner: React.FC = () => {
             {/* Current Step Info */}
             <div className="flex items-center gap-2 px-3 py-1 bg-lime-500/20 rounded-full">
               {getStepIcon(currentStep)}
-              <span className="text-xs font-medium text-lime-400">
+              <span className="text-xs font-medium text-lime-600 dark:text-lime-400">
                 {getStepLabel(currentStep)}
               </span>
             </div>
@@ -218,7 +218,7 @@ const JourneyStatusBanner: React.FC = () => {
           <div className="flex items-center gap-2">
             <motion.button
               onClick={() => setIsExpanded(!isExpanded)}
-              className="px-3 py-1 text-xs text-white/60 hover:text-white hover:bg-white/10 rounded transition-colors flex items-center gap-1"
+              className="px-3 py-1 text-xs text-gray-600 dark:text-white/60 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 rounded transition-colors flex items-center gap-1"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
@@ -227,7 +227,7 @@ const JourneyStatusBanner: React.FC = () => {
             </motion.button>
             <motion.button
               onClick={endJourney}
-              className="p-1 text-white/60 hover:text-white hover:bg-white/10 rounded transition-colors"
+              className="p-1 text-gray-600 dark:text-white/60 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 rounded transition-colors"
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               title="End Journey"

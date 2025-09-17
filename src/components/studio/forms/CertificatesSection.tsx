@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Trash2, Award, Sparkles, RefreshCw } from 'lucide-react';
 import { getThemeClasses } from '@/lib/utils/themeUtils';
+import ProfessionalTextField from '@/components/ui/ProfessionalTextField';
 
 interface CertificatesSectionProps {
   data: any[];
@@ -140,12 +141,13 @@ const CertificatesSection: React.FC<CertificatesSectionProps> = ({
                   <span>{generatingIndex === index ? 'Generating...' : 'AI Generate'}</span>
                 </motion.button>
               </div>
-              <textarea
+              <ProfessionalTextField
                 value={certificate.description || ''}
-                onChange={(e) => onUpdate(`certificates.${index}.description`, e.target.value)}
-                className={`w-full px-3 py-2 rounded-lg border ${themeClasses.input.base} ${themeClasses.input.focus} resize-none`}
+                onChange={(value) => onUpdate(`certificates.${index}.description`, value)}
                 placeholder="Describe what you learned, skills gained, or how this certificate is relevant. Use AI to generate content based on certificate name and issuer..."
                 rows={4}
+                fieldId={`certificate-${index}`}
+                showFullToolbar={true}
               />
             </div>
 

@@ -32,7 +32,7 @@ async function addTestJobs() {
     await client.connect();
     console.log('✅ Connected to MongoDB\n');
     
-    const db = client.db();
+    const db = client.db('cvcircle');
     
     // Test user ID (use the same one as in the app)
     const testUserId = '6889b151d17daa1eaee91a5c';

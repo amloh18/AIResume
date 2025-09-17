@@ -14,14 +14,10 @@ import {
   PenTool,
   Archive,
   MessageSquare,
-  BarChart3,
-  Settings,
-  Bell,
-  User,
-  Sun,
-  Moon
+  BarChart3
 } from 'lucide-react';
-import { useTheme } from '@/lib/contexts/ThemeContext';
+import UserIcon from '@/components/ui/UserIcon';
+import { useSession } from 'next-auth/react';
 
 interface StudioTopBarProps {
   documentType: 'cv' | 'cover-letter';
@@ -56,7 +52,7 @@ const StudioTopBar: React.FC<StudioTopBarProps> = ({
   setIsEditingTitle
 }) => {
   const [tempTitle, setTempTitle] = useState(documentTitle);
-  const { theme, toggleTheme } = useTheme();
+  const { data: session } = useSession();
 
   return (
     <div className="h-16 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-6 z-50 sticky top-0 shadow-sm transition-colors duration-200 bg-white/95 dark:bg-gray-800/95">
@@ -151,20 +147,19 @@ const StudioTopBar: React.FC<StudioTopBarProps> = ({
         </div>
       </div>
 
-      {/* Right Region - Dashboard Header Icons */}
+      {/* Right Region - User Icon */}
       <div className="flex items-center space-x-3">
-        {/* Dashboard Header Icons */}
-        <div className="flex items-center space-x-2">
-          <button className="p-2 transition-colors rounded-lg text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800" title="Notifications">
-            <Bell className="h-4 w-4" />
-          </button>
-          <button className="p-2 transition-colors rounded-lg text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800" title="Settings">
-            <Settings className="h-4 w-4" />
-          </button>
-          <button className="p-2 transition-colors rounded-lg text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800" title="Profile">
-            <User className="h-4 w-4" />
-          </button>
-        </div>
+        {/* User Icon */}
+        {session?.user && (
+          <UserIcon 
+            user={{
+              name: session.user.name || 'User',
+              email: session.user.email || 'user@example.com',
+              profilePhoto: session.user.image,
+              designation: 'CV Creator'
+            }}
+          />
+        )}
 
         {/* Unified Save Button with Status */}
         <button

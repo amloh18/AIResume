@@ -32,11 +32,18 @@ export class AICVParser {
   public static async parseCV(file: File): Promise<ParsedCVData> {
     try {
       // Validate file type
-      const allowedTypes = ['text/plain', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      const allowedTypes = [
+        'text/plain', 
+        'application/pdf', 
+        'application/msword', 
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/rtf',
+        'text/rtf'
+      ];
       if (!allowedTypes.includes(file.type)) {
         return {
           success: false,
-          error: 'Unsupported file type. Please upload a PDF, DOC, DOCX, or TXT file.'
+          error: 'Unsupported file type. Please upload a PDF, DOC, DOCX, RTF, or TXT file.'
         };
       }
 

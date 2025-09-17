@@ -51,7 +51,6 @@ const newsletterSchema = new Schema<INewsletter>({
   }
 });
 
-// Index for email lookup
-newsletterSchema.index({ email: 1 }, { unique: true });
+// Note: Unique index on email is already defined in the schema field above
 
 export default mongoose.models.Newsletter || mongoose.model<INewsletter>('Newsletter', newsletterSchema);

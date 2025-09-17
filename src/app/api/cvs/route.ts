@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/database';
 import { CV } from '@/models';
 import { createPaginationOptions, paginateQuery, createErrorResponse } from '@/lib/db-utils';
@@ -8,6 +10,16 @@ import mongoose from 'mongoose';
 export async function GET(request: NextRequest) {
   try {
     console.log('🔍 CV API - Starting GET request');
+
+    // Check authentication
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     await connectDB();
     console.log('🔍 CV API - Database connected');
     
@@ -35,11 +47,18 @@ export async function GET(request: NextRequest) {
     
     console.log('🔍 CV API - User ID validation passed:', userId);
 
-    // Validate user ID format
+    // Validate user ID format - support both MongoDB ObjectId and NextAuth formats
     try {
       const mongoose = require('mongoose');
-      const objectId = new mongoose.Types.ObjectId(userId);
-      console.log('🔍 CV API - User ID is valid ObjectId:', objectId.toString());
+      
+      // Check if it's a valid MongoDB ObjectId (24 hex chars)
+      if (/^[0-9a-fA-F]{24}$/.test(userId)) {
+        const objectId = new mongoose.Types.ObjectId(userId);
+        console.log('🔍 CV API - User ID is valid MongoDB ObjectId:', objectId.toString());
+      } else {
+        // NextAuth format (e.g., N1sLLNSl8sRcruxVGQlBCDQzXy82)
+        console.log('🔍 CV API - User ID is NextAuth format:', userId);
+      }
     } catch (error) {
       console.error('❌ CV API - Invalid user ID format:', userId, error);
       return NextResponse.json(
@@ -51,8 +70,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Create base query
-    let query = CV.find({ userId });
+    // Create base query - handle both ObjectId and string types
+    let query;
+    if (/^[0-9a-fA-F]{24}$/.test(userId)) {
+      // MongoDB ObjectId format (24 hex chars)
+      query = CV.find({ userId: new mongoose.Types.ObjectId(userId) });
+    } else {
+      // NextAuth string format - use as string
+      query = CV.find({ userId: userId });
+    }
     
     // Add type filter (CV vs Cover Letter)
     if (type) {
@@ -120,13 +146,23 @@ export async function GET(request: NextRequest) {
     const cvs = await query.lean();
     console.log('🔍 CV API - Query executed, found CVs:', cvs.length);
 
-    // Calculate counts for different statuses
+    // Calculate counts for different statuses - handle both ID types
     const counts = await Promise.all([
-      CV.countDocuments({ userId }),
-      CV.countDocuments({ userId, status: 'draft' }),
-      CV.countDocuments({ userId, status: 'published' }),
-      CV.countDocuments({ userId, status: 'archived' }),
-      CV.countDocuments({ userId, 'metadata.starred': true })
+      /^[0-9a-fA-F]{24}$/.test(userId) 
+        ? CV.countDocuments({ userId: new mongoose.Types.ObjectId(userId) })
+        : CV.countDocuments({ userId: userId }),
+      /^[0-9a-fA-F]{24}$/.test(userId) 
+        ? CV.countDocuments({ userId: new mongoose.Types.ObjectId(userId), status: 'draft' })
+        : CV.countDocuments({ userId: userId, status: 'draft' }),
+      /^[0-9a-fA-F]{24}$/.test(userId) 
+        ? CV.countDocuments({ userId: new mongoose.Types.ObjectId(userId), status: 'published' })
+        : CV.countDocuments({ userId: userId, status: 'published' }),
+      /^[0-9a-fA-F]{24}$/.test(userId) 
+        ? CV.countDocuments({ userId: new mongoose.Types.ObjectId(userId), status: 'archived' })
+        : CV.countDocuments({ userId: userId, status: 'archived' }),
+      /^[0-9a-fA-F]{24}$/.test(userId) 
+        ? CV.countDocuments({ userId: new mongoose.Types.ObjectId(userId), 'metadata.starred': true })
+        : CV.countDocuments({ userId: userId, 'metadata.starred': true })
     ]);
 
     const [total, drafts, publishedCount, archived, starredCount] = counts;
@@ -183,7 +219,16 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     console.log('🚀 Starting CV creation...');
-    
+
+    // Check authentication
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     // Connect to database
     await connectDB();
     console.log('✅ Database connected for CV creation');
@@ -216,6 +261,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Convert userId to ObjectId if it's a string
+    let objectIdUserId;
+    try {
+      console.log('🔍 Attempting to convert userId:', userId, 'Type:', typeof userId);
+      objectIdUserId = new mongoose.Types.ObjectId(userId);
+      console.log('✅ Converted userId to ObjectId:', objectIdUserId);
+      console.log('✅ ObjectId string representation:', objectIdUserId.toString());
+    } catch (error: any) {
+      console.error('❌ Invalid userId format:', userId);
+      console.error('❌ Error details:', error.message);
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Invalid user ID format',
+          debug: { userId, error: error.message }
+        },
+        { status: 400 }
+      );
+    }
+
     // Handle CV duplication
     let sourceCvData = null;
     if (duplicateFromId) {
@@ -227,29 +292,9 @@ export async function POST(request: NextRequest) {
         } else {
           console.log('❌ Source CV not found for duplication:', duplicateFromId);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('❌ Error finding source CV:', error);
       }
-    }
-
-    // Convert userId to ObjectId if it's a string
-    let objectIdUserId;
-    try {
-      console.log('🔍 Attempting to convert userId:', userId, 'Type:', typeof userId);
-      objectIdUserId = new mongoose.Types.ObjectId(userId);
-      console.log('✅ Converted userId to ObjectId:', objectIdUserId);
-      console.log('✅ ObjectId string representation:', objectIdUserId.toString());
-    } catch (error) {
-      console.error('❌ Invalid userId format:', userId);
-      console.error('❌ Error details:', error.message);
-      return NextResponse.json(
-        {
-          success: false,
-          message: 'Invalid user ID format',
-          debug: { userId, error: error.message }
-        },
-        { status: 400 }
-      );
     }
 
     // Validate and sanitize CV data
@@ -372,6 +417,35 @@ export async function POST(request: NextRequest) {
 
     const cvResponse = cv.toJSON();
 
+    // Link CV to CV Journey if jobId is provided
+    if (jobId && !isMaster) {
+      try {
+        const { CVJourney } = await import('@/models');
+        console.log('🔍 CV API - Linking CV to CV Journey for job:', jobId);
+        
+        const cvJourney = await CVJourney.findOne({ 
+          userId: objectIdUserId.toString(), 
+          jobId: jobId 
+        });
+        
+        if (cvJourney) {
+          cvJourney.cvId = cvResponse.id;
+          cvJourney.currentStep = 2; // Move to CV creation step
+          cvJourney.steps[1].status = 'completed'; // Mark CV creation as completed
+          cvJourney.metadata.updatedAt = new Date();
+          cvJourney.metadata.lastAccessedAt = new Date();
+          
+          await cvJourney.save();
+          console.log('✅ CV API - CV linked to CV Journey successfully');
+        } else {
+          console.log('⚠️ CV API - No CV Journey found for job:', jobId);
+        }
+      } catch (cvJourneyError) {
+        console.error('❌ CV API - Failed to link CV to CV Journey:', cvJourneyError);
+        // Don't fail CV creation if CV Journey linking fails
+      }
+    }
+
     // Log activity
     try {
       const { ActivityService } = await import('@/lib/services/activityService');
@@ -416,4 +490,4 @@ export async function POST(request: NextRequest) {
       { status: errorResponse.statusCode || 500 }
     );
   }
-} 
+}

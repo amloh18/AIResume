@@ -1,7 +1,7 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IPaymentMethod extends Document {
-  userId: mongoose.Types.ObjectId;
+  userId: mongoose.Types.ObjectId | string;
   type: 'credit_card' | 'paypal' | 'bank_transfer';
   provider: 'visa' | 'mastercard' | 'amex' | 'discover' | 'paypal' | 'stripe';
   last4?: string;
@@ -18,8 +18,7 @@ export interface IPaymentMethod extends Document {
 
 const paymentMethodSchema = new Schema<IPaymentMethod>({
   userId: {
-    type: Schema.Types.ObjectId,
-    ref: 'User',
+    type: Schema.Types.Mixed, // Allow both ObjectId and string
     required: [true, 'User ID is required']
   },
   type: {

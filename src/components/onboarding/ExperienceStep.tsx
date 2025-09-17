@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Briefcase, Plus, Trash2, ArrowRight, ArrowLeft, Calendar, Building, MapPin } from 'lucide-react';
 import { useOnboarding } from '@/contexts/OnboardingContext';
@@ -14,6 +14,12 @@ export default function ExperienceStep({ onNext, onBack }: ExperienceStepProps) 
   const { state, dispatch } = useOnboarding();
   const [showAddWork, setShowAddWork] = useState(false);
   const [showAddProject, setShowAddProject] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
+
+  // Reset navigation state when component mounts or when step changes
+  useEffect(() => {
+    setIsNavigating(false);
+  }, [state.currentStep]);
 
   const addWorkExperience = () => {
     const newWork = {
@@ -88,6 +94,25 @@ export default function ExperienceStep({ onNext, onBack }: ExperienceStepProps) 
       type: 'UPDATE_CV_DATA',
       payload: { projects: updatedProjects }
     });
+  };
+
+  const handleNext = () => {
+    console.log('🔍 ExperienceStep - handleNext called');
+    console.log('🔍 ExperienceStep - isNavigating:', isNavigating);
+    
+    // Prevent multiple clicks
+    if (isNavigating) {
+      console.log('⚠️ ExperienceStep - Already navigating, ignoring click');
+      return;
+    }
+    
+    console.log('✅ ExperienceStep - Calling onNext');
+    setIsNavigating(true);
+    
+    // Add a small delay to ensure state updates are processed
+    setTimeout(() => {
+      onNext();
+    }, 100);
   };
 
   return (
@@ -391,11 +416,21 @@ export default function ExperienceStep({ onNext, onBack }: ExperienceStepProps) 
         </button>
 
         <button
-          onClick={onNext}
-          className="bg-gradient-to-r from-lime-400 to-lime-500 text-black px-8 py-4 rounded-xl font-semibold text-lg hover:from-lime-300 hover:to-lime-400 transition-all duration-200 shadow-lg shadow-lime-400/25 flex items-center gap-2"
+          onClick={handleNext}
+          disabled={isNavigating}
+          className="bg-gradient-to-r from-lime-400 to-lime-500 text-black px-8 py-4 rounded-xl font-semibold text-lg hover:from-lime-300 hover:to-lime-400 transition-all duration-200 shadow-lg shadow-lime-400/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
         >
-          Continue to Education
-          <ArrowRight size={20} />
+          {isNavigating ? (
+            <>
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-black"></div>
+              Continuing...
+            </>
+          ) : (
+            <>
+              Continue to Education
+              <ArrowRight size={20} />
+            </>
+          )}
         </button>
       </motion.div>
     </div>
