@@ -3,6 +3,7 @@ import GoogleProvider from 'next-auth/providers/google'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import { signInWithEmailAndPassword } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
+import { verifyFirebaseToken } from '@/lib/firebase-admin'
 import connectDB from '@/lib/database'
 import User from '@/models/User'
 
@@ -14,6 +15,43 @@ export const authOptions: NextAuthOptions = {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
     }),
     CredentialsProvider({
+      id: 'firebase',
+      name: 'Firebase',
+      credentials: {
+        idToken: { label: 'Firebase ID Token', type: 'text' },
+      },
+      async authorize(credentials) {
+        if (!credentials?.idToken) {
+          console.log('❌ No Firebase ID token provided');
+          return null
+        }
+
+        try {
+          console.log('🔍 Verifying Firebase ID token...');
+          // Verify Firebase ID token
+          const decodedToken = await verifyFirebaseToken(credentials.idToken)
+          console.log('✅ Firebase token verified successfully:', {
+            uid: decodedToken.uid,
+            email: decodedToken.email,
+            name: decodedToken.name
+          });
+          
+          const userData = {
+            id: decodedToken.uid,
+            email: decodedToken.email,
+            name: decodedToken.name || decodedToken.email?.split('@')[0] || 'User',
+            image: decodedToken.picture,
+          };
+          
+          console.log('👤 Returning user data:', userData);
+          return userData as any
+        } catch (error) {
+          console.error('❌ Firebase token verification error:', error)
+          return null
+        }
+      }
+    }),
+    CredentialsProvider({
       name: 'credentials',
       credentials: {
         email: { label: 'Email', type: 'email' },
@@ -21,24 +59,35 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
+          console.log('❌ Credentials provider: Missing email or password');
           return null
         }
 
         try {
+          console.log('🔍 Credentials provider: Attempting Firebase sign-in for:', credentials.email);
           const userCredential = await signInWithEmailAndPassword(
             auth,
             credentials.email,
             credentials.password
           )
 
-          return {
+          console.log('✅ Credentials provider: Firebase sign-in successful:', {
+            uid: userCredential.user.uid,
+            email: userCredential.user.email,
+            displayName: userCredential.user.displayName
+          });
+
+          const userData = {
             id: userCredential.user.uid,
             email: userCredential.user.email,
             name: userCredential.user.displayName,
             image: userCredential.user.photoURL,
-          } as any
+          };
+
+          console.log('👤 Credentials provider: Returning user data:', userData);
+          return userData as any
         } catch (error) {
-          console.error('Firebase auth error:', error)
+          console.error('❌ Credentials provider: Firebase auth error:', error)
           return null
         }
       }
@@ -52,7 +101,17 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async signIn({ user, account, profile }) {
       try {
+        console.log('🔍 NextAuth signIn callback triggered:', {
+          userId: user.id,
+          userEmail: user.email,
+          userName: user.name,
+          provider: account?.provider,
+          accountId: account?.providerAccountId
+        });
+        
+        console.log('🔌 Connecting to database...');
         await connectDB();
+        console.log('✅ Database connected successfully');
         
         if (account?.provider === 'google') {
           // Handle Google OAuth sign-in
@@ -113,11 +172,13 @@ export const authOptions: NextAuthOptions = {
             // Update the user object with MongoDB ID
             user.id = existingUser._id.toString();
           }
-        } else if (account?.provider === 'credentials') {
-          // Handle Firebase credentials sign-in
+        } else if (account?.provider === 'firebase' || account?.provider === 'credentials') {
+          // Handle Firebase sign-in (both firebase provider and credentials provider)
+          console.log('🔥 Handling Firebase sign-in for user:', user.id, 'via provider:', account?.provider);
           const existingUser = await User.findOne({ firebaseUid: user.id });
           
           if (!existingUser) {
+            console.log('👤 Creating new Firebase user in MongoDB...');
             // Create new user for Firebase auth
             const newUser = new User({
               firebaseUid: user.id,
@@ -164,6 +225,7 @@ export const authOptions: NextAuthOptions = {
             // Update the user object with MongoDB ID
             user.id = newUser._id.toString();
           } else {
+            console.log('👤 Updating existing Firebase user:', existingUser._id);
             // Update existing user
             existingUser.avatar = user.image || existingUser.avatar;
             existingUser.lastLogin = new Date();
@@ -175,15 +237,45 @@ export const authOptions: NextAuthOptions = {
           }
         }
         
+        console.log('✅ signIn callback completed successfully');
         return true;
       } catch (error) {
         console.error('❌ Error in signIn callback:', error);
+        console.error('❌ Error stack:', error.stack);
         return false;
       }
     },
     async session({ session, token }) {
       if (token?.sub) {
         session.user.id = token.sub;
+        
+        // Fetch user role from database
+        try {
+          await connectDB();
+          
+          // Try to find user by MongoDB ID first, then by email
+          let user = await User.findById(token.sub).select('role email firstName lastName');
+          
+          if (!user && session.user?.email) {
+            // If not found by ID, try by email
+            user = await User.findOne({ email: session.user.email }).select('role email firstName lastName');
+            if (user) {
+              // Update the session user ID to match the database
+              session.user.id = user._id.toString();
+            }
+          }
+          
+          if (user) {
+            session.user.role = user.role;
+            session.user.email = user.email;
+            session.user.name = `${user.firstName} ${user.lastName}`;
+            console.log('✅ Session callback: User role fetched:', user.role);
+          } else {
+            console.log('❌ Session callback: User not found in database');
+          }
+        } catch (error) {
+          console.error('Error fetching user role in session callback:', error);
+        }
       }
       return session;
     },

@@ -54,10 +54,16 @@ export default admin;
 // Helper function to verify Firebase ID token
 export async function verifyFirebaseToken(idToken: string) {
   try {
+    console.log('🔍 Verifying Firebase token...');
     const decodedToken = await admin.auth().verifyIdToken(idToken);
+    console.log('✅ Firebase token verified successfully:', {
+      uid: decodedToken.uid,
+      email: decodedToken.email,
+      name: decodedToken.name
+    });
     return decodedToken;
   } catch (error) {
-    console.error('Firebase token verification error:', error);
+    console.error('❌ Firebase token verification error:', error);
     throw error;
   }
 }
@@ -76,15 +82,44 @@ export async function getFirebaseUser(uid: string) {
 // Helper function to send password reset email
 export async function sendPasswordResetEmail(email: string) {
   try {
+    console.log('🔥 Generating password reset link for:', email);
+    
     const actionCodeSettings = {
       url: `${process.env.NEXTAUTH_URL}/auth/reset-password`,
       handleCodeInApp: true,
     };
     
     const link = await admin.auth().generatePasswordResetLink(email, actionCodeSettings);
+    console.log('✅ Password reset link generated successfully');
     return link;
-  } catch (error) {
-    console.error('Password reset email error:', error);
+  } catch (error: any) {
+    console.error('❌ Password reset email error:', error);
+    throw error;
+  }
+}
+
+// Helper function to verify password reset code
+export async function verifyPasswordResetCode(code: string) {
+  try {
+    console.log('🔍 Verifying password reset code...');
+    const email = await admin.auth().verifyPasswordResetCode(code);
+    console.log('✅ Password reset code verified for:', email);
+    return email;
+  } catch (error: any) {
+    console.error('❌ Password reset code verification error:', error);
+    throw error;
+  }
+}
+
+// Helper function to confirm password reset
+export async function confirmPasswordReset(code: string, newPassword: string) {
+  try {
+    console.log('🔐 Confirming password reset...');
+    await admin.auth().confirmPasswordReset(code, newPassword);
+    console.log('✅ Password reset confirmed successfully');
+    return true;
+  } catch (error: any) {
+    console.error('❌ Password reset confirmation error:', error);
     throw error;
   }
 }

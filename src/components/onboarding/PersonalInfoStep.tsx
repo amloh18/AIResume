@@ -24,13 +24,14 @@ export default function PersonalInfoStep({ onNext }: PersonalInfoStepProps) {
     setIsNavigating(false);
   }, [state.currentStep]);
 
-  // Ensure card stays flipped if user has filled in basic info
+  // Only auto-flip if user has manually filled in info (not from pre-filled data)
+  // This allows users to still access CV upload functionality even with pre-filled data
   useEffect(() => {
-    if (state.cvData.basics.name && state.cvData.basics.email && !isFlipped) {
-      console.log('🔍 PersonalInfoStep - Auto-flipping card to form side');
+    if (state.cvData.basics.name && state.cvData.basics.email && !isFlipped && !state.prefilledFromSignup) {
+      console.log('🔍 PersonalInfoStep - Auto-flipping card to form side (user filled manually)');
       setIsFlipped(true);
     }
-  }, [state.cvData.basics.name, state.cvData.basics.email, isFlipped]);
+  }, [state.cvData.basics.name, state.cvData.basics.email, isFlipped, state.prefilledFromSignup]);
 
   const handleFileUpload = async (file: File) => {
     setIsUploading(true);
@@ -189,14 +190,18 @@ export default function PersonalInfoStep({ onNext }: PersonalInfoStepProps) {
                 className="absolute w-full backface-hidden"
                 style={{ backfaceVisibility: 'hidden' }}
               >
-                <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8 min-h-[500px] flex flex-col justify-center">
-                  <div className="text-center space-y-6">
+                <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-8 min-h-[500px] flex flex-col">
+                  {/* Header */}
+                  <div className="mb-6">
+                    <h3 className="text-xl font-bold text-white">Upload Your CV</h3>
+                  </div>
+                  
+                  <div className="text-center space-y-6 flex-1 flex flex-col justify-center">
                     <div className="w-20 h-20 bg-gradient-to-br from-lime-400/20 to-lime-500/20 rounded-2xl flex items-center justify-center mx-auto">
                       <FileText size={40} className="text-lime-400" />
                     </div>
-                    <h3 className="text-3xl font-bold text-white">Upload Your CV</h3>
                     <p className="text-white/60 text-lg max-w-md mx-auto">
-                      Upload your existing CV to automatically fill in your details, or start from scratch
+                      Upload your existing CV to automatically fill in your details
                     </p>
                     
                     {!showUpload ? (
@@ -264,13 +269,6 @@ export default function PersonalInfoStep({ onNext }: PersonalInfoStepProps) {
                             </div>
                           </div>
                         )}
-                        
-                        <button
-                          onClick={handleFlip}
-                          className="text-white/60 hover:text-white transition-colors text-lg font-medium flex items-center gap-2 mx-auto"
-                        >
-                          Or start from scratch →
-                        </button>
                       </div>
                     )}
                   </div>
@@ -293,6 +291,14 @@ export default function PersonalInfoStep({ onNext }: PersonalInfoStepProps) {
                       Back to Upload
                     </button>
                   </div>
+                  
+                  {state.prefilledFromSignup && (
+                    <div className="mb-4 p-3 bg-lime-500/10 border border-lime-500/20 rounded-lg">
+                      <p className="text-lime-400 text-sm">
+                        ✨ Your details have been pre-filled from signup. You can still upload your CV to auto-fill additional information or edit manually.
+                      </p>
+                    </div>
+                  )}
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Name */}

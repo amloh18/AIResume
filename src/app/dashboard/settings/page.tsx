@@ -20,12 +20,20 @@ import {
   CreditCard as CardIcon,
   FileText,
   Sun,
-  Moon
+  Moon,
+  AlertCircle,
+  CheckCircle,
+  XCircle
 } from 'lucide-react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import UserIcon from '@/components/ui/UserIcon';
 import MembershipModal from '@/components/payment/MembershipModal';
 import RouteGuard from '@/components/auth/RouteGuard';
+import Toast from '@/components/ui/Toast';
+import ErrorBoundary from '@/components/ui/ErrorBoundary';
+import AddPaymentMethodModal from '@/components/payment/AddPaymentMethodModal';
+import ChangePasswordModal from '@/components/auth/ChangePasswordModal';
+import TwoFactorModal from '@/components/auth/TwoFactorModal';
 
 // --- TYPES ---
 
@@ -621,6 +629,30 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [pushNotifications, setPushNotifications] = useState(true);
+  
+  // Modal states
+  const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
+  const [isTwoFactorModalOpen, setIsTwoFactorModalOpen] = useState(false);
+  
+  // Toast notification state
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('info');
+
+  const showToastNotification = (type: 'success' | 'error' | 'info', message: string) => {
+    setToastType(type);
+    setToastMessage(message);
+    setShowToast(true);
+  };
+
+  const handlePasswordChanged = () => {
+    showToastNotification('success', 'Password changed successfully!');
+  };
+
+  const handleTwoFactorToggled = () => {
+    setTwoFactorEnabled(!twoFactorEnabled);
+    showToastNotification('success', `Two-factor authentication ${twoFactorEnabled ? 'disabled' : 'enabled'} successfully!`);
+  };
 
   return (
     <div className="p-8 h-full">
@@ -636,7 +668,7 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
                 <div className="text-xs text-gray-500 dark:text-gray-300">Add an extra layer of security to your account</div>
               </div>
               <button
-                onClick={() => setTwoFactorEnabled(!twoFactorEnabled)}
+                onClick={() => setIsTwoFactorModalOpen(true)}
                 className={`w-12 h-6 rounded-full transition-colors ${
                   twoFactorEnabled ? 'bg-orange-500' : 'bg-gray-300 dark:bg-gray-600'
                 }`}
@@ -652,7 +684,10 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
                 <div className="text-sm font-medium text-gray-900 dark:text-white">Change Password</div>
                 <div className="text-xs text-gray-500 dark:text-gray-300">Update your account password</div>
               </div>
-              <button className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm font-medium">
+              <button 
+                onClick={() => setIsChangePasswordModalOpen(true)}
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm font-medium"
+              >
                 Change Password
               </button>
             </div>
@@ -700,6 +735,30 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
           </div>
         </div>
       </div>
+
+      {/* Change Password Modal */}
+      <ChangePasswordModal
+        isOpen={isChangePasswordModalOpen}
+        onClose={() => setIsChangePasswordModalOpen(false)}
+        onSuccess={handlePasswordChanged}
+      />
+
+      {/* Two-Factor Authentication Modal */}
+      <TwoFactorModal
+        isOpen={isTwoFactorModalOpen}
+        onClose={() => setIsTwoFactorModalOpen(false)}
+        onSuccess={handleTwoFactorToggled}
+        isEnabling={!twoFactorEnabled}
+      />
+
+      {/* Toast Notifications */}
+      <Toast
+        message={toastMessage}
+        type={toastType}
+        isVisible={showToast}
+        onClose={() => setShowToast(false)}
+        duration={4000}
+      />
     </div>
   );
 };
@@ -713,48 +772,119 @@ const MembershipBilling = ({ user }: { user: User }) => {
   const [loading, setLoading] = useState(true);
   const [isMembershipModalOpen, setIsMembershipModalOpen] = useState(false);
   const [showPlanOptions, setShowPlanOptions] = useState(false);
+  const [isAddPaymentModalOpen, setIsAddPaymentModalOpen] = useState(false);
+  
+  // Toast notification state
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('info');
+  
+  // Error states for individual API calls
+  const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
+  const [paymentMethodsError, setPaymentMethodsError] = useState<string | null>(null);
+  const [invoicesError, setInvoicesError] = useState<string | null>(null);
+  const [plansError, setPlansError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchPaymentData();
   }, []);
 
+  const showToastNotification = (type: 'success' | 'error' | 'info', message: string) => {
+    setToastType(type);
+    setToastMessage(message);
+    setShowToast(true);
+  };
+
+  const handlePaymentMethodAdded = (paymentMethod: any) => {
+    // Refresh payment methods list
+    fetchPaymentData();
+    showToastNotification('success', 'Payment method added successfully!');
+  };
+
   const fetchPaymentData = async () => {
     try {
       setLoading(true);
       
+      // Reset error states
+      setSubscriptionError(null);
+      setPaymentMethodsError(null);
+      setInvoicesError(null);
+      setPlansError(null);
+      
       // Fetch subscription data
-      const subscriptionResponse = await fetch('/api/user/subscription');
-      if (subscriptionResponse.ok) {
-        const subscriptionData = await subscriptionResponse.json();
-        setSubscription(subscriptionData.subscription);
+      try {
+        const subscriptionResponse = await fetch('/api/user/subscription');
+        if (subscriptionResponse.ok) {
+          const subscriptionData = await subscriptionResponse.json();
+          if (subscriptionData.success) {
+            setSubscription(subscriptionData.subscription);
+          } else {
+            setSubscriptionError(subscriptionData.error || 'Failed to load subscription');
+          }
+        } else {
+          setSubscriptionError('Failed to load subscription data');
+        }
+      } catch (error) {
+        console.error('Error fetching subscription:', error);
+        setSubscriptionError('Network error loading subscription');
       }
 
       // Fetch payment methods
-      const paymentResponse = await fetch('/api/user/payment-methods');
-      if (paymentResponse.ok) {
-        const paymentData = await paymentResponse.json();
-        setPaymentMethods(paymentData.paymentMethods || []);
+      try {
+        const paymentResponse = await fetch('/api/user/payment-methods');
+        if (paymentResponse.ok) {
+          const paymentData = await paymentResponse.json();
+          if (paymentData.success) {
+            setPaymentMethods(paymentData.paymentMethods || []);
+          } else {
+            setPaymentMethodsError(paymentData.error || 'Failed to load payment methods');
+          }
+        } else {
+          setPaymentMethodsError('Failed to load payment methods');
+        }
+      } catch (error) {
+        console.error('Error fetching payment methods:', error);
+        setPaymentMethodsError('Network error loading payment methods');
       }
 
       // Fetch invoices
-      const invoiceResponse = await fetch('/api/user/invoices?limit=20');
-      if (invoiceResponse.ok) {
-        const invoiceData = await invoiceResponse.json();
-        setInvoices(invoiceData.invoices || []);
+      try {
+        const invoiceResponse = await fetch('/api/user/invoices?limit=20');
+        if (invoiceResponse.ok) {
+          const invoiceData = await invoiceResponse.json();
+          if (invoiceData.success) {
+            setInvoices(invoiceData.invoices || []);
+          } else {
+            setInvoicesError(invoiceData.error || 'Failed to load invoices');
+          }
+        } else {
+          setInvoicesError('Failed to load invoices');
+        }
+      } catch (error) {
+        console.error('Error fetching invoices:', error);
+        setInvoicesError('Network error loading invoices');
       }
 
       // Fetch available plans (excluding free plan)
-      const plansResponse = await fetch('/api/pricing-plans');
-      if (plansResponse.ok) {
-        const plansData = await plansResponse.json();
-        // Filter out free plan and inactive plans
-        const filteredPlans = plansData.filter((plan: any) => 
-          plan.key !== 'free' && plan.status === 'active'
-        );
-        setAvailablePlans(filteredPlans);
+      try {
+        const plansResponse = await fetch('/api/pricing-plans');
+        if (plansResponse.ok) {
+          const plansData = await plansResponse.json();
+          // Filter out free plan and inactive plans
+          const filteredPlans = plansData.filter((plan: any) => 
+            plan.key !== 'free' && plan.status === 'active'
+          );
+          setAvailablePlans(filteredPlans);
+        } else {
+          setPlansError('Failed to load pricing plans');
+        }
+      } catch (error) {
+        console.error('Error fetching pricing plans:', error);
+        setPlansError('Network error loading pricing plans');
       }
     } catch (error) {
       console.error('Error fetching payment data:', error);
+      showToastNotification('error', 'Failed to load billing information');
     } finally {
       setLoading(false);
     }
@@ -931,8 +1061,23 @@ const MembershipBilling = ({ user }: { user: User }) => {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8">
-                  <p className="text-gray-600 dark:text-gray-300">No upgrade plans available at the moment.</p>
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <DollarSign className="w-8 h-8 text-gray-400 dark:text-gray-500" />
+                  </div>
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Upgrade Plans Available</h4>
+                  <p className="text-gray-600 dark:text-gray-300 mb-4">
+                    We're currently working on new subscription plans. Check back soon for exciting new features!
+                  </p>
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 max-w-md mx-auto">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Bell className="w-4 h-4 text-blue-500" />
+                      <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Stay Updated</span>
+                    </div>
+                    <p className="text-sm text-blue-600 dark:text-blue-400">
+                      We'll notify you when new plans become available.
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
@@ -945,10 +1090,34 @@ const MembershipBilling = ({ user }: { user: User }) => {
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
               Payment Methods
             </h3>
-            <button className="px-4 py-2 bg-lime-500 hover:bg-lime-600 text-white rounded-lg transition-colors">
+            <button 
+              className="px-4 py-2 bg-lime-500 hover:bg-lime-600 text-white rounded-lg transition-colors"
+              onClick={() => setIsAddPaymentModalOpen(true)}
+            >
               Add Payment Method
             </button>
           </div>
+          
+          {/* Error Display */}
+          {paymentMethodsError && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+              <div className="flex items-center gap-2">
+                <XCircle className="w-5 h-5 text-red-500" />
+                <p className="text-red-700 dark:text-red-300 text-sm">
+                  {paymentMethodsError}
+                </p>
+              </div>
+              <button 
+                className="mt-2 text-red-600 dark:text-red-400 text-sm hover:underline"
+                onClick={() => {
+                  setPaymentMethodsError(null);
+                  fetchPaymentData();
+                }}
+              >
+                Retry
+              </button>
+            </div>
+          )}
           
           {paymentMethods.length > 0 ? (
             <div className="space-y-4">
@@ -992,32 +1161,22 @@ const MembershipBilling = ({ user }: { user: User }) => {
               </div>
             </div>
           ) : (
-            <div className="space-y-4">
-              <h4 className="text-md font-medium text-gray-700 dark:text-gray-300">No payment methods saved</h4>
-              
-              {/* Mock Card Preview */}
-              <div className="space-y-3">
-                <p className="text-sm text-gray-600 dark:text-gray-400">Add a card to get started</p>
-                <div className="w-80 h-48 bg-gradient-to-r from-gray-800 to-gray-900 dark:from-gray-700 dark:to-gray-800 rounded-xl p-4 text-white relative opacity-50">
-                  {/* Mock Card Design */}
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-5 bg-white rounded flex items-center justify-center">
-                        <span className="text-xs font-bold text-gray-800">VISA</span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="text-lg font-mono tracking-wider">
-                      •••• •••• •••• 1234
-                    </div>
-                    <div className="flex justify-between text-sm text-gray-300">
-                      <span>12/25</span>
-                      <span className="uppercase">visa</span>
-                    </div>
-                  </div>
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                <CreditCard className="w-8 h-8 text-gray-400 dark:text-gray-500" />
+              </div>
+              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Payment Methods</h4>
+              <p className="text-gray-600 dark:text-gray-300 mb-4">
+                You haven't added any payment methods yet. Add a card to enable quick and secure payments.
+              </p>
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 max-w-md mx-auto">
+                <div className="flex items-center gap-2 mb-2">
+                  <Shield className="w-4 h-4 text-blue-500" />
+                  <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Secure & Safe</span>
                 </div>
+                <p className="text-sm text-blue-600 dark:text-blue-400">
+                  Your payment information is encrypted and secure with industry-standard protection.
+                </p>
               </div>
             </div>
           )}
@@ -1028,6 +1187,27 @@ const MembershipBilling = ({ user }: { user: User }) => {
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
             Payment History
           </h3>
+          
+          {/* Error Display */}
+          {invoicesError && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+              <div className="flex items-center gap-2">
+                <XCircle className="w-5 h-5 text-red-500" />
+                <p className="text-red-700 dark:text-red-300 text-sm">
+                  {invoicesError}
+                </p>
+              </div>
+              <button 
+                className="mt-2 text-red-600 dark:text-red-400 text-sm hover:underline"
+                onClick={() => {
+                  setInvoicesError(null);
+                  fetchPaymentData();
+                }}
+              >
+                Retry
+              </button>
+            </div>
+          )}
           
           {invoices.length > 0 ? (
             <div className="space-y-3">
@@ -1071,9 +1251,23 @@ const MembershipBilling = ({ user }: { user: User }) => {
               ))}
             </div>
           ) : (
-            <div className="text-center py-8">
-              <FileText className="w-12 h-12 mx-auto mb-4 text-gray-400 dark:text-gray-500" />
-              <p className="text-gray-600 dark:text-gray-300">No payment history found</p>
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                <FileText className="w-8 h-8 text-gray-400 dark:text-gray-500" />
+              </div>
+              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Payment History</h4>
+              <p className="text-gray-600 dark:text-gray-300 mb-4">
+                You haven't made any purchases yet. Your payment history will appear here once you upgrade to a paid plan.
+              </p>
+              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 max-w-md mx-auto">
+                <div className="flex items-center gap-2 mb-2">
+                  <Gift className="w-4 h-4 text-green-500" />
+                  <span className="text-sm font-medium text-green-700 dark:text-green-300">Free Plan Benefits</span>
+                </div>
+                <p className="text-sm text-green-600 dark:text-green-400">
+                  You're currently enjoying our free plan with basic features.
+                </p>
+              </div>
             </div>
           )}
         </div>
@@ -1087,8 +1281,24 @@ const MembershipBilling = ({ user }: { user: User }) => {
         onSuccess={() => {
           setIsMembershipModalOpen(false);
           fetchPaymentData();
-          window.location.reload();
+          showToastNotification('success', 'Subscription updated successfully!');
         }}
+      />
+
+      {/* Add Payment Method Modal */}
+      <AddPaymentMethodModal
+        isOpen={isAddPaymentModalOpen}
+        onClose={() => setIsAddPaymentModalOpen(false)}
+        onSuccess={handlePaymentMethodAdded}
+      />
+
+      {/* Toast Notifications */}
+      <Toast
+        message={toastMessage}
+        type={toastType}
+        isVisible={showToast}
+        onClose={() => setShowToast(false)}
+        duration={4000}
       />
     </div>
   );
@@ -1099,20 +1309,38 @@ const ReferralsRewards = () => {
   const [referralStats, setReferralStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Toast notification state
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('info');
+
+  const showToastNotification = (type: 'success' | 'error' | 'info', message: string) => {
+    setToastType(type);
+    setToastMessage(message);
+    setShowToast(true);
+  };
 
   useEffect(() => {
     const fetchReferralStats = async () => {
       try {
         setLoading(true);
+        setError(null);
         const response = await fetch('/api/user/referrals');
         if (response.ok) {
           const data = await response.json();
           if (data.success) {
             setReferralStats(data.stats);
+          } else {
+            setError(data.error || 'Failed to load referral data');
           }
+        } else {
+          setError('Failed to load referral data');
         }
       } catch (error) {
         console.error('Error fetching referral stats:', error);
+        setError('Network error loading referral data');
       } finally {
         setLoading(false);
       }
@@ -1126,10 +1354,14 @@ const ReferralsRewards = () => {
       try {
         await navigator.clipboard.writeText(referralStats.referralLink);
         setCopied(true);
+        showToastNotification('success', 'Referral link copied to clipboard!');
         setTimeout(() => setCopied(false), 2000);
       } catch (error) {
         console.error('Failed to copy referral link:', error);
+        showToastNotification('error', 'Failed to copy referral link');
       }
+    } else {
+      showToastNotification('error', 'No referral link available');
     }
   };
 
@@ -1152,6 +1384,49 @@ const ReferralsRewards = () => {
             Invite friends and earn rewards for successful referrals.
           </p>
         </div>
+
+        {/* Error Display */}
+        {error && (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+            <div className="flex items-center gap-2">
+              <XCircle className="w-5 h-5 text-red-500" />
+              <p className="text-red-700 dark:text-red-300 text-sm">
+                {error}
+              </p>
+            </div>
+            <button 
+              className="mt-2 text-red-600 dark:text-red-400 text-sm hover:underline"
+              onClick={() => {
+                setError(null);
+                // Retry fetch
+                const fetchReferralStats = async () => {
+                  try {
+                    setLoading(true);
+                    const response = await fetch('/api/user/referrals');
+                    if (response.ok) {
+                      const data = await response.json();
+                      if (data.success) {
+                        setReferralStats(data.stats);
+                      } else {
+                        setError(data.error || 'Failed to load referral data');
+                      }
+                    } else {
+                      setError('Failed to load referral data');
+                    }
+                  } catch (error) {
+                    console.error('Error fetching referral stats:', error);
+                    setError('Network error loading referral data');
+                  } finally {
+                    setLoading(false);
+                  }
+                };
+                fetchReferralStats();
+              }}
+            >
+              Retry
+            </button>
+          </div>
+        )}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -1243,6 +1518,15 @@ const ReferralsRewards = () => {
           </div>
         </div>
       </div>
+
+      {/* Toast Notifications */}
+      <Toast
+        message={toastMessage}
+        type={toastType}
+        isVisible={showToast}
+        onClose={() => setShowToast(false)}
+        duration={4000}
+      />
     </div>
   );
 };
@@ -1728,12 +2012,14 @@ const SettingsContent = () => {
 // Main Component
 export default function SettingsPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
-      </div>
-    }>
-      <SettingsContent />
-    </Suspense>
+    <ErrorBoundary>
+      <Suspense fallback={
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+        </div>
+      }>
+        <SettingsContent />
+      </Suspense>
+    </ErrorBoundary>
   );
 }

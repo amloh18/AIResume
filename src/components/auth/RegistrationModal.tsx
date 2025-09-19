@@ -123,8 +123,25 @@ export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, on
       return;
     }
 
+    // Comprehensive password validation
     if (formData.password.length < 8) {
       setError('Password must be at least 8 characters long');
+      return;
+    }
+    if (!/(?=.*[a-z])/.test(formData.password)) {
+      setError('Password must contain at least one lowercase letter');
+      return;
+    }
+    if (!/(?=.*[A-Z])/.test(formData.password)) {
+      setError('Password must contain at least one uppercase letter');
+      return;
+    }
+    if (!/(?=.*\d)/.test(formData.password)) {
+      setError('Password must contain at least one number');
+      return;
+    }
+    if (!/(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])/.test(formData.password)) {
+      setError('Password must contain at least one special character (!@#$%^&*()_+-=[]{}|;:,.<>?)');
       return;
     }
 
