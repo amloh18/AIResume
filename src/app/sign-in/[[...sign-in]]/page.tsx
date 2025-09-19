@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn, useSession } from 'next-auth/react';
 import { Eye, EyeOff, Mail, Lock, Loader2, CheckCircle, AlertCircle, ArrowRight } from 'lucide-react';
-import LoadingAnimation from '@/components/ui/LoadingAnimation';
+import { signInWithEmail } from '@/lib/unified-auth';
 
 interface SignInFormData {
   email: string;
@@ -29,23 +29,23 @@ function SignInPageContent() {
 
   // Check if user is already signed in
   useEffect(() => {
-    if (session?.user) {
+    if (status === 'authenticated' && session?.user) {
       console.log('🔍 User already signed in, redirecting to:', redirectUrl);
       router.push(redirectUrl);
     }
-  }, [session, router, redirectUrl]);
+  }, [status, session, router, redirectUrl]);
 
   // Handle redirect after successful sign-in
   useEffect(() => {
-    if (success && session?.user) {
+    if (success && status === 'authenticated' && session?.user) {
       console.log('🔍 Sign-in successful, redirecting to:', redirectUrl);
       const timer = setTimeout(() => {
         router.push(redirectUrl);
-      }, 1000); // Small delay to show success message
+      }, 1500); // Small delay to show success message
       
       return () => clearTimeout(timer);
     }
-  }, [success, session, router, redirectUrl]);
+  }, [success, status, session, router, redirectUrl]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -83,19 +83,13 @@ function SignInPageContent() {
     setSuccess('');
 
     try {
-      const result = await signIn('credentials', {
-        email: formData.email,
-        password: formData.password,
-        redirect: false,
-      });
+      const result = await signInWithEmail(formData.email, formData.password);
 
-      if (result?.error) {
-        setError('Invalid email or password. Please try again.');
-      } else if (result?.ok) {
+      if (result.success) {
         setSuccess('Sign in successful! Redirecting...');
         // Redirect will be handled by useEffect when session updates
       } else {
-        setError('Sign in failed. Please try again.');
+        setError(result.error || 'Sign in failed. Please try again.');
       }
 
     } catch (error: any) {
@@ -119,13 +113,20 @@ function SignInPageContent() {
     }
   };
 
-  // Loading state
-  if (isLoading) {
-    return <LoadingAnimation progress={0.8} showProgressBar={false} />;
+  // Show loading while checking session status
+  if (status === 'loading') {
+    return (
+      <div className="h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 animate-spin text-lime-400" />
+          <p className="text-white text-sm">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 flex">
+    <div className="h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 flex">
       {/* Left Side - Full Height Sign In Image (50%) */}
       <div className="w-1/2 p-4">
         {/* Full Height Image with Padding */}
@@ -258,6 +259,16 @@ function SignInPageContent() {
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
+              </div>
+
+              {/* Forgot Password Link */}
+              <div className="flex justify-end">
+                <a
+                  href="/auth/reset-password"
+                  className="text-sm text-lime-400 hover:text-lime-300 transition-colors"
+                >
+                  Forgot password?
+                </a>
               </div>
 
               {/* Error Message */}

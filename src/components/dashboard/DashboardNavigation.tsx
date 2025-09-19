@@ -159,14 +159,6 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
 
   return (
     <>
-      {/* Mobile Overlay */}
-      {isOpen && screenSize === 'mobile' && (
-        <div 
-          className="fixed inset-0 bg-black/50 dark:bg-black/80 backdrop-blur-sm z-40"
-          onClick={onClose}
-        />
-      )}
-      
       {/* Sidebar */}
       <div className={getSidebarContainerClasses()}>
       {/* Logo */}

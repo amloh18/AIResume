@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, Mail, Lock, User, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
@@ -20,13 +20,6 @@ export default function SignUpPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
-  // Redirect if already authenticated
-  useEffect(() => {
-    if (status === 'authenticated' && session) {
-      router.push('/master-cv-onboarding');
-    }
-  }, [session, status, router]);
-
   const [formData, setFormData] = useState<SignUpFormData>({
     firstName: '',
     lastName: '',
@@ -34,11 +27,84 @@ export default function SignUpPage() {
     password: '',
     confirmPassword: '',
   });
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (status === 'authenticated' && session) {
+      // Pass signup data to master-cv-onboarding
+      const signupData = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        fullName: `${formData.firstName} ${formData.lastName}`.trim()
+      };
+      
+      // Store signup data in sessionStorage for the onboarding page
+      sessionStorage.setItem('signupData', JSON.stringify(signupData));
+      
+      router.push('/master-cv-onboarding');
+    }
+  }, [session, status, router, formData]);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
+  const [emailError, setEmailError] = useState('');
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+  const emailTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const validatePasswordRealTime = (password: string) => {
+    const errors: string[] = [];
+    
+    if (password.length < 8) {
+      errors.push('At least 8 characters');
+    }
+    if (!/(?=.*[a-z])/.test(password)) {
+      errors.push('One lowercase letter');
+    }
+    if (!/(?=.*[A-Z])/.test(password)) {
+      errors.push('One uppercase letter');
+    }
+    if (!/(?=.*\d)/.test(password)) {
+      errors.push('One number');
+    }
+    if (!/(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])/.test(password)) {
+      errors.push('One special character');
+    }
+    
+    return errors;
+  };
+
+  const checkEmailExists = async (email: string) => {
+    if (!email || !/\S+@\S+\.\S+/.test(email)) {
+      setEmailError('');
+      return;
+    }
+
+    setIsCheckingEmail(true);
+    try {
+      const response = await fetch('/api/auth/check-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
+      const result = await response.json();
+      
+      if (result.success && result.exists) {
+        setEmailError('An account with this email already exists. Please sign in instead.');
+      } else {
+        setEmailError('');
+      }
+    } catch (error) {
+      console.error('Error checking email:', error);
+      setEmailError('');
+    } finally {
+      setIsCheckingEmail(false);
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -46,8 +112,29 @@ export default function SignUpPage() {
       ...prev,
       [name]: value
     }));
+    
     // Clear errors when user starts typing
     if (error) setError('');
+    if (emailError) setEmailError('');
+    
+    // Validate password in real-time
+    if (name === 'password') {
+      const errors = validatePasswordRealTime(value);
+      setPasswordErrors(errors);
+    }
+    
+    // Check email existence in real-time with debouncing
+    if (name === 'email') {
+      // Clear previous timeout
+      if (emailTimeoutRef.current) {
+        clearTimeout(emailTimeoutRef.current);
+      }
+      
+      // Set new timeout
+      emailTimeoutRef.current = setTimeout(() => {
+        checkEmailExists(value);
+      }, 500); // 500ms debounce
+    }
   };
 
   const validateForm = () => {
@@ -67,8 +154,30 @@ export default function SignUpPage() {
       setError('Please enter a valid email address');
       return false;
     }
+    if (emailError) {
+      setError(emailError);
+      return false;
+    }
+    
+    // Comprehensive password validation
     if (formData.password.length < 8) {
       setError('Password must be at least 8 characters long');
+      return false;
+    }
+    if (!/(?=.*[a-z])/.test(formData.password)) {
+      setError('Password must contain at least one lowercase letter');
+      return false;
+    }
+    if (!/(?=.*[A-Z])/.test(formData.password)) {
+      setError('Password must contain at least one uppercase letter');
+      return false;
+    }
+    if (!/(?=.*\d)/.test(formData.password)) {
+      setError('Password must contain at least one number');
+      return false;
+    }
+    if (!/(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])/.test(formData.password)) {
+      setError('Password must contain at least one special character (!@#$%^&*()_+-=[]{}|;:,.<>?)');
       return false;
     }
     if (formData.password !== formData.confirmPassword) {
@@ -100,17 +209,22 @@ export default function SignUpPage() {
         displayName: `${formData.firstName} ${formData.lastName}`,
       });
 
-      // Sign in with NextAuth using credentials
+      // Sign in with NextAuth using credentials provider (same as manual sign-in)
+      console.log('🔑 Attempting automatic sign-in with credentials provider...');
+      
       const result = await signIn('credentials', {
         email: formData.email,
         password: formData.password,
         redirect: false,
       });
 
+      console.log('🔍 NextAuth signIn result:', result);
+
       if (result?.ok) {
         setSuccess('Account created successfully! Redirecting...');
         // Redirect will be handled by useEffect when session updates
       } else {
+        console.error('❌ NextAuth signIn failed:', result?.error);
         setError('Account created but sign in failed. Please try signing in manually.');
       }
 
@@ -119,9 +233,11 @@ export default function SignUpPage() {
       if (error.code === 'auth/email-already-in-use') {
         setError('An account with this email already exists. Please sign in instead.');
       } else if (error.code === 'auth/weak-password') {
-        setError('Password is too weak. Please choose a stronger password.');
+        setError('Password does not meet security requirements. Please ensure your password contains uppercase letters, lowercase letters, numbers, and special characters.');
+      } else if (error.code === 'auth/password-does-not-meet-requirements') {
+        setError('Password does not meet security requirements. Please ensure your password contains uppercase letters, lowercase letters, numbers, and special characters.');
       } else {
-        setError(error.message || 'Failed to create account. Please try again.');
+        setError('Failed to create account. Please check your information and try again.');
       }
     } finally {
       setIsLoading(false);
@@ -444,11 +560,26 @@ export default function SignUpPage() {
                     name="email"
                     value={formData.email}
                     onChange={handleInputChange}
-                    className="w-full pl-10 pr-4 py-3 bg-white/10 border border-gray-600 text-white placeholder-gray-400 focus:border-lime-400 focus:ring-lime-400 focus:ring-2 transition-all duration-200 rounded-lg"
+                    className={`w-full pl-10 pr-4 py-3 bg-white/10 border text-white placeholder-gray-400 focus:ring-2 transition-all duration-200 rounded-lg ${
+                      emailError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-600 focus:border-lime-400 focus:ring-lime-400'
+                    }`}
                     placeholder="john@example.com"
                     required
                   />
+                  {isCheckingEmail && (
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                      <div className="w-4 h-4 border-2 border-gray-400 border-t-lime-400 rounded-full animate-spin"></div>
+                    </div>
+                  )}
                 </div>
+                
+                {/* Email Error Message */}
+                {emailError && (
+                  <div className="mt-2 flex items-center gap-2 text-red-400 text-sm">
+                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                    <span>{emailError}</span>
+                  </div>
+                )}
               </div>
 
               {/* Password Field */}
@@ -476,6 +607,31 @@ export default function SignUpPage() {
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
+                
+                {/* Password Requirements */}
+                {formData.password && (
+                  <div className="mt-2 space-y-1">
+                    <p className="text-xs text-gray-400 mb-2">Password requirements:</p>
+                    <div className="space-y-1">
+                      {[
+                        { text: 'At least 8 characters', valid: formData.password.length >= 8 },
+                        { text: 'One lowercase letter', valid: /(?=.*[a-z])/.test(formData.password) },
+                        { text: 'One uppercase letter', valid: /(?=.*[A-Z])/.test(formData.password) },
+                        { text: 'One number', valid: /(?=.*\d)/.test(formData.password) },
+                        { text: 'One special character', valid: /(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])/.test(formData.password) }
+                      ].map((requirement, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <div className={`w-3 h-3 rounded-full flex items-center justify-center ${requirement.valid ? 'bg-green-500' : 'bg-gray-600'}`}>
+                            {requirement.valid && <CheckCircle className="w-2 h-2 text-white" />}
+                          </div>
+                          <span className={`text-xs ${requirement.valid ? 'text-green-400' : 'text-gray-400'}`}>
+                            {requirement.text}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Confirm Password Field */}

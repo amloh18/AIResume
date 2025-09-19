@@ -59,8 +59,21 @@ export default function SignUpForm() {
         throw new Error('Passwords do not match');
       }
 
+      // Comprehensive password validation
       if (formData.password.length < 8) {
         throw new Error('Password must be at least 8 characters long');
+      }
+      if (!/(?=.*[a-z])/.test(formData.password)) {
+        throw new Error('Password must contain at least one lowercase letter');
+      }
+      if (!/(?=.*[A-Z])/.test(formData.password)) {
+        throw new Error('Password must contain at least one uppercase letter');
+      }
+      if (!/(?=.*\d)/.test(formData.password)) {
+        throw new Error('Password must contain at least one number');
+      }
+      if (!/(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])/.test(formData.password)) {
+        throw new Error('Password must contain at least one special character (!@#$%^&*()_+-=[]{}|;:,.<>?)');
       }
 
       // Step 1: Create user in Firebase Auth
@@ -120,7 +133,15 @@ export default function SignUpForm() {
 
     } catch (error: any) {
       console.error('Sign up error:', error);
-      setError(error.message || 'Failed to create account');
+      if (error.code === 'auth/email-already-in-use') {
+        setError('An account with this email already exists. Please sign in instead.');
+      } else if (error.code === 'auth/weak-password') {
+        setError('Password does not meet security requirements. Please ensure your password contains uppercase letters, lowercase letters, numbers, and special characters.');
+      } else if (error.code === 'auth/password-does-not-meet-requirements') {
+        setError('Password does not meet security requirements. Please ensure your password contains uppercase letters, lowercase letters, numbers, and special characters.');
+      } else {
+        setError(error.message || 'Failed to create account. Please check your information and try again.');
+      }
     } finally {
       setLoading(false);
     }

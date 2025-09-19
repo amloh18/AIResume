@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSession } from 'next-auth/react';
+import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
 import RecentActivityWidget from './RecentActivityWidget';
 import { 
   FileText, 
@@ -48,7 +49,6 @@ import PageHeader from './PageHeader';
 import { authenticatedFetch } from '@/lib/utils/apiUtils';
 import { useJourneyLinking } from '@/lib/services/journeyLinkingService';
 import { ApplicationPackageService } from '@/lib/services/applicationPackageService';
-import MasterCVCard from './MasterCVCard';
 import MasterCVCardUpdated from './MasterCVCardUpdated';
 import CVCard from './CVCard';
 
@@ -218,6 +218,7 @@ const Canvas: React.FC = () => {
   console.log('🔍 Canvas - Component rendered');
   const { data: session } = useSession();
   const { createCV } = useCreateCV();
+  const { isOpen: isMobileMenuOpen, toggleSidebar } = useMobileSidebar();
   const [cvs, setCvs] = useState<CV[]>([]);
   
   // Debug CVs state
@@ -1250,13 +1251,16 @@ const Canvas: React.FC = () => {
           email: userProfile?.email || session?.user?.email || 'user@example.com',
           username: userProfile?.username || session?.user?.username || '',
           profilePhoto: userProfile?.avatar || session?.user?.image || '',
-          designation: userProfile?.designation || ''
+          designation: userProfile?.designation || '',
+          role: session?.user?.role
         }}
         showSettings={true}
         notifications={notifications}
         onMarkAsRead={markNotificationAsRead}
         onMarkAllAsRead={markAllNotificationsAsRead}
         onRemoveNotification={removeNotification}
+        onMobileMenuToggle={toggleSidebar}
+        isMobileMenuOpen={isMobileMenuOpen}
       />
 
       {/* Tab Navigation */}

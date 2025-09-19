@@ -164,15 +164,47 @@ const CVUpload: React.FC<CVUploadProps> = ({ onCVParsed, onClose }) => {
 
   // Helper function to validate and fix data structure
   const asMonth = (value: any): string => {
-    if (!value || typeof value !== 'string') return '';
+    if (!value || typeof value !== 'string') {
+      console.log('🔍 asMonth: Invalid input:', value, 'type:', typeof value);
+      return '';
+    }
     const trimmed = value.trim();
+    console.log('🔍 asMonth processing:', trimmed);
+    
     // Accept YYYY-MM, YYYY-MM-DD, YYYY
     const yyyyMm = trimmed.match(/^\d{4}-(0[1-9]|1[0-2])$/);
-    if (yyyyMm) return yyyyMm[0];
+    if (yyyyMm) {
+      console.log('✅ asMonth: YYYY-MM format:', yyyyMm[0]);
+      return yyyyMm[0];
+    }
     const yyyyMmDd = trimmed.match(/^(\d{4})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/);
-    if (yyyyMmDd) return `${yyyyMmDd[1]}-${yyyyMmDd[2]}`;
+    if (yyyyMmDd) {
+      const result = `${yyyyMmDd[1]}-${yyyyMmDd[2]}`;
+      console.log('✅ asMonth: YYYY-MM-DD format:', trimmed, '->', result);
+      return result;
+    }
     const yyyy = trimmed.match(/^(\d{4})$/);
-    if (yyyy) return `${yyyy[1]}-01`;
+    if (yyyy) {
+      const result = `${yyyy[1]}-01`;
+      console.log('✅ asMonth: YYYY format:', trimmed, '->', result);
+      return result;
+    }
+    
+    // Try to parse other common date formats
+    try {
+      const date = new Date(trimmed);
+      if (!isNaN(date.getTime())) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const result = `${year}-${month}`;
+        console.log('✅ asMonth: Parsed date:', trimmed, '->', result);
+        return result;
+      }
+    } catch (error) {
+      console.log('❌ asMonth: Failed to parse date:', trimmed, error);
+    }
+    
+    console.log('❌ asMonth: No match for:', trimmed);
     return '';
   };
 

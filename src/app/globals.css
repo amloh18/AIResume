@@ -12,6 +12,13 @@
   --bg-primary: #ffffff;
   --bg-secondary: #f9fafb;
   --bg-tertiary: #f3f4f6;
+  --bg-gradient: linear-gradient(135deg, 
+    rgba(185, 235, 185, 0.8) 0%, 
+    rgba(175, 199, 182, 0.6) 25%, 
+    rgba(200, 220, 200, 0.4) 50%, 
+    rgba(220, 240, 220, 0.3) 75%, 
+    rgba(240, 250, 240, 0.2) 100%
+  );
   --text-primary: #111827;
   --text-secondary: #6b7280;
   --text-tertiary: #9ca3af;
@@ -100,6 +107,19 @@ body {
   text-rendering: optimizeSpeed;
   line-height: 1.5;
   transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+}
+
+/* Light theme gradient background */
+body:not(.dark) {
+  background: linear-gradient(135deg, 
+    rgba(185, 235, 185, 0.8) 0%, 
+    rgba(175, 199, 182, 0.6) 25%, 
+    rgba(200, 220, 200, 0.4) 50%, 
+    rgba(220, 240, 220, 0.3) 75%, 
+    rgba(240, 250, 240, 0.2) 100%
+  );
+  background-attachment: fixed;
+  background-size: 100% 100%;
 }
 
 /* Optimize animations */
@@ -1021,6 +1041,10 @@ nav {
 
 .theme-bg-tertiary {
   background-color: var(--bg-tertiary);
+}
+
+.theme-bg-gradient {
+  background: var(--bg-gradient);
 }
 
 .theme-text-primary {

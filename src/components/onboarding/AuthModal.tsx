@@ -39,8 +39,29 @@ export default function SignupModal({ isOpen, onClose, onSuccess, selectedRole, 
       return;
     }
 
+    // Comprehensive password validation
     if (registerData.password.length < 8) {
       setError('Password must be at least 8 characters long');
+      setIsLoading(false);
+      return;
+    }
+    if (!/(?=.*[a-z])/.test(registerData.password)) {
+      setError('Password must contain at least one lowercase letter');
+      setIsLoading(false);
+      return;
+    }
+    if (!/(?=.*[A-Z])/.test(registerData.password)) {
+      setError('Password must contain at least one uppercase letter');
+      setIsLoading(false);
+      return;
+    }
+    if (!/(?=.*\d)/.test(registerData.password)) {
+      setError('Password must contain at least one number');
+      setIsLoading(false);
+      return;
+    }
+    if (!/(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])/.test(registerData.password)) {
+      setError('Password must contain at least one special character (!@#$%^&*()_+-=[]{}|;:,.<>?)');
       setIsLoading(false);
       return;
     }

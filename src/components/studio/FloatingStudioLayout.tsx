@@ -353,7 +353,8 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
                       name: session.user.name || 'User',
                       email: session.user.email || 'user@example.com',
                       profilePhoto: session.user.image,
-                      designation: 'CV Creator'
+                      designation: 'CV Creator',
+                      role: session.user.role
                     }}
                   />
                 )}

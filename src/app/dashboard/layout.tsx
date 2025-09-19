@@ -12,6 +12,7 @@ import DashboardNavigation from '@/components/dashboard/DashboardNavigation';
 import RouteGuard from '@/components/auth/RouteGuard';
 import { useCVSetup } from '@/lib/hooks/useCVSetup';
 import { JobJourneyProvider, useJobJourney } from '@/contexts/JobJourneyContext';
+import { MobileSidebarProvider, useMobileSidebar } from '@/contexts/MobileSidebarContext';
 import JourneyStatusBanner from '@/components/JourneyStatusBanner';
 import PostOnboardingTour from '@/components/onboarding-universal/PostOnboardingTour';
 
@@ -26,7 +27,7 @@ const DashboardContent: React.FC<{ children: React.ReactNode }> = ({ children })
   const router = useRouter();
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { isOpen: sidebarOpen, setIsOpen: setSidebarOpen } = useMobileSidebar();
   const { hasCV, isChecking } = useCVSetup();
 
   // Check for tour parameter
@@ -267,30 +268,6 @@ const DashboardContent: React.FC<{ children: React.ReactNode }> = ({ children })
         )}
       </AnimatePresence>
 
-      {/* Mobile Menu Toggle */}
-      <motion.div 
-        className="xl:hidden fixed left-4 z-50 flex gap-2"
-        animate={{ 
-          top: isBannerVisible ? '3rem' : '1rem'
-        }}
-        transition={{ duration: 0.3, ease: 'easeInOut' }}
-      >
-        <button
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="p-2 bg-white/80 dark:bg-gray-800 backdrop-blur-xl border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-        >
-          {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
-
-        {/* Theme Toggle Button */}
-        <button
-          onClick={toggleTheme}
-          className="p-2 bg-white/80 dark:bg-gray-800 backdrop-blur-xl border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-          title={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
-        >
-          {theme === 'light' ? <Moon size={24} /> : <Sun size={24} />}
-        </button>
-      </motion.div>
 
 
       {/* Journey Status Banner - Full Width Above Everything */}
@@ -343,9 +320,12 @@ const DashboardContent: React.FC<{ children: React.ReactNode }> = ({ children })
               exit={{ opacity: 0 }}
               onClick={() => setSidebarOpen(false)}
             >
-              <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+              {/* Full-width background overlay */}
+              <div className="absolute inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm" />
+              
+              {/* Sidebar panel */}
               <motion.div
-                className="absolute top-0 left-0 h-full w-80 max-w-[85vw] bg-white dark:bg-gray-900 shadow-2xl"
+                className="absolute top-0 left-0 h-full w-80 max-w-[85vw] shadow-2xl"
                 initial={{ x: -320 }}
                 animate={{ x: 0 }}
                 exit={{ x: -320 }}
@@ -396,7 +376,9 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   return (
     <RouteGuard requireAuth={true}>
       <JobJourneyProvider>
-        <DashboardContent children={children} />
+        <MobileSidebarProvider>
+          <DashboardContent children={children} />
+        </MobileSidebarProvider>
       </JobJourneyProvider>
     </RouteGuard>
   );

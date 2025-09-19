@@ -13,7 +13,8 @@ import {
   Moon,
   ChevronDown,
   Mail,
-  Briefcase
+  Briefcase,
+  Shield
 } from 'lucide-react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 
@@ -24,6 +25,7 @@ interface UserProfileDialogProps {
     username?: string;
     profilePhoto?: string;
     designation?: string;
+    role?: string;
   };
   isOpen: boolean;
   onClose: () => void;
@@ -225,6 +227,20 @@ const UserProfileDialog: React.FC<UserProfileDialogProps> = ({
           <Settings className="h-5 w-5" />
           <span>Settings</span>
         </button>
+
+        {/* Admin Dashboard - Only show for admin users */}
+        {user.role === 'admin' && (
+          <button
+            onClick={() => {
+              router.push('/admin');
+              onClose();
+            }}
+            className="w-full flex items-center gap-3 px-4 py-3 text-left text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+          >
+            <Shield className="h-5 w-5" />
+            <span>Admin Dashboard</span>
+          </button>
+        )}
 
         {/* Divider */}
         <div className="border-t border-gray-200 dark:border-gray-700 my-2" />

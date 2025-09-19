@@ -48,6 +48,41 @@ const MasterCVOnboardingContent: React.FC = () => {
     console.log('🔍 Master CV Onboarding - session?.user:', session?.user);
     console.log('🔍 Master CV Onboarding - localStorage user:', typeof window !== 'undefined' ? localStorage.getItem('user') : 'N/A');
     console.log('🔍 Master CV Onboarding - needsCVSetup:', typeof window !== 'undefined' ? sessionStorage.getItem('needsCVSetup') : 'N/A');
+    
+    // Load signup data if available
+    if (typeof window !== 'undefined') {
+      const signupDataStr = sessionStorage.getItem('signupData');
+      if (signupDataStr) {
+        try {
+          const signupData = JSON.parse(signupDataStr);
+          console.log('📝 Loading signup data:', signupData);
+          
+          // Update the onboarding context with signup data
+          dispatch({
+            type: 'SET_CV_DATA',
+            payload: {
+              ...state.cvData,
+              basics: {
+                ...state.cvData.basics,
+                name: signupData.fullName,
+                email: signupData.email,
+              }
+            }
+          });
+          
+          // Mark that data was pre-filled from signup
+          dispatch({
+            type: 'SET_PREFILLED_FROM_SIGNUP',
+            payload: true
+          });
+          
+          // Clear the signup data from sessionStorage
+          sessionStorage.removeItem('signupData');
+        } catch (error) {
+          console.error('Error parsing signup data:', error);
+        }
+      }
+    }
     console.log('🔍 Master CV Onboarding - stepParam:', stepParam);
     console.log('🔍 Master CV Onboarding - state.currentStep:', state.currentStep);
     
@@ -188,6 +223,7 @@ const MasterCVOnboardingContent: React.FC = () => {
     // User is already authenticated, move to next step instead of redirecting to auth
     nextStep();
   };
+
 
   const handleErrorDialogClose = () => {
     setErrorDialog(prev => ({ ...prev, isOpen: false }));
