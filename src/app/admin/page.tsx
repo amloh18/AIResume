@@ -42,14 +42,19 @@ const AdminPage: React.FC<AdminPageProps> = () => {
   const [activeTab, setActiveTab] = useState('kpis');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [roleCheckLoading, setRoleCheckLoading] = useState(false);
 
   // Check if user is admin
   useEffect(() => {
     if (status === 'loading') return;
 
     console.log('🔍 Admin Page Debug:');
-    console.log('Session:', session);
+    console.log('Session:', JSON.stringify(session, null, 2));
     console.log('Session user:', session?.user);
+    console.log('User role:', session?.user?.role);
+    console.log('User ID:', session?.user?.id);
+    console.log('User email:', session?.user?.email);
 
     if (!session) {
       console.log('❌ No session, redirecting to signin');
@@ -57,10 +62,45 @@ const AdminPage: React.FC<AdminPageProps> = () => {
       return;
     }
 
-    // For now, we'll assume admin check is done via API or database
-    // This would need to be implemented based on your user model
-    console.log('✅ User has session, showing admin dashboard');
-  }, [session, status, router]);
+    // Check if user has admin role from session
+    if (session.user?.role === 'admin') {
+      console.log('✅ User is admin (from session), showing admin dashboard');
+      setUserRole('admin');
+      return;
+    }
+
+    // If role is not in session, check via API
+    if (!session.user?.role && !roleCheckLoading) {
+      console.log('🔍 Role not in session, checking via API...');
+      setRoleCheckLoading(true);
+      
+      fetch('/api/admin/check-user-role')
+        .then(response => response.json())
+        .then(data => {
+          setRoleCheckLoading(false);
+          if (data.success && data.user.role === 'admin') {
+            console.log('✅ User is admin (from API), showing admin dashboard');
+            setUserRole('admin');
+          } else {
+            console.log('❌ User is not admin (from API), redirecting to dashboard');
+            router.push('/dashboard');
+          }
+        })
+        .catch(error => {
+          console.error('❌ Error checking user role:', error);
+          setRoleCheckLoading(false);
+          router.push('/dashboard');
+        });
+      return;
+    }
+
+    // If we have a role but it's not admin
+    if (session.user?.role && session.user.role !== 'admin') {
+      console.log('❌ User is not admin, redirecting to dashboard');
+      router.push('/dashboard');
+      return;
+    }
+  }, [session, status, router, roleCheckLoading]);
 
   const handleLogout = async () => {
     try {
@@ -140,15 +180,20 @@ const AdminPage: React.FC<AdminPageProps> = () => {
     }
   };
 
-  if (status === 'loading') {
+  if (status === 'loading' || roleCheckLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-lime-400"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-lime-400 mx-auto mb-4"></div>
+          <p className="text-gray-600">
+            {status === 'loading' ? 'Loading session...' : 'Checking admin access...'}
+          </p>
+        </div>
       </div>
     );
   }
 
-  if (!session) {
+  if (!session || (userRole !== 'admin' && session.user?.role !== 'admin')) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">

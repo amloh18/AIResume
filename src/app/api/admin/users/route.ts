@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs';
-// Removed - using Clerk now
-import { connectToDatabase } from '@/lib/database';
-import User from '@/models/User';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import connectDB from '@/lib/database';
+import { User } from '@/models';
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    await connectToDatabase();
+    await connectDB();
 
     const users = await User.find({})
       .select('firstName lastName email role currentPlanKey subscription createdAt phone location website linkedin github summary settings lastLogin region')

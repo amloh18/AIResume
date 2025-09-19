@@ -10,6 +10,7 @@ interface OnboardingState {
   isAuthenticated: boolean;
   userData: any;
   isLoading: boolean;
+  prefilledFromSignup: boolean;
   error: string | null;
   steps: OnboardingStep[];
 }
@@ -22,6 +23,7 @@ type OnboardingAction =
   | { type: 'SET_AUTHENTICATED'; payload: boolean }
   | { type: 'SET_USER_DATA'; payload: any }
   | { type: 'SET_LOADING'; payload: boolean }
+  | { type: 'SET_PREFILLED_FROM_SIGNUP'; payload: boolean }
   | { type: 'SET_ERROR'; payload: string | null }
   | { type: 'COMPLETE_STEP'; payload: number }
   | { type: 'RESET_ONBOARDING' };
@@ -62,6 +64,7 @@ const initialState: OnboardingState = {
   isAuthenticated: false,
   userData: null,
   isLoading: false,
+  prefilledFromSignup: false,
   error: null,
   steps: [
     { id: 'role', title: 'Choose Your Role', description: 'Select your professional role', isCompleted: false, isActive: true },
@@ -120,6 +123,12 @@ function onboardingReducer(state: OnboardingState, action: OnboardingAction): On
       return {
         ...state,
         isLoading: action.payload
+      };
+    
+    case 'SET_PREFILLED_FROM_SIGNUP':
+      return {
+        ...state,
+        prefilledFromSignup: action.payload
       };
     
     case 'SET_ERROR':

@@ -12,6 +12,7 @@ interface UserIconProps {
     username?: string;
     profilePhoto?: string;
     designation?: string;
+    role?: string;
   };
 }
 

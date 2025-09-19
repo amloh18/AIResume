@@ -87,11 +87,105 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
     { id: 'projects', title: 'Projects', icon: Globe, color: 'from-red-400 to-red-600' }
   ];
 
+  // Helper function to format dates for month input (YYYY-MM format)
+  const formatDateForMonthInput = (dateString: string): string => {
+    if (!dateString) return '';
+    
+    console.log('🔍 formatDateForMonthInput received:', dateString, 'type:', typeof dateString);
+    
+    try {
+      // Handle various date formats
+      let date: Date;
+      
+      // If it's already in YYYY-MM format, return as is
+      if (/^\d{4}-\d{2}$/.test(dateString)) {
+        console.log('✅ Already in YYYY-MM format:', dateString);
+        return dateString;
+      }
+      
+      // If it's in YYYY-MM-DD format, extract YYYY-MM
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+        const result = dateString.substring(0, 7);
+        console.log('✅ Extracted YYYY-MM from YYYY-MM-DD:', dateString, '->', result);
+        return result;
+      }
+      
+      // Try to parse various date formats
+      if (dateString.includes('/')) {
+        // Handle DD/MM/YYYY or MM/YYYY formats
+        const parts = dateString.split('/');
+        if (parts.length === 3) {
+          // DD/MM/YYYY
+          date = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+        } else if (parts.length === 2) {
+          // MM/YYYY
+          date = new Date(parseInt(parts[1]), parseInt(parts[0]) - 1, 1);
+        } else {
+          return '';
+        }
+      } else if (dateString.includes('-')) {
+        // Handle DD-MM-YYYY or MM-YYYY formats
+        const parts = dateString.split('-');
+        if (parts.length === 3) {
+          // DD-MM-YYYY
+          date = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+        } else if (parts.length === 2) {
+          // MM-YYYY
+          date = new Date(parseInt(parts[1]), parseInt(parts[0]) - 1, 1);
+        } else {
+          return '';
+        }
+      } else if (/^\d{4}$/.test(dateString)) {
+        // Handle YYYY format
+        date = new Date(parseInt(dateString), 0, 1);
+      } else {
+        // Try to parse as a general date
+        date = new Date(dateString);
+      }
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        return '';
+      }
+      
+      // Return in YYYY-MM format
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      return `${year}-${month}`;
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return '';
+    }
+  };
+
   useEffect(() => {
     if (initialData) {
       console.log('InteractiveCVForm received initialData:', initialData);
       console.log('InitialData type:', typeof initialData);
       console.log('InitialData keys:', Object.keys(initialData));
+      
+      // Debug date fields specifically
+      if (initialData.education) {
+        console.log('🔍 Education dates:', initialData.education.map((edu: any) => ({
+          institution: edu.institution,
+          startDate: edu.startDate,
+          endDate: edu.endDate
+        })));
+      }
+      if (initialData.experience) {
+        console.log('🔍 Experience dates:', initialData.experience.map((exp: any) => ({
+          company: exp.company,
+          startDate: exp.startDate,
+          endDate: exp.endDate
+        })));
+      }
+      if (initialData.projects) {
+        console.log('🔍 Project dates:', initialData.projects.map((proj: any) => ({
+          title: proj.title,
+          startDate: proj.startDate,
+          endDate: proj.endDate
+        })));
+      }
       
       // Handle the data structure properly
       const updatedFormData = { ...formData };
@@ -430,29 +524,27 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
               <div>
                 <label className="block text-white/80 text-sm font-medium mb-2">Start Date</label>
                 <input
-                  type="text"
-                  value={edu.startDate}
+                  type="month"
+                  value={edu.startDate ? formatDateForMonthInput(edu.startDate) : ''}
                   onChange={(e) => {
                     const newEducation = [...formData.education];
                     newEducation[index].startDate = e.target.value;
                     updateFormData('education', newEducation);
                   }}
                   className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
-                  placeholder="2020"
                 />
               </div>
               <div>
                 <label className="block text-white/80 text-sm font-medium mb-2">End Date</label>
                 <input
-                  type="text"
-                  value={edu.endDate}
+                  type="month"
+                  value={edu.endDate ? formatDateForMonthInput(edu.endDate) : ''}
                   onChange={(e) => {
                     const newEducation = [...formData.education];
                     newEducation[index].endDate = e.target.value;
                     updateFormData('education', newEducation);
                   }}
                   className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
-                  placeholder="2024"
                 />
               </div>
             </div>
@@ -556,29 +648,27 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
               <div>
                 <label className="block text-white/80 text-sm font-medium mb-2">Start Date</label>
                 <input
-                  type="text"
-                  value={exp.startDate}
+                  type="month"
+                  value={exp.startDate ? formatDateForMonthInput(exp.startDate) : ''}
                   onChange={(e) => {
                     const newExperience = [...formData.experience];
                     newExperience[index].startDate = e.target.value;
                     updateFormData('experience', newExperience);
                   }}
                   className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
-                  placeholder="Jan 2023"
                 />
               </div>
               <div>
                 <label className="block text-white/80 text-sm font-medium mb-2">End Date</label>
                 <input
-                  type="text"
-                  value={exp.endDate}
+                  type="month"
+                  value={exp.endDate ? formatDateForMonthInput(exp.endDate) : ''}
                   onChange={(e) => {
                     const newExperience = [...formData.experience];
                     newExperience[index].endDate = e.target.value;
                     updateFormData('experience', newExperience);
                   }}
                   className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
-                  placeholder="Present"
                 />
               </div>
             </div>
@@ -782,6 +872,35 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
                   }}
                   className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
                   placeholder="https://github.com/username/repo"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-white/80 text-sm font-medium mb-2">Start Date</label>
+                <input
+                  type="month"
+                  value={project.startDate ? formatDateForMonthInput(project.startDate) : ''}
+                  onChange={(e) => {
+                    const newProjects = [...formData.projects];
+                    newProjects[index].startDate = e.target.value;
+                    updateFormData('projects', newProjects);
+                  }}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-white/80 text-sm font-medium mb-2">End Date</label>
+                <input
+                  type="month"
+                  value={project.endDate ? formatDateForMonthInput(project.endDate) : ''}
+                  onChange={(e) => {
+                    const newProjects = [...formData.projects];
+                    newProjects[index].endDate = e.target.value;
+                    updateFormData('projects', newProjects);
+                  }}
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
                 />
               </div>
             </div>

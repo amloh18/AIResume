@@ -9,6 +9,7 @@ import {
 // import { useSession } from 'next-auth/react'; // Removed - using Clerk now
 import { useSession } from 'next-auth/react';
 import { useCreateCV } from '@/lib/utils/cvCreationUtils';
+import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
 import AnalyticsJourneyWidget from './AnalyticsJourneyWidget';
 import PageHeader from './PageHeader';
 import MasterCVBadge from './MasterCVBadge';
@@ -1223,6 +1224,7 @@ const RecentJobsWidget: React.FC<{
 const Analytics: React.FC = () => {
   const { data: session } = useSession();
   const { createCV } = useCreateCV();
+  const { isOpen: isMobileMenuOpen, toggleSidebar } = useMobileSidebar();
   const [user, setUser] = useState<any>(null);
   const [jobs, setJobs] = useState<any[]>([]);
   const [cvs, setCvs] = useState<any[]>([]);
@@ -1423,7 +1425,8 @@ const Analytics: React.FC = () => {
         name: updatedUser.firstName + ' ' + updatedUser.lastName,
         email: updatedUser.email,
         username: updatedUser.username,
-        profilePhoto: updatedUser.avatar || updatedUser.profilePhoto
+        profilePhoto: updatedUser.avatar || updatedUser.profilePhoto,
+        role: session?.user?.role
       }));
     };
 
@@ -1719,8 +1722,10 @@ const Analytics: React.FC = () => {
       <PageHeader
         title={`Hello, ${user?.name || user?.username || 'User'}`}
         description="Welcome back! Here's your career progress overview."
-        user={user || { name: 'User', email: 'user@example.com' }}
+        user={user || { name: 'User', email: 'user@example.com', role: session?.user?.role }}
         showSettings={true}
+        onMobileMenuToggle={toggleSidebar}
+        isMobileMenuOpen={isMobileMenuOpen}
       />
 
       {/* CV Journey Widget */}
