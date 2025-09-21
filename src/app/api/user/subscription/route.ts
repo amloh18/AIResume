@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/database';
-import { User, Subscription, PricingPlan } from '@/models';
+import { User } from '@/models';
+import { getAdminSubscription, getAdminPricingPlan } from '@/models/admin-models';
 
 export async function GET(request: NextRequest) {
   try {
@@ -49,6 +50,7 @@ export async function GET(request: NextRequest) {
 
     // Get the current plan details from database
     const currentPlanKey = user.currentPlanKey || 'free';
+    const PricingPlan = await getAdminPricingPlan();
     const planDetails = await PricingPlan.findOne({ key: currentPlanKey }).lean();
 
     // If user has no subscription, return default free plan

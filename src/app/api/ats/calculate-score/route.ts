@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 interface ATSRequest {
-  cvText: string;
-  jobDescription: string;
+  cvText?: string;
+  jobDescription?: string;
   cvData?: any; // Optional structured CV data
-  cvId?: string; // CV ID to save the score
-  jobId?: string; // Job ID for reference
+  cvId?: string; // CV ID to fetch CV data or save the score
+  jobId?: string; // Job ID to fetch job data or for reference
+  userId?: string; // User ID for authentication
 }
 
 interface ATSResponse {
@@ -67,27 +68,166 @@ const EDUCATION_LEVELS = {
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🔍 ATS API - Starting calculation request');
+    console.log('🔍 ATS API - Starting calculation request - V2');
     const body: ATSRequest = await request.json();
-    const { cvText, jobDescription, cvData, cvId, jobId } = body;
+    let { cvText, jobDescription, cvData, cvId, jobId, userId } = body;
 
     console.log('🔍 ATS API - Request data:', {
       cvTextLength: cvText?.length || 0,
       jobDescriptionLength: jobDescription?.length || 0,
       hasCvText: !!cvText,
       hasJobDescription: !!jobDescription,
-      hasCvData: !!cvData
+      hasCvData: !!cvData,
+      hasCvId: !!cvId,
+      hasJobId: !!jobId,
+      hasUserId: !!userId
     });
 
+    // If we only have IDs, fetch the data from database
+    if ((!cvText || !jobDescription) && (cvId || jobId)) {
+      console.log('🔍 ATS API - Fetching data from database using IDs');
+      
+      try {
+        const { CV, JobApplication } = await import('@/models');
+        console.log('🔍 ATS API - Models imported:', {
+          hasCV: !!CV,
+          hasJobApplication: !!JobApplication,
+          CVType: typeof CV,
+          JobApplicationType: typeof JobApplication
+        });
+        
+        // Fetch CV data if cvId is provided
+        if (cvId && !cvText) {
+          console.log('🔍 ATS API - Fetching CV data for ID:', cvId);
+          const cvDoc = await CV.findById(cvId);
+          if (cvDoc) {
+            cvData = cvDoc.cvData;
+            console.log('🔍 ATS API - CV document found:', {
+              hasData: !!cvDoc.cvData,
+              dataKeys: cvDoc.cvData ? Object.keys(cvDoc.cvData) : [],
+              basics: cvDoc.cvData?.basics ? Object.keys(cvDoc.cvData.basics) : [],
+              workCount: cvDoc.cvData?.work?.length || 0,
+              educationCount: cvDoc.cvData?.education?.length || 0,
+              skillsCount: cvDoc.cvData?.skills?.length || 0,
+              title: cvDoc.title,
+              status: cvDoc.status,
+              isMaster: cvDoc.isMaster
+            });
+            
+            // Log a sample of the CV data structure to understand what we're working with
+            if (cvDoc.cvData) {
+              console.log('🔍 ATS API - CV data sample:', {
+                basicsName: cvDoc.cvData.basics?.name,
+                basicsEmail: cvDoc.cvData.basics?.email,
+                basicsSummary: cvDoc.cvData.basics?.summary?.substring(0, 100),
+                firstWorkEntry: cvDoc.cvData.work?.[0] ? {
+                  position: cvDoc.cvData.work[0].position,
+                  name: cvDoc.cvData.work[0].name,
+                  summary: cvDoc.cvData.work[0].summary?.substring(0, 50)
+                } : 'No work entries',
+                firstEducationEntry: cvDoc.cvData.education?.[0] ? {
+                  institution: cvDoc.cvData.education[0].institution,
+                  studyType: cvDoc.cvData.education[0].studyType,
+                  area: cvDoc.cvData.education[0].area
+                } : 'No education entries'
+              });
+            }
+            
+            cvText = convertCVToText(cvDoc.cvData);
+            console.log('✅ ATS API - CV data fetched, text length:', cvText.length);
+            
+            if (cvText.length === 0) {
+              console.log('⚠️ ATS API - CV text is empty after conversion. Full CV data structure:');
+              console.log(JSON.stringify(cvDoc.cvData, null, 2));
+            } else {
+              console.log('🔍 ATS API - CV text preview:', cvText.substring(0, 200) + '...');
+            }
+          } else {
+            console.log('❌ ATS API - CV not found for ID:', cvId);
+            return NextResponse.json(
+              { error: 'CV not found' },
+              { status: 404 }
+            );
+          }
+        }
+        
+        // Fetch job data if jobId is provided
+        if (jobId && !jobDescription) {
+          console.log('🔍 ATS API - Fetching job data for ID:', jobId);
+          const jobDoc = await JobApplication.findById(jobId);
+          if (jobDoc) {
+            jobDescription = jobDoc.jobDescription || '';
+            console.log('✅ ATS API - Job data fetched:', {
+              jobTitle: jobDoc.jobTitle,
+              company: jobDoc.company,
+              hasJobDescription: !!jobDoc.jobDescription,
+              descriptionLength: jobDescription.length,
+              jobDescriptionPreview: jobDescription.substring(0, 100) + '...'
+            });
+          } else {
+            console.log('❌ ATS API - Job not found for ID:', jobId);
+            return NextResponse.json(
+              { error: 'Job not found' },
+              { status: 404 }
+            );
+          }
+        }
+      } catch (error) {
+        console.error('❌ ATS API - Error fetching data from database:', error);
+        return NextResponse.json(
+          { error: 'Failed to fetch CV or job data' },
+          { status: 500 }
+        );
+      }
+    }
+
     if (!cvText || !jobDescription) {
-      console.log('❌ ATS API - Missing required fields:', {
+      console.log('❌ ATS API - Missing required fields after data fetch:', {
         cvText: !!cvText,
-        jobDescription: !!jobDescription
+        jobDescription: !!jobDescription,
+        cvTextLength: cvText?.length || 0,
+        jobDescriptionLength: jobDescription?.length || 0,
+        cvId: cvId,
+        jobId: jobId,
+        cvDataProvided: !!cvData,
+        cvDataStructure: cvData ? Object.keys(cvData) : 'No cvData'
       });
-      return NextResponse.json(
-        { error: 'Both CV text and job description are required' },
-        { status: 400 }
-      );
+      
+      // Additional debugging for CV data
+      if (cvId && !cvText) {
+        console.log('🔍 ATS API - CV ID provided but no text generated. Investigating CV data...');
+        if (cvData) {
+          console.log('🔍 ATS API - CV data structure analysis:', {
+            hasBasics: !!cvData.basics,
+            basicsKeys: cvData.basics ? Object.keys(cvData.basics) : 'No basics',
+            hasWork: !!cvData.work,
+            workLength: cvData.work ? cvData.work.length : 0,
+            hasEducation: !!cvData.education,
+            educationLength: cvData.education ? cvData.education.length : 0,
+            hasSkills: !!cvData.skills,
+            skillsLength: cvData.skills ? cvData.skills.length : 0,
+            fullStructure: JSON.stringify(cvData, null, 2).substring(0, 500) + '...'
+          });
+        }
+      }
+      
+      // Provide more specific error messages
+      if (!cvText && !jobDescription) {
+        return NextResponse.json(
+          { error: 'Both CV and job data are missing or empty' },
+          { status: 400 }
+        );
+      } else if (!cvText) {
+        return NextResponse.json(
+          { error: 'CV data is missing or empty. Please ensure your CV has content before calculating ATS score.' },
+          { status: 400 }
+        );
+      } else if (!jobDescription) {
+        return NextResponse.json(
+          { error: 'Job description is missing or empty' },
+          { status: 400 }
+        );
+      }
     }
 
     console.log('✅ ATS API - Validation passed, starting calculation');
@@ -356,4 +496,115 @@ function generateSuggestions(keywordScore: any, experienceScore: any, actionVerb
   }
 
   return suggestions;
+}
+
+function convertCVToText(cvData: any): string {
+  if (!cvData) return '';
+  
+  let cvText = '';
+  
+  // Basic Information (JSON Resume format)
+  if (cvData.basics) {
+    const { name, label, email, phone, summary, location } = cvData.basics;
+    if (name) cvText += `${name} `;
+    if (label) cvText += `${label} `;
+    if (email) cvText += `${email} `;
+    if (phone) cvText += `${phone} `;
+    if (summary) cvText += `${summary} `;
+    if (location?.city) cvText += `${location.city} `;
+    if (location?.region) cvText += `${location.region} `;
+  }
+  
+  // Work Experience (JSON Resume format)
+  if (cvData.work && Array.isArray(cvData.work)) {
+    cvData.work.forEach((job: any) => {
+      if (job.position) cvText += `${job.position} `;
+      if (job.name) cvText += `${job.name} `;
+      if (job.summary) cvText += `${job.summary} `;
+      if (job.highlights && Array.isArray(job.highlights)) {
+        job.highlights.forEach((highlight: string) => {
+          if (highlight) cvText += `${highlight} `;
+        });
+      }
+    });
+  }
+  
+  // Education (JSON Resume format)
+  if (cvData.education && Array.isArray(cvData.education)) {
+    cvData.education.forEach((edu: any) => {
+      if (edu.studyType) cvText += `${edu.studyType} `;
+      if (edu.area) cvText += `${edu.area} `;
+      if (edu.institution) cvText += `${edu.institution} `;
+    });
+  }
+  
+  // Skills (JSON Resume format)
+  if (cvData.skills && Array.isArray(cvData.skills)) {
+    cvData.skills.forEach((skill: any) => {
+      if (skill.name) cvText += `${skill.name} `;
+      if (skill.keywords && Array.isArray(skill.keywords)) {
+        skill.keywords.forEach((keyword: string) => {
+          if (keyword) cvText += `${keyword} `;
+        });
+      }
+    });
+  }
+  
+  // Projects (JSON Resume format)
+  if (cvData.projects && Array.isArray(cvData.projects)) {
+    cvData.projects.forEach((project: any) => {
+      if (project.name) cvText += `${project.name} `;
+      if (project.description) cvText += `${project.description} `;
+      if (project.highlights && Array.isArray(project.highlights)) {
+        project.highlights.forEach((highlight: string) => {
+          if (highlight) cvText += `${highlight} `;
+        });
+      }
+    });
+  }
+  
+  // Certificates (JSON Resume format)
+  if (cvData.certificates && Array.isArray(cvData.certificates)) {
+    cvData.certificates.forEach((cert: any) => {
+      if (cert.name) cvText += `${cert.name} `;
+      if (cert.issuer) cvText += `${cert.issuer} `;
+    });
+  }
+  
+  // Awards (JSON Resume format)
+  if (cvData.awards && Array.isArray(cvData.awards)) {
+    cvData.awards.forEach((award: any) => {
+      if (award.title) cvText += `${award.title} `;
+      if (award.awarder) cvText += `${award.awarder} `;
+      if (award.summary) cvText += `${award.summary} `;
+    });
+  }
+  
+  // Publications (JSON Resume format)
+  if (cvData.publications && Array.isArray(cvData.publications)) {
+    cvData.publications.forEach((pub: any) => {
+      if (pub.name) cvText += `${pub.name} `;
+      if (pub.publisher) cvText += `${pub.publisher} `;
+      if (pub.summary) cvText += `${pub.summary} `;
+    });
+  }
+  
+  // Languages (JSON Resume format)
+  if (cvData.languages && Array.isArray(cvData.languages)) {
+    cvData.languages.forEach((lang: any) => {
+      if (lang.language) cvText += `${lang.language} `;
+      if (lang.fluency) cvText += `${lang.fluency} `;
+    });
+  }
+  
+  // Volunteer work (JSON Resume format)
+  if (cvData.volunteer && Array.isArray(cvData.volunteer)) {
+    cvData.volunteer.forEach((vol: any) => {
+      if (vol.organization) cvText += `${vol.organization} `;
+      if (vol.position) cvText += `${vol.position} `;
+      if (vol.summary) cvText += `${vol.summary} `;
+    });
+  }
+  
+  return cvText.trim();
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/database';
-import { PricingPlan } from '@/models';
+import { getAdminPricingPlan } from '@/models/admin-models';
 
 export async function GET(request: NextRequest) {
   try {
@@ -20,6 +20,7 @@ export async function GET(request: NextRequest) {
       query.currency = currency;
     }
 
+    const PricingPlan = await getAdminPricingPlan();
     const plans = await PricingPlan.find(query)
       .sort({ sortOrder: 1, price: 1 })
       .lean();

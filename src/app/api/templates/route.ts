@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs';
-// Removed - using Clerk now
-import { Template } from '@/models';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { getAdminTemplate } from '@/models/admin-models';
 
 // GET /api/templates - Get all available templates
 export async function GET(request: NextRequest) {
@@ -20,6 +20,7 @@ export async function GET(request: NextRequest) {
       query.isActive = isActive === 'true';
     }
 
+    const Template = await getAdminTemplate();
     const templates = await Template.find(query)
       .sort({ isDefault: -1, name: 1 })
       .exec();
@@ -51,9 +52,14 @@ export async function POST(request: NextRequest) {
       name,
       description,
       category,
+      categories,
+      tier,
       globalStyles,
       availableSections,
-      isDefault
+      templateData,
+      isDefault,
+      isPublished,
+      globalAccess
     } = body;
 
     if (!name || !category || !availableSections) {
@@ -63,13 +69,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const Template = await getAdminTemplate();
     const template = new Template({
       name,
       description,
       category,
-      globalStyles,
+      categories: categories || [],
+      tier: tier || 'free',
+      globalStyles: globalStyles || {},
       availableSections,
+      templateData: templateData || {},
       isDefault: isDefault || false,
+      isPublished: isPublished || false,
+      globalAccess: globalAccess !== false, // Default to true
       createdBy: session.user.id
     });
 

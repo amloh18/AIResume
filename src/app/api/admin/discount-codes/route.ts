@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 // Removed - using Clerk now
 import connectDB from '@/lib/database';
-import { DiscountCode, PricingPlan } from '@/models';
+import { getAdminDiscountCode, getAdminPricingPlan } from '@/models/admin-models';
 
 export async function GET(request: NextRequest) {
   try {
@@ -28,6 +29,7 @@ export async function GET(request: NextRequest) {
       query.currency = currency;
     }
 
+    const DiscountCode = await getAdminDiscountCode();
     const discountCodes = await DiscountCode.find(query)
       .populate('applicablePlans', 'name price currency')
       .populate('createdBy', 'firstName lastName email')
@@ -105,6 +107,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create new discount code
+    const DiscountCode = await getAdminDiscountCode();
     const discountCode = new DiscountCode({
       code: code.toUpperCase(),
       description,

@@ -139,4 +139,7 @@ pricingPlanSchema.index({ key: 1 }, { unique: true });
 pricingPlanSchema.index({ status: 1, sortOrder: 1 });
 pricingPlanSchema.index({ billingCycle: 1, currency: 1 });
 
+// Export the schema for use in admin models
+export { pricingPlanSchema };
+
 export default mongoose.models.PricingPlan || mongoose.model<IPricingPlan>('PricingPlan', pricingPlanSchema);

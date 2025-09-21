@@ -54,16 +54,28 @@ const MasterCVCardUpdated: React.FC<MasterCVCardProps> = ({
       setLoading(true);
       setError(null);
       
+      console.log('🔍 MasterCVCardUpdated - Fetching master CV with userId:', {
+        userId,
+        userIdType: typeof userId,
+        userIdLength: userId?.length,
+        sessionUserId: session?.user?.id
+      });
+      
       const response = await fetch(`/api/cvs/master?userId=${userId}`);
+      console.log('🔍 MasterCVCardUpdated - API response status:', response.status);
+      
       const result = await response.json();
+      console.log('🔍 MasterCVCardUpdated - API response data:', result);
       
       if (result.success && result.data?.masterCV) {
+        console.log('✅ MasterCVCardUpdated - Master CV found:', result.data.masterCV);
         setMasterCV(result.data.masterCV);
       } else {
+        console.log('❌ MasterCVCardUpdated - No master CV found in response');
         setError('No master CV found');
       }
     } catch (error) {
-      console.error('Error fetching master CV:', error);
+      console.error('❌ MasterCVCardUpdated - Error fetching master CV:', error);
       setError('Failed to load master CV');
     } finally {
       setLoading(false);

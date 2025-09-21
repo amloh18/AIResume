@@ -227,4 +227,7 @@ templateSchema.pre('save', async function(next) {
   next();
 });
 
+// Export the schema for use in admin models
+export { templateSchema };
+
 export default mongoose.models.Template || mongoose.model<ITemplate>('Template', templateSchema); 

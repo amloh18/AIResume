@@ -2,6 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface ISubscription extends Document {
   userId: mongoose.Types.ObjectId | string;
+  firebaseUid?: string; // Firebase UID for user identification
   planId: mongoose.Types.ObjectId;
   status: 'active' | 'inactive' | 'cancelled' | 'past_due' | 'unpaid';
   startDate: Date;
@@ -31,6 +32,11 @@ const subscriptionSchema = new Schema<ISubscription>({
   userId: {
     type: Schema.Types.Mixed, // Allow both ObjectId and string
     required: [true, 'User ID is required']
+  },
+  firebaseUid: {
+    type: String,
+    sparse: true, // Allows multiple null values
+    index: true // Index for efficient Firebase UID queries
   },
   planId: {
     type: Schema.Types.ObjectId,
@@ -150,5 +156,8 @@ subscriptionSchema.methods.renew = function(newEndDate: Date) {
   this.cancellationReason = undefined;
   return this.save();
 };
+
+// Export the schema for use in admin models
+export { subscriptionSchema };
 
 export default mongoose.models.Subscription || mongoose.model<ISubscription>('Subscription', subscriptionSchema);

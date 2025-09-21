@@ -2,6 +2,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IAIUsageLog extends Document {
   userId: mongoose.Types.ObjectId | string;
+  firebaseUid?: string; // Firebase UID for user identification
   apiEndpoint: string;
   tokensUsed: {
     prompt: number;
@@ -24,6 +25,11 @@ const aiUsageLogSchema = new Schema<IAIUsageLog>({
     type: Schema.Types.Mixed, // Allow both ObjectId and string
     required: true,
     index: true
+  },
+  firebaseUid: {
+    type: String,
+    sparse: true, // Allows multiple null values
+    index: true // Index for efficient Firebase UID queries
   },
   apiEndpoint: {
     type: String,

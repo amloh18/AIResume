@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/database';
-import { User, PaymentMethod } from '@/models';
+import { User } from '@/models';
+import { getAdminPaymentMethod } from '@/models/admin-models';
 
 export async function GET(request: NextRequest) {
   try {
@@ -27,6 +28,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch payment methods
+    const PaymentMethod = await getAdminPaymentMethod();
     const paymentMethods = await PaymentMethod.find({ 
       userId: user._id, 
       isActive: true 

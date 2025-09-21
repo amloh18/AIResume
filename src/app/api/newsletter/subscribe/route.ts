@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/database';
-import { Newsletter } from '@/models';
+import { getAdminNewsletter } from '@/models/admin-models';
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if email already exists
+    const Newsletter = await getAdminNewsletter();
     const existingSubscription = await Newsletter.findOne({ email: email.toLowerCase() });
     
     if (existingSubscription) {

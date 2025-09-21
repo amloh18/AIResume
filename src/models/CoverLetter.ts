@@ -2,6 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface ICoverLetter extends Document {
   userId: string;
+  firebaseUid?: string; // Firebase UID for user identification
   title: string;
   content: string;
   status: 'draft' | 'final' | 'archived';
@@ -25,6 +26,11 @@ const coverLetterSchema = new Schema<ICoverLetter>({
     type: String,
     required: true,
     index: true
+  },
+  firebaseUid: {
+    type: String,
+    sparse: true, // Allows multiple null values
+    index: true // Index for efficient Firebase UID queries
   },
   title: {
     type: String,

@@ -49,8 +49,10 @@ import PageHeader from './PageHeader';
 import { authenticatedFetch } from '@/lib/utils/apiUtils';
 import { useJourneyLinking } from '@/lib/services/journeyLinkingService';
 import { ApplicationPackageService } from '@/lib/services/applicationPackageService';
-import MasterCVCardUpdated from './MasterCVCardUpdated';
-import CVCard from './CVCard';
+import MasterCVCardOverlay from './MasterCVCardOverlay';
+import CVCardOverlay from './CVCardOverlay';
+import CoverLetterCardOverlay from './CoverLetterCardOverlay';
+import ApplicationJourneyModal from './ApplicationJourneyModal';
 
 interface CV {
   id: string;
@@ -220,6 +222,51 @@ const Canvas: React.FC = () => {
   const { createCV } = useCreateCV();
   const { isOpen: isMobileMenuOpen, toggleSidebar } = useMobileSidebar();
   const [cvs, setCvs] = useState<CV[]>([]);
+  const [mongoDBUserId, setMongoDBUserId] = useState<string | null>(null);
+  
+  // ApplicationJourneyModal state
+  const [showJourneyModal, setShowJourneyModal] = useState(false);
+  const [selectedJobForJourney, setSelectedJobForJourney] = useState<any>(null);
+  const [journeysForSelectedJob, setJourneysForSelectedJob] = useState<any[]>([]);
+  
+  // Helper function to resolve MongoDB user ID
+  const resolveMongoDBUserId = async (sessionUserId: string): Promise<string | null> => {
+    try {
+      // Check if it's already a MongoDB ObjectId
+      if (/^[0-9a-fA-F]{24}$/.test(sessionUserId)) {
+        console.log('🔍 Canvas - Using MongoDB ObjectId:', sessionUserId);
+        return sessionUserId;
+      } else {
+        // Try to get MongoDB user ID from server
+        console.log('🔍 Canvas - Firebase UID detected, fetching MongoDB user ID...');
+        const userResponse = await fetch('/api/user/current');
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          if (userData.success && userData.user && userData.user.id) {
+            console.log('✅ Canvas - Found MongoDB user ID:', userData.user.id);
+            return userData.user.id;
+          }
+        }
+      }
+    } catch (error) {
+      console.error('❌ Canvas - Error resolving user ID:', error);
+    }
+    return null;
+  };
+  
+  // Resolve MongoDB userId when session changes
+  useEffect(() => {
+    const initializeUserId = async () => {
+      const sessionUserId = session?.user?.id;
+      if (sessionUserId) {
+        const resolvedUserId = await resolveMongoDBUserId(sessionUserId);
+        setMongoDBUserId(resolvedUserId);
+        console.log('🔍 Canvas - MongoDB userId resolved:', resolvedUserId);
+      }
+    };
+    
+    initializeUserId();
+  }, [session?.user?.id]);
   
   // Debug CVs state
   useEffect(() => {
@@ -358,12 +405,49 @@ const Canvas: React.FC = () => {
     }
   };
 
+  const handleEditJourney = async (cv: CV, journey: any) => {
+    try {
+      console.log('🔍 Opening journey modal for CV:', cv, 'Journey:', journey);
+      
+      // Fetch the job details for the journey
+      const jobResponse = await fetch(`/api/jobs/${journey.jobId}`);
+      if (jobResponse.ok) {
+        const jobResult = await jobResponse.json();
+        if (jobResult.success) {
+          setSelectedJobForJourney(jobResult.data);
+          
+          // Fetch journeys for this job
+          const journeysResponse = await fetch(`/api/cv-journey?jobId=${journey.jobId}`);
+          if (journeysResponse.ok) {
+            const journeysResult = await journeysResponse.json();
+            if (journeysResult.success) {
+              setJourneysForSelectedJob(journeysResult.data.journeys || []);
+            }
+          }
+          
+          setShowJourneyModal(true);
+        } else {
+          addToast('error', 'Failed to load job details');
+        }
+      } else {
+        addToast('error', 'Failed to load job details');
+      }
+    } catch (error) {
+      console.error('❌ Error opening journey modal:', error);
+      addToast('error', 'Failed to open journey details');
+    }
+  };
+
   const [selectedCV, setSelectedCV] = useState<CV | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [editingCVId, setEditingCVId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
   const [deletingCVId, setDeletingCVId] = useState<string | null>(null);
+  
+  // Cover Letter editing states
+  const [editingCoverLetterId, setEditingCoverLetterId] = useState<string | null>(null);
+  const [editingCoverLetterTitle, setEditingCoverLetterTitle] = useState('');
   const [activeTab, setActiveTab] = useState<'cv' | 'coverLetter'>('cv');
   const [coverLetters, setCoverLetters] = useState<CoverLetter[]>([]);
   const [availableJobs, setAvailableJobs] = useState<Job[]>([]);
@@ -545,7 +629,7 @@ const Canvas: React.FC = () => {
           return {
             id: cvId,
             title: cv.title || 'Untitled CV',
-            lastModified: formatTimeAgo(new Date(cv.lastModified || cv.updatedAt || cv.createdAt)),
+            lastModified: formatTimeAgo(new Date(cv.metadata?.lastModified || cv.updatedAt || cv.createdAt)),
             status: cv.status || 'draft',
             views: cv.viewCount || cv.views || 0,
             isStarred: cv.starred || cv.isStarred || false,
@@ -594,12 +678,13 @@ const Canvas: React.FC = () => {
         const enrichedCoverLetters = result.data.coverLetters.map((cl: any) => ({
           ...cl,
           id: cl.id || cl._id,
-          lastModified: cl.lastModified || cl.updatedAt,
+          lastModified: formatTimeAgo(new Date(cl.metadata?.lastModified || cl.updatedAt || cl.createdAt)),
           views: cl.views || 0,
           isStarred: cl.isStarred || false,
           thumbnail: '/api/cover-letters/thumbnail/' + (cl.id || cl._id),
           description: cl.metadata?.targetCompany ? `For ${cl.metadata.targetCompany}` : 'Cover letter',
           coverLetterData: cl.content,
+          content: cl.content, // Add content field for the overlay component
           // connectedJobs removed - relationships now managed through CVJourney
           completionPercentage: cl.completionPercentage || 0
         }));
@@ -911,6 +996,114 @@ const Canvas: React.FC = () => {
   const cancelEditing = () => {
     setEditingCVId(null);
     setEditingTitle('');
+  };
+
+  // Cover Letter editing handlers
+  const startEditingCoverLetter = (coverLetter: CoverLetter) => {
+    setEditingCoverLetterId(coverLetter.id);
+    setEditingCoverLetterTitle(coverLetter.title);
+  };
+
+  const saveCoverLetterTitle = async (coverLetterId: string) => {
+    try {
+      // Get user ID from session or Firebase
+      let userId = session?.user?.id;
+      if (!userId) {
+        const userData = localStorage.getItem('user');
+        if (userData) {
+          try {
+            const parsedUser = JSON.parse(userData);
+            if (parsedUser.firebaseUid) {
+              userId = parsedUser.id || parsedUser._id;
+            }
+          } catch (error) {
+            console.error('Error parsing user data:', error);
+          }
+        }
+      }
+      
+      if (!userId) {
+        console.error('No user ID available for title update');
+        addToast('error', 'Please log in again to continue.');
+        return;
+      }
+
+      // Make API call to update the cover letter title
+      const response = await authenticatedFetch(`/api/cover-letters/${coverLetterId}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          title: editingCoverLetterTitle,
+          userId: userId
+        }),
+      });
+
+      if (response.ok) {
+        // Update local state only after successful API call
+        setCoverLetters(coverLetters.map(cl => 
+          cl.id === coverLetterId ? { ...cl, title: editingCoverLetterTitle } : cl
+        ));
+        setEditingCoverLetterId(null);
+        setEditingCoverLetterTitle('');
+        addToast('success', 'Cover letter title updated successfully');
+      } else {
+        const errorData = await response.json();
+        console.error('Error updating cover letter title:', errorData);
+        addToast('error', 'Failed to update cover letter title. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error saving cover letter title:', error);
+      addToast('error', 'Error updating cover letter title. Please try again.');
+    }
+  };
+
+  const cancelEditingCoverLetter = () => {
+    setEditingCoverLetterId(null);
+    setEditingCoverLetterTitle('');
+  };
+
+  const handleDeleteCoverLetter = async (coverLetter: CoverLetter) => {
+    try {
+      const response = await authenticatedFetch(`/api/cover-letters/${coverLetter.id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setCoverLetters(coverLetters.filter(cl => cl.id !== coverLetter.id));
+        addToast('success', 'Cover letter deleted successfully');
+      } else {
+        addToast('error', 'Failed to delete cover letter');
+      }
+    } catch (error) {
+      console.error('Error deleting cover letter:', error);
+      addToast('error', 'Error deleting cover letter');
+    }
+  };
+
+  const toggleCoverLetterStar = async (coverLetterId: string) => {
+    try {
+      const coverLetter = coverLetters.find(cl => cl.id === coverLetterId);
+      if (!coverLetter) return;
+
+      const response = await authenticatedFetch(`/api/cover-letters/${coverLetterId}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          isStarred: !coverLetter.isStarred,
+          userId: session?.user?.id
+        }),
+      });
+
+      if (response.ok) {
+        setCoverLetters(coverLetters.map(cl => 
+          cl.id === coverLetterId ? { ...cl, isStarred: !cl.isStarred } : cl
+        ));
+        addToast('success', coverLetter.isStarred ? 'Removed from favorites' : 'Added to favorites');
+      } else {
+        addToast('error', 'Failed to update favorite status');
+      }
+    } catch (error) {
+      console.error('Error toggling cover letter star:', error);
+      addToast('error', 'Error updating favorite status');
+    }
   };
 
 
@@ -1396,10 +1589,10 @@ const Canvas: React.FC = () => {
 
         <div className="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
           {/* Master CV Card - Always First */}
-          <MasterCVCardUpdated
+          <MasterCVCardOverlay
             onEditMasterCV={handleEditMasterCV}
             onDuplicateMasterCV={handleDuplicateMasterCV}
-            userId={session?.user?.id || ''}
+            userId={mongoDBUserId || session?.user?.id || ''}
             onToggleStar={toggleStar}
           />
 
@@ -1413,320 +1606,27 @@ const Canvas: React.FC = () => {
               </div>
             ))
           ) : (
-            // CV Cards
+            // CV Cards with Overlay Design
             cvs.map((cv, index) => (
-              <motion.div
+              <CVCardOverlay
                 key={cv.id}
-                className="relative frosted-glass-card rounded-2xl overflow-hidden hover:bg-gray-200 dark:hover:bg-white/10 transition-all duration-300 group"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                whileHover={{ y: -5 }}
-              >
-                <CVCard
-                  cv={cv}
-                  onEdit={handleCVClick}
-                  onDuplicate={handleDuplicateCV}
-                  onDownload={handleDownloadCV}
-                  onShare={handleShareCV}
-                  onDelete={handleDeleteCV}
-                  onToggleStar={toggleStar}
-                  onTitleEdit={(cvId, newTitle) => setEditingTitle(newTitle)}
-                  editingCVId={editingCVId}
-                  editingTitle={editingTitle}
-                  onStartEditing={startEditing}
-                  onSaveTitle={saveTitle}
-                  onCancelEditing={cancelEditing}
-                />
-                <motion.button
-                  className="absolute top-4 right-4 p-2 rounded-lg bg-black/20 backdrop-blur-sm text-white/60 hover:text-yellow-400 transition-colors z-10"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleStar(cv.id);
-                  }}
-                >
-                  <Star size={16} className={cv.isStarred ? 'fill-yellow-400 text-yellow-400' : ''} />
-                </motion.button>
-
-                {/* CV Preview */}
-                <div className="h-full p-4 bg-gray-50 text-gray-900">
-                  {cv.cvData ? (
-                    <div className="text-sm">
-                      {/* CV Header */}
-                      <div className="text-center mb-2">
-                        <h1 className="text-lg font-bold text-gray-800 mb-1">
-                          {cv.cvData.basics?.name || 'Your Name'}
-                        </h1>
-                        {cv.cvData.basics?.email && (
-                          <p className="text-gray-700 text-xs">{cv.cvData.basics.email}</p>
-                        )}
-                        {cv.cvData.basics?.phone && (
-                          <p className="text-gray-700 text-xs">{cv.cvData.basics.phone}</p>
-                        )}
-                      </div>
-
-                      {/* Professional Summary */}
-                      {cv.cvData.basics?.summary && (
-                        <div className="mb-2">
-                          <h2 className="text-sm font-semibold text-gray-800 mb-1 border-b border-gray-400 pb-1">Professional Summary</h2>
-                          <p className="text-gray-800 text-xs leading-relaxed">
-                            {cv.cvData.basics.summary.substring(0, 120)}
-                            {cv.cvData.basics.summary.length > 120 && '...'}
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Work Experience - First entry */}
-                      {cv.cvData.work && cv.cvData.work.length > 0 && (
-                        <div>
-                          <h2 className="text-sm font-semibold text-gray-800 mb-1 border-b border-gray-400 pb-1">Work Experience</h2>
-                          <div className="mb-1">
-                            <div className="flex justify-between items-start">
-                              <h3 className="font-semibold text-gray-800 text-xs">
-                                {cv.cvData.work[0].position || cv.cvData.work[0].title}
-                              </h3>
-                              <span className="text-gray-600 text-xs">
-                                {cv.cvData.work[0].startDate} - {cv.cvData.work[0].endDate || 'Present'}
-                              </span>
-                            </div>
-                            <p className="text-gray-700 text-xs font-medium">
-                              {cv.cvData.work[0].name || cv.cvData.work[0].company}
-                            </p>
-                            {cv.cvData.work[0].summary && (
-                              <p className="text-gray-600 text-xs mt-1">
-                                {cv.cvData.work[0].summary.substring(0, 80)}
-                                {cv.cvData.work[0].summary.length > 80 && '...'}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="text-sm">
-                      {/* Fallback CV Preview */}
-                      <div className="text-center mb-2">
-                        <h1 className="text-lg font-bold text-gray-800 mb-1">
-                          {cv.title}
-                        </h1>
-                        <p className="text-gray-700 text-xs">CV Document</p>
-                      </div>
-
-                      <div className="mb-2">
-                        <h2 className="text-sm font-semibold text-gray-800 mb-1 border-b border-gray-400 pb-1">Status</h2>
-                        <p className="text-gray-800 text-xs">
-                          {cv.status === 'draft' ? 'Draft in progress' :
-                           cv.status === 'published' ? 'Published and ready' :
-                           'Archived'}
-                        </p>
-                      </div>
-
-                      {cv.completionPercentage !== undefined && (
-                        <div>
-                          <h2 className="text-sm font-semibold text-gray-800 mb-1 border-b border-gray-400 pb-1">Progress</h2>
-                          <p className="text-gray-800 text-xs">
-                            {cv.completionPercentage}% complete
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* CV Info */}
-                <div className="p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      {/* Inline Editable Title */}
-                      {editingCVId === cv.id ? (
-                        <div className="flex items-center gap-2 mb-1">
-                          <input
-                            type="text"
-                            value={editingTitle}
-                            onChange={(e) => setEditingTitle(e.target.value)}
-                            className="flex-1 bg-white/10 border border-white/20 rounded-lg px-3 py-1 text-white text-sm font-semibold focus:outline-none focus:border-lime-400"
-                            autoFocus
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                saveTitle(cv.id);
-                              } else if (e.key === 'Escape') {
-                                cancelEditing();
-                              }
-                            }}
-                          />
-                          <motion.button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              saveTitle(cv.id);
-                            }}
-                            className="p-1 text-lime-400 hover:text-lime-300 transition-colors"
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
-                          >
-                            <Check size={14} />
-                          </motion.button>
-                          <motion.button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              cancelEditing();
-                            }}
-                            className="p-1 text-white/60 hover:text-white transition-colors"
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
-                          >
-                            <X size={14} />
-                          </motion.button>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-semibold text-white group-hover:text-lime-400 transition-colors flex-1">
-                            {cv.title}
-                          </h3>
-                          <motion.button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              startEditing(cv);
-                            }}
-                            className="p-1 text-white/40 hover:text-white transition-colors opacity-0 group-hover:opacity-100"
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
-                          >
-                            <Pencil size={14} />
-                          </motion.button>
-                        </div>
-                      )}
-
-                      {cv.description && (
-                        <p className="text-white/40 text-xs mt-1 line-clamp-2">{cv.description}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Cover Letter Linked Status */}
-
-                  {/* Linked Job section removed - relationships now managed through CVJourney */}
-
-                  {/* Action Buttons */}
-                  <div className="flex items-center gap-2">
-                    <motion.button
-                      className="flex-1 px-3 py-2 bg-gradient-to-r from-lime-400/20 to-lime-500/20 border border-lime-400/30 text-lime-400 rounded-lg text-sm font-medium hover:from-lime-400/30 hover:to-lime-500/30 transition-all duration-300 flex items-center justify-center gap-2"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        // Store CV session data and route to studio
-                        sessionStorage.setItem('editingCVId', cv.id);
-                        sessionStorage.setItem('editingCVTitle', cv.title);
-                        sessionStorage.setItem('editingCVData', JSON.stringify(cv));
-                        window.location.href = `/studio?type=cv&cvId=${cv.id}`;
-                      }}
-                    >
-                      <Edit size={14} />
-                      Edit
-                    </motion.button>
-
-                    {/* Link Job Dropdown */}
-                    <div className="relative">
-                      <motion.button
-                        className="p-2 text-blue-400/60 hover:text-blue-400 transition-colors"
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setLinkingJobCVId(cv.id);
-                        }}
-                        title="Link Job"
-                      >
-                        <Link size={16} />
-                      </motion.button>
-
-                      {/* Job Linking Dropdown */}
-                      {linkingJobCVId === cv.id && (
-                        <div className="absolute top-full right-0 mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
-                          <div className="p-3 border-b border-gray-200 dark:border-gray-700">
-                            <h3 className="text-sm font-medium text-gray-900 dark:text-white">Link Job to CV</h3>
-                          </div>
-                          <div className="p-3">
-                            <select
-                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                              onChange={(e) => {
-                                if (e.target.value) {
-                                  linkJobToCV(cv.id, e.target.value);
-                                }
-                              }}
-                              defaultValue=""
-                            >
-                              <option value="">Select a job to link...</option>
-                              {availableJobs.map((job) => (
-                                <option key={job.id} value={job.id}>
-                                  {job.company} - {job.title}
-                                </option>
-                              ))}
-                            </select>
-                            {availableJobs.length === 0 && (
-                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                                No jobs available. Add jobs in the Job Tracker first.
-                              </p>
-                            )}
-                          </div>
-                          <div className="p-3 border-t border-gray-200 dark:border-gray-700">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setLinkingJobCVId(null);
-                              }}
-                              className="w-full px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <motion.button
-                      className="p-2 text-white/60 hover:text-white transition-colors"
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                      }}
-                    >
-                      <Share2 size={16} />
-                    </motion.button>
-
-                    <motion.button
-                      className="p-2 text-white/60 hover:text-white transition-colors"
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                      }}
-                    >
-                      <Download size={16} />
-                    </motion.button>
-
-                    <motion.button
-                      className="p-2 text-red-400/60 hover:text-red-400 transition-colors"
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteCV(cv.id);
-                      }}
-                      disabled={deletingCVId === cv.id}
-                    >
-                      {deletingCVId === cv.id ? (
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-400"></div>
-                      ) : (
-                        <Trash2 size={16} />
-                      )}
-                    </motion.button>
-                  </div>
-                </div>
-              </motion.div>
+                cv={cv}
+                onEdit={handleCVClick}
+                onDownload={handleDownloadCV}
+                onDelete={handleDeleteCV}
+                onToggleStar={toggleStar}
+                onRename={(cvId, newTitle) => {
+                  setEditingTitle(newTitle);
+                  saveTitle(cvId);
+                }}
+                onEditJourney={handleEditJourney}
+                onTitleEdit={(cvId, newTitle) => setEditingTitle(newTitle)}
+                editingCVId={editingCVId}
+                editingTitle={editingTitle}
+                onStartEditing={startEditing}
+                onSaveTitle={saveTitle}
+                onCancelEditing={cancelEditing}
+              />
             ))
           )}
         </div>
@@ -1881,72 +1781,30 @@ const Canvas: React.FC = () => {
                 </motion.button>
               </div>
 
-              <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
+              <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                 {coverLetters.map((coverLetter) => (
-                  <motion.div
+                  <CoverLetterCardOverlay
                     key={coverLetter.id}
-                    className="frosted-glass-card rounded-2xl overflow-hidden hover:bg-gray-200 dark:hover:bg-white/10 transition-all duration-300"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    whileHover={{ y: -5 }}
-                  >
-                    {/* Cover Letter Preview */}
-                    <div className="h-48 bg-gradient-to-br from-blue-400/20 to-blue-500/20 flex items-center justify-center">
-                      <PenTool size={48} className="text-blue-400" />
-                    </div>
-                    
-                    {/* Cover Letter Info */}
-                    <div className="p-6 space-y-3">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h3 className="text-white font-semibold text-lg">{coverLetter.title}</h3>
-                          <p className="text-white/60 text-sm">{coverLetter.description}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {coverLetter.isStarred && (
-                            <Star size={16} className="text-yellow-400 fill-current" />
-                          )}
-                                                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                             coverLetter.status === 'final' ? 'bg-green-400/20 text-green-400' :
-                             coverLetter.status === 'draft' ? 'bg-yellow-400/20 text-yellow-400' :
-                             'bg-red-400/20 text-red-400'
-                           }`}>
-                             {coverLetter.status}
-                           </span>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center justify-between text-white/40 text-xs">
-                        <span>Modified {new Date(coverLetter.lastModified).toLocaleDateString()}</span>
-                        <span>{coverLetter.views} views</span>
-                      </div>
-                      
-                      <div className="flex items-center gap-2">
-                        <motion.button
-                          onClick={() => window.location.href = `/studio?type=cover_letter&coverLetterId=${coverLetter.id}`}
-                          className="flex-1 px-3 py-2 bg-blue-400/20 text-blue-400 rounded-lg text-sm font-medium hover:bg-blue-400/30 transition-all duration-300 flex items-center justify-center gap-2"
-                          whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                        >
-                          <Edit size={14} />
-                          Edit
-                        </motion.button>
-                        <motion.button
-                          onClick={() => window.open(`/api/cover-letters/preview/${coverLetter.id}`, '_blank')}
-                          className="px-3 py-2 bg-white/10 text-white/80 rounded-lg text-sm font-medium hover:bg-white/20 transition-all duration-300"
-                          whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                        >
-                          <Eye size={14} />
-                        </motion.button>
-                        <motion.button
-                          onClick={() => window.open(`/api/cover-letters/download/${coverLetter.id}`, '_blank')}
-                          className="px-3 py-2 bg-white/10 text-white/80 rounded-lg text-sm font-medium hover:bg-white/20 transition-all duration-300"
-                          whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                        >
-                          <Download size={14} />
-                        </motion.button>
-                      </div>
-                    </div>
-                  </motion.div>
+                    coverLetter={{
+                      id: coverLetter.id,
+                      title: coverLetter.title,
+                      lastModified: coverLetter.lastModified,
+                      status: coverLetter.status,
+                      content: coverLetter.content || '',
+                      isStarred: coverLetter.isStarred,
+                      metadata: coverLetter.metadata
+                    }}
+                    onEdit={(cl) => window.location.href = `/studio?type=cover_letter&coverLetterId=${cl.id}`}
+                    onDownload={(cl) => window.open(`/api/cover-letters/download/${cl.id}`, '_blank')}
+                    onDelete={handleDeleteCoverLetter}
+                    onToggleStar={toggleCoverLetterStar}
+                    onTitleEdit={(id, newTitle) => setEditingCoverLetterTitle(newTitle)}
+                    editingCoverLetterId={editingCoverLetterId}
+                    editingTitle={editingCoverLetterTitle}
+                    onStartEditing={startEditingCoverLetter}
+                    onSaveTitle={saveCoverLetterTitle}
+                    onCancelEditing={cancelEditingCoverLetter}
+                  />
                 ))}
               </div>
             </div>
@@ -2218,6 +2076,33 @@ const Canvas: React.FC = () => {
           ))}
         </AnimatePresence>
       </div>
+
+      {/* ApplicationJourneyModal */}
+      {showJourneyModal && selectedJobForJourney && (
+        <ApplicationJourneyModal
+          job={selectedJobForJourney}
+          journeys={journeysForSelectedJob}
+          onClose={() => {
+            setShowJourneyModal(false);
+            setSelectedJobForJourney(null);
+            setJourneysForSelectedJob([]);
+          }}
+          onRefresh={async () => {
+            // Refresh the journeys for the selected job
+            if (selectedJobForJourney) {
+              const journeysResponse = await fetch(`/api/cv-journey?jobId=${selectedJobForJourney.id}`);
+              if (journeysResponse.ok) {
+                const journeysResult = await journeysResponse.json();
+                if (journeysResult.success) {
+                  setJourneysForSelectedJob(journeysResult.data.journeys || []);
+                }
+              }
+            }
+            // Also refresh CVs to update any changes
+            loadCVs();
+          }}
+        />
+      )}
     </div>
   );
 };

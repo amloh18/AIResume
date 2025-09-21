@@ -15,7 +15,8 @@ import {
   X,
   Plus,
   ExternalLink,
-  RefreshCw
+  RefreshCw,
+  CheckCircle
 } from 'lucide-react';
 import AddEditJobModal from '@/components/modals/AddEditJobModal';
 

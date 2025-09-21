@@ -15,12 +15,12 @@ function StudioPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Get URL parameters
+  // Get URL parameters - NEW STRUCTURE: journeyId-first approach
+  const journeyId = searchParams.get('journeyId'); // PRIMARY: Journey ID for proper Application Package context
   const type = searchParams.get('type'); // 'cv' or 'cover_letter'
   const cvId = searchParams.get('cvId');
   const coverLetterId = searchParams.get('coverLetterId');
   const jobId = searchParams.get('jobId'); // DEPRECATED: Direct jobId usage violates Application Package model
-  const journeyId = searchParams.get('journeyId'); // PRIMARY: Journey ID for proper context loading
   const mode = searchParams.get('mode'); // 'cv-onboarding', 'ats-edit', 'cover-letter-edit', 'document-first'
   const cvJourneyId = searchParams.get('cvJourneyId'); // LEGACY: Being replaced by journeyId
 
@@ -55,10 +55,16 @@ function StudioPageContent() {
   }
 
   console.log('🔍 Studio Page - Session user ID:', session.user.id);
-  console.log('🔍 Studio Page - URL params:', { type, cvId, coverLetterId, jobId, journeyId, mode, cvJourneyId });
+  console.log('🔍 Studio Page - URL params:', { journeyId, type, cvId, coverLetterId, jobId, mode, cvJourneyId });
   
-  // Determine the primary context ID (prefer journeyId for proper Application Package loading)
+  // NEW APPROACH: Prioritize journeyId for reliable Application Package context
+  // Fallback to cvJourneyId only for legacy compatibility
   const primaryJourneyId = journeyId || cvJourneyId;
+  
+  // Validate required parameters for new structure
+  if (!primaryJourneyId) {
+    console.warn('⚠️ Studio Page - No journeyId provided. This may cause context loading issues.');
+  }
 
   return (
     <RouteGuard requireAuth={true}>

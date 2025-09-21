@@ -53,4 +53,7 @@ const newsletterSchema = new Schema<INewsletter>({
 
 // Note: Unique index on email is already defined in the schema field above
 
+// Export the schema for use in admin models
+export { newsletterSchema };
+
 export default mongoose.models.Newsletter || mongoose.model<INewsletter>('Newsletter', newsletterSchema);

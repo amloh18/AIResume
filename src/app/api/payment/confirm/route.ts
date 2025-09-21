@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 // Removed - using Clerk now
 import connectDB from '@/lib/database';
-import { User, PricingPlan, DiscountCode, Subscription } from '@/models';
+import { User } from '@/models';
+import { getAdminPricingPlan, getAdminDiscountCode, getAdminSubscription } from '@/models/admin-models';
 import StripeService from '@/lib/payment/stripe';
 import RazorpayService from '@/lib/payment/razorpay';
 import mongoose from 'mongoose';
@@ -39,6 +41,7 @@ export async function POST(request: NextRequest) {
     const isSimulation = process.env.NODE_ENV === 'development' && !paymentIntentId && !orderId;
 
     // Get the pricing plan
+    const PricingPlan = await getAdminPricingPlan();
     let plan = await PricingPlan.findById(planId);
     
     // If not found by ID, try to find by name
@@ -164,6 +167,7 @@ export async function POST(request: NextRequest) {
 
     // Calculate discount if applicable
     if (discountCodeId) {
+      const DiscountCode = await getAdminDiscountCode();
       const discountCode = await DiscountCode.findById(discountCodeId);
       if (discountCode) {
         discountAmount = discountCode.discountValue;
@@ -188,6 +192,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create subscription record
+    const Subscription = await getAdminSubscription();
     const subscription = new Subscription({
       userId: user._id,
       planId: plan._id,
@@ -226,6 +231,7 @@ export async function POST(request: NextRequest) {
 
     // Increment discount code usage if applicable
     if (discountCodeId) {
+      const DiscountCode = await getAdminDiscountCode();
       const discountCode = await DiscountCode.findById(discountCodeId);
       if (discountCode) {
         await discountCode.incrementUsage();

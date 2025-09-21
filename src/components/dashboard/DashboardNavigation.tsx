@@ -12,7 +12,8 @@ import {
   Shield,
   Route,
   RefreshCw,
-  CheckCircle
+  CheckCircle,
+  Target
 } from 'lucide-react';
 import { getSidebarClasses } from '@/lib/utils/themeUtils';
 
@@ -88,6 +89,7 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
   const sections = [
     { id: 'analytics', name: 'Analytics', icon: BarChart3, description: 'Progress Tracking' },
     { id: 'pipeline', name: 'Job Tracker', icon: Briefcase, description: 'Track Applications', tourId: 'job-tracker' },
+    { id: 'application-tracker', name: 'Application Tracker', icon: Target, description: 'Manage jobs with integrated CV journeys', tourId: 'application-tracker' },
     { id: 'cv-journey', name: 'CV Journey', icon: Route, description: 'Guided CV Creation', tourId: 'cv-journey' },
     { id: 'canvas', name: 'CV Studio', icon: FileText, description: 'Saved CV/Cover Letters', tourId: 'cv-studio' },
     { id: 'quillbox', name: 'Snippets', icon: MessageSquare, description: 'Content Library' }

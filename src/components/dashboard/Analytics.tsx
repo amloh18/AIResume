@@ -1132,7 +1132,9 @@ const RecentJobsWidget: React.FC<{
                          ? `${job.salary.currency || '$'}${job.salary.min.toLocaleString()}-${job.salary.max.toLocaleString()}`
                          : job.salary.min 
                            ? `${job.salary.currency || '$'}${job.salary.min.toLocaleString()}+`
-                           : `${job.salary.currency || '$'}${job.salary.max.toLocaleString()}`
+                           : job.salary.max
+                             ? `${job.salary.currency || '$'}${job.salary.max.toLocaleString()}`
+                             : 'Not specified'
                        } {job.salary.period || 'yearly'}
                      </span>
                    </div>
@@ -1261,7 +1263,7 @@ const Analytics: React.FC = () => {
         // Reload CVs to reflect the change
         const userId = user?.id || user?._id || session?.user?.id;
         if (userId) {
-          const cvsResponse = await authenticatedFetch(`/api/cvs?userId=${userId}`);
+          const cvsResponse = await authenticatedFetch('/api/cvs');
           const cvsResult = await cvsResponse.json();
           if (cvsResult.success) {
             const cvData = Array.isArray(cvsResult.data?.cvs) ? cvsResult.data.cvs : [];
@@ -1474,8 +1476,8 @@ const Analytics: React.FC = () => {
         setJobs(jobData);
       }
 
-      console.log('🔍 Analytics - Fetching CVs for userId:', userId);
-      const cvsResponse = await authenticatedFetch(`/api/cvs?userId=${userId}`);
+      console.log('🔍 Analytics - Fetching CVs using session authentication');
+      const cvsResponse = await authenticatedFetch('/api/cvs');
       const cvsResult = await cvsResponse.json();
       console.log('🔍 Analytics - CV API response:', cvsResult);
       if (cvsResult.success) {

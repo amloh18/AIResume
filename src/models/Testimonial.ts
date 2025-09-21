@@ -63,4 +63,7 @@ const testimonialSchema = new Schema<ITestimonial>({
 // Index for active testimonials
 testimonialSchema.index({ isActive: 1 });
 
+// Export the schema for use in admin models
+export { testimonialSchema };
+
 export default mongoose.models.Testimonial || mongoose.model<ITestimonial>('Testimonial', testimonialSchema);

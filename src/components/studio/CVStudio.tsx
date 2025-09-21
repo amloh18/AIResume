@@ -46,6 +46,7 @@ import { useTheme } from '@/lib/contexts/ThemeContext';
 import { useJobJourney } from '@/contexts/JobJourneyContext';
 import ActionBlockerDialog from '@/components/modals/ActionBlockerDialog';
 import { CVJourneyLookupService, CVJourneyInfo } from '@/lib/services/cvJourneyLookupService';
+import { ApplicationPackageService } from '@/lib/services/applicationPackageService';
 
 interface CVStudioProps {
   journeyId?: string | null; // PRIMARY: Journey ID for proper Application Package context
@@ -709,16 +710,22 @@ const CVStudio: React.FC<CVStudioProps> = ({
             // Update journey with new CV ID
             await updateJourneyWithDocument(newCvId, 'cv');
 
-            // Update URL to include the new CV ID and preserve cvJourneyId
+            // Update URL using new structure with journeyId as primary context
             const urlParams = new URLSearchParams();
             urlParams.set('type', 'cv');
             urlParams.set('cvId', newCvId);
+            
+            // Prioritize journeyId for reliable Application Package context
+            const primaryJourneyId = journeyId || journeyInfo?.journeyId || cvJourneyId;
+            if (primaryJourneyId) {
+              urlParams.set('journeyId', primaryJourneyId);
+            }
+            
+            // Keep jobId for backwards compatibility
             if (journeyInfo?.jobId || selectedJobId || jobId) {
               urlParams.set('jobId', journeyInfo?.jobId || selectedJobId || jobId);
             }
-            if (journeyInfo?.journeyId || cvJourneyId) {
-              urlParams.set('cvJourneyId', journeyInfo?.journeyId || cvJourneyId);
-            }
+            
             router.replace(`/studio?${urlParams.toString()}`);
 
             // Set save status to saved since we just created the CV
@@ -786,14 +793,81 @@ const CVStudio: React.FC<CVStudioProps> = ({
     initializeCVJourney();
   }, [journeyId, cvId, coverLetterId, jobId, cvJourneyId, userId]);
 
+  // Auto-duplicate master CV function
+  const autoDuplicateMasterCV = async () => {
+    try {
+      console.log('🔍 Auto-duplicating master CV for cv-onboarding mode');
+      
+      // Fetch master CV first
+      const masterResponse = await fetch(`/api/cvs/master?userId=${userId}`);
+      const masterResult = await masterResponse.json();
+      
+      if (!masterResult.success || !masterResult.data?.masterCV) {
+        console.log('❌ No master CV found for auto-duplication');
+        return;
+      }
+      
+      const masterCV = masterResult.data.masterCV;
+      console.log('🔍 Found master CV for auto-duplication:', masterCV.title);
+      
+      // Create duplicate CV using ApplicationPackageService
+      const duplicateResult = await ApplicationPackageService.duplicateCV({
+        sourceCvId: masterCV.id,
+        userId,
+        newTitle: `${masterCV.title} (Copy for ${currentJob?.title || 'Job'})`
+      });
+      
+      if (duplicateResult.success && duplicateResult.data?.cvId) {
+        const duplicatedCVId = duplicateResult.data.cvId;
+        console.log('✅ Auto-duplicated master CV:', duplicatedCVId);
+        
+        // Load the duplicated CV data
+        const cvResult = await CVService.getCV(duplicatedCVId, userId);
+        if (cvResult.cvData) {
+          setCvData(cvResult.cvData);
+          setCvTitle(cvResult.title || `${masterCV.title} (Copy for ${currentJob?.title || 'Job'})`);
+          setIsMasterCV(false);
+          setCurrentMasterCV(null);
+          
+          // Update journey with the new CV ID
+          await updateJourneyWithDocument(duplicatedCVId, 'cv');
+          
+          // Update URL to show duplicated CV with journey context
+          const urlParams = new URLSearchParams();
+          urlParams.set('type', 'cv');
+          urlParams.set('cvId', duplicatedCVId);
+          if (journeyId) {
+            urlParams.set('journeyId', journeyId);
+          } else if (selectedJobId || jobId) {
+            urlParams.set('jobId', selectedJobId || jobId);
+          }
+          router.replace(`/studio?${urlParams.toString()}`);
+          
+          console.log('✅ Auto-duplication completed successfully');
+        }
+      } else {
+        throw new Error(duplicateResult.message || 'Failed to auto-duplicate master CV');
+      }
+    } catch (error) {
+      console.error('❌ Error auto-duplicating master CV:', error);
+      setError('Failed to auto-duplicate master CV');
+    }
+  };
+
   // Handle journey mode and initialization
   useEffect(() => {
-    // Initialize journey when CV Studio is opened
-    if (jobId && !journeyState.isJourneyActive) {
-      console.log('🔍 CVStudio - Starting journey for job:', jobId);
+    // NEW APPROACH: Initialize journey using journeyId for reliable Application Package context
+    const primaryJourneyId = journeyId || cvJourneyId;
+    
+    if (primaryJourneyId) {
+      console.log('🎯 CVStudio - Initializing journey from journeyId:', primaryJourneyId);
+      // Journey context will be loaded in initializeCVJourney()
+    } else if (jobId && !journeyState.isJourneyActive) {
+      // FALLBACK: Legacy approach for backwards compatibility
+      console.log('🔍 CVStudio - Starting journey for job (legacy):', jobId);
       startJourney(jobId);
     } else if (jobId && journeyState.currentJobId !== jobId) {
-      console.log('🔍 CVStudio - Updating journey job ID:', jobId);
+      console.log('🔍 CVStudio - Updating journey job ID (legacy):', jobId);
       updateCurrentJobId(jobId);
     }
 
@@ -811,6 +885,11 @@ const CVStudio: React.FC<CVStudioProps> = ({
         case 'cv-onboarding':
           // Set up CV creation mode
           updateJourneyStatus('job-added');
+          // Auto-duplicate master CV for cv-onboarding mode
+          if (!cvData && !cvId) {
+            console.log('🔍 CVStudio - Auto-duplicating master CV for cv-onboarding mode');
+            autoDuplicateMasterCV();
+          }
           break;
         case 'ats-edit':
           // Set up ATS editing mode
@@ -864,11 +943,17 @@ const CVStudio: React.FC<CVStudioProps> = ({
           setTemplates([]);
         }
 
-        // Load job data if jobId is provided
-        if (jobId) {
+        // NEW APPROACH: Load job data prioritizing journeyId for reliable Application Package context
+        const primaryJourneyId = journeyId || cvJourneyId;
+        const targetJobId = journeyInfo?.jobId || jobId;
+        
+        if (targetJobId) {
           try {
-            console.log('🔍 CVStudio - Loading job data for jobId:', jobId);
-            const jobResponse = await fetch(`/api/jobs?userId=${userId}&jobId=${jobId}`);
+            console.log('🎯 CVStudio - Loading job data from journey context:', { 
+              journeyId: primaryJourneyId, 
+              jobId: targetJobId 
+            });
+            const jobResponse = await fetch(`/api/jobs?userId=${userId}&jobId=${targetJobId}`);
             if (!jobResponse.ok) {
               throw new Error('Failed to fetch job');
             }
@@ -878,7 +963,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
             let jobData;
             if (jobResult.data?.jobs) {
               // If we got a list of jobs, find the specific one
-              jobData = jobResult.data.jobs.find((job: any) => job.id === jobId || job._id === jobId);
+              jobData = jobResult.data.jobs.find((job: any) => job.id === targetJobId || job._id === targetJobId);
             } else {
               // If we got a single job directly
               jobData = jobResult.job || jobResult;
@@ -889,10 +974,11 @@ const CVStudio: React.FC<CVStudioProps> = ({
             }
 
             setCurrentJob(jobData);
-            setSelectedJobId(jobId);
-            console.log('🔍 CVStudio - Job data loaded:', jobData);
+            setSelectedJobId(targetJobId);
+            setJobAutoLoadedFromJourney(!!primaryJourneyId);
+            console.log('✅ CVStudio - Job data loaded from journey context:', jobData);
           } catch (jobError) {
-            console.error('🔍 CVStudio - Failed to load job data:', jobError);
+            console.error('❌ CVStudio - Failed to load job data from journey:', jobError);
             // Don't fail the entire load for job errors
           }
         } else {
@@ -1113,7 +1199,10 @@ const CVStudio: React.FC<CVStudioProps> = ({
                 cvResult = await CVService.getCV(cvId, userId);
                 // CVService.getCV already returns data in CVDataStructure format
                 convertedData = cvResult.cvData;
-                console.log('Existing CV data from service:', convertedData);
+                console.log('🔍 CVStudio - Existing CV data from service:', convertedData);
+                console.log('🔍 CVStudio - CV data type:', typeof convertedData);
+                console.log('🔍 CVStudio - CV data work section:', convertedData?.work);
+                console.log('🔍 CVStudio - CV data work array length:', convertedData?.work?.length);
                 setCvData(convertedData);
 
                 // Set CV title from the result
@@ -1328,7 +1417,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
     if (jobId) {
       try {
         // Fetch job data with userId
-        console.log('🔍 CVStudio - Loading job data for jobId:', jobId);
+        console.log('🎯 CVStudio - Loading job data for jobId:', jobId);
         const response = await fetch(`/api/jobs?userId=${userId}&jobId=${jobId}`);
         if (!response.ok) {
           throw new Error('Failed to fetch job');
@@ -1350,8 +1439,21 @@ const CVStudio: React.FC<CVStudioProps> = ({
         }
 
         setCurrentJob(jobData);
+        
+        // NEW: Update journey context if we have a journeyId
+        const primaryJourneyId = journeyId || cvJourneyId;
+        if (primaryJourneyId && journeyInfo) {
+          console.log('🔄 CVStudio - Updating journey with new job selection:', jobId);
+          updateCurrentJobId(jobId);
+          
+          // Update local journey info
+          setJourneyInfo({
+            ...journeyInfo,
+            jobId: jobId
+          });
+        }
       } catch (err) {
-        console.error('Error loading job data:', err);
+        console.error('❌ CVStudio - Error loading job data:', err);
       }
     } else {
       setCurrentJob(null);
@@ -1450,16 +1552,18 @@ const CVStudio: React.FC<CVStudioProps> = ({
     const url = new URL(window.location.href);
     const searchParams = new URLSearchParams(url.search);
     
-    // Use journey info as source of truth
-    const currentJourneyId = journeyInfo?.journeyId || cvJourneyId;
+    // NEW APPROACH: Prioritize journeyId for reliable Application Package context
+    const currentJourneyId = journeyId || journeyInfo?.journeyId || cvJourneyId;
     const currentJobId = journeyInfo?.jobId || selectedJobId || jobId;
     
-    // Preserve cvJourneyId if it exists
+    // Always preserve journeyId as the primary context identifier
     if (currentJourneyId) {
-      searchParams.set('cvJourneyId', currentJourneyId);
+      searchParams.set('journeyId', currentJourneyId);
+      // Remove legacy cvJourneyId to avoid confusion
+      searchParams.delete('cvJourneyId');
     }
     
-    // Preserve jobId if it exists
+    // Keep jobId for backwards compatibility but it's now secondary to journeyId
     if (currentJobId) {
       searchParams.set('jobId', currentJobId);
     }
@@ -1527,6 +1631,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
     window.history.pushState({}, '', newUrl);
     
     console.log('🔄 Document type changed to:', newType, 'with journey:', currentJourneyId);
+    console.log('🔗 New URL structure:', `${url.pathname}?${searchParams.toString()}`);
   };
 
 
@@ -1670,6 +1775,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
     }
   };
 
+
   // Create sections for draggable component
   const createSections = () => {
     const sectionComponents: Record<string, React.ReactNode> = {
@@ -1688,7 +1794,13 @@ const CVStudio: React.FC<CVStudioProps> = ({
       ),
       work: (
         <WorkExperienceSection
-          data={cvData?.work || []}
+          data={(() => {
+            const workData = cvData?.work || [];
+            console.log('🔍 CVStudio - Passing work data to WorkExperienceSection:', workData);
+            console.log('🔍 CVStudio - Work data length:', workData.length);
+            console.log('🔍 CVStudio - Work data type:', Array.isArray(workData) ? 'array' : typeof workData);
+            return workData;
+          })()}
           onUpdate={updateCVField}
           onAdd={() => addSection('work')}
           onRemove={(index) => removeSection('work', index.toString())}
