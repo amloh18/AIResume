@@ -1,7 +1,9 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface ICVJourney extends Document {
+  journeyId?: string; // Unique journey identifier
   userId: string;
+  firebaseUid?: string; // Firebase UID for user identification
   jobId: string;
   cvId?: string; // Single source of truth for CV-Job relationship
   coverLetterId?: string; // Single source of truth for CoverLetter-Job relationship
@@ -12,6 +14,7 @@ export interface ICVJourney extends Document {
   atsScoreJobId?: string;
   jobTitle: string;
   company: string;
+  journeyType: 'standard' | 'creative' | 'technical' | 'leadership' | 'custom';
   steps: Array<{
     stepId: number;
     name: string;
@@ -30,10 +33,19 @@ export interface ICVJourney extends Document {
 }
 
 const CVJourneySchema = new Schema<ICVJourney>({
+  journeyId: {
+    type: String,
+    index: true
+  },
   userId: {
     type: String,
     required: true,
     index: true
+  },
+  firebaseUid: {
+    type: String,
+    sparse: true, // Allows multiple null values
+    index: true // Index for efficient Firebase UID queries
   },
   jobId: {
     type: String,
@@ -79,6 +91,12 @@ const CVJourneySchema = new Schema<ICVJourney>({
   company: {
     type: String,
     required: true
+  },
+  journeyType: {
+    type: String,
+    enum: ['standard', 'creative', 'technical', 'leadership', 'custom'],
+    default: 'standard',
+    index: true
   },
   steps: [{
     stepId: {
@@ -130,7 +148,7 @@ const CVJourneySchema = new Schema<ICVJourney>({
 
 // Indexes for better query performance
 CVJourneySchema.index({ userId: 1, status: 1 });
-CVJourneySchema.index({ userId: 1, jobId: 1 });
+CVJourneySchema.index({ userId: 1, jobId: 1 }); // Index for performance, uniqueness handled in API
 CVJourneySchema.index({ userId: 1, createdAt: -1 });
 
 // Update the updatedAt field on save

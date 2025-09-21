@@ -401,6 +401,10 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
                     console.log('Download journey:', journey);
                   }}
                   onDelete={onDeleteJourney}
+                  onRefresh={() => {
+                    // Refresh journeys in AnalyticsJourneyWidget
+                    console.log('Refreshing journeys in AnalyticsJourneyWidget');
+                  }}
                   onShowDeleteConfirm={setShowDeleteConfirm}
                 />
               </motion.div>

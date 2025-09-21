@@ -236,9 +236,17 @@ const JourneyStatusBanner: React.FC = () => {
   };
 
   const handleStepClick = (stepId: number) => {
-    // Navigate to studio with the current journey context
+    // Navigate to studio with the current journey context using new URL structure
     if (currentJobId) {
-      router.push(`/studio?journeyId=${currentJobId}&step=${stepId}`);
+      const url = `/studio?journeyId=${currentJobId}&step=${stepId}`;
+      // Add document type and ID based on step
+      if (stepId === 2 && cvId) {
+        router.push(`${url}&type=cv&cvId=${cvId}`);
+      } else if (stepId === 4 && coverLetterId) {
+        router.push(`${url}&type=cover_letter&coverLetterId=${coverLetterId}`);
+      } else {
+        router.push(url);
+      }
     }
   };
 
@@ -251,13 +259,21 @@ const JourneyStatusBanner: React.FC = () => {
         }
         break;
       case 'cv':
-        if (cvId) {
+        if (cvId && currentJobId) {
+          // Use new URL structure with journeyId
+          router.push(`/studio?journeyId=${currentJobId}&type=cv&cvId=${cvId}`);
+        } else if (cvId) {
+          // Fallback to legacy structure
           router.push(`/studio?cvId=${cvId}`);
         }
         break;
       case 'cover-letter':
-        if (coverLetterId) {
-          router.push(`/studio?type=cover&id=${coverLetterId}`);
+        if (coverLetterId && currentJobId) {
+          // Use new URL structure with journeyId
+          router.push(`/studio?journeyId=${currentJobId}&type=cover_letter&coverLetterId=${coverLetterId}`);
+        } else if (coverLetterId) {
+          // Fallback to legacy structure
+          router.push(`/studio?type=cover_letter&coverLetterId=${coverLetterId}`);
         }
         break;
     }

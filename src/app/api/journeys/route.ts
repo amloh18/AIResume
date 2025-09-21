@@ -150,24 +150,55 @@ export async function POST(request: NextRequest) {
         newJourney.company = job.company;
       }
 
-      await newJourney.save();
+      try {
+        await newJourney.save();
 
-      return NextResponse.json({
-        success: true,
-        message: 'Journey created successfully',
-        data: {
-          journey: {
-            id: newJourney._id.toString(),
-            jobId: newJourney.jobId,
-            cvId: newJourney.cvId,
-            coverLetterId: newJourney.coverLetterId,
-            status: newJourney.status,
-            currentStep: newJourney.currentStep,
-            jobTitle: newJourney.jobTitle,
-            company: newJourney.company
+        return NextResponse.json({
+          success: true,
+          message: 'Journey created successfully',
+          data: {
+            journey: {
+              id: newJourney._id.toString(),
+              jobId: newJourney.jobId,
+              cvId: newJourney.cvId,
+              coverLetterId: newJourney.coverLetterId,
+              status: newJourney.status,
+              currentStep: newJourney.currentStep,
+              jobTitle: newJourney.jobTitle,
+              company: newJourney.company
+            }
+          }
+        });
+      } catch (saveError: any) {
+        // Handle unique constraint violation (duplicate journey)
+        if (saveError.code === 11000 || saveError.message.includes('E11000')) {
+          console.log('🔍 Duplicate journey detected, fetching existing journey...');
+          
+          // Fetch the existing journey
+          const existingJourney = await CVJourney.findOne({ userId, jobId });
+          if (existingJourney) {
+            return NextResponse.json({
+              success: true,
+              message: 'Journey already exists',
+              data: {
+                journey: {
+                  id: existingJourney._id.toString(),
+                  jobId: existingJourney.jobId,
+                  cvId: existingJourney.cvId,
+                  coverLetterId: existingJourney.coverLetterId,
+                  status: existingJourney.status,
+                  currentStep: existingJourney.currentStep,
+                  jobTitle: existingJourney.jobTitle,
+                  company: existingJourney.company
+                }
+              }
+            });
           }
         }
-      });
+        
+        // Re-throw the error if it's not a duplicate
+        throw saveError;
+      }
     }
 
   } catch (error: any) {

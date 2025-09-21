@@ -2,6 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IJobApplication extends Document {
   userId: mongoose.Types.ObjectId | string;
+  firebaseUid?: string; // Firebase UID for user identification
   // cvId removed - relationships now managed through CVJourney
   jobTitle: string;
   company: string;
@@ -59,6 +60,11 @@ const jobApplicationSchema = new Schema<IJobApplication>({
     type: Schema.Types.Mixed, // Allow both ObjectId and string
     required: true,
     index: true
+  },
+  firebaseUid: {
+    type: String,
+    sparse: true, // Allows multiple null values
+    index: true // Index for efficient Firebase UID queries
   },
   // cvId removed - relationships now managed through CVJourney
   jobTitle: {

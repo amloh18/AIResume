@@ -1,0 +1,35 @@
+{
+  "name": "cvcircle-job-saver-extension",
+  "version": "1.0.0",
+  "description": "Chrome extension for saving jobs from major job sites to CVCircle dashboard",
+  "main": "background.js",
+  "scripts": {
+    "build": "echo 'No build process needed for Chrome extension'",
+    "test": "echo 'No tests configured'",
+    "lint": "echo 'No linting configured'"
+  },
+  "keywords": [
+    "chrome-extension",
+    "job-saver",
+    "linkedin",
+    "indeed",
+    "glassdoor",
+    "circle-cv"
+  ],
+  "author": "CVCircle Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/circle-cv-app"
+  },
+  "bugs": {
+    "url": "https://github.com/your-org/circle-cv-app/issues"
+  },
+  "homepage": "https://cvcircle.io",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "dependencies": {
+    "sharp": "^0.34.4"
+  }
+}

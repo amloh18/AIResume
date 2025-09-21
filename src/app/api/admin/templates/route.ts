@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 // Removed - using Clerk now
 import connectDB from '@/lib/database';
-import { Template } from '@/models';
+import { getAdminTemplate } from '@/models/admin-models';
 
 // Add better error handling and logging
 const logError = (error: any, context: string) => {
@@ -76,6 +77,7 @@ export async function GET(request: NextRequest) {
 
     await connectDB();
 
+    const Template = await getAdminTemplate();
     const templates = await Template.find({}).sort({ createdAt: -1 });
 
     return NextResponse.json(templates);

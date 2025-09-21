@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 // Removed - using Clerk now
 import connectDB from '@/lib/database';
-import { Testimonial } from '@/models';
+import { getAdminTestimonial } from '@/models/admin-models';
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,6 +15,7 @@ export async function GET(request: NextRequest) {
 
     await connectDB();
 
+    const Testimonial = await getAdminTestimonial();
     const testimonials = await Testimonial.find()
       .sort({ createdAt: -1 });
 
@@ -56,6 +58,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const Testimonial = await getAdminTestimonial();
     const testimonial = new Testimonial({
       username,
       avatar,

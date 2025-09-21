@@ -312,14 +312,80 @@ const MasterCVCreationWizard: React.FC<MasterCVCreationWizardProps> = ({ onCompl
   const handleComplete = async () => {
     setIsLoading(true);
     try {
-      // Mark CV data as master CV
+      // Ensure we have at least one empty item in each section to enable proper form population
+      const completeCVData = {
+        ...state.cvData,
+        // Add empty work experience if none exists
+        work: state.cvData.work.length === 0 ? [{
+          name: '',
+          position: '',
+          url: '',
+          startDate: '',
+          endDate: '',
+          summary: '',
+          highlights: ['']
+        }] : state.cvData.work,
+        
+        // Add empty education if none exists
+        education: state.cvData.education.length === 0 ? [{
+          institution: '',
+          url: '',
+          area: '',
+          studyType: '',
+          startDate: '',
+          endDate: '',
+          score: '',
+          courses: []
+        }] : state.cvData.education,
+        
+        // Add empty skills if none exists
+        skills: state.cvData.skills.length === 0 ? [{
+          name: '',
+          level: '',
+          keywords: ['']
+        }] : state.cvData.skills,
+        
+        // Add empty projects if none exists
+        projects: state.cvData.projects.length === 0 ? [{
+          name: '',
+          startDate: '',
+          endDate: '',
+          description: '',
+          highlights: [],
+          url: ''
+        }] : state.cvData.projects,
+        
+        // Add empty certificates if none exists
+        certificates: state.cvData.certificates.length === 0 ? [{
+          name: '',
+          date: '',
+          issuer: '',
+          url: ''
+        }] : state.cvData.certificates,
+        
+        // Add empty languages if none exists
+        languages: state.cvData.languages.length === 0 ? [{
+          language: '',
+          fluency: ''
+        }] : state.cvData.languages
+      };
+
+      console.log('🔍 MasterCVCreationWizard - Ensuring CV data has starter items for all sections');
+      console.log('📊 CV Data sections populated:', {
+        work: completeCVData.work.length,
+        education: completeCVData.education.length,
+        skills: completeCVData.skills.length,
+        projects: completeCVData.projects.length,
+        certificates: completeCVData.certificates.length,
+        languages: completeCVData.languages.length
+      });
+      
+      // Update CV data with complete structure
       dispatch({ 
         type: 'SET_CV_DATA', 
-        payload: { 
-          ...state.cvData,
-          isMaster: true 
-        } 
+        payload: completeCVData
       });
+      
       onComplete();
     } catch (error) {
       console.error('Error completing master CV creation:', error);

@@ -2,6 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IPaymentMethod extends Document {
   userId: mongoose.Types.ObjectId | string;
+  firebaseUid?: string; // Firebase UID for user identification
   type: 'credit_card' | 'paypal' | 'bank_transfer';
   provider: 'visa' | 'mastercard' | 'amex' | 'discover' | 'paypal' | 'stripe';
   last4?: string;
@@ -20,6 +21,11 @@ const paymentMethodSchema = new Schema<IPaymentMethod>({
   userId: {
     type: Schema.Types.Mixed, // Allow both ObjectId and string
     required: [true, 'User ID is required']
+  },
+  firebaseUid: {
+    type: String,
+    sparse: true, // Allows multiple null values
+    index: true // Index for efficient Firebase UID queries
   },
   type: {
     type: String,
@@ -81,5 +87,8 @@ paymentMethodSchema.index({ userId: 1, isDefault: 1 }, { unique: true, partialFi
 
 // Index for better query performance
 paymentMethodSchema.index({ userId: 1, isActive: 1 });
+
+// Export the schema for use in admin models
+export { paymentMethodSchema };
 
 export default mongoose.models.PaymentMethod || mongoose.model<IPaymentMethod>('PaymentMethod', paymentMethodSchema);

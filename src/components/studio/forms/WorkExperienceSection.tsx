@@ -27,10 +27,15 @@ const WorkExperienceSection: React.FC<WorkExperienceSectionProps> = ({
   const [generatingIndex, setGeneratingIndex] = useState<number | null>(null);
   
   // Debug logging to understand data structure
-  console.log('🔍 WorkExperienceSection - data:', data);
+  console.log('🔍 WorkExperienceSection - received data:', data);
+  console.log('🔍 WorkExperienceSection - data type:', typeof data);
+  console.log('🔍 WorkExperienceSection - is array:', Array.isArray(data));
+  console.log('🔍 WorkExperienceSection - data length:', data?.length);
+  console.log('🔍 WorkExperienceSection - first item:', data?.[0]);
   
   // Ensure we have proper data structure
   const safeData = Array.isArray(data) ? data : [];
+  console.log('🔍 WorkExperienceSection - safeData length:', safeData.length);
 
   const generateAIDescription = async (index: number, workItem: any) => {
     if (!userId) return;

@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/database';
-import { Testimonial } from '@/models';
+import { getAdminTestimonial } from '@/models/admin-models';
 
 export async function GET(request: NextRequest) {
   try {
     await connectDB();
 
     // Get active testimonials only
+    const Testimonial = await getAdminTestimonial();
     const testimonials = await Testimonial.find({ isActive: true })
       .sort({ createdAt: -1 })
       .limit(10);

@@ -3,6 +3,7 @@
 import React from 'react';
 import Hero from '@/components/landing/Hero';
 import Features from '@/components/landing/Features';
+import ChromeExtension from '@/components/landing/ChromeExtension';
 import Testimonials from '@/components/landing/Testimonials';
 import HowItWorks from '@/components/landing/HowItWorks';
 import Pricing from '@/components/landing/Pricing';
@@ -14,6 +15,7 @@ import { motion } from 'framer-motion';
 export default function LandingPage() {
   const navLinks = [
     { label: 'Features', href: '#features', ariaLabel: 'View features section' },
+    { label: 'Extension', href: '#chrome-extension', ariaLabel: 'View Chrome extension section' },
     { label: 'How It Works', href: '#how-it-works', ariaLabel: 'View how it works section' },
     { label: 'Pricing', href: '#pricing', ariaLabel: 'View pricing section' }
   ];
@@ -39,6 +41,9 @@ export default function LandingPage() {
       
       {/* Features Section */}
       <Features />
+      
+      {/* Chrome Extension Section */}
+      <ChromeExtension />
       
       {/* Testimonials Section */}
       <Testimonials />

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/database';
 import { CV } from '@/models';
 import { toObjectId, createErrorResponse } from '@/lib/db-utils';
+import mongoose from 'mongoose';
 
 // GET - Get a specific CV by ID
 export async function GET(
@@ -26,9 +27,18 @@ export async function GET(
     }
 
     const cvId = toObjectId(id);
-    const userIdObjectId = toObjectId(userId);
     
-    const cv = await CV.findOne({ _id: cvId, userId: userIdObjectId });
+    // Handle userId format properly - check if it's MongoDB ObjectId or string
+    let userIdQuery;
+    if (/^[0-9a-fA-F]{24}$/.test(userId)) {
+      // MongoDB ObjectId format (24 hex chars)
+      userIdQuery = new mongoose.Types.ObjectId(userId);
+    } else {
+      // NextAuth string format - use as string
+      userIdQuery = userId;
+    }
+    
+    const cv = await CV.findOne({ _id: cvId, userId: userIdQuery });
     
     if (!cv) {
       return NextResponse.json(
@@ -95,11 +105,21 @@ export async function PUT(
     }
 
     const cvId = toObjectId(id);
-    const userIdObjectId = toObjectId(userId);
-    console.log('🔍 CV UPDATE API - CV ID:', cvId, 'User ID:', userIdObjectId);
+    
+    // Handle userId format properly - check if it's MongoDB ObjectId or string
+    let userIdQuery;
+    if (/^[0-9a-fA-F]{24}$/.test(userId)) {
+      // MongoDB ObjectId format (24 hex chars)
+      userIdQuery = new mongoose.Types.ObjectId(userId);
+    } else {
+      // NextAuth string format - use as string
+      userIdQuery = userId;
+    }
+    
+    console.log('🔍 CV UPDATE API - CV ID:', cvId, 'User ID Query:', userIdQuery);
     
     // Find CV and ensure user owns it
-    const cv = await CV.findOne({ _id: cvId, userId: userIdObjectId });
+    const cv = await CV.findOne({ _id: cvId, userId: userIdQuery });
     console.log('🔍 CV UPDATE API - CV found:', !!cv);
     
     if (!cv) {
@@ -186,26 +206,24 @@ export async function DELETE(
       );
     }
     
-    try {
-      userObjectId = toObjectId(userId);
-      console.log('✅ CV DELETE API - User ID converted successfully:', userObjectId);
-    } catch (error) {
-      console.error('❌ CV DELETE API - Invalid User ID format:', userId, error);
-      return NextResponse.json(
-        {
-          success: false,
-          message: 'Invalid User ID format'
-        },
-        { status: 400 }
-      );
+    // Handle userId format properly - check if it's MongoDB ObjectId or string
+    let userIdQuery;
+    if (/^[0-9a-fA-F]{24}$/.test(userId)) {
+      // MongoDB ObjectId format (24 hex chars)
+      userIdQuery = new mongoose.Types.ObjectId(userId);
+      console.log('✅ CV DELETE API - User ID is MongoDB ObjectId:', userIdQuery);
+    } else {
+      // NextAuth string format - use as string
+      userIdQuery = userId;
+      console.log('✅ CV DELETE API - User ID is string format:', userIdQuery);
     }
     
-    console.log('Converted IDs - cvId:', cvId, 'userObjectId:', userObjectId);
+    console.log('Converted IDs - cvId:', cvId, 'userIdQuery:', userIdQuery);
     
-    console.log('🔍 CV DELETE API - Looking for CV with ID:', cvId, 'and user ID:', userObjectId);
+    console.log('🔍 CV DELETE API - Looking for CV with ID:', cvId, 'and user ID:', userIdQuery);
     
     // Find CV and ensure user owns it
-    const cv = await CV.findOne({ _id: cvId, userId: userObjectId });
+    const cv = await CV.findOne({ _id: cvId, userId: userIdQuery });
     
     if (!cv) {
       console.log('❌ CV DELETE API - CV not found for user');

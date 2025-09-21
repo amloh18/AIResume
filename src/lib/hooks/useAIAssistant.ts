@@ -38,6 +38,17 @@ export const useAIAssistant = (
         return;
       }
       
+      // Check if CV data has meaningful content
+      const hasContent = cvData.personalInfo?.name || 
+                        cvData.experience?.length > 0 || 
+                        cvData.education?.length > 0 || 
+                        cvData.skills?.length > 0;
+      
+      if (!hasContent) {
+        console.log('❌ ATS calculation skipped - CV data is empty:', { cvId });
+        return;
+      }
+      
       console.log('🎯 ATS calculation triggered:', {
         hasJobData: !!jobData,
         jobTitle: jobData?.title || jobData?.jobTitle,

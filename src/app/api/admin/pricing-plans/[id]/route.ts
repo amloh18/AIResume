@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs';
-// Removed - using Clerk now
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/database';
-import { PricingPlan } from '@/models';
+import { getAdminPricingPlan, getAdminSubscription } from '@/models/admin-models';
 
 export async function GET(
   request: NextRequest,
@@ -17,6 +17,7 @@ export async function GET(
 
     await connectDB();
 
+    const PricingPlan = await getAdminPricingPlan();
     const plan = await PricingPlan.findById(params.id).lean();
     
     if (!plan) {
@@ -67,6 +68,7 @@ export async function PUT(
       );
     }
 
+    const PricingPlan = await getAdminPricingPlan();
     const plan = await PricingPlan.findById(params.id);
     
     if (!plan) {
@@ -127,6 +129,7 @@ export async function DELETE(
 
     await connectDB();
 
+    const PricingPlan = await getAdminPricingPlan();
     const plan = await PricingPlan.findById(params.id);
     
     if (!plan) {
@@ -134,7 +137,7 @@ export async function DELETE(
     }
 
     // Check if plan is being used by any active subscriptions
-    const { Subscription } = await import('@/models');
+    const Subscription = await getAdminSubscription();
     const activeSubscriptions = await Subscription.countDocuments({
       planId: params.id,
       status: 'active'

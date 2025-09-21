@@ -90,6 +90,7 @@ import PageHeader from './PageHeader';
 import { authenticatedFetch } from '@/lib/utils/apiUtils';
 import { useJobJourney } from '@/contexts/JobJourneyContext';
 import { useJourneyLinking } from '@/lib/services/journeyLinkingService';
+import toast from 'react-hot-toast';
 
 interface Job extends Omit<IJobApplication, '_id' | 'userId'> {
   id: string;
@@ -1275,6 +1276,7 @@ const Pipeline: React.FC = () => {
 
       if (result.success) {
         console.log('✅ Pipeline - Job linked to CV via journey system:', result);
+        toast.success('CV linked to job successfully!');
         // Note: cvId removed from Job interface - relationships now managed through CVJourney
         // Update selectedJob if it's the one being modified
         if (selectedJob && selectedJob.id === jobId) {
@@ -1282,11 +1284,11 @@ const Pipeline: React.FC = () => {
         }
       } else {
         console.error('❌ Pipeline - Failed to link job to CV:', result.message);
-        alert(`Failed to link CV to job: ${result.message}`);
+        toast.error(`Failed to link CV to job: ${result.message}`);
       }
     } catch (error) {
       console.error('❌ Pipeline - Error linking job to CV:', error);
-      alert('Failed to link CV to job. Please try again.');
+      toast.error('Failed to link CV to job. Please try again.');
     }
   };
 
@@ -1346,7 +1348,7 @@ const Pipeline: React.FC = () => {
       const userId = session?.user?.id || user?.id;
       if (!userId) {
         console.error('No user ID available for job save');
-        alert('Authentication error. Please log in again.');
+        toast.error('Authentication error. Please log in again.');
         return;
       }
 

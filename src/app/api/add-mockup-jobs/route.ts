@@ -380,27 +380,44 @@ export async function POST(request: NextRequest) {
         title: 'Jamie Smith - Professional CV',
         template: 'modern',
         status: 'published',
-        sections: {
-          personalInfo: {
-            firstName: 'Jamie',
-            lastName: 'Smith',
+        cvData: {
+          basics: {
+            name: 'Jamie Smith',
+            label: 'Senior Software Developer',
+            image: '',
             email: 'jamie@gmail.com',
             phone: '+1 (555) 123-4567',
-            location: 'San Francisco, CA',
-            linkedin: 'https://linkedin.com/in/jamiesmith',
-            github: 'https://github.com/jamiesmith',
-            summary: 'Experienced software developer with 5+ years in full-stack development, specializing in React, Node.js, and cloud technologies.'
+            url: 'https://jamiesmith.dev',
+            summary: 'Experienced software developer with 5+ years in full-stack development, specializing in React, Node.js, and cloud technologies.',
+            location: {
+              address: '123 Main St',
+              postalCode: '94105',
+              city: 'San Francisco',
+              countryCode: 'US',
+              region: 'CA'
+            },
+            profiles: [
+              {
+                network: 'LinkedIn',
+                username: 'jamiesmith',
+                url: 'https://linkedin.com/in/jamiesmith'
+              },
+              {
+                network: 'GitHub',
+                username: 'jamiesmith',
+                url: 'https://github.com/jamiesmith'
+              }
+            ]
           },
-          experience: [
+          work: [
             {
-              company: 'TechCorp',
+              name: 'TechCorp',
               position: 'Senior Developer',
-              location: 'San Francisco, CA',
-              startDate: new Date('2022-01-01'),
-              endDate: new Date('2024-01-01'),
-              current: false,
-              description: 'Led development of multiple web applications using React and Node.js',
-              achievements: [
+              url: 'https://techcorp.com',
+              startDate: '2022-01',
+              endDate: '2024-01',
+              summary: 'Led development of multiple web applications using React and Node.js',
+              highlights: [
                 'Improved application performance by 40%',
                 'Mentored 3 junior developers',
                 'Implemented CI/CD pipeline'
@@ -410,59 +427,64 @@ export async function POST(request: NextRequest) {
           education: [
             {
               institution: 'University of California',
-              degree: 'Bachelor of Science',
-              field: 'Computer Science',
-              location: 'Berkeley, CA',
-              startDate: new Date('2018-09-01'),
-              endDate: new Date('2022-05-01'),
-              current: false,
-              gpa: 3.8
+              url: 'https://berkeley.edu',
+              area: 'Computer Science',
+              studyType: 'Bachelor of Science',
+              startDate: '2018-09',
+              endDate: '2022-05',
+              score: '3.8',
+              courses: ['Data Structures', 'Algorithms', 'Software Engineering', 'Database Systems']
             }
           ],
           skills: [
             {
-              category: 'Programming Languages',
-              skills: ['JavaScript', 'TypeScript', 'Python', 'Java']
+              name: 'Programming Languages',
+              level: 'Expert',
+              keywords: ['JavaScript', 'TypeScript', 'Python', 'Java']
             },
             {
-              category: 'Frameworks & Libraries',
-              skills: ['React', 'Node.js', 'Express', 'Django']
+              name: 'Frameworks & Libraries',
+              level: 'Expert',
+              keywords: ['React', 'Node.js', 'Express', 'Django']
             },
             {
-              category: 'Databases',
-              skills: ['MongoDB', 'PostgreSQL', 'Redis']
+              name: 'Databases',
+              level: 'Advanced',
+              keywords: ['MongoDB', 'PostgreSQL', 'Redis']
             }
           ],
           projects: [
             {
-              title: 'E-commerce Platform',
+              name: 'E-commerce Platform',
+              startDate: '2023-01',
+              endDate: '2023-06',
               description: 'Built a full-stack e-commerce platform with React and Node.js',
-              technologies: ['React', 'Node.js', 'MongoDB', 'Stripe'],
-              github: 'https://github.com/jamiesmith/ecommerce',
-              startDate: new Date('2023-01-01'),
-              endDate: new Date('2023-06-01'),
-              current: false
+              highlights: [
+                'Implemented secure payment processing with Stripe',
+                'Built responsive UI with React and Material-UI',
+                'Deployed on AWS with CI/CD pipeline'
+              ],
+              url: 'https://github.com/jamiesmith/ecommerce'
             }
           ],
-          certifications: [
+          certificates: [
             {
               name: 'AWS Certified Developer',
+              date: '2023-03',
               issuer: 'Amazon Web Services',
-              date: new Date('2023-03-01'),
               url: 'https://aws.amazon.com/certification/'
             }
           ],
           languages: [
             {
               language: 'English',
-              proficiency: 'native'
+              fluency: 'Native'
             },
             {
               language: 'Spanish',
-              proficiency: 'intermediate'
+              fluency: 'Intermediate'
             }
-          ],
-          customSections: []
+          ]
         }
       });
       await cv.save();

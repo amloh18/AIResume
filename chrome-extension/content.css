@@ -1,0 +1,468 @@
+/* CVCircle Job Saver Extension - Glassmorphism Styles */
+
+#circle-cv-save-button {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.9);
+  box-sizing: border-box;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.circle-cv-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  background: #262626;
+  color: #ffffff;
+  border: 1px solid #404040;
+  border-radius: 16px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  font-family: 'Cabinet Grotesk', system-ui, sans-serif;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+  text-decoration: none;
+  min-width: 160px;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.circle-cv-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(132, 204, 22, 0.1) 0%, rgba(101, 163, 13, 0.1) 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  border-radius: 16px;
+}
+
+.circle-cv-button:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.4),
+    0 4px 16px rgba(0, 0, 0, 0.2);
+  border-color: rgba(132, 204, 22, 0.4);
+  background: #404040;
+}
+
+.circle-cv-button:hover::before {
+  opacity: 1;
+}
+
+.circle-cv-button:active {
+  transform: translateY(-1px) scale(1.01);
+  box-shadow: 
+    0 6px 24px rgba(0, 0, 0, 0.3),
+    0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.circle-cv-button svg {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+}
+
+.circle-cv-button span {
+  white-space: nowrap;
+}
+
+/* Loading state */
+.circle-cv-button.loading {
+  background: #262626;
+  border-color: #404040;
+  cursor: not-allowed;
+}
+
+.circle-cv-button.loading svg {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Success state */
+.circle-cv-button.success {
+  background: rgba(132, 204, 22, 0.2);
+  border-color: rgba(132, 204, 22, 0.5);
+  box-shadow: 
+    0 8px 32px rgba(132, 204, 22, 0.2),
+    0 2px 8px rgba(132, 204, 22, 0.1);
+}
+
+.circle-cv-button.success svg {
+  animation: checkmark 0.5s ease-in-out;
+}
+
+@keyframes checkmark {
+  0% { transform: scale(0); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+/* Error state */
+.circle-cv-button.error {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.5);
+  box-shadow: 
+    0 8px 32px rgba(239, 68, 68, 0.2),
+    0 2px 8px rgba(239, 68, 68, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+}
+
+.circle-cv-button.error svg {
+  animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-2px); }
+  75% { transform: translateX(2px); }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .circle-cv-button {
+    padding: 10px 14px;
+    font-size: 13px;
+    min-width: 120px;
+  }
+  
+  .circle-cv-button svg {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .circle-cv-button {
+    color: white;
+  }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  .circle-cv-button {
+    border: 2px solid #000;
+    background: #000;
+    color: #fff;
+  }
+  
+  .circle-cv-button:hover {
+    background: #333;
+  }
+}
+
+/* Circular Save Button */
+.circle-cv-save-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: #262626;
+  color: #ffffff;
+  border: 1px solid #404040;
+  border-radius: 50%;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  font-family: 'Cabinet Grotesk', system-ui, sans-serif;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+  text-decoration: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.circle-cv-save-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(132, 204, 22, 0.1) 0%, rgba(101, 163, 13, 0.1) 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  border-radius: 50%;
+}
+
+.circle-cv-save-button:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.4),
+    0 4px 16px rgba(0, 0, 0, 0.2);
+  border-color: rgba(132, 204, 22, 0.4);
+  background: #404040;
+}
+
+.circle-cv-save-button:hover::before {
+  opacity: 1;
+}
+
+.circle-cv-save-button:active {
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 
+    0 6px 24px rgba(0, 0, 0, 0.3),
+    0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.circle-cv-save-button svg {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+
+/* Save button states */
+.circle-cv-save-button.loading {
+  background: #262626;
+  border-color: #404040;
+  cursor: not-allowed;
+}
+
+.circle-cv-save-button.success {
+  background: rgba(132, 204, 22, 0.2);
+  border-color: rgba(132, 204, 22, 0.5);
+  box-shadow: 
+    0 8px 32px rgba(132, 204, 22, 0.2),
+    0 2px 8px rgba(132, 204, 22, 0.1);
+}
+
+.circle-cv-save-button.error {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.5);
+  box-shadow: 
+    0 8px 32px rgba(239, 68, 68, 0.2),
+    0 2px 8px rgba(239, 68, 68, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+}
+
+/* LinkedIn Native Save Button */
+.circle-cv-linkedin-save {
+  /* Inherit LinkedIn's native button styling */
+  margin-right: 8px !important;
+}
+
+.circle-cv-linkedin-save:hover {
+  /* Maintain LinkedIn's hover effects */
+  background-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+.circle-cv-linkedin-save:active {
+  background-color: rgba(0, 0, 0, 0.12) !important;
+}
+
+/* LinkedIn save button states */
+.circle-cv-linkedin-save.loading {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.circle-cv-linkedin-save.loading li-icon svg {
+  animation: spin 1s linear infinite;
+}
+
+.circle-cv-linkedin-save.success {
+  background-color: rgba(132, 204, 22, 0.1) !important;
+  border-color: rgba(132, 204, 22, 0.3) !important;
+}
+
+.circle-cv-linkedin-save.success li-icon svg {
+  animation: checkmark 0.5s ease-in-out;
+  fill: #84cc16 !important;
+}
+
+.circle-cv-linkedin-save.error {
+  background-color: rgba(239, 68, 68, 0.1) !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+}
+
+.circle-cv-linkedin-save.error li-icon svg {
+  animation: shake 0.5s ease-in-out;
+  fill: #ef4444 !important;
+}
+
+/* LinkedIn Download Button */
+.circle-cv-download-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: #262626;
+  color: #ffffff;
+  border: 1px solid #404040;
+  border-radius: 50%;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  font-family: 'Cabinet Grotesk', system-ui, sans-serif;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+  text-decoration: none;
+  position: relative;
+  overflow: hidden;
+  margin-right: 8px;
+}
+
+.circle-cv-download-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(132, 204, 22, 0.1) 0%, rgba(101, 163, 13, 0.1) 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  border-radius: 50%;
+}
+
+.circle-cv-download-button:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.4),
+    0 4px 16px rgba(0, 0, 0, 0.2);
+  border-color: rgba(132, 204, 22, 0.4);
+  background: #404040;
+}
+
+.circle-cv-download-button:hover::before {
+  opacity: 1;
+}
+
+.circle-cv-download-button:active {
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 
+    0 6px 24px rgba(0, 0, 0, 0.3),
+    0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.circle-cv-download-button svg {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+
+/* Download button states */
+.circle-cv-download-button.loading {
+  background: #262626;
+  border-color: #404040;
+  cursor: not-allowed;
+}
+
+.circle-cv-download-button.success {
+  background: rgba(132, 204, 22, 0.2);
+  border-color: rgba(132, 204, 22, 0.5);
+  box-shadow: 
+    0 8px 32px rgba(132, 204, 22, 0.2),
+    0 2px 8px rgba(132, 204, 22, 0.1);
+}
+
+.circle-cv-download-button.error {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.5);
+  box-shadow: 
+    0 8px 32px rgba(239, 68, 68, 0.2),
+    0 2px 8px rgba(239, 68, 68, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .circle-cv-button {
+    transition: none;
+  }
+  
+  .circle-cv-button:hover {
+    transform: none;
+  }
+  
+  .circle-cv-button.loading svg {
+    animation: none;
+  }
+  
+  .circle-cv-button.success svg {
+    animation: none;
+  }
+  
+  .circle-cv-button.error svg {
+    animation: none;
+  }
+  
+  .circle-cv-save-button {
+    transition: none;
+  }
+  
+  .circle-cv-save-button:hover {
+    transform: none;
+  }
+  
+  .circle-cv-save-button.loading svg {
+    animation: none;
+  }
+  
+  .circle-cv-save-button.success svg {
+    animation: none;
+  }
+  
+  .circle-cv-save-button.error svg {
+    animation: none;
+  }
+  
+  .circle-cv-linkedin-save.loading li-icon svg {
+    animation: none;
+  }
+  
+  .circle-cv-linkedin-save.success li-icon svg {
+    animation: none;
+  }
+  
+  .circle-cv-linkedin-save.error li-icon svg {
+    animation: none;
+  }
+  
+  .circle-cv-download-button {
+    transition: none;
+  }
+  
+  .circle-cv-download-button:hover {
+    transform: none;
+  }
+  
+  .circle-cv-download-button.loading svg {
+    animation: none;
+  }
+  
+  .circle-cv-download-button.success svg {
+    animation: none;
+  }
+  
+  .circle-cv-download-button.error svg {
+    animation: none;
+  }
+}
