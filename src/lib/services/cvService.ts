@@ -1,37 +1,47 @@
 import { CVDataStructure } from '@/types/cv';
-import { transformDatabaseToStudio, transformStudioToDatabase } from '@/lib/utils/cvDataTransform';
+import { transformDatabaseToStudio } from '@/lib/utils/cvDataTransform';
 
 export interface CVFilters {
-  userId?: string;
-  type?: 'cv' | 'cover';
-  status?: 'draft' | 'published' | 'archived';
-  sort?: 'updatedAt' | 'createdAt' | 'title';
-  limit?: number;
-  projection?: 'list' | 'full';
+  type?: string;
+  status?: string;
+  sort?: string;
+  limit?: string;
+  projection?: string;
 }
 
 export interface CVListResponse {
+  success: boolean;
   cvs: any[];
   total: number;
-  counts: {
-    total: number;
-    drafts: number;
+  summary: {
+    draft: number;
     published: number;
     archived: number;
   };
 }
 
+export interface CVWithTemplate {
+  cvData: CVDataStructure;
+  jobId?: string;
+  title?: string;
+  template?: any;
+  templateId?: string;
+  id?: string;
+  status?: string;
+  isMaster?: boolean;
+  metadata?: any;
+}
+
 export class CVService {
-  static async getCV(cvId: string, userId?: string): Promise<{ cvData: CVDataStructure; jobId?: string; title?: string }> {
-    const params = new URLSearchParams();
-    if (userId) {
-      params.append('userId', userId);
-    }
-    
-    const url = `/api/cvs/${cvId}?${params.toString()}`;
+  static async getCV(cvId: string, userId?: string): Promise<CVWithTemplate> {
+    const url = `/api/cvs/${cvId}`;
     console.log('🔍 CVService - Fetching CV:', url);
     
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
     console.log('🔍 CVService - Response status:', response.status);
     
     if (!response.ok) {
@@ -42,8 +52,8 @@ export class CVService {
     const data = await response.json();
     console.log('🔍 CVService - Response data:', data);
     
-    // Handle the correct API response structure: { success: true, data: { cv: cvResponse } }
-    const cvData = data.data?.cv || data.cv;
+    // Handle the new API response structure: { success: true, cv: cvWithTemplate }
+    const cvData = data.cv;
     
     if (!cvData) {
       console.error('🔍 CVService - No CV data found in response:', data);
@@ -52,7 +62,7 @@ export class CVService {
     
     console.log('🔍 CVService - CV data structure:', cvData);
     
-    // Check if cvData has the expected CVDataStructure format
+    // New schema: CV data with template reference
     if (cvData.cvData && typeof cvData.cvData === 'object') {
       console.log('🔍 CVService - Found cvData field, checking structure...');
       
@@ -61,47 +71,54 @@ export class CVService {
         console.log('🔍 CVService - Data is already in CVDataStructure format');
         return {
           cvData: cvData.cvData as CVDataStructure,
-          jobId: cvData.jobId,
-          title: cvData.title
+          jobId: cvData.journeyId, // journeyId replaces jobId in new schema
+          title: cvData.title,
+          template: cvData.template,
+          templateId: cvData.templateId,
+          id: cvData.id || cvData._id,
+          status: cvData.status,
+          isMaster: cvData.isMaster,
+          metadata: cvData.metadata
         };
       } else {
         console.log('🔍 CVService - Transforming old format data');
         return {
           cvData: transformDatabaseToStudio(cvData.cvData),
-          jobId: cvData.jobId,
-          title: cvData.title
+          jobId: cvData.journeyId,
+          title: cvData.title,
+          template: cvData.template,
+          templateId: cvData.templateId,
+          id: cvData.id || cvData._id,
+          status: cvData.status,
+          isMaster: cvData.isMaster,
+          metadata: cvData.metadata
         };
       }
     }
     
     // If cvData itself is the CVDataStructure
     if (cvData.basics && Array.isArray(cvData.work)) {
-      console.log('🔍 CVService - cvData is already in CVDataStructure format');
+      console.log('🔍 CVService - Root level CVDataStructure found');
       return {
         cvData: cvData as CVDataStructure,
-        jobId: cvData.jobId,
-        title: cvData.title
+        title: 'Untitled CV'
       };
     }
     
-    console.error('🔍 CVService - Unknown data format:', cvData);
-    throw new Error('Unknown CV data format');
+    throw new Error('Invalid CV data structure');
   }
 
   static async getCVs(filters: CVFilters = {}): Promise<CVListResponse> {
     const params = new URLSearchParams();
-    
-    if (filters.userId) params.append('userId', filters.userId);
-    if (filters.type) params.append('type', filters.type);
-    if (filters.status) params.append('status', filters.status);
-    if (filters.sort) params.append('sort', filters.sort);
-    if (filters.limit) params.append('limit', filters.limit.toString());
-    if (filters.projection) params.append('projection', filters.projection);
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) params.append(key, value);
+    });
 
     const response = await fetch(`/api/cvs?${params.toString()}`);
     if (!response.ok) {
       throw new Error('Failed to fetch CVs');
     }
+
     const data = await response.json();
     return data;
   }
@@ -110,21 +127,27 @@ export class CVService {
     jobId?: string; 
     userId: string;
     title: string;
+    templateId?: string;
   }): Promise<any> {
     console.log('🔍 CVService.createCV - Input data:', { 
       userId: cvData.userId, 
       title: cvData.title, 
       hasJobId: !!cvData.jobId,
+      templateId: cvData.templateId,
       hasData: !!cvData 
     });
     
-    // Send CV data directly since it's already in the correct format
+    // Prepare request body for new decoupled schema
     const requestBody = {
-      userId: cvData.userId,
       title: cvData.title,
       cvData: cvData,
-      jobId: cvData.jobId,
-      type: 'cv'
+      templateId: cvData.templateId, // Use templateId instead of inline styling
+      status: 'draft',
+      isMaster: false,
+      metadata: {
+        tags: [],
+        isPublic: false
+      }
     };
     
     console.log('🔍 CVService.createCV - Request body:', requestBody);
@@ -151,135 +174,118 @@ export class CVService {
     return result;
   }
 
-  static async updateCV(cvId: string, cvData: CVDataStructure, userId?: string): Promise<any> {
+  static async updateCV(cvId: string, cvData: CVDataStructure, userId?: string, templateId?: string): Promise<any> {
     console.log('🔍 CVService.updateCV - Input data:', { 
       cvId, 
       userId, 
+      templateId,
       hasData: !!cvData 
     });
-    
-    // Send CV data directly since it's already in the correct format
+
     const requestBody = {
-      userId: userId,
-      cvData: cvData
+      cvData,
+      templateId, // Include templateId for updates
+      title: (cvData as any).title || 'Untitled CV',
+      metadata: {
+        lastModified: new Date().toISOString()
+      }
     };
-    
-    console.log('🔍 CVService.updateCV - Request body:', requestBody);
-    
-    // Add timeout to fetch request
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
-    
+
     const response = await fetch(`/api/cvs/${cvId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(requestBody),
-      signal: controller.signal,
     });
-    
-    clearTimeout(timeoutId);
-    
-    console.log('🔍 CVService.updateCV - Response status:', response.status);
-    
+
     if (!response.ok) {
       const errorText = await response.text();
       console.error('🔍 CVService.updateCV - Error response:', errorText);
-      throw new Error(`Failed to update CV: ${response.status} ${errorText}`);
+      throw new Error('Failed to update CV');
     }
-    
-    if (response.status === 0) {
-      throw new Error('Request was aborted (timeout)');
-    }
-    
+
     const result = await response.json();
     console.log('🔍 CVService.updateCV - Response data:', result);
     
     return result;
   }
 
-  static async updateCVMetadata(cvId: string, metadata: { title?: string; description?: string }, userId?: string): Promise<any> {
-    console.log('🔍 CVService.updateCVMetadata - Input data:', { 
-      cvId, 
-      userId, 
-      metadata 
+  static async deleteCV(cvId: string, userId: string): Promise<any> {
+    const response = await fetch(`/api/cvs/${cvId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
     });
+
+    if (!response.ok) {
+      throw new Error('Failed to delete CV');
+    }
+
+    return response.json();
+  }
+
+  static async getMasterCV(userId: string): Promise<any> {
+    const response = await fetch(`/api/cvs/master`);
     
-    const requestBody = {
-      userId: userId,
-      ...metadata
-    };
-    
-    console.log('🔍 CVService.updateCVMetadata - Request body:', requestBody);
-    
-    const response = await fetch(`/api/cvs/${cvId}/metadata`, {
+    if (!response.ok) {
+      throw new Error('Failed to fetch master CV');
+    }
+
+    return response.json();
+  }
+
+  static async setMasterCV(cvId: string, userId: string): Promise<any> {
+    const response = await fetch(`/api/cvs/${cvId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(requestBody),
+      body: JSON.stringify({
+        isMaster: true
+      }),
     });
-    
-    console.log('🔍 CVService.updateCVMetadata - Response status:', response.status);
-    
+
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('🔍 CVService.updateCVMetadata - Error response:', errorText);
-      throw new Error(`Failed to update CV metadata: ${response.status} ${errorText}`);
+      throw new Error('Failed to set master CV');
     }
-    
-    const result = await response.json();
-    console.log('🔍 CVService.updateCVMetadata - Response data:', result);
-    
-    return result;
+
+    return response.json();
   }
 
-  static async deleteCV(cvId: string, userId?: string): Promise<void> {
-    const params = new URLSearchParams();
-    if (userId) {
-      params.append('userId', userId);
-    }
-    
-    const response = await fetch(`/api/cvs/${cvId}?${params.toString()}`, {
-      method: 'DELETE',
-    });
+  /**
+   * Get available templates for CV creation
+   */
+  static async getTemplates(category: string = 'cv'): Promise<any> {
+    const response = await fetch(`/api/templates?category=${category}`);
     
     if (!response.ok) {
-      throw new Error('Failed to delete CV');
+      throw new Error('Failed to fetch templates');
     }
+
+    const data = await response.json();
+    return data.templates || [];
   }
 
-  static async duplicateCV(cvId: string, userId?: string): Promise<any> {
-    const params = new URLSearchParams();
-    if (userId) {
-      params.append('userId', userId);
-    }
-    
-    const response = await fetch(`/api/cvs/${cvId}/duplicate?${params.toString()}`, {
-      method: 'POST',
+  /**
+   * Switch CV template
+   */
+  static async switchTemplate(cvId: string, templateId: string): Promise<any> {
+    const response = await fetch(`/api/cvs/${cvId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        templateId
+      }),
     });
-    
-    if (!response.ok) {
-      throw new Error('Failed to duplicate CV');
-    }
-    
-    return await response.json();
-  }
 
-  static async exportCV(cvId: string, format: 'pdf' | 'docx' | 'json', userId?: string): Promise<Blob> {
-    const params = new URLSearchParams();
-    if (userId) {
-      params.append('userId', userId);
-    }
-    params.append('format', format);
-    
-    const response = await fetch(`/api/cvs/${cvId}/export?${params.toString()}`);
-    
     if (!response.ok) {
-      throw new Error('Failed to export CV');
+      throw new Error('Failed to switch template');
     }
-    
-    return await response.blob();
+
+    return response.json();
   }
-} 
+}

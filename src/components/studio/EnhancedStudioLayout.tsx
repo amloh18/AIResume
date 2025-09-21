@@ -30,6 +30,7 @@ import { useTemplateStore } from '@/lib/stores/templateStore';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
 import AIEnhancedFormField from './AIEnhancedFormField';
 import EnhancedFormSection, { 
   PersonalInfoSection, 
@@ -68,6 +69,7 @@ interface EnhancedStudioLayoutProps {
   onExport: (format: 'pdf' | 'docx' | 'json') => void;
   documentType?: 'cv' | 'cover-letter';
   onDocumentTypeChange?: (type: 'cv' | 'cover-letter') => void;
+  onTemplateChange?: (template: any) => void;
 }
 
 const EnhancedStudioLayout: React.FC<EnhancedStudioLayoutProps> = ({
@@ -87,7 +89,8 @@ const EnhancedStudioLayout: React.FC<EnhancedStudioLayoutProps> = ({
   onManualSave,
   onExport,
   documentType = 'cv',
-  onDocumentTypeChange
+  onDocumentTypeChange,
+  onTemplateChange
 }) => {
   const { hasAI } = useUserPlan();
   const { currentJob } = useJobStore();
@@ -382,10 +385,49 @@ const EnhancedStudioLayout: React.FC<EnhancedStudioLayoutProps> = ({
     setDesignSettings(defaultSettings);
   };
 
-  const handleTemplateSelect = (template: any) => {
-    setSelectedTemplateItem(template);
-    // Here you would typically update the CV template
-    console.log('Template selected:', template);
+  const handleTemplateSelect = async (template: any) => {
+    if (!cvId || !template?.id) {
+      console.error('Missing cvId or template.id for template selection');
+      return;
+    }
+
+    try {
+      setSelectedTemplateItem(template);
+      
+      // Update CV template in database
+      const response = await fetch(`/api/cvs/${cvId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          templateId: template.id,
+          metadata: {
+            lastModified: new Date().toISOString()
+          }
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Template updated successfully:', result);
+        
+        // Notify parent component to update template
+        if (onTemplateChange) {
+          onTemplateChange(template);
+        }
+        
+        // Show success toast
+        toast.success(`Template "${template.name}" applied successfully!`);
+      } else {
+        const errorData = await response.json();
+        console.error('❌ Failed to update template:', errorData);
+        toast.error('Failed to apply template. Please try again.');
+      }
+    } catch (error) {
+      console.error('❌ Error updating template:', error);
+      toast.error('Error applying template. Please try again.');
+    }
   };
 
   const handleTemplatePreview = (template: any) => {

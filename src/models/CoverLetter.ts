@@ -1,124 +1,124 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface ICoverLetter extends Document {
-  userId: string;
-  firebaseUid?: string; // Firebase UID for user identification
+  userId: mongoose.Types.ObjectId; // ObjectId, references the User schema
   title: string;
   content: string;
-  status: 'draft' | 'final' | 'archived';
-  journeyId?: string; // Links cover letter to specific CV Journey (Application Package)
-  // cvId and jobId removed - relationships now managed through CVJourney
-  metadata: {
-    targetCompany?: string;
-    targetPosition?: string;
-    keywords?: string[];
-    wordCount?: number;
-    isPublic?: boolean;
-    lastModified?: Date;
-    version?: number;
-  };
   createdAt: Date;
   updatedAt: Date;
+  metadata: {
+    lastModified: Date;
+    wordCount: number;
+    characterCount: number;
+    estimatedReadingTime: number; // in minutes
+    tags: string[];
+    isPublic: boolean;
+    viewCount: number;
+    downloadCount: number;
+    atsScore?: number;
+    atsScoreDate?: Date;
+  };
 }
 
 const coverLetterSchema = new Schema<ICoverLetter>({
   userId: {
-    type: String,
-    required: true,
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+    required: [true, 'User ID is required'],
     index: true
-  },
-  firebaseUid: {
-    type: String,
-    sparse: true, // Allows multiple null values
-    index: true // Index for efficient Firebase UID queries
   },
   title: {
     type: String,
-    required: true,
-    trim: true
+    required: [true, 'Cover letter title is required'],
+    trim: true,
+    maxlength: [100, 'Title cannot exceed 100 characters']
   },
   content: {
     type: String,
-    required: true
+    required: [true, 'Cover letter content is required'],
+    trim: true,
+    maxlength: [10000, 'Content cannot exceed 10000 characters']
   },
-  status: {
-    type: String,
-    enum: ['draft', 'final', 'archived'],
-    default: 'draft',
-    index: true
-  },
-  journeyId: {
-    type: String,
-    index: true, // Index for efficient journey-based queries
-    default: null // null means cover letter is freestanding (not part of an application package)
-  },
-  // cvId and jobId removed - relationships now managed through CVJourney
   metadata: {
-    targetCompany: {
-      type: String,
-      trim: true
-    },
-    targetPosition: {
-      type: String,
-      trim: true
-    },
-    keywords: [{
-      type: String,
-      trim: true
-    }],
-    wordCount: {
-      type: Number,
-      default: 0
-    },
-    isPublic: {
-      type: Boolean,
-      default: false
-    },
     lastModified: {
       type: Date,
       default: Date.now
     },
-    version: {
+    wordCount: {
       type: Number,
-      default: 1
+      default: 0,
+      min: 0
+    },
+    characterCount: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    estimatedReadingTime: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    tags: [{
+      type: String,
+      trim: true,
+      maxlength: [50, 'Tag cannot exceed 50 characters']
+    }],
+    isPublic: {
+      type: Boolean,
+      default: false
+    },
+    viewCount: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    downloadCount: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    atsScore: {
+      type: Number,
+      min: 0,
+      max: 100
+    },
+    atsScoreDate: {
+      type: Date
     }
   }
 }, {
   timestamps: true,
-  collection: 'coverletters'
+  toJSON: {
+    transform: function(doc, ret) {
+      ret.id = ret._id;
+      delete ret._id;
+      delete ret.__v;
+      return ret;
+    }
+  }
 });
 
-// Indexes for better query performance
-coverLetterSchema.index({ userId: 1, status: 1 });
-coverLetterSchema.index({ userId: 1, createdAt: -1 });
-coverLetterSchema.index({ 'metadata.targetCompany': 1 });
-coverLetterSchema.index({ 'metadata.keywords': 1 });
-coverLetterSchema.index({ 'metadata.isPublic': 1, 'metadata.lastModified': -1 });
+// Indexes for efficient queries
+coverLetterSchema.index({ userId: 1, createdAt: -1 }); // User's cover letters by date
+coverLetterSchema.index({ 'metadata.tags': 1 }); // Tag-based searches
+coverLetterSchema.index({ 'metadata.isPublic': 1, 'metadata.lastModified': -1 }); // Public cover letters
 
-// Pre-save middleware to update word count
+// Pre-save middleware to update metadata
 coverLetterSchema.pre('save', function(next) {
-  if (this.isModified('content')) {
-    this.metadata.wordCount = this.content.split(/\s+/).length;
-    this.metadata.lastModified = new Date();
-    this.metadata.version = (this.metadata.version || 0) + 1;
+  // Update lastModified
+  this.metadata.lastModified = new Date();
+  
+  // Calculate word and character count
+  if (this.content) {
+    this.metadata.characterCount = this.content.length;
+    this.metadata.wordCount = this.content.trim().split(/\s+/).filter(word => word.length > 0).length;
+    
+    // Estimate reading time (average 200 words per minute)
+    this.metadata.estimatedReadingTime = Math.ceil(this.metadata.wordCount / 200);
   }
+  
   next();
 });
 
-// Virtual for formatted creation date
-coverLetterSchema.virtual('formattedCreatedAt').get(function() {
-  return this.createdAt.toLocaleDateString();
-});
-
-// Virtual for formatted last modified date
-coverLetterSchema.virtual('formattedLastModified').get(function() {
-  return this.metadata.lastModified?.toLocaleDateString() || this.formattedCreatedAt;
-});
-
-// Ensure virtuals are serialized
-coverLetterSchema.set('toJSON', { virtuals: true });
-coverLetterSchema.set('toObject', { virtuals: true });
-
-const CoverLetter = mongoose.models.CoverLetter || mongoose.model<ICoverLetter>('CoverLetter', coverLetterSchema);
-
-export default CoverLetter;
+export default mongoose.models.CoverLetter || mongoose.model<ICoverLetter>('CoverLetter', coverLetterSchema);

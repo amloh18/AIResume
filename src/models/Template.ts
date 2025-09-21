@@ -14,7 +14,30 @@ export interface ISectionBlueprint {
   minItems?: number; // Optional minimum number of items required
 }
 
-// Template interface
+// Column Layout Configuration
+export interface IColumnLayout {
+  leftColumn?: {
+    width: string; // e.g., "30%", "250px"
+    sections: string[]; // Array of section keys to be rendered in this column
+  };
+  rightColumn?: {
+    width: string; // e.g., "70%", "auto"
+    sections: string[]; // Array of section keys to be rendered in this column
+  };
+  main?: {
+    width: string; // For single-column layouts, e.g., "100%"
+    sections: string[]; // Array of section keys to be rendered
+  };
+}
+
+// Section-specific styling configuration
+export interface ISectionStyling {
+  [sectionKey: string]: {
+    [styleProperty: string]: any; // Flexible styling properties for each section
+  };
+}
+
+// Template interface with improved layout system
 export interface ITemplate extends Document {
   name: string;
   description?: string;
@@ -22,6 +45,11 @@ export interface ITemplate extends Document {
   category: 'cv' | 'portfolio' | 'cover-letter' | 'resume' | 'custom';
   categories?: string[]; // Multiple categories like 'Creative', 'Professional', 'Modern'
   tier: 'free' | 'premium';
+  
+  // Layout Configuration
+  layoutType: 'one-column' | 'two-column' | 'three-column' | 'custom';
+  
+  // Global styling that applies to the entire document
   globalStyles: {
     fontFamily: string;
     primaryColor: string;
@@ -30,11 +58,33 @@ export interface ITemplate extends Document {
     fontSize: string;
     lineHeight: string;
     spacing: string;
-    borderRadius: string;
-    boxShadow: string;
-    customCSS?: string;
+    borderRadius?: string;
+    boxShadow?: string;
+    customCSS?: string; // Global CSS rules
   };
+  
+  // Column layout definition - controls section placement
+  columnLayout: IColumnLayout;
+  
+  // Section-specific styling rules
+  sectionStyling: ISectionStyling;
+  
+  // Available sections that can be used in this template
   availableSections: ISectionBlueprint[];
+  
+  // Pagination settings
+  pageSettings?: {
+    format: 'A4' | 'Letter' | 'Legal' | 'custom';
+    orientation: 'portrait' | 'landscape';
+    margins: {
+      top: string;
+      bottom: string;
+      left: string;
+      right: string;
+    };
+    maxHeight?: string; // For overflow calculations
+  };
+  
   templateData?: any; // Sample data for preview
   isActive: boolean;
   isDefault: boolean;
@@ -166,6 +216,58 @@ const templateSchema = new Schema<ITemplate>({
       trim: true 
     }
   },
+  
+  // Layout Configuration
+  layoutType: {
+    type: String,
+    enum: ['one-column', 'two-column', 'three-column', 'custom'],
+    required: true,
+    default: 'one-column'
+  },
+  
+  // Column layout definition - controls section placement
+  columnLayout: {
+    leftColumn: {
+      width: { type: String },
+      sections: [{ type: String, trim: true }]
+    },
+    rightColumn: {
+      width: { type: String },
+      sections: [{ type: String, trim: true }]
+    },
+    main: {
+      width: { type: String, default: '100%' },
+      sections: [{ type: String, trim: true }]
+    }
+  },
+  
+  // Section-specific styling rules
+  sectionStyling: {
+    type: Schema.Types.Mixed,
+    default: {}
+  },
+  
+  // Pagination settings
+  pageSettings: {
+    format: {
+      type: String,
+      enum: ['A4', 'Letter', 'Legal', 'custom'],
+      default: 'A4'
+    },
+    orientation: {
+      type: String,
+      enum: ['portrait', 'landscape'],
+      default: 'portrait'
+    },
+    margins: {
+      top: { type: String, default: '20mm' },
+      bottom: { type: String, default: '20mm' },
+      left: { type: String, default: '20mm' },
+      right: { type: String, default: '20mm' }
+    },
+    maxHeight: { type: String, default: '297mm' } // A4 height for overflow calculations
+  },
+  
   availableSections: [SectionBlueprintSchema],
   templateData: {
     type: Schema.Types.Mixed,

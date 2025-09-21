@@ -1,0 +1,325 @@
+import mongoose, { Document, Schema } from 'mongoose';
+
+export interface IJob extends Document {
+  userId: mongoose.Types.ObjectId; // ObjectId, references the User schema
+  jobTitle: string;
+  company: string;
+  jobUrl?: string;
+  jobDescription?: string;
+  location?: string;
+  salary?: {
+    min?: number;
+    max?: number;
+    currency?: string;
+    period?: 'hourly' | 'monthly' | 'yearly';
+  };
+  sponsorship?: 'yes' | 'no' | 'unknown';
+  status: 'created' | 'applied' | 'screening' | 'interview' | 'offer' | 'rejected' | 'accepted' | 'withdrawn'; // Single status field for Kanban board
+  priority: 'low' | 'medium' | 'high';
+  applicationDate?: Date;
+  deadline?: Date;
+  notes?: string;
+  contacts: Array<{
+    name: string;
+    role?: string;
+    email?: string;
+    phone?: string;
+    linkedin?: string;
+  }>;
+  interviews: Array<{
+    type: 'phone' | 'video' | 'onsite' | 'technical' | 'behavioral';
+    date: Date;
+    duration?: number;
+    interviewer?: string;
+    notes?: string;
+    outcome?: 'scheduled' | 'completed' | 'cancelled' | 'no-show';
+    feedback?: string;
+  }>;
+  followUps: Array<{
+    date: Date;
+    type: 'email' | 'phone' | 'linkedin' | 'other';
+    description: string;
+    outcome?: string;
+  }>;
+  attachments: Array<{
+    name: string;
+    type: 'cv' | 'cover-letter' | 'certificate' | 'portfolio' | 'other';
+    url: string;
+    size: number;
+    uploadedAt: Date;
+  }>;
+  
+  // Job source tracking
+  source?: 'linkedin' | 'indeed' | 'company-website' | 'referral' | 'other';
+  sourceUrl?: string;
+  
+  // ATS tracking
+  atsScore?: number;
+  atsAnalysis?: {
+    matchedKeywords: string[];
+    missingKeywords: string[];
+    suggestions: string[];
+    analyzedAt: Date;
+  };
+  
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const jobSchema = new Schema<IJob>({
+  userId: {
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+    required: [true, 'User ID is required'],
+    index: true
+  },
+  jobTitle: {
+    type: String,
+    required: [true, 'Job title is required'],
+    trim: true,
+    maxlength: [200, 'Job title cannot exceed 200 characters']
+  },
+  company: {
+    type: String,
+    required: [true, 'Company name is required'],
+    trim: true,
+    maxlength: [100, 'Company name cannot exceed 100 characters']
+  },
+  jobUrl: {
+    type: String,
+    trim: true,
+    maxlength: [500, 'Job URL cannot exceed 500 characters']
+  },
+  jobDescription: {
+    type: String,
+    trim: true,
+    maxlength: [10000, 'Job description cannot exceed 10000 characters']
+  },
+  location: {
+    type: String,
+    trim: true,
+    maxlength: [200, 'Location cannot exceed 200 characters']
+  },
+  salary: {
+    min: {
+      type: Number,
+      min: 0
+    },
+    max: {
+      type: Number,
+      min: 0
+    },
+    currency: {
+      type: String,
+      default: 'USD',
+      maxlength: 3
+    },
+    period: {
+      type: String,
+      enum: ['hourly', 'monthly', 'yearly'],
+      default: 'yearly'
+    }
+  },
+  sponsorship: {
+    type: String,
+    enum: ['yes', 'no', 'unknown'],
+    default: 'unknown'
+  },
+  status: {
+    type: String,
+    enum: ['created', 'applied', 'screening', 'interview', 'offer', 'rejected', 'accepted', 'withdrawn'],
+    default: 'created',
+    required: true,
+    index: true // Index for Kanban board queries
+  },
+  priority: {
+    type: String,
+    enum: ['low', 'medium', 'high'],
+    default: 'medium'
+  },
+  applicationDate: {
+    type: Date
+  },
+  deadline: {
+    type: Date
+  },
+  notes: {
+    type: String,
+    trim: true,
+    maxlength: [2000, 'Notes cannot exceed 2000 characters']
+  },
+  contacts: [{
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: [100, 'Contact name cannot exceed 100 characters']
+    },
+    role: {
+      type: String,
+      trim: true,
+      maxlength: [100, 'Contact role cannot exceed 100 characters']
+    },
+    email: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      maxlength: [100, 'Contact email cannot exceed 100 characters']
+    },
+    phone: {
+      type: String,
+      trim: true,
+      maxlength: [20, 'Contact phone cannot exceed 20 characters']
+    },
+    linkedin: {
+      type: String,
+      trim: true,
+      maxlength: [200, 'LinkedIn URL cannot exceed 200 characters']
+    }
+  }],
+  interviews: [{
+    type: {
+      type: String,
+      enum: ['phone', 'video', 'onsite', 'technical', 'behavioral'],
+      required: true
+    },
+    date: {
+      type: Date,
+      required: true
+    },
+    duration: {
+      type: Number,
+      min: 15,
+      max: 480 // 8 hours max
+    },
+    interviewer: {
+      type: String,
+      trim: true,
+      maxlength: [100, 'Interviewer name cannot exceed 100 characters']
+    },
+    notes: {
+      type: String,
+      trim: true,
+      maxlength: [1000, 'Interview notes cannot exceed 1000 characters']
+    },
+    outcome: {
+      type: String,
+      enum: ['scheduled', 'completed', 'cancelled', 'no-show'],
+      default: 'scheduled'
+    },
+    feedback: {
+      type: String,
+      trim: true,
+      maxlength: [2000, 'Interview feedback cannot exceed 2000 characters']
+    }
+  }],
+  followUps: [{
+    date: {
+      type: Date,
+      required: true
+    },
+    type: {
+      type: String,
+      enum: ['email', 'phone', 'linkedin', 'other'],
+      required: true
+    },
+    description: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: [500, 'Follow-up description cannot exceed 500 characters']
+    },
+    outcome: {
+      type: String,
+      trim: true,
+      maxlength: [500, 'Follow-up outcome cannot exceed 500 characters']
+    }
+  }],
+  attachments: [{
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: [200, 'Attachment name cannot exceed 200 characters']
+    },
+    type: {
+      type: String,
+      enum: ['cv', 'cover-letter', 'certificate', 'portfolio', 'other'],
+      required: true
+    },
+    url: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: [500, 'Attachment URL cannot exceed 500 characters']
+    },
+    size: {
+      type: Number,
+      required: true,
+      min: 0
+    },
+    uploadedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+  source: {
+    type: String,
+    enum: ['linkedin', 'indeed', 'company-website', 'referral', 'other']
+  },
+  sourceUrl: {
+    type: String,
+    trim: true,
+    maxlength: [500, 'Source URL cannot exceed 500 characters']
+  },
+  atsScore: {
+    type: Number,
+    min: 0,
+    max: 100
+  },
+  atsAnalysis: {
+    matchedKeywords: [{
+      type: String,
+      trim: true
+    }],
+    missingKeywords: [{
+      type: String,
+      trim: true
+    }],
+    suggestions: [{
+      type: String,
+      trim: true,
+      maxlength: [200, 'ATS suggestion cannot exceed 200 characters']
+    }],
+    analyzedAt: {
+      type: Date
+    }
+  }
+}, {
+  timestamps: true,
+  toJSON: {
+    transform: function(doc, ret) {
+      ret.id = ret._id;
+      delete ret._id;
+      delete ret.__v;
+      return ret;
+    }
+  }
+});
+
+// Indexes for efficient queries
+jobSchema.index({ userId: 1, status: 1 }); // Kanban board queries
+jobSchema.index({ userId: 1, createdAt: -1 }); // Recent jobs
+jobSchema.index({ userId: 1, priority: -1 }); // Priority sorting
+jobSchema.index({ userId: 1, deadline: 1 }); // Deadline tracking
+jobSchema.index({ company: 'text', jobTitle: 'text' }); // Text search
+
+// Update lastModified on save
+jobSchema.pre('save', function(next) {
+  if (this.isModified()) {
+    this.updatedAt = new Date();
+  }
+  next();
+});
+
+export default mongoose.models.Job || mongoose.model<IJob>('Job', jobSchema);

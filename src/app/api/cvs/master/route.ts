@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
     console.log('🔍 Master CV API - User identifier:', userIdentifier);
 
     // Build query condition based on user identifier type
-    let queryCondition: Record<string, any> = { isMaster: true };
+    let queryCondition: Record<string, any> = { 'metadata.isMaster': true };
     
     if (userIdentifier.type === 'firebase') {
       queryCondition.firebaseUid = userIdentifier.id;
@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
       console.log(`🔍 Master CV API - CV ${index + 1}:`, {
         id: cv._id,
         title: cv.title,
-        isMaster: cv.isMaster,
+        isMaster: cv.metadata?.isMaster,
         status: cv.status,
         userId: cv.userId,
         firebaseUid: cv.firebaseUid
@@ -110,7 +110,7 @@ export async function GET(request: NextRequest) {
           title: cv.title,
           cvData: cv.cvData,
           status: cv.status,
-          isMaster: cv.isMaster,
+          isMaster: cv.metadata?.isMaster,
           createdAt: cv.createdAt,
           updatedAt: cv.updatedAt
         }

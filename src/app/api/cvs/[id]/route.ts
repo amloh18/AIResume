@@ -1,73 +1,106 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/database';
-import { CV } from '@/models';
+import { CV, Template } from '@/models';
 import { toObjectId, createErrorResponse } from '@/lib/db-utils';
+import { extractUserIdentifier } from '@/lib/firebase-uid-utils';
+import { getCVWithTemplate } from '@/lib/cv-template-utils';
 import mongoose from 'mongoose';
 
-// GET - Get a specific CV by ID
+// GET - Get a specific CV by ID with template data
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await connectDB();
+    console.log('🔍 CV GET API - Starting request');
     
-    const { id } = await params;
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-
-    if (!userId) {
+    // Check authentication
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
       return NextResponse.json(
-        {
-          success: false,
-          message: 'User ID is required'
-        },
-        { status: 400 }
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
       );
     }
 
+    await connectDB();
+    console.log('🔍 CV GET API - Database connected');
+    
+    const { id } = await params;
+    
+    // Extract user identifier from request and session
+    const userIdentifier = extractUserIdentifier(request, session);
+    
+    if (!userIdentifier.id || !userIdentifier.type) {
+      console.log('❌ CV GET API - No valid user identifier found');
+      return NextResponse.json(
+        { success: false, error: 'User identification failed' },
+        { status: 401 }
+      );
+    }
+
+    console.log('🔍 CV GET API - User identifier:', userIdentifier);
+
     const cvId = toObjectId(id);
     
-    // Handle userId format properly - check if it's MongoDB ObjectId or string
-    let userIdQuery;
-    if (/^[0-9a-fA-F]{24}$/.test(userId)) {
-      // MongoDB ObjectId format (24 hex chars)
-      userIdQuery = new mongoose.Types.ObjectId(userId);
+    // Build query based on user identifier type
+    let query: Record<string, any> = { _id: cvId };
+    
+    if (userIdentifier.type === 'firebase') {
+      query.firebaseUid = userIdentifier.id;
     } else {
-      // NextAuth string format - use as string
-      userIdQuery = userId;
+      query.userId = new mongoose.Types.ObjectId(userIdentifier.id);
     }
     
-    const cv = await CV.findOne({ _id: cvId, userId: userIdQuery });
+    console.log('🔍 CV GET API - Query:', query);
+    
+    // Use utility function to get CV with template data
+    const cv = await getCVWithTemplate(id);
     
     if (!cv) {
+      console.log('❌ CV GET API - CV not found');
       return NextResponse.json(
-        {
-          success: false,
-          message: 'CV not found'
-        },
+        { success: false, error: 'CV not found' },
+        { status: 404 }
+      );
+    }
+
+    // Verify user owns the CV
+    const userOwnsCV = userIdentifier.type === 'firebase' 
+      ? cv.firebaseUid === userIdentifier.id
+      : cv.userId.toString() === userIdentifier.id;
+
+    if (!userOwnsCV) {
+      console.log('❌ CV GET API - User does not own CV');
+      return NextResponse.json(
+        { success: false, error: 'CV not found' },
         { status: 404 }
       );
     }
 
     // Increment view count if it's a public CV
     if (cv.metadata.isPublic) {
+      await CV.updateOne(
+        { _id: cvId },
+        { 
+          $inc: { 'metadata.viewCount': 1 },
+          $set: { 'metadata.lastModified': new Date() }
+        }
+      );
       cv.metadata.viewCount += 1;
-      await cv.save();
     }
 
-    const cvResponse = cv.toJSON();
+    console.log('✅ CV GET API - CV retrieved successfully');
 
     return NextResponse.json({
       success: true,
-      message: 'CV retrieved successfully',
-      data: {
-        cv: cvResponse
-      }
+      cv: cv
     });
 
   } catch (error: any) {
-    console.error('Get CV error:', error);
+    console.error('❌ CV GET API - Error:', error);
     const errorResponse = createErrorResponse(error);
     
     return NextResponse.json(
@@ -84,74 +117,107 @@ export async function PUT(
 ) {
   try {
     console.log('🔍 CV UPDATE API - Starting update request');
+    
+    // Check authentication
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     await connectDB();
     console.log('🔍 CV UPDATE API - Database connected');
     
     const { id } = await params;
     const body = await request.json();
-    console.log('🔍 CV UPDATE API - Request body:', body);
+    console.log('🔍 CV UPDATE API - Request body received');
     
-    const { userId, ...updateData } = body;
-    console.log('🔍 CV UPDATE API - Extracted data:', { userId, hasUpdateData: !!updateData });
-
-    if (!userId) {
+    // Extract user identifier from request and session
+    const userIdentifier = extractUserIdentifier(request, session);
+    
+    if (!userIdentifier.id || !userIdentifier.type) {
+      console.log('❌ CV UPDATE API - No valid user identifier found');
       return NextResponse.json(
-        {
-          success: false,
-          message: 'User ID is required'
-        },
-        { status: 400 }
+        { success: false, error: 'User identification failed' },
+        { status: 401 }
       );
     }
 
     const cvId = toObjectId(id);
     
-    // Handle userId format properly - check if it's MongoDB ObjectId or string
-    let userIdQuery;
-    if (/^[0-9a-fA-F]{24}$/.test(userId)) {
-      // MongoDB ObjectId format (24 hex chars)
-      userIdQuery = new mongoose.Types.ObjectId(userId);
+    // Build query based on user identifier type
+    let query: Record<string, any> = { _id: cvId };
+    
+    if (userIdentifier.type === 'firebase') {
+      query.firebaseUid = userIdentifier.id;
     } else {
-      // NextAuth string format - use as string
-      userIdQuery = userId;
+      query.userId = new mongoose.Types.ObjectId(userIdentifier.id);
     }
     
-    console.log('🔍 CV UPDATE API - CV ID:', cvId, 'User ID Query:', userIdQuery);
+    console.log('🔍 CV UPDATE API - Query:', query);
     
     // Find CV and ensure user owns it
-    const cv = await CV.findOne({ _id: cvId, userId: userIdQuery });
+    const cv = await CV.findOne(query);
     console.log('🔍 CV UPDATE API - CV found:', !!cv);
     
     if (!cv) {
       console.log('❌ CV UPDATE API - CV not found for user');
       return NextResponse.json(
-        {
-          success: false,
-          message: 'CV not found'
-        },
+        { success: false, error: 'CV not found' },
         { status: 404 }
       );
     }
 
-    // Update CV with new data
-    console.log('🔍 CV UPDATE API - Updating CV with data:', updateData);
-    Object.assign(cv, updateData);
-    cv.metadata.lastModified = new Date();
+    // Prepare update data (excluding legacy fields)
+    const allowedFields = [
+      'title', 'cvData', 'templateId', 'status', 'isMaster', 'metadata'
+    ];
     
-    console.log('🔍 CV UPDATE API - Saving CV...');
+    const updateData: Record<string, any> = {};
+    
+    for (const field of allowedFields) {
+      if (body[field] !== undefined) {
+        updateData[field] = body[field];
+      }
+    }
+
+    // Validate templateId if provided
+    if (updateData.templateId) {
+      const template = await Template.findById(updateData.templateId);
+      if (!template || !template.isActive || !template.globalAccess) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid template specified' },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Update metadata.lastModified
+    if (!updateData.metadata) {
+      updateData.metadata = cv.metadata;
+    }
+    updateData.metadata.lastModified = new Date();
+
+    console.log('🔍 CV UPDATE API - Updating CV with data:', Object.keys(updateData));
+    
+    // Update CV
+    Object.assign(cv, updateData);
     await cv.save();
+    
     console.log('✅ CV UPDATE API - CV saved successfully');
+
+    // Get updated CV with template data
+    const updatedCV = await getCVWithTemplate(id);
 
     return NextResponse.json({
       success: true,
-      message: 'CV updated successfully',
-      data: {
-        cv: cv.toJSON()
-      }
+      cv: updatedCV
     });
 
   } catch (error: any) {
-    console.error('Update CV error:', error);
+    console.error('❌ CV UPDATE API - Error:', error);
     const errorResponse = createErrorResponse(error);
     
     return NextResponse.json(
@@ -168,77 +234,54 @@ export async function DELETE(
 ) {
   try {
     console.log('🔍 CV DELETE API - Starting delete request');
+    
+    // Check authentication
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     await connectDB();
     console.log('🔍 CV DELETE API - Database connected');
     
     const { id } = await params;
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-
-    console.log('🔍 CV DELETE API - CV ID:', id, 'User ID:', userId);
-
-    if (!userId) {
-      console.log('❌ CV DELETE API - No user ID provided');
+    
+    // Extract user identifier from request and session
+    const userIdentifier = extractUserIdentifier(request, session);
+    
+    if (!userIdentifier.id || !userIdentifier.type) {
+      console.log('❌ CV DELETE API - No valid user identifier found');
       return NextResponse.json(
-        {
-          success: false,
-          message: 'User ID is required'
-        },
-        { status: 400 }
+        { success: false, error: 'User identification failed' },
+        { status: 401 }
       );
     }
-    
-    console.log('🔍 CV DELETE API - User ID validation passed');
 
-    let cvId, userObjectId;
+    console.log('🔍 CV DELETE API - User identifier:', userIdentifier);
+
+    const cvId = toObjectId(id);
     
-    try {
-      cvId = toObjectId(id);
-      console.log('CV ID converted successfully:', cvId);
-    } catch (error) {
-      console.error('Invalid CV ID format:', id);
-      return NextResponse.json(
-        {
-          success: false,
-          message: 'Invalid CV ID format'
-        },
-        { status: 400 }
-      );
-    }
+    // Build query based on user identifier type
+    let query: Record<string, any> = { _id: cvId };
     
-    // Handle userId format properly - check if it's MongoDB ObjectId or string
-    let userIdQuery;
-    if (/^[0-9a-fA-F]{24}$/.test(userId)) {
-      // MongoDB ObjectId format (24 hex chars)
-      userIdQuery = new mongoose.Types.ObjectId(userId);
-      console.log('✅ CV DELETE API - User ID is MongoDB ObjectId:', userIdQuery);
+    if (userIdentifier.type === 'firebase') {
+      query.firebaseUid = userIdentifier.id;
     } else {
-      // NextAuth string format - use as string
-      userIdQuery = userId;
-      console.log('✅ CV DELETE API - User ID is string format:', userIdQuery);
+      query.userId = new mongoose.Types.ObjectId(userIdentifier.id);
     }
     
-    console.log('Converted IDs - cvId:', cvId, 'userIdQuery:', userIdQuery);
-    
-    console.log('🔍 CV DELETE API - Looking for CV with ID:', cvId, 'and user ID:', userIdQuery);
+    console.log('🔍 CV DELETE API - Query:', query);
     
     // Find CV and ensure user owns it
-    const cv = await CV.findOne({ _id: cvId, userId: userIdQuery });
+    const cv = await CV.findOne(query);
     
     if (!cv) {
       console.log('❌ CV DELETE API - CV not found for user');
-      console.log('🔍 CV DELETE API - Checking if CV exists without user filter...');
-      const cvWithoutUser = await CV.findOne({ _id: cvId });
-      if (cvWithoutUser) {
-        console.log('🔍 CV DELETE API - CV exists but belongs to different user:', cvWithoutUser.userId);
-      } else {
-        console.log('🔍 CV DELETE API - CV does not exist at all');
-      }
       return NextResponse.json(
-        {
-          success: false,
-          message: 'CV not found'
-        },
+        { success: false, error: 'CV not found' },
         { status: 404 }
       );
     }
@@ -253,7 +296,7 @@ export async function DELETE(
     });
 
   } catch (error: any) {
-    console.error('Delete CV error:', error);
+    console.error('❌ CV DELETE API - Error:', error);
     const errorResponse = createErrorResponse(error);
     
     return NextResponse.json(
@@ -261,4 +304,4 @@ export async function DELETE(
       { status: errorResponse.statusCode || 500 }
     );
   }
-} 
+}
