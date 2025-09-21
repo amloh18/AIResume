@@ -19,7 +19,7 @@ import MasterCVCreationWizard from '@/components/onboarding/MasterCVCreationWiza
 import Link from 'next/link';
 import { SkeletonText, Skeleton } from '@/components/ui/SkeletonLoader';
 import ErrorDialog from '@/components/ui/ErrorDialog';
-import { validateAndGetMongoDBUserId } from '@/lib/utils/userIdUtils';
+// Removed server-side imports to fix WebAssembly build error
 
 const MasterCVOnboardingContent: React.FC = () => {
   const { state, dispatch, nextStep, prevStep } = useOnboarding();
@@ -100,15 +100,17 @@ const MasterCVOnboardingContent: React.FC = () => {
         color: 'blue'
       }});
       
-      // Check if user already has CVs before proceeding
-      const checkExistingCVs = async () => {
-        if (isCheckingCVsRef.current) return;
-        isCheckingCVsRef.current = true;
-        setIsCheckingCVs(true);
-        
-        try {
-          const response = await fetch(`/api/cvs?userId=${session.user.id}`);
-          const result = await response.json();
+          // Check if user already has CVs before proceeding
+          const checkExistingCVs = async () => {
+            if (isCheckingCVsRef.current) return;
+            isCheckingCVsRef.current = true;
+            setIsCheckingCVs(true);
+            
+            try {
+              // For NextAuth users, the session contains the user ID
+              // The CV API will handle user resolution on the server side
+              const response = await fetch(`/api/cvs`);
+              const result = await response.json();
           
           // Check if user came here via callback URL (they specifically want to access onboarding)
           const cameFromCallbackUrl = typeof window !== 'undefined' && 
@@ -178,8 +180,30 @@ const MasterCVOnboardingContent: React.FC = () => {
               setIsCheckingCVs(true);
               
               try {
-                const response = await fetch(`/api/cvs?userId=${parsedUser.id}`);
-                const result = await response.json();
+                // For Firebase users, we need to resolve their Firebase UID to MongoDB ObjectId
+                // The parsedUser.id should be the Firebase UID
+                const response = await fetch('/api/users/resolve', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    authProviderId: parsedUser.id,
+                    authProvider: 'firebase'
+                  })
+                });
+                
+                if (!response.ok) {
+                  console.error('Failed to resolve user');
+                  return;
+                }
+                
+                const userResolution = await response.json();
+                if (!userResolution.success) {
+                  console.error('User resolution failed:', userResolution.error);
+                  return;
+                }
+                
+                const cvResponse = await fetch(`/api/cvs?userId=${userResolution.mongoUserId}`);
+                const result = await cvResponse.json();
                 
                 if (result.success && result.data.cvs && result.data.cvs.length > 0) {
                   // User has CVs, redirect to dashboard
@@ -238,106 +262,94 @@ const MasterCVOnboardingContent: React.FC = () => {
     setIsLoading(true);
     
     try {
-      // For credentials login, prioritize localStorage over NextAuth session
-      let userId = null;
-      
-      // First try auth-session from localStorage (credentials login)
-      if (typeof window !== 'undefined') {
-        const authSession = localStorage.getItem('auth-session');
-        console.log('🔍 Raw auth-session:', authSession);
-        if (authSession) {
+      // Ensure user is authenticated (check session or localStorage)
+      let userInfo = null;
+      let authProvider = 'nextauth';
+      let authProviderId = null;
+
+      if (session?.user) {
+        // NextAuth session
+        userInfo = session.user;
+        authProviderId = session.user.id || session.user.email;
+        authProvider = 'nextauth';
+      } else if (typeof window !== 'undefined') {
+        // Check for Firebase user in localStorage
+        const userData = localStorage.getItem('user');
+        if (userData) {
           try {
-            const sessionData = JSON.parse(authSession);
-            console.log('🔍 Parsed session data:', sessionData);
-            userId = sessionData.user?.id || sessionData.user?._id;
-            console.log('🔍 Extracted userId from auth-session:', userId);
+            userInfo = JSON.parse(userData);
+            authProviderId = userInfo.id || userInfo.uid;
+            authProvider = 'firebase';
           } catch (error) {
-            console.error('Error parsing auth-session:', error);
-          }
-        }
-        
-        // Fallback to sessionStorage user data
-        if (!userId) {
-          const userData = sessionStorage.getItem('user');
-          console.log('🔍 Raw sessionStorage userData:', userData);
-          if (userData) {
-            try {
-              const parsedUser = JSON.parse(userData);
-              console.log('🔍 Parsed user data from sessionStorage:', parsedUser);
-              userId = parsedUser.id || parsedUser._id;
-              console.log('🔍 Extracted userId from sessionStorage:', userId);
-            } catch (error) {
-              console.error('Error parsing user data from sessionStorage:', error);
-            }
+            console.error('Error parsing user data:', error);
           }
         }
       }
-      
-      // Fallback to NextAuth session (OAuth login) or onboarding state
-      if (!userId) {
-        userId = session?.user?.id || state.userData?.id;
-        console.log('🔍 Fallback userId from session/state:', userId);
-        console.log('🔍 Session user:', session?.user);
-        console.log('🔍 State userData:', state.userData);
-      }
-      
-      console.log('🔍 Final selected userId:', userId);
-      console.log('🔍 userId type:', typeof userId);
-      console.log('🔍 userId length:', userId?.toString().length);
-      console.log('🔍 userId value:', JSON.stringify(userId));
-      
-      // Ensure user is authenticated
-      if (!userId) {
-        console.error('❌ No user ID found in any source');
-        console.error('❌ Session:', session);
-        console.error('❌ State:', state);
-        console.error('❌ LocalStorage user:', typeof window !== 'undefined' ? localStorage.getItem('user') : 'N/A');
+
+      if (!userInfo || !authProviderId) {
         throw new Error('User must be authenticated to create a Master CV. Please log in or sign up first.');
       }
+
+      console.log('✅ User authenticated:', {
+        authProvider,
+        authProviderId,
+        email: userInfo.email
+      });
       
-      // Validate and get MongoDB user ID (handles both MongoDB ObjectId and Google OAuth ID)
+      // Get default template ID
+      let defaultTemplateId;
       try {
-        userId = await validateAndGetMongoDBUserId(userId);
-        console.log('✅ Validated and converted user ID:', userId);
-      } catch (error) {
-        console.error('❌ User ID validation failed:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        const templatesResponse = await fetch('/api/templates?category=cv&tier=free');
+        const templatesResult = await templatesResponse.json();
         
-        // Provide more specific error messages based on the error
-        if (errorMessage.includes('Failed to fetch user data from server')) {
-          throw new Error('Authentication session expired. Please log in again.');
-        } else if (errorMessage.includes('Invalid user ID format')) {
-          throw new Error('Authentication error. Please try logging in again.');
+        if (templatesResult.success && templatesResult.templates.length > 0) {
+          // Use the first free template or find the default one
+          const defaultTemplate = templatesResult.templates.find(t => t.isDefault) || templatesResult.templates[0];
+          defaultTemplateId = defaultTemplate.id;
+          console.log('✅ Using template:', defaultTemplate.name, defaultTemplateId);
         } else {
-          throw new Error(`Authentication error: ${errorMessage}`);
+          throw new Error('No templates available');
         }
+      } catch (error) {
+        console.error('❌ Failed to get default template:', error);
+        throw new Error('Failed to load CV templates. Please try again.');
       }
-      
+
       const requestData = {
-        userId: userId, // This is now the correct MongoDB user ID
-        title: `${session?.user?.firstName || state.userData?.firstName || 'User'} ${session?.user?.lastName || state.userData?.lastName || ''}'s Master CV`.trim(),
-        cvData: state.cvData, // Fixed: was 'sections', should be 'cvData'
-        type: 'cv',
-        isMaster: true // Mark as master CV during onboarding
+        title: `${userInfo?.firstName || userInfo?.name || state.userData?.firstName || 'User'} ${userInfo?.lastName || state.userData?.lastName || ''}'s Master CV`.trim(),
+        cvData: state.cvData,
+        templateId: defaultTemplateId,
+        metadata: {
+          isMaster: true, // Mark as master CV during onboarding
+          tags: ['master-cv', 'onboarding'],
+          isPublic: false
+        }
       };
       
       console.log('🚀 Sending Master CV creation request:', requestData);
       console.log('🔍 Request data details:', {
-        userId: requestData.userId,
-        userIdType: typeof requestData.userId,
+        authProvider,
+        authProviderId,
         title: requestData.title,
+        templateId: requestData.templateId,
         hasCvData: !!requestData.cvData,
-        isMaster: requestData.isMaster,
+        isMaster: requestData.metadata.isMaster,
         cvDataKeys: requestData.cvData ? Object.keys(requestData.cvData) : 'No CV data'
       });
       
-      // Save CV data to database
-      const response = await fetch('/api/cvs', {
+      // Save CV data to database using specialized onboarding endpoint
+      const onboardingRequestData = {
+        ...requestData,
+        authProviderId,
+        authProvider
+      };
+
+      const response = await fetch('/api/cvs/onboarding', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(requestData),
+        body: JSON.stringify(onboardingRequestData),
       });
       
       console.log('📡 Response status:', response.status);

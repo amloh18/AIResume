@@ -2,34 +2,41 @@ import mongoose, { Document, Schema } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
 export interface IUser extends Document {
+  // SINGLE SOURCE OF TRUTH: Authentication linking
+  authProviderId: string; // The unique string ID from Firebase/NextAuth/Clerk
+  authProvider: 'firebase' | 'nextauth' | 'clerk' | 'google' | 'local';
+  
+  // Core user information
   email: string;
-  password?: string; // Optional - only for non-Firebase users
-  firebaseUid?: string; // Required for Firebase users
-  clerkId?: string; // Required for Clerk users
+  password?: string; // Optional - only for local auth users
   firstName: string;
   lastName: string;
   username?: string;
   avatar?: string;
   role: 'user' | 'admin';
-  userRole?: 'Student' | 'Professional' | 'Recruiter'; // New field for onboarding role selection
+  userRole?: 'Student' | 'Professional' | 'Recruiter';
   isEmailVerified: boolean;
+  
+  // Authentication tokens (for password reset, email verification)
   emailVerificationToken?: string;
   emailVerificationExpires?: Date;
   resetPasswordToken?: string;
   resetPasswordExpires?: Date;
+  
+  // Subscription and usage tracking
   currentPlanKey: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly';
-  monthlyGoal?: number; // Monthly job application goal
-  // Usage tracking for limits enforcement
+  monthlyGoal?: number;
   usage: {
-    cvJourneyCount: number; // Total CV journeys completed
-    cvCreatedCount: number; // Total CVs created
-    journeysCreated: number; // Total journeys created (for new onboarding)
-    exportCount: number; // Total exports/downloads
-    atsCheckCount: number; // Total ATS checks performed
-    lastResetDate: Date; // Last time usage was reset (for day pass)
-    deviceFingerprint?: string; // Device identifier for tracking
+    cvJourneyCount: number;
+    cvCreatedCount: number;
+    journeysCreated: number;
+    exportCount: number;
+    atsCheckCount: number;
+    lastResetDate: Date;
+    deviceFingerprint?: string;
   };
-  // Core Profile Information (frequently accessed)
+  
+  // Core Profile Information
   phone?: string;
   location?: string;
   website?: string;
@@ -44,6 +51,8 @@ export interface IUser extends Document {
   // Admin tracking fields
   lastLogin?: Date;
   region?: string;
+  
+  // Subscription details
   subscription: {
     planKey: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly';
     status: 'active' | 'inactive' | 'cancelled' | 'expired';
@@ -58,47 +67,52 @@ export interface IUser extends Document {
     seats: number;
     storageUsed: number;
   };
-  // Basic UI Settings (frequently accessed, kept in User table)
+  
+  // Basic UI Settings
   settings: {
     theme: 'light' | 'dark' | 'auto';
     notifications: {
       email: boolean;
       push: boolean;
     };
-    // Basic preferences only - detailed settings moved to UserSettings
     timezone: string;
     languagePreference: string;
   };
+  
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
 const userSchema = new Schema<IUser>({
+  // CRITICAL: Single source of truth for user authentication
+  authProviderId: {
+    type: String,
+    required: [true, 'Auth provider ID is required'],
+    unique: true,
+    trim: true,
+    index: true // Primary index for fast lookups
+  },
+  authProvider: {
+    type: String,
+    enum: ['firebase', 'nextauth', 'clerk', 'google', 'local'],
+    required: [true, 'Auth provider is required'],
+    index: true
+  },
+  
   email: {
     type: String,
     required: [true, 'Email is required'],
     unique: true,
     lowercase: true,
-    trim: true
+    trim: true,
+    index: true
   },
   password: {
     type: String,
-    required: false, // Make password optional - validation will be handled in pre-save hook
+    required: false,
     minlength: [8, 'Password must be at least 8 characters long'],
-    select: false // Don't include password in queries by default
-  },
-  firebaseUid: {
-    type: String,
-    unique: true,
-    sparse: true, // Allows multiple null values
-    required: false // Firebase UID is optional - can be used for Firebase auth users
-  },
-  clerkId: {
-    type: String,
-    unique: true,
-    sparse: true, // Allows multiple null values
-    required: false
+    select: false
   },
   firstName: {
     type: String,
@@ -115,7 +129,7 @@ const userSchema = new Schema<IUser>({
   username: {
     type: String,
     unique: true,
-    sparse: true, // Allows multiple null values
+    sparse: true,
     trim: true,
     lowercase: true,
     minlength: [3, 'Username must be at least 3 characters long'],
@@ -151,11 +165,10 @@ const userSchema = new Schema<IUser>({
   },
   monthlyGoal: {
     type: Number,
-    default: 20, // Default goal of 20 jobs per month
+    default: 20,
     min: 1,
     max: 100
   },
-  // Usage tracking for limits enforcement
   usage: {
     cvJourneyCount: {
       type: Number,
@@ -191,7 +204,6 @@ const userSchema = new Schema<IUser>({
       trim: true
     }
   },
-  // Profile information from onboarding
   phone: {
     type: String,
     trim: true,
@@ -242,7 +254,6 @@ const userSchema = new Schema<IUser>({
     enum: ['entry', 'mid', 'senior', 'executive'],
     default: 'mid'
   },
-  // Admin tracking fields
   lastLogin: {
     type: Date,
     default: null
@@ -307,7 +318,6 @@ const userSchema = new Schema<IUser>({
         default: true
       }
     },
-    // Basic preferences only - detailed settings moved to UserSettings
     timezone: {
       type: String,
       trim: true,
@@ -333,17 +343,15 @@ const userSchema = new Schema<IUser>({
   }
 });
 
-// Validate and hash password before saving
+// Validate authentication method
 userSchema.pre('save', async function(next) {
   try {
-    // Validate that user has at least one authentication method
+    // Validate that user has proper authentication setup
     const hasPassword = !!this.password;
-    const hasFirebaseUid = !!this.firebaseUid;
-    const hasClerkId = !!this.clerkId;
-    const isGoogleOAuth = this.isEmailVerified && !hasPassword && !hasFirebaseUid && !hasClerkId;
+    const hasAuthProvider = !!this.authProviderId && !!this.authProvider;
     
-    if (!hasPassword && !hasFirebaseUid && !hasClerkId && !isGoogleOAuth) {
-      return next(new Error('User must have either a password, Firebase UID, Clerk ID, or be a verified Google OAuth user'));
+    if (!hasPassword && !hasAuthProvider) {
+      return next(new Error('User must have either password or external auth provider'));
     }
     
     // Hash password if it exists and is modified
@@ -358,14 +366,16 @@ userSchema.pre('save', async function(next) {
   }
 });
 
-// Compare password method (only for non-Firebase users)
+// Compare password method
 userSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
-  if (!this.password) return false; // Firebase users don't have passwords
+  if (!this.password) return false;
   return bcrypt.compare(candidatePassword, this.password);
 };
 
-// Indexes for better query performance and data integrity
+// Critical indexes for performance
+userSchema.index({ authProviderId: 1 }, { unique: true });
+userSchema.index({ email: 1 }, { unique: true });
+userSchema.index({ authProvider: 1, authProviderId: 1 });
 userSchema.index({ 'subscription.status': 1 });
-// Note: Unique indexes are already defined in the schema fields above
 
-export default mongoose.models.User || mongoose.model<IUser>('User', userSchema); 
+export default mongoose.models.User || mongoose.model<IUser>('User', userSchema);
