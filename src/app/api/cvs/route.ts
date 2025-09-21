@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/database';
-import { CV } from '@/models';
+import { CV, Template, User } from '@/models';
 import { createPaginationOptions, paginateQuery, createErrorResponse } from '@/lib/db-utils';
 import { extractUserIdentifier, findManyByFirebaseUid, countByFirebaseUid, createWithFirebaseUid } from '@/lib/firebase-uid-utils';
 import mongoose from 'mongoose';
@@ -132,7 +132,7 @@ export async function GET(request: NextRequest) {
       console.log(`🔍 CV API - CV ${index + 1}:`, {
         id: cv._id,
         title: cv.title,
-        isMaster: cv.isMaster,
+        isMaster: cv.metadata?.isMaster,
         status: cv.status,
         userId: cv.userId,
         firebaseUid: cv.firebaseUid
@@ -162,16 +162,16 @@ export async function GET(request: NextRequest) {
       console.log('🔍 CV API - Transforming CV:', {
         id: cv._id,
         title: cv.title,
-        isMaster: cv.isMaster,
-        rawIsMaster: cv.isMaster,
-        isMasterType: typeof cv.isMaster
+        isMaster: cv.metadata?.isMaster,
+        rawIsMaster: cv.metadata?.isMaster,
+        isMasterType: typeof cv.metadata?.isMaster
       });
       
       return {
         id: cv._id,
         title: cv.title,
         status: cv.status,
-        isMaster: cv.isMaster || false,
+        isMaster: cv.metadata?.isMaster || false,
         starred: cv.metadata?.starred || false,
         lastModified: cv.metadata?.lastModified || cv.updatedAt,
         viewCount: cv.metadata?.viewCount || 0,
@@ -253,12 +253,9 @@ export async function POST(request: NextRequest) {
     const {
       title, 
       templateId,
-      templateName,
-      templateData, 
       cvData, 
       status, 
       isMaster,
-      styling,
       metadata
     } = body;
 
@@ -271,29 +268,44 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Prepare CV data for creation
+    // Ensure templateId is provided or get default template
+    let finalTemplateId = templateId;
+    if (!finalTemplateId) {
+      const defaultTemplate = await Template.findOne({ isDefault: true, category: 'cv' });
+      if (!defaultTemplate) {
+        console.log('❌ CV POST API - No default template found');
+        return NextResponse.json(
+          { success: false, error: 'No template specified and no default template available' },
+          { status: 400 }
+        );
+      }
+      finalTemplateId = defaultTemplate._id;
+      console.log('🔍 CV POST API - Using default template:', defaultTemplate.name);
+    }
+
+    // Validate template exists
+    const template = await Template.findById(finalTemplateId);
+    if (!template) {
+      console.log('❌ CV POST API - Template not found:', finalTemplateId);
+      return NextResponse.json(
+        { success: false, error: 'Template not found' },
+        { status: 400 }
+      );
+    }
+
+    // Prepare CV data for creation (clean schema - no styling data)
     const cvDataToCreate = {
       title,
-      templateId,
-      templateName,
-      templateData,
+      templateId: finalTemplateId,
       cvData,
       status: status || 'draft',
       isMaster: isMaster || false,
-      styling: styling || {
-        primaryColor: '#84cc16',
-        secondaryColor: '#22c55e',
-        fontFamily: 'Inter',
-        fontSize: 'medium',
-        spacing: 1.5
-      },
       metadata: {
         lastModified: new Date(),
         tags: metadata?.tags || [],
         isPublic: metadata?.isPublic || false,
         viewCount: 0,
         downloadCount: 0,
-        starred: metadata?.starred || false,
         ...metadata
       }
     };
@@ -305,16 +317,25 @@ export async function POST(request: NextRequest) {
       userIdentifier
     });
 
-    // Create new CV using the helper function
-    let userId: string | mongoose.Types.ObjectId;
+    // Get MongoDB userId for Firebase users
+    let userId: mongoose.Types.ObjectId;
     let firebaseUid: string;
     
     if (userIdentifier.type === 'firebase') {
-      userId = new mongoose.Types.ObjectId().toString(); // Generate new ObjectId for userId
+      // For Firebase users, get the MongoDB ObjectId from the User collection
+      const user = await User.findOne({ firebaseUid: userIdentifier.id }).lean();
+      if (!user) {
+        console.log('❌ CV POST API - Firebase user not found in database');
+        return NextResponse.json(
+          { success: false, error: 'User not found in database' },
+          { status: 404 }
+        );
+      }
+      userId = user._id;
       firebaseUid = userIdentifier.id;
     } else {
       userId = new mongoose.Types.ObjectId(userIdentifier.id);
-      firebaseUid = ''; // Empty string for non-Firebase users
+      firebaseUid = ''; // This should not happen in the new schema
     }
 
     const newCV = await createWithFirebaseUid(
@@ -328,7 +349,8 @@ export async function POST(request: NextRequest) {
       id: newCV._id,
       userId: newCV.userId,
       firebaseUid: newCV.firebaseUid,
-      title: newCV.title
+      title: newCV.title,
+      templateId: newCV.templateId
     });
 
     return NextResponse.json({
@@ -337,6 +359,7 @@ export async function POST(request: NextRequest) {
         id: newCV._id,
         title: newCV.title,
         status: newCV.status,
+        templateId: newCV.templateId,
         createdAt: newCV.createdAt,
         updatedAt: newCV.updatedAt
       }

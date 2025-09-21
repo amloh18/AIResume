@@ -1,56 +1,97 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { getAdminTemplate } from '@/models/admin-models';
+import connectDB from '@/lib/database';
+import { Template } from '@/models';
+import { createErrorResponse } from '@/lib/db-utils';
+import AdminTemplateService from '@/lib/services/adminTemplateService';
 
-// GET /api/templates - Get all available templates
+// GET - List available templates from admin database
 export async function GET(request: NextRequest) {
   try {
+    console.log('🔍 TEMPLATES API - Starting GET request (using admin templates)');
+    
     const { searchParams } = new URL(request.url);
-    const category = searchParams.get('category');
-    const isActive = searchParams.get('isActive');
+    const category = searchParams.get('category') || 'cv';
+    const tier = searchParams.get('tier') as 'free' | 'premium' | null;
+    const includeInactive = searchParams.get('includeInactive') === 'true';
 
-    const query: any = {};
+    console.log('🔍 TEMPLATES API - Params:', { category, tier, includeInactive });
+
+    // Get templates from admin database
+    const templates = await AdminTemplateService.getAllTemplates({
+      category,
+      tier: tier || undefined,
+      isActive: !includeInactive ? true : undefined
+    });
+
+    console.log(`✅ TEMPLATES API - Found ${templates.length} admin templates`);
+
+    return NextResponse.json({
+      success: true,
+      templates: templates.map(template => ({
+        id: template.id || template._id,
+        name: template.name,
+        description: template.description,
+        thumbnail: template.thumbnail,
+        tier: template.tier,
+        layoutType: template.layoutType,
+        globalStyles: template.globalStyles,
+        columnLayout: template.columnLayout,
+        sectionStyling: template.sectionStyling,
+        availableSections: template.availableSections,
+        pageSettings: template.pageSettings,
+        isDefault: template.isDefault,
+        version: template.version,
+        createdAt: template.createdAt
+      }))
+    });
+
+  } catch (error: any) {
+    console.error('❌ TEMPLATES API - Error:', error);
+    const errorResponse = createErrorResponse(error);
     
-    if (category) {
-      query.category = category;
-    }
-    
-    if (isActive !== null) {
-      query.isActive = isActive === 'true';
-    }
-
-    const Template = await getAdminTemplate();
-    const templates = await Template.find(query)
-      .sort({ isDefault: -1, name: 1 })
-      .exec();
-
-    return NextResponse.json({ templates });
-
-  } catch (error) {
-    console.error('Error fetching templates:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch templates' },
-      { status: 500 }
+      errorResponse,
+      { status: errorResponse.statusCode || 500 }
     );
   }
 }
 
-// POST /api/templates - Create a new template (admin only)
+// POST - Create a new template (admin only)
 export async function POST(request: NextRequest) {
   try {
+    console.log('🔍 TEMPLATES API - Starting POST request');
+
+    // Check authentication
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
 
-    // TODO: Add admin check here
-    // For now, allow any authenticated user to create templates
+    // For template creation, you might want to add admin check
+    // const user = await User.findOne({ email: session.user.email });
+    // if (user?.role !== 'admin') {
+    //   return NextResponse.json(
+    //     { success: false, error: 'Admin access required' },
+    //     { status: 403 }
+    //   );
+    // }
+
+    await connectDB();
+    console.log('🔍 TEMPLATES API - Database connected');
 
     const body = await request.json();
+    console.log('🔍 TEMPLATES API - Request body received');
+
+    // Extract template data
     const {
       name,
       description,
+      thumbnail,
       category,
       categories,
       tier,
@@ -58,42 +99,66 @@ export async function POST(request: NextRequest) {
       availableSections,
       templateData,
       isDefault,
-      isPublished,
       globalAccess
     } = body;
 
-    if (!name || !category || !availableSections) {
+    // Validate required fields
+    if (!name || !category || !globalStyles || !availableSections) {
       return NextResponse.json(
-        { error: 'Name, category, and available sections are required' },
+        { success: false, error: 'Name, category, globalStyles, and availableSections are required' },
         { status: 400 }
       );
     }
 
-    const Template = await getAdminTemplate();
-    const template = new Template({
+    // Create new template
+    const newTemplate = new Template({
       name,
       description,
+      thumbnail,
       category,
-      categories: categories || [],
+      categories,
       tier: tier || 'free',
-      globalStyles: globalStyles || {},
+      globalStyles,
       availableSections,
-      templateData: templateData || {},
+      templateData,
+      isActive: true,
       isDefault: isDefault || false,
-      isPublished: isPublished || false,
+      isPublished: true,
       globalAccess: globalAccess !== false, // Default to true
-      createdBy: session.user.id
+      version: 1
     });
 
-    await template.save();
+    await newTemplate.save();
 
-    return NextResponse.json({ template }, { status: 201 });
+    console.log('✅ TEMPLATES API - Template created successfully:', newTemplate._id);
 
-  } catch (error) {
-    console.error('Error creating template:', error);
+    return NextResponse.json({
+      success: true,
+      template: {
+        id: newTemplate._id.toString(),
+        name: newTemplate.name,
+        description: newTemplate.description,
+        category: newTemplate.category,
+        tier: newTemplate.tier,
+        isDefault: newTemplate.isDefault,
+        createdAt: newTemplate.createdAt
+      }
+    }, { status: 201 });
+
+  } catch (error: any) {
+    console.error('❌ TEMPLATES API - Error creating template:', error);
+    
+    if (error.code === 11000) {
+      return NextResponse.json(
+        { success: false, error: 'A template with this name already exists' },
+        { status: 409 }
+      );
+    }
+    
+    const errorResponse = createErrorResponse(error);
     return NextResponse.json(
-      { error: 'Failed to create template' },
-      { status: 500 }
+      errorResponse,
+      { status: errorResponse.statusCode || 500 }
     );
   }
-} 
+}

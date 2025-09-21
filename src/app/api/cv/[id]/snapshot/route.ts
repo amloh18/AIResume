@@ -126,7 +126,7 @@ function generateCVThumbnailSVG(cv: any): string {
       </text>
       
       <!-- Master Badge (if applicable) -->
-      ${cv.isMaster ? `
+      ${cv.metadata?.isMaster ? `
         <rect x="200" y="55" width="60" height="20" rx="10" fill="#84cc16" opacity="0.2"/>
         <text x="230" y="68" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="#84cc16">
           MASTER

@@ -13,9 +13,12 @@ import {
   Briefcase,
   GraduationCap,
   Palette,
-  Loader2
+  Loader2,
+  Crown,
+  Info
 } from 'lucide-react';
 import { Template } from '@/lib/stores/templateStore';
+import TemplatePreview from './TemplatePreview';
 
 interface TemplatePanelProps {
   selectedTemplate: Template | null;
@@ -204,11 +207,26 @@ const TemplatePanel: React.FC<TemplatePanelProps> = ({
             )}
 
             {/* Template Preview */}
-            <div className="mb-3">
-              <div className="w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center border">
-                <div className="text-center">
-                  <div className="w-16 h-20 bg-gray-300 rounded mx-auto mb-2"></div>
-                  <span className="text-xs text-gray-500">{template.name}</span>
+            <div className="mb-3 relative group">
+              <TemplatePreview 
+                template={template} 
+                scale={0.25}
+                className="w-full h-32"
+              />
+              
+              {/* Hover Info Overlay */}
+              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-300 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
+                <div className="text-center text-white p-2">
+                  <div className="flex items-center justify-center space-x-2 mb-1">
+                    {template.tier === 'premium' ? (
+                      <Crown className="h-4 w-4 text-amber-400" />
+                    ) : (
+                      <Star className="h-4 w-4 text-green-400" />
+                    )}
+                    <span className="text-sm font-medium">{template.tier === 'premium' ? 'Premium' : 'Free'}</span>
+                  </div>
+                  <p className="text-xs opacity-90">{template.availableSections?.length || 0} sections</p>
+                  <p className="text-xs opacity-75 mt-1">{template.layoutType}</p>
                 </div>
               </div>
             </div>
@@ -216,30 +234,39 @@ const TemplatePanel: React.FC<TemplatePanelProps> = ({
             {/* Template Info */}
             <div className="space-y-2">
               <div className="flex items-start justify-between">
-                <h3 className="font-medium text-gray-900">{template.name}</h3>
-                <div className="flex items-center space-x-1">
+                <h3 className="font-medium text-gray-900 truncate pr-2">{template.name}</h3>
+                <div className="flex items-center space-x-1 flex-shrink-0">
+                  {template.tier === 'premium' ? (
+                    <Crown className="h-3 w-3 text-amber-500" />
+                  ) : (
+                    <Star className="h-3 w-3 text-green-500" />
+                  )}
                   <span className="text-xs text-gray-500">v{template.version}</span>
                 </div>
               </div>
 
-              <p className="text-sm text-gray-600 line-clamp-2">{template.description || 'No description available'}</p>
+              <p className="text-sm text-gray-600 line-clamp-2">{template.description || 'Professional CV template with modern design'}</p>
 
-              {/* Tags */}
-              <div className="flex items-center space-x-2">
+              {/* Tags and Layout Info */}
+              <div className="flex items-center justify-between">
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${getCategoryColor(template.category)}`}>
                   {template.category}
                 </span>
+                <span className="text-xs text-gray-500 capitalize">{template.layoutType}</span>
               </div>
 
               {/* Actions */}
               <div className="flex items-center justify-between text-xs text-gray-500">
-                <span>{template.availableSections?.length || 0} sections</span>
+                <span className="flex items-center space-x-1">
+                  <Info className="h-3 w-3" />
+                  <span>{template.availableSections?.length || 0} sections</span>
+                </span>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     onPreviewTemplate(template);
                   }}
-                  className="flex items-center space-x-1 text-lime-600 hover:text-lime-700"
+                  className="flex items-center space-x-1 text-lime-600 hover:text-lime-700 transition-colors"
                 >
                   <Eye className="h-3 w-3" />
                   <span>Preview</span>
