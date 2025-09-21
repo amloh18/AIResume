@@ -3,6 +3,7 @@ import { CVDataStructure } from '@/types/cv';
 
 export interface ICV extends Document {
   userId: mongoose.Types.ObjectId | string;
+  firebaseUid?: string; // Firebase UID for user identification
   title: string;
   cvData: CVDataStructure;
   status: 'draft' | 'published' | 'archived';
@@ -11,70 +12,6 @@ export interface ICV extends Document {
   journeyId?: mongoose.Types.ObjectId | string; // Links tailored CV to specific CV Journey (Application Package)
   // Legacy fields for backward compatibility
   template?: string;
-  sections?: {
-    personalInfo: {
-      firstName: string;
-      lastName: string;
-      email: string;
-      phone?: string;
-      location?: string;
-      website?: string;
-      linkedin?: string;
-      github?: string;
-      summary: string;
-    };
-    experience: Array<{
-      company: string;
-      position: string;
-      location?: string;
-      startDate: Date;
-      endDate?: Date;
-      current: boolean;
-      description: string;
-      achievements: string[];
-    }>;
-    education: Array<{
-      institution: string;
-      degree: string;
-      field: string;
-      location?: string;
-      startDate: Date;
-      endDate?: Date;
-      current: boolean;
-      gpa?: number;
-      description?: string;
-    }>;
-    skills: Array<{
-      category: string;
-      skills: string[];
-    }>;
-    projects: Array<{
-      title: string;
-      description: string;
-      technologies: string[];
-      url?: string;
-      github?: string;
-      startDate?: Date;
-      endDate?: Date;
-      current: boolean;
-    }>;
-    certifications: Array<{
-      name: string;
-      issuer: string;
-      date: Date;
-      expiryDate?: Date;
-      url?: string;
-    }>;
-    languages: Array<{
-      language: string;
-      proficiency: 'basic' | 'intermediate' | 'advanced' | 'native';
-    }>;
-    customSections: Array<{
-      title: string;
-      content: string;
-      order: number;
-    }>;
-  };
   styling: {
     primaryColor: string;
     secondaryColor: string;
@@ -93,6 +30,8 @@ export interface ICV extends Document {
     atsScore?: number;
     atsScoreDate?: Date;
     atsScoreJobId?: mongoose.Types.ObjectId;
+    thumbnailUrl?: string; // URL to PNG snapshot for card preview
+    thumbnailGeneratedAt?: Date; // When the thumbnail was last generated
   };
   createdAt: Date;
   updatedAt: Date;
@@ -103,6 +42,11 @@ const cvSchema = new Schema<ICV>({
     type: Schema.Types.Mixed, // Allow both ObjectId and string
     required: true,
     index: true
+  },
+  firebaseUid: {
+    type: String,
+    sparse: true, // Allows multiple null values
+    index: true // Index for efficient Firebase UID queries
   },
   title: {
     type: String,
@@ -295,73 +239,6 @@ const cvSchema = new Schema<ICV>({
     type: String,
     default: 'modern'
   },
-  sections: {
-    personalInfo: {
-      firstName: { type: String, trim: true },
-      lastName: { type: String, trim: true },
-      email: { type: String, trim: true },
-      phone: { type: String, trim: true },
-      location: { type: String, trim: true },
-      website: { type: String, trim: true },
-      linkedin: { type: String, trim: true },
-      github: { type: String, trim: true },
-      summary: { type: String, trim: true, maxlength: 500 }
-    },
-    experience: [{
-      company: { type: String, trim: true },
-      position: { type: String, trim: true },
-      location: { type: String, trim: true },
-      startDate: { type: Date },
-      endDate: { type: Date },
-      current: { type: Boolean, default: false },
-      description: { type: String, trim: true },
-      achievements: [{ type: String, trim: true }]
-    }],
-    education: [{
-      institution: { type: String, trim: true },
-      degree: { type: String, trim: true },
-      field: { type: String, trim: true },
-      location: { type: String, trim: true },
-      startDate: { type: Date },
-      endDate: { type: Date },
-      current: { type: Boolean, default: false },
-      gpa: { type: Number, min: 0, max: 4 },
-      description: { type: String, trim: true }
-    }],
-    skills: [{
-      category: { type: String, trim: true },
-      skills: [{ type: String, trim: true }]
-    }],
-    projects: [{
-      title: { type: String, trim: true },
-      description: { type: String, trim: true },
-      technologies: [{ type: String, trim: true }],
-      url: { type: String, trim: true },
-      github: { type: String, trim: true },
-      startDate: { type: Date },
-      endDate: { type: Date },
-      current: { type: Boolean, default: false }
-    }],
-    certifications: [{
-      name: { type: String, trim: true },
-      issuer: { type: String, trim: true },
-      date: { type: Date },
-      expiryDate: { type: Date },
-      url: { type: String, trim: true }
-    }],
-    languages: [{
-      language: { type: String, trim: true },
-      proficiency: {
-        type: String,
-        enum: ['basic', 'intermediate', 'advanced', 'native']
-      }
-    }],
-    customSections: [{
-      title: { type: String, trim: true },
-      content: { type: String, trim: true },
-      order: { type: Number }
-    }]
-  },
   styling: {
     primaryColor: { type: String, default: '#84cc16' },
     secondaryColor: { type: String, default: '#22c55e' },
@@ -379,7 +256,9 @@ const cvSchema = new Schema<ICV>({
     downloadCount: { type: Number, default: 0 },
     atsScore: { type: Number, min: 0, max: 100 },
     atsScoreDate: { type: Date },
-    atsScoreJobId: { type: Schema.Types.ObjectId, ref: 'JobApplication' }
+    atsScoreJobId: { type: Schema.Types.ObjectId, ref: 'JobApplication' },
+    thumbnailUrl: { type: String, trim: true },
+    thumbnailGeneratedAt: { type: Date }
   }
 }, {
   timestamps: true,
@@ -406,7 +285,7 @@ cvSchema.pre('save', async function(next) {
   this.metadata.lastModified = new Date();
   
   // If this CV is being set as master, unset any existing master CV for this user
-  if (this.isMaster && this.isModified('isMaster')) {
+  if (this.isMaster && (this.isModified('isMaster') || this.isNew)) {
     await this.constructor.updateMany(
       { userId: this.userId, _id: { $ne: this._id } },
       { $set: { isMaster: false } }

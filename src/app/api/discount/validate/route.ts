@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 // Removed - using Clerk now
 import connectDB from '@/lib/database';
-import { DiscountCode, PricingPlan } from '@/models';
+import { getAdminDiscountCode, getAdminPricingPlan } from '@/models/admin-models';
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,6 +24,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Find the discount code
+    const DiscountCode = await getAdminDiscountCode();
     const discountCode = await DiscountCode.findOne({ 
       code: code.toUpperCase(),
       isActive: true 
@@ -53,6 +55,7 @@ export async function POST(request: NextRequest) {
 
     // Check if code applies to this plan
     if (discountCode.applicablePlans.length > 0) {
+      const PricingPlan = await getAdminPricingPlan();
       const plan = await PricingPlan.findById(planId);
       if (!plan || !discountCode.applicablePlans.includes(plan._id)) {
         return NextResponse.json({

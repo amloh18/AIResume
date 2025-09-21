@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 // Removed - using Clerk now
 import connectDB from '@/lib/database';
 import User from '@/models/User';

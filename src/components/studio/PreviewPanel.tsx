@@ -22,6 +22,7 @@ import { CVDataStructure } from '@/types/cv';
 import { Template } from '@/lib/stores/templateStore';
 import { Job } from '@/lib/stores/jobStore';
 import CVPreviewContent from './CVPreviewContent';
+import EnhancedCVPreview from './EnhancedCVPreview';
 import CoverLetterPreview from './CoverLetterPreview';
 import { downloadAsJSON, downloadAsPDF, downloadAsDOCX, downloadAsImage } from '@/lib/utils/download';
 import { useTheme } from '@/lib/contexts/ThemeContext';
@@ -204,17 +205,30 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
           marginBottom: '0'
         }}
       >
-        <CVPreviewContent 
-          cvData={cvData} 
-          theme="light" // Always use light theme for preview
-          showBadge={false}
-          sectionOrder={sectionOrder}
-          sectionVisibility={sectionVisibility}
-          templateStyles={templateStyles}
-          customCSS={customCSS}
-          templateName={templateName}
-          pagePadding={pagePadding}
-        />
+        {/* Use new enhanced preview if template has availableSections, otherwise fallback */}
+        {template?.availableSections ? (
+          <EnhancedCVPreview
+            cvData={cvData}
+            template={template}
+            theme="light"
+            showBadge={false}
+            sectionOrder={sectionOrder}
+            sectionVisibility={sectionVisibility}
+            pagePadding={pagePadding}
+          />
+        ) : (
+          <CVPreviewContent 
+            cvData={cvData} 
+            theme="light" // Always use light theme for preview
+            showBadge={false}
+            sectionOrder={sectionOrder}
+            sectionVisibility={sectionVisibility}
+            templateStyles={templateStyles}
+            customCSS={customCSS}
+            templateName={templateName}
+            pagePadding={pagePadding}
+          />
+        )}
       </div>
     );
   };

@@ -1,4 +1,4 @@
-// Admin database service - handles admin collections within cvcircle database
+// Admin database service - handles admin collections within cvcircle_admin database
 import mongoose from 'mongoose';
 import connectDB from './database';
 
@@ -19,7 +19,7 @@ export function isAdminCollection(collectionName: string): boolean {
   return ADMIN_COLLECTIONS.includes(collectionName);
 }
 
-// Get admin database connection (uses same cvcircle database but with admin context)
+// Get admin database connection (uses cvcircle_admin database for admin collections)
 export async function getAdminDB() {
   // Use a dedicated database for admin data (NOT the MongoDB system 'admin')
   const baseUri = process.env.MONGODB_URI || '';

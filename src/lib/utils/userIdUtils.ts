@@ -145,7 +145,8 @@ export async function validateAndGetMongoDBUserId(userId: string): Promise<strin
   if (validation.type === 'google') {
     console.log('Google OAuth ID detected, fetching MongoDB user ID...');
     try {
-      const userResponse = await fetch('/api/user');
+      // For Firebase users, send the Firebase UID in the request
+      const userResponse = await fetch(`/api/user?firebaseUserId=${userId}`);
       if (userResponse.ok) {
         const userData = await userResponse.json();
         if (userData.success && userData.user && userData.user.id) {

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 // Removed - using Clerk now
 import connectDB from '@/lib/database';
-import { DiscountCode } from '@/models';
+import { getAdminDiscountCode } from '@/models/admin-models';
 
 export async function GET(
   request: NextRequest,
@@ -17,6 +18,7 @@ export async function GET(
 
     await connectDB();
 
+    const DiscountCode = await getAdminDiscountCode();
     const discountCode = await DiscountCode.findById(params.id)
       .populate('applicablePlans', 'name price currency')
       .populate('createdBy', 'firstName lastName email')
@@ -99,6 +101,7 @@ export async function PUT(
       );
     }
 
+    const DiscountCode = await getAdminDiscountCode();
     const discountCode = await DiscountCode.findById(params.id);
     
     if (!discountCode) {
@@ -155,6 +158,7 @@ export async function DELETE(
 
     await connectDB();
 
+    const DiscountCode = await getAdminDiscountCode();
     const discountCode = await DiscountCode.findById(params.id);
     
     if (!discountCode) {

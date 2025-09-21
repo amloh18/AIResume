@@ -34,3 +34,22 @@ export const authenticatedFetch = async (url: string, options: RequestInit = {})
     headers,
   });
 };
+
+// Enhanced fetch function that includes auth headers and userId as query parameter
+export const authenticatedFetchWithUserId = async (url: string, userId?: string, options: RequestInit = {}) => {
+  const baseUrl = new URL(url, typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
+
+  if (userId) {
+    baseUrl.searchParams.set('userId', userId);
+  }
+
+  const headers = {
+    ...getAuthHeaders(),
+    ...options.headers,
+  };
+
+  return fetch(baseUrl.toString(), {
+    ...options,
+    headers,
+  });
+};

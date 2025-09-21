@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/database';
 import { CV } from '@/models';
 import { createPaginationOptions, paginateQuery, createErrorResponse } from '@/lib/db-utils';
+import { extractUserIdentifier, findManyByFirebaseUid, countByFirebaseUid, createWithFirebaseUid } from '@/lib/firebase-uid-utils';
 import mongoose from 'mongoose';
 
 // GET - List CVs for a user with comprehensive filtering
@@ -13,7 +14,14 @@ export async function GET(request: NextRequest) {
 
     // Check authentication
     const session = await getServerSession(authOptions);
+    console.log('🔍 CV API - Session check:', { 
+      hasSession: !!session, 
+      hasUser: !!session?.user,
+      email: session?.user?.email 
+    });
+    
     if (!session?.user?.email) {
+      console.log('❌ CV API - No valid session found');
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -23,9 +31,20 @@ export async function GET(request: NextRequest) {
     await connectDB();
     console.log('🔍 CV API - Database connected');
     
+    // Extract user identifier from request and session
+    const userIdentifier = extractUserIdentifier(request, session);
+    
+    if (!userIdentifier.id || !userIdentifier.type) {
+      console.log('❌ CV API - No valid user identifier found');
+      return NextResponse.json(
+        { success: false, error: 'User identification failed' },
+        { status: 401 }
+      );
+    }
+    
+    console.log('🔍 CV API - User identifier:', userIdentifier);
+    
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-    console.log('🔍 CV API - User ID from params:', userId);
     const type = searchParams.get('type'); // 'cv' or 'cover'
     const status = searchParams.get('status');
     const sort = searchParams.get('sort') || 'updatedAt';
@@ -33,99 +52,61 @@ export async function GET(request: NextRequest) {
     const projection = searchParams.get('projection') || 'full';
     const starred = searchParams.get('starred');
     const published = searchParams.get('published');
-    
-    if (!userId) {
-      console.log('❌ CV API - No user ID provided');
-      return NextResponse.json(
-        {
-          success: false,
-          message: 'User ID is required'
-        },
-        { status: 400 }
-      );
-    }
-    
-    console.log('🔍 CV API - User ID validation passed:', userId);
+    const searchTerm = searchParams.get('search');
 
-    // Validate user ID format - support both MongoDB ObjectId and NextAuth formats
-    try {
-      const mongoose = require('mongoose');
-      
-      // Check if it's a valid MongoDB ObjectId (24 hex chars)
-      if (/^[0-9a-fA-F]{24}$/.test(userId)) {
-        const objectId = new mongoose.Types.ObjectId(userId);
-        console.log('🔍 CV API - User ID is valid MongoDB ObjectId:', objectId.toString());
-      } else {
-        // NextAuth format (e.g., N1sLLNSl8sRcruxVGQlBCDQzXy82)
-        console.log('🔍 CV API - User ID is NextAuth format:', userId);
-      }
-    } catch (error) {
-      console.error('❌ CV API - Invalid user ID format:', userId, error);
-      return NextResponse.json(
-        {
-          success: false,
-          message: 'Invalid user ID format'
-        },
-        { status: 400 }
-      );
+    // Build query conditions based on user identifier type
+    let baseQuery: Record<string, any> = {};
+    
+    if (userIdentifier.type === 'firebase') {
+      baseQuery.firebaseUid = userIdentifier.id;
+      console.log('🔍 CV API - Using Firebase UID query:', userIdentifier.id);
+    } else if (userIdentifier.type === 'objectid') {
+      baseQuery.userId = new mongoose.Types.ObjectId(userIdentifier.id);
+      console.log('🔍 CV API - Using MongoDB ObjectId query:', userIdentifier.id);
     }
 
-    // Create base query - handle both ObjectId and string types
-    let query;
-    if (/^[0-9a-fA-F]{24}$/.test(userId)) {
-      // MongoDB ObjectId format (24 hex chars)
-      query = CV.find({ userId: new mongoose.Types.ObjectId(userId) });
-    } else {
-      // NextAuth string format - use as string
-      query = CV.find({ userId: userId });
-    }
-    
-    // Add type filter (CV vs Cover Letter)
+    console.log('🔍 CV API - Base query:', baseQuery);
+
+    // Add additional query conditions
     if (type) {
-      // For now, we'll use a simple approach - CVs have type field or are default
-      // Cover letters might have a specific type or be identified differently
       if (type === 'cover') {
-        query = query.find({ 'metadata.type': 'cover_letter' });
+        baseQuery['metadata.type'] = 'cover_letter';
       } else if (type === 'cv') {
-        query = query.find({ 
-          $or: [
-            { 'metadata.type': { $ne: 'cover_letter' } },
-            { 'metadata.type': { $exists: false } }
-          ]
-        });
+        baseQuery.$or = [
+          { 'metadata.type': { $ne: 'cover_letter' } },
+          { 'metadata.type': { $exists: false } }
+        ];
       }
     }
-
-    // Add status filter
+    
     if (status) {
-      query = query.find({ status });
+      baseQuery.status = status;
     }
-
-    // Add starred filter
+    
     if (starred !== null && starred !== undefined) {
-      const isStarred = starred === 'true';
-      query = query.find({ 'metadata.starred': isStarred });
+      baseQuery['metadata.starred'] = starred === 'true';
     }
-
-    // Add published filter
+    
     if (published !== null && published !== undefined) {
       const isPublished = published === 'true';
-      query = query.find({ status: isPublished ? 'published' : { $ne: 'published' } });
+      baseQuery.status = isPublished ? 'published' : { $ne: 'published' };
     }
     
     // Add search filter if provided
-    const searchTerm = searchParams.get('search');
     if (searchTerm) {
-      const searchFilter = {
+      baseQuery.$and = baseQuery.$and || [];
+      baseQuery.$and.push({
         $or: [
           { title: { $regex: searchTerm, $options: 'i' } },
           { 'cvData.basics.name': { $regex: searchTerm, $options: 'i' } },
           { 'cvData.basics.label': { $regex: searchTerm, $options: 'i' } },
           { 'cvData.basics.email': { $regex: searchTerm, $options: 'i' } }
         ]
-      };
-      query = query.find(searchFilter);
+      });
     }
+    
+    // Create the actual query
+    let query = CV.find(baseQuery);
 
     // Apply sorting
     const sortOrder = sort === 'updatedAt' ? -1 : 1;
@@ -142,51 +123,70 @@ export async function GET(request: NextRequest) {
     }
 
     // Execute query
-    console.log('🔍 CV API - Executing database query for user:', userId);
+    console.log('🔍 CV API - Executing database query');
     const cvs = await query.lean();
     console.log('🔍 CV API - Query executed, found CVs:', cvs.length);
+    
+    // Debug: Show all found CVs
+    cvs.forEach((cv, index) => {
+      console.log(`🔍 CV API - CV ${index + 1}:`, {
+        id: cv._id,
+        title: cv.title,
+        isMaster: cv.isMaster,
+        status: cv.status,
+        userId: cv.userId,
+        firebaseUid: cv.firebaseUid
+      });
+    });
 
-    // Calculate counts for different statuses - handle both ID types
+    // Handle count queries efficiently
+    let countBaseQuery = {};
+    if (userIdentifier.type === 'firebase') {
+      countBaseQuery = { firebaseUid: userIdentifier.id };
+    } else {
+      countBaseQuery = { userId: new mongoose.Types.ObjectId(userIdentifier.id) };
+    }
+    
     const counts = await Promise.all([
-      /^[0-9a-fA-F]{24}$/.test(userId) 
-        ? CV.countDocuments({ userId: new mongoose.Types.ObjectId(userId) })
-        : CV.countDocuments({ userId: userId }),
-      /^[0-9a-fA-F]{24}$/.test(userId) 
-        ? CV.countDocuments({ userId: new mongoose.Types.ObjectId(userId), status: 'draft' })
-        : CV.countDocuments({ userId: userId, status: 'draft' }),
-      /^[0-9a-fA-F]{24}$/.test(userId) 
-        ? CV.countDocuments({ userId: new mongoose.Types.ObjectId(userId), status: 'published' })
-        : CV.countDocuments({ userId: userId, status: 'published' }),
-      /^[0-9a-fA-F]{24}$/.test(userId) 
-        ? CV.countDocuments({ userId: new mongoose.Types.ObjectId(userId), status: 'archived' })
-        : CV.countDocuments({ userId: userId, status: 'archived' }),
-      /^[0-9a-fA-F]{24}$/.test(userId) 
-        ? CV.countDocuments({ userId: new mongoose.Types.ObjectId(userId), 'metadata.starred': true })
-        : CV.countDocuments({ userId: userId, 'metadata.starred': true })
+      CV.countDocuments(countBaseQuery),
+      CV.countDocuments({ ...countBaseQuery, status: 'draft' }),
+      CV.countDocuments({ ...countBaseQuery, status: 'published' }),
+      CV.countDocuments({ ...countBaseQuery, status: 'archived' }),
+      CV.countDocuments({ ...countBaseQuery, 'metadata.starred': true })
     ]);
 
     const [total, drafts, publishedCount, archived, starredCount] = counts;
 
     // Transform data for response
-    const transformedCvs = cvs.map(cv => ({
-      id: cv._id,
-      title: cv.title,
-      status: cv.status,
-      isMaster: cv.isMaster || false,
-      starred: cv.metadata?.starred || false,
-      lastModified: cv.metadata?.lastModified || cv.updatedAt,
-      viewCount: cv.metadata?.viewCount || 0,
-      downloadCount: cv.metadata?.downloadCount || 0,
-      createdAt: cv.createdAt,
-      updatedAt: cv.updatedAt,
-      ...(projection === 'full' && {
-        cvData: cv.cvData,
-        templateId: cv.templateId,
-        templateName: cv.templateName,
-        styling: cv.styling,
-        metadata: cv.metadata
-      })
-    }));
+    const transformedCvs = cvs.map(cv => {
+      console.log('🔍 CV API - Transforming CV:', {
+        id: cv._id,
+        title: cv.title,
+        isMaster: cv.isMaster,
+        rawIsMaster: cv.isMaster,
+        isMasterType: typeof cv.isMaster
+      });
+      
+      return {
+        id: cv._id,
+        title: cv.title,
+        status: cv.status,
+        isMaster: cv.isMaster || false,
+        starred: cv.metadata?.starred || false,
+        lastModified: cv.metadata?.lastModified || cv.updatedAt,
+        viewCount: cv.metadata?.viewCount || 0,
+        downloadCount: cv.metadata?.downloadCount || 0,
+        createdAt: cv.createdAt,
+        updatedAt: cv.updatedAt,
+        ...(projection === 'full' && {
+          cvData: cv.cvData,
+          templateId: cv.templateId,
+          templateName: cv.templateName,
+          styling: cv.styling,
+          metadata: cv.metadata
+        })
+      };
+    });
 
     return NextResponse.json({
       success: true,
@@ -223,176 +223,64 @@ export async function POST(request: NextRequest) {
     // Check authentication
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
+      console.log('❌ CV POST API - No session found');
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
       );
     }
 
-    // Connect to database
     await connectDB();
-    console.log('✅ Database connected for CV creation');
+    console.log('🚀 CV POST API - Database connected');
+
+    // Extract user identifier from request and session
+    const userIdentifier = extractUserIdentifier(request, session);
     
+    if (!userIdentifier.id || !userIdentifier.type) {
+      console.log('❌ CV POST API - No valid user identifier found');
+      return NextResponse.json(
+        { success: false, error: 'User identification failed' },
+        { status: 401 }
+      );
+    }
+    
+    console.log('🔍 CV POST API - User identifier:', userIdentifier);
+
     const body = await request.json();
-    console.log('📄 Request body received:', JSON.stringify(body, null, 2));
-    
-    const { 
-      userId, 
+    console.log('🚀 CV POST API - Request body received');
+
+    // Extract CV data from request
+    const {
       title, 
-      cvData,
-      jobId,
       templateId,
-      type = 'cv',
-      isMaster = false,
-      duplicateFromId
+      templateName,
+      templateData, 
+      cvData, 
+      status, 
+      isMaster,
+      styling,
+      metadata
     } = body;
 
-    console.log('🔍 Parsed data:', { userId, title, hasData: !!cvData, type, isMaster, duplicateFromId });
-
-    if (!userId || !title) {
-      console.log('❌ Missing required fields:', { userId: !!userId, title: !!title });
+    // Validate required fields
+    if (!title || !cvData) {
+      console.log('❌ CV POST API - Missing required fields');
       return NextResponse.json(
-        {
-          success: false,
-          message: 'User ID and title are required',
-          debug: { userId: !!userId, title: !!title }
-        },
+        { success: false, error: 'Title and CV data are required' },
         { status: 400 }
       );
     }
 
-    // Convert userId to ObjectId if it's a string
-    let objectIdUserId;
-    try {
-      console.log('🔍 Attempting to convert userId:', userId, 'Type:', typeof userId);
-      objectIdUserId = new mongoose.Types.ObjectId(userId);
-      console.log('✅ Converted userId to ObjectId:', objectIdUserId);
-      console.log('✅ ObjectId string representation:', objectIdUserId.toString());
-    } catch (error: any) {
-      console.error('❌ Invalid userId format:', userId);
-      console.error('❌ Error details:', error.message);
-      return NextResponse.json(
-        {
-          success: false,
-          message: 'Invalid user ID format',
-          debug: { userId, error: error.message }
-        },
-        { status: 400 }
-      );
-    }
-
-    // Handle CV duplication
-    let sourceCvData = null;
-    if (duplicateFromId) {
-      try {
-        const sourceCV = await CV.findOne({ _id: duplicateFromId, userId: objectIdUserId });
-        if (sourceCV) {
-          sourceCvData = sourceCV.cvData;
-          console.log('✅ Found source CV for duplication:', duplicateFromId);
-        } else {
-          console.log('❌ Source CV not found for duplication:', duplicateFromId);
-        }
-      } catch (error: any) {
-        console.error('❌ Error finding source CV:', error);
-      }
-    }
-
-    // Validate and sanitize CV data
-    const sanitizeCvData = (data: any) => {
-      if (!data) return null;
-      
-      const sanitizeString = (str: any): string => {
-        if (typeof str !== 'string') return '';
-        return str.trim().substring(0, 1000);
-      };
-      
-      const sanitizeArray = (arr: any[]): any[] => {
-        if (!Array.isArray(arr)) return [];
-        return arr.filter(item => item !== null && item !== undefined);
-      };
-      
-      return {
-        basics: {
-          name: sanitizeString(data.basics?.name) || "Your Name",
-          label: sanitizeString(data.basics?.label) || "Professional Title",
-          image: sanitizeString(data.basics?.image) || "",
-          email: sanitizeString(data.basics?.email) || "your.email@example.com",
-          phone: sanitizeString(data.basics?.phone) || "",
-          url: sanitizeString(data.basics?.url) || "",
-          summary: sanitizeString(data.basics?.summary) || "A passionate professional with experience in...",
-          location: {
-            address: sanitizeString(data.basics?.location?.address) || "",
-            postalCode: sanitizeString(data.basics?.location?.postalCode) || "",
-            city: sanitizeString(data.basics?.location?.city) || "",
-            countryCode: sanitizeString(data.basics?.location?.countryCode) || "",
-            region: sanitizeString(data.basics?.location?.region) || ""
-          },
-          profiles: sanitizeArray(data.basics?.profiles || [])
-        },
-        work: sanitizeArray(data.work || []),
-        volunteer: sanitizeArray(data.volunteer || []),
-        education: sanitizeArray(data.education || []),
-        awards: sanitizeArray(data.awards || []),
-        certificates: sanitizeArray(data.certificates || []),
-        publications: sanitizeArray(data.publications || []),
-        skills: sanitizeArray(data.skills || []),
-        languages: sanitizeArray(data.languages || []),
-        interests: sanitizeArray(data.interests || []),
-        references: sanitizeArray(data.references || []),
-        projects: sanitizeArray(data.projects || [])
-      };
-    };
-
-    // Use source CV data if duplicating, otherwise use provided data or defaults
-    const defaultCvData = sanitizeCvData(sourceCvData || cvData) || {
-      basics: {
-        name: "Your Name",
-        label: "Professional Title",
-        image: "",
-        email: "your.email@example.com",
-        phone: "",
-        url: "",
-        summary: "A passionate professional with experience in...",
-        location: {
-          address: "",
-          postalCode: "",
-          city: "",
-          countryCode: "",
-          region: ""
-        },
-        profiles: []
-      },
-      work: [],
-      volunteer: [],
-      education: [],
-      awards: [],
-      certificates: [],
-      publications: [],
-      skills: [],
-      languages: [],
-      interests: [],
-      references: [],
-      projects: []
-    };
-
-    // Create CV with new universal structure
-    console.log('📝 Creating CV with data:', { 
-      userId: objectIdUserId, 
-      title: title.trim(), 
-      hasData: !!defaultCvData,
-      type 
-    });
-    
-    const cv = new CV({
-      userId: objectIdUserId,
-      title: title.trim(),
-      cvData: defaultCvData,
-      status: 'draft',
-      version: 1,
-      isMaster: isMaster,
+    // Prepare CV data for creation
+    const cvDataToCreate = {
+      title,
       templateId,
-      jobId, // Link to job if provided
-      styling: {
+      templateName,
+      templateData,
+      cvData,
+      status: status || 'draft',
+      isMaster: isMaster || false,
+      styling: styling || {
         primaryColor: '#84cc16',
         secondaryColor: '#22c55e',
         fontFamily: 'Inter',
@@ -401,65 +289,71 @@ export async function POST(request: NextRequest) {
       },
       metadata: {
         lastModified: new Date(),
-        tags: [],
-        isPublic: false,
+        tags: metadata?.tags || [],
+        isPublic: metadata?.isPublic || false,
         viewCount: 0,
         downloadCount: 0,
-        type: type, // 'cv' or 'cover_letter'
-        starred: false,
-        createdFrom: duplicateFromId ? new mongoose.Types.ObjectId(duplicateFromId) : undefined
+        starred: metadata?.starred || false,
+        ...metadata
       }
+    };
+
+    console.log('🚀 CV POST API - CV data prepared:', {
+      title, 
+      status: cvDataToCreate.status,
+      isMaster: cvDataToCreate.isMaster,
+      userIdentifier
     });
 
-    console.log('💾 Saving CV to database...');
-    await cv.save();
-    console.log('✅ CV saved successfully!');
-
-    const cvResponse = cv.toJSON();
-
-    // Note: CV-to-Journey linking is now handled by ApplicationPackageService
-    // CVs are created as freestanding documents and linked to journeys separately
-    // This enforces the "Application Package" model where documents belong to specific packages
-
-    // Log activity
-    try {
-      const { ActivityService } = await import('@/lib/services/activityService');
-      await ActivityService.logCVCreated(objectIdUserId.toString(), cvResponse.id, title);
-    } catch (activityError) {
-      console.error('Failed to log CV creation activity:', activityError);
+    // Create new CV using the helper function
+    let userId: string | mongoose.Types.ObjectId;
+    let firebaseUid: string;
+    
+    if (userIdentifier.type === 'firebase') {
+      userId = new mongoose.Types.ObjectId().toString(); // Generate new ObjectId for userId
+      firebaseUid = userIdentifier.id;
+    } else {
+      userId = new mongoose.Types.ObjectId(userIdentifier.id);
+      firebaseUid = ''; // Empty string for non-Firebase users
     }
+
+    const newCV = await createWithFirebaseUid(
+      CV,
+      cvDataToCreate,
+      userId,
+      firebaseUid
+    );
+
+    console.log('✅ CV POST API - CV saved successfully:', {
+      id: newCV._id,
+      userId: newCV.userId,
+      firebaseUid: newCV.firebaseUid,
+      title: newCV.title
+    });
 
     return NextResponse.json({
       success: true,
-      message: 'CV created successfully',
-      data: {
-        cv: cvResponse
+      cv: {
+        id: newCV._id,
+        title: newCV.title,
+        status: newCV.status,
+        createdAt: newCV.createdAt,
+        updatedAt: newCV.updatedAt
       }
     }, { status: 201 });
 
   } catch (error: any) {
-    console.error('Create CV error:', error);
+    console.error('❌ CV POST API - Error creating CV:', error);
     
-    // Handle Mongoose validation errors specifically
-    if (error.name === 'ValidationError') {
-      const validationErrors = Object.values(error.errors).map((err: any) => ({
-        field: err.path,
-        message: err.message,
-        value: err.value
-      }));
-      
-      console.error('Validation errors:', validationErrors);
-      
-      return NextResponse.json({
-        success: false,
-        message: 'CV data validation failed',
-        errors: validationErrors,
-        statusCode: 400
-      }, { status: 400 });
+    if (error.code === 11000) {
+      // Duplicate key error
+      return NextResponse.json(
+        { success: false, error: 'A CV with this title already exists' },
+        { status: 409 }
+      );
     }
     
     const errorResponse = createErrorResponse(error);
-    
     return NextResponse.json(
       errorResponse,
       { status: errorResponse.statusCode || 500 }

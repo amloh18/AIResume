@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/database';
-import { User, Invoice } from '@/models';
+import { User } from '@/models';
+import { getAdminInvoice } from '@/models/admin-models';
 
 export async function GET(request: NextRequest) {
   try {
@@ -39,6 +40,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch invoices with pagination
+    const Invoice = await getAdminInvoice();
     const invoices = await Invoice.find(query)
       .sort({ createdAt: -1 })
       .limit(limit)
