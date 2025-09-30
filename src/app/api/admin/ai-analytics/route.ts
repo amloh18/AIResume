@@ -4,6 +4,16 @@ import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/database';
 import AIUsageLog from '@/models/AIUsageLog';
 
+// Add error handling for Firebase imports
+let admin;
+try {
+  const firebaseAdmin = require('@/lib/firebase-admin');
+  admin = firebaseAdmin.default;
+} catch (error) {
+  console.warn('⚠️ Firebase Admin not available:', error);
+  admin = null;
+}
+
 export async function GET(request: NextRequest) {
   try {
     // Check authentication and admin role

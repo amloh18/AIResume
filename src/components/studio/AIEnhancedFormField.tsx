@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { useUserPlan } from '@/lib/hooks/useUserPlan';
 import { AIAssistantService } from '@/lib/services/aiAssistantService';
-import { CVDataStructure } from '@/types/cv';
+import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { Job } from '@/lib/stores/jobStore';
 import ProfessionalTextField from '@/components/ui/ProfessionalTextField';
 
@@ -28,7 +28,7 @@ interface AIEnhancedFormFieldProps {
   rows?: number;
   className?: string;
   fieldType?: 'summary' | 'description' | 'highlights' | 'achievements' | 'skills' | 'projects' | 'position' | 'company' | 'education' | 'certificates';
-  cvData?: CVDataStructure | null;
+  cvData?: UnifiedCVDataStructure | null;
   jobData?: Job | null;
   disabled?: boolean;
   required?: boolean;

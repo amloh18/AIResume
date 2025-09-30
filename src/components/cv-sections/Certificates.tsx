@@ -1,13 +1,13 @@
 import React from 'react';
 import { Calendar, ExternalLink, Award, AlertTriangle } from 'lucide-react';
-import { CVDataStructure } from '@/types/cv';
+import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ISectionBlueprint, ITemplate } from '@/models/Template';
 
 interface CertificatesProps {
-  data: CVDataStructure['certificates'];
+  data: UnifiedCVDataStructure['certificates'];
   sectionConfig: ISectionBlueprint;
   template: ITemplate;
-  cvData: CVDataStructure;
+  cvData: UnifiedCVDataStructure;
 }
 
 const Certificates: React.FC<CertificatesProps> = ({ 

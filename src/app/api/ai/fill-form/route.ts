@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { CVDataStructure } from '@/types/cv';
+import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
 
 interface FormFillRequest {
-  cvData: CVDataStructure;
+  cvData: UnifiedCVDataStructure;
   jobData: any;
   section: 'basics' | 'work' | 'skills' | 'summary' | 'all';
 }
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     const keywords = extractKeywords(jobDescription);
     const requirements = extractRequirements(jobDescription);
 
-    let filledData: Partial<CVDataStructure> = {};
+    let filledData: Partial<UnifiedCVDataStructure> = {};
 
     switch (section) {
       case 'basics':
@@ -107,7 +107,7 @@ function extractRequirements(jobDescription: string): string[] {
   return requirements;
 }
 
-function fillBasics(cvData: CVDataStructure, jobData: any, keywords: string[]): Partial<CVDataStructure> {
+function fillBasics(cvData: UnifiedCVDataStructure, jobData: any, keywords: string[]): Partial<UnifiedCVDataStructure> {
   const jobTitle = jobData.title || jobData.jobTitle || '';
   const companyName = jobData.company || jobData.companyName || '';
   
@@ -127,7 +127,7 @@ function fillBasics(cvData: CVDataStructure, jobData: any, keywords: string[]): 
   return { basics };
 }
 
-function fillSummary(cvData: CVDataStructure, jobData: any, keywords: string[], requirements: string[]): Partial<CVDataStructure> {
+function fillSummary(cvData: UnifiedCVDataStructure, jobData: any, keywords: string[], requirements: string[]): Partial<UnifiedCVDataStructure> {
   const jobTitle = jobData.title || jobData.jobTitle || '';
   const companyName = jobData.company || jobData.companyName || '';
   
@@ -149,7 +149,7 @@ function fillSummary(cvData: CVDataStructure, jobData: any, keywords: string[], 
   };
 }
 
-function fillSkills(cvData: CVDataStructure, keywords: string[]): Partial<CVDataStructure> {
+function fillSkills(cvData: UnifiedCVDataStructure, keywords: string[]): Partial<UnifiedCVDataStructure> {
   let skills = [...(cvData.skills || [])];
 
   // Add missing keywords as skills
@@ -170,7 +170,7 @@ function fillSkills(cvData: CVDataStructure, keywords: string[]): Partial<CVData
   return { skills };
 }
 
-function fillWorkExperience(cvData: CVDataStructure, jobData: any, keywords: string[]): Partial<CVDataStructure> {
+function fillWorkExperience(cvData: UnifiedCVDataStructure, jobData: any, keywords: string[]): Partial<UnifiedCVDataStructure> {
   let work = [...(cvData.work || [])];
 
   // Enhance existing work experience with keywords
@@ -336,7 +336,7 @@ function getSkillCategory(keyword: string): string {
   }
 }
 
-function generateFormFillSuggestions(filledData: Partial<CVDataStructure>, keywords: string[]): string[] {
+function generateFormFillSuggestions(filledData: Partial<UnifiedCVDataStructure>, keywords: string[]): string[] {
   const suggestions: string[] = [];
   
   // Check if summary was enhanced

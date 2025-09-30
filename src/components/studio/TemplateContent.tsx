@@ -3,13 +3,13 @@
 import React from 'react';
 import TemplateSelector from './TemplateSelector';
 import { ITemplate } from '@/models/Template';
-import { CVDataStructure } from '@/types/cv';
+import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
 
 interface TemplateContentProps {
   selectedTemplate?: ITemplate | null;
   onTemplateSelect?: (template: ITemplate) => void;
   onTemplatePreview?: (template: ITemplate) => void;
-  cvData?: CVDataStructure | null;
+  cvData?: UnifiedCVDataStructure | null;
 }
 
 const TemplateContent: React.FC<TemplateContentProps> = ({

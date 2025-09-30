@@ -150,73 +150,73 @@ const ProfessionalTextField: React.FC<ProfessionalTextFieldProps> = ({
           <div className="flex items-center gap-1">
             <motion.button
               onClick={() => applyFormatting('bold')}
-              className={`p-1.5 ${themeClasses.background.hover} rounded-lg transition-colors`}
+              className={`p-2 hover:bg-lime-100 dark:hover:bg-lime-900/30 rounded-lg transition-colors text-lime-600`}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               title="Bold"
               disabled={disabled}
             >
-              <Bold className="w-3 h-3" />
+              <Bold className="w-5 h-5" />
             </motion.button>
             <motion.button
               onClick={() => applyFormatting('italic')}
-              className={`p-1.5 ${themeClasses.background.hover} rounded-lg transition-colors`}
+              className={`p-2 hover:bg-lime-100 dark:hover:bg-lime-900/30 rounded-lg transition-colors text-lime-600`}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               title="Italic"
               disabled={disabled}
             >
-              <Italic className="w-3 h-3" />
+              <Italic className="w-5 h-5" />
             </motion.button>
             <motion.button
               onClick={() => applyFormatting('bullet')}
-              className={`p-1.5 ${themeClasses.background.hover} rounded-lg transition-colors`}
+              className={`p-2 hover:bg-lime-100 dark:hover:bg-lime-900/30 rounded-lg transition-colors text-lime-600`}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               title="Bullet List"
               disabled={disabled}
             >
-              <List className="w-3 h-3" />
+              <List className="w-5 h-5" />
             </motion.button>
             <motion.button
               onClick={() => applyFormatting('number')}
-              className={`p-1.5 ${themeClasses.background.hover} rounded-lg transition-colors`}
+              className={`p-2 hover:bg-lime-100 dark:hover:bg-lime-900/30 rounded-lg transition-colors text-lime-600`}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               title="Numbered List"
               disabled={disabled}
             >
-              <Hash className="w-3 h-3" />
+              <Hash className="w-5 h-5" />
             </motion.button>
           </div>
           <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-2" />
           <div className="flex items-center gap-1">
             <motion.button
-              className={`p-1.5 ${themeClasses.background.hover} rounded-lg transition-colors`}
+              className={`p-2 hover:bg-lime-100 dark:hover:bg-lime-900/30 rounded-lg transition-colors text-lime-600`}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               title="Align Left"
               disabled={disabled}
             >
-              <AlignLeft className="w-3 h-3" />
+              <AlignLeft className="w-5 h-5" />
             </motion.button>
             <motion.button
-              className={`p-1.5 ${themeClasses.background.hover} rounded-lg transition-colors`}
+              className={`p-2 hover:bg-lime-100 dark:hover:bg-lime-900/30 rounded-lg transition-colors text-lime-600`}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               title="Align Center"
               disabled={disabled}
             >
-              <AlignCenter className="w-3 h-3" />
+              <AlignCenter className="w-5 h-5" />
             </motion.button>
             <motion.button
-              className={`p-1.5 ${themeClasses.background.hover} rounded-lg transition-colors`}
+              className={`p-2 hover:bg-lime-100 dark:hover:bg-lime-900/30 rounded-lg transition-colors text-lime-600`}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               title="Align Right"
               disabled={disabled}
             >
-              <AlignRight className="w-3 h-3" />
+              <AlignRight className="w-5 h-5" />
             </motion.button>
           </div>
         </div>

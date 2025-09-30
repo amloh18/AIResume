@@ -3,8 +3,9 @@ import bcrypt from 'bcryptjs';
 
 export interface IUser extends Document {
   // SINGLE SOURCE OF TRUTH: Authentication linking
-  authProviderId: string; // The unique string ID from Firebase/NextAuth/Clerk
-  authProvider: 'firebase' | 'nextauth' | 'clerk' | 'google' | 'local';
+  authProviderId: string; // The unique string ID from NextAuth
+  authProvider: 'nextauth' | 'local';
+  firebaseUid?: string; // Firebase UID for linking with Firebase users
   
   // Core user information
   email: string;
@@ -88,16 +89,26 @@ const userSchema = new Schema<IUser>({
   // CRITICAL: Single source of truth for user authentication
   authProviderId: {
     type: String,
-    required: [true, 'Auth provider ID is required'],
+    required: false, // Make optional for NextAuth compatibility
     unique: true,
+    sparse: true, // Allow multiple null values
     trim: true,
     index: true // Primary index for fast lookups
   },
   authProvider: {
     type: String,
-    enum: ['firebase', 'nextauth', 'clerk', 'google', 'local'],
-    required: [true, 'Auth provider is required'],
+    enum: ['nextauth', 'local'],
+    required: false, // Make optional for NextAuth compatibility
+    default: 'nextauth',
     index: true
+  },
+  firebaseUid: {
+    type: String,
+    required: false,
+    unique: true,
+    sparse: true, // Allow multiple null values
+    trim: true,
+    index: true // Index for Firebase UID lookups
   },
   
   email: {
@@ -105,8 +116,7 @@ const userSchema = new Schema<IUser>({
     required: [true, 'Email is required'],
     unique: true,
     lowercase: true,
-    trim: true,
-    index: true
+    trim: true
   },
   password: {
     type: String,
@@ -346,18 +356,51 @@ const userSchema = new Schema<IUser>({
 // Validate authentication method
 userSchema.pre('save', async function(next) {
   try {
-    // Validate that user has proper authentication setup
-    const hasPassword = !!this.password;
-    const hasAuthProvider = !!this.authProviderId && !!this.authProvider;
-    
-    if (!hasPassword && !hasAuthProvider) {
-      return next(new Error('User must have either password or external auth provider'));
-    }
-    
     // Hash password if it exists and is modified
     if (this.isModified('password') && this.password) {
       const salt = await bcrypt.genSalt(12);
       this.password = await bcrypt.hash(this.password, salt);
+    }
+    
+    // Set default authProvider for NextAuth users
+    if (!this.authProvider) {
+      this.authProvider = 'nextauth';
+    }
+    
+    // Set default values for required fields
+    if (!this.usage) {
+      this.usage = {
+        cvJourneyCount: 0,
+        cvCreatedCount: 0,
+        journeysCreated: 0,
+        exportCount: 0,
+        atsCheckCount: 0,
+        lastResetDate: new Date(),
+      };
+    }
+    
+    if (!this.subscription) {
+      this.subscription = {
+        planKey: 'free',
+        status: 'inactive',
+        startDate: new Date(),
+        provider: 'stripe',
+        interval: 'monthly',
+        seats: 3,
+        storageUsed: 0,
+      };
+    }
+    
+    if (!this.settings) {
+      this.settings = {
+        theme: 'auto',
+        notifications: {
+          email: true,
+          push: true,
+        },
+        timezone: 'UTC',
+        languagePreference: 'en',
+      };
     }
     
     next();
@@ -373,9 +416,9 @@ userSchema.methods.comparePassword = async function(candidatePassword: string): 
 };
 
 // Critical indexes for performance
-userSchema.index({ authProviderId: 1 }, { unique: true });
-userSchema.index({ email: 1 }, { unique: true });
+// Note: authProviderId, email, and firebaseUid indexes are already defined in field definitions above
 userSchema.index({ authProvider: 1, authProviderId: 1 });
 userSchema.index({ 'subscription.status': 1 });
+userSchema.index({ email: 1, authProvider: 1 }); // For NextAuth lookups
 
 export default mongoose.models.User || mongoose.model<IUser>('User', userSchema);

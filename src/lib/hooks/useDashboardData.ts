@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { CVService } from '@/lib/services/cvService';
+import { UnifiedCVService } from '@/lib/services/unified-cv-service';
 import { JobService } from '@/lib/services/jobService';
 import { ActivityService } from '@/lib/services/activityService';
 import { CVAnalyticsService } from '@/lib/services/cvAnalyticsService';
@@ -113,8 +113,8 @@ export function useDashboardData(userId: string, selectedPeriod: string = 'week'
       setData(prev => ({ ...prev, loading: { ...prev.loading, drafts: true } }));
       
       const [cvs, coverLetters] = await Promise.all([
-        CVService.getCVs({ userId, status: 'draft', type: 'cv', sort: 'updatedAt', limit: 2, projection: 'list' }),
-        CVService.getCVs({ userId, status: 'draft', type: 'cover', sort: 'updatedAt', limit: 2, projection: 'list' })
+        UnifiedCVService.getCVs(userId, { status: 'draft', projection: 'summary' }),
+        UnifiedCVService.getCVs(userId, { status: 'draft', projection: 'summary' })
       ]);
 
       const calculateProgress = (cv: any) => {
@@ -131,7 +131,7 @@ export function useDashboardData(userId: string, selectedPeriod: string = 'week'
         return score;
       };
 
-      const draftCVs = cvs.cvs.map(cv => ({
+      const draftCVs = cvs.map(cv => ({
         id: cv.id,
         type: 'cv' as const,
         title: cv.title,
@@ -139,7 +139,7 @@ export function useDashboardData(userId: string, selectedPeriod: string = 'week'
         lastEdited: new Date(cv.updatedAt)
       }));
 
-      const draftCoverLetters = coverLetters.cvs.map(cv => ({
+      const draftCoverLetters = coverLetters.map(cv => ({
         id: cv.id,
         type: 'cover_letter' as const,
         title: cv.title,
@@ -168,14 +168,14 @@ export function useDashboardData(userId: string, selectedPeriod: string = 'week'
       
       const [jobCounts, cvCounts, coverLetterCounts] = await Promise.all([
         JobService.getJobCounts(userId, selectedPeriod),
-        CVService.getCVCounts(userId),
-        CVService.getCVs({ userId, type: 'cover', projection: 'list' })
+        UnifiedCVService.getCVs(userId, { projection: 'summary' }),
+        UnifiedCVService.getCVs(userId, { projection: 'summary' })
       ]);
 
       const kpis = {
         totalJobs: jobCounts.total,
-        cvsCreated: cvCounts.total,
-        coverLettersCreated: coverLetterCounts.total,
+        cvsCreated: cvCounts.length,
+        coverLettersCreated: coverLetterCounts.length,
         applicationsSubmitted: jobCounts.applied,
         interviewsScheduled: jobCounts.interview
       };
@@ -243,15 +243,15 @@ export function useDashboardData(userId: string, selectedPeriod: string = 'week'
       setData(prev => ({ ...prev, loading: { ...prev.loading, aiData: true } }));
       
       const [cvCounts, jobCounts, coverLetterCounts] = await Promise.all([
-        CVService.getCVCounts(userId),
+        UnifiedCVService.getCVs(userId, { projection: 'summary' }),
         JobService.getJobCounts(userId, 'week'),
-        CVService.getCVs({ userId, type: 'cover', projection: 'list' })
+        UnifiedCVService.getCVs(userId, { projection: 'summary' })
       ]);
 
       // Calculate AI metrics
       const metrics = {
-        cvsPerJob: jobCounts.total > 0 ? (cvCounts.total / jobCounts.total).toFixed(1) : '0',
-        coverLetterCoverage: jobCounts.total > 0 ? Math.round((coverLetterCounts.total / jobCounts.total) * 100) : 0,
+        cvsPerJob: jobCounts.total > 0 ? (cvCounts.length / jobCounts.total).toFixed(1) : '0',
+        coverLetterCoverage: jobCounts.total > 0 ? Math.round((coverLetterCounts.length / jobCounts.total) * 100) : 0,
         jobsThisWeek: jobCounts.total
       };
 
@@ -262,7 +262,7 @@ export function useDashboardData(userId: string, selectedPeriod: string = 'week'
 
       // Generate job tips
       const jobTips = [];
-      if (cvCounts.total === 0) {
+      if (cvCounts.length === 0) {
         jobTips.push({ tip: 'Create your first CV to get started', source: 'CV Circle' });
       } else if (jobCounts.total === 0) {
         jobTips.push({ tip: 'Start tracking job applications', source: 'CV Circle' });
@@ -271,7 +271,7 @@ export function useDashboardData(userId: string, selectedPeriod: string = 'week'
       }
 
       // Get keywords analysis from latest CV
-      const latestCVs = await CVService.getRecentCVs(userId, 1);
+      const latestCVs = await UnifiedCVService.getCVs(userId, { projection: 'summary' });
       let strengths: string[] = [];
       let gaps: string[] = [];
       
@@ -299,9 +299,9 @@ export function useDashboardData(userId: string, selectedPeriod: string = 'week'
   const loadVaultCounts = useCallback(async () => {
     try {
       const [cvCounts, jobCounts, coverLetterCounts, allJobs] = await Promise.all([
-        CVService.getCVCounts(userId),
+        UnifiedCVService.getCVs(userId, { projection: 'summary' }),
         JobService.getJobCounts(userId, 'all'),
-        CVService.getCVs({ userId, type: 'cover', projection: 'list' }),
+        UnifiedCVService.getCVs(userId, { projection: 'summary' }),
         JobService.getJobs({ userId, status: 'all' })
       ]);
 
@@ -311,10 +311,10 @@ export function useDashboardData(userId: string, selectedPeriod: string = 'week'
       setData(prev => ({
         ...prev,
         vaultCounts: {
-          cvs: cvCounts.total,
-          coverLetters: coverLetterCounts.total,
+          cvs: cvCounts.length,
+          coverLetters: coverLetterCounts.length,
           jobDescriptions: nonRejectedJobs.length,
-          notes: Math.floor((cvCounts.total + nonRejectedJobs.length + coverLetterCounts.total) * 0.3)
+          notes: Math.floor((cvCounts.length + nonRejectedJobs.length + coverLetterCounts.length) * 0.3)
         }
       }));
     } catch (error) {
@@ -324,7 +324,7 @@ export function useDashboardData(userId: string, selectedPeriod: string = 'week'
 
   const loadCVHealthScore = useCallback(async () => {
     try {
-      const latestCVs = await CVService.getRecentCVs(userId, 1);
+      const latestCVs = await UnifiedCVService.getCVs(userId, { projection: 'summary' });
       if (latestCVs.length > 0) {
         try {
           const healthMetrics = await CVAnalyticsService.calculateHealthScore(latestCVs[0].id);

@@ -1,4 +1,4 @@
-import { CVDataStructure } from '@/types/cv';
+import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { AISuggestion } from '@/lib/stores/aiStore';
 
 export interface SuggestionApplicationResult {
@@ -13,7 +13,7 @@ export class AISuggestionApplier {
    */
   static applySuggestion(
     suggestion: AISuggestion, 
-    cvData: CVDataStructure, 
+    cvData: UnifiedCVDataStructure, 
     onUpdateField: (path: string, value: any) => void
   ): SuggestionApplicationResult {
     try {
@@ -83,7 +83,7 @@ export class AISuggestionApplier {
    */
   private static applySkillsSuggestion(
     suggestion: AISuggestion,
-    cvData: CVDataStructure,
+    cvData: UnifiedCVDataStructure,
     onUpdateField: (path: string, value: any) => void,
     updatedFields: string[]
   ) {
@@ -137,7 +137,7 @@ export class AISuggestionApplier {
    */
   private static applyExperienceSuggestion(
     suggestion: AISuggestion,
-    cvData: CVDataStructure,
+    cvData: UnifiedCVDataStructure,
     onUpdateField: (path: string, value: any) => void,
     updatedFields: string[]
   ) {
@@ -162,7 +162,7 @@ export class AISuggestionApplier {
    */
   private static applyWorkSuggestion(
     suggestion: AISuggestion,
-    cvData: CVDataStructure,
+    cvData: UnifiedCVDataStructure,
     onUpdateField: (path: string, value: any) => void,
     updatedFields: string[]
   ) {
@@ -186,7 +186,7 @@ export class AISuggestionApplier {
    */
   private static applyContentSuggestion(
     suggestion: AISuggestion,
-    cvData: CVDataStructure,
+    cvData: UnifiedCVDataStructure,
     onUpdateField: (path: string, value: any) => void,
     updatedFields: string[]
   ) {
@@ -202,7 +202,7 @@ export class AISuggestionApplier {
    */
   private static applyAchievementSuggestion(
     suggestion: AISuggestion,
-    cvData: CVDataStructure,
+    cvData: UnifiedCVDataStructure,
     onUpdateField: (path: string, value: any) => void,
     updatedFields: string[]
   ) {

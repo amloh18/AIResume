@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import LoadingAnimation from '@/components/ui/LoadingAnimation';
+import MinimalLoading from '@/components/ui/MinimalLoading';
 
 interface LoadingContextType {
   isLoading: boolean;
@@ -29,6 +30,9 @@ export const LoadingProvider: React.FC<{ children: React.ReactNode }> = React.me
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const pathname = usePathname();
+  
+  // Check if current route is a dashboard route
+  const isDashboardRoute = pathname.startsWith('/dashboard');
 
   // Optimized loading handler with useCallback
   const handleRouteChange = useCallback(() => {
@@ -60,8 +64,14 @@ export const LoadingProvider: React.FC<{ children: React.ReactNode }> = React.me
 
   // Handle route changes with optimized loading
   useEffect(() => {
-    handleRouteChange();
-  }, [pathname, handleRouteChange]);
+    // Don't show loading animation for dashboard routes - pages handle their own loading states
+    if (isDashboardRoute) {
+      // No loading animation for dashboard routes
+      return;
+    } else {
+      handleRouteChange();
+    }
+  }, [pathname, handleRouteChange, isDashboardRoute]);
 
   // Optimized setLoading function
   const setLoading = useCallback((loading: boolean) => {
@@ -91,7 +101,11 @@ export const LoadingProvider: React.FC<{ children: React.ReactNode }> = React.me
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }} // Faster transition
           >
-            <MemoizedLoadingAnimation progress={progress} showProgressBar={false} />
+            {isDashboardRoute ? (
+              <MinimalLoading />
+            ) : (
+              <MemoizedLoadingAnimation progress={progress} showProgressBar={false} />
+            )}
           </motion.div>
         )}
       </AnimatePresence>

@@ -1,8 +1,8 @@
-import { CVDataStructure } from '@/types/cv';
+import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { Template } from '@/lib/stores/templateStore';
 
 export class PDFService {
-  static async generatePDF(cvData: CVDataStructure, template: Template): Promise<Blob> {
+  static async generatePDF(cvData: UnifiedCVDataStructure, template: Template): Promise<Blob> {
     // For now, we'll create a simple PDF using jsPDF
     // In a real implementation, you would use @react-pdf/renderer
     

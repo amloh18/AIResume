@@ -42,38 +42,42 @@ export async function GET(
     }
 
     console.log('🔍 CV GET API - User identifier:', userIdentifier);
+    console.log('🔍 CV GET API - CV ID from params:', id);
 
     const cvId = toObjectId(id);
+    console.log('🔍 CV GET API - Converted CV ID:', cvId);
     
     // Build query based on user identifier type
     let query: Record<string, any> = { _id: cvId };
     
     if (userIdentifier.type === 'firebase') {
       query.firebaseUid = userIdentifier.id;
+      console.log('🔍 CV GET API - Using Firebase UID query:', userIdentifier.id);
     } else {
       query.userId = new mongoose.Types.ObjectId(userIdentifier.id);
+      console.log('🔍 CV GET API - Using MongoDB ObjectId query:', userIdentifier.id);
     }
     
-    console.log('🔍 CV GET API - Query:', query);
+    console.log('🔍 CV GET API - Final query:', query);
     
-    // Use utility function to get CV with template data
-    const cv = await getCVWithTemplate(id);
+    // First, find the CV with user ownership check
+    const cvDoc = await CV.findOne(query);
     
-    if (!cv) {
-      console.log('❌ CV GET API - CV not found');
+    if (!cvDoc) {
+      console.log('❌ CV GET API - CV not found for user');
       return NextResponse.json(
         { success: false, error: 'CV not found' },
         { status: 404 }
       );
     }
 
-    // Verify user owns the CV
-    const userOwnsCV = userIdentifier.type === 'firebase' 
-      ? cv.firebaseUid === userIdentifier.id
-      : cv.userId.toString() === userIdentifier.id;
-
-    if (!userOwnsCV) {
-      console.log('❌ CV GET API - User does not own CV');
+    console.log('✅ CV GET API - CV found, getting template data');
+    
+    // Use utility function to get CV with template data
+    const cv = await getCVWithTemplate(id);
+    
+    if (!cv) {
+      console.log('❌ CV GET API - CV not found after template fetch');
       return NextResponse.json(
         { success: false, error: 'CV not found' },
         { status: 404 }
@@ -96,7 +100,9 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      cv: cv
+      data: {
+        cv: cv
+      }
     });
 
   } catch (error: any) {

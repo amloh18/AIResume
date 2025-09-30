@@ -20,9 +20,14 @@ import {
   LogOut,
   Edit3,
   ZoomIn,
-  ZoomOut
+  ZoomOut,
+  FileText as FileTextIcon,
+  FileDown,
+  FileJson,
+  User,
+  ChevronDown
 } from 'lucide-react';
-import { CVDataStructure } from '@/types/cv';
+import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { Job } from '@/lib/stores/jobStore';
 import { useUserPlan } from '@/lib/hooks/useUserPlan';
 import { useJobStore } from '@/lib/stores/jobStore';
@@ -52,10 +57,10 @@ import { AIAssistantService } from '@/lib/services/aiAssistantService';
 import Toast from '@/components/ui/Toast';
 
 interface EnhancedStudioLayoutProps {
-  cvData: CVDataStructure | null;
+  cvData: UnifiedCVDataStructure | null;
   onUpdateField: (path: string, value: any) => void;
-  onAddSection: (sectionType: keyof CVDataStructure, item?: any) => void;
-  onRemoveSection: (sectionType: keyof CVDataStructure, id: string) => void;
+  onAddSection: (sectionType: keyof UnifiedCVDataStructure, item?: any) => void;
+  onRemoveSection: (sectionType: keyof UnifiedCVDataStructure, id: string) => void;
   template: any;
   jobData: Job | null;
   selectedJobId: string | null;
@@ -133,6 +138,24 @@ const EnhancedStudioLayout: React.FC<EnhancedStudioLayoutProps> = ({
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('success');
+
+  // Export menu state
+  const [showExportMenu, setShowExportMenu] = useState(false);
+
+  // Close export menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showExportMenu) {
+        const target = event.target as HTMLElement;
+        if (!target.closest('[data-export-menu]')) {
+          setShowExportMenu(false);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showExportMenu]);
 
   // AI state
   const [atsScore, setAtsScore] = useState<number | null>(null);
@@ -619,26 +642,123 @@ const EnhancedStudioLayout: React.FC<EnhancedStudioLayoutProps> = ({
                 </div>
               ) : saveStatus === 'saved' ? (
                 <div className="flex items-center space-x-1">
-                  <div className="w-3 h-3 bg-green-400 rounded-full" />
+                  <div className="w-3 h-3 bg-white rounded-full" />
                   <span>Saved</span>
+                </div>
+              ) : saveStatus === 'error' ? (
+                <div className="flex items-center space-x-1">
+                  <span className="text-red-200">Save Failed</span>
                 </div>
               ) : (
                 <span>Save</span>
               )}
             </button>
             
+            {/* Export Button with Horizontal Expansion */}
+            <div className="relative" data-export-menu>
+              <motion.div
+                className="flex items-center bg-lime-600 text-white rounded-lg overflow-hidden"
+                animate={{ 
+                  width: showExportMenu ? 280 : 100
+                }}
+                transition={{ duration: 0.3, ease: 'easeInOut' }}
+              >
+                <motion.button
+                  onClick={() => setShowExportMenu(!showExportMenu)}
+                  className="flex items-center gap-2 px-4 py-1.5 hover:bg-lime-700 transition-colors text-sm font-medium whitespace-nowrap"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Download className="h-4 w-4" />
+                  <span>Export</span>
+                  <motion.div
+                    animate={{ rotate: showExportMenu ? 180 : 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </motion.div>
+                </motion.button>
+                
+                <AnimatePresence>
+                  {showExportMenu && (
+                    <motion.div
+                      initial={{ width: 0, opacity: 0 }}
+                      animate={{ width: 'auto', opacity: 1 }}
+                      exit={{ width: 0, opacity: 0 }}
+                      transition={{ duration: 0.3, ease: 'easeInOut' }}
+                      className="flex items-center gap-1 px-2"
+                    >
+                      <div className="w-px h-6 bg-lime-400 mx-1"></div>
+                      <button
+                        onClick={() => {
+                          onExport('pdf');
+                          setShowExportMenu(false);
+                        }}
+                        className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-lime-700 rounded-md transition-colors whitespace-nowrap"
+                      >
+                        <FileTextIcon className="h-4 w-4" />
+                        PDF
+                      </button>
+                      <button
+                        onClick={() => {
+                          onExport('docx');
+                          setShowExportMenu(false);
+                        }}
+                        className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-lime-700 rounded-md transition-colors whitespace-nowrap"
+                      >
+                        <FileDown className="h-4 w-4" />
+                        DOCX
+                      </button>
+                      <button
+                        onClick={() => {
+                          onExport('json');
+                          setShowExportMenu(false);
+                        }}
+                        className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-lime-700 rounded-md transition-colors whitespace-nowrap"
+                      >
+                        <FileJson className="h-4 w-4" />
+                        JSON
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            </div>
             
-            <button className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors relative">
+            {/* Enhanced Notification Button */}
+            <motion.button 
+              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors relative"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
               <Bell className="h-5 w-5" />
-              <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></div>
-            </button>
+              <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+            </motion.button>
             
-            <button
+            {/* User Avatar */}
+            <div className="flex items-center gap-2">
+              <motion.div
+                className="w-8 h-8 bg-lime-100 rounded-full flex items-center justify-center border-2 border-lime-200"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <User className="h-4 w-4 text-lime-600" />
+              </motion.div>
+              <div className="hidden md:block">
+                <div className="text-sm font-medium text-gray-900 dark:text-white">User</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">Studio</div>
+              </div>
+            </div>
+            
+            {/* Logout Button */}
+            <motion.button
               onClick={handleLogout}
               className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
               <LogOut className="h-5 w-5" />
-            </button>
+            </motion.button>
           </div>
         </div>
       </div>
@@ -900,6 +1020,7 @@ const EnhancedStudioLayout: React.FC<EnhancedStudioLayoutProps> = ({
                     selectedTemplate={selectedTemplateItem}
                     onTemplateSelect={handleTemplateSelect}
                     onPreviewTemplate={handleTemplatePreview}
+                    cvData={cvData}
                   />
                 )}
               </div>

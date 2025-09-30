@@ -1,7 +1,6 @@
-import { CVService } from '@/lib/services/cvService';
+import { UnifiedCVService } from '@/lib/services/unified-cv-service';
+import { DEFAULT_UNIFIED_CV_DATA } from '@/types/unified-cv-schema';
 import { useRouter } from 'next/navigation';
-import { transformStudioToDatabase } from '@/lib/utils/cvDataTransform';
-import { CVDataStructure } from '@/types/cv';
 import { generateCVName } from '@/lib/utils/cvNamingUtils';
 
 export interface CreateCVOptions {
@@ -20,55 +19,18 @@ export const createCVAndNavigate = async (options: CreateCVOptions) => {
   } = options;
 
   try {
-    // Create default CV data structure in CVDataStructure format
-    const defaultCVData: CVDataStructure = {
-      basics: {
-        name: '',
-        label: '',
-        image: '',
-        email: '',
-        phone: '',
-        url: '',
-        summary: '',
-        location: {
-          address: '',
-          postalCode: '',
-          city: '',
-          countryCode: '',
-          region: ''
-        },
-        profiles: []
-      },
-      work: [],
-      volunteer: [],
-      education: [],
-      awards: [],
-      certificates: [],
-      publications: [],
-      skills: [],
-      languages: [],
-      interests: [],
-      references: [],
-      projects: []
-    };
-
     // Generate automatic title if not provided
-    const cvTitle = title || generateCVName(defaultCVData);
+    const cvTitle = title || generateCVName(DEFAULT_UNIFIED_CV_DATA);
     
-    // Create the CV in the database
-    console.log('🚀 Creating CV with data:', { userId, title: cvTitle, jobId, hasData: !!defaultCVData });
+    // Create the CV in the database using unified service
+    console.log('🚀 Creating CV with unified service:', { userId, title: cvTitle, jobId });
     
-    const newCV = await CVService.createCV({
-      ...defaultCVData,
-      userId,
-      title: cvTitle,
-      jobId
-    });
+    const newCV = await UnifiedCVService.createDefaultCV(cvTitle, userId, 'default-template-id');
 
     console.log('✅ CV creation response:', newCV);
 
     // Extract the CV ID from the response
-    const cvId = newCV.data?.cv?.id || newCV.data?.cv?._id || newCV.id || newCV._id;
+    const cvId = newCV.id;
     console.log('🔍 Extracted CV ID:', cvId);
 
     // Log the activity (lazy import to avoid client-side issues)

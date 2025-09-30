@@ -1,13 +1,13 @@
 import React from 'react';
 import { Calendar, MapPin, ExternalLink } from 'lucide-react';
-import { CVDataStructure } from '@/types/cv';
+import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ISectionBlueprint, ITemplate } from '@/models/Template';
 
 interface WorkExperienceProps {
-  data: CVDataStructure['work'];
+  data: UnifiedCVDataStructure['work'];
   sectionConfig: ISectionBlueprint;
   template: ITemplate;
-  cvData: CVDataStructure;
+  cvData: UnifiedCVDataStructure;
 }
 
 const WorkExperience: React.FC<WorkExperienceProps> = ({ 

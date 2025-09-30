@@ -3,9 +3,11 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Bell, Settings, User, Menu, X } from 'lucide-react';
-// import { useSession, signOut  } from 'next-auth/react'; // Removed - using Clerk now
 import { useRouter } from 'next/navigation';
 import { getTopBarClasses } from '@/lib/utils/themeUtils';
+import UserAvatar from '@/components/ui/UserAvatar';
+import { useUserData } from '@/lib/hooks/useUserData';
+import { useSession } from 'next-auth/react';
 
 interface TopBarProps {
   onMenuToggle?: () => void;
@@ -18,10 +20,10 @@ const TopBar: React.FC<TopBarProps> = ({
   isMenuOpen = false,
   showMenuButton = true
 }) => {
-  // const { data: session } = useSession(); // Removed - using Clerk now
-  const session = null; // Temporary - will replace with Clerk user
   const router = useRouter();
   const topBarClasses = getTopBarClasses();
+  const { data: session } = useSession();
+  const { userData } = useUserData();
 
   const handleProfileClick = () => {
     router.push('/dashboard/settings');
@@ -89,26 +91,20 @@ const TopBar: React.FC<TopBarProps> = ({
             <Settings size={18} />
           </motion.button>
 
-          {/* User Profile */}
-          <motion.button
-            onClick={handleProfileClick}
-            className={`${topBarClasses.button} flex items-center gap-2`}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            {session?.user?.image ? (
-              <img
-                src={session.user.image}
-                alt="Profile"
-                className="w-6 h-6 rounded-full"
-              />
-            ) : (
-              <User size={18} />
-            )}
-            <span className="hidden sm:block text-sm font-medium">
-              {session?.user?.firstName || session?.user?.name || 'User'}
-            </span>
-          </motion.button>
+          {/* User Avatar */}
+          <UserAvatar 
+            user={{
+              name: userData?.displayName || userData?.username || session?.user?.name || 'User',
+              email: userData?.email || session?.user?.email || '',
+              profilePhoto: userData?.profilePhoto || session?.user?.image,
+              isEmailVerified: userData?.isEmailVerified || false,
+              subscription: {
+                planName: userData?.subscription?.planName || 'Free Plan',
+                status: userData?.subscription?.status || 'active'
+              }
+            }}
+          />
+
         </div>
       </div>
     </div>

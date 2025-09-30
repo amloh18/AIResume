@@ -1,10 +1,10 @@
 import React from 'react';
-import { CVDataStructure } from '@/types/cv';
+import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ITemplate } from '@/models/Template';
 import { TemplateRenderer } from '@/lib/templates/template-renderer';
 
 interface EnhancedCVPreviewProps {
-  cvData: CVDataStructure | null;
+  cvData: UnifiedCVDataStructure | null;
   template: ITemplate | null;
   theme?: 'light' | 'dark';
   showBadge?: boolean;

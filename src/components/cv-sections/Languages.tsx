@@ -1,13 +1,13 @@
 import React from 'react';
 import { Globe, Star } from 'lucide-react';
-import { CVDataStructure } from '@/types/cv';
+import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ISectionBlueprint, ITemplate } from '@/models/Template';
 
 interface LanguagesProps {
-  data: CVDataStructure['languages'];
+  data: UnifiedCVDataStructure['languages'];
   sectionConfig: ISectionBlueprint;
   template: ITemplate;
-  cvData: CVDataStructure;
+  cvData: UnifiedCVDataStructure;
 }
 
 const Languages: React.FC<LanguagesProps> = ({ 

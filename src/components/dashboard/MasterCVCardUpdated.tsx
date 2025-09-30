@@ -29,13 +29,15 @@ interface MasterCVCardProps {
   onDuplicateMasterCV: (masterCV: MasterCV) => void;
   userId: string;
   onToggleStar?: (cvId: string) => void;
+  masterCVData?: MasterCV | null; // Optional prop to pass Master CV data
 }
 
 const MasterCVCardUpdated: React.FC<MasterCVCardProps> = ({
   onEditMasterCV,
   onDuplicateMasterCV,
   userId,
-  onToggleStar
+  onToggleStar,
+  masterCVData
 }) => {
   const { data: session } = useSession();
   const [masterCV, setMasterCV] = useState<MasterCV | null>(null);
@@ -44,10 +46,16 @@ const MasterCVCardUpdated: React.FC<MasterCVCardProps> = ({
   const [actionLoading, setActionLoading] = useState<'edit' | 'duplicate' | null>(null);
 
   useEffect(() => {
-    if (userId) {
+    if (masterCVData) {
+      // Use passed Master CV data
+      setMasterCV(masterCVData);
+      setLoading(false);
+      setError(null);
+    } else if (userId) {
+      // Fallback to fetching if no data passed
       fetchMasterCV();
     }
-  }, [userId]);
+  }, [userId, masterCVData]);
 
   const fetchMasterCV = async () => {
     try {

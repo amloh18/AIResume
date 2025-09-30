@@ -309,13 +309,13 @@ const JobSelector: React.FC<JobSelectorProps> = ({
     <div className="relative min-w-[200px] max-w-[300px]" ref={dropdownRef}>
       {/* Selected Job Display */}
       {selectedJob ? (
-        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 shadow-sm">
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md px-2 py-1.5 shadow-sm">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1 mb-1">
+              <div className="flex items-center gap-1 mb-0.5">
                 <Briefcase className="h-3 w-3 text-lime-600" />
                 <span className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate">{selectedJob.jobTitle}</span>
-                <div className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                <div className={`px-1 py-0.5 rounded text-xs font-medium ${
                   selectedJob.status === 'created' ? 'bg-gray-100 text-gray-600' :
                   selectedJob.status === 'applied' ? 'bg-blue-100 text-blue-700' :
                   selectedJob.status === 'interview' ? 'bg-yellow-100 text-yellow-700' :
@@ -330,7 +330,7 @@ const JobSelector: React.FC<JobSelectorProps> = ({
                 <Building className="h-3 w-3" />
                 <span className="truncate">{selectedJob.company}</span>
                 {autoLoadedFromJourney && (
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs rounded-full ml-2">
+                  <span className="inline-flex items-center gap-1 px-1 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs rounded-full ml-1">
                     <CheckCircle className="w-2 h-2" />
                     Auto-loaded
                   </span>
@@ -339,7 +339,7 @@ const JobSelector: React.FC<JobSelectorProps> = ({
             </div>
             <button
               onClick={handleClearSelection}
-              className="p-1 text-gray-400 hover:text-gray-600 transition-colors ml-2"
+              className="p-0.5 text-gray-400 hover:text-gray-600 transition-colors ml-1"
             >
               <X className="h-3 w-3" />
             </button>
@@ -348,16 +348,16 @@ const JobSelector: React.FC<JobSelectorProps> = ({
       ) : (
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border border-gray-200/50 dark:border-gray-600/50 rounded-xl px-4 py-3 text-gray-700 dark:text-gray-200 text-sm flex items-center justify-between hover:bg-white dark:hover:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-500 transition-all duration-200 shadow-lg hover:shadow-xl min-w-[240px] group"
+          className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border border-gray-200/50 dark:border-gray-600/50 rounded-lg px-3 py-2 text-gray-700 dark:text-gray-200 text-sm flex items-center justify-between hover:bg-white dark:hover:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-500 transition-all duration-200 shadow-sm hover:shadow-md min-w-[200px] group"
         >
-          <div className="flex items-center gap-3">
-            <div className="p-1.5 bg-lime-100 dark:bg-lime-900/30 rounded-lg group-hover:bg-lime-200 dark:group-hover:bg-lime-900/50 transition-colors">
-              <Briefcase className="h-4 w-4 text-lime-600 dark:text-lime-400" />
+          <div className="flex items-center gap-2">
+            <div className="p-1 bg-lime-100 dark:bg-lime-900/30 rounded-md group-hover:bg-lime-200 dark:group-hover:bg-lime-900/50 transition-colors">
+              <Briefcase className="h-3 w-3 text-lime-600 dark:text-lime-400" />
             </div>
             <span className="truncate font-medium">Select job...</span>
           </div>
-          <div className="p-1 rounded-lg group-hover:bg-gray-100 dark:group-hover:bg-gray-700 transition-colors">
-            {isOpen ? <ChevronUp className="h-4 w-4 text-gray-500 dark:text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-500 dark:text-gray-400" />}
+          <div className="p-0.5 rounded-md group-hover:bg-gray-100 dark:group-hover:bg-gray-700 transition-colors">
+            {isOpen ? <ChevronUp className="h-3 w-3 text-gray-500 dark:text-gray-400" /> : <ChevronDown className="h-3 w-3 text-gray-500 dark:text-gray-400" />}
           </div>
         </button>
       )}
@@ -370,41 +370,41 @@ const JobSelector: React.FC<JobSelectorProps> = ({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.2 }}
-            className="absolute top-full left-0 right-0 mt-2 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-gray-200/50 dark:border-gray-600/50 rounded-2xl shadow-2xl overflow-hidden z-[999999] min-w-[320px]"
+            className="absolute top-full left-0 right-0 mt-1 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-gray-200/50 dark:border-gray-600/50 rounded-xl shadow-xl overflow-hidden z-[999999] min-w-[280px]"
           >
             {/* Search Bar */}
-            <div className="p-3 border-b border-gray-100/50 dark:border-gray-700/50">
+            <div className="p-2 border-b border-gray-100/50 dark:border-gray-700/50">
               <div className="flex items-center gap-2">
                 <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
+                  <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-gray-400 dark:text-gray-500" />
                   <input
                     type="text"
                     placeholder="Search jobs..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full bg-gray-50/80 dark:bg-gray-700/80 backdrop-blur-sm border border-gray-200/50 dark:border-gray-600/50 rounded-xl pl-10 pr-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-lime-500/50 focus:border-lime-500 focus:bg-white dark:focus:bg-gray-700 transition-all duration-200"
+                    className="w-full bg-gray-50/80 dark:bg-gray-700/80 backdrop-blur-sm border border-gray-200/50 dark:border-gray-600/50 rounded-lg pl-8 pr-3 py-1.5 text-xs text-gray-700 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-lime-500/50 focus:border-lime-500 focus:bg-white dark:focus:bg-gray-700 transition-all duration-200"
                   />
                 </div>
                 <button
                   onClick={loadJobs}
                   disabled={loading}
-                  className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
+                  className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors disabled:opacity-50"
                   title="Refresh jobs"
                 >
-                  <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={`h-3 w-3 ${loading ? 'animate-spin' : ''}`} />
                 </button>
               </div>
             </div>
 
             {/* Jobs List */}
-            <div className="max-h-64 overflow-y-auto">
+            <div className="max-h-48 overflow-y-auto">
               {loading ? (
-                <div className="p-3 text-center">
+                <div className="p-2 text-center">
                   <Loader2 className="h-3 w-3 animate-spin text-lime-600 mx-auto mb-1" />
                   <span className="text-xs text-gray-500">Loading jobs...</span>
                 </div>
               ) : Object.keys(filteredGroupedJobs).length === 0 ? (
-                <div className="p-3 text-center">
+                <div className="p-2 text-center">
                   <span className="text-xs text-gray-500">
                     {searchTerm ? 'No jobs found' : 'No jobs available'}
                   </span>
@@ -431,12 +431,12 @@ const JobSelector: React.FC<JobSelectorProps> = ({
                     return (
                       <div key={stage} className="border-b border-gray-100 last:border-b-0">
                         {/* Stage Header */}
-                        <div className="px-4 py-3 bg-gradient-to-r from-gray-50/80 to-gray-100/80 dark:from-gray-700/50 dark:to-gray-800/50 border-b border-gray-100/50 dark:border-gray-700/50">
+                        <div className="px-3 py-2 bg-gradient-to-r from-gray-50/80 to-gray-100/80 dark:from-gray-700/50 dark:to-gray-800/50 border-b border-gray-100/50 dark:border-gray-700/50">
                           <div className="flex items-center justify-between">
-                            <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                            <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">
                               {stageLabels[stage as keyof typeof stageLabels]}
                             </span>
-                            <span className="text-xs text-gray-500 dark:text-gray-400 bg-white/60 dark:bg-gray-600/60 px-2 py-1 rounded-full">
+                            <span className="text-xs text-gray-500 dark:text-gray-400 bg-white/60 dark:bg-gray-600/60 px-1.5 py-0.5 rounded-full">
                               {jobsInStage.length} job{jobsInStage.length !== 1 ? 's' : ''}
                             </span>
                           </div>
@@ -448,18 +448,18 @@ const JobSelector: React.FC<JobSelectorProps> = ({
                             <motion.button
                               key={job.id}
                               onClick={() => handleJobSelect(job)}
-                              className="w-full p-4 text-left hover:bg-gray-50/80 dark:hover:bg-gray-700/50 transition-all duration-200 group"
+                              className="w-full p-2.5 text-left hover:bg-gray-50/80 dark:hover:bg-gray-700/50 transition-all duration-200 group"
                               whileHover={{ backgroundColor: 'rgba(249, 250, 251, 0.8)' }}
                             >
                               <div className="flex items-start justify-between">
                                 <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <div className="p-1.5 bg-lime-100 dark:bg-lime-900/30 rounded-lg group-hover:bg-lime-200 dark:group-hover:bg-lime-900/50 transition-colors">
+                                  <div className="flex items-center gap-1.5 mb-1">
+                                    <div className="p-1 bg-lime-100 dark:bg-lime-900/30 rounded-md group-hover:bg-lime-200 dark:group-hover:bg-lime-900/50 transition-colors">
                                       <Briefcase className="h-3 w-3 text-lime-600 dark:text-lime-400" />
                                     </div>
-                                    <span className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{job.jobTitle}</span>
+                                    <span className="text-xs font-semibold text-gray-900 dark:text-gray-100 truncate">{job.jobTitle}</span>
                                   </div>
-                                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                                  <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300">
                                     <div className="flex items-center gap-1">
                                       <Building className="h-3 w-3" />
                                       <span className="truncate">{job.company}</span>
@@ -473,7 +473,7 @@ const JobSelector: React.FC<JobSelectorProps> = ({
                                     )}
                                   </div>
                                 </div>
-                                <div className={`px-2 py-1 rounded-lg text-xs font-medium ml-3 ${
+                                <div className={`px-1.5 py-0.5 rounded-md text-xs font-medium ml-2 ${
                                   job.status === 'created' ? 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300' :
                                   job.status === 'applied' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' :
                                   job.status === 'interview' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300' :
@@ -495,16 +495,16 @@ const JobSelector: React.FC<JobSelectorProps> = ({
             </div>
 
             {/* Add New Job Button */}
-            <div className="p-3 border-t border-gray-100/50 dark:border-gray-700/50">
+            <div className="p-2 border-t border-gray-100/50 dark:border-gray-700/50">
               <button
                 onClick={() => {
                   setIsOpen(false);
                   setShowJobModal(true);
                 }}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-lime-600 to-lime-700 hover:from-lime-700 hover:to-lime-800 text-white text-sm font-medium rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl group"
+                className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-gradient-to-r from-lime-600 to-lime-700 hover:from-lime-700 hover:to-lime-800 text-white text-xs font-medium rounded-lg transition-all duration-200 shadow-md hover:shadow-lg group"
               >
-                <div className="p-1 bg-white/20 rounded-lg group-hover:bg-white/30 transition-colors">
-                  <Plus className="h-4 w-4" />
+                <div className="p-0.5 bg-white/20 rounded-md group-hover:bg-white/30 transition-colors">
+                  <Plus className="h-3 w-3" />
                 </div>
                 Add New Job
               </button>

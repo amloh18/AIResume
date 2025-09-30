@@ -4,8 +4,8 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Bell, Sun, Moon, CheckCircle, AlertCircle, AlertTriangle, X, Check, Menu } from 'lucide-react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
-import UserIcon from '@/components/ui/UserIcon';
 import { motion, AnimatePresence } from 'framer-motion';
+import UserAvatar from '@/components/ui/UserAvatar';
 
 interface Notification {
   id: string;
@@ -162,10 +162,17 @@ const PageHeader: React.FC<PageHeaderProps> = ({
             </AnimatePresence>
           </div>
           
-          {/* User Profile */}
-          <div className="pl-2 ml-1">
-            <UserIcon user={user} />
-          </div>
+          {/* User Avatar */}
+          <UserAvatar 
+            user={{
+              name: user?.name || 'User',
+              email: user?.email || '',
+              profilePhoto: user?.profilePhoto,
+              isEmailVerified: true, // You can add this to user data
+              subscription: user?.subscription
+            }}
+          />
+          
         </div>
       </div>
 
@@ -289,7 +296,17 @@ const PageHeader: React.FC<PageHeaderProps> = ({
               </AnimatePresence>
             </div>
             
-            <UserIcon user={user} />
+            {/* User Avatar */}
+            <UserAvatar 
+              user={{
+                name: user?.name || 'User',
+                email: user?.email || 'user@example.com',
+                profilePhoto: user?.profilePhoto,
+                isEmailVerified: true, // You can add this to user data
+                subscription: user?.subscription
+              }}
+            />
+            
           </div>
         </div>
       </div>

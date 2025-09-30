@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { CVDataStructure } from '@/types/cv';
+import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
 // @ts-ignore - pdf-parse doesn't have types
 let pdfParse: any;
 let mammoth: any;
@@ -98,7 +98,7 @@ interface Project {
   current: boolean;
 }
 
-// Using CVDataStructure from @/types/cv instead of custom interface
+// Using UnifiedCVDataStructure from @/types/cv instead of custom interface
 
 // Add GET method for testing
 export async function GET() {
@@ -460,7 +460,7 @@ async function parseDocument(file: File) {
 }
 
 // Create basic structure from filename when all parsing fails
-function createBasicStructureFromFilename(filename: string): CVDataStructure {
+function createBasicStructureFromFilename(filename: string): UnifiedCVDataStructure {
   const result = getEmptyStructure();
   
   // Try to extract name from filename
@@ -477,7 +477,7 @@ function createBasicStructureFromFilename(filename: string): CVDataStructure {
   return result;
 }
 
-function parseTextToStructuredData(text: string): CVDataStructure {
+function parseTextToStructuredData(text: string): UnifiedCVDataStructure {
   const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
   
   const result = getEmptyStructure();
@@ -573,7 +573,7 @@ function parseTextToStructuredData(text: string): CVDataStructure {
 }
 
 // Helper function to check if parsed data is empty
-function isEmptyParsedData(data: CVDataStructure): boolean {
+function isEmptyParsedData(data: UnifiedCVDataStructure): boolean {
   const hasPersonalInfo = data.basics.name || data.basics.email;
   const hasEducation = data.education.length > 0;
   const hasExperience = data.work.length > 0;
@@ -594,7 +594,7 @@ function isEmptyParsedData(data: CVDataStructure): boolean {
 }
 
 // Create sample data with any extracted information
-function createSampleDataWithExtractedInfo(text: string): CVDataStructure {
+function createSampleDataWithExtractedInfo(text: string): UnifiedCVDataStructure {
   const result = getEmptyStructure();
   
   // Try to extract at least basic info
@@ -661,7 +661,7 @@ function createSampleDataWithExtractedInfo(text: string): CVDataStructure {
   return result;
 }
 
-function getEmptyStructure(): CVDataStructure {
+function getEmptyStructure(): UnifiedCVDataStructure {
   return {
     basics: {
       name: '',

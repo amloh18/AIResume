@@ -237,7 +237,7 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
 
 
         {/* Master Badge - Always visible */}
-        {cv.isMaster && (
+        {(cv.isMaster || cv.metadata?.isMaster) && (
           <div className="absolute top-3 right-3">
             <span className="px-2 py-1 rounded-full text-xs font-medium bg-lime-500/20 text-lime-400 border border-lime-500/30 backdrop-blur-sm">
               Master

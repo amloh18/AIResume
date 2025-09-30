@@ -3,11 +3,11 @@ import { useAIStore } from '@/lib/stores/aiStore';
 import { useJobStore } from '@/lib/stores/jobStore';
 import { AIAssistantService } from '@/lib/services/aiAssistantService';
 import { debounce } from 'lodash';
-import { CVDataStructure } from '@/types/cv';
+import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
 
 export const useAIAssistant = (
   cvId: string | null, 
-  cvData: CVDataStructure | null,
+  cvData: UnifiedCVDataStructure | null,
   documentType: 'cv' | 'cover-letter' = 'cv'
 ) => {
   const {
@@ -32,7 +32,7 @@ export const useAIAssistant = (
   const { currentJob } = useJobStore();
   
   const debouncedATSCalculation = useRef(
-    debounce(async (cvData: CVDataStructure | null, jobData: any) => {
+    debounce(async (cvData: UnifiedCVDataStructure | null, jobData: any) => {
       if (!cvId || !cvData) {
         console.log('❌ ATS calculation skipped - missing data:', { hasCvId: !!cvId, hasCvData: !!cvData });
         return;

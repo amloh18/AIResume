@@ -112,14 +112,14 @@ export const getPageBackground = (pageType: 'dashboard' | 'studio' | 'admin' | '
 export const getSidebarClasses = (isOpen: boolean = true, isMobile: boolean = false) => ({
   container: `
     fixed lg:sticky top-0 z-50 h-screen
-    ${isMobile ? 'inset-y-0 left-0' : 'top-4 left-4 bottom-4 h-[calc(100vh-2rem)]'}
+    ${isMobile ? 'inset-y-0 left-0' : 'top-2 left-2 bottom-2 h-[calc(100vh-1rem)]'}
     ${!isMobile ? 'bg-white/90 dark:bg-gray-800/95' : 'bg-white/95 dark:bg-gray-900/95'} 
     backdrop-blur-xl border border-white/20 dark:border-gray-700/50
     transition-all duration-300 ease-in-out
     ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
     ${isMobile ? 'w-80' : 'w-72 lg:w-16 xl:w-72'}
     rounded-2xl shadow-xl shadow-gray-900/10 dark:shadow-black/20
-    ${!isMobile ? 'm-4' : ''}
+    ${!isMobile ? 'm-2' : ''}
   `,
   logo: 'text-lime-600 dark:text-lime-400',
   navItem: 'text-gray-700 hover:text-gray-900 dark:text-gray-200 dark:hover:text-white',

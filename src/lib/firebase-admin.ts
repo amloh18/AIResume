@@ -1,9 +1,15 @@
 import admin from 'firebase-admin';
 
-// Initialize Firebase Admin SDK
+// Initialize Firebase Admin SDK with better error handling for Vercel deployment
 if (!admin.apps.length) {
   try {
-    // Priority 1: Environment variables (recommended for production)
+    // Check if we're in a production environment (Vercel)
+    const isProduction = process.env.NODE_ENV === 'production';
+    const isVercel = process.env.VERCEL === '1';
+    
+    console.log('🔧 Firebase Admin initialization:', { isProduction, isVercel });
+    
+    // Priority 1: Environment variables (recommended for production/Vercel)
     if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY) {
       console.log('✅ Using Firebase service account from environment variables');
       const serviceAccount = {
@@ -17,35 +23,41 @@ if (!admin.apps.length) {
         projectId: process.env.FIREBASE_PROJECT_ID,
       });
     }
-    // Priority 2: Service account key file (for development)
-    else {
+    // Priority 2: Service account key file (for development only)
+    else if (!isVercel && !isProduction) {
       const serviceAccountPath = process.cwd() + '/firebase-key.json';
-      const fs = require('fs');
       
-      if (fs.existsSync(serviceAccountPath)) {
-        console.log('✅ Using Firebase service account key file');
+      try {
+        // Use require for synchronous file check
+        const fs = require('fs');
+        
+        if (fs.existsSync(serviceAccountPath)) {
+          console.log('✅ Using Firebase service account key file');
+          admin.initializeApp({
+            credential: admin.credential.cert(serviceAccountPath),
+            projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'cvcircle-app',
+          });
+        } else {
+          throw new Error('No service account key file found');
+        }
+      } catch (error) {
+        console.log('⚠️ Service account key file not found, using minimal configuration');
         admin.initializeApp({
-          credential: admin.credential.cert(serviceAccountPath),
-          projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-        });
-      } else if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
-        console.log('✅ Using Firebase service account key from environment');
-        const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
-        admin.initializeApp({
-          credential: admin.credential.cert(serviceAccount),
-          projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-        });
-      } else {
-        console.log('⚠️ Using Firebase application default credentials');
-        admin.initializeApp({
-          credential: admin.credential.applicationDefault(),
-          projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+          projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'cvcircle-app',
         });
       }
     }
+    // Priority 3: Minimal configuration for Vercel/production
+    else {
+      console.log('⚠️ Using minimal Firebase configuration for production');
+      admin.initializeApp({
+        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'cvcircle-app',
+      });
+    }
   } catch (error) {
     console.error('❌ Firebase Admin initialization error:', error);
-    throw new Error('Failed to initialize Firebase Admin SDK');
+    // Don't throw error, just log it and continue
+    console.log('⚠️ Continuing without Firebase Admin SDK');
   }
 }
 
@@ -55,6 +67,12 @@ export default admin;
 export async function verifyFirebaseToken(idToken: string) {
   try {
     console.log('🔍 Verifying Firebase token...');
+    
+    // Check if Firebase Admin is properly initialized
+    if (!admin.apps.length) {
+      throw new Error('Firebase Admin SDK not initialized');
+    }
+    
     const decodedToken = await admin.auth().verifyIdToken(idToken);
     console.log('✅ Firebase token verified successfully:', {
       uid: decodedToken.uid,

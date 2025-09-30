@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronRight, Eye, Star, Crown, Check, Loader2, Palette } from 'lucide-react';
 import { ITemplate } from '@/models/Template';
-import { CVDataStructure } from '@/types/cv';
+import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { generateTemplatePreview } from '@/lib/templates/template-renderer';
 import EnhancedCVPreview from './EnhancedCVPreview';
 
 interface TemplateSelectorProps {
   selectedTemplate: ITemplate | null;
   onTemplateSelect: (template: ITemplate) => void;
-  cvData?: CVDataStructure | null;
+  cvData?: UnifiedCVDataStructure | null;
   className?: string;
 }
 
@@ -58,7 +58,7 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
     setShowPreview(false);
   };
 
-  const getPreviewData = (template: ITemplate): CVDataStructure => {
+  const getPreviewData = (template: ITemplate): UnifiedCVDataStructure => {
     // Use actual CV data if available, otherwise use template preview data
     return cvData || generateTemplatePreview(template);
   };
@@ -159,6 +159,7 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
                 ? 'selected'
                 : ''
             }`}
+            onClick={() => handleTemplateSelect(template)}
           >
             <div className="template-preview">
               {template.thumbnail ? (
@@ -172,54 +173,40 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
                   <span className="placeholder-text">{template.name.substring(0, 2)}</span>
                 </div>
               )}
-              
+
+              {/* Template Name Overlay */}
+              <div className="template-title-overlay">
+                <h4 className="template-name-overlay">{template.name}</h4>
+              </div>
+
+              {/* Hover Info Overlay */}
+              <div className="template-hover-overlay">
+                <div className="hover-content">
+                  <div className="hover-header">
+                    <div className="template-tier-hover">
+                      {getTierIcon(template.tier)}
+                      <span className="tier-label-hover">{getTierLabel(template.tier)}</span>
+                    </div>
+                  </div>
+                  {template.description && (
+                    <p className="hover-description">{template.description}</p>
+                  )}
+                  <div className="hover-stats">
+                    <span className="stat-item">
+                      {template.categories?.length || 0} categories
+                    </span>
+                    {template.isDefault && (
+                      <span className="stat-item default">Default</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               {(selectedTemplate?.id === template.id || selectedTemplate?._id === template._id) && (
                 <div className="selected-indicator">
                   <Check size={16} />
                 </div>
               )}
-            </div>
-
-            <div className="template-info">
-              <div className="template-header">
-                <h4 className="template-name">{template.name}</h4>
-                <div className="template-tier">
-                  {getTierIcon(template.tier)}
-                  <span className="tier-label">{getTierLabel(template.tier)}</span>
-                </div>
-              </div>
-
-              {template.description && (
-                <p className="template-description">{template.description}</p>
-              )}
-
-              <div className="template-categories">
-                {template.categories?.map((category, index) => (
-                  <span key={index} className="category-tag">
-                    {category}
-                  </span>
-                ))}
-                {template.isDefault && (
-                  <span className="category-tag default">Default</span>
-                )}
-              </div>
-
-              <div className="template-actions">
-                <button
-                  className="action-button preview"
-                  onClick={() => handleTemplatePreview(template)}
-                >
-                  <Eye size={14} />
-                  Preview
-                </button>
-                <button
-                  className="action-button select"
-                  onClick={() => handleTemplateSelect(template)}
-                >
-                  Select
-                  <ChevronRight size={14} />
-                </button>
-              </div>
             </div>
           </div>
         ))}
@@ -278,7 +265,7 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
           font-size: 18px;
           font-weight: 600;
           color: #1f2937;
-          margin-bottom: 8px;
+          margin-bottom: 0;
         }
         
         .selector-description {
@@ -289,10 +276,10 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
         
         .templates-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-          gap: 20px;
+          grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+          gap: 16px;
         }
-        
+
         .template-card {
           border: 2px solid #e5e7eb;
           border-radius: 12px;
@@ -301,31 +288,124 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
           transition: all 0.2s ease;
           cursor: pointer;
         }
-        
+
         .template-card:hover {
           border-color: #3b82f6;
           transform: translateY(-2px);
           box-shadow: 0 8px 25px rgba(0,0,0,0.1);
         }
-        
+
         .template-card.selected {
           border-color: #10b981;
           box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
         }
-        
+
         .template-preview {
           position: relative;
           width: 100%;
-          height: 180px;
+          aspect-ratio: 0.707;
           overflow: hidden;
         }
-        
+
+        .template-title-overlay {
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 70%, transparent 100%);
+          padding: 24px 12px 12px;
+          z-index: 2;
+        }
+
+        .template-name-overlay {
+          color: white;
+          font-size: 14px;
+          font-weight: 600;
+          margin: 0;
+          text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+          line-height: 1.2;
+        }
+
+        .template-hover-overlay {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0,0,0,0.85);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          opacity: 0;
+          transition: opacity 0.3s ease;
+          z-index: 3;
+          padding: 16px;
+        }
+
+        .template-card:hover .template-hover-overlay {
+          opacity: 1;
+        }
+
+        .hover-content {
+          text-align: center;
+          color: white;
+          max-width: 100%;
+        }
+
+        .hover-header {
+          margin-bottom: 12px;
+        }
+
+        .template-tier-hover {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          font-size: 13px;
+          font-weight: 500;
+        }
+
+        .tier-label-hover {
+          color: white;
+        }
+
+        .hover-description {
+          font-size: 12px;
+          line-height: 1.4;
+          margin: 0 0 12px 0;
+          opacity: 0.9;
+          display: -webkit-box;
+          -webkit-line-clamp: 3;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+
+        .hover-stats {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          justify-content: center;
+        }
+
+        .stat-item {
+          font-size: 11px;
+          padding: 2px 8px;
+          background: rgba(255,255,255,0.2);
+          border-radius: 12px;
+          backdrop-filter: blur(4px);
+        }
+
+        .stat-item.default {
+          background: rgba(16, 185, 129, 0.8);
+          color: white;
+        }
+
         .template-thumbnail {
           width: 100%;
           height: 100%;
           object-fit: cover;
         }
-        
+
         .template-placeholder {
           width: 100%;
           height: 100%;
@@ -336,7 +416,7 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
           font-weight: 600;
           font-size: 24px;
         }
-        
+
         .selected-indicator {
           position: absolute;
           top: 8px;
@@ -349,107 +429,6 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
           display: flex;
           align-items: center;
           justify-content: center;
-        }
-        
-        .template-info {
-          padding: 16px;
-        }
-        
-        .template-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 8px;
-        }
-        
-        .template-name {
-          font-size: 16px;
-          font-weight: 600;
-          color: #1f2937;
-          margin: 0;
-          line-height: 1.3;
-        }
-        
-        .template-tier {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          font-size: 12px;
-          font-weight: 500;
-        }
-        
-        .tier-label {
-          color: #6b7280;
-        }
-        
-        .template-description {
-          font-size: 13px;
-          color: #6b7280;
-          line-height: 1.4;
-          margin: 0 0 12px 0;
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-        }
-        
-        .template-categories {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 6px;
-          margin-bottom: 16px;
-        }
-        
-        .category-tag {
-          background: #f3f4f6;
-          color: #374151;
-          padding: 2px 8px;
-          border-radius: 12px;
-          font-size: 11px;
-          font-weight: 500;
-        }
-        
-        .category-tag.default {
-          background: #fef3c7;
-          color: #92400e;
-        }
-        
-        .template-actions {
-          display: flex;
-          gap: 8px;
-        }
-        
-        .action-button {
-          flex: 1;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 6px;
-          padding: 8px 12px;
-          border: 1px solid #d1d5db;
-          border-radius: 6px;
-          background: white;
-          color: #374151;
-          font-size: 12px;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-        
-        .action-button:hover {
-          background: #f9fafb;
-          border-color: #9ca3af;
-        }
-        
-        .action-button.select {
-          background: #3b82f6;
-          color: white;
-          border-color: #3b82f6;
-        }
-        
-        .action-button.select:hover {
-          background: #2563eb;
-          border-color: #2563eb;
         }
         
         .preview-modal {
@@ -525,31 +504,27 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
           border-top: 1px solid #e5e7eb;
           text-align: center;
         }
-        
-        .select-from-preview {
-          background: #10b981 !important;
-          color: white !important;
-          border-color: #10b981 !important;
-          padding: 12px 24px !important;
-          font-size: 14px !important;
+
+        .action-button.select-from-preview {
+          background: #10b981;
+          color: white;
+          border-color: #10b981;
+          padding: 12px 24px;
+          font-size: 14px;
         }
-        
-        .select-from-preview:hover {
-          background: #059669 !important;
-          border-color: #059669 !important;
+
+        .action-button.select-from-preview:hover {
+          background: #059669;
+          border-color: #059669;
         }
         
         @media (max-width: 768px) {
           .templates-grid {
             grid-template-columns: 1fr;
           }
-          
+
           .preview-cv {
             transform: scale(0.6);
-          }
-          
-          .template-actions {
-            flex-direction: column;
           }
         }
       `}</style>
