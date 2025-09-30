@@ -13,7 +13,7 @@ import {
   CVData,
   CoverLetterData
 } from '@/types/studio';
-import { CVDataStructure } from '@/types/cv';
+import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { requireAuthContext } from '@/lib/user-resolution';
 
 /**
@@ -36,7 +36,7 @@ export function useStudio(): UseStudioReturn {
     isLoading: true,
     isSaving: false,
     saveStatus: 'saved',
-    documentData: {} as CVDataStructure,
+    documentData: {} as UnifiedCVDataStructure,
     documentTitle: 'Untitled Document',
     isDocumentModified: false,
     availableJobs: [],
@@ -106,7 +106,7 @@ export function useStudio(): UseStudioReturn {
 
     // 3. Fetch or create document based on type
     let currentDocument: CVData | CoverLetterData | null = null;
-    let documentData: CVDataStructure | string;
+    let documentData: UnifiedCVDataStructure | string;
     let documentTitle: string;
 
     if (params.documentType === 'cv') {
@@ -188,7 +188,7 @@ export function useStudio(): UseStudioReturn {
     console.log('📄 Initializing Standalone Mode:', params.documentId);
 
     let currentDocument: CVData | CoverLetterData;
-    let documentData: CVDataStructure | string;
+    let documentData: UnifiedCVDataStructure | string;
     let documentTitle: string;
 
     if (params.documentId) {
@@ -249,7 +249,7 @@ export function useStudio(): UseStudioReturn {
    * Update Document Data
    * Tracks modifications and triggers auto-save
    */
-  const updateDocument = useCallback((data: CVDataStructure | string) => {
+  const updateDocument = useCallback((data: UnifiedCVDataStructure | string) => {
     setState(prev => ({
       ...prev,
       documentData: data,
@@ -276,7 +276,7 @@ export function useStudio(): UseStudioReturn {
       if (sessionContext.documentType === 'cv') {
         const cvData = {
           title: documentTitle,
-          cvData: documentData as CVDataStructure,
+          cvData: documentData as UnifiedCVDataStructure,
           templateId: state.selectedTemplateId
         };
 
@@ -398,7 +398,7 @@ export function useStudio(): UseStudioReturn {
    * Internal ATS Analysis Function
    */
   const runATSAnalysisInternal = async (
-    documentData: CVDataStructure | string, 
+    documentData: UnifiedCVDataStructure | string, 
     jobDescription: string, 
     documentType: DocumentType
   ) => {
@@ -470,11 +470,11 @@ export function useStudio(): UseStudioReturn {
 
 // Helper Functions
 
-async function createJourneyCV(journey: ApplicationJourneyData, job: JobData, userId: string): Promise<{ newCV: CVData; newDocumentData: CVDataStructure }> {
+async function createJourneyCV(journey: ApplicationJourneyData, job: JobData, userId: string): Promise<{ newCV: CVData; newDocumentData: UnifiedCVDataStructure }> {
   // Create CV tailored for this journey
   const cvData = {
     title: `CV for ${job.jobTitle} at ${job.company}`,
-    cvData: {} as CVDataStructure, // Empty initial structure
+    cvData: {} as UnifiedCVDataStructure, // Empty initial structure
     templateId: 'default-template-id' // Get from templates API
   };
 
@@ -514,10 +514,10 @@ async function createJourneyCoverLetter(journey: ApplicationJourneyData, job: Jo
   };
 }
 
-async function createStandaloneCV(userId: string): Promise<{ newCV: CVData; newDocumentData: CVDataStructure }> {
+async function createStandaloneCV(userId: string): Promise<{ newCV: CVData; newDocumentData: UnifiedCVDataStructure }> {
   const cvData = {
     title: 'Untitled CV',
-    cvData: {} as CVDataStructure,
+    cvData: {} as UnifiedCVDataStructure,
     templateId: 'default-template-id'
   };
 

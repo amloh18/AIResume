@@ -1,4 +1,4 @@
-import { CVDataStructure } from '@/types/cv';
+import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { Job } from '@/lib/stores/jobStore';
 import { AISuggestion } from '@/lib/stores/aiStore';
 
@@ -42,7 +42,7 @@ export class AIAssistantService {
     }
   };
 
-  static async calculateATSScore(cvData: CVDataStructure, jobData: Job | null): Promise<ATSAnalysis> {
+  static async calculateATSScore(cvData: UnifiedCVDataStructure, jobData: Job | null): Promise<ATSAnalysis> {
     try {
       console.log('🔍 AIAssistantService - Starting ATS score calculation');
       
@@ -107,7 +107,7 @@ export class AIAssistantService {
     }
   }
 
-  static async optimizeContent(cvData: CVDataStructure, jobData: Job | null): Promise<AISuggestion[]> {
+  static async optimizeContent(cvData: UnifiedCVDataStructure, jobData: Job | null): Promise<AISuggestion[]> {
     try {
       const suggestions: AISuggestion[] = [];
       
@@ -172,7 +172,7 @@ export class AIAssistantService {
     }
   }
 
-  static async quantifyAchievements(cvData: CVDataStructure, jobData: Job | null): Promise<AISuggestion[]> {
+  static async quantifyAchievements(cvData: UnifiedCVDataStructure, jobData: Job | null): Promise<AISuggestion[]> {
     try {
       const suggestions: AISuggestion[] = [];
       
@@ -221,7 +221,7 @@ export class AIAssistantService {
     }
   }
 
-  static async mapSkillsAndKeywords(cvData: CVDataStructure, jobData: Job | null): Promise<AISuggestion[]> {
+  static async mapSkillsAndKeywords(cvData: UnifiedCVDataStructure, jobData: Job | null): Promise<AISuggestion[]> {
     try {
       if (!jobData) {
         return [];
@@ -301,7 +301,7 @@ export class AIAssistantService {
     }
   }
 
-  static async analyzeGaps(cvData: CVDataStructure, jobData: Job | null): Promise<AISuggestion[]> {
+  static async analyzeGaps(cvData: UnifiedCVDataStructure, jobData: Job | null): Promise<AISuggestion[]> {
     try {
       if (!jobData) {
         return [];
@@ -330,7 +330,7 @@ export class AIAssistantService {
     }
   }
 
-  static async generateAchievements(cvData: CVDataStructure, jobData: Job | null): Promise<AISuggestion[]> {
+  static async generateAchievements(cvData: UnifiedCVDataStructure, jobData: Job | null): Promise<AISuggestion[]> {
     try {
       const suggestions: AISuggestion[] = [];
       
@@ -354,7 +354,7 @@ export class AIAssistantService {
     }
   }
 
-  static async buildTailoredSummary(cvData: CVDataStructure, jobData: Job | null): Promise<AISuggestion[]> {
+  static async buildTailoredSummary(cvData: UnifiedCVDataStructure, jobData: Job | null): Promise<AISuggestion[]> {
     try {
       if (!jobData) {
         return [];
@@ -380,7 +380,7 @@ export class AIAssistantService {
     }
   }
 
-  static async draftCoverLetter(cvData: CVDataStructure, jobData: Job | null): Promise<AISuggestion[]> {
+  static async draftCoverLetter(cvData: UnifiedCVDataStructure, jobData: Job | null): Promise<AISuggestion[]> {
     try {
       if (!jobData) {
         return [];
@@ -406,7 +406,7 @@ export class AIAssistantService {
     }
   }
 
-  static async checkConsistency(cvData: CVDataStructure): Promise<AISuggestion[]> {
+  static async checkConsistency(cvData: UnifiedCVDataStructure): Promise<AISuggestion[]> {
     try {
       const cvText = this.extractCVText(cvData);
       
@@ -444,7 +444,7 @@ export class AIAssistantService {
     return Array.from(new Set(keywords)).slice(0, 20);
   }
 
-  private static extractSkillsFromCV(cvData: CVDataStructure): string[] {
+  private static extractSkillsFromCV(cvData: UnifiedCVDataStructure): string[] {
     const skills: string[] = [];
     
     // Extract from skills section
@@ -486,7 +486,7 @@ export class AIAssistantService {
     ];
   }
 
-  private static extractCVText(cvData: CVDataStructure): string {
+  private static extractCVText(cvData: UnifiedCVDataStructure): string {
     let text = '';
     
     // Add basic information
@@ -530,7 +530,7 @@ export class AIAssistantService {
     return text;
   }
 
-  static async performComprehensiveAnalysis(cvData: CVDataStructure, jobData: Job): Promise<any> {
+  static async performComprehensiveAnalysis(cvData: UnifiedCVDataStructure, jobData: Job): Promise<any> {
     try {
       console.log('🔍 AIAssistantService - Starting comprehensive analysis...');
       console.log('📊 AIAssistantService - Job data:', {
@@ -652,7 +652,7 @@ export class AIAssistantService {
    */
   static async generateSectionSuggestions(
     section: keyof typeof AIAssistantService.SECTION_GUIDELINES,
-    cvData: CVDataStructure,
+    cvData: UnifiedCVDataStructure,
     jobData: Job | null
   ): Promise<AISuggestion[]> {
     const guidelines = this.SECTION_GUIDELINES[section];
@@ -686,7 +686,7 @@ export class AIAssistantService {
    * Generate summary suggestions following guidelines
    */
   private static async generateSummarySuggestions(
-    cvData: CVDataStructure,
+    cvData: UnifiedCVDataStructure,
     jobData: Job | null,
     guidelines: any
   ): Promise<AISuggestion[]> {
@@ -727,7 +727,7 @@ export class AIAssistantService {
    * Generate work experience suggestions following guidelines
    */
   private static async generateWorkExperienceSuggestions(
-    cvData: CVDataStructure,
+    cvData: UnifiedCVDataStructure,
     jobData: Job | null,
     guidelines: any
   ): Promise<AISuggestion[]> {
@@ -772,7 +772,7 @@ export class AIAssistantService {
    * Generate skills suggestions following guidelines
    */
   private static async generateSkillsSuggestions(
-    cvData: CVDataStructure,
+    cvData: UnifiedCVDataStructure,
     jobData: Job | null,
     guidelines: any
   ): Promise<AISuggestion[]> {
@@ -813,7 +813,7 @@ export class AIAssistantService {
    * Generate projects suggestions following guidelines
    */
   private static async generateProjectsSuggestions(
-    cvData: CVDataStructure,
+    cvData: UnifiedCVDataStructure,
     jobData: Job | null,
     guidelines: any
   ): Promise<AISuggestion[]> {
@@ -853,7 +853,7 @@ export class AIAssistantService {
    * Generate education suggestions following guidelines
    */
   private static async generateEducationSuggestions(
-    cvData: CVDataStructure,
+    cvData: UnifiedCVDataStructure,
     jobData: Job | null,
     guidelines: any
   ): Promise<AISuggestion[]> {
@@ -883,7 +883,7 @@ export class AIAssistantService {
    * Generate certificates suggestions following guidelines
    */
   private static async generateCertificatesSuggestions(
-    cvData: CVDataStructure,
+    cvData: UnifiedCVDataStructure,
     jobData: Job | null,
     guidelines: any
   ): Promise<AISuggestion[]> {

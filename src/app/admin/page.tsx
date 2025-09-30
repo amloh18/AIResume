@@ -31,7 +31,6 @@ import SystemHealth from '@/components/admin/SystemHealth';
 import RecentActivity from '@/components/admin/RecentActivity';
 import TestimonialManager from '@/components/admin/TestimonialManager';
 import { useTheme } from '@/lib/contexts/ThemeContext';
-import UserIcon from '@/components/ui/UserIcon';
 
 interface AdminPageProps {}
 
@@ -148,7 +147,7 @@ const AdminPage: React.FC<AdminPageProps> = () => {
 
   const menuItems = [
     { id: 'kpis', label: 'General KPIs', icon: DashboardIcon },
-    { id: 'cv-journey-kpis', label: 'CV Journey KPIs', icon: DashboardIcon },
+    { id: 'cv-journey-kpis', label: 'Application Journey KPIs', icon: DashboardIcon },
     { id: 'templates', label: 'Template Manager', icon: Template },
     { id: 'users', label: 'User Management', icon: People },
     { id: 'pricing', label: 'Pricing Plans', icon: FileText },
@@ -354,14 +353,6 @@ const AdminPage: React.FC<AdminPageProps> = () => {
 
               {/* Right side controls */}
               <div className="flex items-center space-x-2">
-                <UserIcon 
-                  user={{
-                    name: session?.user?.name || 'Admin',
-                    email: session?.user?.email || 'admin@example.com',
-                    profilePhoto: session?.user?.image,
-                    designation: 'System Administrator'
-                  }}
-                />
                 
                 <button
                   onClick={() => setNotificationsOpen(true)}

@@ -76,23 +76,29 @@ const CVSelectionStep: React.FC<CVSelectionStepProps> = ({
     
     setDuplicating(true);
     try {
-      const response = await fetch('/api/cvs/master', {
+      // Create a proper title with job title prefix
+      const duplicatedTitle = jobTitle && company 
+        ? `${jobTitle} - ${company} CV`
+        : `${masterCV.title} (Copy)`;
+
+      const response = await fetch('/api/cvs/duplicate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          sourceCvId: masterCV.id,
           userId: session?.user?.id,
-          jobTitle,
-          company,
-          jobId
+          jobId,
+          journeyId: null, // Create freestanding CV, not linked to journey yet
+          customTitle: duplicatedTitle // Pass the custom title directly
         }),
       });
 
       const result = await response.json();
       
       if (result.success) {
-        onCVSelected(result.data.cv.id, 'duplicate');
+        onCVSelected(result.cvId, 'duplicate');
       } else {
         console.error('Error duplicating master CV:', result.message);
       }

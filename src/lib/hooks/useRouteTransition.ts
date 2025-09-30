@@ -19,17 +19,23 @@ const ROUTE_TRANSITIONS: RouteTransitionConfig[] = [
   { from: '/master-cv-onboarding', to: '/dashboard', type: 'full' },
   { from: '/dashboard', to: '/studio', type: 'full' },
   
-  // Minimal loading for dashboard page switches
-  { from: '/dashboard', to: '/dashboard/pipeline', type: 'minimal' },
-  { from: '/dashboard', to: '/dashboard/cv-journey', type: 'minimal' },
-  { from: '/dashboard', to: '/dashboard/settings', type: 'minimal' },
-  { from: '/dashboard/pipeline', to: '/dashboard', type: 'minimal' },
-  { from: '/dashboard/cv-journey', to: '/dashboard', type: 'minimal' },
-  { from: '/dashboard/settings', to: '/dashboard', type: 'minimal' },
+  // DISABLED: Minimal loading for dashboard page switches - too annoying
+  // { from: '/dashboard', to: '/dashboard/application-tracker', type: 'minimal' },
+  // { from: '/dashboard', to: '/dashboard/cv-journey', type: 'minimal' },
+  // { from: '/dashboard', to: '/dashboard/settings', type: 'minimal' },
+  // { from: '/dashboard/application-tracker', to: '/dashboard', type: 'minimal' },
+  // { from: '/dashboard/cv-journey', to: '/dashboard', type: 'minimal' },
+  // { from: '/dashboard/settings', to: '/dashboard', type: 'minimal' },
   
-  // No loading for quick navigation
-  { from: '/dashboard/settings', to: '/dashboard/pipeline', type: 'none' },
-  { from: '/dashboard/pipeline', to: '/dashboard/cv-journey', type: 'none' },
+  // No loading for all dashboard navigation - smooth transitions
+  { from: '/dashboard/settings', to: '/dashboard/application-tracker', type: 'none' },
+  { from: '/dashboard/application-tracker', to: '/dashboard/cv-journey', type: 'none' },
+  { from: '/dashboard', to: '/dashboard/application-tracker', type: 'none' },
+  { from: '/dashboard', to: '/dashboard/cv-journey', type: 'none' },
+  { from: '/dashboard', to: '/dashboard/settings', type: 'none' },
+  { from: '/dashboard/application-tracker', to: '/dashboard', type: 'none' },
+  { from: '/dashboard/cv-journey', to: '/dashboard', type: 'none' },
+  { from: '/dashboard/settings', to: '/dashboard', type: 'none' },
 ];
 
 export const useRouteTransition = () => {

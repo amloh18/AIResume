@@ -4,7 +4,37 @@ import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/database';
 import { User } from '@/models';
 
+// Extend global type for cache
+declare global {
+  var userCache: Map<string, { data: any; timestamp: number }> | undefined;
+  var journeysCache: Map<string, { data: any; timestamp: number }> | undefined;
+}
+
+// Cache cleanup utility
+function cleanupExpiredCache(cache: Map<string, { data: any; timestamp: number }> | undefined, cacheName: string) {
+  if (!cache) return;
+
+  const now = Date.now();
+  const CACHE_DURATION = cacheName === 'journeys' ? 30000 : 60000;
+  const expiredKeys: string[] = [];
+
+  Array.from(cache.entries()).forEach(([key, value]) => {
+    if ((now - value.timestamp) > CACHE_DURATION) {
+      expiredKeys.push(key);
+    }
+  });
+
+  expiredKeys.forEach(key => cache.delete(key));
+
+  if (expiredKeys.length > 0) {
+    console.log(`🧹 Cleaned up ${expiredKeys.length} expired entries from ${cacheName} cache`);
+  }
+}
+
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
+  let dbConnection = null;
+
   try {
     const session = await getServerSession(authOptions);
 
@@ -20,14 +50,14 @@ export async function GET(request: NextRequest) {
       userEmail = session.user.email;
     } else if (firebaseUserId) {
       // Firebase user - get user by Firebase UID
-      await connectDB();
+      dbConnection = await connectDB();
       const firebaseUser = await User.findOne({ firebaseUid: firebaseUserId });
       if (firebaseUser) {
         userEmail = firebaseUser.email;
         userId = firebaseUser._id.toString();
       }
     }
-    
+
     if (!userEmail) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
@@ -35,10 +65,31 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    await connectDB();
+    // Check cache first
+    const cacheKey = `user_${userEmail}`;
+    const cachedData = global.userCache?.get(cacheKey);
+    const CACHE_DURATION = 60000; // 1 minute cache for user data
 
-    // Find user
-    const user = await User.findOne({ email: userEmail });
+    if (cachedData && (Date.now() - cachedData.timestamp) < CACHE_DURATION) {
+      console.log('🔍 User API - Returning cached data');
+      return NextResponse.json(cachedData.data);
+    }
+
+    // Clean up expired cache entries periodically
+    if (Math.random() < 0.1) { // 10% chance to clean up
+      cleanupExpiredCache(global.userCache, 'user');
+    }
+
+    if (!dbConnection) {
+      dbConnection = await connectDB();
+    }
+
+    // Find user with optimized query
+    const user = await User.findOne({ email: userEmail })
+      .select('firstName lastName email username avatar role isEmailVerified currentPlanKey subscription settings authProvider createdAt updatedAt')
+      .lean()
+      .exec() as any;
+
     if (!user) {
       return NextResponse.json(
         { success: false, error: 'User not found' },
@@ -56,6 +107,7 @@ export async function GET(request: NextRequest) {
       avatar: user.avatar,
       role: user.role,
       isEmailVerified: user.isEmailVerified,
+      authProvider: user.authProvider,
       currentPlanKey: user.currentPlanKey,
       subscription: user.subscription,
       settings: user.settings,
@@ -63,10 +115,26 @@ export async function GET(request: NextRequest) {
       updatedAt: user.updatedAt
     };
 
-    return NextResponse.json({
+    const responseData = {
       success: true,
-      user: userData
+      user: userData,
+      _performance: {
+        queryTime: Date.now() - startTime
+      }
+    };
+
+    // Cache the response
+    if (!global.userCache) {
+      global.userCache = new Map();
+    }
+    global.userCache.set(cacheKey, {
+      data: responseData,
+      timestamp: Date.now()
     });
+
+    console.log(`✅ User API - Completed in ${Date.now() - startTime}ms`);
+
+    return NextResponse.json(responseData);
 
   } catch (error) {
     console.error('Error fetching user profile:', error);

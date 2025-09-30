@@ -1,13 +1,13 @@
 import React from 'react';
 import { Calendar, BookOpen, ExternalLink, User } from 'lucide-react';
-import { CVDataStructure } from '@/types/cv';
+import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ISectionBlueprint, ITemplate } from '@/models/Template';
 
 interface PublicationsProps {
-  data: CVDataStructure['publications'];
+  data: UnifiedCVDataStructure['publications'];
   sectionConfig: ISectionBlueprint;
   template: ITemplate;
-  cvData: CVDataStructure;
+  cvData: UnifiedCVDataStructure;
 }
 
 const Publications: React.FC<PublicationsProps> = ({ 

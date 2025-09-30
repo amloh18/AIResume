@@ -1,11 +1,11 @@
-import { CVDataStructure } from '@/types/cv';
+import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
 
 /**
  * Generates an automatic CV name based on professional title and summary
  * @param cvData - The CV data structure
  * @returns A formatted CV name
  */
-export const generateCVName = (cvData: CVDataStructure): string => {
+export const generateCVName = (cvData: UnifiedCVDataStructure): string => {
   const { basics } = cvData;
   
   // If we have a professional title, use it as the base
@@ -35,7 +35,7 @@ export const generateCVName = (cvData: CVDataStructure): string => {
  * @param cvData - The CV data structure
  * @returns A brief description
  */
-export const generateCVDescription = (cvData: CVDataStructure): string => {
+export const generateCVDescription = (cvData: UnifiedCVDataStructure): string => {
   const { basics } = cvData;
   
   if (basics?.summary && basics.summary.trim()) {
@@ -67,7 +67,7 @@ export const generateCVDescription = (cvData: CVDataStructure): string => {
  * @param cvData - The CV data structure
  * @returns Object with title and description
  */
-export const getCVMetadata = (cvData: CVDataStructure) => {
+export const getCVMetadata = (cvData: UnifiedCVDataStructure) => {
   return {
     title: generateCVName(cvData),
     description: generateCVDescription(cvData)

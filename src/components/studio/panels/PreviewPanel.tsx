@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 
 import { DocumentType } from '@/types/studio';
-import { CVDataStructure } from '@/types/cv';
+import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
@@ -25,7 +25,7 @@ import { Slider } from '@/components/ui/slider';
 
 interface PreviewPanelProps {
   documentType: DocumentType;
-  documentData: CVDataStructure | string;
+  documentData: UnifiedCVDataStructure | string;
   templateId: string;
   designOverrides: Record<string, any>;
   previewSettings: {
@@ -253,7 +253,7 @@ function PreviewRenderer({
   isLoading
 }: {
   documentType: DocumentType;
-  documentData: CVDataStructure | string;
+  documentData: UnifiedCVDataStructure | string;
   templateData: any;
   designOverrides: Record<string, any>;
   previewMode: 'desktop' | 'mobile' | 'print';
@@ -315,7 +315,7 @@ function PreviewRenderer({
       >
         {documentType === 'cv' ? (
           <CVPreview 
-            cvData={documentData as CVDataStructure}
+            cvData={documentData as UnifiedCVDataStructure}
             templateData={templateData}
             appliedStyles={appliedStyles}
             previewMode={previewMode}
@@ -342,7 +342,7 @@ function CVPreview({
   appliedStyles,
   previewMode
 }: {
-  cvData: CVDataStructure;
+  cvData: UnifiedCVDataStructure;
   templateData: any;
   appliedStyles: any;
   previewMode: string;
@@ -489,12 +489,12 @@ function PreviewFooter({
   zoom
 }: {
   documentType: DocumentType;
-  documentData: CVDataStructure | string;
+  documentData: UnifiedCVDataStructure | string;
   zoom: number;
 }) {
   const getDocumentStats = () => {
     if (documentType === 'cv') {
-      const cvData = documentData as CVDataStructure;
+      const cvData = documentData as UnifiedCVDataStructure;
       const sectionCount = Object.keys(cvData).filter(key => 
         cvData[key] && (Array.isArray(cvData[key]) ? cvData[key].length > 0 : true)
       ).length;
@@ -569,7 +569,7 @@ function PreviewSkeleton() {
 
 // Helper Functions
 
-async function handleExport(documentType: DocumentType, documentData: CVDataStructure | string) {
+async function handleExport(documentType: DocumentType, documentData: UnifiedCVDataStructure | string) {
   try {
     const response = await fetch('/api/export', {
       method: 'POST',

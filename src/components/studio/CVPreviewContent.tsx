@@ -2,10 +2,10 @@
 
 import React from 'react';
 import { Eye } from 'lucide-react';
-import { CVDataStructure } from '@/types/cv';
+import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
 
 interface CVPreviewContentProps {
-  cvData: CVDataStructure | null;
+  cvData: UnifiedCVDataStructure | null;
   theme?: 'light' | 'dark';
   showBadge?: boolean;
   sectionOrder?: string[];

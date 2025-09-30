@@ -1,4 +1,4 @@
-import { CVDataStructure } from '@/types/cv';
+import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { Job } from '@/lib/stores/jobStore';
 
 export interface ATSAnalysis {
@@ -15,7 +15,7 @@ export interface AIImprovement {
 
 export class AIService {
   // ATS score calculation - requires AI service integration
-  static async calculateATSScore(cvData: CVDataStructure, jobData: Job | null): Promise<ATSAnalysis> {
+  static async calculateATSScore(cvData: UnifiedCVDataStructure, jobData: Job | null): Promise<ATSAnalysis> {
     try {
       // TODO: Replace with actual AI service call
       // This should call your preferred AI provider (OpenAI, Anthropic, etc.)
@@ -32,7 +32,7 @@ export class AIService {
   static async improveDescription(
     currentText: string, 
     jobData: Job | null, 
-    cvData: CVDataStructure
+    cvData: UnifiedCVDataStructure
   ): Promise<AIImprovement> {
     try {
       // TODO: Replace with actual AI service call

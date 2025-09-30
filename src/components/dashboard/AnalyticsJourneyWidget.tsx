@@ -64,7 +64,7 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
       }
       
       console.log('🔍 AnalyticsJourneyWidget - Fetching journeys for user:', userId);
-      const response = await fetch(`/api/cv-journey?userId=${userId}&status=in-progress`);
+      const response = await fetch(`/api/application-journey?userId=${userId}&status=in-progress`);
       console.log('🔍 AnalyticsJourneyWidget - Response status:', response.status);
       
       if (!response.ok) {
@@ -133,7 +133,7 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
       console.log('🔍 AnalyticsJourneyWidget - Deleting journey:', journeyId);
       
       // Call the API to delete the journey (job) from database
-      const response = await fetch(`/api/cv-journey`, {
+      const response = await fetch(`/api/application-journey`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ journeyId, userId })
@@ -244,93 +244,47 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
             {incompleteJourneys.length} incomplete journey{incompleteJourneys.length !== 1 ? 's' : ''}
           </p>
         </div>
-        {incompleteJourneys.length > 0 && (
-          <div className="flex items-center gap-2">
-            <motion.button
-              onClick={() => {
-                console.log('🔍 AnalyticsJourneyWidget - Start New button clicked');
-                setShowNewJourneyCard(true);
-                console.log('🔍 AnalyticsJourneyWidget - showNewJourneyCard set to true');
-              }}
-              className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors text-sm flex items-center gap-1"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <Plus className="h-3 w-3" />
-              Start New
-            </motion.button>
+        <div className="flex items-center gap-2">
+          <motion.button
+            onClick={() => {
+              console.log('🔍 AnalyticsJourneyWidget - Start Journey button clicked');
+              setShowNewJourneyCard(true);
+            }}
+            className="px-4 py-2 bg-lime-500 hover:bg-lime-600 text-black font-medium rounded-lg transition-colors text-sm shadow-lg shadow-lime-500/25 hover:shadow-lime-500/40"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            Start a Journey
+          </motion.button>
+          {incompleteJourneys.length > 0 && (
             <motion.button
               onClick={() => window.location.href = '/dashboard/cv-journey'}
-              className="px-3 py-1.5 bg-lime-500 hover:bg-lime-600 text-black font-medium rounded-lg transition-colors text-sm flex items-center gap-1"
+              className="px-3 py-1.5 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors text-sm flex items-center gap-1"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
               <Eye className="h-3 w-3" />
               View All
             </motion.button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {incompleteJourneys.length === 0 ? (
-        <div className="space-y-4">
-          {/* Single Skeleton Card */}
+        <div className="text-center py-4">
           <motion.div
-            className="glass-card-premium rounded-lg p-4"
-            initial={{ opacity: 0, y: 10 }}
+            className="max-w-md mx-auto"
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
-            {/* Header Skeleton */}
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-4 h-4 bg-gray-200 dark:bg-white/10 rounded animate-pulse"></div>
-                  <div className="h-4 bg-gray-200 dark:bg-white/10 rounded w-32 animate-pulse"></div>
-                </div>
-                <div className="h-3 bg-gray-200 dark:bg-white/10 rounded w-24 animate-pulse"></div>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <div className="w-16 h-6 bg-gray-200 dark:bg-white/10 rounded-full animate-pulse"></div>
-                <div className="w-16 h-6 bg-gray-200 dark:bg-white/10 rounded animate-pulse"></div>
-                <div className="w-6 h-6 bg-gray-200 dark:bg-white/10 rounded animate-pulse"></div>
-              </div>
-            </div>
-
-            {/* Timeline Skeleton */}
-            <div className="relative mb-3">
-              <div className="absolute top-4 left-0 right-0 h-0.5 bg-gray-200 dark:bg-white/10"></div>
-              <div className="relative flex justify-between">
-                {[1, 2, 3, 4, 5].map((step) => (
-                  <div key={step} className="flex flex-col items-center relative z-10">
-                    <div className="w-6 h-6 bg-gray-200 dark:bg-white/10 rounded-full animate-pulse"></div>
-                    <div className="mt-2">
-                      <div className="w-16 h-4 bg-gray-200 dark:bg-white/10 rounded animate-pulse"></div>
-                      <div className="w-12 h-3 bg-gray-200 dark:bg-white/10 rounded mt-1 animate-pulse"></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Progress Info Skeleton */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 bg-gray-200 dark:bg-white/10 rounded animate-pulse"></div>
-                <div className="w-20 h-3 bg-gray-200 dark:bg-white/10 rounded animate-pulse"></div>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-16 h-3 bg-gray-200 dark:bg-white/10 rounded animate-pulse"></div>
-              </div>
-            </div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+              Ready to Start?
+            </h3>
+            <p className="text-gray-600 dark:text-white/60 text-sm">
+              Click "Start a Journey" above to create your first CV journey
+            </p>
           </motion.div>
-          
-          {/* Empty State Message */}
-          <div className="text-center py-4">
-            <div className="text-gray-600 dark:text-white/60 text-sm mb-1">No incomplete journeys</div>
-            <p className="text-gray-500 dark:text-white/50 text-xs">All your CV journeys are complete!</p>
-          </div>
         </div>
       ) : (
         <div className="relative overflow-hidden">

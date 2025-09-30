@@ -13,8 +13,20 @@ const Typewriter = ({ words, delay = 2000, className = '' }: TypewriterProps) =>
   const [currentText, setCurrentText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Safety check for empty words array
+  useEffect(() => {
+    if (words.length === 0) {
+      console.warn('Typewriter: No words provided');
+    }
+  }, [words]);
+
   useEffect(() => {
     const currentWord = words[currentWordIndex];
+    
+    // Safety check for empty words array
+    if (!currentWord || words.length === 0) {
+      return;
+    }
     
     if (isDeleting) {
       if (currentText.length > 0) {
@@ -41,12 +53,21 @@ const Typewriter = ({ words, delay = 2000, className = '' }: TypewriterProps) =>
     }
   }, [currentText, currentWordIndex, isDeleting, words, delay]);
 
+  // Fallback if no words provided
+  if (words.length === 0) {
+    return (
+      <span className={`inline-block ${className}`}>
+        <span className="text-lime-400">CV</span>
+      </span>
+    );
+  }
+
   return (
     <span className={`inline-block ${className}`}>
       <span className="text-lime-400 transition-all duration-200">
         {currentText}
       </span>
-      <span className="animate-pulse">|</span>
+      <span className="animate-pulse text-lime-400">|</span>
     </span>
   );
 };

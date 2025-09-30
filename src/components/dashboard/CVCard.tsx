@@ -132,7 +132,7 @@ const CVCard: React.FC<CVCardProps> = ({
         </motion.div>
         
         {/* Master Badge - Top Right */}
-        {cv.isMaster && (
+        {(cv.isMaster || cv.metadata?.isMaster) && (
           <motion.div 
             className="absolute top-3 right-3 px-3 py-1.5 rounded-xl bg-gradient-to-r from-lime-500/25 to-lime-600/25 text-lime-300 border border-lime-400/40 text-xs font-semibold z-10 flex items-center gap-1.5 backdrop-blur-sm shadow-lg"
             initial={{ scale: 0.8, opacity: 0 }}

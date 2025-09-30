@@ -1,19 +1,142 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { 
   FileText, Briefcase, PenTool, TrendingUp, Target, Sparkles, Zap, 
   Lightbulb, Plus, Edit, Eye, Trash2, Calendar, CheckCircle, Heart
 } from 'lucide-react';
-// import { useSession } from 'next-auth/react'; // Removed - using Clerk now
-import { useSession } from 'next-auth/react';
+import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
 import { useCreateCV } from '@/lib/utils/cvCreationUtils';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
+import { useUserData, getUserDisplayName, getUserEmail, getUserAvatar } from '@/lib/hooks/useUserData';
 import AnalyticsJourneyWidget from './AnalyticsJourneyWidget';
+import ProgressTrackingWidget from './ProgressTrackingWidget';
+import ApplicationStatsWidget from './ApplicationStatsWidget';
 import PageHeader from './PageHeader';
 import MasterCVBadge from './MasterCVBadge';
 import { authenticatedFetch } from '@/lib/utils/apiUtils';
+import { useParallelDataFetching } from '@/lib/hooks/useOptimizedDataFetching';
+import { AnalyticsSkeleton } from '@/components/ui/OptimizedSkeletons';
+import { usePerformanceMonitor } from '@/lib/utils/performanceMonitor';
+
+// Helper functions for CV scoring
+const calculatePersonalInfoScore = (basics: any): number => {
+  let score = 0;
+  let maxScore = 5;
+  if (basics.name && basics.name.trim()) score += 1;
+  if (basics.email && basics.email.trim()) score += 1;
+  if (basics.phone && basics.phone.trim()) score += 1;
+  if (basics.location && (basics.location.city || basics.location.address)) score += 1;
+  if (basics.summary && basics.summary.trim()) score += 1;
+  return (score / maxScore) * 100;
+};
+
+const calculateExperienceScore = (work: any[]): number => {
+  if (!Array.isArray(work) || work.length === 0) return 0;
+  let totalScore = 0;
+  const maxEntries = 3;
+  work.slice(0, maxEntries).forEach(entry => {
+    let entryScore = 0;
+    let maxEntryScore = 4;
+    if (entry.name && entry.name.trim()) entryScore += 1;
+    if (entry.position && entry.position.trim()) entryScore += 1;
+    if (entry.startDate && entry.startDate.trim()) entryScore += 1;
+    if (entry.summary && entry.summary.trim()) entryScore += 1;
+    totalScore += (entryScore / maxEntryScore) * 100;
+  });
+  return Math.min(100, totalScore / Math.min(work.length, maxEntries));
+};
+
+const calculateEducationScore = (education: any[]): number => {
+  if (!Array.isArray(education) || education.length === 0) return 0;
+  let totalScore = 0;
+  const maxEntries = 2;
+  education.slice(0, maxEntries).forEach(entry => {
+    let entryScore = 0;
+    let maxEntryScore = 4;
+    if (entry.institution && entry.institution.trim()) entryScore += 1;
+    if (entry.area && entry.area.trim()) entryScore += 1;
+    if (entry.studyType && entry.studyType.trim()) entryScore += 1;
+    if (entry.startDate && entry.startDate.trim()) entryScore += 1;
+    totalScore += (entryScore / maxEntryScore) * 100;
+  });
+  return Math.min(100, totalScore / Math.min(education.length, maxEntries));
+};
+
+const calculateSkillsScore = (skills: any[]): number => {
+  if (!Array.isArray(skills) || skills.length === 0) return 0;
+  let totalScore = 0;
+  const maxSkills = 5;
+  skills.slice(0, maxSkills).forEach(skill => {
+    let skillScore = 0;
+    let maxSkillScore = 2;
+    if (skill.name && skill.name.trim()) skillScore += 1;
+    if (skill.keywords && Array.isArray(skill.keywords) && skill.keywords.length > 0) skillScore += 1;
+    totalScore += (skillScore / maxSkillScore) * 100;
+  });
+  return Math.min(100, totalScore / Math.min(skills.length, maxSkills));
+};
+
+const calculateProjectsScore = (projects: any[]): number => {
+  if (!Array.isArray(projects) || projects.length === 0) return 0;
+  let totalScore = 0;
+  const maxProjects = 2;
+  projects.slice(0, maxProjects).forEach(project => {
+    let projectScore = 0;
+    let maxProjectScore = 3;
+    if (project.name && project.name.trim()) projectScore += 1;
+    if (project.description && project.description.trim()) projectScore += 1;
+    if (project.url && project.url.trim()) projectScore += 1;
+    totalScore += (projectScore / maxProjectScore) * 100;
+  });
+  return Math.min(100, totalScore / Math.min(projects.length, maxProjects));
+};
+
+// Helper function to calculate CV completion percentage
+const calculateCompletionPercentage = (cv: any): number => {
+  if (cv.status === 'published') return 100;
+  if (cv.status === 'archived') return 0;
+  
+  let totalScore = 0;
+  let maxScore = 0;
+  
+  const sectionWeights = { personalInfo: 25, experience: 30, education: 20, skills: 15, projects: 10 };
+  
+  if (cv.cvData?.basics) {
+    const basics = cv.cvData.basics;
+    const personalInfoScore = calculatePersonalInfoScore(basics);
+    totalScore += (personalInfoScore * sectionWeights.personalInfo) / 100;
+  }
+  maxScore += sectionWeights.personalInfo;
+  
+  if (cv.cvData?.work) {
+    const experienceScore = calculateExperienceScore(cv.cvData.work);
+    totalScore += (experienceScore * sectionWeights.experience) / 100;
+  }
+  maxScore += sectionWeights.experience;
+  
+  if (cv.cvData?.education) {
+    const educationScore = calculateEducationScore(cv.cvData.education);
+    totalScore += (educationScore * sectionWeights.education) / 100;
+  }
+  maxScore += sectionWeights.education;
+  
+  if (cv.cvData?.skills) {
+    const skillsScore = calculateSkillsScore(cv.cvData.skills);
+    totalScore += (skillsScore * sectionWeights.skills) / 100;
+  }
+  maxScore += sectionWeights.skills;
+  
+  if (cv.cvData?.projects) {
+    const projectsScore = calculateProjectsScore(cv.cvData.projects);
+    totalScore += (projectsScore * sectionWeights.projects) / 100;
+  }
+  maxScore += sectionWeights.projects;
+  
+  const completionPercentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
+  return Math.max(0, Math.min(100, completionPercentage));
+};
 
 // 1. Combined CV Management Section - CV Health Score + Master CV Management + Quick Actions
 const CVManagementSection: React.FC<{ 
@@ -36,128 +159,10 @@ const CVManagementSection: React.FC<{
   const strokeDashoffset = circumference * (1 - cvHealthScore / 100);
 
   // Find master CV
-  console.log('🔍 CVManagementSection - Received CVs:', cvs);
-  console.log('🔍 CVManagementSection - CVs length:', cvs.length);
-  const masterCV = cvs.find(cv => cv.isMaster);
-  const otherCVs = cvs.filter(cv => !cv.isMaster);
-  console.log('🔍 CVManagementSection - Master CV:', masterCV);
-  console.log('🔍 CVManagementSection - Other CVs:', otherCVs);
+  const masterCV = cvs.find(cv => cv.isMaster || cv.metadata?.isMaster);
+  const otherCVs = cvs.filter(cv => !cv.isMaster && !cv.metadata?.isMaster);
 
-  const calculateCompletionPercentage = (cv: any): number => {
-    if (cv.status === 'published') return 100;
-    if (cv.status === 'archived') return 0;
-    
-    let totalScore = 0;
-    let maxScore = 0;
-    
-    const sectionWeights = { personalInfo: 25, experience: 30, education: 20, skills: 15, projects: 10 };
-    
-    if (cv.cvData?.basics) {
-      const basics = cv.cvData.basics;
-      const personalInfoScore = calculatePersonalInfoScore(basics);
-      totalScore += (personalInfoScore * sectionWeights.personalInfo) / 100;
-    }
-    maxScore += sectionWeights.personalInfo;
-    
-    if (cv.cvData?.work) {
-      const experienceScore = calculateExperienceScore(cv.cvData.work);
-      totalScore += (experienceScore * sectionWeights.experience) / 100;
-    }
-    maxScore += sectionWeights.experience;
-    
-    if (cv.cvData?.education) {
-      const educationScore = calculateEducationScore(cv.cvData.education);
-      totalScore += (educationScore * sectionWeights.education) / 100;
-    }
-    maxScore += sectionWeights.education;
-    
-    if (cv.cvData?.skills) {
-      const skillsScore = calculateSkillsScore(cv.cvData.skills);
-      totalScore += (skillsScore * sectionWeights.skills) / 100;
-    }
-    maxScore += sectionWeights.skills;
-    
-    if (cv.cvData?.projects) {
-      const projectsScore = calculateProjectsScore(cv.cvData.projects);
-      totalScore += (projectsScore * sectionWeights.projects) / 100;
-    }
-    maxScore += sectionWeights.projects;
-    
-    const completionPercentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
-    return Math.max(0, Math.min(100, completionPercentage));
-  };
-
-  const calculatePersonalInfoScore = (basics: any): number => {
-    let score = 0;
-    let maxScore = 5;
-    if (basics.name && basics.name.trim()) score += 1;
-    if (basics.email && basics.email.trim()) score += 1;
-    if (basics.phone && basics.phone.trim()) score += 1;
-    if (basics.location && (basics.location.city || basics.location.address)) score += 1;
-    if (basics.summary && basics.summary.trim()) score += 1;
-    return (score / maxScore) * 100;
-  };
   
-  const calculateExperienceScore = (work: any[]): number => {
-    if (!Array.isArray(work) || work.length === 0) return 0;
-    let totalScore = 0;
-    const maxEntries = 3;
-    work.slice(0, maxEntries).forEach(entry => {
-      let entryScore = 0;
-      let maxEntryScore = 4;
-      if (entry.name && entry.name.trim()) entryScore += 1;
-      if (entry.position && entry.position.trim()) entryScore += 1;
-      if (entry.startDate && entry.startDate.trim()) entryScore += 1;
-      if (entry.summary && entry.summary.trim()) entryScore += 1;
-      totalScore += (entryScore / maxEntryScore) * 100;
-    });
-    return Math.min(100, totalScore / Math.min(work.length, maxEntries));
-  };
-  
-  const calculateEducationScore = (education: any[]): number => {
-    if (!Array.isArray(education) || education.length === 0) return 0;
-    let totalScore = 0;
-    const maxEntries = 2;
-    education.slice(0, maxEntries).forEach(entry => {
-      let entryScore = 0;
-      let maxEntryScore = 4;
-      if (entry.institution && entry.institution.trim()) entryScore += 1;
-      if (entry.area && entry.area.trim()) entryScore += 1;
-      if (entry.studyType && entry.studyType.trim()) entryScore += 1;
-      if (entry.startDate && entry.startDate.trim()) entryScore += 1;
-      totalScore += (entryScore / maxEntryScore) * 100;
-    });
-    return Math.min(100, totalScore / Math.min(education.length, maxEntries));
-  };
-  
-  const calculateSkillsScore = (skills: any[]): number => {
-    if (!Array.isArray(skills) || skills.length === 0) return 0;
-    let totalScore = 0;
-    const maxSkills = 5;
-    skills.slice(0, maxSkills).forEach(skill => {
-      let skillScore = 0;
-      let maxSkillScore = 2;
-      if (skill.name && skill.name.trim()) skillScore += 1;
-      if (skill.keywords && Array.isArray(skill.keywords) && skill.keywords.length > 0) skillScore += 1;
-      totalScore += (skillScore / maxSkillScore) * 100;
-    });
-    return Math.min(100, totalScore / Math.min(skills.length, maxSkills));
-  };
-  
-  const calculateProjectsScore = (projects: any[]): number => {
-    if (!Array.isArray(projects) || projects.length === 0) return 0;
-    let totalScore = 0;
-    const maxProjects = 2;
-    projects.slice(0, maxProjects).forEach(project => {
-      let projectScore = 0;
-      let maxProjectScore = 3;
-      if (project.name && project.name.trim()) projectScore += 1;
-      if (project.description && project.description.trim()) projectScore += 1;
-      if (project.url && project.url.trim()) projectScore += 1;
-      totalScore += (projectScore / maxProjectScore) * 100;
-    });
-    return Math.min(100, totalScore / Math.min(projects.length, maxProjects));
-  };
 
   return (
     <div className="glass-widget-premium glass-shimmer rounded-xl p-6">
@@ -270,14 +275,14 @@ const CVManagementSection: React.FC<{
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {cvs.map((cv) => (
               <div key={cv.id || cv._id} className={`glass-card-premium rounded-lg p-3 cursor-pointer hover:bg-gray-200 dark:hover:bg-white/10 transition-all duration-200 ${
-                cv.isMaster ? 'ring-1 ring-lime-400/30 bg-lime-400/5' : ''
+                (cv.isMaster || cv.metadata?.isMaster) ? 'ring-1 ring-lime-400/30 bg-lime-400/5' : ''
               }`}
                 onClick={() => onSetMasterCV(cv.id || cv._id)}>
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <h5 className="text-gray-900 dark:text-white font-medium text-sm truncate">{cv.title || 'Untitled CV'}</h5>
-                      {cv.isMaster && (
+                      {(cv.isMaster || cv.metadata?.isMaster) && (
                         <div className="flex items-center gap-1">
                           <div className="w-1.5 h-1.5 bg-lime-400 rounded-full"></div>
                           <span className="text-xs text-lime-400 font-medium">Master</span>
@@ -286,7 +291,7 @@ const CVManagementSection: React.FC<{
                     </div>
                     <p className="text-gray-500 dark:text-white/50 text-xs">{calculateCompletionPercentage(cv)}% complete</p>
                   </div>
-                  {!cv.isMaster && (
+                  {!(cv.isMaster || cv.metadata?.isMaster) && (
                     <button className="text-blue-400 hover:text-blue-300 text-xs font-medium">
                       Set Master
                     </button>
@@ -524,7 +529,7 @@ const ApplicationHub: React.FC<{
       <div>
                     <div className="flex items-center gap-2 mb-1">
                       <h4 className="text-gray-900 dark:text-white font-medium text-sm">{draft.title}</h4>
-                      {draft.isMaster && <MasterCVBadge variant="compact" />}
+                      {(draft.isMaster || draft.metadata?.isMaster) && <MasterCVBadge variant="compact" />}
                     </div>
                     <p className="text-gray-600 dark:text-white/40 text-xs">Progress: {draft.progress}%</p>
         </div>
@@ -1070,7 +1075,7 @@ const RecentJobsWidget: React.FC<{
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-bold text-gray-900 dark:text-white">Recent Applications</h2>
         <motion.button 
-          onClick={() => window.location.href = '/dashboard/pipeline'}
+          onClick={() => window.location.href = '/dashboard/application-tracker'}
           className="px-3 py-1.5 bg-blue-400/20 text-blue-400 rounded-lg text-sm font-medium hover:bg-blue-400/30 transition-all duration-300 flex items-center gap-2"
           whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
           <Briefcase size={14} /> View All
@@ -1155,7 +1160,7 @@ const RecentJobsWidget: React.FC<{
             <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-2">No Jobs Yet</h3>
             <p className="text-gray-600 dark:text-white/60 text-xs mb-4">Start tracking your job applications to see your recent applications here.</p>
             <motion.button 
-              onClick={() => window.location.href = '/dashboard/pipeline'}
+              onClick={() => window.location.href = '/dashboard/application-tracker'}
               className="px-4 py-2 bg-blue-400/20 text-blue-400 rounded-lg text-sm font-medium hover:bg-blue-400/30 transition-all duration-300"
               whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
               Add Your First Job
@@ -1224,16 +1229,82 @@ const RecentJobsWidget: React.FC<{
 
 // Main Analytics Component
 const Analytics: React.FC = () => {
-  const { data: session } = useSession();
+  const { user, loading: authLoading, isAuthenticated } = useUnifiedAuth();
   const { createCV } = useCreateCV();
   const { isOpen: isMobileMenuOpen, toggleSidebar } = useMobileSidebar();
-  const [user, setUser] = useState<any>(null);
-  const [jobs, setJobs] = useState<any[]>([]);
-  const [cvs, setCvs] = useState<any[]>([]);
-  const [analyticsData, setAnalyticsData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const { userData, loading: userLoading, error: userError } = useUserData();
   const [selectedPeriod, setSelectedPeriod] = useState('week');
-  const [drafts, setDrafts] = useState<any[]>([]);
+  
+  // Performance monitoring
+  const { startPageLoad, endPageLoad, startDataFetch, endDataFetch } = usePerformanceMonitor('Analytics');
+  
+  // Get user ID for data fetching using unified authentication
+  const userId = getUserIdForAPI(user);
+  
+  // Memoize fetchers with priority-based loading
+  const fetchers = useMemo(() => ({
+    // High priority - essential for Analytics page
+    cvs: () => {
+      startDataFetch();
+      return authenticatedFetch('/api/cvs').then(res => {
+        endDataFetch();
+        return res.json();
+      });
+    },
+    jobs: () => {
+      startDataFetch();
+      return authenticatedFetch('/api/jobs').then(res => {
+        endDataFetch();
+        return res.json();
+      });
+    },
+    // Medium priority - analytics data
+    analytics: () => {
+      startDataFetch();
+      return authenticatedFetch(`/api/analytics/progress?userId=${userId}&period=${selectedPeriod}`).then(res => {
+        endDataFetch();
+        return res.json();
+      }).catch(() => {
+        endDataFetch();
+        return { success: false, data: null };
+      });
+    },
+    // Low priority - optional data
+    drafts: () => {
+      startDataFetch();
+      return authenticatedFetch('/api/drafts').then(res => {
+        endDataFetch();
+        return res.json();
+      }).catch(() => {
+        endDataFetch();
+        return { success: false, data: { drafts: [] } };
+      });
+    }
+  }), [userId, selectedPeriod, startDataFetch, endDataFetch]);
+  
+  // Optimized parallel data fetching with priority
+  const {
+    data: dashboardData,
+    loading,
+    errors,
+    refetch
+  } = useParallelDataFetching(
+    fetchers,
+    {
+      cacheDuration: 300000, // 5 minutes
+      staleWhileRevalidate: true,
+      priority: ['cvs', 'jobs', 'analytics', 'drafts'], // Priority order for Analytics page
+      timeout: 10000, // 10 second timeout for individual requests
+      retryAttempts: 2 // Retry failed requests twice
+    }
+  );
+
+  // Use standardized user data from hook
+  const userProfile = userData;
+  const jobs = (dashboardData as any)?.jobs?.success ? (dashboardData as any).jobs.data?.jobs || [] : [];
+  const cvs = (dashboardData as any)?.cvs?.success ? (dashboardData as any).cvs.data?.cvs || [] : [];
+  const analyticsData = (dashboardData as any)?.analytics?.success ? (dashboardData as any).analytics.data : null;
+  const drafts = (dashboardData as any)?.drafts?.success ? (dashboardData as any).drafts.data?.drafts || [] : [];
 
   const handleUpdateMonthlyGoal = async (newGoal: number) => {
     try {
@@ -1242,11 +1313,8 @@ const Analytics: React.FC = () => {
         body: JSON.stringify({ monthlyGoal: newGoal }),
       });
       if (response.ok) {
-        const analyticsResponse = await authenticatedFetch(`/api/analytics?userId=${user?.id || user?._id || session?.user?.id}&period=${selectedPeriod}`);
-        if (analyticsResponse.ok) {
-          const newAnalyticsData = await analyticsResponse.json();
-          setAnalyticsData(newAnalyticsData.data);
-        }
+        // Refresh data using the optimized data fetching system
+        refetch();
       }
     } catch (error) {
       console.error('Error updating monthly goal:', error);
@@ -1260,16 +1328,8 @@ const Analytics: React.FC = () => {
         body: JSON.stringify({ cvId }),
       });
       if (response.ok) {
-        // Reload CVs to reflect the change
-        const userId = user?.id || user?._id || session?.user?.id;
-        if (userId) {
-          const cvsResponse = await authenticatedFetch('/api/cvs');
-          const cvsResult = await cvsResponse.json();
-          if (cvsResult.success) {
-            const cvData = Array.isArray(cvsResult.data?.cvs) ? cvsResult.data.cvs : [];
-            setCvs(cvData);
-          }
-        }
+        // Refresh data using the optimized data fetching system
+        refetch();
       }
     } catch (error) {
       console.error('Error setting master CV:', error);
@@ -1346,178 +1406,15 @@ const Analytics: React.FC = () => {
     });
     return Math.min(100, totalScore / Math.min(work.length, maxEntries));
   };
-  
-  const calculateEducationScore = (education: any[]): number => {
-    if (!Array.isArray(education) || education.length === 0) return 0;
-    let totalScore = 0;
-    const maxEntries = 2;
-    education.slice(0, maxEntries).forEach(entry => {
-      let entryScore = 0;
-      let maxEntryScore = 4;
-      if (entry.institution && entry.institution.trim()) entryScore += 1;
-      if (entry.area && entry.area.trim()) entryScore += 1;
-      if (entry.studyType && entry.studyType.trim()) entryScore += 1;
-      if (entry.startDate && entry.startDate.trim()) entryScore += 1;
-      totalScore += (entryScore / maxEntryScore) * 100;
-    });
-    return Math.min(100, totalScore / Math.min(education.length, maxEntries));
-  };
-  
-  const calculateSkillsScore = (skills: any[]): number => {
-    if (!Array.isArray(skills) || skills.length === 0) return 0;
-    let totalScore = 0;
-    const maxSkills = 5;
-    skills.slice(0, maxSkills).forEach(skill => {
-      let skillScore = 0;
-      let maxSkillScore = 2;
-      if (skill.name && skill.name.trim()) skillScore += 1;
-      if (skill.keywords && Array.isArray(skill.keywords) && skill.keywords.length > 0) skillScore += 1;
-      totalScore += (skillScore / maxSkillScore) * 100;
-    });
-    return Math.min(100, totalScore / Math.min(skills.length, maxSkills));
-  };
-  
-  const calculateProjectsScore = (projects: any[]): number => {
-    if (!Array.isArray(projects) || projects.length === 0) return 0;
-    let totalScore = 0;
-    const maxProjects = 2;
-    projects.slice(0, maxProjects).forEach(project => {
-      let projectScore = 0;
-      let maxProjectScore = 3;
-      if (project.name && project.name.trim()) projectScore += 1;
-      if (project.description && project.description.trim()) projectScore += 1;
-      if (project.url && project.url.trim()) projectScore += 1;
-      totalScore += (projectScore / maxProjectScore) * 100;
-    });
-    return Math.min(100, totalScore / Math.min(projects.length, maxProjects));
-  };
 
-  useEffect(() => {
-    // Check NextAuth session first
-    if (session?.user) {
-      console.log('🔍 Analytics - NextAuth session found:', session.user);
-      setUser(session.user);
-      loadData(session.user.id);
-    } else {
-      // Fallback to Firebase user data
-      const userData = localStorage.getItem('user');
-      if (userData) {
-        try {
-          const parsedUser = JSON.parse(userData);
-          console.log('🔍 Analytics - Firebase user data:', parsedUser);
-          if (parsedUser.firebaseUid) {
-            setUser(parsedUser);
-            loadData(parsedUser.id || parsedUser._id);
-          }
-        } catch (error) {
-          console.error('Error parsing Firebase user data:', error);
-        }
-      } else {
-        console.log('🔍 Analytics - No user data found in localStorage');
-      }
-    }
-  }, [session]);
+  // Old data fetching logic removed - now using optimized parallel data fetching
 
-  // Listen for user profile updates
-  useEffect(() => {
-    const handleUserProfileUpdate = (event: CustomEvent) => {
-      const updatedUser = event.detail.user;
-      setUser((prev: any) => ({
-        ...prev,
-        name: updatedUser.firstName + ' ' + updatedUser.lastName,
-        email: updatedUser.email,
-        username: updatedUser.username,
-        profilePhoto: updatedUser.avatar || updatedUser.profilePhoto,
-        role: session?.user?.role
-      }));
-    };
-
-    window.addEventListener('userProfileUpdated', handleUserProfileUpdate as EventListener);
-    
-    return () => {
-      window.removeEventListener('userProfileUpdated', handleUserProfileUpdate as EventListener);
-    };
-  }, []);
+  // User profile updates now handled by the optimized data fetching system
 
 
-  useEffect(() => {
-    if (user?.id || user?._id) {
-      loadAnalyticsDataOnly(user.id || user._id);
-    }
-  }, [selectedPeriod, user]);
+  // Analytics data loading now handled by optimized parallel data fetching
 
-  const loadAnalyticsDataOnly = async (userId: string) => {
-    try {
-      const analyticsResponse = await authenticatedFetch(`/api/analytics?userId=${userId}&period=${selectedPeriod}`);
-      const analyticsResult = await analyticsResponse.json();
-      if (analyticsResult.success) {
-        setAnalyticsData(analyticsResult.data);
-      }
-    } catch (error) {
-      console.error('Error loading analytics data:', error);
-    }
-  };
-
-  const loadData = async (userId: string) => {
-    try {
-      console.log('🔍 Analytics - loadData called with userId:', userId);
-      setLoading(true);
-      
-      const analyticsResponse = await authenticatedFetch(`/api/analytics?userId=${userId}&period=${selectedPeriod}`);
-      const analyticsResult = await analyticsResponse.json();
-      if (analyticsResult.success) {
-        setAnalyticsData(analyticsResult.data);
-      }
-      
-      const jobsResponse = await authenticatedFetch(`/api/jobs?userId=${userId}&limit=5&sort=createdAt&order=asc`);
-      const jobsResult = await jobsResponse.json();
-      if (jobsResult.success) {
-        const jobData = Array.isArray(jobsResult.jobs) ? jobsResult.jobs : [];
-        setJobs(jobData);
-      }
-
-      console.log('🔍 Analytics - Fetching CVs using session authentication');
-      const cvsResponse = await authenticatedFetch('/api/cvs');
-      const cvsResult = await cvsResponse.json();
-      console.log('🔍 Analytics - CV API response:', cvsResult);
-      if (cvsResult.success) {
-        const cvData = Array.isArray(cvsResult.data?.cvs) ? cvsResult.data.cvs : [];
-        console.log('🔍 Analytics - CV data received:', cvData);
-        console.log('🔍 Analytics - Number of CVs:', cvData.length);
-        setCvs(cvData);
-        
-        const incompleteCVs = cvData
-          .filter((cv: any) => {
-            const progress = calculateCompletionPercentage(cv);
-            return progress < 99;
-          })
-          .sort((a: any, b: any) => {
-            const progressA = calculateCompletionPercentage(a);
-            const progressB = calculateCompletionPercentage(b);
-            if (progressA !== progressB) {
-              return progressA - progressB;
-            }
-            return new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime();
-          })
-          .slice(0, 4)
-          .map((cv: any) => ({
-            id: cv.id || cv._id,
-            type: 'cv' as const,
-            title: cv.title || 'Untitled CV',
-            progress: calculateCompletionPercentage(cv),
-            lastEdited: new Date(cv.updatedAt || cv.createdAt),
-            cvData: cv.cvData,
-            isMaster: cv.isMaster || false
-          }));
-        
-        setDrafts(incompleteCVs);
-      }
-    } catch (error) {
-      console.error('Error loading data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // loadData function removed - now using optimized parallel data fetching
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -1527,226 +1424,79 @@ const Analytics: React.FC = () => {
   };
 
   const calculateCVHealthScore = () => {
-    if (!analyticsData) return 0;
-    return analyticsData.cvHealthScore || 0;
+    // Find master CV and calculate its completion percentage
+    const masterCV = cvs.find((cv: any) => cv.isMaster || cv.metadata?.isMaster);
+    
+    if (!masterCV) {
+      return 0;
+    }
+    
+    const healthScore = calculateCompletionPercentage(masterCV);
+    return healthScore;
   };
   
   const cvHealthScore = calculateCVHealthScore();
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        {/* Header Skeleton */}
-        <div className="mb-8">
-          <div className="h-8 w-64 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded mb-2">
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
-          </div>
-          <div className="h-4 w-32 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
-          </div>
-        </div>
+  // Performance monitoring
+  useEffect(() => {
+    startPageLoad();
+    return () => {
+      endPageLoad();
+    };
+  }, [startPageLoad, endPageLoad]);
 
-        {/* Main Grid Layout Skeleton */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Column 1: Status + Application Hub + Last 5 Jobs */}
-          <div className="space-y-6">
-            {/* My Status Section Skeleton */}
-            <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-              <div className="h-6 w-24 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded mb-4">
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
-              </div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* CV Health Score Skeleton */}
-                <div className="text-center">
-                  <div className="w-32 h-32 mx-auto mb-4 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded-full">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
-                  </div>
-                  <div className="h-3 w-20 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded mx-auto mb-1">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
-                  </div>
-                  <div className="h-3 w-16 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded mx-auto">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
-                  </div>
-                </div>
-                {/* Quick Actions Skeleton */}
-                <div className="space-y-3">
-                  <div className="h-4 w-24 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
-                  </div>
-                  {Array.from({ length: 4 }).map((_, index) => (
-                    <div key={index} className="h-10 w-full bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded-lg">
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Application Hub Skeleton */}
-            <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-              <div className="h-6 w-32 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded mb-4">
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
-              </div>
-              <div className="flex gap-2 mb-6">
-                {Array.from({ length: 2 }).map((_, index) => (
-                  <div key={index} className="h-8 w-24 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded-lg">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
-                  </div>
-                ))}
-              </div>
-              <div className="space-y-4">
-                {Array.from({ length: 2 }).map((_, index) => (
-                  <div key={index} className="p-4 bg-white/5 border border-white/10 rounded-lg">
-                    <div className="h-4 w-3/4 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded mb-2">
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
-                    </div>
-                    <div className="h-3 w-1/2 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Column 2: Intelligence Dashboard + Performance */}
-          <div className="space-y-6">
-            {/* Intelligence Dashboard Skeleton */}
-            <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-              <div className="h-6 w-40 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded mb-4">
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
-              </div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {Array.from({ length: 2 }).map((_, index) => (
-                  <div key={index} className="space-y-4">
-                    <div className="h-4 w-32 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      {Array.from({ length: 2 }).map((_, cardIndex) => (
-                        <div key={cardIndex} className="p-3 bg-white/5 rounded-lg">
-                          <div className="h-6 w-12 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded mb-1">
-                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
-                          </div>
-                          <div className="h-3 w-16 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
-                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Performance Insights Skeleton */}
-            <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div className="h-6 w-40 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
-                </div>
-                <div className="flex gap-2">
-                  {Array.from({ length: 3 }).map((_, index) => (
-                    <div key={index} className="h-8 w-16 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded-lg">
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              
-              {/* KPI Cards Skeleton */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {Array.from({ length: 4 }).map((_, index) => (
-                  <div key={index} className="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl p-4">
-                    <div className="h-6 w-16 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded mb-3">
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
-                    </div>
-                    <div className="h-4 w-12 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Last 5 Jobs Widget Skeleton */}
-            <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div className="h-6 w-28 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
-                </div>
-                <div className="h-8 w-20 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded-lg">
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
-                </div>
-              </div>
-              <div className="space-y-3">
-                {Array.from({ length: 5 }).map((_, index) => (
-                  <div key={index} className="p-4 bg-white/5 border border-white/10 rounded-lg">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-start gap-3 flex-1">
-                        <div className="w-8 h-8 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded-lg">
-                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
-                        </div>
-                        <div className="flex-1">
-                          <div className="h-4 w-3/4 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded mb-2">
-                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
-                          </div>
-                          <div className="h-3 w-1/2 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded mb-1">
-                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
-                          </div>
-                          <div className="h-3 w-1/3 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
-                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="h-4 w-16 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
-                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
-                        </div>
-                        <div className="h-3 w-12 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
-                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Show page with partial data - always render structure immediately
+  const hasCriticalData = userProfile && (cvs.length > 0 || jobs.length > 0);
+  const showPartialData = !loading || hasCriticalData;
 
   return (
     <div className="space-y-6">
       {/* Page Header */}
       <PageHeader
-        title={`Hello, ${user?.name || user?.username || 'User'}`}
+        title={`Hello, ${getUserDisplayName(userProfile)}`}
         description="Welcome back! Here's your career progress overview."
-        user={user || { name: 'User', email: 'user@example.com', role: session?.user?.role }}
+        user={{
+          name: getUserDisplayName(userProfile),
+          email: getUserEmail(userProfile),
+          username: userProfile?.username || '',
+          profilePhoto: getUserAvatar(userProfile),
+          designation: userProfile?.role || '',
+          role: user?.role,
+          subscription: userProfile?.subscription
+        }}
         showSettings={true}
         onMobileMenuToggle={toggleSidebar}
         isMobileMenuOpen={isMobileMenuOpen}
       />
 
-      {/* CV Journey Widget */}
-      <AnalyticsJourneyWidget
-        onResumeJourney={(journey) => {
-          // Navigate to CV Journey page and resume the specific journey
-          console.log('Resume journey:', journey);
-          window.location.href = `/dashboard/cv-journey?resume=${journey.id}`;
-        }}
-        onDeleteJourney={(journeyId) => {
-          // TODO: Implement delete journey functionality
-          console.log('Delete journey:', journeyId);
-        }}
-        onViewJourney={(journey) => {
-          // TODO: Implement view journey functionality
-          console.log('View journey:', journey);
-          window.location.href = `/dashboard/cv-journey`;
-        }}
-      />
+      {/* Application Journey Widget */}
+      {showPartialData ? (
+        <AnalyticsJourneyWidget
+          onResumeJourney={(journey) => {
+            // Navigate to Application Journey page and resume the specific journey
+            window.location.href = `/dashboard/application-journey?resume=${journey.id}`;
+          }}
+          onDeleteJourney={(journeyId) => {
+            // TODO: Implement delete journey functionality
+          }}
+          onViewJourney={(journey) => {
+            // TODO: Implement view journey functionality
+            window.location.href = `/dashboard/application-journey`;
+          }}
+        />
+      ) : (
+        <div className="h-32 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-xl" />
+      )}
+
+      {/* Progress Tracking Widgets */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <ProgressTrackingWidget userId={userId || ''} />
+        </div>
+        <div className="lg:col-span-1">
+          <ApplicationStatsWidget userId={userId || ''} />
+        </div>
+      </div>
 
       {/* CV Management Section */}
       <CVManagementSection
@@ -1755,7 +1505,7 @@ const Analytics: React.FC = () => {
         onImproveScore={() => window.location.href = '/studio'}
         onCreateCV={async () => {
           try {
-            const userId = user?.id || user?._id || session?.user?.id;
+            const currentUserId = userId;
             if (userId) {
               await createCV({ userId });
             }
@@ -1763,7 +1513,7 @@ const Analytics: React.FC = () => {
             console.error('Error creating CV:', error);
           }
         }}
-        onAddJob={() => window.location.href = '/dashboard/pipeline'}
+        onAddJob={() => window.location.href = '/dashboard/application-tracker'}
         onWriteCoverLetter={() => window.location.href = '/studio?type=cover_letter'}
         onSetMasterCV={handleSetMasterCV}
       />
@@ -1777,12 +1527,14 @@ const Analytics: React.FC = () => {
             jobs={jobs}
             onResumeDraft={(draftId) => window.location.href = `/studio?draft=${draftId}`}
             onPreviewDraft={(draftId) => window.location.href = `/preview?draft=${draftId}`}
-            onDiscardDraft={(draftId) => console.log('Discard draft', draftId)}
+            onDiscardDraft={(draftId) => {
+              // TODO: Implement discard draft functionality
+            }}
           />
 
           <RecentJobsWidget
             jobs={jobs}
-            onViewJob={(jobId) => window.location.href = `/dashboard/pipeline?job=${jobId}`}
+            onViewJob={(jobId) => window.location.href = `/dashboard/application-tracker?job=${jobId}`}
           />
         </div>
                         

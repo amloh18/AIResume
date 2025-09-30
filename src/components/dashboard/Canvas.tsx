@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useSession } from 'next-auth/react';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
+import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
 import RecentActivityWidget from './RecentActivityWidget';
 import { 
   FileText, 
@@ -46,13 +46,17 @@ import {
 import { useCreateCV } from '@/lib/utils/cvCreationUtils';
 import CVPreviewContent from '@/components/studio/CVPreviewContent';
 import PageHeader from './PageHeader';
+import { useUserData, getUserDisplayName, getUserEmail, getUserAvatar } from '@/lib/hooks/useUserData';
 import { authenticatedFetch } from '@/lib/utils/apiUtils';
 import { useJourneyLinking } from '@/lib/services/journeyLinkingService';
 import { ApplicationPackageService } from '@/lib/services/applicationPackageService';
+import { UnifiedCVService } from '@/lib/services/unified-cv-service';
 import MasterCVCardOverlay from './MasterCVCardOverlay';
 import CVCardOverlay from './CVCardOverlay';
 import CoverLetterCardOverlay from './CoverLetterCardOverlay';
 import ApplicationJourneyModal from './ApplicationJourneyModal';
+import { useOptimizedDataFetching } from '@/lib/hooks/useOptimizedDataFetching';
+import { CanvasSkeleton } from '@/components/ui/OptimizedSkeletons';
 
 interface CV {
   id: string;
@@ -218,10 +222,12 @@ const Modal: React.FC<ModalProps> = ({
 
 const Canvas: React.FC = () => {
   console.log('🔍 Canvas - Component rendered');
-  const { data: session } = useSession();
+  const { user, loading: authLoading, isAuthenticated } = useUnifiedAuth();
   const { createCV } = useCreateCV();
   const { isOpen: isMobileMenuOpen, toggleSidebar } = useMobileSidebar();
+  const { userData, loading: userLoading, error: userError } = useUserData();
   const [cvs, setCvs] = useState<CV[]>([]);
+  const [masterCVs, setMasterCVs] = useState<CV[]>([]);
   const [mongoDBUserId, setMongoDBUserId] = useState<string | null>(null);
   
   // ApplicationJourneyModal state
@@ -229,13 +235,13 @@ const Canvas: React.FC = () => {
   const [selectedJobForJourney, setSelectedJobForJourney] = useState<any>(null);
   const [journeysForSelectedJob, setJourneysForSelectedJob] = useState<any[]>([]);
   
-  // Helper function to resolve MongoDB user ID
-  const resolveMongoDBUserId = async (sessionUserId: string): Promise<string | null> => {
+  // Helper function to resolve MongoDB user ID using unified authentication
+  const resolveMongoDBUserId = async (userId: string): Promise<string | null> => {
     try {
       // Check if it's already a MongoDB ObjectId
-      if (/^[0-9a-fA-F]{24}$/.test(sessionUserId)) {
-        console.log('🔍 Canvas - Using MongoDB ObjectId:', sessionUserId);
-        return sessionUserId;
+      if (/^[0-9a-fA-F]{24}$/.test(userId)) {
+        console.log('🔍 Canvas - Using MongoDB ObjectId:', userId);
+        return userId;
       } else {
         // Try to get MongoDB user ID from server
         console.log('🔍 Canvas - Firebase UID detected, fetching MongoDB user ID...');
@@ -257,16 +263,16 @@ const Canvas: React.FC = () => {
   // Resolve MongoDB userId when session changes
   useEffect(() => {
     const initializeUserId = async () => {
-      const sessionUserId = session?.user?.id;
-      if (sessionUserId) {
-        const resolvedUserId = await resolveMongoDBUserId(sessionUserId);
+      const userId = getUserIdForAPI(user);
+      if (userId) {
+        const resolvedUserId = await resolveMongoDBUserId(userId);
         setMongoDBUserId(resolvedUserId);
         console.log('🔍 Canvas - MongoDB userId resolved:', resolvedUserId);
       }
     };
     
     initializeUserId();
-  }, [session?.user?.id]);
+  }, [user]);
   
   // Debug CVs state
   useEffect(() => {
@@ -279,7 +285,7 @@ const Canvas: React.FC = () => {
   // Handle CV creation
   const handleCreateCV = async () => {
     try {
-      const userId = session?.user?.id || getUserIdFromLocalStorage();
+      const userId = getUserIdForAPI(user);
       if (userId) {
         await createCV({ userId });
       } else {
@@ -294,6 +300,13 @@ const Canvas: React.FC = () => {
   const handleEditMasterCV = async (masterCV: any) => {
     try {
       console.log('🔍 Editing master CV:', masterCV);
+      
+      // Store master CV data in sessionStorage for studio to access
+      sessionStorage.setItem('editingMasterCV', JSON.stringify(masterCV));
+      sessionStorage.setItem('editingCVId', masterCV.id);
+      sessionStorage.setItem('editingCVTitle', masterCV.title);
+      sessionStorage.setItem('editingCVData', JSON.stringify(masterCV.cvData));
+      
       // Navigate to studio with master CV
       window.location.href = `/studio?cvId=${masterCV.id}&master=true`;
     } catch (error) {
@@ -305,7 +318,7 @@ const Canvas: React.FC = () => {
     try {
       console.log('🔍 Duplicating master CV using ApplicationPackageService:', masterCV);
       
-      const userId = session?.user?.id || getUserIdFromLocalStorage();
+      const userId = getUserIdForAPI(user) || getUserIdFromLocalStorage();
       if (!userId) {
         addToast('error', 'User not authenticated');
         return;
@@ -340,7 +353,7 @@ const Canvas: React.FC = () => {
     try {
       console.log('🔍 Duplicating CV using ApplicationPackageService:', cv);
       
-      const userId = session?.user?.id || getUserIdFromLocalStorage();
+      const userId = getUserIdForAPI(user) || getUserIdFromLocalStorage();
       if (!userId) {
         addToast('error', 'User not authenticated');
         return;
@@ -417,7 +430,7 @@ const Canvas: React.FC = () => {
           setSelectedJobForJourney(jobResult.data);
           
           // Fetch journeys for this job
-          const journeysResponse = await fetch(`/api/cv-journey?jobId=${journey.jobId}`);
+          const journeysResponse = await fetch(`/api/application-journey?jobId=${journey.jobId}`);
           if (journeysResponse.ok) {
             const journeysResult = await journeysResponse.json();
             if (journeysResult.success) {
@@ -467,7 +480,7 @@ const Canvas: React.FC = () => {
     read: boolean;
   }>>([]);
   const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
-  const [userProfile, setUserProfile] = useState<any>(null);
+  // userProfile is now handled by the useUserData hook
   
   // Modal state
   const [modalConfig, setModalConfig] = useState<{
@@ -552,25 +565,17 @@ const Canvas: React.FC = () => {
       sessionStorage.removeItem('fromOnboarding'); // Clear the flag
     }
     
-    // Check NextAuth session first
-    if (session?.user?.id) {
-      loadCVs(session.user.id);
+    // Use unified authentication
+    const userId = getUserIdForAPI(user);
+    if (userId) {
+      loadCVs(userId);
       loadCoverLetters();
       fetchAvailableJobs();
-      fetchUserProfile();
     } else {
-      // Fallback to Firebase user data
-      const userId = getUserIdFromLocalStorage();
-      if (userId) {
-        loadCVs(userId);
-        loadCoverLetters();
-        fetchAvailableJobs();
-      } else {
-        console.log('No user ID available, cannot load CVs and Cover Letters');
-        setLoading(false);
-      }
+      console.log('No user ID available, cannot load CVs and Cover Letters');
+      setLoading(false);
     }
-  }, [session?.user?.id]);
+  }, [user]);
 
   const getUserIdFromLocalStorage = (): string | null => {
     try {
@@ -591,7 +596,7 @@ const Canvas: React.FC = () => {
   const loadCVs = async (userId?: string) => {
     try {
       setLoading(true);
-      const userIdToUse = userId || session?.user?.id;
+      const userIdToUse = getUserIdForAPI(user);
       
       if (!userIdToUse) {
         console.error('No user ID available from session or localStorage');
@@ -603,58 +608,64 @@ const Canvas: React.FC = () => {
       console.log('🔍 Canvas - User ID type:', typeof userIdToUse);
       console.log('🔍 Canvas - User ID length:', userIdToUse?.toString().length);
       
-      const response = await authenticatedFetch(`/api/cvs?userId=${userIdToUse}`);
-      const result = await response.json();
-      console.log('🔍 Canvas - CV API response:', result);
-      console.log('🔍 Canvas - Response success:', result.success);
-      console.log('🔍 Canvas - Response data keys:', result.data ? Object.keys(result.data) : 'No data');
+      // Use unified service to get CVs
+      const result = await UnifiedCVService.getCVs(userIdToUse, { projection: 'summary' });
+      console.log('🔍 Canvas - Unified CV service response:', result);
       
-      if (result.success) {
-        const cvData = result.data.cvs || result.data.data || [];
-        console.log('🔍 Canvas - CV data received:', cvData);
-        console.log('🔍 Canvas - Number of CVs:', cvData.length);
-        console.log('🔍 Canvas - Result structure:', Object.keys(result.data));
+      if (result && result.length > 0) {
+        console.log('🔍 Canvas - CV data received:', result);
+        console.log('🔍 Canvas - Number of CVs:', result.length);
         
-        // Load connected jobs and cover letters for each CV
-        const enrichedCVs = await Promise.all(cvData.map(async (cv: any) => {
-          console.log('Processing CV:', cv.id || cv._id, 'Type:', typeof (cv.id || cv._id));
+        // Process CVs with unified data structure
+        const enrichedCVs = result.map((cv: any) => {
+          console.log('Processing CV:', cv.id, 'Type:', typeof cv.id);
           console.log('CV data structure:', Object.keys(cv));
           
-          const cvId = cv.id || cv._id;
-          
-          // Connected jobs removed - relationships now managed through CVJourney
-          
-
-          
           return {
-            id: cvId,
+            id: cv.id,
             title: cv.title || 'Untitled CV',
             lastModified: formatTimeAgo(new Date(cv.metadata?.lastModified || cv.updatedAt || cv.createdAt)),
             status: cv.status || 'draft',
-            views: cv.viewCount || cv.views || 0,
-            isStarred: cv.starred || cv.isStarred || false,
-            thumbnail: cv.thumbnail || '/api/placeholder/300/200',
-                            description: cv.description || '',
+            views: cv.metadata?.viewCount || 0,
+            isStarred: cv.metadata?.starred || false,
+            thumbnail: cv.metadata?.thumbnailUrl || '/api/placeholder/300/200',
+            description: cv.description || '',
             cvData: cv.cvData || null, // Include CV data for preview
-            // connectedJobs removed - relationships now managed through CVJourney
             completionPercentage: calculateCompletionPercentage(cv),
-            isMaster: cv.isMaster || false // Include master flag
+            isMaster: cv.metadata?.isMaster || false // Include master flag
           };
-        }));
+        });
         
-        // Filter out master CV from regular CV list (it will be displayed in MasterCVCard)
-        const regularCVs = enrichedCVs.filter(cv => !cv.isMaster);
+        // Separate Master CVs from regular CVs based on isMaster metadata
+        console.log('🔍 Canvas - All CVs before filtering:', enrichedCVs.map(cv => ({ 
+          id: cv.id, 
+          title: cv.title, 
+          isMaster: cv.isMaster,
+          metadataIsMaster: cv.metadata?.isMaster 
+        })));
         
-        console.log('🔍 Canvas - Setting CVs:', regularCVs.length);
+        // Filter CVs based on isMaster metadata
+        const masterCVs = enrichedCVs.filter(cv => cv.isMaster === true);
+        const regularCVs = enrichedCVs.filter(cv => cv.isMaster === false);
+        
+        console.log('🔍 Canvas - Master CVs:', masterCVs.length);
+        console.log('🔍 Canvas - Regular CVs:', regularCVs.length);
         console.log('🔍 Canvas - First CV sample:', regularCVs[0]);
+        console.log('🔍 Canvas - Master CVs data:', masterCVs);
+        console.log('🔍 Canvas - First Master CV:', masterCVs[0]);
+        
+        // Store both Master CVs and regular CVs
         setCvs(regularCVs);
+        setMasterCVs(masterCVs);
       } else {
-        console.log('🔍 Canvas - API returned success: false');
+        console.log('🔍 Canvas - No CVs found');
         setCvs([]);
+        setMasterCVs([]);
       }
     } catch (error) {
       console.error('Error loading CVs:', error);
       setCvs([]);
+      setMasterCVs([]);
     } finally {
       setLoading(false);
     }
@@ -663,7 +674,7 @@ const Canvas: React.FC = () => {
   const loadCoverLetters = async () => {
     try {
       console.log('🔍 Canvas - Loading Cover Letters...');
-      const userId = session?.user?.id;
+      const userId = getUserIdForAPI(user);
       if (!userId) {
         console.log('🔍 Canvas - No user ID, skipping Cover Letter load');
         return;
@@ -933,7 +944,7 @@ const Canvas: React.FC = () => {
   const saveTitle = async (cvId: string) => {
     try {
       // Get user ID from session or Firebase
-      let userId = session?.user?.id;
+      let userId = getUserIdForAPI(user);
       if (!userId) {
         const userData = localStorage.getItem('user');
         if (userData) {
@@ -1007,7 +1018,7 @@ const Canvas: React.FC = () => {
   const saveCoverLetterTitle = async (coverLetterId: string) => {
     try {
       // Get user ID from session or Firebase
-      let userId = session?.user?.id;
+      let userId = getUserIdForAPI(user);
       if (!userId) {
         const userData = localStorage.getItem('user');
         if (userData) {
@@ -1088,7 +1099,7 @@ const Canvas: React.FC = () => {
         method: 'PUT',
         body: JSON.stringify({
           isStarred: !coverLetter.isStarred,
-          userId: session?.user?.id
+          userId: getUserIdForAPI(user)
         }),
       });
 
@@ -1111,10 +1122,10 @@ const Canvas: React.FC = () => {
     try {
       setDeletingCVId(cvId);
       
-      // Get user ID from session or Firebase
-      let userId = session?.user?.id;
-      console.log('🔍 Delete - Session user ID:', session?.user?.id);
-      console.log('🔍 Delete - Session data:', session);
+      // Get user ID from unified authentication
+      let userId = getUserIdForAPI(user);
+      console.log('🔍 Delete - User ID:', getUserIdForAPI(user));
+      console.log('🔍 Delete - User data:', user);
       
       if (!userId) {
         const userData = localStorage.getItem('user');
@@ -1134,7 +1145,7 @@ const Canvas: React.FC = () => {
       
       if (!userId) {
         console.error('No user ID available for delete operation');
-        console.error('Session:', session);
+        console.error('User:', user);
         console.error('localStorage user data:', localStorage.getItem('user'));
         showModalDialog({
           title: 'Authentication Error',
@@ -1208,7 +1219,7 @@ const Canvas: React.FC = () => {
   // Fetch available jobs for linking
   const fetchAvailableJobs = async () => {
     try {
-      const userId = session?.user?.id || getUserIdFromLocalStorage();
+      const userId = getUserIdForAPI(user);
       if (!userId) return;
 
       const response = await authenticatedFetch(`/api/jobs?userId=${userId}`);
@@ -1223,25 +1234,12 @@ const Canvas: React.FC = () => {
     }
   };
 
-  // Fetch user profile from database
-  const fetchUserProfile = async () => {
-    try {
-      const response = await authenticatedFetch('/api/user');
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success && result.user) {
-          setUserProfile(result.user);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-    }
-  };
+  // User profile is now handled by the useUserData hook
 
   // Link job to CV using centralized journey linking service
   const linkJobToCV = async (cvId: string, jobId: string) => {
     try {
-      const userId = session?.user?.id || getUserIdFromLocalStorage();
+      const userId = getUserIdForAPI(user);
       if (!userId) return;
 
       // Use centralized journey linking service
@@ -1345,107 +1343,20 @@ const Canvas: React.FC = () => {
     return sections;
   };
 
-  if (loading) {
-      return (
-    <div className="space-y-6">
-        {/* Header Skeleton */}
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="h-8 w-48 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded mb-2">
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
-            </div>
-            <div className="h-4 w-96 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
-            </div>
-          </div>
-        </div>
-
-        {/* Main Grid Layout Skeleton */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          {/* Left Column - Main Content */}
-          <div className="xl:col-span-2 space-y-6">
-            {/* Stats Cards Skeleton */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {Array.from({ length: 4 }).map((_, index) => (
-                <div key={index} className="frosted-glass-card rounded-xl p-4">
-                  <div className="h-4 w-20 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded mb-2">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
-                  </div>
-                  <div className="h-6 w-12 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* CV Grid Skeleton */}
-            <div className="space-y-6">
-              <div className="h-6 w-32 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
-              </div>
-
-              <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
-                {Array.from({ length: 4 }).map((_, index) => (
-                  <div key={index} className="frosted-glass-card rounded-2xl overflow-hidden">
-                    {/* CV Preview Skeleton */}
-                    <div className="h-48 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden">
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
-                    </div>
-                    
-                    {/* CV Info Skeleton */}
-                    <div className="p-6 space-y-3">
-                      <div className="h-5 w-3/4 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
-                      </div>
-                      <div className="h-3 w-1/2 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded">
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
-                      </div>
-                      <div className="h-8 w-full bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded-lg">
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column - Sidebar Skeleton */}
-          <div className="space-y-6">
-            {Array.from({ length: 3 }).map((_, index) => (
-              <div key={index} className="frosted-glass-widget rounded-xl p-6">
-                <div className="h-5 w-32 bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded mb-4">
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
-                </div>
-                <div className="space-y-3">
-                  <div className="h-8 w-full bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded-lg">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
-                  </div>
-                  <div className="h-8 w-full bg-gradient-to-r from-gray-800 to-gray-700 relative overflow-hidden rounded-lg">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-shimmer"></div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
-      {/* Page Header */}
+      {/* Page Header - Always show immediately */}
       <PageHeader
         title="CV Studio"
         description="Create, edit, and manage professional CVs"
         user={{
-          name: userProfile?.firstName + ' ' + userProfile?.lastName || session?.user?.name || 'User',
-          email: userProfile?.email || session?.user?.email || 'user@example.com',
-          username: userProfile?.username || session?.user?.username || '',
-          profilePhoto: userProfile?.avatar || session?.user?.image || '',
-          designation: userProfile?.designation || '',
-          role: session?.user?.role
+          name: getUserDisplayName(userData),
+          email: getUserEmail(userData),
+          username: userData?.username || '',
+          profilePhoto: getUserAvatar(userData),
+          designation: userData?.role || '',
+          role: user?.role,
+          subscription: userData?.subscription
         }}
         showSettings={true}
         notifications={notifications}
@@ -1592,8 +1503,9 @@ const Canvas: React.FC = () => {
           <MasterCVCardOverlay
             onEditMasterCV={handleEditMasterCV}
             onDuplicateMasterCV={handleDuplicateMasterCV}
-            userId={mongoDBUserId || session?.user?.id || ''}
+            userId={mongoDBUserId || getUserIdForAPI(user) || ''}
             onToggleStar={toggleStar}
+            masterCVData={masterCVs.length > 0 ? masterCVs[0] : null}
           />
 
           {loading ? (
@@ -2090,7 +2002,7 @@ const Canvas: React.FC = () => {
           onRefresh={async () => {
             // Refresh the journeys for the selected job
             if (selectedJobForJourney) {
-              const journeysResponse = await fetch(`/api/cv-journey?jobId=${selectedJobForJourney.id}`);
+              const journeysResponse = await fetch(`/api/application-journey?jobId=${selectedJobForJourney.id}`);
               if (journeysResponse.ok) {
                 const journeysResult = await journeysResponse.json();
                 if (journeysResult.success) {

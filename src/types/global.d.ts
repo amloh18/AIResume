@@ -43,11 +43,11 @@ declare module 'next-auth' {
   interface Session {
     user: {
       id: string; // MongoDB user ID
-      firebaseUid: string; // Firebase UID
-      firstName: string;
-      lastName: string;
-      role: string;
-      emailVerified: boolean;
+      firebaseUid?: string; // Firebase UID (optional - legacy)
+      firstName?: string;
+      lastName?: string;
+      role?: string;
+      emailVerified?: boolean;
       email?: string;
       name?: string;
       image?: string;
@@ -56,21 +56,27 @@ declare module 'next-auth' {
 
   interface User {
     id: string; // MongoDB user ID
-    firebaseUid: string; // Firebase UID
-    firstName: string;
-    lastName: string;
-    role: string;
-    emailVerified: boolean;
+    firebaseUid?: string; // Firebase UID (optional - legacy)
+    firstName?: string;
+    lastName?: string;
+    role?: string;
+    emailVerified?: boolean;
+    email?: string;
+    name?: string;
+    image?: string;
   }
 }
 
 declare module 'next-auth/jwt' {
   interface JWT {
-    id: string; // MongoDB user ID
-    firebaseUid: string; // Firebase UID
-    firstName: string;
-    lastName: string;
-    role: string;
-    emailVerified: boolean;
+    sub?: string; // Subject (user ID)
+    firebaseUid?: string; // Firebase UID (optional - legacy)
+    firstName?: string;
+    lastName?: string;
+    role?: string;
+    emailVerified?: boolean;
+    email?: string;
+    name?: string;
+    picture?: string;
   }
-} 
+}

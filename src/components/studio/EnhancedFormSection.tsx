@@ -17,7 +17,7 @@ import AIEnhancedFormField from './AIEnhancedFormField';
 import ATSScoreGauge from '@/components/ui/ATSScoreGauge';
 import JobSelector from './JobSelector';
 import CVParserButton from './CVParserButton';
-import { CVDataStructure } from '@/types/cv';
+import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { Job } from '@/lib/stores/jobStore';
 import { useUserPlan } from '@/lib/hooks/useUserPlan';
 
@@ -51,7 +51,7 @@ interface FormSectionProps {
   };
   data: any;
   onUpdate: (path: string, value: any) => void;
-  cvData?: CVDataStructure | null;
+  cvData?: UnifiedCVDataStructure | null;
   jobData?: Job | null;
   isExpanded?: boolean;
   onToggle?: () => void;
@@ -214,7 +214,7 @@ export const FormSection: React.FC<FormSectionProps> = ({
 export const PersonalInfoSection: React.FC<{
   data: any;
   onUpdate: (path: string, value: any) => void;
-  cvData?: CVDataStructure | null;
+  cvData?: UnifiedCVDataStructure | null;
   jobData?: Job | null;
   isExpanded?: boolean;
   onToggle?: () => void;
@@ -353,7 +353,7 @@ export const WorkExperienceSection: React.FC<{
   onUpdate: (path: string, value: any) => void;
   onAdd: () => void;
   onRemove: (index: number) => void;
-  cvData?: CVDataStructure | null;
+  cvData?: UnifiedCVDataStructure | null;
   jobData?: Job | null;
   isExpanded?: boolean;
   onToggle?: () => void;
@@ -500,7 +500,7 @@ export const ProjectsSection: React.FC<{
   onUpdate: (path: string, value: any) => void;
   onAdd: () => void;
   onRemove: (index: number) => void;
-  cvData?: CVDataStructure | null;
+  cvData?: UnifiedCVDataStructure | null;
   jobData?: Job | null;
   isExpanded?: boolean;
   onToggle?: () => void;
@@ -640,7 +640,7 @@ export const LanguagesSection: React.FC<{
   onUpdate: (path: string, value: any) => void;
   onAdd: () => void;
   onRemove: (index: number) => void;
-  cvData?: CVDataStructure | null;
+  cvData?: UnifiedCVDataStructure | null;
   jobData?: Job | null;
   isExpanded?: boolean;
   onToggle?: () => void;
@@ -735,7 +735,7 @@ export const CertificationsSection: React.FC<{
   onUpdate: (path: string, value: any) => void;
   onAdd: () => void;
   onRemove: (index: number) => void;
-  cvData?: CVDataStructure | null;
+  cvData?: UnifiedCVDataStructure | null;
   jobData?: Job | null;
   isExpanded?: boolean;
   onToggle?: () => void;
@@ -875,7 +875,7 @@ export const SkillsSection: React.FC<{
   onUpdate: (path: string, value: any) => void;
   onAdd: () => void;
   onRemove: (index: number) => void;
-  cvData?: CVDataStructure | null;
+  cvData?: UnifiedCVDataStructure | null;
   jobData?: Job | null;
   isExpanded?: boolean;
   onToggle?: () => void;

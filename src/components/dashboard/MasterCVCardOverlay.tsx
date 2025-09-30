@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { CVProgressService } from '@/lib/services/cvProgressService';
+import { UnifiedCVService } from '@/lib/services/unified-cv-service';
 
 interface MasterCV {
   id: string;
@@ -32,13 +33,15 @@ interface MasterCVCardOverlayProps {
   onDuplicateMasterCV: (masterCV: MasterCV) => void;
   userId: string;
   onToggleStar?: (cvId: string) => void;
+  masterCVData?: MasterCV | null; // Optional prop to pass Master CV data
 }
 
 const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
   onEditMasterCV,
   onDuplicateMasterCV,
   userId,
-  onToggleStar
+  onToggleStar,
+  masterCVData
 }) => {
   const { data: session } = useSession();
   const [masterCV, setMasterCV] = useState<MasterCV | null>(null);
@@ -48,10 +51,32 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
   const [isHovered, setIsHovered] = useState(false);
 
   useEffect(() => {
-    if (userId) {
+    console.log('🔍 MasterCVCardOverlay - useEffect triggered');
+    console.log('🔍 MasterCVCardOverlay - masterCVData:', masterCVData);
+    console.log('🔍 MasterCVCardOverlay - userId:', userId);
+    
+    if (masterCVData) {
+      // Use passed Master CV data
+      console.log('🔍 MasterCVCardOverlay - Using passed masterCVData:', masterCVData);
+      console.log('🔍 MasterCVCardOverlay - Master CV details:', {
+        id: masterCVData.id,
+        title: masterCVData.title,
+        isMaster: masterCVData.isMaster,
+        status: masterCVData.status,
+        cvData: masterCVData.cvData ? 'Present' : 'Missing'
+      });
+      setMasterCV(masterCVData);
+      setLoading(false);
+      setError(null);
+    } else if (userId) {
+      // Fallback to fetching if no data passed
+      console.log('🔍 MasterCVCardOverlay - No masterCVData, fetching...');
       fetchMasterCV();
+    } else {
+      console.log('🔍 MasterCVCardOverlay - No masterCVData and no userId, setting loading to false');
+      setLoading(false);
     }
-  }, [userId]);
+  }, [userId, masterCVData]);
 
   const fetchMasterCV = async () => {
     try {
@@ -65,17 +90,35 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
         sessionUserId: session?.user?.id
       });
       
-      const response = await fetch(`/api/cvs/master?userId=${userId}`);
-      console.log('🔍 MasterCVCardOverlay - API response status:', response.status);
+      // Use unified service to get master CV
+      const allCVs = await UnifiedCVService.getCVs(userId, { 
+        projection: 'summary'
+      });
       
-      const result = await response.json();
-      console.log('🔍 MasterCVCardOverlay - API response data:', result);
+      // Filter for master CVs based on metadata.isMaster
+      const masterCVs = allCVs.filter(cv => cv.metadata?.isMaster === true);
       
-      if (result.success && result.data?.masterCV) {
-        console.log('✅ MasterCVCardOverlay - Master CV found:', result.data.masterCV);
-        setMasterCV(result.data.masterCV);
+      console.log('🔍 MasterCVCardOverlay - Unified service response:', masterCVs);
+      
+      if (masterCVs && masterCVs.length > 0) {
+        const masterCVData = masterCVs[0];
+        console.log('✅ MasterCVCardOverlay - Master CV found:', masterCVData);
+        
+        // Transform to expected format
+        const transformedMasterCV = {
+          id: masterCVData.id,
+          title: masterCVData.title,
+          lastModified: new Date(masterCVData.metadata?.lastModified || masterCVData.updatedAt).toLocaleDateString(),
+          status: masterCVData.status,
+          isMaster: masterCVData.metadata?.isMaster || false,
+          cvData: masterCVData.cvData,
+          isStarred: masterCVData.metadata?.starred || false,
+          thumbnail: masterCVData.metadata?.thumbnailUrl
+        };
+        
+        setMasterCV(transformedMasterCV);
       } else {
-        console.log('❌ MasterCVCardOverlay - No master CV found in response');
+        console.log('❌ MasterCVCardOverlay - No master CV found');
         setError('No master CV found');
       }
     } catch (error) {

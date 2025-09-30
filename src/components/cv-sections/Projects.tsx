@@ -1,13 +1,13 @@
 import React from 'react';
 import { Calendar, ExternalLink, Github, FolderOpen } from 'lucide-react';
-import { CVDataStructure } from '@/types/cv';
+import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ISectionBlueprint, ITemplate } from '@/models/Template';
 
 interface ProjectsProps {
-  data: CVDataStructure['projects'];
+  data: UnifiedCVDataStructure['projects'];
   sectionConfig: ISectionBlueprint;
   template: ITemplate;
-  cvData: CVDataStructure;
+  cvData: UnifiedCVDataStructure;
 }
 
 const Projects: React.FC<ProjectsProps> = ({ 

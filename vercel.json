@@ -1,23 +1,36 @@
 {
-  "version": 2,
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "framework": "nextjs",
   "functions": {
     "src/app/api/**/*.ts": {
       "maxDuration": 30
     }
   },
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization"
-      }
-    }
-  ],
   "env": {
     "NODE_ENV": "production"
   },
-  "regions": ["iad1"],
-  "public": true
+  "build": {
+    "env": {
+      "NEXT_PUBLIC_FIREBASE_API_KEY": "@firebase-api-key",
+      "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN": "@firebase-auth-domain",
+      "NEXT_PUBLIC_FIREBASE_PROJECT_ID": "@firebase-project-id",
+      "NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET": "@firebase-storage-bucket",
+      "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID": "@firebase-messaging-sender-id",
+      "NEXT_PUBLIC_FIREBASE_APP_ID": "@firebase-app-id",
+      "NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID": "@firebase-measurement-id",
+      "FIREBASE_PROJECT_ID": "@firebase-project-id",
+      "FIREBASE_CLIENT_EMAIL": "@firebase-client-email",
+      "FIREBASE_PRIVATE_KEY": "@firebase-private-key",
+      "MONGODB_URI": "@mongodb-uri",
+      "NEXTAUTH_SECRET": "@nextauth-secret",
+      "NEXTAUTH_URL": "@nextauth-url"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
+    }
+  ]
 }

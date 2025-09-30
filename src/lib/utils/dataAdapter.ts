@@ -1,11 +1,11 @@
-import { CVDataStructure } from '@/types/cv';
+import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
 
 /**
  * Adapter utility to convert between CV data formats
  */
 
-// Type guard to check if data is in CVDataStructure format
-export const isCVDataStructure = (data: any): data is CVDataStructure => {
+// Type guard to check if data is in UnifiedCVDataStructure format
+export const isUnifiedCVDataStructure = (data: any): data is UnifiedCVDataStructure => {
   return data && typeof data === 'object' && 'basics' in data;
 };
 
@@ -15,11 +15,11 @@ export const isOldCVData = (data: any): data is any => {
 };
 
 /**
- * Convert any CV data format to CVDataStructure (JSON Resume format)
+ * Convert any CV data format to UnifiedCVDataStructure (JSON Resume format)
  */
-export const toCVDataStructure = (data: any): CVDataStructure => {
-  // If it's already CVDataStructure format
-  if (isCVDataStructure(data)) {
+export const toUnifiedCVDataStructure = (data: any): UnifiedCVDataStructure => {
+  // If it's already UnifiedCVDataStructure format
+  if (isUnifiedCVDataStructure(data)) {
     return data;
   }
   

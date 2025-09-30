@@ -11,12 +11,12 @@
  * - Canvas queries all CVs and Cover Letters regardless of CV Journey
  */
 
-import { CVJourney } from '@/models/CVJourney';
-import { JobApplication } from '@/models/JobApplication';
-import { CV } from '@/models/CV';
-import { CoverLetter } from '@/models/CoverLetter';
+import { ApplicationJourney } from '@/models';
+import JobApplication from '@/models/JobApplication';
+import CV from '@/models/CV';
+import CoverLetter from '@/models/CoverLetter';
 
-export interface CVJourneyRelationship {
+export interface ApplicationJourneyRelationship {
   journeyId: string;
   jobId: string;
   cvId?: string;
@@ -43,13 +43,13 @@ export interface DocumentWithJourney {
   lastModified: Date;
 }
 
-export class CVJourneyRelationshipService {
+export class ApplicationJourneyRelationshipService {
   /**
    * Get CV Journey by Job ID
    */
-  static async getJourneyByJobId(jobId: string, userId: string): Promise<CVJourneyRelationship | null> {
+  static async getJourneyByJobId(jobId: string, userId: string): Promise<ApplicationJourneyRelationship | null> {
     try {
-      const journey = await CVJourney.findOne({ jobId, userId });
+      const journey = await ApplicationJourney.findOne({ jobId, userId });
       if (!journey) return null;
 
       return {
@@ -75,9 +75,9 @@ export class CVJourneyRelationshipService {
   /**
    * Get CV Journey by CV ID
    */
-  static async getJourneyByCVId(cvId: string, userId: string): Promise<CVJourneyRelationship | null> {
+  static async getJourneyByCVId(cvId: string, userId: string): Promise<ApplicationJourneyRelationship | null> {
     try {
-      const journey = await CVJourney.findOne({ cvId, userId });
+      const journey = await ApplicationJourney.findOne({ cvId, userId });
       if (!journey) return null;
 
       return {
@@ -103,9 +103,9 @@ export class CVJourneyRelationshipService {
   /**
    * Get CV Journey by Cover Letter ID
    */
-  static async getJourneyByCoverLetterId(coverLetterId: string, userId: string): Promise<CVJourneyRelationship | null> {
+  static async getJourneyByCoverLetterId(coverLetterId: string, userId: string): Promise<ApplicationJourneyRelationship | null> {
     try {
-      const journey = await CVJourney.findOne({ coverLetterId, userId });
+      const journey = await ApplicationJourney.findOne({ coverLetterId, userId });
       if (!journey) return null;
 
       return {
@@ -131,9 +131,9 @@ export class CVJourneyRelationshipService {
   /**
    * Get all CV Journeys for a user
    */
-  static async getAllJourneysForUser(userId: string): Promise<CVJourneyRelationship[]> {
+  static async getAllJourneysForUser(userId: string): Promise<ApplicationJourneyRelationship[]> {
     try {
-      const journeys = await CVJourney.find({ userId }).sort({ createdAt: -1 });
+      const journeys = await ApplicationJourney.find({ userId }).sort({ createdAt: -1 });
       
       return journeys.map(journey => ({
         journeyId: journey._id.toString(),
@@ -164,7 +164,7 @@ export class CVJourneyRelationshipService {
       const cvs = await CV.find({ userId }).sort({ updatedAt: -1 });
       
       // Get all CV Journeys for the user
-      const journeys = await CVJourney.find({ userId });
+      const journeys = await ApplicationJourney.find({ userId });
       
       // Create a map of CV ID to Journey
       const cvToJourneyMap = new Map();
@@ -204,7 +204,7 @@ export class CVJourneyRelationshipService {
       const coverLetters = await CoverLetter.find({ userId }).sort({ updatedAt: -1 });
       
       // Get all CV Journeys for the user
-      const journeys = await CVJourney.find({ userId });
+      const journeys = await ApplicationJourney.find({ userId });
       
       // Create a map of Cover Letter ID to Journey
       const coverLetterToJourneyMap = new Map();
@@ -240,7 +240,7 @@ export class CVJourneyRelationshipService {
    */
   static async linkCVToJourney(journeyId: string, cvId: string): Promise<boolean> {
     try {
-      const journey = await CVJourney.findById(journeyId);
+      const journey = await ApplicationJourney.findById(journeyId);
       if (!journey) return false;
 
       journey.cvId = cvId;
@@ -262,7 +262,7 @@ export class CVJourneyRelationshipService {
    */
   static async linkCoverLetterToJourney(journeyId: string, coverLetterId: string): Promise<boolean> {
     try {
-      const journey = await CVJourney.findById(journeyId);
+      const journey = await ApplicationJourney.findById(journeyId);
       if (!journey) return false;
 
       journey.coverLetterId = coverLetterId;
@@ -284,7 +284,7 @@ export class CVJourneyRelationshipService {
    */
   static async updateJourneyATSScore(journeyId: string, atsScore: number): Promise<boolean> {
     try {
-      const journey = await CVJourney.findById(journeyId);
+      const journey = await ApplicationJourney.findById(journeyId);
       if (!journey) return false;
 
       journey.atsScore = atsScore;
@@ -306,7 +306,7 @@ export class CVJourneyRelationshipService {
    */
   static async completeJourney(journeyId: string): Promise<boolean> {
     try {
-      const journey = await CVJourney.findById(journeyId);
+      const journey = await ApplicationJourney.findById(journeyId);
       if (!journey) return false;
 
       journey.status = 'completed';
@@ -368,7 +368,7 @@ export class CVJourneyRelationshipService {
       await tailoredCV.save();
 
       // Link to CV Journey
-      const journey = await CVJourney.findOne({ jobId, userId });
+      const journey = await ApplicationJourney.findOne({ jobId, userId });
       if (journey) {
         await this.linkCVToJourney(journey._id.toString(), tailoredCV._id.toString());
       }
@@ -386,10 +386,10 @@ export class CVJourneyRelationshipService {
   static async validateJourneyRelationships(journeyId: string): Promise<{
     isValid: boolean;
     issues: string[];
-    journey?: CVJourneyRelationship;
+    journey?: ApplicationJourneyRelationship;
   }> {
     try {
-      const journey = await CVJourney.findById(journeyId);
+      const journey = await ApplicationJourney.findById(journeyId);
       if (!journey) {
         return { isValid: false, issues: ['Journey not found'] };
       }
@@ -418,7 +418,7 @@ export class CVJourneyRelationshipService {
         }
       }
 
-      const journeyData: CVJourneyRelationship = {
+      const journeyData: ApplicationJourneyRelationship = {
         journeyId: journey._id.toString(),
         jobId: journey.jobId,
         cvId: journey.cvId,

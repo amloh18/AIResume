@@ -1,4 +1,4 @@
-import { CVDataStructure } from '@/types/cv';
+import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { Job } from '@/lib/stores/jobStore';
 
 export interface ATSAnalysisResult {
@@ -62,7 +62,7 @@ export class ATSService {
   /**
    * Calculate ATS score for CV against job description
    */
-  static async calculateATSScore(cvData: CVDataStructure, jobData: Job): Promise<ATSAnalysisResult> {
+  static async calculateATSScore(cvData: UnifiedCVDataStructure, jobData: Job): Promise<ATSAnalysisResult> {
     try {
       const cvText = this.convertCVToText(cvData);
       const jobDescription = jobData.description || jobData.jobDescription || '';
@@ -91,7 +91,7 @@ export class ATSService {
   /**
    * Convert CV data structure to text for analysis
    */
-  private static convertCVToText(cvData: CVDataStructure): string {
+  private static convertCVToText(cvData: UnifiedCVDataStructure): string {
     let cvText = '';
 
     // Add basics
@@ -175,7 +175,7 @@ export class ATSService {
   /**
    * Calculate a simple ATS score for quick display (without API call)
    */
-  static calculateQuickATSScore(cvData: CVDataStructure, jobData: Job): number {
+  static calculateQuickATSScore(cvData: UnifiedCVDataStructure, jobData: Job): number {
     try {
       const cvText = this.convertCVToText(cvData).toLowerCase();
       const jobDescription = (jobData.description || jobData.jobDescription || '').toLowerCase();

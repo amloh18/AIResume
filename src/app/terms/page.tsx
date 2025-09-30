@@ -6,7 +6,6 @@ import { FileText, Scale, CreditCard, Shield, Users, AlertTriangle, CheckCircle,
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import Logo from '@/components/ui/Logo';
-import UserIcon from '@/components/ui/UserIcon';
 
 const TermsOfService: React.FC = () => {
   const { data: session, status } = useSession();
@@ -32,13 +31,6 @@ const TermsOfService: React.FC = () => {
               <div className="flex items-center space-x-3 ml-4 pl-4 border-l border-white/20">
                 {status === 'loading' ? (
                   <div className="w-8 h-8 bg-white/20 rounded-full animate-pulse"></div>
-                ) : session?.user ? (
-                  <UserIcon user={{
-                    name: session.user.name || '',
-                    email: session.user.email || '',
-                    username: undefined,
-                    profilePhoto: session.user.image
-                  }} />
                 ) : (
                   <div className="flex items-center space-x-2">
                     <Link

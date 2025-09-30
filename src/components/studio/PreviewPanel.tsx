@@ -18,7 +18,7 @@ import {
   Loader2,
   Image
 } from 'lucide-react';
-import { CVDataStructure } from '@/types/cv';
+import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { Template } from '@/lib/stores/templateStore';
 import { Job } from '@/lib/stores/jobStore';
 import CVPreviewContent from './CVPreviewContent';
@@ -28,7 +28,7 @@ import { downloadAsJSON, downloadAsPDF, downloadAsDOCX, downloadAsImage } from '
 import { useTheme } from '@/lib/contexts/ThemeContext';
 
 interface PreviewPanelProps {
-  cvData: CVDataStructure | null;
+  cvData: UnifiedCVDataStructure | null;
   template: Template | null;
   jobData: Job | null;
   zoom: number;

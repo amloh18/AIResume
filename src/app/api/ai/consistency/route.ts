@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AIAssistantService } from '@/lib/services/aiAssistantService';
-import { CVService } from '@/lib/services/cvService';
+import { UnifiedCVService } from '@/lib/services/unified-cv-service';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Load CV data
-    const cvData = await CVService.getCV(cvId);
+    const cvData = await UnifiedCVService.getCV(cvId);
     if (!cvData) {
       return NextResponse.json(
         { success: false, error: 'CV not found' },

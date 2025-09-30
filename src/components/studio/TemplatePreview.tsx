@@ -2,13 +2,13 @@
 
 import React from 'react';
 import { Template } from '@/lib/stores/templateStore';
-import { CVDataStructure } from '@/types/cv';
+import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import EnhancedCVPreview from './EnhancedCVPreview';
 import CVPreviewContent from './CVPreviewContent';
 
 interface TemplatePreviewProps {
   template: Template;
-  cvData?: CVDataStructure | null;
+  cvData?: UnifiedCVDataStructure | null;
   scale?: number;
   className?: string;
 }
@@ -20,7 +20,7 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
   className = ''
 }) => {
   // Generate sample CV data if none provided
-  const sampleCVData: CVDataStructure = cvData || {
+  const sampleCVData: UnifiedCVDataStructure = cvData || {
     basics: {
       name: 'John Doe',
       label: 'Software Engineer',

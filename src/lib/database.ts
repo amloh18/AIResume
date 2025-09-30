@@ -1,42 +1,9 @@
 import mongoose from 'mongoose';
 
-// Load environment variables manually if not already loaded
-let MONGODB_URI = process.env.MONGODB_URI;
+// Load environment variables
+const MONGODB_URI = process.env.MONGODB_URI;
 
-if (!MONGODB_URI && typeof window === 'undefined') {
-  // Only try to load from file system on server side
-  try {
-    const fs = require('fs');
-    const path = require('path');
-    const envPath = path.join(process.cwd(), '.env.local');
-    if (fs.existsSync(envPath)) {
-      const envContent = fs.readFileSync(envPath, 'utf8');
-      const uriMatch = envContent.match(/MONGODB_URI=(.+)/);
-      if (uriMatch) {
-        MONGODB_URI = uriMatch[1].trim();
-        console.log('✅ Loaded MONGODB_URI from .env.local');
-      }
-    }
-  } catch (error) {
-    console.error('❌ Error loading .env.local:', error);
-  }
-}
-
-// Fallback to default if still not found
-MONGODB_URI = MONGODB_URI || 'mongodb://localhost:27017/cvcircle';
-
-// Ensure the URI includes a database name
-if (MONGODB_URI && !MONGODB_URI.includes('/cvcircle') && !MONGODB_URI.includes('/test') && !MONGODB_URI.includes('/admin')) {
-  // Add /cvcircle to the URI if no database name is specified
-  if (MONGODB_URI.endsWith('/') || MONGODB_URI.includes('?')) {
-    MONGODB_URI = MONGODB_URI.replace(/(\?.*)$/, '/cvcircle$1');
-  } else {
-    MONGODB_URI = MONGODB_URI + '/cvcircle';
-  }
-  console.log('🔧 Added database name to MongoDB URI');
-}
-
-console.log('🔍 Current MONGODB_URI:', MONGODB_URI ? MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@') : 'undefined');
+console.log('🔍 MongoDB URI check:', MONGODB_URI ? 'URI found' : 'URI missing');
 
 if (!MONGODB_URI) {
   throw new Error('Please define the MONGODB_URI environment variable inside .env.local');
@@ -53,20 +20,9 @@ if (!cached) {
   cached = global.mongoose = { conn: null, promise: null };
 }
 
-// Enhanced connection options for production
+// Simplified connection options
 const connectionOptions = {
   bufferCommands: false,
-  maxPoolSize: 10, // Maintain up to 10 socket connections
-  serverSelectionTimeoutMS: 30000, // Increase timeout for Atlas
-  socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
-  family: 4, // Use IPv4, skip trying IPv6
-  retryWrites: true,
-  // SSL settings - required for MongoDB Atlas
-  ssl: true, // Enable SSL for Atlas connections
-  // Connection monitoring
-  heartbeatFrequencyMS: 10000, // Send heartbeat every 10 seconds
-  // Timeout settings
-  connectTimeoutMS: 30000, // Increase timeout for Atlas connections
 };
 
 // Connection event handlers
@@ -114,9 +70,9 @@ async function connectDB() {
     // Setup connection event handlers
     setupConnectionHandlers();
 
-    cached.promise = mongoose.connect(MONGODB_URI, connectionOptions).then((mongoose) => {
+    cached.promise = mongoose.connect(MONGODB_URI!, connectionOptions).then((mongoose) => {
       console.log('✅ Connected to MongoDB successfully');
-      console.log(`📊 Database: ${mongoose.connection.db.databaseName}`);
+      console.log(`📊 Database: ${mongoose.connection.db?.databaseName || 'unknown'}`);
       console.log(`🌐 Host: ${mongoose.connection.host}:${mongoose.connection.port}`);
       return mongoose;
     }).catch((error) => {
@@ -171,12 +127,12 @@ export const healthCheck = async () => {
     }
     
     // Test the connection with a simple operation
-    await mongoose.connection.db.admin().ping();
+    await mongoose.connection.db?.admin().ping();
     
-    return { 
-      status: 'healthy', 
+    return {
+      status: 'healthy',
       message: 'MongoDB connection is healthy',
-      database: mongoose.connection.db.databaseName,
+      database: mongoose.connection.db?.databaseName || 'unknown',
       host: mongoose.connection.host,
       port: mongoose.connection.port
     };

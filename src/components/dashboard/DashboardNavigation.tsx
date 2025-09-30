@@ -13,7 +13,8 @@ import {
   Route,
   RefreshCw,
   CheckCircle,
-  Target
+  Target,
+  Settings
 } from 'lucide-react';
 import { getSidebarClasses } from '@/lib/utils/themeUtils';
 
@@ -88,11 +89,11 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
 
   const sections = [
     { id: 'analytics', name: 'Analytics', icon: BarChart3, description: 'Progress Tracking' },
-    { id: 'pipeline', name: 'Job Tracker', icon: Briefcase, description: 'Track Applications', tourId: 'job-tracker' },
     { id: 'application-tracker', name: 'Application Tracker', icon: Target, description: 'Manage jobs with integrated CV journeys', tourId: 'application-tracker' },
-    { id: 'cv-journey', name: 'CV Journey', icon: Route, description: 'Guided CV Creation', tourId: 'cv-journey' },
+    { id: 'application-journey', name: 'Application Journey', icon: Route, description: 'Guided Application Process', tourId: 'application-journey' },
     { id: 'canvas', name: 'CV Studio', icon: FileText, description: 'Saved CV/Cover Letters', tourId: 'cv-studio' },
-    { id: 'quillbox', name: 'Snippets', icon: MessageSquare, description: 'Content Library' }
+    { id: 'quillbox', name: 'Snippets', icon: MessageSquare, description: 'Content Library' },
+    { id: 'settings', name: 'Settings', icon: Settings, description: 'Account & preferences', tourId: 'settings' }
   ];
 
   const getUserInitials = (name: string) => {
@@ -139,7 +140,7 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
 
   const getSidebarContainerClasses = () => {
     const baseClasses = 'fixed z-40 transition-all duration-300 ease-in-out';
-    const topOffset = isBannerVisible ? 'top-20' : 'top-4';
+    const topOffset = isBannerVisible ? 'top-20' : 'top-2';
     
     switch (screenSize) {
       case 'mobile':
@@ -147,13 +148,13 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
                 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-r border-gray-200/50 dark:border-gray-700/50`;
       
       case 'tablet':
-        return `${baseClasses} ${topOffset} left-4 bottom-4 w-20 ${isOpen ? 'translate-x-0' : '-translate-x-full xl:translate-x-0'} 
+        return `${baseClasses} ${topOffset} left-2 bottom-2 w-20 ${isOpen ? 'translate-x-0' : '-translate-x-full xl:translate-x-0'} 
                 bg-gray-50/95 dark:bg-gray-800/95 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 
                 rounded-2xl shadow-xl shadow-gray-900/10 dark:shadow-black/20`;
       
       case 'desktop':
       default:
-        return `${baseClasses} ${topOffset} left-4 bottom-4 w-72 ${isOpen ? 'translate-x-0' : '-translate-x-full xl:translate-x-0'} 
+        return `${baseClasses} ${topOffset} left-2 bottom-2 w-72 ${isOpen ? 'translate-x-0' : '-translate-x-full xl:translate-x-0'} 
                 bg-gray-50/95 dark:bg-gray-800/95 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 
                 rounded-2xl shadow-xl shadow-gray-900/10 dark:shadow-black/20`;
     }
@@ -175,10 +176,7 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
                 <CheckCircle size={20} className="text-gray-900 dark:text-white" />
               </div>
             ) : (
-              <>
-                <span className="text-lime-600 dark:text-lime-400 drop-shadow-lg">CV</span>
-                <span className="text-gray-800 dark:text-white">CIRCLE</span>
-              </>
+              <span className="text-lime-600 dark:text-lime-400 drop-shadow-lg">CVCircle.io</span>
             )}
           </button>
         </div>
@@ -214,7 +212,11 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
               {screenSize !== 'tablet' && (
                 <div className="text-left">
                   <div className="text-sm font-semibold">{section.name}</div>
-                  <div className="text-xs opacity-70">{section.description}</div>
+                  <div className={`text-xs ${
+                    activeSection === section.id 
+                      ? 'text-lime-600 dark:text-lime-400 opacity-90' 
+                      : 'opacity-70'
+                  }`}>{section.description}</div>
                 </div>
               )}
             </motion.button>

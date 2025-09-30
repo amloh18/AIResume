@@ -9,7 +9,7 @@
  */
 
 import { ITemplate, IColumnLayout, ISectionStyling } from '@/models/Template';
-import { CVDataStructure } from '@/types/cv';
+import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
 
 // Page configuration for different formats
 const PAGE_FORMATS = {
@@ -53,10 +53,10 @@ export interface PreviewResult {
  */
 export class PreviewEngine {
   private template: ITemplate;
-  private cvData: CVDataStructure;
+  private cvData: UnifiedCVDataStructure;
   private maxPageHeight: number;
   
-  constructor(template: ITemplate, cvData: CVDataStructure) {
+  constructor(template: ITemplate, cvData: UnifiedCVDataStructure) {
     this.template = template;
     this.cvData = cvData;
     
@@ -484,8 +484,9 @@ export class PreviewEngine {
  */
 export async function renderCVPreview(
   template: ITemplate, 
-  cvData: CVDataStructure
+  cvData: UnifiedCVDataStructure
 ): Promise<PreviewResult> {
   const engine = new PreviewEngine(template, cvData);
   return await engine.render();
 }
+

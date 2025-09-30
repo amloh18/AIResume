@@ -7,7 +7,7 @@ import Typewriter from '../ui/Typewriter';
 import { Play, ArrowRight, Sparkles } from 'lucide-react';
 
 const Hero = () => {
-  const typewriterWords = ['CV', 'Cover Letter', 'Job Tracker'];
+  const typewriterWords = ['CV', 'Cover Letter', 'Job Applications'];
   const [scrollY, setScrollY] = useState(0);
 
   useEffect(() => {
@@ -26,7 +26,12 @@ const Hero = () => {
   }, []);
 
   return (
-    <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16 sm:pt-20 lg:pt-24">
+    <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16 sm:pt-20 lg:pt-24 bg-gradient-to-br from-gray-900 via-black to-gray-900">
+      {/* Background Effects */}
+      <div className="absolute inset-0">
+        <div className="absolute inset-0 bg-gradient-to-br from-lime-400/5 to-blue-400/5"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-lime-400/3 to-blue-400/3 rounded-full blur-3xl"></div>
+      </div>
 
       {/* Content */}
       <div className="relative z-10 text-center px-4 sm:px-6 lg:px-8 w-full max-w-7xl mx-auto" style={{ paddingTop: 'var(--navbar-height, 80px)' }}>
@@ -66,7 +71,7 @@ const Hero = () => {
           transition={{ duration: 0.6, delay: 0.3, ease: "easeOut" }}
           style={{ willChange: 'transform, opacity' }}
         >
-          Your one-stop platform for job seekers. Smart, fast, beautiful.
+          One-click CV creation, cover letter generation, and job application tracking made effortless.
         </motion.p>
 
         {/* Enhanced CTA Buttons - Optimized */}
@@ -95,7 +100,6 @@ const Hero = () => {
               className="relative flex items-center gap-3"
               whileHover={{ x: 5 }}
             >
-              <Sparkles size={20} />
               <span>Get Started</span>
               <motion.div
                 whileHover={{ rotate: 45 }}
@@ -106,7 +110,8 @@ const Hero = () => {
             </motion.div>
           </motion.a>
           
-          <motion.button
+          <motion.a
+            href="#chrome-extension"
             className="group relative border-2 border-white/20 text-white px-10 py-5 rounded-full font-semibold text-lg hover:bg-white/10 transition-all backdrop-blur-sm overflow-hidden"
             whileHover={{ 
               scale: 1.05,
@@ -118,7 +123,6 @@ const Hero = () => {
               transformStyle: 'preserve-3d',
               perspective: '1000px'
             }}
-            onClick={() => window.location.href = '/sign-up'}
           >
             <motion.div
               className="absolute inset-0 bg-gradient-to-r from-lime-400/10 to-blue-400/10 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -126,9 +130,9 @@ const Hero = () => {
             />
             <div className="relative flex items-center gap-3">
               <Play size={20} />
-              <span>Get Started</span>
+              <span>Download Extension</span>
             </div>
-          </motion.button>
+          </motion.a>
         </motion.div>
 
         {/* Hero Banner with Parallax Effect */}

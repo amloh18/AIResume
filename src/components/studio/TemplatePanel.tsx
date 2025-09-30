@@ -18,18 +18,21 @@ import {
   Info
 } from 'lucide-react';
 import { Template } from '@/lib/stores/templateStore';
+import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import TemplatePreview from './TemplatePreview';
 
 interface TemplatePanelProps {
   selectedTemplate: Template | null;
   onTemplateSelect: (template: Template) => void;
   onPreviewTemplate: (template: Template) => void;
+  cvData?: UnifiedCVDataStructure | null;
 }
 
 const TemplatePanel: React.FC<TemplatePanelProps> = ({
   selectedTemplate,
   onTemplateSelect,
-  onPreviewTemplate
+  onPreviewTemplate,
+  cvData
 }) => {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
@@ -184,24 +187,28 @@ const TemplatePanel: React.FC<TemplatePanelProps> = ({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             className={`
-              relative p-4 rounded-lg border transition-all cursor-pointer
+              relative p-4 rounded-lg border-2 transition-all cursor-pointer
               ${selectedTemplate?.id === template.id
-                ? 'border-lime-500 bg-lime-50'
-                : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
+                ? 'border-lime-500 bg-lime-50 shadow-lg ring-2 ring-lime-200'
+                : 'border-gray-200 hover:border-gray-300 hover:shadow-md bg-white'
               }
             `}
-            onClick={() => onTemplateSelect(template)}
+            onClick={() => {
+              console.log('🔍 TemplatePanel - Selecting template:', template.name, 'ID:', template.id);
+              console.log('🔍 TemplatePanel - Current selectedTemplate:', selectedTemplate?.id);
+              onTemplateSelect(template);
+            }}
           >
-            {/* Selected Checkmark */}
+            {/* Selected Checkmark - Only show on active template */}
             {selectedTemplate?.id === template.id && (
-              <div className="absolute top-3 right-3 w-6 h-6 bg-lime-600 rounded-full flex items-center justify-center">
-                <Check className="h-4 w-4 text-white" />
+              <div className="absolute top-3 right-3 w-7 h-7 bg-lime-500 rounded-full flex items-center justify-center shadow-md">
+                <Check className="h-5 w-5 text-white font-bold" />
               </div>
             )}
 
-            {/* Default Badge */}
-            {template.isDefault && (
-              <div className="absolute top-3 left-3 px-2 py-1 bg-lime-100 text-lime-800 text-xs font-medium rounded-full">
+            {/* Default Badge - Only show if not selected */}
+            {template.isDefault && selectedTemplate?.id !== template.id && (
+              <div className="absolute top-3 left-3 px-2 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
                 Default
               </div>
             )}
@@ -209,7 +216,8 @@ const TemplatePanel: React.FC<TemplatePanelProps> = ({
             {/* Template Preview */}
             <div className="mb-3 relative group">
               <TemplatePreview 
-                template={template} 
+                template={template}
+                cvData={cvData}
                 scale={0.25}
                 className="w-full h-32"
               />

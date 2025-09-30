@@ -19,9 +19,16 @@ export async function GET(request: NextRequest) {
     }
 
     const userId = session.user.id;
-    
-    // Get user profile data
-    const user = await User.findById(userId).select('-password -emailVerificationToken -emailVerificationExpires -resetPasswordToken -resetPasswordExpires');
+
+    // Get user profile data - handle both MongoDB ObjectId and Firebase UID
+    let user;
+    if (userId.length === 24 && /^[0-9a-fA-F]{24}$/.test(userId)) {
+      // MongoDB ObjectId
+      user = await User.findById(userId).select('-password -emailVerificationToken -emailVerificationExpires -resetPasswordToken -resetPasswordExpires');
+    } else {
+      // Firebase UID - find by firebaseUid field
+      user = await User.findOne({ firebaseUid: userId }).select('-password -emailVerificationToken -emailVerificationExpires -resetPasswordToken -resetPasswordExpires');
+    }
     
     if (!user) {
       return NextResponse.json(
@@ -30,13 +37,21 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get user settings
-    let userSettings = await UserSettings.findOne({ userId });
-    
+    // Get user settings - handle both MongoDB ObjectId and Firebase UID
+    let userSettings;
+    if (userId.length === 24 && /^[0-9a-fA-F]{24}$/.test(userId)) {
+      // MongoDB ObjectId
+      userSettings = await UserSettings.findOne({ userId });
+    } else {
+      // Firebase UID - find by firebaseUid field
+      userSettings = await UserSettings.findOne({ firebaseUid: userId });
+    }
+
     // Create default settings if they don't exist
     if (!userSettings) {
       userSettings = new UserSettings({
-        userId,
+        userId: userId.length === 24 && /^[0-9a-fA-F]{24}$/.test(userId) ? userId : undefined,
+        firebaseUid: userId.length === 24 && /^[0-9a-fA-F]{24}$/.test(userId) ? undefined : userId,
         // Default values are set in the schema
       });
       await userSettings.save();

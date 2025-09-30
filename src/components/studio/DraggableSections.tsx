@@ -17,7 +17,6 @@ import {
   Globe,
   Plus,
   Minus,
-  Upload,
   TrendingUp
 } from 'lucide-react';
 import { getThemeClasses } from '@/lib/utils/themeUtils';
@@ -88,115 +87,62 @@ const DraggableSections: React.FC<DraggableSectionsProps> = ({
   return (
     <div className="space-y-6">
       {/* Global Controls */}
-      <div className="bg-gradient-to-r from-white/90 to-gray-50/90 dark:from-gray-800/90 dark:to-gray-900/90 backdrop-blur-xl border border-gray-200/60 dark:border-gray-700/60 rounded-xl p-6 shadow-lg shadow-gray-200/50 dark:shadow-gray-900/50">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-br from-lime-500 to-lime-600 rounded-lg shadow-md">
-              <TrendingUp className="w-5 h-5 text-white" />
+      <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl border border-gray-200/60 dark:border-gray-700/60 rounded-lg p-3 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-gradient-to-br from-lime-500 to-lime-600 rounded-md">
+              <TrendingUp className="w-4 h-4 text-white" />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+              <h3 className="text-base font-semibold text-gray-900 dark:text-white">
                 CV Sections
               </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-xs text-gray-600 dark:text-gray-400">
                 Organize and customize your CV structure
               </p>
             </div>
           </div>
-          <motion.button
-            onClick={onToggleAllSections}
-            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
-              allCollapsed 
-                ? 'bg-lime-600 hover:bg-lime-700 text-white shadow-md hover:shadow-lg' 
-                : 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'
-            }`}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            {allCollapsed ? (
-              <>
-                <Plus className="w-4 h-4" />
-                Expand All
-              </>
-            ) : (
-              <>
-                <Minus className="w-4 h-4" />
-                Collapse All
-              </>
-            )}
-          </motion.button>
-        </div>
-        <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-          <div className="flex items-center gap-1">
-            <GripVertical className="w-3 h-3" />
-            <span>Drag to reorder</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <ChevronDown className="w-3 h-3" />
-            <span>Click to expand</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Eye className="w-3 h-3" />
-            <span>Toggle visibility</span>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+              <div className="flex items-center gap-1">
+                <GripVertical className="w-3 h-3" />
+                <span>Drag to reorder</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <ChevronDown className="w-3 h-3" />
+                <span>Click to expand</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Eye className="w-3 h-3" />
+                <span>Toggle visibility</span>
+              </div>
+            </div>
+            <motion.button
+              onClick={onToggleAllSections}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
+                allCollapsed 
+                  ? 'bg-lime-600 hover:bg-lime-700 text-white' 
+                  : 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'
+              }`}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              {allCollapsed ? (
+                <>
+                  <Plus className="w-3 h-3" />
+                  Expand All
+                </>
+              ) : (
+                <>
+                  <Minus className="w-3 h-3" />
+                  Collapse All
+                </>
+              )}
+            </motion.button>
           </div>
         </div>
       </div>
 
-      {/* CV Parser Section */}
-      <div className="bg-gradient-to-r from-blue-50/90 to-indigo-50/90 dark:from-blue-900/20 dark:to-indigo-900/20 backdrop-blur-xl border border-blue-200/60 dark:border-blue-700/60 rounded-xl p-6 shadow-lg shadow-blue-200/50 dark:shadow-blue-900/50">
-        <div className="flex items-center gap-4 mb-4">
-          <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-md">
-            <Upload className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h4 className="text-lg font-bold text-gray-900 dark:text-white">
-              CV Parser
-            </h4>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Upload your existing CV to automatically populate sections
-            </p>
-          </div>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <input
-            type="file"
-            accept=".pdf,.doc,.docx"
-            className="hidden"
-            id="cv-upload"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) {
-                // Handle file upload logic here
-                console.log('CV file selected:', file.name);
-              }
-            }}
-          />
-          <motion.label
-            htmlFor="cv-upload"
-            className="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-sm font-medium rounded-lg transition-all duration-200 cursor-pointer shadow-md hover:shadow-lg"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <Upload className="w-4 h-4" />
-            Upload CV File
-          </motion.label>
-          <motion.button
-            onClick={() => {
-              // Handle drag & drop area toggle
-              console.log('Toggle drag area');
-            }}
-            className="flex items-center justify-center gap-2 px-4 py-3 bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg transition-all duration-200 border border-gray-200 dark:border-gray-600 shadow-md hover:shadow-lg"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <div className="w-4 h-4 border-2 border-dashed border-gray-400 dark:border-gray-500 rounded"></div>
-            Drag & Drop Area
-          </motion.button>
-        </div>
-        <div className="mt-3 text-xs text-gray-500 dark:text-gray-400">
-          Supported formats: PDF, DOC, DOCX • Max size: 10MB
-        </div>
-      </div>
 
       {/* Draggable Sections */}
       <div className="space-y-4">

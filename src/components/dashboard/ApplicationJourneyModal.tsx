@@ -124,7 +124,7 @@ const ApplicationJourneyModal: React.FC<ApplicationJourneyModalProps> = ({
       setLoadingJourneys(true);
       try {
         console.log('🔍 Loading journeys for job:', job.id);
-        const response = await authenticatedFetchWithUserId(`/api/cv-journey?jobId=${job.id}`, session.user.id);
+        const response = await authenticatedFetchWithUserId(`/api/application-journey?jobId=${job.id}`, session.user.id);
         const result = await response.json();
 
         if (result.success && result.data.journeys) {
@@ -171,7 +171,7 @@ const ApplicationJourneyModal: React.FC<ApplicationJourneyModalProps> = ({
         return;
       }
 
-      const response = await fetch('/api/cv-journey', {
+      const response = await fetch('/api/application-journey', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -240,24 +240,30 @@ const ApplicationJourneyModal: React.FC<ApplicationJourneyModalProps> = ({
 
   const handleDeleteJourney = async (journeyId: string) => {
     try {
+      console.log('🔍 ApplicationJourneyModal - handleDeleteJourney called with journeyId:', journeyId);
       setIsDeleting(true);
       const userId = session?.user?.id;
       if (!userId) {
-        console.error('No user ID available');
+        console.error('❌ ApplicationJourneyModal - No user ID available');
         return;
       }
 
-      console.log('🔍 ApplicationJourneyModal - Deleting journey:', journeyId);
+      console.log('🔍 ApplicationJourneyModal - Deleting journey:', journeyId, 'userId:', userId);
       
       // Call the CV Journey API to delete the journey
-      const response = await fetch('/api/cv-journey', {
+      console.log('🔍 ApplicationJourneyModal - Making DELETE request to /api/application-journey');
+      const response = await fetch('/api/application-journey', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ journeyId, userId })
       });
 
+      console.log('🔍 ApplicationJourneyModal - Response status:', response.status);
+      console.log('🔍 ApplicationJourneyModal - Response ok:', response.ok);
+
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('❌ ApplicationJourneyModal - API error:', errorData);
         throw new Error(errorData.message || 'Failed to delete journey');
       }
 
@@ -774,7 +780,11 @@ const ApplicationJourneyModal: React.FC<ApplicationJourneyModalProps> = ({
                 Cancel
               </motion.button>
               <motion.button
-                onClick={() => handleDeleteJourney(showDeleteConfirm)}
+                onClick={() => {
+                  console.log('🔍 ApplicationJourneyModal - Delete button clicked, journeyId:', showDeleteConfirm);
+                  console.log('🔍 ApplicationJourneyModal - isDeleting state:', isDeleting);
+                  handleDeleteJourney(showDeleteConfirm);
+                }}
                 disabled={isDeleting}
                 className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
                 whileHover={{ scale: 1.02 }}

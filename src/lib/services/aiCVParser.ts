@@ -1,8 +1,8 @@
-import { CVDataStructure } from '@/types/cv';
+import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
 
 export interface ParsedCVData {
   success: boolean;
-  data?: CVDataStructure;
+  data?: UnifiedCVDataStructure;
   error?: string;
 }
 
@@ -68,7 +68,7 @@ export class AICVParser {
       }
 
       // Parse the AI response and validate the structure
-      const parsedData: CVDataStructure = aiResponse.data;
+      const parsedData: UnifiedCVDataStructure = aiResponse.data;
 
       // Validate and clean the parsed data
       const cleanedData = this.validateAndCleanData(parsedData);
@@ -87,9 +87,9 @@ export class AICVParser {
     }
   }
 
-  private static validateAndCleanData(data: any): CVDataStructure {
+  private static validateAndCleanData(data: any): UnifiedCVDataStructure {
     // Ensure all required fields exist with proper defaults
-    const cleaned: CVDataStructure = {
+    const cleaned: UnifiedCVDataStructure = {
       basics: {
         name: data.basics?.name || '',
         label: data.basics?.label || '',

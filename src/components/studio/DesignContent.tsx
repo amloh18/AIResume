@@ -122,7 +122,7 @@ const DesignContent: React.FC<DesignContentProps> = ({
                 max="32"
                 value={designSettings.headerFontSize}
                 onChange={(e) => handleSettingChange('headerFontSize', parseInt(e.target.value))}
-                className="w-full"
+                className="w-full accent-lime-500"
               />
               <span className="text-xs text-gray-500">{designSettings.headerFontSize}px</span>
             </div>
@@ -136,7 +136,7 @@ const DesignContent: React.FC<DesignContentProps> = ({
                 max="18"
                 value={designSettings.bodyFontSize}
                 onChange={(e) => handleSettingChange('bodyFontSize', parseInt(e.target.value))}
-                className="w-full"
+                className="w-full accent-lime-500"
               />
               <span className="text-xs text-gray-500">{designSettings.bodyFontSize}px</span>
             </div>
@@ -150,7 +150,7 @@ const DesignContent: React.FC<DesignContentProps> = ({
                 max="24"
                 value={designSettings.sectionFontSize}
                 onChange={(e) => handleSettingChange('sectionFontSize', parseInt(e.target.value))}
-                className="w-full"
+                className="w-full accent-lime-500"
               />
               <span className="text-xs text-gray-500">{designSettings.sectionFontSize}px</span>
             </div>
@@ -169,8 +169,9 @@ const DesignContent: React.FC<DesignContentProps> = ({
           {/* Alignment */}
           <div>
             <label className={`block text-sm font-medium ${themeClasses.text.secondary} mb-2`}>
-              Text Alignment
+              Text Alignment for CV Header
             </label>
+            <p className="text-xs text-gray-500 mb-2">Affects basics section only (excluding professional summary)</p>
             <div className="flex gap-2">
               {['left', 'center', 'right'].map((align) => (
                 <button
@@ -200,7 +201,7 @@ const DesignContent: React.FC<DesignContentProps> = ({
               step="0.1"
               value={designSettings.lineSpacing}
               onChange={(e) => handleSettingChange('lineSpacing', parseFloat(e.target.value))}
-              className="w-full"
+              className="w-full accent-lime-500"
             />
             <span className="text-xs text-gray-500">{designSettings.lineSpacing}x</span>
           </div>
@@ -216,10 +217,10 @@ const DesignContent: React.FC<DesignContentProps> = ({
         
         <div className="grid grid-cols-2 gap-3">
           {[
-            { id: 'professional', name: 'Professional', colors: ['#1f2937', '#3b82f6'] },
-            { id: 'modern', name: 'Modern', colors: ['#059669', '#10b981'] },
-            { id: 'creative', name: 'Creative', colors: ['#7c3aed', '#a855f7'] },
-            { id: 'minimal', name: 'Minimal', colors: ['#374151', '#6b7280'] }
+            { id: 'black-black', name: 'Black/Black', colors: ['#000000', '#000000'] },
+            { id: 'black-grey', name: 'Black/Dark Grey', colors: ['#000000', '#374151'] },
+            { id: 'blue-black', name: 'Blue/Black', colors: ['#2563eb', '#000000'] },
+            { id: 'green-black', name: 'Green/Black', colors: ['#16a34a', '#000000'] }
           ].map((scheme) => (
             <button
               key={scheme.id}

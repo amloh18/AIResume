@@ -5,6 +5,7 @@ import connectDB from '@/lib/database';
 import { CV, Template, User } from '@/models';
 import { createPaginationOptions, paginateQuery, createErrorResponse } from '@/lib/db-utils';
 import { extractUserIdentifier, findManyByFirebaseUid, countByFirebaseUid, createWithFirebaseUid } from '@/lib/firebase-uid-utils';
+import { UnifiedCVAPIResponse, UnifiedCVDocument, UnifiedCVRequest } from '@/types/unified-cv-schema';
 import mongoose from 'mongoose';
 
 // GET - List CVs for a user with comprehensive filtering
@@ -164,7 +165,8 @@ export async function GET(request: NextRequest) {
         title: cv.title,
         isMaster: cv.metadata?.isMaster,
         rawIsMaster: cv.metadata?.isMaster,
-        isMasterType: typeof cv.metadata?.isMaster
+        isMasterType: typeof cv.metadata?.isMaster,
+        fullMetadata: cv.metadata
       });
       
       return {
@@ -188,11 +190,45 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    return NextResponse.json({
+    console.log('🔍 CV API - Final transformed CVs:', transformedCvs.map(cv => ({
+      id: cv.id,
+      title: cv.title,
+      isMaster: cv.isMaster,
+      metadata: cv.metadata
+    })));
+
+    // Convert to unified schema format
+    const unifiedCvs: UnifiedCVDocument[] = transformedCvs.map(cv => ({
+      id: cv.id,
+      userId: userIdentifier.id,
+      title: cv.title,
+      cvData: cv.cvData,
+      templateId: cv.templateId,
+      status: cv.status,
+      version: 1, // Default version
+      metadata: {
+        isMaster: cv.isMaster,
+        lastModified: cv.lastModified,
+        createdFrom: undefined,
+        tags: cv.metadata?.tags || [],
+        isPublic: cv.metadata?.isPublic || false,
+        viewCount: cv.viewCount,
+        downloadCount: cv.downloadCount,
+        atsScore: cv.metadata?.atsScore,
+        atsScoreDate: cv.metadata?.atsScoreDate,
+        thumbnailUrl: cv.metadata?.thumbnailUrl,
+        thumbnailGeneratedAt: cv.metadata?.thumbnailGeneratedAt,
+        starred: cv.starred
+      },
+      createdAt: cv.createdAt,
+      updatedAt: cv.updatedAt
+    }));
+
+    const response: UnifiedCVAPIResponse = {
       success: true,
       message: 'CVs retrieved successfully',
       data: {
-        cvs: transformedCvs,
+        cvs: unifiedCvs,
         total,
         counts: {
           total,
@@ -202,7 +238,9 @@ export async function GET(request: NextRequest) {
           starred: starredCount
         }
       }
-    });
+    };
+
+    return NextResponse.json(response);
 
   } catch (error: any) {
     console.error('Get CVs error:', error);

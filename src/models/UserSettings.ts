@@ -137,6 +137,16 @@ export interface IUserSettings extends Document {
         connected: boolean;
         provider: 'google' | 'outlook' | 'apple';
         accessToken?: string; // Encrypted
+        refreshToken?: string; // Encrypted
+        lastSync?: Date;
+        syncEnabled: boolean;
+        syncSettings: {
+          includeInterviews: boolean;
+          includeFollowUps: boolean;
+          includeDeadlines: boolean;
+          reminderMinutes: number;
+          colorCoding: boolean;
+        };
       };
     };
     experimental: {
@@ -163,8 +173,7 @@ const userSettingsSchema = new Schema<IUserSettings>({
   userId: {
     type: Schema.Types.Mixed, // Allow both ObjectId and string
     required: [true, 'User ID is required'],
-    unique: true,
-    index: true
+    unique: true
   },
   firebaseUid: {
     type: String,
@@ -547,6 +556,41 @@ const userSettingsSchema = new Schema<IUserSettings>({
         accessToken: {
           type: String,
           select: false // Never include in queries by default
+        },
+        refreshToken: {
+          type: String,
+          select: false // Never include in queries by default
+        },
+        lastSync: {
+          type: Date
+        },
+        syncEnabled: {
+          type: Boolean,
+          default: false
+        },
+        syncSettings: {
+          includeInterviews: {
+            type: Boolean,
+            default: true
+          },
+          includeFollowUps: {
+            type: Boolean,
+            default: true
+          },
+          includeDeadlines: {
+            type: Boolean,
+            default: true
+          },
+          reminderMinutes: {
+            type: Number,
+            default: 60,
+            min: 0,
+            max: 1440
+          },
+          colorCoding: {
+            type: Boolean,
+            default: true
+          }
         }
       }
     },

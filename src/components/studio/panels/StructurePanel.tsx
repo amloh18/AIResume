@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 
 import { DocumentType, StudioSessionContext, JobData } from '@/types/studio';
-import { CVDataStructure } from '@/types/cv';
+import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -25,13 +25,22 @@ import EducationSection from '../forms/EducationSection';
 import SkillsSection from '../forms/SkillsSection';
 import ProjectsSection from '../forms/ProjectsSection';
 
+// Import new form components for unified schema
+import VolunteerSection from '../forms/VolunteerSection';
+import AwardsSection from '../forms/AwardsSection';
+import CertificatesSection from '../forms/CertificatesSection';
+import PublicationsSection from '../forms/PublicationsSection';
+import LanguagesSection from '../forms/LanguagesSection';
+import InterestsSection from '../forms/InterestsSection';
+import ReferencesSection from '../forms/ReferencesSection';
+
 interface StructurePanelProps {
   documentType: DocumentType;
-  documentData: CVDataStructure | string;
+  documentData: UnifiedCVDataStructure | string;
   sessionContext: StudioSessionContext;
   availableJobs: JobData[];
   selectedJobId?: string;
-  onUpdateDocument: (data: CVDataStructure | string) => void;
+  onUpdateDocument: (data: UnifiedCVDataStructure | string) => void;
   onSelectJob: (jobId: string) => void;
 }
 
@@ -66,7 +75,7 @@ export function StructurePanel({
 
         {/* CV Sections */}
         <CVStructureSections
-          cvData={documentData as CVDataStructure}
+          cvData={documentData as UnifiedCVDataStructure}
           onUpdateCV={onUpdateDocument}
           jobContext={selectedJobId ? availableJobs.find(j => j.id === selectedJobId) : undefined}
         />
@@ -222,8 +231,8 @@ function CVStructureSections({
   onUpdateCV,
   jobContext
 }: {
-  cvData: CVDataStructure;
-  onUpdateCV: (data: CVDataStructure) => void;
+  cvData: UnifiedCVDataStructure;
+  onUpdateCV: (data: UnifiedCVDataStructure) => void;
   jobContext?: JobData;
 }) {
   const [openSections, setOpenSections] = React.useState<Set<string>>(new Set(['basics', 'work']));
@@ -254,11 +263,16 @@ function CVStructureSections({
   const sections = [
     { id: 'basics', title: 'Personal Information', icon: '👤' },
     { id: 'work', title: 'Work Experience', icon: '💼' },
+    { id: 'volunteer', title: 'Volunteer Experience', icon: '🤝' },
     { id: 'education', title: 'Education', icon: '🎓' },
-    { id: 'skills', title: 'Skills', icon: '🛠️' },
-    { id: 'projects', title: 'Projects', icon: '🚀' },
+    { id: 'awards', title: 'Awards & Recognition', icon: '🏆' },
     { id: 'certificates', title: 'Certifications', icon: '📜' },
-    { id: 'languages', title: 'Languages', icon: '🌐' }
+    { id: 'publications', title: 'Publications', icon: '📚' },
+    { id: 'skills', title: 'Skills', icon: '🛠️' },
+    { id: 'languages', title: 'Languages', icon: '🌐' },
+    { id: 'interests', title: 'Interests', icon: '❤️' },
+    { id: 'references', title: 'References', icon: '👥' },
+    { id: 'projects', title: 'Projects', icon: '🚀' }
   ];
 
   return (
@@ -317,7 +331,7 @@ function CVStructureSections({
  */
 function renderSectionContent(
   sectionId: string, 
-  cvData: CVDataStructure, 
+  cvData: UnifiedCVDataStructure, 
   updateCVField: (field: string, value: any) => void,
   jobContext?: JobData
 ) {
@@ -345,6 +359,16 @@ function renderSectionContent(
         />
       );
     
+    case 'volunteer':
+      return (
+        <VolunteerSection
+          data={cvData.volunteer || []}
+          onUpdate={updateCVField}
+          onAdd={() => {}}
+          onRemove={() => {}}
+        />
+      );
+    
     case 'education':
       return (
         <EducationSection
@@ -357,10 +381,70 @@ function renderSectionContent(
         />
       );
     
+    case 'awards':
+      return (
+        <AwardsSection
+          data={cvData.awards || []}
+          onUpdate={updateCVField}
+          onAdd={() => {}}
+          onRemove={() => {}}
+        />
+      );
+    
+    case 'certificates':
+      return (
+        <CertificatesSection
+          data={cvData.certificates || []}
+          onUpdate={updateCVField}
+          onAdd={() => {}}
+          onRemove={() => {}}
+        />
+      );
+    
+    case 'publications':
+      return (
+        <PublicationsSection
+          data={cvData.publications || []}
+          onUpdate={updateCVField}
+          onAdd={() => {}}
+          onRemove={() => {}}
+        />
+      );
+    
     case 'skills':
       return (
         <SkillsSection
           data={cvData.skills || []}
+          onUpdate={updateCVField}
+          onAdd={() => {}}
+          onRemove={() => {}}
+        />
+      );
+    
+    case 'languages':
+      return (
+        <LanguagesSection
+          data={cvData.languages || []}
+          onUpdate={updateCVField}
+          onAdd={() => {}}
+          onRemove={() => {}}
+        />
+      );
+    
+    case 'interests':
+      return (
+        <InterestsSection
+          data={cvData.interests || []}
+          onUpdate={updateCVField}
+          onAdd={() => {}}
+          onRemove={() => {}}
+        />
+      );
+    
+    case 'references':
+      return (
+        <ReferencesSection
+          data={cvData.references || []}
           onUpdate={updateCVField}
           onAdd={() => {}}
           onRemove={() => {}}

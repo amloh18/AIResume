@@ -30,3 +30,8 @@ export default clientPromise;
 export const connectToDatabase = async () => {
   return await clientPromise;
 };
+
+// Export connectDB function for mongoose compatibility
+export const connectDB = async () => {
+  return await clientPromise;
+};

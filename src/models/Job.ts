@@ -70,8 +70,7 @@ const jobSchema = new Schema<IJob>({
   userId: {
     type: Schema.Types.ObjectId,
     ref: 'User',
-    required: [true, 'User ID is required'],
-    index: true
+    required: [true, 'User ID is required']
   },
   jobTitle: {
     type: String,
@@ -320,6 +319,32 @@ jobSchema.pre('save', function(next) {
     this.updatedAt = new Date();
   }
   next();
+});
+
+// Auto-sync to calendar after save (only for non-created status)
+jobSchema.post('save', async function(doc) {
+  try {
+    // Only sync if status is not 'created'
+    if (doc.status !== 'created') {
+      const { AutoSyncService } = await import('@/lib/services/autoSyncService');
+      
+      // Get user identifier
+      const userId = doc.userId?.toString();
+      const firebaseUid = doc.firebaseUid;
+      
+      if (userId || firebaseUid) {
+        // Run sync in background to avoid blocking the save operation
+        setImmediate(() => {
+          AutoSyncService.syncUserJobApplications(userId || '', firebaseUid).catch(error => {
+            console.error('Background calendar sync failed:', error);
+          });
+        });
+      }
+    }
+  } catch (error) {
+    console.error('Error in calendar sync post-save hook:', error);
+    // Don't throw error to avoid breaking the save operation
+  }
 });
 
 export default mongoose.models.Job || mongoose.model<IJob>('Job', jobSchema);

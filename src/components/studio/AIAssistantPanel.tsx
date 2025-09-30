@@ -27,7 +27,7 @@ import {
   Lock
 } from 'lucide-react';
 import CircularProgress from '@/components/ui/CircularProgress';
-import { CVDataStructure } from '@/types/cv';
+import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { Job } from '@/lib/stores/jobStore';
 import { useAIStore } from '@/lib/stores/aiStore';
 import { useAIAssistant } from '@/lib/hooks/useAIAssistant';
@@ -39,7 +39,7 @@ import { useUserPlan } from '@/lib/hooks/useUserPlan';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 
 interface AIAssistantPanelProps {
-  cvData: CVDataStructure | null;
+  cvData: UnifiedCVDataStructure | null;
   jobData: Job | null;
   onUpdateField: (path: string, value: any) => void;
   isCollapsed: boolean;

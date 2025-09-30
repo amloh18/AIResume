@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/database';
-import { CVJourneyRelationshipService } from '@/lib/services/cvJourneyRelationshipService';
+import { ApplicationJourneyRelationshipService } from '@/lib/services/cvJourneyRelationshipService';
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,25 +19,25 @@ export async function GET(request: NextRequest) {
     console.log('🔍 Testing CV Journey relationships for user:', userId);
 
     // Test 1: Get all CV Journeys for user
-    const journeys = await CVJourneyRelationshipService.getAllJourneysForUser(userId);
+    const journeys = await ApplicationJourneyRelationshipService.getAllJourneysForUser(userId);
     console.log(`✅ Found ${journeys.length} CV Journeys`);
 
     // Test 2: Get CVs with journey info
-    const cvsWithJourney = await CVJourneyRelationshipService.getCVsWithJourneyInfo(userId);
+    const cvsWithJourney = await ApplicationJourneyRelationshipService.getCVsWithJourneyInfo(userId);
     console.log(`✅ Found ${cvsWithJourney.length} CVs with journey info`);
 
     // Test 3: Get Cover Letters with journey info
-    const coverLettersWithJourney = await CVJourneyRelationshipService.getCoverLettersWithJourneyInfo(userId);
+    const coverLettersWithJourney = await ApplicationJourneyRelationshipService.getCoverLettersWithJourneyInfo(userId);
     console.log(`✅ Found ${coverLettersWithJourney.length} Cover Letters with journey info`);
 
     // Test 4: Get Master CV
-    const masterCV = await CVJourneyRelationshipService.getMasterCV(userId);
+    const masterCV = await ApplicationJourneyRelationshipService.getMasterCV(userId);
     console.log(`✅ Master CV: ${masterCV ? 'Found' : 'Not found'}`);
 
     // Test 5: Validate relationships for each journey
     const validationResults = await Promise.all(
       journeys.map(journey => 
-        CVJourneyRelationshipService.validateJourneyRelationships(journey.journeyId)
+        ApplicationJourneyRelationshipService.validateJourneyRelationships(journey.journeyId)
       )
     );
 

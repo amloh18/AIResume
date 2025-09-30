@@ -1,4 +1,4 @@
-import { CVSession, CVDataStructure, CVDesignSettings } from '@/types/cv';
+import { CVSession, UnifiedCVDataStructure, CVDesignSettings } from '@/types/cv';
 
 export class CVSessionService {
   private static readonly SESSION_STORAGE_KEY = 'cv_session_';
@@ -10,7 +10,7 @@ export class CVSessionService {
   static createSession(
     cvId: string,
     userId: string,
-    cvData: CVDataStructure,
+    cvData: UnifiedCVDataStructure,
     template: any,
     designSettings: CVDesignSettings
   ): CVSession {
@@ -97,7 +97,7 @@ export class CVSessionService {
   static updateSession(
     session: CVSession,
     updates: Partial<{
-      cvData: CVDataStructure;
+      cvData: UnifiedCVDataStructure;
       designSettings: CVDesignSettings;
       layout: any;
       template: any;
@@ -242,7 +242,7 @@ export class CVSessionService {
   /**
    * Merge session with current CV data
    */
-  static mergeSessionWithCV(session: CVSession, currentCVData: CVDataStructure): CVSession {
+  static mergeSessionWithCV(session: CVSession, currentCVData: UnifiedCVDataStructure): CVSession {
     return {
       ...session,
       cvData: currentCVData,
