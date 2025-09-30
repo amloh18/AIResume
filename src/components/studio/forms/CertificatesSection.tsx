@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Trash2, Award, Sparkles, RefreshCw } from 'lucide-react';
+import { Plus, Trash2, Award, ExternalLink } from 'lucide-react';
 import { getThemeClasses } from '@/lib/utils/themeUtils';
 import ProfessionalTextField from '@/components/ui/ProfessionalTextField';
 
@@ -11,70 +11,50 @@ interface CertificatesSectionProps {
   onUpdate: (path: string, value: any) => void;
   onAdd: () => void;
   onRemove: (index: number) => void;
-  jobData?: any;
-  userId?: string;
 }
 
 const CertificatesSection: React.FC<CertificatesSectionProps> = ({
   data,
   onUpdate,
   onAdd,
-  onRemove,
-  jobData,
-  userId
+  onRemove
 }) => {
   const themeClasses = getThemeClasses;
-  const [generatingIndex, setGeneratingIndex] = useState<number | null>(null);
-  
-  // Debug logging to understand data structure
-  console.log('🔍 CertificatesSection - data:', data);
   
   // Ensure we have proper data structure
   const safeData = Array.isArray(data) ? data : [];
 
-  const generateAIDescription = async (index: number, certificateItem: any) => {
-    if (!userId) return;
-    
-    setGeneratingIndex(index);
-    try {
-      const response = await fetch('/api/ai/generate-description', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId,
-          jobData,
-          certificateItem,
-          type: 'certificate'
-        }),
-      });
+  const addCertificate = () => {
+    const newCertificate = {
+      name: '',
+      date: '',
+      issuer: '',
+      url: ''
+    };
+    onUpdate('certificates', [...safeData, newCertificate]);
+  };
 
-      if (!response.ok) {
-        throw new Error('Failed to generate description');
-      }
+  const removeCertificate = (index: number) => {
+    const updatedData = safeData.filter((_, i) => i !== index);
+    onUpdate('certificates', updatedData);
+  };
 
-      const result = await response.json();
-      onUpdate(`certificates.${index}.description`, result.description);
-    } catch (error) {
-      console.error('Error generating AI description:', error);
-    } finally {
-      setGeneratingIndex(null);
-    }
+  const updateCertificate = (index: number, field: string, value: any) => {
+    const updatedData = [...safeData];
+    updatedData[index] = { ...updatedData[index], [field]: value };
+    onUpdate('certificates', updatedData);
   };
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Award className="w-4 h-4 text-yellow-600" />
-          <h4 className={`font-medium ${themeClasses.text.primary}`}>
-            Certificates
-          </h4>
-        </div>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+          <Award className="w-5 h-5 text-blue-500" />
+          Certifications
+        </h3>
         <motion.button
-          onClick={onAdd}
-          className={`flex items-center gap-2 px-3 py-1.5 text-sm ${themeClasses.button.primary} rounded-lg`}
+          onClick={addCertificate}
+          className="flex items-center gap-2 px-3 py-2 bg-lime-500 hover:bg-lime-600 text-white rounded-lg transition-colors"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
         >
@@ -83,88 +63,84 @@ const CertificatesSection: React.FC<CertificatesSectionProps> = ({
         </motion.button>
       </div>
 
-      <div className="space-y-4">
-        {safeData.map((certificate, index) => (
-          <div key={index} className={`${themeClasses.card.base} border rounded-lg p-4`}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <input
-                type="text"
-                value={certificate.name || ''}
-                onChange={(e) => onUpdate(`certificates.${index}.name`, e.target.value)}
-                className={`w-full px-3 py-2 rounded-lg border ${themeClasses.input.base} ${themeClasses.input.focus}`}
-                placeholder="Certificate Name"
-              />
-              <input
-                type="text"
-                value={certificate.issuer || ''}
-                onChange={(e) => onUpdate(`certificates.${index}.issuer`, e.target.value)}
-                className={`w-full px-3 py-2 rounded-lg border ${themeClasses.input.base} ${themeClasses.input.focus}`}
-                placeholder="Issuing Organization"
-              />
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <input
-                type="text"
-                value={certificate.date || ''}
-                onChange={(e) => onUpdate(`certificates.${index}.date`, e.target.value)}
-                className={`w-full px-3 py-2 rounded-lg border ${themeClasses.input.base} ${themeClasses.input.focus}`}
-                placeholder="Issue Date"
-              />
-              <input
-                type="url"
-                value={certificate.url || ''}
-                onChange={(e) => onUpdate(`certificates.${index}.url`, e.target.value)}
-                className={`w-full px-3 py-2 rounded-lg border ${themeClasses.input.base} ${themeClasses.input.focus}`}
-                placeholder="Certificate URL"
-              />
-            </div>
-
-            {/* Description Field */}
-            <div className="mb-4">
-              <div className="flex items-center justify-between mb-2">
-                <label className={`text-sm font-medium ${themeClasses.text.secondary}`}>
-                  Certificate Description
-                </label>
-                <motion.button
-                  onClick={() => generateAIDescription(index, certificate)}
-                  disabled={generatingIndex === index || !certificate.name || !certificate.issuer}
-                  className="flex items-center gap-2 px-3 py-1.5 text-xs bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+      {safeData.length === 0 ? (
+        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+          <Award className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+          <p>No certifications added yet</p>
+          <p className="text-sm">Click "Add Certificate" to get started</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {safeData.map((certificate, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="font-medium text-gray-900 dark:text-white">
+                  Certificate #{index + 1}
+                </h4>
+                <button
+                  onClick={() => removeCertificate(index)}
+                  className="text-red-500 hover:text-red-700 transition-colors"
                 >
-                  {generatingIndex === index ? (
-                    <RefreshCw className="w-3 h-3 animate-spin" />
-                  ) : (
-                    <Sparkles className="w-3 h-3" />
-                  )}
-                  <span>{generatingIndex === index ? 'Generating...' : 'AI Generate'}</span>
-                </motion.button>
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
-              <ProfessionalTextField
-                value={certificate.description || ''}
-                onChange={(value) => onUpdate(`certificates.${index}.description`, value)}
-                placeholder="Describe what you learned, skills gained, or how this certificate is relevant. Use AI to generate content based on certificate name and issuer..."
-                rows={4}
-                fieldId={`certificate-${index}`}
-                showFullToolbar={true}
-              />
-            </div>
 
-            <div className="flex justify-end">
-              <motion.button
-                onClick={() => onRemove(index)}
-                className="flex items-center gap-2 text-sm text-red-600 hover:text-red-700"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Trash2 className="w-4 h-4" />
-                Remove
-              </motion.button>
-            </div>
-          </div>
-        ))}
-      </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <ProfessionalTextField
+                  label="Certificate Name"
+                  value={certificate.name || ''}
+                  onChange={(value) => updateCertificate(index, 'name', value)}
+                  placeholder="e.g., AWS Certified Solutions Architect"
+                  showFullToolbar={false}
+                />
+
+                <ProfessionalTextField
+                  label="Date Issued"
+                  value={certificate.date || ''}
+                  onChange={(value) => updateCertificate(index, 'date', value)}
+                  placeholder="MM/YYYY"
+                  showFullToolbar={false}
+                />
+
+                <ProfessionalTextField
+                  label="Issuing Organization"
+                  value={certificate.issuer || ''}
+                  onChange={(value) => updateCertificate(index, 'issuer', value)}
+                  placeholder="e.g., Amazon Web Services, Microsoft"
+                  showFullToolbar={false}
+                />
+
+                <ProfessionalTextField
+                  label="Certificate URL (optional)"
+                  value={certificate.url || ''}
+                  onChange={(value) => updateCertificate(index, 'url', value)}
+                  placeholder="https://credential-url.com"
+                  showFullToolbar={false}
+                />
+              </div>
+
+              {certificate.url && (
+                <div className="mt-3">
+                  <a
+                    href={certificate.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-sm text-lime-600 hover:text-lime-700 hover:underline"
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                    View Certificate
+                  </a>
+                </div>
+              )}
+            </motion.div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

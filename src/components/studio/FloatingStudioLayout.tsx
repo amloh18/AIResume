@@ -9,12 +9,16 @@ import {
   X,
   Edit3,
   Home,
-  Menu
+  Menu,
+  Bell,
+  User,
+  FileText,
+  File
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { getStudioLayoutClasses } from '@/lib/utils/themeUtils';
-import UserIcon from '@/components/ui/UserIcon';
 import { useSession } from 'next-auth/react';
+import UserAvatar from '@/components/ui/UserAvatar';
 
 
 interface FloatingStudioLayoutProps {
@@ -47,6 +51,8 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [tempTitle, setTempTitle] = useState(documentTitle);
   const [isMobile, setIsMobile] = useState(false);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
   const layoutClasses = getStudioLayoutClasses();
 
   // Handle responsive behavior
@@ -70,6 +76,23 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
   useEffect(() => {
     setTempTitle(documentTitle);
   }, [documentTitle]);
+
+  // Export menu now uses hover, so no click outside handler needed
+
+  // Close notification dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showNotificationDropdown) {
+        const target = event.target as Element;
+        if (!target.closest('[data-notification-dropdown]')) {
+          setShowNotificationDropdown(false);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showNotificationDropdown]);
 
   const handleBackToDashboard = () => {
     router.push('/dashboard');
@@ -174,7 +197,7 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
                 </div>
               </div>
 
-              {/* Right Section - Save Button + User */}
+              {/* Right Section - Save Button + Notifications + User */}
               <div className="flex items-center gap-2">
                 {/* Save Button */}
                 <motion.button
@@ -208,17 +231,66 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
                   )}
                 </motion.button>
 
-                {/* User Icon */}
-                {session?.user && (
-                  <UserIcon 
-                    user={{
-                      name: session.user.name || 'User',
-                      email: session.user.email || 'user@example.com',
-                      profilePhoto: session.user.image,
-                      designation: 'CV Creator'
-                    }}
-                  />
-                )}
+                {/* Notification Icon */}
+                <div className="relative" data-notification-dropdown>
+                  <motion.button
+                    onClick={() => setShowNotificationDropdown(!showNotificationDropdown)}
+                    className="p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors relative"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    title="Notifications"
+                  >
+                    <Bell size={18} />
+                    {/* Notification Badge */}
+                    <div className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                      3
+                    </div>
+                  </motion.button>
+                  
+                  {/* Notification Dropdown */}
+                  <AnimatePresence>
+                    {showNotificationDropdown && (
+                      <motion.div
+                        className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-[9999999]"
+                        initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Notifications</h3>
+                            <button
+                              onClick={() => setShowNotificationDropdown(false)}
+                              className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                            >
+                              Mark all as read
+                            </button>
+                          </div>
+                        </div>
+                        <div className="max-h-64 overflow-y-auto">
+                          <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+                            No notifications yet
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* User Avatar */}
+                <UserAvatar 
+                  user={{
+                    name: session?.user?.name || 'User',
+                    email: session?.user?.email || 'user@example.com',
+                    profilePhoto: session?.user?.image,
+                    isEmailVerified: true,
+                    subscription: {
+                      planName: 'Free Plan',
+                      status: 'active'
+                    }
+                  }}
+                />
               </div>
             </div>
           </motion.div>
@@ -330,34 +402,173 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
               </div>
 
               {/* Right Section */}
-              <div className="flex items-center gap-2">
-                {/* Action Buttons */}
-                <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
+                {/* Export Menu - Expanding Inline Towards Left on Hover */}
                   {onDownload && (
-                    <motion.button
-                      onClick={onDownload}
-                      className="flex items-center gap-2 px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors"
+                  <div className="relative group" data-export-menu>
+                    <motion.div
+                      className="flex items-center bg-green-500 hover:bg-green-600 text-white rounded-full overflow-hidden transition-all duration-300"
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
+                      onMouseEnter={() => setExportMenuOpen(true)}
+                      onMouseLeave={() => setExportMenuOpen(false)}
+                    >
+                      {/* Main Export Button */}
+                      <motion.button
+                        className="flex items-center gap-2 px-4 py-2 hover:bg-green-600 transition-colors"
                     >
                       <Download size={16} />
                       <span className="hidden sm:inline">Export</span>
                     </motion.button>
-                  )}
+                      
+                      {/* Expanded Options */}
+                      <AnimatePresence>
+                        {exportMenuOpen && (
+                          <>
+                            {/* Divider */}
+                            <motion.div 
+                              className="w-px h-6 bg-green-400/50"
+                              initial={{ opacity: 0, scaleX: 0 }}
+                              animate={{ opacity: 1, scaleX: 1 }}
+                              exit={{ opacity: 0, scaleX: 0 }}
+                              transition={{ duration: 0.2 }}
+                            />
+                            
+                            {/* PDF Export */}
+                            <motion.button
+                              onClick={() => {
+                                onDownload();
+                                setExportMenuOpen(false);
+                              }}
+                              className="flex items-center gap-2 px-4 py-2 hover:bg-green-600 transition-colors"
+                              initial={{ opacity: 0, x: -20, scale: 0.8 }}
+                              animate={{ opacity: 1, x: 0, scale: 1 }}
+                              exit={{ opacity: 0, x: -20, scale: 0.8 }}
+                              transition={{ duration: 0.3, ease: "easeOut" }}
+                              title="Export as PDF"
+                            >
+                              <FileText size={16} />
+                              <span className="hidden sm:inline">PDF</span>
+                            </motion.button>
+                            
+                            {/* Divider */}
+                            <motion.div 
+                              className="w-px h-6 bg-green-400/50"
+                              initial={{ opacity: 0, scaleX: 0 }}
+                              animate={{ opacity: 1, scaleX: 1 }}
+                              exit={{ opacity: 0, scaleX: 0 }}
+                              transition={{ duration: 0.2, delay: 0.1 }}
+                            />
+                            
+                            {/* DOCX Export */}
+                            <motion.button
+                              onClick={() => {
+                                console.log('DOCX export clicked');
+                                setExportMenuOpen(false);
+                              }}
+                              className="flex items-center gap-2 px-4 py-2 hover:bg-green-600 transition-colors"
+                              initial={{ opacity: 0, x: -20, scale: 0.8 }}
+                              animate={{ opacity: 1, x: 0, scale: 1 }}
+                              exit={{ opacity: 0, x: -20, scale: 0.8 }}
+                              transition={{ duration: 0.3, delay: 0.1, ease: "easeOut" }}
+                              title="Export as DOCX"
+                            >
+                              <File size={16} />
+                              <span className="hidden sm:inline">DOCX</span>
+                            </motion.button>
+                            
+                            {/* Divider */}
+                            <motion.div 
+                              className="w-px h-6 bg-green-400/50"
+                              initial={{ opacity: 0, scaleX: 0 }}
+                              animate={{ opacity: 1, scaleX: 1 }}
+                              exit={{ opacity: 0, scaleX: 0 }}
+                              transition={{ duration: 0.2, delay: 0.2 }}
+                            />
+                            
+                            {/* Full Journey Download */}
+                            <motion.button
+                              onClick={() => {
+                                console.log('Full journey download clicked');
+                                setExportMenuOpen(false);
+                              }}
+                              className="flex items-center gap-2 px-4 py-2 hover:bg-green-600 transition-colors"
+                              initial={{ opacity: 0, x: -20, scale: 0.8 }}
+                              animate={{ opacity: 1, x: 0, scale: 1 }}
+                              exit={{ opacity: 0, x: -20, scale: 0.8 }}
+                              transition={{ duration: 0.3, delay: 0.2, ease: "easeOut" }}
+                              title="Download complete journey (CV and cover letter as PDF)"
+                            >
+                              <Download size={16} />
+                              <span className="hidden sm:inline">Full Journey</span>
+                            </motion.button>
+                          </>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
+                  </div>
+                )}
+
+                {/* Notification Icon */}
+                <div className="relative" data-notification-dropdown>
+                  <motion.button
+                    onClick={() => setShowNotificationDropdown(!showNotificationDropdown)}
+                    className="p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors relative"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    title="Notifications"
+                  >
+                    <Bell size={18} />
+                    {/* Notification Badge */}
+                    <div className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                      3
+                    </div>
+                  </motion.button>
+                  
+                  {/* Notification Dropdown */}
+                  <AnimatePresence>
+                    {showNotificationDropdown && (
+                      <motion.div
+                        className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-[9999999]"
+                        initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Notifications</h3>
+                            <button
+                              onClick={() => setShowNotificationDropdown(false)}
+                              className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                            >
+                              Mark all as read
+                            </button>
+                          </div>
+                        </div>
+                        <div className="max-h-64 overflow-y-auto">
+                          <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+                            No notifications yet
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
 
-                {/* User Icon */}
-                {session?.user && (
-                  <UserIcon 
-                    user={{
-                      name: session.user.name || 'User',
-                      email: session.user.email || 'user@example.com',
-                      profilePhoto: session.user.image,
-                      designation: 'CV Creator',
-                      role: session.user.role
-                    }}
-                  />
-                )}
+                {/* User Avatar */}
+                <UserAvatar 
+                  user={{
+                    name: session?.user?.name || 'User',
+                    email: session?.user?.email || 'user@example.com',
+                    profilePhoto: session?.user?.image,
+                    isEmailVerified: true,
+                    subscription: {
+                      planName: 'Free Plan',
+                      status: 'active'
+                    }
+                  }}
+                />
               </div>
             </div>
           </motion.div>
@@ -457,16 +668,47 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
                 </button>
 
                 {onDownload && (
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Export Options</div>
+                    
                   <button
                     onClick={() => {
                       onDownload();
                       setMobileMenuOpen(false);
                     }}
                     className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                  >
-                    <Download size={18} />
-                    <span>Export Document</span>
+                      title="Export as PDF"
+                    >
+                      <FileText size={18} className="text-red-500" />
+                      <span>Export as PDF</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        // Handle DOCX export
+                        console.log('DOCX export clicked');
+                        setMobileMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                      title="Export as DOCX"
+                    >
+                      <File size={18} className="text-blue-500" />
+                      <span>Export as DOCX</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        // Handle full journey download
+                        console.log('Full journey download clicked');
+                        setMobileMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                      title="Download complete journey (CV and cover letter as PDF)"
+                    >
+                      <Download size={18} className="text-green-500" />
+                      <span>Full Journey Download</span>
                   </button>
+                  </div>
                 )}
               </div>
             </motion.div>

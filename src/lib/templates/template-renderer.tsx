@@ -1,5 +1,5 @@
 import React from 'react';
-import { CVDataStructure } from '@/types/cv';
+import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ITemplate, ISectionBlueprint } from '@/models/Template';
 import { generateTemplateCSS } from './default-template';
 
@@ -43,7 +43,7 @@ interface SectionDataMapping {
   publications: 'publications';
 }
 
-const SECTION_DATA_MAP: Record<keyof SectionDataMapping, keyof CVDataStructure> = {
+const SECTION_DATA_MAP: Record<keyof SectionDataMapping, keyof UnifiedCVDataStructure> = {
   personal_header: 'basics',
   work_experience: 'work',
   education: 'education',
@@ -57,7 +57,7 @@ const SECTION_DATA_MAP: Record<keyof SectionDataMapping, keyof CVDataStructure> 
 };
 
 export interface TemplateRendererProps {
-  cvData: CVDataStructure;
+  cvData: UnifiedCVDataStructure;
   template: ITemplate;
   className?: string;
   sectionOrder?: string[];
@@ -197,7 +197,7 @@ function getSectionsToRender(
 }
 
 // Template validation helper
-export function validateTemplateData(cvData: CVDataStructure, template: ITemplate): {
+export function validateTemplateData(cvData: UnifiedCVDataStructure, template: ITemplate): {
   isValid: boolean;
   errors: string[];
   warnings: string[];
@@ -241,7 +241,7 @@ export function validateTemplateData(cvData: CVDataStructure, template: ITemplat
 }
 
 // Template preview generator
-export function generateTemplatePreview(template: ITemplate): CVDataStructure {
+export function generateTemplatePreview(template: ITemplate): UnifiedCVDataStructure {
   return {
     basics: template.templateData?.sampleBasics || {
       name: 'Jane Doe',

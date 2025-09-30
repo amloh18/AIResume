@@ -2,18 +2,43 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Briefcase, FileText, CheckCircle, Download, X, Settings, Mail, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
+import { Briefcase, FileText, CheckCircle, Download, X, Settings, Mail, ChevronDown, ChevronUp } from 'lucide-react';
 import { useJobJourney } from '@/contexts/JobJourneyContext';
 import { useFirebaseAuth } from '@/lib/hooks/useFirebaseAuth';
-import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
 
-const JourneyStatusBanner: React.FC = () => {
+interface JourneyStatusBannerProps {
+  journey?: {
+    id: string;
+    jobId: string;
+    jobTitle: string;
+    company: string;
+    status: 'in-progress' | 'completed';
+    currentStep: number;
+    totalSteps: number;
+    atsScore?: number;
+    cvId?: string;
+    coverLetterId?: string;
+  };
+}
+
+const JourneyStatusBanner: React.FC<JourneyStatusBannerProps> = ({ journey }) => {
   const { state, endJourney } = useJobJourney();
   const { isJourneyActive, jobTitle, company, currentStep, currentJobId, cvId, cvName, atsScore, coverLetterId } = state;
+  
+  // Use journey props if available, otherwise fall back to context
+  const activeJourney = journey || {
+    id: currentJobId || '',
+    jobId: currentJobId || '',
+    jobTitle: jobTitle || '',
+    company: company || '',
+    status: isJourneyActive ? 'in-progress' : 'completed',
+    currentStep: currentStep || 1,
+    totalSteps: 5,
+    atsScore: atsScore || 0,
+    cvId: cvId || '',
+    coverLetterId: coverLetterId || ''
+  };
   const { user } = useFirebaseAuth();
-  const { data: session } = useSession();
-  const router = useRouter();
   const [isExpanded, setIsExpanded] = useState(false);
   const [jobData, setJobData] = useState<any>(null);
   const [cvData, setCvData] = useState<any>(null);
@@ -27,8 +52,8 @@ const JourneyStatusBanner: React.FC = () => {
 
       try {
         // Load job data
-        if (currentJobId && currentJobId !== 'temp') {
-          const jobResponse = await fetch(`/api/jobs/${currentJobId}?userId=${user.uid}`);
+        if (activeJourney.jobId && activeJourney.jobId !== 'temp') {
+          const jobResponse = await fetch(`/api/jobs/${activeJourney.jobId}?userId=${user.uid}`);
           if (jobResponse.ok) {
             const jobResult = await jobResponse.json();
             setJobData(jobResult.job);
@@ -36,8 +61,8 @@ const JourneyStatusBanner: React.FC = () => {
         }
 
         // Load CV data
-        if (cvId) {
-          const cvResponse = await fetch(`/api/cvs/${cvId}?userId=${user.uid}`);
+        if (activeJourney.cvId) {
+          const cvResponse = await fetch(`/api/cvs/${activeJourney.cvId}?userId=${user.uid}`);
           if (cvResponse.ok) {
             const cvResult = await cvResponse.json();
             setCvData(cvResult.cv);
@@ -45,8 +70,8 @@ const JourneyStatusBanner: React.FC = () => {
         }
 
         // Load cover letter data
-        if (coverLetterId) {
-          const coverLetterResponse = await fetch(`/api/cover-letters/${coverLetterId}?userId=${user.uid}`);
+        if (activeJourney.coverLetterId) {
+          const coverLetterResponse = await fetch(`/api/cover-letters/${activeJourney.coverLetterId}?userId=${user.uid}`);
           if (coverLetterResponse.ok) {
             const coverLetterResult = await coverLetterResponse.json();
             setCoverLetterData(coverLetterResult.coverLetter);
@@ -58,9 +83,9 @@ const JourneyStatusBanner: React.FC = () => {
     };
 
     loadLinkedData();
-  }, [currentJobId, cvId, coverLetterId, user?.uid]);
+  }, [activeJourney.jobId, activeJourney.cvId, activeJourney.coverLetterId, user?.uid]);
 
-  if (!isJourneyActive) {
+  if (!isJourneyActive && !journey) {
     return null;
   }
 
@@ -193,41 +218,41 @@ const JourneyStatusBanner: React.FC = () => {
   const getStepStatus = (stepId: number) => {
     switch (stepId) {
       case 1: // Job Added
-        return (jobData || currentJobId) ? 'completed' : 'pending';
+        return (jobData || activeJourney.jobId) ? 'completed' : 'pending';
       
       case 2: // CV Created/Linked
         // Check if CV is specifically linked to this journey
-        const hasLinkedCV = (cvData && cvData.jobId === currentJobId) || 
-                           (cvId && state.cvId === cvId && state.currentJobId === currentJobId);
+        const hasLinkedCV = (cvData && cvData.jobId === activeJourney.jobId) || 
+                           (activeJourney.cvId && activeJourney.cvId === activeJourney.cvId);
         return hasLinkedCV ? 'completed' : 
-               (jobData || currentJobId) ? 'active' : 'pending';
+               (jobData || activeJourney.jobId) ? 'active' : 'pending';
       
       case 3: // ATS Score Checked
         // Check if ATS score exists for this specific job-CV combination
-        const hasATSScore = (atsScore !== null && atsScore > 0) || 
+        const hasATSScore = (activeJourney.atsScore !== null && activeJourney.atsScore > 0) || 
                            (cvData?.metadata?.atsScore && 
-                            cvData?.metadata?.atsScoreJobId === currentJobId &&
+                            cvData?.metadata?.atsScoreJobId === activeJourney.jobId &&
                             cvData?.metadata?.atsScore > 0);
         return hasATSScore ? 'completed' :
-               (cvData || cvId) ? 'active' : 'pending';
+               (cvData || activeJourney.cvId) ? 'active' : 'pending';
       
       case 4: // Cover Letter Created
-        const atsCompleted = (atsScore !== null && atsScore > 0) || 
+        const atsCompleted = (activeJourney.atsScore !== null && activeJourney.atsScore > 0) || 
                             (cvData?.metadata?.atsScore && 
-                             cvData?.metadata?.atsScoreJobId === currentJobId &&
+                             cvData?.metadata?.atsScoreJobId === activeJourney.jobId &&
                              cvData?.metadata?.atsScore > 0);
-        return (coverLetterData || coverLetterId) ? 'completed' :
+        return (coverLetterData || activeJourney.coverLetterId) ? 'completed' :
                atsCompleted ? 'active' : 'pending';
       
       case 5: // Download/Apply
-        const atsReady = (atsScore !== null && atsScore > 0) || 
+        const atsReady = (activeJourney.atsScore !== null && activeJourney.atsScore > 0) || 
                         (cvData?.metadata?.atsScore && 
-                         cvData?.metadata?.atsScoreJobId === currentJobId &&
+                         cvData?.metadata?.atsScoreJobId === activeJourney.jobId &&
                          cvData?.metadata?.atsScore > 0);
-        const hasLinkedCVForDownload = (cvData && cvData.jobId === currentJobId) || 
-                                     (cvId && state.cvId === cvId && state.currentJobId === currentJobId);
-        const hasAllComponents = (jobData || currentJobId) && hasLinkedCVForDownload && 
-                                atsReady && (coverLetterData || coverLetterId);
+        const hasLinkedCVForDownload = (cvData && cvData.jobId === activeJourney.jobId) || 
+                                     (activeJourney.cvId && activeJourney.cvId === activeJourney.cvId);
+        const hasAllComponents = (jobData || activeJourney.jobId) && hasLinkedCVForDownload && 
+                                atsReady && (coverLetterData || activeJourney.coverLetterId);
         return hasAllComponents ? 'completed' : 'pending';
       
       default:
@@ -235,49 +260,6 @@ const JourneyStatusBanner: React.FC = () => {
     }
   };
 
-  const handleStepClick = (stepId: number) => {
-    // Navigate to studio with the current journey context using new URL structure
-    if (currentJobId) {
-      const url = `/studio?journeyId=${currentJobId}&step=${stepId}`;
-      // Add document type and ID based on step
-      if (stepId === 2 && cvId) {
-        router.push(`${url}&type=cv&cvId=${cvId}`);
-      } else if (stepId === 4 && coverLetterId) {
-        router.push(`${url}&type=cover_letter&coverLetterId=${coverLetterId}`);
-      } else {
-        router.push(url);
-      }
-    }
-  };
-
-
-  const handleViewDocument = (type: 'job' | 'cv' | 'cover-letter') => {
-    switch (type) {
-      case 'job':
-        if (currentJobId) {
-          router.push(`/dashboard/pipeline`); // Or specific job view
-        }
-        break;
-      case 'cv':
-        if (cvId && currentJobId) {
-          // Use new URL structure with journeyId
-          router.push(`/studio?journeyId=${currentJobId}&type=cv&cvId=${cvId}`);
-        } else if (cvId) {
-          // Fallback to legacy structure
-          router.push(`/studio?cvId=${cvId}`);
-        }
-        break;
-      case 'cover-letter':
-        if (coverLetterId && currentJobId) {
-          // Use new URL structure with journeyId
-          router.push(`/studio?journeyId=${currentJobId}&type=cover_letter&coverLetterId=${coverLetterId}`);
-        } else if (coverLetterId) {
-          // Fallback to legacy structure
-          router.push(`/studio?type=cover_letter&coverLetterId=${coverLetterId}`);
-        }
-        break;
-    }
-  };
 
   return (
     <>
@@ -289,28 +271,29 @@ const JourneyStatusBanner: React.FC = () => {
         exit={{ opacity: 0, y: -20 }}
       >
         {/* Compact Banner */}
-        <div className="px-6 py-3">
+        <div className="px-6 py-2">
           <div className="max-w-7xl mx-auto flex items-center justify-between">
             {/* Left: Journey Info */}
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <Briefcase className="h-5 w-5 text-lime-400" />
-                <div>
-                  <h3 className="text-sm font-medium text-gray-900 dark:text-white">
-                    {isJourneyActive ? (jobData?.title || jobTitle || 'Active Journey') : 'CV Journeys'}
-                  </h3>
-                  <p className="text-xs text-gray-600 dark:text-white/60">
-                    {isJourneyActive ? (jobData?.company || company || 'In Progress') : `${ongoingJourneys.length} ongoing`}
-                  </p>
+                <div className="text-sm font-medium text-gray-900 dark:text-white">
+                  {activeJourney.jobTitle || jobData?.title || 'Active Journey'}
+                  {activeJourney.company || jobData?.company ? (
+                    <span className="text-gray-600 dark:text-white/60 font-normal">
+                      {' - '}
+                      {activeJourney.company || jobData?.company}
+                    </span>
+                  ) : null}
                 </div>
               </div>
 
               {/* Current Step Info */}
-              {isJourneyActive && (
+              {(isJourneyActive || journey) && (
                 <div className="flex items-center gap-2 px-3 py-1 bg-lime-500/20 rounded-full">
-                  {getStepIcon(currentStep)}
+                  {getStepIcon(activeJourney.currentStep)}
                   <span className="text-xs font-medium text-lime-600 dark:text-lime-400">
-                    {getStepLabel(currentStep)}
+                    {getStepLabel(activeJourney.currentStep)}
                   </span>
                 </div>
               )}
@@ -366,16 +349,13 @@ const JourneyStatusBanner: React.FC = () => {
                           return (
                             <motion.div
                               key={stepId}
-                              onClick={() => handleStepClick(stepId)}
-                              className={`p-4 rounded-lg border cursor-pointer transition-all ${
+                              className={`p-4 rounded-lg border transition-all ${
                                 status === 'completed' 
-                                  ? 'bg-lime-500/10 border-lime-500/30 hover:bg-lime-500/15' 
+                                  ? 'bg-lime-500/10 border-lime-500/30' 
                                   : status === 'active'
-                                  ? 'bg-lime-400/10 border-lime-400/30 hover:bg-lime-400/15'
-                                  : 'bg-white/5 border-white/10 hover:bg-white/10'
+                                  ? 'bg-lime-400/10 border-lime-400/30'
+                                  : 'bg-white/5 border-white/10'
                               }`}
-                              whileHover={{ scale: 1.02 }}
-                              whileTap={{ scale: 0.98 }}
                             >
                               {/* Header */}
                               <div className="flex items-center gap-2 mb-3">
@@ -420,7 +400,7 @@ const JourneyStatusBanner: React.FC = () => {
                                 </div>
                               )}
 
-                              {/* Action Button */}
+                              {/* Status Indicator */}
                               <div className="pt-2 border-t border-white/10">
                                 <div className="flex items-center justify-between">
                                   <span className="text-xs text-white/60">
@@ -428,7 +408,8 @@ const JourneyStatusBanner: React.FC = () => {
                                      status === 'active' ? 'Active' : 'Pending'}
                                   </span>
                                   <span className="text-xs text-lime-400 font-medium">
-                                    {details.actionText}
+                                    {status === 'completed' ? '✓ Done' : 
+                                     status === 'active' ? '→ Next' : '○ Waiting'}
                                   </span>
                                 </div>
                               </div>
@@ -445,6 +426,7 @@ const JourneyStatusBanner: React.FC = () => {
           )}
         </AnimatePresence>
       </motion.div>
+
     </>
   );
 };

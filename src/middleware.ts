@@ -13,6 +13,9 @@ const publicRoutes = [
   '/',
   '/sign-in',
   '/sign-up',
+  '/auth/verify-email',
+  '/auth/error',
+  '/auth/reset-password',
   '/master-cv-onboarding',
   '/onboarding',
   '/onboarding-universal',
@@ -34,22 +37,35 @@ export default async function middleware(req: NextRequest) {
 
   // Allow public routes
   if (isPublicRoute(req)) {
-    return NextResponse.next()
-  }
-
-  // Allow API routes
-  if (req.nextUrl.pathname.startsWith('/api/')) {
+    console.log('✅ Middleware - Public route, allowing access:', req.nextUrl.pathname)
     return NextResponse.next()
   }
 
   // Allow static assets
   if (req.nextUrl.pathname.startsWith('/_next') || req.nextUrl.pathname.startsWith('/public')) {
+    console.log('✅ Middleware - Static asset, allowing access:', req.nextUrl.pathname)
+    return NextResponse.next()
+  }
+
+  // Check API routes for authentication
+  if (req.nextUrl.pathname.startsWith('/api/')) {
+    console.log('🔍 Middleware - API route detected, checking authentication:', req.nextUrl.pathname)
+    
+    // Check for NextAuth session token
+    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
+    
+    if (!token) {
+      console.log('❌ Middleware - No session token found for API route, returning 401')
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    
+    console.log('✅ Middleware - API route authenticated, allowing access')
     return NextResponse.next()
   }
 
   // Protect routes that require authentication
   if (isProtectedRoute(req)) {
-    console.log('🔍 Middleware - Checking authentication for:', req.nextUrl.pathname)
+    console.log('🔍 Middleware - Protected route detected, checking authentication:', req.nextUrl.pathname)
 
     // Check for NextAuth session token
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
@@ -61,31 +77,10 @@ export default async function middleware(req: NextRequest) {
       return NextResponse.redirect(signInUrl)
     }
 
-    console.log('✅ Middleware - Session token found, allowing access')
-
-    // Check if user has a master CV
-    try {
-      const response = await fetch(`${req.nextUrl.origin}/api/user/current`)
-
-      if (response.ok) {
-        const userData = await response.json()
-
-        // If user doesn't have a master CV, redirect to master CV onboarding
-        if (!userData.user?.hasMasterCV) {
-          console.log('🔍 Middleware - User has no master CV, redirecting to onboarding')
-          const onboardingUrl = new URL('/master-cv-onboarding', req.url)
-          return NextResponse.redirect(onboardingUrl)
-        }
-        
-        console.log('✅ Middleware - User has master CV, allowing access')
-      }
-    } catch (error) {
-      console.error('Middleware: Error checking master CV status:', error)
-      // If we can't check master CV status, allow access to dashboard
-      // The dashboard layout will handle the redirect
-    }
+    console.log('✅ Middleware - Session token found, allowing access to protected route')
   }
 
+  console.log('✅ Middleware - Allowing access to:', req.nextUrl.pathname)
   return NextResponse.next()
 }
 

@@ -50,7 +50,15 @@ export async function GET(request: NextRequest) {
     console.log('🔍 Master CV API - User identifier:', userIdentifier);
 
     // Build query condition based on user identifier type
-    let queryCondition: Record<string, any> = { 'metadata.isMaster': true };
+    // Handle both old format (isMaster at root) and new format (metadata.isMaster)
+    let queryCondition: Record<string, any> = {
+      $or: [
+        { 'metadata.isMaster': true },
+        { 'metadata.isMaster': 'true' },
+        { isMaster: true },
+        { isMaster: 'true' }
+      ]
+    };
     
     if (userIdentifier.type === 'firebase') {
       queryCondition.firebaseUid = userIdentifier.id;
@@ -110,7 +118,7 @@ export async function GET(request: NextRequest) {
           title: cv.title,
           cvData: cv.cvData,
           status: cv.status,
-          isMaster: cv.metadata?.isMaster,
+          isMaster: cv.metadata?.isMaster || cv.isMaster || true, // Handle both formats
           createdAt: cv.createdAt,
           updatedAt: cv.updatedAt
         }
@@ -157,7 +165,15 @@ export async function POST(request: NextRequest) {
     const { jobTitle, company, jobId } = body;
 
     // Find the master CV based on user identifier type
-    let masterCVQuery: Record<string, any> = { isMaster: true };
+    // Handle both old format (isMaster at root) and new format (metadata.isMaster)
+    let masterCVQuery: Record<string, any> = {
+      $or: [
+        { 'metadata.isMaster': true },
+        { 'metadata.isMaster': 'true' },
+        { isMaster: true },
+        { isMaster: 'true' }
+      ]
+    };
     
     if (userIdentifier.type === 'firebase') {
       masterCVQuery.firebaseUid = userIdentifier.id;
@@ -174,10 +190,38 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate title for the duplicated CV
-    const duplicatedTitle = jobTitle && company 
+    // Generate unique title for the duplicated CV to avoid conflicts
+    const generateUniqueTitle = async (baseTitle: string, userId: string, isFirebaseUser: boolean) => {
+      let finalTitle = baseTitle;
+      let counter = 1;
+      
+      // Check for existing CVs with the same title
+      while (true) {
+        const query = isFirebaseUser 
+          ? { firebaseUid: userId, title: finalTitle }
+          : { userId: new mongoose.Types.ObjectId(userId), title: finalTitle };
+          
+        const existingCV = await CV.findOne(query);
+        if (!existingCV) {
+          break;
+        }
+        
+        finalTitle = `${baseTitle} ${counter}`;
+        counter++;
+      }
+      
+      return finalTitle;
+    };
+
+    const baseTitle = jobTitle && company 
       ? `${jobTitle}-${company}-CV`
       : `${masterCV.title} (Copy)`;
+    
+    const duplicatedTitle = await generateUniqueTitle(
+      baseTitle,
+      userIdentifier.id,
+      userIdentifier.type === 'firebase'
+    );
 
     // Prepare duplicated CV data
     const duplicatedCVData = {

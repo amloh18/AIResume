@@ -130,7 +130,7 @@ export class JourneyLinkingService {
    */
   static async getJourneyByJobId(jobId: string, userId: string): Promise<any | null> {
     try {
-      const response = await fetch(`/api/cv-journey?userId=${userId}&jobId=${jobId}`);
+      const response = await fetch(`/api/application-journey?userId=${userId}&jobId=${jobId}`);
       
       if (response.ok) {
         const result = await response.json();
@@ -151,7 +151,7 @@ export class JourneyLinkingService {
    */
   static async getUserJourneys(userId: string): Promise<any[]> {
     try {
-      const response = await fetch(`/api/cv-journey?userId=${userId}&status=all`);
+      const response = await fetch(`/api/application-journey?userId=${userId}&status=all`);
       
       if (response.ok) {
         const result = await response.json();
@@ -183,7 +183,7 @@ export class JourneyLinkingService {
       const jobData = await jobResponse.json();
 
       // Create journey using the CVJourney API
-      const response = await fetch('/api/cv-journey', {
+      const response = await fetch('/api/application-journey', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -237,7 +237,7 @@ export class JourneyLinkingService {
         };
       }
 
-      const response = await fetch('/api/cv-journey', {
+      const response = await fetch('/api/application-journey', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

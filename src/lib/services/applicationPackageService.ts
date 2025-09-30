@@ -18,6 +18,8 @@ export interface DuplicateCVData {
   sourceCvId: string;
   userId: string;
   newTitle?: string;
+  jobTitle?: string;
+  company?: string;
 }
 
 export interface PackageLinkResult {
@@ -68,7 +70,7 @@ export class ApplicationPackageService {
       }
       
       // Create new CV Journey (Application Package)
-      const response = await fetch('/api/cv-journey', {
+      const response = await fetch('/api/application-journey', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -139,7 +141,7 @@ export class ApplicationPackageService {
     try {
       console.log('🔄 ApplicationPackageService - Duplicating CV:', data);
       
-      const { sourceCvId, userId, newTitle } = data;
+      const { sourceCvId, userId, newTitle, jobTitle, company } = data;
       
       // Fetch the source CV
       const cvResponse = await fetch(`/api/cvs/${sourceCvId}?userId=${userId}`);
@@ -160,28 +162,22 @@ export class ApplicationPackageService {
         };
       }
       
+      // Generate title with job context if available
+      const finalTitle = newTitle || (jobTitle && company 
+        ? `${jobTitle} - ${company} CV`
+        : `${sourceCV.title} (Copy)`);
+
       // Create duplicate CV (freestanding - no journeyId)
-      const duplicateResponse = await fetch('/api/cvs', {
+      const duplicateResponse = await fetch('/api/cvs/duplicate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          sourceCvId,
           userId,
-          title: newTitle || `${sourceCV.title} (Copy)`,
-          cvData: sourceCV.cvData,
-          templateData: sourceCV.templateData,
-          styling: sourceCV.styling,
-          status: 'draft',
-          isMaster: false,
-          // journeyId is intentionally omitted - new CV is freestanding
-          metadata: {
-            ...sourceCV.metadata,
-            createdFrom: sourceCvId,
-            atsScore: null, // Reset ATS score for new CV
-            atsScoreDate: null,
-            atsScoreJobId: null
-          }
+          customTitle: finalTitle,
+          journeyId: null // Create freestanding CV
         }),
       });
       
@@ -282,7 +278,7 @@ export class ApplicationPackageService {
       
       // Update the CV Journey with the document ID
       const journeyUpdateField = documentType === 'cv' ? 'cvId' : 'coverLetterId';
-      const journeyResponse = await fetch(`/api/cv-journey/${journeyId}`, {
+      const journeyResponse = await fetch(`/api/application-journey/${journeyId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

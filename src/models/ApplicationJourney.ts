@@ -1,202 +1,162 @@
-import mongoose, { Document, Schema } from 'mongoose';
+import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IApplicationJourney extends Document {
-  userId: mongoose.Types.ObjectId; // ObjectId, references the User schema
-  journeyId: string; // A unique string for public sharing/referencing
-  jobId: mongoose.Types.ObjectId; // ObjectId, references the Job schema
-  cvId?: mongoose.Types.ObjectId; // ObjectId, links to the specific tailored CV for this job
-  coverLetterId?: mongoose.Types.ObjectId; // ObjectId, links to the specific tailored cover letter
-  status: 'created' | 'in-progress' | 'completed' | 'paused' | 'cancelled';
-  currentStep: number; // Step number for progress tracking
-  
-  // Journey progress tracking
+  journeyId?: string; // Unique journey identifier
+  userId: string;
+  firebaseUid?: string; // Firebase UID for user identification
+  jobId: string;
+  cvId?: string; // Single source of truth for CV-Job relationship
+  coverLetterId?: string; // Single source of truth for CoverLetter-Job relationship
+  status: 'in-progress' | 'completed' | 'paused';
+  currentStep: number;
+  totalSteps: number;
+  atsScore?: number;
+  atsScoreJobId?: string;
+  jobTitle: string;
+  company: string;
+  journeyType: 'standard' | 'creative' | 'technical' | 'leadership' | 'custom';
   steps: Array<{
-    stepNumber: number;
-    stepName: string;
-    status: 'pending' | 'in-progress' | 'completed' | 'skipped';
+    stepId: number;
+    name: string;
+    status: 'pending' | 'active' | 'completed';
     completedAt?: Date;
-    notes?: string;
+    data?: any;
   }>;
-  
-  // Journey metadata
   metadata: {
     createdAt: Date;
     updatedAt: Date;
+    lastAccessedAt: Date;
     completedAt?: Date;
-    estimatedDuration?: number; // Minutes
-    actualDuration?: number; // Minutes
-    priority: 'low' | 'medium' | 'high';
-    tags: string[];
-    isArchived: boolean;
+    tags?: string[];
+    notes?: string;
   };
 }
 
-const applicationJourneySchema = new Schema<IApplicationJourney>({
-  userId: {
-    type: Schema.Types.ObjectId,
-    ref: 'User',
-    required: [true, 'User ID is required'],
-    index: true
-  },
+const ApplicationJourneySchema = new Schema<IApplicationJourney>({
   journeyId: {
     type: String,
-    required: [true, 'Journey ID is required'],
-    unique: true,
-    trim: true,
     index: true
   },
+  userId: {
+    type: String,
+    required: true
+  },
+  firebaseUid: {
+    type: String,
+    sparse: true, // Allows multiple null values
+    index: true // Index for efficient Firebase UID queries
+  },
   jobId: {
-    type: Schema.Types.ObjectId,
-    ref: 'Job',
-    required: [true, 'Job ID is required'],
+    type: String,
+    required: true,
     index: true
   },
   cvId: {
-    type: Schema.Types.ObjectId,
-    ref: 'CV',
-    index: true,
-    sparse: true // Allow null values but index non-null ones
+    type: String,
+    index: true
   },
   coverLetterId: {
-    type: Schema.Types.ObjectId,
-    ref: 'CoverLetter',
-    index: true,
-    sparse: true // Allow null values but index non-null ones
+    type: String,
+    index: true
   },
   status: {
     type: String,
-    enum: ['created', 'in-progress', 'completed', 'paused', 'cancelled'],
-    default: 'created',
-    required: true,
+    enum: ['in-progress', 'completed', 'paused'],
+    default: 'in-progress',
     index: true
   },
   currentStep: {
     type: Number,
     default: 1,
     min: 1,
-    max: 10
+    max: 5
+  },
+  totalSteps: {
+    type: Number,
+    default: 5
+  },
+  atsScore: {
+    type: Number,
+    min: 0,
+    max: 100
+  },
+  atsScoreJobId: {
+    type: String
+  },
+  jobTitle: {
+    type: String,
+    required: true
+  },
+  company: {
+    type: String,
+    required: true
+  },
+  journeyType: {
+    type: String,
+    enum: ['standard', 'creative', 'technical', 'leadership', 'custom'],
+    default: 'standard',
+    index: true
   },
   steps: [{
-    stepNumber: {
+    stepId: {
       type: Number,
-      required: true,
-      min: 1,
-      max: 10
+      required: true
     },
-    stepName: {
+    name: {
       type: String,
-      required: true,
-      trim: true,
-      maxlength: [100, 'Step name cannot exceed 100 characters']
+      required: true
     },
     status: {
       type: String,
-      enum: ['pending', 'in-progress', 'completed', 'skipped'],
-      default: 'pending',
-      required: true
+      enum: ['pending', 'active', 'completed'],
+      default: 'pending'
     },
     completedAt: {
       type: Date
     },
-    notes: {
-      type: String,
-      trim: true,
-      maxlength: [500, 'Step notes cannot exceed 500 characters']
+    data: {
+      type: Schema.Types.Mixed
     }
   }],
   metadata: {
     createdAt: {
       type: Date,
-      default: Date.now,
-      required: true
+      default: Date.now
     },
     updatedAt: {
       type: Date,
-      default: Date.now,
-      required: true
+      default: Date.now
+    },
+    lastAccessedAt: {
+      type: Date,
+      default: Date.now
     },
     completedAt: {
       type: Date
     },
-    estimatedDuration: {
-      type: Number,
-      min: 5,
-      max: 10080 // One week in minutes
-    },
-    actualDuration: {
-      type: Number,
-      min: 0
-    },
-    priority: {
-      type: String,
-      enum: ['low', 'medium', 'high'],
-      default: 'medium'
-    },
     tags: [{
-      type: String,
-      trim: true,
-      maxlength: [50, 'Tag cannot exceed 50 characters']
+      type: String
     }],
-    isArchived: {
-      type: Boolean,
-      default: false
+    notes: {
+      type: String
     }
   }
 }, {
-  timestamps: true,
-  toJSON: {
-    transform: function(doc, ret) {
-      ret.id = ret._id;
-      delete ret._id;
-      delete ret.__v;
-      return ret;
-    }
-  }
+  timestamps: true
 });
 
-// Compound indexes for efficient queries
-applicationJourneySchema.index({ userId: 1, status: 1 }); // User's active journeys
-applicationJourneySchema.index({ userId: 1, 'metadata.createdAt': -1 }); // Recent journeys
-applicationJourneySchema.index({ userId: 1, jobId: 1 }); // Journey for specific job
-applicationJourneySchema.index({ cvId: 1 }); // Find journeys using specific CV
-applicationJourneySchema.index({ coverLetterId: 1 }); // Find journeys using specific cover letter
-applicationJourneySchema.index({ 'metadata.priority': -1, status: 1 }); // Priority sorting
+// Optimized indexes for better query performance
+ApplicationJourneySchema.index({ userId: 1, status: 1, updatedAt: -1 }); // Compound index for common queries
+ApplicationJourneySchema.index({ userId: 1, jobId: 1 }); // Index for performance, uniqueness handled in API
+ApplicationJourneySchema.index({ userId: 1, createdAt: -1 });
+ApplicationJourneySchema.index({ firebaseUid: 1, status: 1 }); // For Firebase user queries
+ApplicationJourneySchema.index({ status: 1, updatedAt: -1 }); // For status-based queries
+// Note: cvId and coverLetterId indexes are already defined in field definitions above
 
-// Generate unique journeyId before saving
-applicationJourneySchema.pre('save', async function(next) {
-  // Generate journeyId if not provided
-  if (!this.journeyId) {
-    const timestamp = Date.now().toString(36);
-    const randomStr = Math.random().toString(36).substring(2, 8);
-    this.journeyId = `journey_${timestamp}_${randomStr}`;
-  }
-  
-  // Update metadata timestamps
+// Update the updatedAt field on save
+ApplicationJourneySchema.pre('save', function(next) {
   this.metadata.updatedAt = new Date();
-  
-  // Set completion timestamp if status is completed
-  if (this.status === 'completed' && !this.metadata.completedAt) {
-    this.metadata.completedAt = new Date();
-  }
-  
   next();
 });
 
-// Method to calculate actual duration
-applicationJourneySchema.methods.calculateDuration = function() {
-  if (this.metadata.completedAt && this.metadata.createdAt) {
-    const durationMs = this.metadata.completedAt.getTime() - this.metadata.createdAt.getTime();
-    this.metadata.actualDuration = Math.round(durationMs / (1000 * 60)); // Convert to minutes
-  }
-};
-
-// Static method to find journeys with populated references
-applicationJourneySchema.statics.findWithReferences = function(query: any) {
-  return this.find(query)
-    .populate('jobId', 'jobTitle company status priority deadline')
-    .populate('cvId', 'title metadata.lastModified')
-    .populate('coverLetterId', 'title metadata.lastModified')
-    .sort({ 'metadata.createdAt': -1 });
-};
-
-export default mongoose.models.ApplicationJourney || mongoose.model<IApplicationJourney>('ApplicationJourney', applicationJourneySchema);
+export const ApplicationJourney = mongoose.models.ApplicationJourney || mongoose.model<IApplicationJourney>('ApplicationJourney', ApplicationJourneySchema);

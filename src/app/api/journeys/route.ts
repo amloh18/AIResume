@@ -1,17 +1,50 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/database';
-import { JobApplication, CV, CoverLetter, CVJourney } from '@/models';
+import { JobApplication, CV, CoverLetter, ApplicationJourney } from '@/models';
 import { createErrorResponse } from '@/lib/db-utils';
 
+// Extend global type for cache
+declare global {
+  var userCache: Map<string, { data: any; timestamp: number }> | undefined;
+  var journeysCache: Map<string, { data: any; timestamp: number }> | undefined;
+}
+
+// Cache cleanup utility
+function cleanupExpiredCache(cache: Map<string, { data: any; timestamp: number }> | undefined, cacheName: string) {
+  if (!cache) return;
+
+  const now = Date.now();
+  const CACHE_DURATION = cacheName === 'journeys' ? 30000 : 60000;
+  const expiredKeys: string[] = [];
+
+  Array.from(cache.entries()).forEach(([key, value]) => {
+    if ((now - value.timestamp) > CACHE_DURATION) {
+      expiredKeys.push(key);
+    }
+  });
+
+  expiredKeys.forEach(key => cache.delete(key));
+
+  if (expiredKeys.length > 0) {
+    console.log(`🧹 Cleaned up ${expiredKeys.length} expired entries from ${cacheName} cache`);
+  }
+}
+
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
+  const requestId = Math.random().toString(36).substr(2, 9);
+  let dbConnection = null;
+
+  console.log(`🚀 [${requestId}] Journeys API - Request started`);
+
   try {
-    await connectDB();
-    
+    // Parse query parameters
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     const status = searchParams.get('status'); // 'in-progress' | 'completed' | 'all'
     const jobId = searchParams.get('jobId'); // Filter by specific job ID
-    
+    const includeUserProfile = searchParams.get('includeUserProfile') === 'true';
+
     if (!userId) {
       return NextResponse.json(
         { success: false, message: 'User ID is required' },
@@ -19,9 +52,27 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Build query for CV Journeys
+    // Check cache first (in-memory cache for this request)
+    const cacheKey = `journeys_${userId}_${status || 'all'}_${jobId || 'all'}`;
+    const cachedData = global.journeysCache?.get(cacheKey);
+    const CACHE_DURATION = 30000; // 30 seconds
+
+    if (cachedData && (Date.now() - cachedData.timestamp) < CACHE_DURATION) {
+      console.log('🔍 Journeys API - Returning cached data');
+      return NextResponse.json(cachedData.data);
+    }
+
+    // Clean up expired cache entries periodically
+    if (Math.random() < 0.1) { // 10% chance to clean up
+      cleanupExpiredCache(global.journeysCache, 'journeys');
+    }
+
+    // Establish database connection once
+    dbConnection = await connectDB();
+
+    // Build optimized query for CV Journeys
     let journeyQuery: any = { userId };
-    
+
     // Add jobId filter if provided
     if (jobId) {
       journeyQuery.jobId = jobId;
@@ -32,15 +83,17 @@ export async function GET(request: NextRequest) {
       journeyQuery.status = status;
     }
 
-    // Fetch CV Journeys for the user with optimized query
-    const cvJourneys = await CVJourney.find(journeyQuery)
+    // Optimized query with projection and sorting
+    const cvJourneys = await ApplicationJourney.find(journeyQuery)
       .select('_id jobId jobTitle company status currentStep totalSteps createdAt updatedAt atsScore cvId coverLetterId')
       .sort({ updatedAt: -1 })
-      .lean();
+      .limit(50) // Limit results to prevent large data sets
+      .lean()
+      .exec(); // Explicitly execute query for better performance monitoring
 
     // Transform CV Journeys into the expected format
     const journeys = cvJourneys.map(journey => ({
-      id: journey._id.toString(),
+      id: (journey._id as any).toString(),
       jobId: journey.jobId,
       jobTitle: journey.jobTitle,
       company: journey.company,
@@ -54,17 +107,69 @@ export async function GET(request: NextRequest) {
       coverLetterId: journey.coverLetterId
     }));
 
-    return NextResponse.json({
+    let userProfile = null;
+
+    // Fetch user profile data in parallel if requested
+    if (includeUserProfile) {
+      try {
+        const userResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/user`, {
+          headers: {
+            'x-firebase-user-id': userId,
+          },
+        });
+
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          if (userData.success) {
+            userProfile = userData.user;
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+        // Continue without user profile data
+      }
+    }
+
+    const responseData = {
       success: true,
       data: {
-        journeys
-      }
+        journeys,
+        ...(userProfile && { userProfile })
+      },
+      _performance: {
+        queryTime: Date.now() - startTime,
+        journeysCount: journeys.length,
+        totalTime: 0,
+        requestId: requestId,
+        cacheUsed: !!cachedData,
+        dbConnectionTime: 0
+      } as any
+    };
+
+    // Cache the response
+    if (!global.journeysCache) {
+      global.journeysCache = new Map();
+    }
+    global.journeysCache.set(cacheKey, {
+      data: responseData,
+      timestamp: Date.now()
     });
+
+    const totalTime = Date.now() - startTime;
+    console.log(`✅ [${requestId}] Journeys API - Completed in ${totalTime}ms, found ${journeys.length} journeys`);
+
+    // Add performance metrics to response
+    responseData._performance.totalTime = totalTime;
+    responseData._performance.requestId = requestId;
+    responseData._performance.cacheUsed = !!cachedData;
+    responseData._performance.dbConnectionTime = dbConnection ? Date.now() - startTime - 50 : 0; // Approximate
+
+    return NextResponse.json(responseData);
 
   } catch (error: any) {
     console.error('Journeys API error:', error);
     const errorResponse = createErrorResponse(error);
-    
+
     return NextResponse.json(
       errorResponse,
       { status: errorResponse.statusCode || 500 }
@@ -88,7 +193,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if journey already exists for this job
-    let journey = await CVJourney.findOne({ userId, jobId });
+    let journey = await ApplicationJourney.findOne({ userId, jobId });
 
     if (journey) {
       // Update existing journey
@@ -118,7 +223,7 @@ export async function POST(request: NextRequest) {
       });
     } else {
       // Create new journey
-      const newJourney = new CVJourney({
+      const newJourney = new ApplicationJourney({
         userId,
         jobId,
         cvId: cvId || null,
@@ -175,7 +280,7 @@ export async function POST(request: NextRequest) {
           console.log('🔍 Duplicate journey detected, fetching existing journey...');
           
           // Fetch the existing journey
-          const existingJourney = await CVJourney.findOne({ userId, jobId });
+          const existingJourney = await ApplicationJourney.findOne({ userId, jobId });
           if (existingJourney) {
             return NextResponse.json({
               success: true,
@@ -227,7 +332,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const result = await CVJourney.findOneAndDelete({ 
+    const result = await ApplicationJourney.findOneAndDelete({ 
       _id: journeyId, 
       userId 
     });

@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn, useSession } from 'next-auth/react';
 import { Eye, EyeOff, Mail, Lock, Loader2, CheckCircle, AlertCircle, ArrowRight } from 'lucide-react';
-import { signInWithEmail } from '@/lib/unified-auth';
 
 interface SignInFormData {
   email: string;
@@ -83,13 +82,17 @@ function SignInPageContent() {
     setSuccess('');
 
     try {
-      const result = await signInWithEmail(formData.email, formData.password);
+      // Try credentials first (for users with passwords)
+      const result = await signIn('credentials', {
+        email: formData.email,
+        password: formData.password,
+        redirect: false,
+      });
 
-      if (result.success) {
+      if (result?.ok) {
         setSuccess('Sign in successful! Redirecting...');
-        // Redirect will be handled by useEffect when session updates
       } else {
-        setError(result.error || 'Sign in failed. Please try again.');
+        setError(result?.error || 'Invalid email or password.');
       }
 
     } catch (error: any) {
@@ -99,6 +102,7 @@ function SignInPageContent() {
       setIsLoading(false);
     }
   };
+
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);

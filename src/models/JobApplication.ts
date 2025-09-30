@@ -58,8 +58,7 @@ export interface IJobApplication extends Document {
 const jobApplicationSchema = new Schema<IJobApplication>({
   userId: {
     type: Schema.Types.Mixed, // Allow both ObjectId and string
-    required: true,
-    index: true
+    required: true
   },
   firebaseUid: {
     type: String,

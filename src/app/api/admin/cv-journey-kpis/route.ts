@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/database';
-import { CVJourney } from '@/models/CVJourney';
-import { JobApplication } from '@/models/JobApplication';
-import { CV } from '@/models/CV';
-import { CoverLetter } from '@/models/CoverLetter';
-import { User } from '@/models/User';
+import { ApplicationJourney } from '@/models';
+import JobApplication from '@/models/JobApplication';
+import CV from '@/models/CV';
+import CoverLetter from '@/models/CoverLetter';
+import User from '@/models/User';
 
 export async function GET(request: NextRequest) {
   try {
@@ -44,11 +44,11 @@ export async function GET(request: NextRequest) {
     // ========================================
 
     // 1.1 Core Activity Metrics
-    const cvJourneysInitiated = await CVJourney.countDocuments({
+    const cvJourneysInitiated = await ApplicationJourney.countDocuments({
       createdAt: { $gte: startDate }
     });
 
-    const cvJourneysWithBothDocuments = await CVJourney.countDocuments({
+    const cvJourneysWithBothDocuments = await ApplicationJourney.countDocuments({
       createdAt: { $gte: startDate },
       cvId: { $exists: true, $ne: null },
       coverLetterId: { $exists: true, $ne: null }
@@ -130,7 +130,7 @@ export async function GET(request: NextRequest) {
       : 0;
 
     // Average ATS Score
-    const atsScores = await CVJourney.aggregate([
+    const atsScores = await ApplicationJourney.aggregate([
       {
         $match: {
           atsScore: { $exists: true, $ne: null },
@@ -155,7 +155,7 @@ export async function GET(request: NextRequest) {
 
     // Orphaned or Stale Journeys (14+ days old without CV)
     const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
-    const orphanedJourneys = await CVJourney.countDocuments({
+    const orphanedJourneys = await ApplicationJourney.countDocuments({
       createdAt: { $lt: fourteenDaysAgo },
       cvId: { $exists: false }
     });
@@ -217,7 +217,7 @@ export async function GET(request: NextRequest) {
     // ========================================
 
     // Journey Status Distribution
-    const journeyStatusDistribution = await CVJourney.aggregate([
+    const journeyStatusDistribution = await ApplicationJourney.aggregate([
       {
         $match: {
           createdAt: { $gte: startDate }
@@ -232,7 +232,7 @@ export async function GET(request: NextRequest) {
     ]);
 
     // Average Journey Completion Time
-    const completedJourneys = await CVJourney.find({
+    const completedJourneys = await ApplicationJourney.find({
       status: 'completed',
       createdAt: { $gte: startDate },
       'metadata.completedAt': { $exists: true }
@@ -247,10 +247,10 @@ export async function GET(request: NextRequest) {
 
     // User Retention (users who created journeys in both periods)
     const previousPeriodStart = new Date(startDate.getTime() - (now.getTime() - startDate.getTime()));
-    const usersInCurrentPeriod = await CVJourney.distinct('userId', {
+    const usersInCurrentPeriod = await ApplicationJourney.distinct('userId', {
       createdAt: { $gte: startDate }
     });
-    const usersInPreviousPeriod = await CVJourney.distinct('userId', {
+    const usersInPreviousPeriod = await ApplicationJourney.distinct('userId', {
       createdAt: { $gte: previousPeriodStart, $lt: startDate }
     });
 

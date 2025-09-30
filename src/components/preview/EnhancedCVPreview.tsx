@@ -7,7 +7,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { ITemplate } from '@/models/Template';
-import { CVDataStructure } from '@/types/cv';
+import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { PreviewResult, renderCVPreview } from '@/lib/preview-engine';
 import { Loader2, Eye, Download, ZoomIn, ZoomOut, RotateCcw, Printer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge';
 
 interface EnhancedCVPreviewProps {
   template: ITemplate;
-  cvData: CVDataStructure;
+  cvData: UnifiedCVDataStructure;
   zoom?: number;
   onZoomChange?: (zoom: number) => void;
   showControls?: boolean;
@@ -389,3 +389,4 @@ const EnhancedCVPreview: React.FC<EnhancedCVPreviewProps> = ({
 };
 
 export default EnhancedCVPreview;
+

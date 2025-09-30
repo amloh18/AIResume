@@ -1,11 +1,13 @@
 import mongoose, { Document, Schema } from 'mongoose';
-import { CVDataStructure } from '@/types/cv';
+import { UnifiedCVDataStructure, UnifiedCVDocument } from '@/types/unified-cv-schema';
 
 export interface ICV extends Document {
   userId: mongoose.Types.ObjectId; // MongoDB ObjectId linking to User collection
   title: string;
-  cvData: CVDataStructure;
+  cvData: UnifiedCVDataStructure; // Using unified schema
   templateId: mongoose.Types.ObjectId; // Reference to Template collection
+  status: 'draft' | 'published' | 'archived';
+  version: number;
   createdAt: Date;
   updatedAt: Date;
   metadata: {
@@ -20,6 +22,7 @@ export interface ICV extends Document {
     atsScoreDate?: Date;
     thumbnailUrl?: string; // URL to PNG snapshot for card preview
     thumbnailGeneratedAt?: Date; // When the thumbnail was last generated
+    starred: boolean;
   };
 }
 
@@ -27,8 +30,7 @@ const cvSchema = new Schema<ICV>({
   userId: {
     type: Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
-    index: true
+    required: true
   },
   title: {
     type: String,
@@ -40,6 +42,15 @@ const cvSchema = new Schema<ICV>({
     type: Schema.Types.ObjectId,
     ref: 'Template',
     required: true
+  },
+  status: {
+    type: String,
+    enum: ['draft', 'published', 'archived'],
+    default: 'draft'
+  },
+  version: {
+    type: Number,
+    default: 1
   },
   cvData: {
     basics: {
@@ -147,7 +158,8 @@ const cvSchema = new Schema<ICV>({
     atsScore: { type: Number, min: 0, max: 100 },
     atsScoreDate: { type: Date },
     thumbnailUrl: { type: String, trim: true },
-    thumbnailGeneratedAt: { type: Date }
+    thumbnailGeneratedAt: { type: Date },
+    starred: { type: Boolean, default: false }
   }
 }, {
   timestamps: true,

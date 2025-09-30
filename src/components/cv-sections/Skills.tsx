@@ -1,13 +1,13 @@
 import React from 'react';
 import { Code2, Star, Zap } from 'lucide-react';
-import { CVDataStructure } from '@/types/cv';
+import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ISectionBlueprint, ITemplate } from '@/models/Template';
 
 interface SkillsProps {
-  data: CVDataStructure['skills'];
+  data: UnifiedCVDataStructure['skills'];
   sectionConfig: ISectionBlueprint;
   template: ITemplate;
-  cvData: CVDataStructure;
+  cvData: UnifiedCVDataStructure;
 }
 
 const Skills: React.FC<SkillsProps> = ({ 

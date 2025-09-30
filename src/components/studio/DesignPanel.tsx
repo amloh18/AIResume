@@ -50,12 +50,12 @@ const DesignPanel: React.FC<DesignPanelProps> = ({
   ];
 
   const colorSchemes = [
-    { value: 'professional', label: 'Professional', colors: ['#1f2937', '#6b7280', '#d1d5db'] },
-    { value: 'modern', label: 'Modern', colors: ['#059669', '#10b981', '#d1fae5'] },
-    { value: 'classic', label: 'Classic', colors: ['#1e40af', '#3b82f6', '#dbeafe'] },
-    { value: 'elegant', label: 'Elegant', colors: ['#7c3aed', '#a855f7', '#f3e8ff'] },
+    { value: 'professional', label: 'Professional', colors: ['#1f2937', '#6b7280', '#059669'] },
+    { value: 'modern', label: 'Modern', colors: ['#1f2937', '#6b7280', '#10b981'] },
+    { value: 'classic', label: 'Classic', colors: ['#1f2937', '#6b7280', '#1e40af'] },
+    { value: 'elegant', label: 'Elegant', colors: ['#1f2937', '#6b7280', '#7c3aed'] },
     { value: 'minimal', label: 'Minimal', colors: ['#374151', '#6b7280', '#f9fafb'] },
-    { value: 'bold', label: 'Bold', colors: ['#dc2626', '#ef4444', '#fecaca'] }
+    { value: 'bold', label: 'Bold', colors: ['#1f2937', '#6b7280', '#dc2626'] }
   ];
 
   const updateSetting = (key: keyof DesignSettings, value: any) => {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/database';
-import { CVJourney, JobApplication } from '@/models';
+import { ApplicationJourney, JobApplication } from '@/models';
 
 export async function GET(request: NextRequest) {
   try {
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     console.log(`✅ Found ${jobs.length} jobs for user`);
 
     // Get all CV Journeys for the user
-    const cvJourneys = await CVJourney.find({ userId }).sort({ createdAt: -1 });
+    const cvJourneys = await ApplicationJourney.find({ userId }).sort({ createdAt: -1 });
     console.log(`✅ Found ${cvJourneys.length} CV Journeys for user`);
 
     // Check if each job has a corresponding CV Journey
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
         jobTitle: job.jobTitle,
         company: job.company,
         createdAt: job.createdAt,
-        hasCVJourney: !!journey,
+        hasApplicationJourney: !!journey,
         journeyId: journey?._id.toString(),
         journeyStatus: journey?.status,
         journeyCurrentStep: journey?.currentStep
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
       message: 'CV Journey creation test completed',
       data: {
         totalJobs: jobs.length,
-        totalCVJourneys: cvJourneys.length,
+        totalApplicationJourneys: cvJourneys.length,
         jobsWithJourneys,
         cvJourneys: cvJourneys.map(journey => ({
           id: journey._id.toString(),

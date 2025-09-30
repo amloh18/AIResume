@@ -25,7 +25,7 @@ export class CVJourneyLookupService {
     try {
       console.log('🔍 CVJourneyLookupService - Finding journey by CV ID:', cvId);
       
-      const response = await fetch(`/api/cv-journey?userId=${userId}&cvId=${cvId}`);
+      const response = await fetch(`/api/application-journey?userId=${userId}&cvId=${cvId}`);
       
       if (!response.ok) {
         console.log('❌ No journey found for CV ID:', cvId);
@@ -64,7 +64,7 @@ export class CVJourneyLookupService {
     try {
       console.log('🔍 CVJourneyLookupService - Finding journey by cover letter ID:', coverLetterId);
       
-      const response = await fetch(`/api/cv-journey?userId=${userId}&coverLetterId=${coverLetterId}`);
+      const response = await fetch(`/api/application-journey?userId=${userId}&coverLetterId=${coverLetterId}`);
       
       if (!response.ok) {
         console.log('❌ No journey found for cover letter ID:', coverLetterId);
@@ -103,7 +103,7 @@ export class CVJourneyLookupService {
     try {
       console.log('🔍 CVJourneyLookupService - Finding journey by job ID:', jobId);
       
-      const response = await fetch(`/api/cv-journey?userId=${userId}&jobId=${jobId}`);
+      const response = await fetch(`/api/application-journey?userId=${userId}&jobId=${jobId}`);
       
       if (!response.ok) {
         console.log('❌ No journey found for job ID:', jobId);

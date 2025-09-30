@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, Suspense, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
 import {
   User,
   Trash2,
@@ -26,7 +26,6 @@ import {
   XCircle
 } from 'lucide-react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
-import UserIcon from '@/components/ui/UserIcon';
 import MembershipModal from '@/components/payment/MembershipModal';
 import RouteGuard from '@/components/auth/RouteGuard';
 import Toast from '@/components/ui/Toast';
@@ -34,6 +33,9 @@ import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import AddPaymentMethodModal from '@/components/payment/AddPaymentMethodModal';
 import ChangePasswordModal from '@/components/auth/ChangePasswordModal';
 import TwoFactorModal from '@/components/auth/TwoFactorModal';
+import PageHeader from '@/components/dashboard/PageHeader';
+import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
+import CalendarSyncSettings from '@/components/settings/CalendarSyncSettings';
 
 // --- TYPES ---
 
@@ -1535,6 +1537,7 @@ const ReferralsRewards = () => {
 const ConnectedAppsIntegrations = () => {
   const [connectedApps, setConnectedApps] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userSettings, setUserSettings] = useState<any>(null);
 
   useEffect(() => {
     const fetchConnectedApps = async () => {
@@ -1554,7 +1557,22 @@ const ConnectedAppsIntegrations = () => {
       }
     };
 
+    const fetchUserSettings = async () => {
+      try {
+        const response = await fetch('/api/user/settings');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setUserSettings(data.settings);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching user settings:', error);
+      }
+    };
+
     fetchConnectedApps();
+    fetchUserSettings();
   }, []);
 
   const getProviderIcon = (provider: string) => {
@@ -1593,6 +1611,27 @@ const ConnectedAppsIntegrations = () => {
     );
   }
 
+  const handleUpdateSettings = async (updatedSettings: any) => {
+    try {
+      const response = await fetch('/api/user/settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedSettings),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setUserSettings(updatedSettings);
+        }
+      }
+    } catch (error) {
+      console.error('Error updating settings:', error);
+    }
+  };
+
   return (
     <div className="p-8 h-full overflow-y-auto">
       <div className="space-y-8">
@@ -1602,6 +1641,14 @@ const ConnectedAppsIntegrations = () => {
             Manage your connected applications and third-party integrations.
           </p>
         </div>
+
+        {/* Calendar Sync Settings */}
+        {userSettings && (
+          <CalendarSyncSettings 
+            userSettings={userSettings}
+            onUpdateSettings={handleUpdateSettings}
+          />
+        )}
 
         {/* Connected Apps List */}
         <div className="space-y-4">
@@ -1798,79 +1845,24 @@ const SettingsSidebar = ({
   );
 };
 
-// Settings Header Component
-const SettingsHeader = ({ activeTab, user, session }: { activeTab: string; user: User | null; session: any }) => {
-  const router = useRouter();
-  const { theme, toggleTheme } = useTheme();
-
-  const getTabDescription = (tab: string) => {
-    switch (tab) {
-      case 'account': return 'Manage your personal information and account details';
-      case 'security': return 'Secure your account and manage notification preferences';
-      case 'membership': return 'View and manage your subscription and billing information';
-      case 'referrals': return 'Track your referrals and earn rewards';
-      case 'integrations': return 'Connect and manage your third-party integrations';
-      case 'workspace': return 'Manage your workspace and team settings';
-      default: return 'Configure your account settings';
-    }
-  };
-
-  const displayUser = user ? {
-    name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || session?.user?.name || 'User',
-    email: user?.email || session?.user?.email || 'user@example.com',
-    username: user?.username,
-    profilePhoto: user?.profilePhoto || session?.user?.image,
-    designation: 'Software Developer'
-  } : {
-    name: session?.user?.name || 'User',
-    email: session?.user?.email || 'user@example.com',
-    username: undefined,
-    profilePhoto: session?.user?.image,
-    designation: 'Software Developer'
-  };
-
-  return (
-    <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border border-gray-200 dark:border-gray-700 p-6 rounded-lg">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Settings
-          </h1>
-          <p className="text-gray-600 dark:text-gray-300 mt-1">
-            {getTabDescription(activeTab)}
-          </p>
-        </div>
-        {/* Actions - Same as Analytics page header but without Settings icon */}
-        <div className="flex items-center gap-2">
-          {/* Theme Toggle */}
-          <button
-            onClick={toggleTheme}
-            aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white transition-colors"
-            title={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
-          >
-            {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
-          </button>
-
-          {/* Notifications */}
-          <button aria-label="Notifications" className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white transition-colors">
-            <Bell size={18} />
-          </button>
-
-          {/* User Profile */}
-          <div className="pl-2 ml-1">
-            <UserIcon user={displayUser} />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+// Helper function to get tab description
+const getTabDescription = (tab: string) => {
+  switch (tab) {
+    case 'account': return 'Manage your personal information and account details';
+    case 'security': return 'Secure your account and manage notification preferences';
+    case 'membership': return 'View and manage your subscription and billing information';
+    case 'referrals': return 'Track your referrals and earn rewards';
+    case 'integrations': return 'Connect and manage your third-party integrations';
+    case 'workspace': return 'Manage your workspace and team settings';
+    default: return 'Configure your account settings';
+  }
 };
 
 // Main Settings Content Component
 const SettingsContent = () => {
-  const { data: session, status } = useSession();
+  const { user, loading: authLoading, isAuthenticated } = useUnifiedAuth();
   const router = useRouter();
+  const { toggleSidebar, isMobileMenuOpen } = useMobileSidebar();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState('account');
   const [userData, setUserData] = useState<User | null>(null);
@@ -1905,10 +1897,10 @@ const SettingsContent = () => {
       }
     };
 
-    if (session) {
+    if (user) {
       fetchUserData();
     }
-  }, [session]);
+  }, [user]);
 
   const handleSaveUser = async (userData: User) => {
     try {
@@ -1987,9 +1979,23 @@ const SettingsContent = () => {
 
   return (
     <RouteGuard requireAuth={true}>
-      <div className="fixed top-4 left-80 right-4 bottom-4 space-y-6">
-        {/* Header */}
-        <SettingsHeader activeTab={activeTab} user={userData} session={session} />
+      <div className="space-y-6">
+        {/* Page Header */}
+        <PageHeader
+          title="Settings"
+          description={getTabDescription(activeTab)}
+          user={{
+            name: userData ? `${userData?.firstName || ''} ${userData?.lastName || ''}`.trim() || user?.name || 'User' : user?.name || 'User',
+            email: userData?.email || user?.email || '',
+            username: userData?.username || user?.username,
+            profilePhoto: userData?.profilePhoto || user?.image,
+            designation: 'Software Developer',
+            subscription: userData?.subscription
+          }}
+          showSettings={true}
+          onMobileMenuToggle={toggleSidebar}
+          isMobileMenuOpen={isMobileMenuOpen}
+        />
         
         {/* Main Layout */}
         <div className="flex h-[calc(100vh-180px)] w-full">

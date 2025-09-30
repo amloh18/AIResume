@@ -96,6 +96,11 @@ export async function POST(request: NextRequest) {
           JobApplicationType: typeof JobApplication
         });
         
+        // Test database connection
+        if (!CV || !JobApplication) {
+          throw new Error('Failed to import database models');
+        }
+        
         // Fetch CV data if cvId is provided
         if (cvId && !cvText) {
           console.log('🔍 ATS API - Fetching CV data for ID:', cvId);
@@ -208,6 +213,8 @@ export async function POST(request: NextRequest) {
             skillsLength: cvData.skills ? cvData.skills.length : 0,
             fullStructure: JSON.stringify(cvData, null, 2).substring(0, 500) + '...'
           });
+        } else {
+          console.log('🔍 ATS API - No CV data found in document');
         }
       }
       
@@ -499,9 +506,20 @@ function generateSuggestions(keywordScore: any, experienceScore: any, actionVerb
 }
 
 function convertCVToText(cvData: any): string {
-  if (!cvData) return '';
+  if (!cvData) {
+    console.log('🔍 ATS API - convertCVToText: No CV data provided');
+    return '';
+  }
   
   let cvText = '';
+  
+  console.log('🔍 ATS API - convertCVToText: Starting conversion with data structure:', {
+    hasBasics: !!cvData.basics,
+    hasWork: !!cvData.work,
+    hasEducation: !!cvData.education,
+    hasSkills: !!cvData.skills,
+    dataKeys: Object.keys(cvData)
+  });
   
   // Basic Information (JSON Resume format)
   if (cvData.basics) {
@@ -606,5 +624,7 @@ function convertCVToText(cvData: any): string {
     });
   }
   
-  return cvText.trim();
+  const result = cvText.trim();
+  console.log('🔍 ATS API - convertCVToText: Conversion completed, text length:', result.length);
+  return result;
 }

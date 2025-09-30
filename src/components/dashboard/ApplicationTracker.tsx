@@ -10,13 +10,17 @@ import {
   TrendingUp, Users, Building2, Globe, Bookmark,
   Archive, Copy, Share2, Download, Upload
 } from 'lucide-react';
-import { useSession } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
 import { authenticatedFetch } from '@/lib/utils/apiUtils';
+import { useUserData, getUserDisplayName, getUserEmail, getUserAvatar } from '@/lib/hooks/useUserData';
+import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
 import PageHeader from './PageHeader';
 import ApplicationJourneyModal from './ApplicationJourneyModal';
+import AddEditJobModal from '@/components/modals/AddEditJobModal';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
 import toast from 'react-hot-toast';
+import { useOptimizedDataFetching } from '@/lib/hooks/useOptimizedDataFetching';
+import { ApplicationTrackerSkeleton } from '@/components/ui/OptimizedSkeletons';
 
 interface JobApplication {
   id: string;
@@ -77,10 +81,14 @@ interface CVJourney {
 }
 
 const ApplicationTracker: React.FC = () => {
-  const { data: session } = useSession();
+  const { user, loading: authLoading, isAuthenticated } = useUnifiedAuth();
   const { isOpen: isMobileMenuOpen, toggleSidebar } = useMobileSidebar();
+  const { userData, loading: userLoading, error: userError } = useUserData();
   const searchParams = useSearchParams();
   const cvId = searchParams.get('cvId'); // Get CV ID from URL params
+  
+  // Get user ID for data fetching using unified authentication
+  const userId = getUserIdForAPI(user);
   
   const [jobs, setJobs] = useState<JobApplication[]>([]);
   const [journeys, setJourneys] = useState<CVJourney[]>([]);
@@ -91,26 +99,68 @@ const ApplicationTracker: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
-  const [sortBy, setSortBy] = useState<'date' | 'company' | 'status' | 'priority'>('date');
+  const [isLoadingViewMode, setIsLoadingViewMode] = useState(true);
+  const [sortBy, setSortBy] = useState<'lastUpdated' | 'followUpDate' | 'salaryRange' | 'priority'>('lastUpdated');
+  const [lastUpdatedFilter, setLastUpdatedFilter] = useState<'today' | 'last7days' | 'last30days' | 'all'>('all');
+  const [followUpFilter, setFollowUpFilter] = useState<'upcoming' | 'overdue' | 'all'>('all');
+  const [salaryRangeFilter, setSalaryRangeFilter] = useState<'all' | 'under50k' | '50k-75k' | '75k-100k' | '100k-150k' | '150k-200k' | 'over200k'>('all');
+  const [priorityFilter, setPriorityFilter] = useState<'high' | 'medium' | 'low' | 'all'>('all');
   const [selectedJobs, setSelectedJobs] = useState<Set<string>>(new Set());
   const [showBulkActions, setShowBulkActions] = useState(false);
   const [draggedJob, setDraggedJob] = useState<string | null>(null);
   const [showJourneyTemplates, setShowJourneyTemplates] = useState(false);
   const [cvContext, setCvContext] = useState<any>(null); // Store CV context when navigating from CV card
+  const [showAddJobModal, setShowAddJobModal] = useState(false);
+  const [editingJob, setEditingJob] = useState<JobApplication | null>(null);
 
   // Load data on component mount
   useEffect(() => {
-    if (session?.user?.id) {
+    if (userId) {
       loadData();
+      loadViewModePreference();
     }
-  }, [session?.user?.id]);
+  }, [userId]);
+
+  // Handle URL parameters for add job action
+  useEffect(() => {
+    const action = searchParams.get('action');
+    if (action === 'add-job') {
+      setShowAddJobModal(true);
+      // Clean up URL parameter
+      const url = new URL(window.location.href);
+      url.searchParams.delete('action');
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, [searchParams]);
+
+  const loadViewModePreference = async () => {
+    try {
+      const response = await authenticatedFetch('/api/user/settings');
+      const result = await response.json();
+      
+      if (result.success && result.data?.settings?.preferences?.dashboard?.layout) {
+        const savedLayout = result.data.settings.preferences.dashboard.layout;
+        // Map dashboard layout to our view modes
+        if (savedLayout === 'list') {
+          setViewMode('list');
+        } else {
+          setViewMode('kanban'); // Default to kanban for 'grid' or 'compact'
+        }
+      }
+    } catch (error) {
+      console.error('Error loading view mode preference:', error);
+      // Keep default 'kanban' view mode
+    } finally {
+      setIsLoadingViewMode(false);
+    }
+  };
 
   // Load CV context if cvId is provided
   useEffect(() => {
-    if (cvId && session?.user?.id) {
+    if (cvId && userId) {
       loadCVContext(cvId);
     }
-  }, [cvId, session?.user?.id]);
+  }, [cvId, userId]);
 
   const loadCVContext = async (cvId: string) => {
     try {
@@ -127,7 +177,6 @@ const ApplicationTracker: React.FC = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const userId = session?.user?.id;
       
       // Load jobs
       const jobsResponse = await authenticatedFetch(`/api/jobs?userId=${userId}`);
@@ -161,7 +210,7 @@ const ApplicationTracker: React.FC = () => {
       }
 
       // Load CV journeys using cv-journey API with cleanup
-      const journeysResponse = await authenticatedFetch(`/api/cv-journey?userId=${userId}&cleanup=true`);
+      const journeysResponse = await authenticatedFetch(`/api/application-journey?userId=${userId}&cleanup=true`);
       const journeysResult = await journeysResponse.json();
       if (journeysResult.success) {
         const loadedJourneys = journeysResult.data.journeys || [];
@@ -211,25 +260,80 @@ const ApplicationTracker: React.FC = () => {
     }
   };
 
-  // Enhanced filtering and sorting
+  // Enhanced filtering and sorting with Application-Specific Metrics
   const filteredAndSortedJobs = React.useMemo(() => {
     let filtered = jobs.filter(job => {
       const matchesSearch = job.jobTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            job.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            job.location?.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesStatus = filterStatus === 'all' || job.status === filterStatus;
-      return matchesSearch && matchesStatus;
+      
+      // Application-Specific Metrics Filters
+      const matchesLastUpdated = (() => {
+        if (lastUpdatedFilter === 'all') return true;
+        const now = new Date();
+        const jobUpdated = new Date(job.updatedAt);
+        const daysDiff = Math.floor((now.getTime() - jobUpdated.getTime()) / (1000 * 60 * 60 * 24));
+        
+        switch (lastUpdatedFilter) {
+          case 'today': return daysDiff === 0;
+          case 'last7days': return daysDiff <= 7;
+          case 'last30days': return daysDiff <= 30;
+          default: return true;
+        }
+      })();
+      
+      const matchesFollowUp = (() => {
+        if (followUpFilter === 'all') return true;
+        // For now, we'll use applicationDate as a proxy for follow-up date
+        // In a real implementation, you'd have a dedicated followUpDate field
+        const followUpDate = job.applicationDate ? new Date(job.applicationDate) : new Date(job.createdAt);
+        const now = new Date();
+        const daysDiff = Math.floor((followUpDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        
+        switch (followUpFilter) {
+          case 'upcoming': return daysDiff > 0 && daysDiff <= 7;
+          case 'overdue': return daysDiff < 0;
+          default: return true;
+        }
+      })();
+      
+      const matchesSalaryRange = (() => {
+        if (salaryRangeFilter === 'all' || !job.salary) return true;
+        
+        const jobMin = job.salary.min || 0;
+        const jobMax = job.salary.max || jobMin;
+        const jobAvg = (jobMin + jobMax) / 2;
+        
+        switch (salaryRangeFilter) {
+          case 'under50k': return jobAvg < 50000;
+          case '50k-75k': return jobAvg >= 50000 && jobAvg < 75000;
+          case '75k-100k': return jobAvg >= 75000 && jobAvg < 100000;
+          case '100k-150k': return jobAvg >= 100000 && jobAvg < 150000;
+          case '150k-200k': return jobAvg >= 150000 && jobAvg < 200000;
+          case 'over200k': return jobAvg >= 200000;
+          default: return true;
+        }
+      })();
+      
+      const matchesPriority = priorityFilter === 'all' || job.priority === priorityFilter;
+      
+      return matchesSearch && matchesStatus && matchesLastUpdated && matchesFollowUp && matchesSalaryRange && matchesPriority;
     });
 
-    // Sort jobs
+    // Sort jobs by Application-Specific Metrics
     filtered.sort((a, b) => {
       switch (sortBy) {
-        case 'date':
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-        case 'company':
-          return a.company.localeCompare(b.company);
-        case 'status':
-          return a.status.localeCompare(b.status);
+        case 'lastUpdated':
+          return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+        case 'followUpDate':
+          const aFollowUp = a.applicationDate ? new Date(a.applicationDate) : new Date(a.createdAt);
+          const bFollowUp = b.applicationDate ? new Date(b.applicationDate) : new Date(b.createdAt);
+          return aFollowUp.getTime() - bFollowUp.getTime();
+        case 'salaryRange':
+          const aSalary = a.salary?.max || a.salary?.min || 0;
+          const bSalary = b.salary?.max || b.salary?.min || 0;
+          return bSalary - aSalary;
         case 'priority':
           const priorityOrder = { 'high': 3, 'medium': 2, 'low': 1 };
           return (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
@@ -239,7 +343,7 @@ const ApplicationTracker: React.FC = () => {
     });
 
     return filtered;
-  }, [jobs, searchQuery, filterStatus, sortBy]);
+  }, [jobs, searchQuery, filterStatus, sortBy, lastUpdatedFilter, followUpFilter, salaryRangeFilter, priorityFilter]);
 
   // Group jobs by status
   const jobsByStatus = {
@@ -289,7 +393,68 @@ const ApplicationTracker: React.FC = () => {
   };
 
   const handleAddJob = () => {
-    window.location.href = '/dashboard/pipeline';
+    setEditingJob(null);
+    setShowAddJobModal(true);
+  };
+
+  const handleJobSaved = (job: any) => {
+    setShowAddJobModal(false);
+    setEditingJob(null);
+    // Refresh the jobs list
+    loadData();
+    toast.success(editingJob ? 'Job updated successfully!' : 'Job added successfully!');
+  };
+
+  const handleEditJob = (job: JobApplication) => {
+    // Map JobApplication to Job interface for the modal
+    const jobForModal = {
+      id: job.id,
+      jobTitle: job.jobTitle || job.title,
+      company: job.company,
+      location: job.location,
+      jobDescription: job.jobDescription || job.description,
+      notes: job.notes,
+      priority: job.priority,
+      status: job.status,
+      deadline: job.deadline ? new Date(job.deadline).toISOString().split('T')[0] : '',
+      applicationDate: job.applicationDate ? new Date(job.applicationDate).toISOString().split('T')[0] : '',
+      salary: job.salary,
+      // Add other fields as needed
+    };
+    setEditingJob(jobForModal as any);
+    setShowAddJobModal(true);
+  };
+
+  const handleViewModeChange = async (mode: 'kanban' | 'list') => {
+    setViewMode(mode);
+    
+    try {
+      // Map our view modes to dashboard layout values
+      const layoutValue = mode === 'list' ? 'list' : 'grid';
+      
+      const response = await authenticatedFetch('/api/user/settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          settings: {
+            preferences: {
+              dashboard: {
+                layout: layoutValue
+              }
+            }
+          }
+        })
+      });
+      
+      const result = await response.json();
+      if (!result.success) {
+        console.error('Error saving view mode preference:', result.message);
+      }
+    } catch (error) {
+      console.error('Error saving view mode preference:', error);
+    }
   };
 
   // Drag and drop handlers
@@ -390,34 +555,20 @@ const ApplicationTracker: React.FC = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="h-8 w-64 bg-gray-200 dark:bg-gray-700 animate-pulse rounded mb-2"></div>
-        <div className="h-4 w-96 bg-gray-200 dark:bg-gray-700 animate-pulse rounded mb-6"></div>
-        <div className="grid grid-cols-5 gap-6">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="space-y-4">
-              <div className="h-6 w-24 bg-gray-200 dark:bg-gray-700 animate-pulse rounded"></div>
-              {Array.from({ length: 3 }).map((_, j) => (
-                <div key={j} className="h-32 bg-gray-200 dark:bg-gray-700 animate-pulse rounded-lg"></div>
-              ))}
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
-      {/* Page Header */}
+      {/* Page Header - Always show immediately */}
       <PageHeader
         title="Application Tracker"
         description="Manage your job applications with integrated CV journeys"
         user={{
-          name: session?.user?.name || session?.user?.firstName || 'User',
-          email: session?.user?.email || 'user@example.com'
+          name: getUserDisplayName(userData),
+          email: getUserEmail(userData),
+          username: userData?.username || '',
+          profilePhoto: getUserAvatar(userData),
+          designation: userData?.role || '',
+          role: user?.role,
+          subscription: userData?.subscription
         }}
         showSettings={true}
         onMobileMenuToggle={toggleSidebar}
@@ -465,7 +616,7 @@ const ApplicationTracker: React.FC = () => {
           <div className="flex flex-col sm:flex-row gap-3 flex-1">
             <motion.button
               onClick={handleAddJob}
-              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+              className="px-4 py-2 bg-gradient-to-r from-lime-500 to-lime-600 hover:from-lime-600 hover:to-lime-700 text-white rounded-lg font-medium transition-all duration-200 flex items-center gap-2 shadow-md hover:shadow-lg"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -474,13 +625,13 @@ const ApplicationTracker: React.FC = () => {
             </motion.button>
             
             <div className="relative flex-1 max-w-md">
-              <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/60" />
               <input
                 type="text"
                 placeholder="Search jobs, companies, locations... (Ctrl+K)"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 rounded-lg bg-white/10 backdrop-blur-md border border-white/20 text-white placeholder-white/60 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 focus:bg-white/20 transition-all duration-200"
                 aria-label="Search jobs"
                 role="searchbox"
               />
@@ -489,28 +640,30 @@ const ApplicationTracker: React.FC = () => {
 
           <div className="flex items-center gap-2">
             {/* View Mode Toggle */}
-            <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+            <div className="flex items-center bg-white/10 backdrop-blur-md border border-white/20 rounded-lg p-1">
               <motion.button
-                onClick={() => setViewMode('kanban')}
+                onClick={() => handleViewModeChange('kanban')}
+                disabled={isLoadingViewMode}
                 className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
                   viewMode === 'kanban' 
-                    ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' 
-                    : 'text-gray-600 dark:text-gray-400'
-                }`}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                    ? 'bg-white/20 text-white shadow-sm' 
+                    : 'text-white/60 hover:text-white/80'
+                } ${isLoadingViewMode ? 'opacity-50 cursor-not-allowed' : ''}`}
+                whileHover={isLoadingViewMode ? {} : { scale: 1.02 }}
+                whileTap={isLoadingViewMode ? {} : { scale: 0.98 }}
               >
                 Kanban
               </motion.button>
               <motion.button
-                onClick={() => setViewMode('list')}
+                onClick={() => handleViewModeChange('list')}
+                disabled={isLoadingViewMode}
                 className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
                   viewMode === 'list' 
-                    ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' 
-                    : 'text-gray-600 dark:text-gray-400'
-                }`}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                    ? 'bg-white/20 text-white shadow-sm' 
+                    : 'text-white/60 hover:text-white/80'
+                } ${isLoadingViewMode ? 'opacity-50 cursor-not-allowed' : ''}`}
+                whileHover={isLoadingViewMode ? {} : { scale: 1.02 }}
+                whileTap={isLoadingViewMode ? {} : { scale: 0.98 }}
               >
                 List
               </motion.button>
@@ -521,8 +674,8 @@ const ApplicationTracker: React.FC = () => {
               onClick={() => setShowFilters(!showFilters)}
               className={`px-3 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
                 showFilters 
-                  ? 'bg-blue-500 text-white' 
-                  : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                  ? 'bg-blue-500/20 border border-blue-500/30 text-blue-400' 
+                  : 'bg-white/10 backdrop-blur-md border border-white/20 text-white/60 hover:text-white/80 hover:bg-white/20'
               }`}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -540,11 +693,11 @@ const ApplicationTracker: React.FC = () => {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4"
+              className="bg-blue-500/10 backdrop-blur-md border border-blue-500/20 rounded-lg p-4"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                  <span className="text-sm font-medium text-blue-400">
                     {selectedJobs.size} job{selectedJobs.size !== 1 ? 's' : ''} selected
                   </span>
                   <button
@@ -552,7 +705,7 @@ const ApplicationTracker: React.FC = () => {
                       setSelectedJobs(new Set());
                       setShowBulkActions(false);
                     }}
-                    className="text-blue-500 hover:text-blue-600 text-sm"
+                    className="text-blue-400 hover:text-blue-300 text-sm"
                   >
                     Clear selection
                   </button>
@@ -592,79 +745,109 @@ const ApplicationTracker: React.FC = () => {
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: 'auto' }}
           exit={{ opacity: 0, height: 0 }}
-          className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 space-y-4"
+          className="bg-white/10 backdrop-blur-md border border-white/20 rounded-lg p-4 space-y-4"
         >
-          {/* Status Filters */}
-          <div>
-            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</h4>
-            <div className="flex flex-wrap gap-2">
-              {['all', 'created', 'applied', 'interview', 'offer', 'rejected'].map((status) => (
-                <motion.button
-                  key={status}
-                  onClick={() => setFilterStatus(status)}
-                  className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-                    filterStatus === status
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'
-                  }`}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  {status.charAt(0).toUpperCase() + status.slice(1)}
-                </motion.button>
-              ))}
+          {/* Application-Specific Metrics Filters */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            {/* Last Updated Filter */}
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">Last Updated</label>
+              <select
+                value={lastUpdatedFilter}
+                onChange={(e) => setLastUpdatedFilter(e.target.value as any)}
+                className="w-full px-3 py-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg text-white text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 focus:bg-white/20 transition-all duration-200"
+              >
+                <option value="all" className="bg-gray-800 text-white">All Time</option>
+                <option value="today" className="bg-gray-800 text-white">Today</option>
+                <option value="last7days" className="bg-gray-800 text-white">Last 7 Days</option>
+                <option value="last30days" className="bg-gray-800 text-white">Last 30 Days</option>
+              </select>
             </div>
-          </div>
 
-          {/* Sort Options */}
-          <div>
-            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Sort By</h4>
-            <div className="flex flex-wrap gap-2">
-              {[
-                { key: 'date', label: 'Date Created', icon: Calendar },
-                { key: 'company', label: 'Company', icon: Building2 },
-                { key: 'status', label: 'Status', icon: Target },
-                { key: 'priority', label: 'Priority', icon: Star }
-              ].map(({ key, label, icon: Icon }) => (
-                <motion.button
-                  key={key}
-                  onClick={() => setSortBy(key as any)}
-                  className={`px-3 py-1 rounded-full text-sm font-medium transition-colors flex items-center gap-1 ${
-                    sortBy === key
-                      ? 'bg-green-500 text-white'
-                      : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600'
-                  }`}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <Icon size={12} />
-                  {label}
-                </motion.button>
-              ))}
+            {/* Follow-Up Date Filter */}
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">Follow-Up Status</label>
+              <select
+                value={followUpFilter}
+                onChange={(e) => setFollowUpFilter(e.target.value as any)}
+                className="w-full px-3 py-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg text-white text-sm focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 focus:bg-white/20 transition-all duration-200"
+              >
+                <option value="all" className="bg-gray-800 text-white">All</option>
+                <option value="upcoming" className="bg-gray-800 text-white">Upcoming (Next 7 Days)</option>
+                <option value="overdue" className="bg-gray-800 text-white">Overdue</option>
+              </select>
+            </div>
+
+            {/* Salary Range Filter */}
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">Salary Range</label>
+              <select
+                value={salaryRangeFilter}
+                onChange={(e) => setSalaryRangeFilter(e.target.value as any)}
+                className="w-full px-3 py-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg text-white text-sm focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 focus:bg-white/20 transition-all duration-200"
+              >
+                <option value="all" className="bg-gray-800 text-white">All Salaries</option>
+                <option value="under50k" className="bg-gray-800 text-white">Under $50k</option>
+                <option value="50k-75k" className="bg-gray-800 text-white">$50k - $75k</option>
+                <option value="75k-100k" className="bg-gray-800 text-white">$75k - $100k</option>
+                <option value="100k-150k" className="bg-gray-800 text-white">$100k - $150k</option>
+                <option value="150k-200k" className="bg-gray-800 text-white">$150k - $200k</option>
+                <option value="over200k" className="bg-gray-800 text-white">Over $200k</option>
+              </select>
+            </div>
+
+            {/* Priority Level Filter */}
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">Priority Level</label>
+              <select
+                value={priorityFilter}
+                onChange={(e) => setPriorityFilter(e.target.value as any)}
+                className="w-full px-3 py-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg text-white text-sm focus:ring-2 focus:ring-red-500/50 focus:border-red-500/50 focus:bg-white/20 transition-all duration-200"
+              >
+                <option value="all" className="bg-gray-800 text-white">All Priorities</option>
+                <option value="high" className="bg-gray-800 text-white">High Priority</option>
+                <option value="medium" className="bg-gray-800 text-white">Medium Priority</option>
+                <option value="low" className="bg-gray-800 text-white">Low Priority</option>
+              </select>
+            </div>
+
+            {/* Sort Options */}
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">Sort By</label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="w-full px-3 py-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg text-white text-sm focus:ring-2 focus:ring-green-500/50 focus:border-green-500/50 focus:bg-white/20 transition-all duration-200"
+              >
+                <option value="lastUpdated" className="bg-gray-800 text-white">Last Updated</option>
+                <option value="followUpDate" className="bg-gray-800 text-white">Follow-Up Date</option>
+                <option value="salaryRange" className="bg-gray-800 text-white">Salary Range</option>
+                <option value="priority" className="bg-gray-800 text-white">Priority Level</option>
+              </select>
             </div>
           </div>
 
           {/* Quick Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 pt-2 border-t border-gray-200 dark:border-gray-700">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 pt-2 border-t border-white/20">
             <div className="text-center">
-              <div className="text-lg font-bold text-blue-500">{jobsByStatus.created.length}</div>
-              <div className="text-xs text-gray-600 dark:text-gray-400">Created</div>
+              <div className="text-lg font-bold text-purple-400">{jobsByStatus.created.length}</div>
+              <div className="text-xs text-white/60">Created</div>
             </div>
             <div className="text-center">
-              <div className="text-lg font-bold text-green-500">{jobsByStatus.applied.length}</div>
-              <div className="text-xs text-gray-600 dark:text-gray-400">Applied</div>
+              <div className="text-lg font-bold text-blue-400">{jobsByStatus.applied.length}</div>
+              <div className="text-xs text-white/60">Applied</div>
             </div>
             <div className="text-center">
-              <div className="text-lg font-bold text-purple-500">{jobsByStatus.interview.length}</div>
-              <div className="text-xs text-gray-600 dark:text-gray-400">Interview</div>
+              <div className="text-lg font-bold text-orange-400">{jobsByStatus.interview.length}</div>
+              <div className="text-xs text-white/60">Interview</div>
             </div>
             <div className="text-center">
-              <div className="text-lg font-bold text-yellow-500">{jobsByStatus.offer.length}</div>
-              <div className="text-xs text-gray-600 dark:text-gray-400">Offer</div>
+              <div className="text-lg font-bold text-green-400">{jobsByStatus.offer.length}</div>
+              <div className="text-xs text-white/60">Offer</div>
             </div>
             <div className="text-center">
-              <div className="text-lg font-bold text-red-500">{jobsByStatus.rejected.length}</div>
-              <div className="text-xs text-gray-600 dark:text-gray-400">Rejected</div>
+              <div className="text-lg font-bold text-red-400">{jobsByStatus.rejected.length}</div>
+              <div className="text-xs text-white/60">Rejected</div>
             </div>
           </div>
         </motion.div>
@@ -678,18 +861,30 @@ const ApplicationTracker: React.FC = () => {
       }`}>
         {viewMode === 'kanban' ? (
           [
-            { status: 'created', title: 'Created', color: 'bg-yellow-100 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700' },
-            { status: 'applied', title: 'Applied', color: 'bg-blue-100 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700' },
-            { status: 'interview', title: 'Interview', color: 'bg-purple-100 dark:bg-purple-900/20 border-purple-300 dark:border-purple-700' },
-            { status: 'offer', title: 'Offer', color: 'bg-green-100 dark:bg-green-900/20 border-green-300 dark:border-green-700' },
-            { status: 'rejected', title: 'Rejected', color: 'bg-red-100 dark:bg-red-900/20 border-red-300 dark:border-red-700' }
+            { status: 'created', title: 'Created', color: 'bg-purple-500/20 border-purple-500/30' },
+            { status: 'applied', title: 'Applied', color: 'bg-blue-500/20 border-blue-500/30' },
+            { status: 'interview', title: 'Interview', color: 'bg-orange-500/20 border-orange-500/30' },
+            { status: 'offer', title: 'Offer', color: 'bg-green-500/20 border-green-500/30' },
+            { status: 'rejected', title: 'Rejected', color: 'bg-red-500/20 border-red-500/30' }
           ].map((stage) => (
           <div key={stage.status} className="space-y-4">
             {/* Stage Header */}
-            <div className={`p-3 rounded-lg border ${stage.color}`}>
+            <div className={`p-3 rounded-xl border ${stage.color}`}>
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-gray-900 dark:text-white">{stage.title}</h3>
-                <span className="text-sm text-gray-600 dark:text-gray-400">
+                <h3 className={`text-base font-bold ${
+                  stage.status === 'created' ? 'text-purple-400' :
+                  stage.status === 'applied' ? 'text-blue-400' :
+                  stage.status === 'interview' ? 'text-orange-400' :
+                  stage.status === 'offer' ? 'text-green-400' :
+                  'text-red-400'
+                }`}>{stage.title}</h3>
+                <span className={`text-sm ${
+                  stage.status === 'created' ? 'text-purple-400' :
+                  stage.status === 'applied' ? 'text-blue-400' :
+                  stage.status === 'interview' ? 'text-orange-400' :
+                  stage.status === 'offer' ? 'text-green-400' :
+                  'text-red-400'
+                }`}>
                   {jobsByStatus[stage.status as keyof typeof jobsByStatus].length}
                 </span>
               </div>
@@ -697,7 +892,25 @@ const ApplicationTracker: React.FC = () => {
 
             {/* Job Cards */}
             <div className="space-y-3">
-              {jobsByStatus[stage.status as keyof typeof jobsByStatus].map((job) => {
+              {loading ? (
+                // Show skeleton loading for job cards
+                Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="glass-widget-premium rounded-xl p-4 animate-pulse">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="space-y-2">
+                        <div className="h-4 bg-white/20 rounded w-32"></div>
+                        <div className="h-3 bg-white/10 rounded w-24"></div>
+                      </div>
+                      <div className="h-6 bg-white/20 rounded w-16"></div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="h-3 bg-white/10 rounded w-full"></div>
+                      <div className="h-3 bg-white/10 rounded w-3/4"></div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                jobsByStatus[stage.status as keyof typeof jobsByStatus].map((job) => {
                 const jobJourneys = getJobJourneys(job.id);
                 const journeyStatusText = getJourneyStatusText(jobJourneys);
                 const avgProgress = jobJourneys.length > 0 
@@ -736,15 +949,6 @@ const ApplicationTracker: React.FC = () => {
                        <div className="space-y-3">
                          <div className="flex items-center justify-between">
                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                             <input
-                               type="checkbox"
-                               checked={isSelected}
-                               onChange={(e) => {
-                                 e.stopPropagation();
-                                 handleSelectJob(job.id);
-                               }}
-                               className="w-4 h-4 text-blue-600 bg-white/50 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700/50 dark:border-gray-600"
-                             />
                              <div className="flex-1 min-w-0">
                                <h4 className="font-bold text-gray-900 dark:text-white text-sm group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                                  {job.jobTitle}
@@ -760,9 +964,9 @@ const ApplicationTracker: React.FC = () => {
                            </div>
                          </div>
                          
-                         {/* Progress Bar - Hidden on Hover */}
-                         <div className="w-full bg-white/30 dark:bg-gray-700/50 rounded-full h-2 overflow-hidden group-hover:h-0 group-hover:opacity-0 transition-all duration-300">
-                           {jobJourneys.length > 0 ? (
+                         {/* Progress Bar - Only show if job has journeys */}
+                         {jobJourneys.length > 0 && (
+                           <div className="w-full bg-white/30 dark:bg-gray-700/50 rounded-full h-2 overflow-hidden group-hover:h-0 group-hover:opacity-0 transition-all duration-300">
                              <motion.div 
                                className={`h-2 rounded-full transition-all duration-500 ${
                                  avgProgress >= 80 ? 'bg-gradient-to-r from-green-500 to-green-600' :
@@ -774,10 +978,8 @@ const ApplicationTracker: React.FC = () => {
                                animate={{ width: `${avgProgress}%` }}
                                transition={{ duration: 0.8, ease: "easeOut" }}
                              />
-                           ) : (
-                             <div className="h-2 w-0 rounded-full bg-gray-400/50" />
-                           )}
-                         </div>
+                           </div>
+                         )}
                        </div>
 
                       {/* Expanded View - Visible on Hover */}
@@ -877,104 +1079,128 @@ const ApplicationTracker: React.FC = () => {
                     </div>
                   </div>
                 );
-              })}
+              })
+              )}
             </div>
           </div>
         ))
         ) : (
           /* List View */
-          <div className="space-y-4">
-            {filteredAndSortedJobs.map((job) => {
-              const jobJourneys = getJobJourneys(job.id);
-              const journeyStatusText = getJourneyStatusText(jobJourneys);
-              const avgProgress = jobJourneys.length > 0 
-                ? Math.round(jobJourneys.reduce((sum, journey) => sum + getJourneyProgress(journey), 0) / jobJourneys.length)
-                : 0;
-              const isSelected = selectedJobs.has(job.id);
+          <div className="frosted-glass-widget rounded-xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-white/10">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-white/80 font-medium">Company</th>
+                    <th className="px-4 py-3 text-left text-white/80 font-medium">Role/Title</th>
+                    <th className="px-4 py-3 text-left text-white/80 font-medium">Stage</th>
+                    <th className="px-4 py-3 text-left text-white/80 font-medium">Date</th>
+                    <th className="px-4 py-3 text-left text-white/80 font-medium">Location</th>
+                    <th className="px-4 py-3 text-left text-white/80 font-medium">Journey Status</th>
+                    <th className="px-4 py-3 text-left text-white/80 font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredAndSortedJobs.map((job) => {
+                    const jobJourneys = getJobJourneys(job.id);
+                    const journeyStatusText = getJourneyStatusText(jobJourneys);
+                    const avgProgress = jobJourneys.length > 0 
+                      ? Math.round(jobJourneys.reduce((sum, journey) => sum + getJourneyProgress(journey), 0) / jobJourneys.length)
+                      : 0;
 
-              return (
-                <motion.div
-                  key={job.id}
-                  onClick={() => handleJobClick(job)}
-                  className={`group relative overflow-hidden cursor-pointer transition-all duration-300 ${
-                    isSelected ? 'ring-2 ring-blue-500 ring-opacity-50' : ''
-                  }`}
-                  whileHover={{ scale: 1.01, y: -1 }}
-                  whileTap={{ scale: 0.99 }}
-                  layout
-                >
-                  {/* Glass Morphism Background */}
-                  <div className="absolute inset-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border border-white/20 dark:border-gray-700/50 rounded-xl shadow-lg group-hover:shadow-xl transition-all duration-300" />
-                  
-                  {/* Card Content */}
-                  <div className="relative z-10 p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4 flex-1 min-w-0">
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={(e) => {
-                            e.stopPropagation();
-                            handleSelectJob(job.id);
-                          }}
-                          className="w-4 h-4 text-blue-600 bg-white/50 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700/50 dark:border-gray-600"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h4 className="font-bold text-gray-900 dark:text-white text-sm truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                              {job.jobTitle}
-                            </h4>
-                            {job.priority === 'high' && (
-                              <Star size={14} className="text-red-500 fill-current" />
+                    return (
+                      <motion.tr
+                        key={job.id}
+                        className="border-b border-white/10 hover:bg-white/5 transition-colors cursor-pointer"
+                        onClick={() => handleJobClick(job)}
+                        whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
+                      >
+                        <td className="px-4 py-3 text-white font-medium">{job.company || 'Unknown Company'}</td>
+                        <td className="px-4 py-3 text-white/80">{job.jobTitle || 'Untitled Job'}</td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                            job.status === 'created' ? 'bg-purple-500/20 text-purple-400' :
+                            job.status === 'applied' ? 'bg-blue-500/20 text-blue-400' :
+                            job.status === 'interview' ? 'bg-orange-500/20 text-orange-400' :
+                            job.status === 'offer' ? 'bg-green-500/20 text-green-400' :
+                            'bg-red-500/20 text-red-400'
+                          }`}>
+                            {job.status ? job.status.charAt(0).toUpperCase() + job.status.slice(1) : 'Unknown'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-white/60 text-sm">
+                          {job.status === 'created' ? (job.createdAt ? new Date(job.createdAt).toLocaleDateString() : '-') :
+                           job.status === 'applied' ? (job.applicationDate || job.createdAt ? new Date(job.applicationDate || job.createdAt).toLocaleDateString() : '-') :
+                           job.status === 'interview' ? (job.applicationDate || job.createdAt ? new Date(job.applicationDate || job.createdAt).toLocaleDateString() : '-') :
+                           (job.updatedAt || job.createdAt ? new Date(job.updatedAt || job.createdAt).toLocaleDateString() : '-')}
+                        </td>
+                        <td className="px-4 py-3 text-white/60 text-sm">{job.location || '-'}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <span className="text-white/60 text-sm">{journeyStatusText}</span>
+                            {jobJourneys.length > 0 && (
+                              <div className="flex items-center gap-2">
+                                <div className="w-16 bg-white/20 rounded-full h-2 overflow-hidden">
+                                  <motion.div 
+                                    className={`h-2 rounded-full transition-all duration-500 ${
+                                      avgProgress >= 80 ? 'bg-green-400' :
+                                      avgProgress >= 60 ? 'bg-blue-400' :
+                                      avgProgress >= 40 ? 'bg-orange-400' :
+                                      'bg-red-400'
+                                    }`}
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${avgProgress}%` }}
+                                    transition={{ duration: 0.8, ease: "easeOut" }}
+                                  />
+                                </div>
+                                <span className="text-white/60 text-xs font-medium">{avgProgress}%</span>
+                              </div>
                             )}
                           </div>
-                          <p className="text-gray-600 dark:text-gray-400 text-xs">{job.company}</p>
-                        </div>
-                        <div className="flex items-center gap-4 text-xs text-gray-600 dark:text-gray-400">
-                          {job.location && (
-                            <div className="flex items-center gap-1">
-                              <MapPin size={12} />
-                              <span className="hidden sm:inline">{job.location}</span>
-                            </div>
-                          )}
-                          <div className="flex items-center gap-1">
-                            <Target size={12} />
-                            <span>{journeyStatusText}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <motion.button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleJobClick(job);
+                              }}
+                              className="p-1 text-white/60 hover:text-white hover:bg-white/10 rounded transition-colors"
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                            >
+                              <Eye size={14} />
+                            </motion.button>
+                            <motion.button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditJob(job);
+                              }}
+                              className="p-1 text-white/60 hover:text-lime-400 hover:bg-lime-500/10 rounded transition-colors"
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                            >
+                              <Edit size={14} />
+                            </motion.button>
+                            <motion.button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // Add delete functionality here if needed
+                              }}
+                              className="p-1 text-white/60 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                            >
+                              <Trash2 size={14} />
+                            </motion.button>
                           </div>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            job.status === 'created' ? 'bg-yellow-100/80 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                            job.status === 'applied' ? 'bg-blue-100/80 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-                            job.status === 'interview' ? 'bg-purple-100/80 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' :
-                            job.status === 'offer' ? 'bg-green-100/80 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                            'bg-red-100/80 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                          }`}>
-                            {job.status}
-                          </span>
-                        </div>
-                      </div>
-                      {jobJourneys.length > 0 && (
-                        <div className="ml-4">
-                          <div className="w-16 bg-white/30 dark:bg-gray-700/50 rounded-full h-2 overflow-hidden">
-                            <motion.div 
-                              className={`h-2 rounded-full transition-all duration-500 ${
-                                avgProgress >= 80 ? 'bg-gradient-to-r from-green-500 to-green-600' :
-                                avgProgress >= 60 ? 'bg-gradient-to-r from-blue-500 to-blue-600' :
-                                avgProgress >= 40 ? 'bg-gradient-to-r from-yellow-500 to-orange-500' :
-                                'bg-gradient-to-r from-red-500 to-red-600'
-                              }`}
-                              initial={{ width: 0 }}
-                              animate={{ width: `${avgProgress}%` }}
-                              transition={{ duration: 0.8, ease: "easeOut" }}
-                            />
-                          </div>
-                          <div className="text-xs text-gray-500 text-center mt-1">{avgProgress}%</div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </motion.div>
-              );
-            })}
+                        </td>
+                      </motion.tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
@@ -988,6 +1214,18 @@ const ApplicationTracker: React.FC = () => {
           onRefresh={loadData}
         />
       )}
+
+      {/* Add/Edit Job Modal */}
+      <AddEditJobModal
+        isOpen={showAddJobModal}
+        onClose={() => {
+          setShowAddJobModal(false);
+          setEditingJob(null);
+        }}
+        onJobSaved={handleJobSaved}
+        editingJob={editingJob}
+        userId={userId || ''}
+      />
     </div>
   );
 };

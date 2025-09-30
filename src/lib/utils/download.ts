@@ -1,7 +1,7 @@
-import { CVDataStructure } from '@/types/cv';
+import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
 
 // Download CV data as JSON
-export const downloadAsJSON = (cvData: CVDataStructure, filename: string = 'cv-data.json') => {
+export const downloadAsJSON = (cvData: UnifiedCVDataStructure, filename: string = 'cv-data.json') => {
   // Check if we're in browser environment
   if (typeof window === 'undefined') {
     throw new Error('JSON download is only available in browser environment');
@@ -96,7 +96,7 @@ export const downloadAsImage = async (elementRef: HTMLElement, filename: string 
 };
 
 // Download CV as DOCX using docx library
-export const downloadAsDOCX = async (cvData: CVDataStructure, filename: string = 'cv.docx') => {
+export const downloadAsDOCX = async (cvData: UnifiedCVDataStructure, filename: string = 'cv.docx') => {
   try {
     // Check if we're in browser environment
     if (typeof window === 'undefined') {
