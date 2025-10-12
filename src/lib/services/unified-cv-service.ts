@@ -15,6 +15,7 @@ import {
   DEFAULT_UNIFIED_CV_DATA,
   UnifiedCVMigration
 } from '@/types/unified-cv-schema';
+import { validateCVData } from '@/lib/data-adapters/cv-data-adapter';
 
 export class UnifiedCVService {
   /**

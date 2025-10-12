@@ -23,7 +23,9 @@ import {
   Copy,
   RefreshCw,
   Sparkles,
-  X
+  X,
+  CheckCircle2,
+  AlertTriangle
 } from 'lucide-react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { useJobJourney } from '@/contexts/JobJourneyContext';
@@ -31,6 +33,9 @@ import { useSession } from 'next-auth/react';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { useUserPlan } from '@/lib/hooks/useUserPlan';
+import MoveToAppliedModal from '@/components/modals/MoveToAppliedModal';
+import CelebrationModal from '@/components/modals/CelebrationModal';
+import { JourneyAnalyticsService } from '@/lib/utils/journeyAnalytics';
 
 interface Journey {
   id: string;
@@ -95,7 +100,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
   const { hasAI } = useUserPlan();
   const { data: session } = useSession();
   const router = useRouter();
-  const [isExpanded, setIsExpanded] = React.useState(false);
+  const [isExpanded, setIsExpanded] = React.useState(true);
   const [userCVs, setUserCVs] = React.useState<CV[]>([]);
   const [freestandingCVs, setFreestandingCVs] = React.useState<CV[]>([]);
   const [userCoverLetters, setUserCoverLetters] = React.useState<CoverLetter[]>([]);
@@ -110,6 +115,20 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
   const hasAttemptedATSCalculation = React.useRef(false);
   const [mongoDBUserId, setMongoDBUserId] = React.useState<string | null>(null);
   const [showCVSelector, setShowCVSelector] = React.useState(false);
+  
+  // New state for Step 5 functionality
+  const [showMoveToAppliedModal, setShowMoveToAppliedModal] = React.useState(false);
+  const [fileSizeEstimates, setFileSizeEstimates] = React.useState<{
+    cv: number;
+    coverLetter: number;
+    jobDescription: number;
+    total: number;
+  } | null>(null);
+  const [isCompletingJourney, setIsCompletingJourney] = React.useState(false);
+  const [showUndoToast, setShowUndoToast] = React.useState(false);
+  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = React.useState(false);
+  const [showCelebrationModal, setShowCelebrationModal] = React.useState(false);
+  const [showDownloadDropdown, setShowDownloadDropdown] = React.useState(false);
   
   // Helper function to resolve MongoDB user ID
   const resolveMongoDBUserId = async (sessionUserId: string): Promise<string | null> => {
@@ -183,11 +202,14 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
             setUserCVs(cvs);
             
             // Filter freestanding CVs (not master CVs and not linked to other journeys)
-            const freestanding = cvs.filter((cv: CV) => 
-              !cv.isMaster && cv.isMaster !== 'true' && 
-              !cv.metadata?.isMaster && cv.metadata?.isMaster !== 'true' && 
-              (cv.journeyId === null || cv.journeyId === undefined)
-            );
+            const freestanding = cvs.filter((cv: CV) => {
+              const isMasterAtRoot = cv.isMaster === true;
+              const isMasterInMetadata = cv.metadata?.isMaster === true;
+              const isMasterInMetadataString = cv.metadata?.isMaster === 'true';
+              const isMasterCV = isMasterAtRoot || isMasterInMetadata || isMasterInMetadataString;
+              
+              return !isMasterCV && (cv.journeyId === null || cv.journeyId === undefined);
+            });
             // Only show toast for debugging info
             if (freestanding.length > 0) {
               console.log('🔍 JourneyTimelineCard - Freestanding CVs available:', freestanding.length);
@@ -347,6 +369,80 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
     }
   }, [journey.cvId, journey.jobId, journey.atsScore, atsScore, atsScoreLoading]);
 
+  // Enhanced step status calculation using live progress data
+  const getStepStatus = (stepId: number) => {
+    switch (stepId) {
+      case 1: // Job Added
+        return journey.jobTitle && journey.company ? 'completed' : 'pending';
+      
+      case 2: // CV Created/Linked
+        return (liveProgress.cvId && !cvNotFound) ? 'completed' : 
+               (liveProgress.currentStep >= 2 ? 'active' : 'pending');
+      
+      case 3: // ATS Score Checked
+        // Only completed if we have a valid ATS score (not -1) AND CV is linked and available
+        return (atsScore !== null && atsScore !== -1 && liveProgress.cvId && !cvNotFound) ? 'completed' :
+               (liveProgress.currentStep >= 3 && liveProgress.cvId && !cvNotFound ? 'active' : 'pending');
+      
+      case 4: // Cover Letter Created
+        // Only completed if cover letter is explicitly linked to this journey and available
+        return (liveProgress.coverLetterId && liveProgress.coverLetterId.trim() !== '' && !coverLetterNotFound) ? 'completed' :
+               (liveProgress.currentStep >= 4 && atsScore !== null && atsScore !== -1 && !cvNotFound ? 'active' : 'pending');
+      
+      case 5: // Download/Apply
+        // Only completed if journey status is explicitly 'completed'
+        return liveProgress.status === 'completed' ? 'completed' :
+               (liveProgress.currentStep >= 5 && liveProgress.coverLetterId ? 'active' : 'pending');
+      
+      default:
+        return 'pending';
+    }
+  };
+
+  // Keyboard shortcuts
+  React.useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Only handle shortcuts when the card is focused or visible
+      if (event.target instanceof HTMLElement && event.target.closest('.journey-card')) {
+        if (event.key.toLowerCase() === 'd' && (event.ctrlKey || event.metaKey)) {
+          event.preventDefault();
+          if (liveProgress.status === 'completed') {
+            handleDownloadFiles('all');
+          } else if (getStepStatus(5) === 'active') {
+            handleDownloadFiles('all');
+          }
+        } else if (event.key.toLowerCase() === 'a' && (event.ctrlKey || event.metaKey)) {
+          event.preventDefault();
+          if (getStepStatus(5) === 'active' && liveProgress.status !== 'completed') {
+            handleGetFileSizeEstimates();
+            setShowMoveToAppliedModal(true);
+          }
+        } else if (event.key === '?' && (event.ctrlKey || event.metaKey)) {
+          event.preventDefault();
+          setShowKeyboardShortcuts(!showKeyboardShortcuts);
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [liveProgress.status, getStepStatus(5)]);
+
+  // Close download dropdown when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showDownloadDropdown && event.target instanceof HTMLElement) {
+        const dropdown = event.target.closest('.download-dropdown');
+        const button = event.target.closest('.download-button');
+        if (!dropdown && !button) {
+          setShowDownloadDropdown(false);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showDownloadDropdown]);
 
   const handleCreateCV = () => {
     updateCurrentJobId(journey.jobId);
@@ -446,8 +542,12 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
       
       // Find the master CV
       const masterCV = userCVs.find(cv => 
-        cv.isMaster === true || cv.isMaster === 'true' || 
-        cv.metadata?.isMaster === true || cv.metadata?.isMaster === 'true'
+        (() => {
+          const isMasterAtRoot = cv.isMaster === true;
+          const isMasterInMetadata = cv.metadata?.isMaster === true;
+          const isMasterInMetadataString = cv.metadata?.isMaster === 'true';
+          return isMasterAtRoot || isMasterInMetadata || isMasterInMetadataString;
+        })()
       );
       if (!masterCV) {
         toast.error('No master CV found. Please create a master CV first.');
@@ -738,7 +838,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
   };
 
   const handleCreateCoverLetter = () => {
-    router.push(`/studio?type=cover_letter&jobId=${journey.jobId}&cvId=${journey.cvId}&mode=cover-letter-edit`);
+    router.push(`/studio?journeyId=${journey.id}&type=cover_letter&mode=journey`);
   };
 
   const handleSelectCoverLetter = (coverLetterId: string) => {
@@ -802,6 +902,143 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
       toast.error('Error changing CV');
     }
   };
+
+  // Step 5 handler functions
+  const handleMoveToApplied = async () => {
+    try {
+      setIsCompletingJourney(true);
+      
+      const response = await fetch(`/api/application-journey/${journey.id}/complete`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        toast.success('Journey completed! Job moved to Applied stage');
+        
+        // Show celebration modal
+        setShowCelebrationModal(true);
+        
+        // Show undo toast for 5 seconds
+        setShowUndoToast(true);
+        setTimeout(() => setShowUndoToast(false), 5000);
+        
+        // Refresh the journey data
+        if (onRefresh) {
+          onRefresh();
+        }
+      } else {
+        const error = await response.json();
+        toast.error(error.error || 'Failed to complete journey');
+      }
+    } catch (error) {
+      console.error('Error completing journey:', error);
+      toast.error('Error completing journey');
+    } finally {
+      setIsCompletingJourney(false);
+      setShowMoveToAppliedModal(false);
+    }
+  };
+
+  const handleDownloadFiles = async (downloadType: 'all' | 'cv' | 'coverLetter' | 'jobDescription' = 'all') => {
+    try {
+      const url = `/api/application-journey/${journey.id}/download?type=${downloadType}`;
+      
+      // Create a temporary link to trigger download
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${journey.jobTitle} - Application Files${downloadType === 'all' ? '.zip' : '.pdf'}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.success('Files downloaded successfully');
+    } catch (error) {
+      console.error('Error downloading files:', error);
+      toast.error('Error downloading files');
+    }
+  };
+
+  const handleUndoComplete = async () => {
+    try {
+      const response = await fetch(`/api/application-journey/${journey.id}/undo-complete`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (response.ok) {
+        toast.success('Journey completion undone');
+        setShowUndoToast(false);
+        
+        // Refresh the journey data
+        if (onRefresh) {
+          onRefresh();
+        }
+      } else {
+        const error = await response.json();
+        toast.error(error.error || 'Failed to undo completion');
+      }
+    } catch (error) {
+      console.error('Error undoing completion:', error);
+      toast.error('Error undoing completion');
+    }
+  };
+
+  const handleGetFileSizeEstimates = async () => {
+    try {
+      const response = await fetch(`/api/application-journey/${journey.id}/download`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ journeyId: journey.id })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setFileSizeEstimates(result.fileSizeEstimates);
+      }
+    } catch (error) {
+      console.error('Error getting file size estimates:', error);
+    }
+  };
+
+  const handleRefreshATS = async () => {
+    try {
+      setAtsScoreLoading(true);
+      
+      const response = await fetch(`/api/application-journey/${journey.id}/refresh-ats`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setAtsScore(result.atsScore);
+        toast.success(`ATS score updated: ${result.atsScore}%`);
+        
+        // Refresh the journey data to get updated history
+        if (onRefresh) {
+          onRefresh();
+        }
+      } else {
+        const error = await response.json();
+        toast.error(error.error || 'Failed to refresh ATS score');
+      }
+    } catch (error) {
+      console.error('Error refreshing ATS score:', error);
+      toast.error('Error refreshing ATS score');
+    } finally {
+      setAtsScoreLoading(false);
+    }
+  };
   
   const steps = [
     { id: 1, label: 'Add Job', icon: Briefcase, color: 'blue' },
@@ -811,36 +1048,6 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
     { id: 5, label: 'Download', icon: Download, color: 'lime' }
   ];
 
-  // Enhanced step status calculation using live progress data
-  const getStepStatus = (stepId: number) => {
-    switch (stepId) {
-      case 1: // Job Added
-        return journey.jobTitle && journey.company ? 'completed' : 'pending';
-      
-      case 2: // CV Created/Linked
-        return (liveProgress.cvId && !cvNotFound) ? 'completed' : 
-               (liveProgress.currentStep >= 2 ? 'active' : 'pending');
-      
-      case 3: // ATS Score Checked
-        // Only completed if we have a valid ATS score (not -1) AND CV is linked and available
-        return (atsScore !== null && atsScore !== -1 && liveProgress.cvId && !cvNotFound) ? 'completed' :
-               (liveProgress.currentStep >= 3 && liveProgress.cvId && !cvNotFound ? 'active' : 'pending');
-      
-      case 4: // Cover Letter Created
-        // Only completed if cover letter is explicitly linked to this journey and available
-        return (liveProgress.coverLetterId && liveProgress.coverLetterId.trim() !== '' && !coverLetterNotFound) ? 'completed' :
-               (liveProgress.currentStep >= 4 && atsScore !== null && atsScore !== -1 && !cvNotFound ? 'active' : 'pending');
-      
-      case 5: // Download/Apply
-        // Only completed if journey status is explicitly 'completed'
-        return liveProgress.status === 'completed' ? 'completed' :
-               (liveProgress.currentStep >= 5 && liveProgress.coverLetterId ? 'active' : 'pending');
-      
-      default:
-        return 'pending';
-    }
-  };
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       month: 'short',
@@ -849,9 +1056,35 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
     });
   };
 
+  const formatRelativeTime = (dateString: string | Date) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diffInSeconds < 60) {
+      return 'just now';
+    } else if (diffInSeconds < 3600) {
+      const minutes = Math.floor(diffInSeconds / 60);
+      return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+    } else if (diffInSeconds < 86400) {
+      const hours = Math.floor(diffInSeconds / 3600);
+      return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    } else if (diffInSeconds < 604800) {
+      const days = Math.floor(diffInSeconds / 86400);
+      return `${days} day${days > 1 ? 's' : ''} ago`;
+    } else {
+      const weeks = Math.floor(diffInSeconds / 604800);
+      return `${weeks} week${weeks > 1 ? 's' : ''} ago`;
+    }
+  };
+
   return (
     <motion.div
-      className="bg-gradient-to-r from-lime-500/10 to-lime-600/10 border border-lime-500/20 rounded-xl overflow-hidden hover:shadow-lg dark:hover:shadow-gray-900/20 transition-all duration-300 group"
+      className={`journey-card ${
+        liveProgress.status === 'completed' 
+          ? 'bg-gradient-to-r from-blue-500/10 to-blue-600/10 border border-blue-500/20' 
+          : 'bg-gradient-to-r from-lime-500/10 to-lime-600/10 border border-lime-500/20'
+      } rounded-xl overflow-hidden hover:shadow-lg dark:hover:shadow-gray-900/20 transition-all duration-300 group`}
       whileHover={{ y: -2 }}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -863,12 +1096,34 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
           {/* Left: Job Info and Progress */}
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <Building className="h-5 w-5 text-lime-400" />
+              <Building className={`h-5 w-5 ${liveProgress.status === 'completed' ? 'text-blue-400' : 'text-lime-400'}`} />
               <div>
                 <h3 className="text-sm font-medium text-white">
                   {journey.jobTitle}
                 </h3>
                 <p className="text-xs text-white/60">{journey.company}</p>
+                {journey.lastWorkedOn && (
+                  <p className="text-xs text-white/40">
+                    Last worked {formatRelativeTime(journey.lastWorkedOn)}
+                  </p>
+                )}
+                {liveProgress.status !== 'completed' && (() => {
+                  // Calculate estimated time to completion
+                  const estimatedTime = JourneyAnalyticsService.calculateEstimatedTimeToCompletion(
+                    journey, 
+                    [] // We'll need to pass all journeys from parent component
+                  );
+                  const formattedTime = JourneyAnalyticsService.formatEstimatedTime(estimatedTime);
+                  
+                  return (
+                    <div className="flex items-center gap-1 mt-1">
+                      <Clock className="h-3 w-3 text-white/40" />
+                      <p className="text-xs text-white/40">
+                        Est. {formattedTime} remaining
+                      </p>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 
@@ -881,10 +1136,12 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                     key={`step-${stepId}-${index}`}
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-all ${
                       status === 'completed' 
-                        ? 'bg-lime-500 text-black' 
+                        ? liveProgress.status === 'completed' 
+                          ? 'bg-blue-500 text-white' 
+                          : 'bg-lime-500 text-black'
                         : status === 'active' 
                         ? 'bg-lime-400 text-black' 
-                        : 'bg-white/20 text-white/60 hover:bg-white/30'
+                        : 'bg-gray-700 dark:bg-white/20 text-white hover:bg-gray-600 dark:hover:bg-white/30'
                     }`}
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.95 }}
@@ -937,7 +1194,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
           <div className="flex items-center gap-2">
             <motion.button
               onClick={() => setIsExpanded(!isExpanded)}
-              className="px-3 py-1 text-xs text-white/60 hover:text-white hover:bg-white/10 rounded transition-colors flex items-center gap-1"
+              className="px-3 py-1 text-xs text-white/60 hover:text-white hover:bg-gray-600 dark:hover:bg-white/10 rounded transition-colors flex items-center gap-1"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
@@ -947,8 +1204,8 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
             
             {liveProgress.status === 'completed' ? (
               <motion.button
-                onClick={() => onDownload(journey)}
-                className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg transition-colors text-sm"
+                onClick={() => handleDownloadFiles('all')}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors text-sm"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 title="Download Files"
@@ -991,21 +1248,27 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="border-t border-lime-500/20 bg-black/20 overflow-hidden"
+            className={`border-t ${
+              liveProgress.status === 'completed' 
+                ? 'border-blue-500/20' 
+                : 'border-lime-500/20'
+            } bg-black/20 overflow-hidden`}
           >
             <div className="px-6 py-4">
               <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                 {/* Step 1: Job */}
                 <div className={`p-3 rounded-lg border ${
                   getStepStatus(1) === 'completed' 
-                    ? 'bg-lime-500/10 border-lime-500/30' 
-                    : 'bg-gray-100 dark:bg-white/5 border-gray-200 dark:border-white/10'
+                    ? liveProgress.status === 'completed'
+                      ? 'bg-blue-500/10 border-blue-500/30'
+                      : 'bg-lime-500/10 border-lime-500/30'
+                    : 'bg-gray-300 dark:bg-white/5 border-gray-400 dark:border-white/10 text-gray-900 dark:text-white'
                 }`}>
                   <div className="flex items-center gap-2 mb-2">
                     <Briefcase className="h-4 w-4 text-blue-400" />
                     <span className="text-xs font-medium text-white">Job</span>
                     {getStepStatus(1) === 'completed' && (
-                      <CheckCircle className="h-3 w-3 text-lime-400" />
+                      <CheckCircle className={`h-3 w-3 ${liveProgress.status === 'completed' ? 'text-blue-400' : 'text-lime-400'}`} />
                     )}
                   </div>
                   <div>
@@ -1017,14 +1280,16 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 {/* Step 2: CV */}
                 <div className={`p-3 rounded-lg border ${
                   getStepStatus(2) === 'completed' 
-                    ? 'bg-lime-500/10 border-lime-500/30' 
-                    : 'bg-gray-100 dark:bg-white/5 border-gray-200 dark:border-white/10'
+                    ? liveProgress.status === 'completed'
+                      ? 'bg-blue-500/10 border-blue-500/30'
+                      : 'bg-lime-500/10 border-lime-500/30'
+                    : 'bg-gray-300 dark:bg-white/5 border-gray-400 dark:border-white/10 text-gray-900 dark:text-white'
                 }`}>
                   <div className="flex items-center gap-2 mb-2">
                     <FileText className="h-4 w-4 text-green-400" />
                     <span className="text-xs font-medium text-white">CV</span>
                     {getStepStatus(2) === 'completed' && (
-                      <CheckCircle className="h-3 w-3 text-lime-400" />
+                      <CheckCircle className={`h-3 w-3 ${liveProgress.status === 'completed' ? 'text-blue-400' : 'text-lime-400'}`} />
                     )}
                   </div>
                   {journey.cvId ? (
@@ -1058,8 +1323,12 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                             </motion.button>
                           ) : (
                             userCVs.some(cv => 
-                              cv.isMaster === true || cv.isMaster === 'true' || 
-                              cv.metadata?.isMaster === true || cv.metadata?.isMaster === 'true'
+                              (() => {
+                                const isMasterAtRoot = cv.isMaster === true;
+                                const isMasterInMetadata = cv.metadata?.isMaster === true;
+                                const isMasterInMetadataString = cv.metadata?.isMaster === 'true';
+                                return isMasterAtRoot || isMasterInMetadata || isMasterInMetadataString;
+                              })()
                             ) && (
                               <motion.button
                                 onClick={handleDuplicateMasterCV}
@@ -1087,22 +1356,35 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                           <p className="text-xs text-white/60">
                             {linkedCV ? 'Ready for editing' : 'Document linked'}
                           </p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <motion.button
-                              onClick={() => router.push(`/studio?journeyId=${journey.id}&cvId=${journey.cvId}`)}
-                              className="text-xs text-lime-400 hover:text-lime-300 flex items-center gap-1"
-                            >
-                              <ExternalLink className="h-3 w-3" />
-                              Edit
-                            </motion.button>
-                            <motion.button
-                              onClick={() => setShowCVSelector(!showCVSelector)}
-                              className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
-                            >
-                              <RefreshCw className="h-3 w-3" />
-                              Change
-                            </motion.button>
-                          </div>
+                          {liveProgress.status !== 'completed' && (
+                            <div className="flex items-center gap-2 mt-1">
+                              <motion.button
+                                onClick={() => router.push(`/studio?journeyId=${journey.id}&cvId=${journey.cvId}`)}
+                                className="text-xs text-lime-400 hover:text-lime-300 flex items-center gap-1"
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                                Edit
+                              </motion.button>
+                              <motion.button
+                                onClick={() => setShowCVSelector(!showCVSelector)}
+                                className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                              >
+                                <RefreshCw className="h-3 w-3" />
+                                Change
+                              </motion.button>
+                            </div>
+                          )}
+                          {liveProgress.status === 'completed' && (
+                            <div className="flex items-center gap-2 mt-1">
+                              <motion.button
+                                onClick={() => router.push(`/studio?journeyId=${journey.id}&cvId=${journey.cvId}`)}
+                                className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                                Edit
+                              </motion.button>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -1125,8 +1407,12 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                         </motion.button>
                       ) : (
                         userCVs.some(cv => 
-                          cv.isMaster === true || cv.isMaster === 'true' || 
-                          cv.metadata?.isMaster === true || cv.metadata?.isMaster === 'true'
+                          (() => {
+                            const isMasterAtRoot = cv.isMaster === true;
+                            const isMasterInMetadata = cv.metadata?.isMaster === true;
+                            const isMasterInMetadataString = cv.metadata?.isMaster === 'true';
+                            return isMasterAtRoot || isMasterInMetadata || isMasterInMetadataString;
+                          })()
                         ) && (
                           <motion.button
                             onClick={handleDuplicateMasterCV}
@@ -1150,14 +1436,16 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 {/* Step 3: ATS Score */}
                 <div className={`p-3 rounded-lg border ${
                   getStepStatus(3) === 'completed' 
-                    ? 'bg-lime-500/10 border-lime-500/30' 
-                    : 'bg-gray-100 dark:bg-white/5 border-gray-200 dark:border-white/10'
+                    ? liveProgress.status === 'completed'
+                      ? 'bg-blue-500/10 border-blue-500/30'
+                      : 'bg-lime-500/10 border-lime-500/30'
+                    : 'bg-gray-300 dark:bg-white/5 border-gray-400 dark:border-white/10 text-gray-900 dark:text-white'
                 }`}>
                   <div className="flex items-center gap-2 mb-2">
                     <Settings className="h-4 w-4 text-purple-400" />
                     <span className="text-xs font-medium text-white">ATS Score</span>
                     {getStepStatus(3) === 'completed' && (
-                      <CheckCircle className="h-3 w-3 text-lime-400" />
+                      <CheckCircle className={`h-3 w-3 ${liveProgress.status === 'completed' ? 'text-blue-400' : 'text-lime-400'}`} />
                     )}
                   </div>
                   {atsScoreLoading ? (
@@ -1193,25 +1481,65 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                         </div>
                       ) : (
                         <div>
-                          <p className={`text-xs font-medium ${
-                            atsScore >= 80 ? 'text-green-400' : 
-                            atsScore >= 60 ? 'text-yellow-400' : 
-                            'text-red-400'
-                          }`}>
-                            {atsScore}%
+                          {/* Enhanced ATS Score Display */}
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <div className={`w-3 h-3 rounded-full ${
+                                atsScore >= 80 ? 'bg-green-400' : 
+                                atsScore >= 60 ? 'bg-yellow-400' : 
+                                'bg-red-400'
+                              }`} />
+                              <p className={`text-sm font-bold ${
+                                atsScore >= 80 ? 'text-green-400' : 
+                                atsScore >= 60 ? 'text-yellow-400' : 
+                                'text-red-400'
+                              }`}>
+                                {atsScore}%
+                              </p>
+                            </div>
+                            <motion.button
+                              onClick={handleRefreshATS}
+                              disabled={atsScoreLoading}
+                              className="p-1 text-white/60 hover:text-white/80 transition-colors"
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                              title="Refresh ATS Score"
+                            >
+                              <RefreshCw className={`h-3 w-3 ${atsScoreLoading ? 'animate-spin' : ''}`} />
+                            </motion.button>
+                          </div>
+                          
+                          <p className="text-xs text-white/60 mb-2">
+                            {atsScore >= 80 ? '🎉 Excellent ATS Match!' : 
+                             atsScore >= 60 ? '⚠️ Good, but could be better' : 
+                             '❌ Needs significant improvement'}
                           </p>
-                          <p className="text-xs text-white/60">
-                            {atsScore >= 80 ? 'ATS Optimized' : 'Needs Improvement'}
-                          </p>
+                          
+                          {/* ATS Score History */}
+                          {journey.atsScoreHistory && journey.atsScoreHistory.length > 1 && (
+                            <div className="mb-2">
+                              <p className="text-xs text-white/50 mb-1">Score History:</p>
+                              <div className="flex gap-1">
+                                {journey.atsScoreHistory.slice(-3).map((entry, index) => (
+                                  <div key={index} className={`w-2 h-2 rounded-full ${
+                                    entry.score >= 80 ? 'bg-green-400' : 
+                                    entry.score >= 60 ? 'bg-yellow-400' : 
+                                    'bg-red-400'
+                                  }`} title={`${entry.score}% - ${new Date(entry.calculatedAt).toLocaleDateString()}`} />
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
                           {atsScore < 80 && (
                             <motion.button
                               onClick={() => router.push(`/studio?journeyId=${journey.id}&cvId=${journey.cvId}&mode=ats-edit`)}
-                              className="mt-1 text-xs text-orange-400 hover:text-orange-300 flex items-center gap-1"
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
+                              className="w-full px-2 py-1 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 text-xs rounded transition-colors flex items-center gap-1 justify-center"
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
                             >
                               <Settings className="h-3 w-3" />
-                              Fix ATS
+                              Optimize ATS
                             </motion.button>
                           )}
                         </div>
@@ -1255,14 +1583,16 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 {/* Step 4: Cover Letter */}
                 <div className={`p-3 rounded-lg border ${
                   getStepStatus(4) === 'completed' 
-                    ? 'bg-lime-500/10 border-lime-500/30' 
-                    : 'bg-gray-100 dark:bg-white/5 border-gray-200 dark:border-white/10'
+                    ? liveProgress.status === 'completed'
+                      ? 'bg-blue-500/10 border-blue-500/30'
+                      : 'bg-lime-500/10 border-lime-500/30'
+                    : 'bg-gray-300 dark:bg-white/5 border-gray-400 dark:border-white/10 text-gray-900 dark:text-white'
                 }`}>
                   <div className="flex items-center gap-2 mb-2">
                     <Mail className="h-4 w-4 text-orange-400" />
                     <span className="text-xs font-medium text-white">Cover Letter</span>
                     {getStepStatus(4) === 'completed' && (
-                      <CheckCircle className="h-3 w-3 text-lime-400" />
+                      <CheckCircle className={`h-3 w-3 ${liveProgress.status === 'completed' ? 'text-blue-400' : 'text-lime-400'}`} />
                     )}
                   </div>
                   {journey.coverLetterId ? (
@@ -1295,7 +1625,11 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                           </p>
                           <motion.button
                             onClick={() => router.push(`/studio?journeyId=${journey.id}&type=cover_letter&coverLetterId=${journey.coverLetterId}`)}
-                            className="mt-1 text-xs text-lime-400 hover:text-lime-300 flex items-center gap-1"
+                            className={`mt-1 text-xs flex items-center gap-1 ${
+                              liveProgress.status === 'completed' 
+                                ? 'text-blue-400 hover:text-blue-300' 
+                                : 'text-lime-400 hover:text-lime-300'
+                            }`}
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                           >
@@ -1341,26 +1675,207 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 {/* Step 5: Ready to Apply */}
                 <div className={`p-3 rounded-lg border ${
                   getStepStatus(5) === 'completed' 
-                    ? 'bg-lime-500/10 border-lime-500/30' 
-                    : 'bg-gray-100 dark:bg-white/5 border-gray-200 dark:border-white/10'
+                    ? 'bg-blue-500/10 border-blue-500/30' 
+                    : 'bg-gray-300 dark:bg-white/5 border-gray-400 dark:border-white/10 text-gray-900 dark:text-white'
                 }`}>
                   <div className="flex items-center gap-2 mb-2">
-                    <Download className="h-4 w-4 text-lime-400" />
+                    <Download className={`h-4 w-4 ${getStepStatus(5) === 'completed' ? 'text-blue-400' : 'text-lime-400'}`} />
                     <span className="text-xs font-medium text-white">Ready</span>
                     {getStepStatus(5) === 'completed' && (
-                      <CheckCircle className="h-3 w-3 text-lime-400" />
+                      <CheckCircle className="h-3 w-3 text-blue-400" />
                     )}
                   </div>
+                  
                   {getStepStatus(5) === 'completed' ? (
                     <div>
                       <p className="text-xs text-white font-medium">Complete</p>
                       <p className="text-xs text-white/60">Ready to apply</p>
                     </div>
                   ) : (
-                    <p className="text-xs text-white/60">In progress</p>
+                    <div>
+                      <p className="text-xs text-white/60 mb-2">Ready to apply</p>
+                      {/* Action buttons for Step 5 */}
+                      <div className="flex gap-2">
+                        <motion.button
+                          onClick={() => {
+                            handleGetFileSizeEstimates();
+                            setShowMoveToAppliedModal(true);
+                          }}
+                          className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors flex items-center gap-1 justify-center"
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          disabled={isCompletingJourney}
+                        >
+                          <CheckCircle2 className="h-3 w-3" />
+                          Move to Applied
+                        </motion.button>
+                        
+                        <div className="relative flex-1">
+                          <motion.button
+                            onClick={() => setShowDownloadDropdown(!showDownloadDropdown)}
+                            className="download-button w-full px-3 py-2 bg-lime-600 hover:bg-lime-700 text-white text-xs rounded transition-colors flex items-center gap-1 justify-center"
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            <Download className="h-3 w-3" />
+                            Download
+                            <ChevronDown className={`h-3 w-3 ml-1 transition-transform ${showDownloadDropdown ? 'rotate-180' : ''}`} />
+                          </motion.button>
+                          
+                          {/* Download Dropdown */}
+                          {showDownloadDropdown && (
+                            <div className="download-dropdown absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-xl z-50 min-w-48 animate-in slide-in-from-top-2 duration-200">
+                            <div className="py-1">
+                              <button
+                                onClick={() => {
+                                  setShowDownloadDropdown(false);
+                                  handleDownloadFiles('all');
+                                }}
+                                className="w-full px-3 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 text-xs flex items-center gap-2"
+                              >
+                                <Download className="h-3 w-3" />
+                                Download All (ZIP)
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setShowDownloadDropdown(false);
+                                  handleDownloadFiles('cv');
+                                }}
+                                className="w-full px-3 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 text-xs flex items-center gap-2"
+                              >
+                                <FileText className="h-3 w-3" />
+                                CV Only (PDF)
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setShowDownloadDropdown(false);
+                                  handleDownloadFiles('coverLetter');
+                                }}
+                                className="w-full px-3 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 text-xs flex items-center gap-2"
+                              >
+                                <Mail className="h-3 w-3" />
+                                Cover Letter Only (PDF)
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setShowDownloadDropdown(false);
+                                  handleDownloadFiles('jobDescription');
+                                }}
+                                className="w-full px-3 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 text-xs flex items-center gap-2"
+                              >
+                                <Briefcase className="h-3 w-3" />
+                                Job Description (PDF)
+                              </button>
+                            </div>
+                          </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Application Timeline for Completed Journeys */}
+        {isExpanded && liveProgress.status === 'completed' && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mt-4 p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg"
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <Clock className="h-4 w-4 text-blue-400" />
+              <h4 className="text-sm font-medium text-white">Application Timeline</h4>
+            </div>
+            
+            <div className="space-y-3">
+              {/* Journey Started */}
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 bg-blue-400 rounded-full" />
+                <div className="flex-1">
+                  <p className="text-xs text-white font-medium">Journey Started</p>
+                  <p className="text-xs text-white/60">{formatDate(journey.createdAt)}</p>
+                </div>
+              </div>
+              
+              {/* CV Created/Linked */}
+              {journey.cvId && (
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-green-400 rounded-full" />
+                  <div className="flex-1">
+                    <p className="text-xs text-white font-medium">CV Created</p>
+                    <p className="text-xs text-white/60">
+                      {linkedCV ? linkedCV.title : 'CV linked to journey'}
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              {/* ATS Score Calculated */}
+              {journey.atsScore && journey.atsScore !== -1 && (
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-purple-400 rounded-full" />
+                  <div className="flex-1">
+                    <p className="text-xs text-white font-medium">ATS Score: {journey.atsScore}%</p>
+                    <p className="text-xs text-white/60">
+                      {journey.atsScoreHistory && journey.atsScoreHistory.length > 0 
+                        ? `First calculated ${formatDate(journey.atsScoreHistory[0].calculatedAt)}`
+                        : 'Score calculated'
+                      }
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              {/* Cover Letter Created */}
+              {journey.coverLetterId && (
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-orange-400 rounded-full" />
+                  <div className="flex-1">
+                    <p className="text-xs text-white font-medium">Cover Letter Created</p>
+                    <p className="text-xs text-white/60">
+                      {linkedCoverLetter ? linkedCoverLetter.title : 'Cover letter linked to journey'}
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              {/* Journey Completed */}
+              {journey.completedAt && (
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                  <div className="flex-1">
+                    <p className="text-xs text-white font-medium">Journey Completed</p>
+                    <p className="text-xs text-white/60">
+                      Completed {formatDate(journey.completedAt)}
+                      {journey.journeyDuration && (
+                        <span className="ml-2">
+                          (Duration: {Math.round(journey.journeyDuration / 60)} hours)
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              {/* Files Downloaded */}
+              {journey.downloadHistory && journey.downloadHistory.length > 0 && (
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-lime-400 rounded-full" />
+                  <div className="flex-1">
+                    <p className="text-xs text-white font-medium">
+                      Files Downloaded ({journey.downloadHistory.length} times)
+                    </p>
+                    <p className="text-xs text-white/60">
+                      Last download: {formatDate(journey.downloadHistory[journey.downloadHistory.length - 1].downloadedAt)}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </motion.div>
         )}
@@ -1371,7 +1886,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="mt-3 p-3 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg"
+            className="mt-3 p-3 bg-gray-300 dark:bg-white/5 border border-gray-400 dark:border-white/10 rounded-lg text-gray-900 dark:text-white"
           >
             <div className="flex items-center justify-between mb-2">
               <h4 className="text-sm font-medium text-white">Select CV</h4>
@@ -1386,8 +1901,12 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
               {/* Duplicate Master CV Option */}
               {(() => {
                 const hasMasterCV = userCVs.some(cv => 
-                  cv.isMaster === true || cv.isMaster === 'true' || 
-                  cv.metadata?.isMaster === true || cv.metadata?.isMaster === 'true'
+                  (() => {
+                    const isMasterAtRoot = cv.isMaster === true;
+                    const isMasterInMetadata = cv.metadata?.isMaster === true;
+                    const isMasterInMetadataString = cv.metadata?.isMaster === 'true';
+                    return isMasterAtRoot || isMasterInMetadata || isMasterInMetadataString;
+                  })()
                 );
                 console.log('🔍 JourneyTimelineCard - Master CV check:', {
                   totalCVs: userCVs.length,
@@ -1420,12 +1939,17 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                   <motion.button
                     key={cv.id && cv.id !== '' ? cv.id : `cv-${index}`}
                     onClick={() => handleSelectCV(cv.id)}
-                    className="w-full p-2 text-left bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 rounded border border-gray-200 dark:border-white/10 transition-colors"
+                    className="w-full p-2 text-left bg-gray-600 dark:bg-white/5 hover:bg-gray-700 dark:hover:bg-white/10 rounded border border-gray-700 dark:border-white/10 transition-colors text-white dark:text-white"
                   >
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-xs font-medium text-white truncate">
-                          {cv.title} {((cv.isMaster === true || cv.isMaster === 'true') || (cv.metadata?.isMaster === true || cv.metadata?.isMaster === 'true')) && <span className="text-yellow-400">(Master)</span>}
+                          {cv.title} {(() => {
+                            const isMasterAtRoot = cv.isMaster === true;
+                            const isMasterInMetadata = cv.metadata?.isMaster === true;
+                            const isMasterInMetadataString = cv.metadata?.isMaster === 'true';
+                            return isMasterAtRoot || isMasterInMetadata || isMasterInMetadataString;
+                          })() && <span className="text-yellow-400">(Master)</span>}
                         </p>
                         <p className="text-xs text-white/60">
                           {cv.status} • {new Date(cv.lastModified).toLocaleDateString()}
@@ -1452,7 +1976,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="mt-3 p-3 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg"
+            className="mt-3 p-3 bg-gray-300 dark:bg-white/5 border border-gray-400 dark:border-white/10 rounded-lg text-gray-900 dark:text-white"
           >
             <div className="flex items-center justify-between mb-2">
               <h4 className="text-sm font-medium text-white">Select Cover Letter</h4>
@@ -1468,7 +1992,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 <motion.button
                   key={cl.id && cl.id !== '' ? cl.id : `cl-${index}`}
                   onClick={() => handleSelectCoverLetter(cl.id)}
-                  className="w-full p-2 text-left bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 rounded border border-gray-200 dark:border-white/10 transition-colors"
+                  className="w-full p-2 text-left bg-gray-600 dark:bg-white/5 hover:bg-gray-700 dark:hover:bg-white/10 rounded border border-gray-700 dark:border-white/10 transition-colors text-white dark:text-white"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
@@ -1496,7 +2020,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="mt-3 p-3 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg"
+            className="mt-3 p-3 bg-gray-300 dark:bg-white/5 border border-gray-400 dark:border-white/10 rounded-lg text-gray-900 dark:text-white"
           >
             <div className="space-y-2">
               <div className="flex items-center justify-between mb-3">
@@ -1514,8 +2038,12 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                   {/* Duplicate Master CV Option */}
                   {(() => {
                     const hasMasterCV = userCVs.some(cv => 
-                      cv.isMaster === true || cv.isMaster === 'true' || 
-                      cv.metadata?.isMaster === true || cv.metadata?.isMaster === 'true'
+                      (() => {
+                        const isMasterAtRoot = cv.isMaster === true;
+                        const isMasterInMetadata = cv.metadata?.isMaster === true;
+                        const isMasterInMetadataString = cv.metadata?.isMaster === 'true';
+                        return isMasterAtRoot || isMasterInMetadata || isMasterInMetadataString;
+                      })()
                     );
                     return hasMasterCV;
                   })() && (
@@ -1538,8 +2066,12 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                   {/* Regular CVs (excluding master CVs) */}
                   {userCVs
                     .filter(cv => 
-                      !(cv.isMaster === true || cv.isMaster === 'true' || 
-                        cv.metadata?.isMaster === true || cv.metadata?.isMaster === 'true')
+                      !(() => {
+                        const isMasterAtRoot = cv.isMaster === true;
+                        const isMasterInMetadata = cv.metadata?.isMaster === true;
+                        const isMasterInMetadataString = cv.metadata?.isMaster === 'true';
+                        return isMasterAtRoot || isMasterInMetadata || isMasterInMetadataString;
+                      })()
                     )
                     .map((cv, index) => (
                       <motion.button
@@ -1593,6 +2125,118 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
             </div>
           </motion.div>
         )}
+
+        {/* Move to Applied Modal */}
+        <MoveToAppliedModal
+          isOpen={showMoveToAppliedModal}
+          onClose={() => setShowMoveToAppliedModal(false)}
+          onConfirm={handleMoveToApplied}
+          journey={{
+            jobTitle: journey.jobTitle,
+            company: journey.company,
+            id: journey.id
+          }}
+          fileSizeEstimates={fileSizeEstimates}
+          isLoading={isCompletingJourney}
+        />
+
+        {/* Undo Toast */}
+        {showUndoToast && (
+          <div className="fixed bottom-4 right-4 z-50">
+            <motion.div
+              initial={{ opacity: 0, y: 50 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 50 }}
+              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-4 max-w-sm"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                  <CheckCircle className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">
+                    Journey Completed!
+                  </p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    Undo available for 5 seconds
+                  </p>
+                </div>
+                <button
+                  onClick={handleUndoComplete}
+                  className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors"
+                >
+                  Undo
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Keyboard Shortcuts Help Modal */}
+        {showKeyboardShortcuts && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Keyboard Shortcuts
+                </h3>
+                <button
+                  onClick={() => setShowKeyboardShortcuts(false)}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Download Files</span>
+                  <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-xs rounded">Ctrl+D</kbd>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Move to Applied</span>
+                  <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-xs rounded">Ctrl+A</kbd>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Show Shortcuts</span>
+                  <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-xs rounded">Ctrl+?</kbd>
+                </div>
+              </div>
+              
+              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Shortcuts only work when this journey card is focused
+                </p>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Celebration Modal */}
+        <CelebrationModal
+          isOpen={showCelebrationModal}
+          onClose={() => setShowCelebrationModal(false)}
+          journey={{
+            id: journey.id,
+            jobTitle: journey.jobTitle,
+            company: journey.company,
+            atsScore: journey.atsScore,
+            journeyDuration: journey.journeyDuration
+          }}
+          onDownloadFiles={() => {
+            setShowCelebrationModal(false);
+            handleDownloadFiles('all');
+          }}
+          onViewJourney={() => {
+            setShowCelebrationModal(false);
+            // Keep the journey expanded to show details
+          }}
+        />
 
     </motion.div>
   );

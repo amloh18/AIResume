@@ -2,6 +2,7 @@ import React from 'react';
 import { Calendar, ExternalLink, Github, FolderOpen } from 'lucide-react';
 import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ISectionBlueprint, ITemplate } from '@/models/Template';
+import { parseFormattedText, formatDate, formatDateRange } from '@/lib/utils/textFormatting';
 
 interface ProjectsProps {
   data: UnifiedCVDataStructure['projects'];
@@ -53,44 +54,27 @@ const Projects: React.FC<ProjectsProps> = ({
             <div className="item-header">
               <div className="item-title-group">
                 <h3 className="item-title">
-                  <FolderOpen size={16} className="project-icon" />
                   {project.name || 'Project Name'}
-                </h3>
-                <div className="project-links">
                   {project.url && (
-                    <a 
-                      href={project.url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="project-link"
-                      aria-label={`View ${project.name} project`}
-                    >
-                      {isGithubUrl(project.url) ? (
-                        <Github size={14} />
-                      ) : (
-                        <ExternalLink size={14} />
-                      )}
-                      <span className="link-text">
-                        {isGithubUrl(project.url) ? 'GitHub' : 'View Project'}
-                      </span>
-                    </a>
+                    <span className="project-link">
+                      {isGithubUrl(project.url) ? ' (GitHub)' : ' (Project Link)'}
+                    </span>
                   )}
-                </div>
+                </h3>
               </div>
               
               {(project.startDate || project.endDate) && (
                 <div className="item-date">
-                  <Calendar size={12} />
-                  <span>
-                    {formatDateRange(project.startDate, project.endDate)}
-                  </span>
+                  {formatDateRange(project.startDate, project.endDate)}
                 </div>
               )}
             </div>
 
             {project.description && (
               <div className="project-description">
-                <p>{project.description}</p>
+                <div 
+                  dangerouslySetInnerHTML={{ __html: parseFormattedText(project.description) }}
+                />
               </div>
             )}
 
@@ -198,6 +182,10 @@ const Projects: React.FC<ProjectsProps> = ({
         
         .project-description p {
           margin: 0;
+          text-align: justify;
+        }
+        
+        .project-description {
           text-align: justify;
         }
         

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { AdminTestimonialSkeleton } from './AdminSkeletons';
 import { 
   MessageSquare, 
   Plus, 
@@ -151,13 +152,7 @@ const TestimonialManager: React.FC = () => {
     return matchesSearch && matchesFilter;
   });
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-lime-400"></div>
-      </div>
-    );
-  }
+  // Always show the structure, only skeleton the data portions
 
   return (
     <div className="space-y-6">

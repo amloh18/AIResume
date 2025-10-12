@@ -16,7 +16,8 @@ const Languages: React.FC<LanguagesProps> = ({
   template, 
   cvData 
 }) => {
-  if (!data || data.length === 0) return null;
+  // Always render the section, even if empty, so users can see the structure
+  const languages = data || [];
 
   const getProficiencyLevel = (fluency: string): number => {
     const normalizedFluency = fluency.toLowerCase();
@@ -68,20 +69,16 @@ const Languages: React.FC<LanguagesProps> = ({
       </h2>
       
       <div className="languages-container">
-        {data.map((language, index) => (
+        {languages.map((language, index) => (
           <div key={index} className="language-item">
             <div className="language-header">
               <div className="language-name-group">
-                <Globe size={14} className="language-icon" />
                 <h3 className="language-name">
                   {language.language || 'Language'}
                 </h3>
               </div>
               
               <div className="proficiency-group">
-                <div className="proficiency-stars">
-                  {renderProficiencyStars(language.fluency)}
-                </div>
                 <span className="proficiency-text">
                   {formatFluency(language.fluency)}
                 </span>
@@ -98,7 +95,7 @@ const Languages: React.FC<LanguagesProps> = ({
         
         .languages-container {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          grid-template-columns: repeat(3, 1fr);
           gap: 12px;
         }
         

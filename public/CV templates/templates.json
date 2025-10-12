@@ -1,316 +1,108 @@
-{
-  "_id": { "$oid": "modern_professional_id" },
-  "name": "The Modern Professional",
-  "layoutType": "one-column",
-  "globalStyles": {
-    "fontFamily": "Inter, sans-serif",
-    "primaryColor": "#007BFF",
-    "secondaryColor": "#212529",
-    "backgroundColor": "#ffffff",
-    "fontSize": "11pt",
-    "lineHeight": "1.5",
-    "spacing": "20px",
-    "customCSS": ".cv-container { padding: 40px; } .section-header { font-size: 14pt; font-weight: 600; text-transform: uppercase; color: var(--secondary-color); border-bottom: 2px solid var(--primary-color); padding-bottom: 4px; }"
-  },
-  "columnLayout": {
-    "main": {
-      "width": "100%",
-      "sections": ["personal_header", "summary", "work_experience", "education", "skills", "projects"]
+[
+  {
+    "_id": { "$oid": "modern_professional_id" },
+    "name": "The Modern Professional",
+    "thumbnail": "/templates/modern-professional-thumb.png",
+    "layoutType": "one-column",
+    "globalStyles": {
+      "fontFamily": "Inter, sans-serif",
+      "primaryColor": "#007BFF",
+      "secondaryColor": "#212529",
+      "backgroundColor": "#ffffff",
+      "fontSize": "11pt",
+      "lineHeight": "1.5",
+      "spacing": "20px",
+      "customCSS": ".cv-container { padding: 40px; } .section-header { font-size: 14pt; font-weight: 600; text-transform: uppercase; color: var(--secondary-color); border-bottom: 2px solid var(--primary-color); padding-bottom: 4px; }"
+    },
+    "columnLayout": {
+      "main": {
+        "width": "100%",
+        "sections": ["personal_header", "summary", "work_experience", "education", "skills", "projects"]
+      }
+    },
+    "sectionStyling": {
+      "personal_header": {
+        "name": { "font-size": "28pt", "font-weight": "700", "color": "var(--secondary-color)" },
+        "label": { "font-size": "14pt", "font-weight": "400", "color": "var(--primary-color)" },
+        "contactInfo": { "font-size": "10pt", "color": "var(--secondary-color)" }
+      },
+      "work_experience": {
+        "jobTitle": { "font-weight": "600", "color": "var(--secondary-color)" },
+        "company": { "font-style": "italic", "color": "var(--secondary-color)" }
+      }
     }
   },
-  "sectionStyling": {
-    "personal_header": {
-      "name": { "font-size": "28pt", "font-weight": "700", "color": "var(--secondary-color)" },
-      "label": { "font-size": "14pt", "font-weight": "400", "color": "var(--primary-color)" },
-      "contactInfo": { "font-size": "10pt", "color": "var(--secondary-color)" }
+  {
+    "_id": { "$oid": "modern_professional_alt_id" },
+    "name": "Modern Professional",
+    "thumbnail": "/templates/modern-professional-thumb.png",
+    "layoutType": "one-column",
+    "globalStyles": {
+      "fontFamily": "Calibri, Arial, sans-serif",
+      "primaryColor": "#000000",
+      "secondaryColor": "#000000",
+      "backgroundColor": "#ffffff",
+      "fontSize": "11pt",
+      "lineHeight": "1.2",
+      "spacing": "16px",
+      "customCSS": ".cv-container { max-width: 8.5in; margin: 0 auto; background: white; min-height: 11in; padding: 0.5in 0.5in; } .section-header { font-weight: 700; font-size: 12pt; color: #000000; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; border-bottom: 1px solid #000000; padding-bottom: 2px; }"
     },
-    "work_experience": {
-      "jobTitle": { "font-weight": "600", "color": "var(--secondary-color)" },
-      "company": { "font-style": "italic", "color": "var(--secondary-color)" }
+    "columnLayout": {
+      "main": {
+        "width": "100%",
+        "sections": ["personal_header", "summary", "work_experience", "education", "skills", "projects"]
+      }
+    },
+    "sectionStyling": {
+      "personal_header": {
+        "name": { "font-size": "16pt", "font-weight": "700", "color": "#000000", "text-transform": "uppercase", "letter-spacing": "1px" },
+        "label": { "font-size": "11pt", "font-weight": "400", "color": "#000000" },
+        "contactInfo": { "font-size": "10pt", "color": "#000000" }
+      },
+      "work_experience": {
+        "jobTitle": { "font-weight": "700", "color": "#000000" },
+        "company": { "font-weight": "400", "color": "#000000" },
+        "date": { "font-weight": "700", "color": "#000000", "text-align": "right" }
+      }
+    }
+  },
+  {
+    "_id": { "$oid": "executive_accent_id" },
+    "name": "The Executive Accent",
+    "thumbnail": "/templates/executive-accent-thumb.png",
+    "layoutType": "one-column",
+    "globalStyles": {
+      "fontFamily": "Calibri, Arial, sans-serif",
+      "primaryColor": "#1e3a8a",
+      "secondaryColor": "#334155",
+      "backgroundColor": "#ffffff",
+      "fontSize": "11pt",
+      "lineHeight": "1.5",
+      "spacing": "20px",
+      "customCSS": ".cv-container { max-width: 8.5in; margin: 0 auto; background: white; min-height: 11in; padding: 0.6in 0.6in; } .header-section { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30px; gap: 30px; } .header-content { flex: 1; } .header-image { flex-shrink: 0; width: 120px; height: 120px; } .profile-image { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid #e0f2fe; } .person-name { font-size: 24pt; font-weight: 700; color: #1e3a8a; margin: 0 0 6px 0; line-height: 1.2; } .person-title { font-size: 14pt; font-weight: 600; color: #334155; margin: 0 0 12px 0; } .contact-info { display: flex; flex-direction: column; gap: 4px; font-size: 10pt; color: #334155; margin-top: 12px; } .contact-item { display: flex; align-items: center; gap: 6px; } .section-header { font-size: 13pt; font-weight: 700; text-transform: uppercase; color: #1e3a8a; text-align: center; background-color: #e0f2fe; padding: 10px 20px; margin: 24px 0 16px 0; width: 100%; letter-spacing: 0.5px; }"
+    },
+    "columnLayout": {
+      "main": {
+        "width": "100%",
+        "sections": ["personal_header", "profile", "work_experience", "education", "skills", "projects", "awards", "languages"]
+      }
+    },
+    "sectionStyling": {
+      "personal_header": {
+        "name": { "font-size": "24pt", "font-weight": "700", "color": "#1e3a8a" },
+        "label": { "font-size": "14pt", "font-weight": "600", "color": "#334155" },
+        "contactInfo": { "font-size": "10pt", "color": "#334155" }
+      },
+      "profile": {
+        "text-align": "justify",
+        "line-height": "1.6",
+        "color": "#334155"
+      },
+      "work_experience": {
+        "jobTitle": { "font-weight": "700", "color": "#1e3a8a", "font-size": "12pt" },
+        "company": { "font-weight": "600", "color": "#334155" },
+        "date": { "font-weight": "600", "color": "#64748b", "text-align": "right" }
+      }
     }
   }
-},
-{
-  "_id": { "$oid": "two_column_sidebar_id" },
-  "name": "The Two-Column Sidebar",
-  "layoutType": "two-column",
-  "globalStyles": {
-    "fontFamily": "Inter, sans-serif",
-    "primaryColor": "#5C2D91",
-    "secondaryColor": "#333333",
-    "backgroundColor": "#EFEFEF",
-    "fontSize": "10pt",
-    "lineHeight": "1.6",
-    "spacing": "20px",
-    "customCSS": ".left-column { background: #FFFFFF; padding: 30px; } .right-column { padding: 30px; } .section-header { font-size: 14pt; font-weight: 600; text-transform: uppercase; color: var(--secondary-color); border-bottom: 2px solid var(--primary-color); padding-bottom: 4px; }"
-  },
-  "columnLayout": {
-    "leftColumn": {
-      "width": "30%",
-      "sections": ["personal_info", "contact_info", "profile", "languages"]
-    },
-    "rightColumn": {
-      "width": "70%",
-      "sections": ["professional_experience", "education", "skills", "projects", "awards"]
-    }
-  },
-  "sectionStyling": {
-    "personal_info": {
-      "name": { "font-size": "24pt", "font-weight": "700", "color": "var(--secondary-color)" },
-      "label": { "font-size": "14pt", "font-weight": "400", "color": "var(--primary-color)" }
-    },
-    "contact_info": {
-      "icon": { "color": "var(--primary-color)" }
-    }
-  }
-},
-{
-  "_id": { "$oid": "timeline_id" },
-  "name": "The Timeline",
-  "layoutType": "one-column",
-  "globalStyles": {
-    "fontFamily": "Georgia, serif",
-    "primaryColor": "#DC3545",
-    "secondaryColor": "#212529",
-    "backgroundColor": "#ffffff",
-    "fontSize": "11pt",
-    "lineHeight": "1.6",
-    "spacing": "20px",
-    "customCSS": ".cv-container { padding: 40px 60px; position: relative; } .timeline-line { position: absolute; left: 30px; top: 0; bottom: 0; width: 2px; background: #E9ECEF; }"
-  },
-  "columnLayout": {
-    "main": {
-      "width": "100%",
-      "sections": ["personal_header", "summary", "work_experience", "education", "projects", "awards"]
-    }
-  },
-  "sectionStyling": {
-    "work_experience": {
-      "timeline-dot": { "background": "var(--primary-color)", "width": "10px", "height": "10px", "border-radius": "50%" },
-      "date": { "color": "var(--primary-color)", "font-weight": "600" }
-    },
-    "education": {
-      "timeline-dot": { "background": "var(--primary-color)", "width": "10px", "height": "10px", "border-radius": "50%" },
-      "date": { "color": "var(--primary-color)", "font-weight": "600" }
-    }
-  }
-},
-{
-  "_id": { "$oid": "stacked_blocks_id" },
-  "name": "The Stacked Blocks",
-  "layoutType": "one-column",
-  "globalStyles": {
-    "fontFamily": "Poppins, sans-serif",
-    "primaryColor": "#FFC107",
-    "secondaryColor": "#343a40",
-    "backgroundColor": "#F8F9FA",
-    "fontSize": "11pt",
-    "lineHeight": "1.7",
-    "spacing": "20px",
-    "customCSS": ".cv-container { padding: 30px; background: var(--backgroundColor); } .section-block { background: #FFFFFF; border-left: 5px solid var(--primary-color); padding: 20px; margin-bottom: 20px; }"
-  },
-  "columnLayout": {
-    "main": {
-      "width": "100%",
-      "sections": ["personal_header", "summary", "work_experience", "education", "skills", "projects"]
-    }
-  },
-  "sectionStyling": {
-    "personal_header": {
-      "name": { "font-size": "30pt", "font-weight": "700", "color": "var(--secondary-color)" },
-      "label": { "font-size": "16pt", "color": "var(--secondary-color)" }
-    },
-    "section_header": {
-      "font-weight": "700",
-      "color": "var(--secondary-color)"
-    }
-  }
-},
-{
-  "_id": { "$oid": "hybrid_id" },
-  "name": "The Hybrid",
-  "layoutType": "single-and-split",
-  "globalStyles": {
-    "fontFamily": "Roboto, sans-serif",
-    "primaryColor": "#28A745",
-    "secondaryColor": "#333333",
-    "backgroundColor": "#FFFFFF",
-    "fontSize": "11pt",
-    "lineHeight": "1.5",
-    "spacing": "20px",
-    "customCSS": ".cv-container { padding: 40px; } .split-section { display: flex; }"
-  },
-  "columnLayout": {
-    "main": {
-      "width": "100%",
-      "sections": ["personal_header", "summary"]
-    },
-    "split_left": {
-      "width": "30%",
-      "sections": []
-    },
-    "split_right": {
-      "width": "70%",
-      "sections": []
-    }
-  },
-  "sectionStyling": {
-    "personal_header": {
-      "name": { "font-size": "32pt", "font-weight": "700", "color": "var(--secondary-color)" },
-      "label": { "font-size": "18pt", "color": "var(--secondary-color)" }
-    },
-    "work_experience": {
-      "date": { "color": "var(--primary-color)", "font-weight": "600", "text-align": "right" }
-    }
-  }
-},
-{
-  "_id": { "$oid": "minimalist_id" },
-  "name": "The Minimalist",
-  "layoutType": "one-column",
-  "globalStyles": {
-    "fontFamily": "Garamond, serif",
-    "primaryColor": "#6C757D",
-    "secondaryColor": "#212529",
-    "backgroundColor": "#ffffff",
-    "fontSize": "12pt",
-    "lineHeight": "1.8",
-    "spacing": "30px",
-    "customCSS": ".cv-container { padding: 50px 80px; } .section-header { font-size: 16pt; font-weight: 700; color: var(--secondary-color); margin-bottom: 15px; }"
-  },
-  "columnLayout": {
-    "main": {
-      "width": "100%",
-      "sections": ["personal_header", "summary", "work_experience", "education", "skills", "languages"]
-    }
-  },
-  "sectionStyling": {
-    "personal_header": {
-      "name": { "font-size": "26pt", "font-weight": "700", "text-align": "center", "color": "var(--secondary-color)" },
-      "contactInfo": { "font-size": "11pt", "text-align": "center", "color": "var(--secondary-color)" }
-    }
-  }
-},
-{
-  "_id": { "$oid": "infographic_id" },
-  "name": "The Infographic",
-  "layoutType": "two-column",
-  "globalStyles": {
-    "fontFamily": "Montserrat, sans-serif",
-    "primaryColor": "#17A2B8",
-    "secondaryColor": "#343a40",
-    "backgroundColor": "#FFFFFF",
-    "fontSize": "10pt",
-    "lineHeight": "1.5",
-    "spacing": "20px",
-    "customCSS": ".left-column { background: #E9F6F8; padding: 25px; } .right-column { padding: 25px; } .section-header { font-size: 12pt; font-weight: 600; text-transform: uppercase; color: var(--secondary-color); }"
-  },
-  "columnLayout": {
-    "leftColumn": {
-      "width": "35%",
-      "sections": ["personal_header", "skills", "languages"]
-    },
-    "rightColumn": {
-      "width": "65%",
-      "sections": ["summary", "work_experience", "education", "projects"]
-    }
-  },
-  "sectionStyling": {
-    "skills": {
-      "icon": { "color": "var(--primary-color)" },
-      "bar": { "height": "8px", "background": "#E9ECEF" },
-      "fill": { "background": "var(--primary-color)" }
-    },
-    "languages": {
-      "icon": { "color": "var(--primary-color)" }
-    }
-  }
-},
-{
-  "_id": { "$oid": "classic_id" },
-  "name": "The Classic",
-  "layoutType": "one-column",
-  "globalStyles": {
-    "fontFamily": "Times New Roman, serif",
-    "primaryColor": "#000000",
-    "secondaryColor": "#000000",
-    "backgroundColor": "#ffffff",
-    "fontSize": "12pt",
-    "lineHeight": "1.4",
-    "spacing": "20px",
-    "customCSS": ".cv-container { padding: 40px 60px; } .section-header { font-size: 14pt; font-weight: 700; text-transform: uppercase; color: var(--secondary-color); border-bottom: 1px solid var(--secondary-color); padding-bottom: 2px; margin-bottom: 10px; }"
-  },
-  "columnLayout": {
-    "main": {
-      "width": "100%",
-      "sections": ["personal_header", "summary", "work_experience", "education", "awards", "skills"]
-    }
-  },
-  "sectionStyling": {
-    "personal_header": {
-      "name": { "font-size": "24pt", "font-weight": "700", "text-align": "center", "color": "var(--secondary-color)" },
-      "label": { "font-size": "14pt", "font-weight": "400", "text-align": "center", "color": "var(--secondary-color)" }
-    },
-    "work_experience": {
-      "date": { "font-style": "italic" }
-    }
-  }
-},
-{
-  "_id": { "$oid": "bubble_id" },
-  "name": "The Bubble",
-  "layoutType": "one-column",
-  "globalStyles": {
-    "fontFamily": "Open Sans, sans-serif",
-    "primaryColor": "#FD7E14",
-    "secondaryColor": "#343a40",
-    "backgroundColor": "#f8f9fa",
-    "fontSize": "10pt",
-    "lineHeight": "1.6",
-    "spacing": "25px",
-    "customCSS": ".cv-container { padding: 40px; } .section-header { background: #FFFFFF; border-radius: 20px; padding: 10px 20px; display: inline-block; margin-bottom: 15px; color: var(--primary-color); }"
-  },
-  "columnLayout": {
-    "main": {
-      "width": "100%",
-      "sections": ["personal_header", "summary", "work_experience", "education", "skills", "languages"]
-    }
-  },
-  "sectionStyling": {
-    "personal_header": {
-      "name": { "font-size": "26pt", "font-weight": "700", "color": "var(--secondary-color)" }
-    },
-    "skills": {
-      "dot": { "background": "var(--primary-color)", "width": "8px", "height": "8px", "border-radius": "50%" }
-    }
-  }
-},
-
-{
-  "_id": { "$oid": "bold_header_id" },
-  "name": "The Bold Header",
-  "layoutType": "one-column",
-  "globalStyles": {
-    "fontFamily": "Helvetica, sans-serif",
-    "primaryColor": "#6610F2",
-    "secondaryColor": "#212529",
-    "backgroundColor": "#ffffff",
-    "fontSize": "11pt",
-    "lineHeight": "1.5",
-    "spacing": "20px",
-    "customCSS": ".header-section { background: var(--primary-color); color: #FFFFFF; padding: 30px; } .header-section * { color: #FFFFFF !important; } .section-header { font-size: 14pt; font-weight: 600; text-transform: uppercase; border-bottom: 2px solid var(--secondary-color); padding-bottom: 4px; }"
-  },
-  "columnLayout": {
-    "main": {
-      "width": "100%",
-      "sections": ["personal_header", "summary", "work_experience", "education", "skills", "projects"]
-    }
-  },
-  "sectionStyling": {
-    "personal_header": {
-      "name": { "font-size": "36pt", "font-weight": "700" },
-      "label": { "font-size": "20pt", "font-weight": "400" },
-      "contactInfo": { "font-size": "11pt" }
-    }
-  }
-}
+]

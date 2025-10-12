@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
     await connectDB();
     
     const body = await request.json();
-    const { userId, title, content, targetCompany, targetPosition, keywords, jobId } = body;
+    const { userId, title, content, targetCompany, targetPosition, keywords, jobId, cvId, status, metadata } = body;
 
     if (!userId || !title || !content) {
       return NextResponse.json(
@@ -113,19 +113,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Build metadata object, merging provided metadata with defaults
+    const coverLetterMetadata = {
+      targetCompany: targetCompany || metadata?.targetCompany,
+      targetPosition: targetPosition || metadata?.targetPosition,
+      keywords: keywords || metadata?.keywords || [],
+      isPublic: metadata?.isPublic || false,
+      lastModified: new Date(),
+      version: metadata?.version || 1,
+      ...(metadata || {}) // Merge any additional metadata fields
+    };
+
     const coverLetter = new CoverLetter({
       userId,
       title,
       content,
-      status: 'draft',
-      metadata: {
-        targetCompany,
-        targetPosition,
-        keywords: keywords || [],
-        isPublic: false,
-        lastModified: new Date(),
-        version: 1
-      }
+      status: status || 'draft',
+      jobId,
+      cvId,
+      metadata: coverLetterMetadata
     });
 
     await coverLetter.save();
@@ -141,6 +147,9 @@ export async function POST(request: NextRequest) {
         title: coverLetter.title,
         content: coverLetter.content,
         status: coverLetter.status,
+        jobId: coverLetter.jobId,
+        cvId: coverLetter.cvId,
+        userId: coverLetter.userId,
         lastModified: coverLetter.metadata.lastModified,
         createdAt: coverLetter.createdAt,
         updatedAt: coverLetter.updatedAt,

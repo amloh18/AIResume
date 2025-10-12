@@ -3,6 +3,18 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, Filter, Calendar } from 'lucide-react';
+import {
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer
+} from 'recharts';
 
 interface ProgressData {
   date: string;
@@ -19,29 +31,41 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
   const [data, setData] = useState<ProgressData[]>([]);
   const [filter, setFilter] = useState<'all' | 'jobs' | 'cvs' | 'coverLetters'>('all');
   const [loading, setLoading] = useState(true);
-  const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('30d');
+  const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('7d');
 
   useEffect(() => {
     fetchProgressData();
   }, [userId, timeRange]);
 
   const fetchProgressData = async () => {
+    if (!userId) {
+      console.warn('ProgressTrackingWidget: No userId provided');
+      setData(generateMockData());
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
+      console.log('ProgressTrackingWidget: Fetching data for userId:', userId, 'range:', timeRange);
       const response = await fetch(`/api/analytics/progress?userId=${userId}&range=${timeRange}`);
+      
       if (response.ok) {
         const result = await response.json();
-        if (result.success && result.data) {
+        console.log('ProgressTrackingWidget: API response:', result);
+        if (result.success && result.data && result.data.length > 0) {
           setData(result.data);
+          console.log('ProgressTrackingWidget: Using real data, points:', result.data.length);
         } else {
+          console.log('ProgressTrackingWidget: No real data, using mock data');
           setData(generateMockData());
         }
       } else {
-        console.error('Failed to fetch progress data:', response.status);
+        console.error('ProgressTrackingWidget: Failed to fetch progress data:', response.status);
         setData(generateMockData());
       }
     } catch (error) {
-      console.error('Error fetching progress data:', error);
+      console.error('ProgressTrackingWidget: Error fetching progress data:', error);
       setData(generateMockData());
     } finally {
       setLoading(false);
@@ -89,173 +113,91 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  const renderLineChart = () => {
+  const renderChart = () => {
     const filteredData = getFilteredData();
-    const maxValue = getMaxValue();
-    const leftPadding = 5;
-    const rightPadding = 5;
-    const topPadding = 15;
-    const bottomPadding = 15;
-
+    
     if (filteredData.length === 0) return null;
 
-    const points = filteredData.map((item, index) => {
-      const x = leftPadding + (index * (100 - leftPadding - rightPadding)) / (filteredData.length - 1);
-      const total = (item.jobs || 0) + (item.cvs || 0) + (item.coverLetters || 0);
-      const y = 100 - bottomPadding - (total / maxValue) * (100 - topPadding - bottomPadding);
-      const safeY = isNaN(y) ? 100 - bottomPadding : y;
-      return { x, y: safeY, ...item };
-    });
-
-    const createPath = (dataKey: keyof ProgressData, color: string, offset: number = 0) => {
-      const pathData = points.map((point, index) => {
-        const value = (point[dataKey] as number) || 0;
-        const y = 100 - bottomPadding - ((value + offset) / maxValue) * (100 - topPadding - bottomPadding);
-        const safeY = isNaN(y) ? 100 - bottomPadding : y;
-        return `${index === 0 ? 'M' : 'L'} ${point.x} ${safeY}`;
-      }).join(' ');
-
-      return (
-        <path
-          key={dataKey}
-          d={pathData}
-          fill="none"
-          stroke={color}
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          opacity={filter === 'all' ? 0.8 : filter === dataKey ? 1 : 0.3}
-        />
-      );
-    };
-
-    const createStackedArea = (dataKey: keyof ProgressData, color: string, stackOrder: number) => {
-      // Calculate cumulative values for each point
-      const cumulativePoints = points.map((point, index) => {
-        let cumulativeValue = 0;
-        
-        // Add values based on stack order
-        if (stackOrder >= 0) cumulativeValue += point.jobs;
-        if (stackOrder >= 1) cumulativeValue += point.cvs;
-        if (stackOrder >= 2) cumulativeValue += point.coverLetters;
-        
-        const y = 100 - bottomPadding - (cumulativeValue / maxValue) * (100 - topPadding - bottomPadding);
-        const safeY = isNaN(y) ? 100 - bottomPadding : y;
-        return { x: point.x, y: safeY, value: point[dataKey] as number };
-      });
-
-      // Top path (current cumulative value)
-      const topPath = cumulativePoints.map((point, index) => {
-        return `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`;
-      }).join(' ');
-
-      // Bottom path (previous cumulative value)
-      const bottomPath = cumulativePoints.map((point, index) => {
-        let previousCumulativeValue = 0;
-        
-        // Calculate previous cumulative value based on stack order
-        if (stackOrder > 0) {
-          if (stackOrder >= 1) previousCumulativeValue += point.jobs;
-          if (stackOrder >= 2) previousCumulativeValue += point.cvs;
-        }
-        
-        const y = 100 - bottomPadding - (previousCumulativeValue / maxValue) * (100 - topPadding - bottomPadding);
-        const safeY = isNaN(y) ? 100 - bottomPadding : y;
-        return `L ${point.x} ${safeY}`;
-      }).reverse().join(' ');
-
-      return (
-        <path
-          key={`${dataKey}-area`}
-          d={`${topPath} ${bottomPath} Z`}
-          fill={color}
-          opacity={filter === 'all' ? 0.6 : filter === dataKey ? 0.8 : 0.3}
-        />
-      );
-    };
-
     return (
-      <svg viewBox="0 0 100 100" className="w-full h-full">
-        {/* X-axis line */}
-        <line
-          x1={leftPadding}
-          y1={100 - bottomPadding}
-          x2={100 - rightPadding}
-          y2={100 - bottomPadding}
-          stroke="currentColor"
-          strokeWidth="1"
-          opacity="0.3"
-        />
-
-        {/* Y-axis line */}
-        <line
-          x1={leftPadding}
-          y1={topPadding}
-          x2={leftPadding}
-          y2={100 - bottomPadding}
-          stroke="currentColor"
-          strokeWidth="1"
-          opacity="0.3"
-        />
-
-        {/* Grid lines */}
-        {[0, 0.25, 0.5, 0.75, 1].map((ratio, index) => (
-          <line
-            key={index}
-            x1={leftPadding}
-            y1={100 - bottomPadding - ratio * (100 - topPadding - bottomPadding)}
-            x2={100 - rightPadding}
-            y2={100 - bottomPadding - ratio * (100 - topPadding - bottomPadding)}
-            stroke="currentColor"
-            strokeWidth="0.5"
-            opacity="0.1"
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={filteredData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+          <defs>
+            <linearGradient id="jobsGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.8}/>
+              <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.1}/>
+            </linearGradient>
+            <linearGradient id="cvsGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#EF4444" stopOpacity={0.8}/>
+              <stop offset="95%" stopColor="#EF4444" stopOpacity={0.1}/>
+            </linearGradient>
+            <linearGradient id="coverLettersGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#10B981" stopOpacity={0.8}/>
+              <stop offset="95%" stopColor="#10B981" stopOpacity={0.1}/>
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
+          <XAxis 
+            dataKey="date" 
+            stroke="#6B7280"
+            fontSize={12}
+            interval={0}
+            angle={-45}
+            textAnchor="end"
+            height={60}
+            domain={['dataMin', 'dataMax']}
           />
-        ))}
-
-        {/* Stacked Areas */}
-        {createStackedArea('jobs', '#3B82F6', 0)}
-        {createStackedArea('cvs', '#EF4444', 1)}
-        {createStackedArea('coverLetters', '#10B981', 2)}
-
-        {/* Lines */}
-        {createPath('jobs', '#3B82F6', 0)}
-        {createPath('cvs', '#EF4444', 0)}
-        {createPath('coverLetters', '#10B981', 0)}
-
-        {/* Data points */}
-        {points.map((point, index) => {
-          // Calculate cy values with NaN protection
-          const jobsCy = 100 - bottomPadding - ((point.jobs || 0) / maxValue) * (100 - topPadding - bottomPadding);
-          const cvsCy = 100 - bottomPadding - ((point.cvs || 0) / maxValue) * (100 - topPadding - bottomPadding);
-          const coverLettersCy = 100 - bottomPadding - ((point.coverLetters || 0) / maxValue) * (100 - topPadding - bottomPadding);
-          
-          return (
-            <g key={index}>
-              <circle
-                cx={point.x}
-                cy={isNaN(jobsCy) ? 100 - bottomPadding : jobsCy}
-                r="2"
-                fill="#3B82F6"
-                opacity={filter === 'all' || filter === 'jobs' ? 1 : 0.3}
-              />
-              <circle
-                cx={point.x}
-                cy={isNaN(cvsCy) ? 100 - bottomPadding : cvsCy}
-                r="2"
-                fill="#EF4444"
-                opacity={filter === 'all' || filter === 'cvs' ? 1 : 0.3}
-              />
-              <circle
-                cx={point.x}
-                cy={isNaN(coverLettersCy) ? 100 - bottomPadding : coverLettersCy}
-                r="2"
-                fill="#10B981"
-                opacity={filter === 'all' || filter === 'coverLetters' ? 1 : 0.3}
-              />
-            </g>
-          );
-        })}
-      </svg>
+          <YAxis 
+            stroke="#6B7280"
+            fontSize={12}
+            domain={[0, 'dataMax + 1']}
+          />
+          <Tooltip 
+            contentStyle={{
+              backgroundColor: '#1F2937',
+              border: '1px solid #374151',
+              borderRadius: '8px',
+              color: '#F9FAFB'
+            }}
+          />
+          <Legend />
+          <Area
+            type="monotone"
+            dataKey="jobs"
+            stroke="#3B82F6"
+            fill="url(#jobsGradient)"
+            strokeWidth={2}
+            dot={{ fill: '#3B82F6', strokeWidth: 2, r: 4 }}
+            name="Jobs"
+            animationDuration={1000}
+            animationEasing="ease-in-out"
+            opacity={filter === 'all' || filter === 'jobs' ? 1 : 0.3}
+          />
+          <Area
+            type="monotone"
+            dataKey="cvs"
+            stroke="#EF4444"
+            fill="url(#cvsGradient)"
+            strokeWidth={2}
+            dot={{ fill: '#EF4444', strokeWidth: 2, r: 4 }}
+            name="CVs"
+            animationDuration={1000}
+            animationEasing="ease-in-out"
+            opacity={filter === 'all' || filter === 'cvs' ? 1 : 0.3}
+          />
+          <Area
+            type="monotone"
+            dataKey="coverLetters"
+            stroke="#10B981"
+            fill="url(#coverLettersGradient)"
+            strokeWidth={2}
+            dot={{ fill: '#10B981', strokeWidth: 2, r: 4 }}
+            name="Cover Letters"
+            animationDuration={1000}
+            animationEasing="ease-in-out"
+            opacity={filter === 'all' || filter === 'coverLetters' ? 1 : 0.3}
+          />
+        </AreaChart>
+      </ResponsiveContainer>
     );
   };
 
@@ -289,7 +231,6 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
         <div className="flex items-center gap-4">
           {/* Filter Buttons */}
           <div className="flex items-center gap-1">
-            <Filter className="h-4 w-4 text-gray-600 dark:text-white/60 mr-2" />
             {[
               { key: 'all', label: 'All', color: 'bg-gray-500' },
               { key: 'jobs', label: 'Jobs', color: 'bg-blue-500' },
@@ -299,7 +240,7 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
               <motion.button
                 key={item.key}
                 onClick={() => setFilter(item.key as any)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors h-8 flex items-center justify-center whitespace-nowrap ${
                   filter === item.key
                     ? `${item.color} text-white shadow-lg`
                     : 'bg-white/10 backdrop-blur-md border border-white/20 text-white/60 hover:text-white/80 hover:bg-white/20'
@@ -326,30 +267,14 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
       </div>
 
       {/* Chart */}
-      <div className="h-80 bg-white/5 rounded-lg">
+      <div className="h-72 bg-white/5 rounded-lg p-4" style={{ minHeight: '288px', maxHeight: '288px' }}>
         {loading ? (
           <div className="flex items-center justify-center h-full">
             <div className="w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
           </div>
         ) : (
-          renderLineChart()
+          renderChart()
         )}
-      </div>
-
-      {/* Legend */}
-      <div className="flex items-center justify-center gap-6 mt-4">
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-          <span className="text-sm text-white/60">Jobs</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-          <span className="text-sm text-white/60">CVs</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-          <span className="text-sm text-white/60">Cover Letters</span>
-        </div>
       </div>
     </div>
   );

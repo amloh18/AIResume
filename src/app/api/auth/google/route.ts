@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
     await connectDB();
     
     const body = await request.json();
-    const { email, name, image, provider } = body;
+    const { email, name, image, provider, firebaseUid, authProviderId } = body;
 
     if (!email) {
       return NextResponse.json(
@@ -31,9 +31,12 @@ export async function POST(request: NextRequest) {
         firstName,
         lastName,
         avatar: image,
+        firebaseUid: firebaseUid || undefined, // Store Firebase UID if provided
+        authProviderId: authProviderId || undefined, // Store authProviderId if provided
         isEmailVerified: true, // Google OAuth users are pre-verified
         role: 'user',
         currentPlanKey: 'free',
+        authProvider: 'nextauth',
         monthlyGoal: 20,
         usage: {
           cvJourneyCount: 0,
@@ -72,6 +75,15 @@ export async function POST(request: NextRequest) {
     } else {
       // Update existing user
       user.avatar = image || user.avatar;
+      if (firebaseUid && !user.firebaseUid) {
+        user.firebaseUid = firebaseUid;
+      }
+      if (authProviderId && !user.authProviderId) {
+        user.authProviderId = authProviderId;
+      }
+      if (!user.authProvider) {
+        user.authProvider = 'nextauth';
+      }
       user.lastLogin = new Date();
       await user.save();
       console.log('✅ Existing Google OAuth user updated:', user._id);

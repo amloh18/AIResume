@@ -76,7 +76,7 @@ export default function SignUpForm() {
         throw new Error('Password must contain at least one special character (!@#$%^&*()_+-=[]{}|;:,.<>?)');
       }
 
-      // Step 1: Create user in Firebase Auth
+      // Step 1: Create user in Firebase Auth first
       const userCredential = await createUserWithEmailAndPassword(
         auth, 
         formData.email, 
@@ -84,36 +84,37 @@ export default function SignUpForm() {
       );
       const user = userCredential.user;
 
-      // Step 2: Send verification email
-      await sendEmailVerification(user);
-
-      // Step 3: Save the detailed profile to MongoDB via API
-      const profileData = {
-        idToken: await user.getIdToken(),
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        username: formData.username,
-        email: user.email,
-        location: formData.location,
-        website: formData.website,
-        linkedin: formData.linkedin,
-        github: formData.github,
-        company: formData.company,
-        professionalSummary: formData.professionalSummary,
-      };
-
-      const response = await fetch('/api/user/create-profile', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(profileData),
+      // Step 2: Update the user's display name
+      await updateProfile(user, {
+        displayName: `${formData.firstName} ${formData.lastName}`,
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create profile');
+      // Step 3: Send verification email via Hostinger
+      const verificationResponse = await fetch('/api/auth/send-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+        }),
+      });
+
+      if (!verificationResponse.ok) {
+        const errorData = await verificationResponse.json();
+        throw new Error(errorData.message || 'Failed to send verification email');
       }
 
-      setSuccess('Account created successfully! Please check your email to verify your account before signing in.');
+      const verificationResult = await verificationResponse.json();
+      
+      // Store password temporarily for automatic sign-in after verification
+      localStorage.setItem('temp_password', formData.password);
+      
+      if (verificationResult.fallback) {
+        setSuccess('Account created successfully! Please check your email to verify your account before signing in. (Email sent via Firebase)');
+      } else {
+        setSuccess('Account created successfully! Please check your email to verify your account before signing in.');
+      }
       
       // Reset form
       setFormData({

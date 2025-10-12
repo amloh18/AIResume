@@ -7,6 +7,7 @@ import { MobileSidebarProvider, useMobileSidebar } from '@/contexts/MobileSideba
 import { JobJourneyProvider } from '@/contexts/JobJourneyContext';
 import OptimizedNavigation from './OptimizedNavigation';
 import DashboardRouter from './DashboardRouter';
+import CVCheckRedirect from './CVCheckRedirect';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface OptimizedDashboardLayoutProps {
@@ -23,62 +24,46 @@ const DashboardContent: React.FC<{ children?: React.ReactNode }> = ({ children }
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="flex h-screen">
-        {/* Desktop Sidebar */}
-        <div className="hidden lg:flex lg:w-[335px] lg:flex-col lg:fixed lg:inset-y-0 lg:z-50 lg:p-2">
+        {/* Desktop Sidebar - Hidden on mobile and small screens, visible on xl and up */}
+        <div className="hidden xl:flex xl:w-[335px] xl:flex-col xl:fixed xl:inset-y-0 xl:z-50 xl:p-1">
           <OptimizedNavigation />
         </div>
 
-        {/* Mobile Sidebar */}
+        {/* Mobile/Small Screen Sidebar - Hidden on xl and up */}
         <AnimatePresence>
           {isMobileMenuOpen && (
             <motion.div
               initial={{ opacity: 0, x: -300 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -300 }}
-              className="fixed inset-y-0 left-0 z-50 w-[335px] p-2 lg:hidden"
+              className="fixed inset-y-0 left-0 z-50 w-[335px] p-1 xl:hidden"
             >
               <OptimizedNavigation />
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Mobile Overlay */}
+        {/* Mobile/Small Screen Overlay - Hidden on xl and up */}
         <AnimatePresence>
           {isMobileMenuOpen && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-40 bg-black bg-opacity-50 lg:hidden"
+              className="fixed inset-0 z-40 bg-black bg-opacity-50 xl:hidden"
               onClick={toggleSidebar}
             />
           )}
         </AnimatePresence>
 
         {/* Main Content */}
-        <div className="flex flex-col flex-1 lg:pl-[335px]">
-          {/* Mobile Header */}
-          <div className="lg:hidden flex items-center justify-between p-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-            <button
-              onClick={toggleSidebar}
-              className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-            <div className="text-lg font-semibold text-gray-900 dark:text-white">
-              Circle CV
-            </div>
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-lime-400 to-lime-600 flex items-center justify-center text-white text-sm font-medium">
-              {userData?.name?.charAt(0) || 'U'}
-            </div>
-          </div>
-
+        <div className="flex flex-col flex-1 xl:pl-[335px]">
           {/* Page Content */}
           <main className="flex-1 overflow-auto">
             <div className="p-6">
-              <DashboardRouter />
+              <CVCheckRedirect>
+                <DashboardRouter />
+              </CVCheckRedirect>
             </div>
           </main>
         </div>

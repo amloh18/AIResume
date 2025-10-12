@@ -18,14 +18,41 @@ export async function GET(request: NextRequest) {
 
     console.log('🔍 TEMPLATES API - Params:', { category, tier, includeInactive });
 
-    // Get templates from admin database
-    const templates = await AdminTemplateService.getAllTemplates({
-      category,
-      tier: tier || undefined,
-      isActive: !includeInactive ? true : undefined
-    });
-
-    console.log(`✅ TEMPLATES API - Found ${templates.length} admin templates`);
+    // Get templates from main database
+    let templates;
+    try {
+      await connectDB();
+      console.log('✅ TEMPLATES API - Connected to main database');
+      
+      const query: any = {};
+      
+      if (category && category !== 'all') {
+        query.category = category;
+      }
+      
+      if (tier) {
+        query.tier = tier;
+      }
+      
+      if (!includeInactive) {
+        query.isActive = true;
+      }
+      
+      templates = await Template.find(query)
+        .sort({ name: 1 })
+        .lean()
+        .exec();
+      
+      console.log(`✅ TEMPLATES API - Found ${templates.length} templates from main database`);
+    } catch (error) {
+      console.warn('⚠️ TEMPLATES API - Database connection failed, using fallback templates');
+      templates = AdminTemplateService.getFallbackTemplates({
+        category,
+        tier: tier || undefined,
+        isActive: !includeInactive ? true : undefined
+      });
+      console.log(`📋 TEMPLATES API - Using ${templates.length} fallback templates`);
+    }
 
     return NextResponse.json({
       success: true,

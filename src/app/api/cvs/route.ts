@@ -128,6 +128,25 @@ export async function GET(request: NextRequest) {
     const cvs = await query.lean();
     console.log('🔍 CV API - Query executed, found CVs:', cvs.length);
     
+    // Trigger async thumbnail generation for CVs missing thumbnails
+    cvs.forEach(async (cv) => {
+      const thumbnailAge = cv.metadata?.thumbnailGeneratedAt 
+        ? Date.now() - new Date(cv.metadata.thumbnailGeneratedAt).getTime()
+        : Infinity;
+      
+      const needsThumbnail = !cv.metadata?.thumbnailUrl || thumbnailAge > 7 * 24 * 60 * 60 * 1000; // 7 days
+      
+      if (needsThumbnail) {
+        // Trigger async thumbnail generation (don't await)
+        fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/cv/${cv._id}/generate-thumbnail`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        }).catch(error => {
+          console.error(`Failed to generate thumbnail for CV ${cv._id}:`, error);
+        });
+      }
+    });
+    
     // Debug: Show all found CVs
     cvs.forEach((cv, index) => {
       console.log(`🔍 CV API - CV ${index + 1}:`, {

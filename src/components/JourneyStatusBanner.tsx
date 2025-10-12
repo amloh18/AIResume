@@ -38,6 +38,14 @@ const JourneyStatusBanner: React.FC<JourneyStatusBannerProps> = ({ journey }) =>
     cvId: cvId || '',
     coverLetterId: coverLetterId || ''
   };
+
+  // Debug logging to see what data is being used
+  console.log('🔍 JourneyStatusBanner - Journey prop:', journey);
+  console.log('🔍 JourneyStatusBanner - Context state:', state);
+  console.log('🔍 JourneyStatusBanner - Active journey:', activeJourney);
+  
+  // If we have a journey prop, use it exclusively (don't fall back to context)
+  const displayJourney = journey ? journey : activeJourney;
   const { user } = useFirebaseAuth();
   const [isExpanded, setIsExpanded] = useState(false);
   const [jobData, setJobData] = useState<any>(null);
@@ -278,11 +286,11 @@ const JourneyStatusBanner: React.FC<JourneyStatusBannerProps> = ({ journey }) =>
               <div className="flex items-center gap-2">
                 <Briefcase className="h-5 w-5 text-lime-400" />
                 <div className="text-sm font-medium text-gray-900 dark:text-white">
-                  {activeJourney.jobTitle || jobData?.title || 'Active Journey'}
-                  {activeJourney.company || jobData?.company ? (
+                  {displayJourney.jobTitle || jobData?.title || 'Active Journey'}
+                  {displayJourney.company || jobData?.company ? (
                     <span className="text-gray-600 dark:text-white/60 font-normal">
                       {' - '}
-                      {activeJourney.company || jobData?.company}
+                      {displayJourney.company || jobData?.company}
                     </span>
                   ) : null}
                 </div>
@@ -291,9 +299,9 @@ const JourneyStatusBanner: React.FC<JourneyStatusBannerProps> = ({ journey }) =>
               {/* Current Step Info */}
               {(isJourneyActive || journey) && (
                 <div className="flex items-center gap-2 px-3 py-1 bg-lime-500/20 rounded-full">
-                  {getStepIcon(activeJourney.currentStep)}
+                  {getStepIcon(displayJourney.currentStep)}
                   <span className="text-xs font-medium text-lime-600 dark:text-lime-400">
-                    {getStepLabel(activeJourney.currentStep)}
+                    {getStepLabel(displayJourney.currentStep)}
                   </span>
                 </div>
               )}

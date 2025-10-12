@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/database';
 import User from '@/models/User';
-import bcrypt from 'bcryptjs';
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,12 +23,12 @@ export async function POST(request: NextRequest) {
 
     await connectDB();
 
-    // Find user by email and reset token
+    // Find user by email and reset token - include password field
     const user = await User.findOne({
       email,
       resetPasswordToken: token,
       resetPasswordExpires: { $gt: new Date() }
-    });
+    }).select('+password');
 
     if (!user) {
       return NextResponse.json(
@@ -46,12 +45,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Hash new password
-    const salt = await bcrypt.genSalt(12);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    // Update user password and clear reset token
-    user.password = hashedPassword;
+    // Update user password (let the User model handle hashing via pre-save hook)
+    user.password = password;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
     user.lastLogin = new Date();

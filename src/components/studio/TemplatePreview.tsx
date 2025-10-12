@@ -135,10 +135,10 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
             template={template}
             theme="light"
             showBadge={false}
-            sectionOrder={['basics', 'work', 'education', 'skills', 'projects']}
+            sectionOrder={['personal_header', 'work_experience', 'education', 'skills', 'projects']}
             sectionVisibility={{
-              basics: true,
-              work: true,
+              personal_header: true,
+              work_experience: true,
               education: true,
               skills: true,
               projects: true,
@@ -152,10 +152,10 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
             cvData={sampleCVData}
             theme="light"
             showBadge={false}
-            sectionOrder={['basics', 'work', 'education', 'skills', 'projects']}
+            sectionOrder={['personal_header', 'work_experience', 'education', 'skills', 'projects']}
             sectionVisibility={{
-              basics: true,
-              work: true,
+              personal_header: true,
+              work_experience: true,
               education: true,
               skills: true,
               projects: true,

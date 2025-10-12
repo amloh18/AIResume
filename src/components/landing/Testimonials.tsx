@@ -196,7 +196,7 @@ const Testimonials = () => {
             </span>
           </h2>
           <p className="text-xl text-white/70 max-w-3xl mx-auto leading-relaxed">
-            Join thousands of successful job seekers who have landed their dream positions using CVCircle.
+            Join thousands of successful job seekers who have landed their dream positions using <span className="text-lime-400">CV</span><span className="text-white/70">Circle.io</span>.
           </p>
         </motion.div>
 

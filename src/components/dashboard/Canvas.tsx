@@ -48,15 +48,16 @@ import CVPreviewContent from '@/components/studio/CVPreviewContent';
 import PageHeader from './PageHeader';
 import { useUserData, getUserDisplayName, getUserEmail, getUserAvatar } from '@/lib/hooks/useUserData';
 import { authenticatedFetch } from '@/lib/utils/apiUtils';
-import { useJourneyLinking } from '@/lib/services/journeyLinkingService';
 import { ApplicationPackageService } from '@/lib/services/applicationPackageService';
 import { UnifiedCVService } from '@/lib/services/unified-cv-service';
+import { useNotifications } from '@/contexts/NotificationContext';
 import MasterCVCardOverlay from './MasterCVCardOverlay';
 import CVCardOverlay from './CVCardOverlay';
 import CoverLetterCardOverlay from './CoverLetterCardOverlay';
 import ApplicationJourneyModal from './ApplicationJourneyModal';
 import { useOptimizedDataFetching } from '@/lib/hooks/useOptimizedDataFetching';
 import { CanvasSkeleton } from '@/components/ui/OptimizedSkeletons';
+import { formatCardTime } from '@/lib/utils/timeUtils';
 
 interface CV {
   id: string;
@@ -185,7 +186,7 @@ const Modal: React.FC<ModalProps> = ({
             <h3 className="text-lg font-semibold text-white">{title}</h3>
             <button
               onClick={onClose}
-              className="ml-auto p-1 hover:bg-white/10 rounded-lg transition-colors"
+                className="ml-auto p-1 hover:bg-gray-200 dark:hover:bg-white/10 rounded-lg transition-colors"
             >
               <X className="w-5 h-5 text-white/60" />
             </button>
@@ -199,7 +200,7 @@ const Modal: React.FC<ModalProps> = ({
             {type === 'confirmation' && (
               <button
                 onClick={onClose}
-                className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
+                className="px-4 py-2 bg-gray-700 dark:bg-white/10 hover:bg-gray-600 dark:hover:bg-white/20 text-white rounded-lg transition-colors"
               >
                 {cancelText}
               </button>
@@ -465,20 +466,7 @@ const Canvas: React.FC = () => {
   const [coverLetters, setCoverLetters] = useState<CoverLetter[]>([]);
   const [availableJobs, setAvailableJobs] = useState<Job[]>([]);
   const [linkingJobCVId, setLinkingJobCVId] = useState<string | null>(null);
-  const [toasts, setToasts] = useState<Array<{
-    id: string;
-    type: 'success' | 'error' | 'info';
-    message: string;
-    duration?: number;
-  }>>([]);
-  const [notifications, setNotifications] = useState<Array<{
-    id: string;
-    type: 'success' | 'error' | 'info' | 'warning';
-    title: string;
-    message: string;
-    timestamp: Date;
-    read: boolean;
-  }>>([]);
+  const { notifications, addNotification, markAsRead, markAllAsRead, removeNotification } = useNotifications();
   const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
   // userProfile is now handled by the useUserData hook
   
@@ -506,55 +494,16 @@ const Canvas: React.FC = () => {
     setModalConfig(prev => ({ ...prev, isOpen: false }));
   };
 
-  // Toast notification functions
+  // Notification functions (using unified notification system)
   const addToast = (type: 'success' | 'error' | 'info', message: string, duration: number = 4000) => {
-    const id = Math.random().toString(36).substr(2, 9);
-    const newToast = { id, type, message, duration };
-    setToasts(prev => [...prev, newToast]);
-
-    // Auto remove toast after duration
-    setTimeout(() => {
-      removeToast(id);
-    }, duration);
-  };
-
-  const removeToast = (id: string) => {
-    setToasts(prev => prev.filter(toast => toast.id !== id));
-  };
-
-  // Notification functions
-  const addNotification = (type: 'success' | 'error' | 'info' | 'warning', title: string, message: string) => {
-    const id = Math.random().toString(36).substr(2, 9);
-    const newNotification = {
-      id,
+    addNotification({
       type,
-      title,
+      title: type === 'success' ? 'Success' : type === 'error' ? 'Error' : 'Info',
       message,
-      timestamp: new Date(),
-      read: false
-    };
-    setNotifications(prev => [newNotification, ...prev]);
+      persistent: false
+    });
   };
 
-  const markNotificationAsRead = (id: string) => {
-    setNotifications(prev => 
-      prev.map(notification => 
-        notification.id === id 
-          ? { ...notification, read: true }
-          : notification
-      )
-    );
-  };
-
-  const markAllNotificationsAsRead = () => {
-    setNotifications(prev => 
-      prev.map(notification => ({ ...notification, read: true }))
-    );
-  };
-
-  const removeNotification = (id: string) => {
-    setNotifications(prev => prev.filter(notification => notification.id !== id));
-  };
 
   // Load CVs and Cover Letters from API
   useEffect(() => {
@@ -624,15 +573,17 @@ const Canvas: React.FC = () => {
           return {
             id: cv.id,
             title: cv.title || 'Untitled CV',
-            lastModified: formatTimeAgo(new Date(cv.metadata?.lastModified || cv.updatedAt || cv.createdAt)),
+            lastModified: cv.metadata?.lastModified || cv.updatedAt || cv.createdAt,
             status: cv.status || 'draft',
             views: cv.metadata?.viewCount || 0,
             isStarred: cv.metadata?.starred || false,
-            thumbnail: cv.metadata?.thumbnailUrl || '/api/placeholder/300/200',
+            thumbnail: cv.metadata?.thumbnailUrl,
             description: cv.description || '',
             cvData: cv.cvData || null, // Include CV data for preview
             completionPercentage: calculateCompletionPercentage(cv),
-            isMaster: cv.metadata?.isMaster || false // Include master flag
+            isMaster: cv.metadata?.isMaster || false, // Include master flag
+            atsScore: cv.metadata?.atsScore, // Include ATS score
+            metadata: cv.metadata // Include full metadata
           };
         });
         
@@ -874,20 +825,7 @@ const Canvas: React.FC = () => {
   
 
   const formatTimeAgo = (date: Date) => {
-    const now = new Date();
-    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-    
-    if (diffInHours < 1) return 'Just now';
-    if (diffInHours < 24) return `${diffInHours} hours ago`;
-    
-    const diffInDays = Math.floor(diffInHours / 24);
-    if (diffInDays < 7) return `${diffInDays} days ago`;
-    
-    const diffInWeeks = Math.floor(diffInDays / 7);
-    if (diffInWeeks < 4) return `${diffInWeeks} weeks ago`;
-    
-    const diffInMonths = Math.floor(diffInDays / 30);
-    return `${diffInMonths} months ago`;
+    return formatCardTime(date);
   };
 
 
@@ -1074,7 +1012,13 @@ const Canvas: React.FC = () => {
 
   const handleDeleteCoverLetter = async (coverLetter: CoverLetter) => {
     try {
-      const response = await authenticatedFetch(`/api/cover-letters/${coverLetter.id}`, {
+      const userId = getUserIdForAPI(user);
+      if (!userId) {
+        addToast('error', 'User not authenticated');
+        return;
+      }
+
+      const response = await authenticatedFetch(`/api/cover-letters/${coverLetter.id}?userId=${userId}`, {
         method: 'DELETE',
       });
 
@@ -1082,7 +1026,9 @@ const Canvas: React.FC = () => {
         setCoverLetters(coverLetters.filter(cl => cl.id !== coverLetter.id));
         addToast('success', 'Cover letter deleted successfully');
       } else {
-        addToast('error', 'Failed to delete cover letter');
+        const errorData = await response.json();
+        console.error('Delete cover letter error:', errorData);
+        addToast('error', errorData.error || 'Failed to delete cover letter');
       }
     } catch (error) {
       console.error('Error deleting cover letter:', error);
@@ -1242,10 +1188,8 @@ const Canvas: React.FC = () => {
       const userId = getUserIdForAPI(user);
       if (!userId) return;
 
-      // Use centralized journey linking service
-      const { linkJobToCV: linkJobToCVService } = useJourneyLinking();
-      
-      const result = await linkJobToCVService({
+      // Use ApplicationPackageService for proper application package management
+      const result = await ApplicationPackageService.createApplicationPackage({
         jobId,
         cvId,
         userId,
@@ -1360,8 +1304,8 @@ const Canvas: React.FC = () => {
         }}
         showSettings={true}
         notifications={notifications}
-        onMarkAsRead={markNotificationAsRead}
-        onMarkAllAsRead={markAllNotificationsAsRead}
+        onMarkAsRead={markAsRead}
+        onMarkAllAsRead={markAllAsRead}
         onRemoveNotification={removeNotification}
         onMobileMenuToggle={toggleSidebar}
         isMobileMenuOpen={isMobileMenuOpen}
@@ -1372,7 +1316,7 @@ const Canvas: React.FC = () => {
         <motion.button
           onClick={() => setActiveTab('cv')}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
-            activeTab === 'cv' ? 'bg-lime-400/20 text-lime-400 border border-lime-400/30' : 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-white/60 border border-gray-200 dark:border-white/10 hover:bg-gray-200 dark:hover:bg-white/10'
+            activeTab === 'cv' ? 'bg-lime-400/20 text-lime-400 border border-lime-400/30' : 'bg-gray-700 dark:bg-white/5 text-white dark:text-white/60 border border-gray-600 dark:border-white/10 hover:bg-gray-600 dark:hover:bg-white/10'
           }`}
           whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
         >
@@ -1382,7 +1326,7 @@ const Canvas: React.FC = () => {
         <motion.button
           onClick={() => setActiveTab('coverLetter')}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
-            activeTab === 'coverLetter' ? 'bg-blue-400/20 text-blue-400 border border-blue-400/30' : 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-white/60 border border-gray-200 dark:border-white/10 hover:bg-gray-200 dark:hover:bg-white/10'
+            activeTab === 'coverLetter' ? 'bg-blue-400/20 text-blue-400 border border-blue-400/30' : 'bg-gray-700 dark:bg-white/5 text-white dark:text-white/60 border border-gray-600 dark:border-white/10 hover:bg-gray-600 dark:hover:bg-white/10'
           }`}
           whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
         >
@@ -1498,7 +1442,7 @@ const Canvas: React.FC = () => {
           </div>
         </div>
 
-        <div className="grid gap-6 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {/* Master CV Card - Always First */}
           <MasterCVCardOverlay
             onEditMasterCV={handleEditMasterCV}
@@ -1512,9 +1456,9 @@ const Canvas: React.FC = () => {
             // Loading skeleton
             Array.from({ length: 4 }).map((_, index) => (
               <div key={index} className="frosted-glass-card rounded-2xl p-6 animate-pulse">
-                <div className="h-48 bg-white/10 rounded-lg mb-4"></div>
-                <div className="h-4 bg-white/10 rounded mb-2"></div>
-                <div className="h-3 bg-white/10 rounded w-2/3"></div>
+                <div className="h-48 bg-gray-200 dark:bg-white/10 rounded-lg mb-4"></div>
+                <div className="h-4 bg-gray-200 dark:bg-white/10 rounded mb-2"></div>
+                <div className="h-3 bg-gray-200 dark:bg-white/10 rounded w-2/3"></div>
               </div>
             ))
           ) : (
@@ -1693,7 +1637,7 @@ const Canvas: React.FC = () => {
                 </motion.button>
               </div>
 
-              <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
                 {coverLetters.map((coverLetter) => (
                   <CoverLetterCardOverlay
                     key={coverLetter.id}
@@ -1777,7 +1721,7 @@ const Canvas: React.FC = () => {
                 </div>
                 <motion.button
                   onClick={() => setShowModal(false)}
-                  className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                  className="p-2 rounded-lg bg-gray-700 dark:bg-white/10 hover:bg-gray-600 dark:hover:bg-white/20 transition-colors"
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                   aria-label="Close modal"
@@ -1797,7 +1741,7 @@ const Canvas: React.FC = () => {
                       </h3>
                       
                     {/* CV Preview - Using CVPreviewContent component */}
-                      <div className="bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl p-4 h-96 overflow-hidden">
+                      <div className="bg-gray-300 dark:bg-white/5 border border-gray-400 dark:border-white/10 rounded-xl p-4 h-96 overflow-hidden text-gray-900 dark:text-white">
                         {selectedCV.cvData ? (
                           <div className="h-full flex items-center justify-center">
                             <div className="transform scale-[0.35] origin-center">
@@ -1846,7 +1790,7 @@ const Canvas: React.FC = () => {
                         
                         <div className="relative group">
                         <motion.button
-                            className="px-4 py-2 bg-white/10 border border-white/20 text-white font-medium rounded-lg hover:bg-white/20 transition-all duration-300 flex items-center gap-2 text-sm"
+                            className="px-4 py-2 bg-gray-700 dark:bg-white/10 border border-gray-600 dark:border-white/20 text-white font-medium rounded-lg hover:bg-gray-600 dark:hover:bg-white/20 transition-all duration-300 flex items-center gap-2 text-sm"
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                         >
@@ -1855,11 +1799,11 @@ const Canvas: React.FC = () => {
                         </motion.button>
                           <div className="absolute top-full left-0 mt-1 bg-gray-900 border border-white/20 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
                             <div className="p-1">
-                              <button className="w-full px-3 py-2 text-left text-white/80 hover:text-white hover:bg-white/10 rounded text-sm flex items-center gap-2">
+                              <button className="w-full px-3 py-2 text-left text-white/80 hover:text-white hover:bg-white/80 dark:hover:bg-white/10 rounded text-sm flex items-center gap-2">
                                 <FileText size={12} />
                                 Download CV (PDF)
                               </button>
-                              <button className="w-full px-3 py-2 text-left text-white/40 hover:text-white hover:bg-white/10 rounded text-sm flex items-center gap-2" disabled>
+                              <button className="w-full px-3 py-2 text-left text-white/40 hover:text-white hover:bg-white/80 dark:hover:bg-white/10 rounded text-sm flex items-center gap-2" disabled>
                                 <PenTool size={12} />
                                 Download Cover Letter (PDF)
                               </button>
@@ -1868,7 +1812,7 @@ const Canvas: React.FC = () => {
                         </div>
                         
                         <motion.button
-                          className="px-4 py-2 bg-white/10 border border-white/20 text-white font-medium rounded-lg hover:bg-white/20 transition-all duration-300 flex items-center gap-2 text-sm"
+                          className="px-4 py-2 bg-white/80 dark:bg-white/10 border border-white/40 dark:border-white/20 text-white font-medium rounded-lg hover:bg-white/90 dark:hover:bg-white/20 transition-all duration-300 flex items-center gap-2 text-sm"
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                         >
@@ -1884,7 +1828,7 @@ const Canvas: React.FC = () => {
                         <label className="text-white/80 text-sm font-medium">Linked Jobs:</label>
                         <div className="flex-1 min-w-0">
                           <select 
-                            className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:border-lime-400/50"
+                            className="w-full px-3 py-2 bg-gray-700 dark:bg-white/10 border border-gray-600 dark:border-white/20 rounded-lg text-white text-sm focus:outline-none focus:border-lime-400/50"
                             onChange={(e) => {
                               console.log('🔍 Canvas - Job selection changed:', e.target.value);
                               // Here you would link the selected job to the CV
@@ -1938,56 +1882,6 @@ const Canvas: React.FC = () => {
         cancelText={modalConfig.cancelText}
       />
 
-      {/* Toast Notifications */}
-      <div className="fixed bottom-4 right-4 z-50 space-y-2">
-        <AnimatePresence>
-          {toasts.map((toast) => (
-            <motion.div
-              key={toast.id}
-              initial={{ opacity: 0, x: 300, scale: 0.8 }}
-              animate={{ opacity: 1, x: 0, scale: 1 }}
-              exit={{ opacity: 0, x: 300, scale: 0.8 }}
-              transition={{ duration: 0.3, ease: "easeOut" }}
-              className={`min-w-80 max-w-md w-auto bg-white dark:bg-gray-800 border-l-4 shadow-lg rounded-lg p-4 ${
-                toast.type === 'success' ? 'border-l-green-500' :
-                toast.type === 'error' ? 'border-l-red-500' :
-                'border-l-blue-500'
-              }`}
-            >
-              <div className="flex items-start">
-                <div className="flex-shrink-0">
-                  {toast.type === 'success' && (
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                  )}
-                  {toast.type === 'error' && (
-                    <AlertCircle className="h-5 w-5 text-red-500" />
-                  )}
-                  {toast.type === 'info' && (
-                    <AlertTriangle className="h-5 w-5 text-blue-500" />
-                  )}
-                </div>
-                <div className="ml-3 w-0 flex-1">
-                  <p className={`text-sm font-medium ${
-                    toast.type === 'success' ? 'text-green-800 dark:text-green-200' :
-                    toast.type === 'error' ? 'text-red-800 dark:text-red-200' :
-                    'text-blue-800 dark:text-blue-200'
-                  }`}>
-                    {toast.message}
-                  </p>
-                </div>
-                <div className="ml-4 flex-shrink-0 flex">
-                  <button
-                    className="inline-flex text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 focus:outline-none"
-                    onClick={() => removeToast(toast.id)}
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </div>
 
       {/* ApplicationJourneyModal */}
       {showJourneyModal && selectedJobForJourney && (

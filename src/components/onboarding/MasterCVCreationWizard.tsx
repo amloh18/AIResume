@@ -4,6 +4,7 @@ import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ArrowRight, CheckCircle, User, Briefcase, GraduationCap, Award, Star, Upload, FileText, X, Trash2, Code } from 'lucide-react';
 import { useOnboarding } from '@/contexts/OnboardingContext';
+import { adaptMasterCVToUnified, MasterCVOnboardingData } from '@/lib/data-adapters/cv-data-adapter';
 
 interface MasterCVCreationWizardProps {
   onComplete: () => void;
@@ -67,28 +68,23 @@ const MasterCVCreationWizard: React.FC<MasterCVCreationWizardProps> = ({ onCompl
   // Helper function to format dates for month input (YYYY-MM format) - from CVUpload
   const asMonth = (value: any): string => {
     if (!value || typeof value !== 'string') {
-      console.log('🔍 asMonth: Invalid input:', value, 'type:', typeof value);
       return '';
     }
     const trimmed = value.trim();
-    console.log('🔍 asMonth processing:', trimmed);
     
     // Accept YYYY-MM, YYYY-MM-DD, YYYY
     const yyyyMm = trimmed.match(/^\d{4}-(0[1-9]|1[0-2])$/);
     if (yyyyMm) {
-      console.log('✅ asMonth: YYYY-MM format:', yyyyMm[0]);
       return yyyyMm[0];
     }
     const yyyyMmDd = trimmed.match(/^(\d{4})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/);
     if (yyyyMmDd) {
       const result = `${yyyyMmDd[1]}-${yyyyMmDd[2]}`;
-      console.log('✅ asMonth: YYYY-MM-DD format:', trimmed, '->', result);
       return result;
     }
     const yyyy = trimmed.match(/^(\d{4})$/);
     if (yyyy) {
       const result = `${yyyy[1]}-01`;
-      console.log('✅ asMonth: YYYY format:', trimmed, '->', result);
       return result;
     }
     
@@ -99,14 +95,11 @@ const MasterCVCreationWizard: React.FC<MasterCVCreationWizardProps> = ({ onCompl
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const result = `${year}-${month}`;
-        console.log('✅ asMonth: Parsed date:', trimmed, '->', result);
         return result;
       }
     } catch (error) {
-      console.log('❌ asMonth: Failed to parse date:', trimmed, error);
     }
     
-    console.log('❌ asMonth: No match for:', trimmed);
     return '';
   };
 
@@ -123,7 +116,6 @@ const MasterCVCreationWizard: React.FC<MasterCVCreationWizardProps> = ({ onCompl
   };
 
   const mapParsedDataToForm = (data: any) => {
-    console.log('🔍 MasterCVCreationWizard - Mapping parsed data:', data);
     
     // Handle direct parsing API structure (CVData interface)
     if (data.personalInfo && data.education && data.experience && data.skills && data.projects) {
@@ -218,12 +210,10 @@ const MasterCVCreationWizard: React.FC<MasterCVCreationWizardProps> = ({ onCompl
       }
       
       const result = await response.json();
-      console.log('🔍 MasterCVCreationWizard - CV parsing result:', result);
       
       if (result.personalInfo || result.basics) {
         // Map the parsed data to our form structure
         const mappedData = mapParsedDataToForm(result);
-        console.log('🔍 MasterCVCreationWizard - Mapped data:', mappedData);
         
         // Update the onboarding context with parsed information
         dispatch({
@@ -274,7 +264,6 @@ const MasterCVCreationWizard: React.FC<MasterCVCreationWizardProps> = ({ onCompl
         });
         
         setShowUpload(false);
-        console.log('✅ MasterCVCreationWizard - CV data updated successfully');
       } else {
         setUploadError('Failed to parse CV data');
       }
@@ -370,14 +359,15 @@ const MasterCVCreationWizard: React.FC<MasterCVCreationWizardProps> = ({ onCompl
         }] : state.cvData.languages
       };
 
-      console.log('🔍 MasterCVCreationWizard - Ensuring CV data has starter items for all sections');
-      console.log('📊 CV Data sections populated:', {
-        work: completeCVData.work.length,
-        education: completeCVData.education.length,
-        skills: completeCVData.skills.length,
-        projects: completeCVData.projects.length,
-        certificates: completeCVData.certificates.length,
-        languages: completeCVData.languages.length
+      // Update progress with complete data
+      dispatch({
+        type: 'UPDATE_PROGRESS',
+        payload: {
+          skills: completeCVData.skills.length,
+          projects: completeCVData.projects.length,
+          certificates: completeCVData.certificates.length,
+          languages: completeCVData.languages.length
+        }
       });
       
       // Update CV data with complete structure

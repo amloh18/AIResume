@@ -14,8 +14,7 @@ const Logo = ({ className = '', size = 'md' }: LogoProps) => {
 
   return (
     <div className={`font-black font-sans ${sizeClasses[size]} ${className}`} style={{ fontWeight: 900 }}>
-      <span className="text-lime-400">CV</span>
-      <span className="text-gray-600">CIRCLE</span>
+      <span className="text-lime-400">CV</span><span className="text-gray-600 dark:text-gray-300">Circle.io</span>
     </div>
   );
 };

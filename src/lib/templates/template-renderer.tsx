@@ -1,10 +1,12 @@
 import React from 'react';
-import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ITemplate, ISectionBlueprint } from '@/models/Template';
 import { generateTemplateCSS } from './default-template';
+import { convertToTemplateSectionOrder } from '@/lib/section-mapping';
 
 // Component registry for dynamic section rendering
 import PersonalHeader from '@/components/cv-sections/PersonalHeader';
+import Profile from '@/components/cv-sections/Profile';
 import WorkExperience from '@/components/cv-sections/WorkExperience';
 import Education from '@/components/cv-sections/Education';
 import Skills from '@/components/cv-sections/Skills';
@@ -18,21 +20,41 @@ import Publications from '@/components/cv-sections/Publications';
 // Component registry mapping
 const COMPONENT_REGISTRY: Record<string, React.ComponentType<any>> = {
   PersonalHeader,
+  PersonalHeaderSection: PersonalHeader, // Alias
+  HeaderSection: PersonalHeader, // Alias for new naming
+  Profile,
+  ProfileSection: Profile, // Alias
   WorkExperience,
+  WorkExperienceSection: WorkExperience, // Alias
+  ExperienceSection: WorkExperience, // Alias for new naming
   Education,
+  EducationSection: Education, // Alias for new naming
   Skills,
+  SkillsSection: Skills, // Alias for new naming
   Projects,
+  ProjectsSection: Projects, // Alias for new naming
   Certificates,
+  CertificatesSection: Certificates, // Alias for new naming
   Languages,
+  LanguagesSection: Languages, // Alias for new naming
   Volunteer,
+  VolunteerSection: Volunteer, // Alias for new naming
   Awards,
-  Publications
+  AwardsSection: Awards, // Alias for new naming
+  Publications,
+  PublicationsSection: Publications, // Alias for new naming
+  SummarySection: Profile, // Use Profile for summary section
+  ContactSection: PersonalHeader // Use PersonalHeader for contact
 };
 
 // Data mapping interface for CV sections
 interface SectionDataMapping {
   personal_header: 'basics';
+  header: 'basics';
+  summary: 'basics';
+  profile: 'basics';
   work_experience: 'work';
+  experience: 'work';
   education: 'education';
   skills: 'skills';
   projects: 'projects';
@@ -41,11 +63,16 @@ interface SectionDataMapping {
   volunteer: 'volunteer';
   awards: 'awards';
   publications: 'publications';
+  contact: 'basics';
 }
 
 const SECTION_DATA_MAP: Record<keyof SectionDataMapping, keyof UnifiedCVDataStructure> = {
   personal_header: 'basics',
+  header: 'basics',
+  summary: 'basics',
+  profile: 'basics',
   work_experience: 'work',
+  experience: 'work',
   education: 'education',
   skills: 'skills',
   projects: 'projects',
@@ -53,7 +80,8 @@ const SECTION_DATA_MAP: Record<keyof SectionDataMapping, keyof UnifiedCVDataStru
   languages: 'languages',
   volunteer: 'volunteer',
   awards: 'awards',
-  publications: 'publications'
+  publications: 'publications',
+  contact: 'basics'
 };
 
 export interface TemplateRendererProps {
@@ -78,20 +106,34 @@ export const TemplateRenderer: React.FC<TemplateRendererProps> = ({
   // Generate CSS variables from template styles
   const templateCSS = generateTemplateCSS(template.globalStyles);
   
+  // Convert frontend section order to template section order
+  const templateSectionOrder = sectionOrder ? convertToTemplateSectionOrder(sectionOrder) : undefined;
+  
   // Determine which sections to render
-  const sectionsToRender = getSectionsToRender(
+  let sectionsToRender = getSectionsToRender(
     template.availableSections,
-    sectionOrder,
+    templateSectionOrder,
     sectionVisibility,
     enabledSections
   );
+  
+  // CRITICAL: Ensure personal_header is ALWAYS first, regardless of any other logic
+  sectionsToRender = sectionsToRender.sort((a, b) => {
+    if (a.key === 'personal_header') return -1;
+    if (b.key === 'personal_header') return 1;
+    return 0;
+  });
+
 
   // Check if section has data
   const hasDataForSection = (sectionKey: string): boolean => {
     const dataKey = SECTION_DATA_MAP[sectionKey as keyof SectionDataMapping];
-    if (!dataKey || !cvData[dataKey]) return false;
+    if (!dataKey) return false;
 
     const data = cvData[dataKey];
+    
+    // If no data exists, return false
+    if (!data) return false;
     
     // For array sections, check if array has items
     if (Array.isArray(data)) {
@@ -130,10 +172,8 @@ export const TemplateRenderer: React.FC<TemplateRendererProps> = ({
         }}
       >
         {sectionsToRender.map((section) => {
-          // Skip sections with no data (unless it's a required section)
-          if (!hasDataForSection(section.key) && !section.minItems) {
-            return null;
-          }
+          // Always render sections that are in the template, regardless of data
+          // The section components themselves will handle empty data gracefully
 
           const Component = COMPONENT_REGISTRY[section.componentName];
           if (!Component) {
@@ -184,7 +224,7 @@ function getSectionsToRender(
   }
 
   // Apply custom order if provided
-  if (sectionOrder) {
+  if (sectionOrder && sectionOrder.length > 0) {
     const orderMap = new Map(sectionOrder.map((key, index) => [key, index]));
     sectionsToRender.sort((a, b) => {
       const aOrder = orderMap.get(a.key) ?? 999;
@@ -192,6 +232,7 @@ function getSectionsToRender(
       return aOrder - bOrder;
     });
   }
+  // Note: personal_header priority is enforced at the renderer level
 
   return sectionsToRender;
 }
@@ -313,7 +354,7 @@ export function generateTemplatePreview(template: ITemplate): UnifiedCVDataStruc
         name: 'Portfolio Website',
         startDate: '2023-01',
         endDate: '2023-03',
-        description: 'Personal portfolio built with React and Next.js',
+        description: '',
         highlights: ['Responsive design', 'SEO optimized'],
         url: 'https://janedoe.dev'
       }

@@ -2,6 +2,7 @@ import React from 'react';
 import { Calendar, MapPin, ExternalLink } from 'lucide-react';
 import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ISectionBlueprint, ITemplate } from '@/models/Template';
+import { parseFormattedText, formatDate, formatDateRange } from '@/lib/utils/textFormatting';
 
 interface WorkExperienceProps {
   data: UnifiedCVDataStructure['work'];
@@ -16,26 +17,11 @@ const WorkExperience: React.FC<WorkExperienceProps> = ({
   template, 
   cvData 
 }) => {
+  // Don't render if no data
   if (!data || data.length === 0) return null;
+  
+  const work = data;
 
-  const formatDate = (dateString: string) => {
-    if (!dateString) return '';
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('en-US', { 
-        year: 'numeric', 
-        month: 'short' 
-      });
-    } catch {
-      return dateString;
-    }
-  };
-
-  const formatDateRange = (startDate: string, endDate: string) => {
-    const start = formatDate(startDate);
-    const end = endDate ? formatDate(endDate) : 'Present';
-    return `${start} - ${end}`;
-  };
 
   const calculateDuration = (startDate: string, endDate: string) => {
     if (!startDate) return '';
@@ -65,50 +51,27 @@ const WorkExperience: React.FC<WorkExperienceProps> = ({
       </h2>
       
       <div className="experience-list">
-        {data.map((job, index) => (
+        {work.map((job, index) => (
           <div key={index} className="experience-item">
             <div className="item-header">
               <div className="item-title-group">
                 <h3 className="item-title">
-                  {job.position || 'Position Title'}
+                  {job.position || 'Position Title'}, {job.name || 'Company Name'}
                 </h3>
-                <div className="company-info">
-                  <span className="company-name">
-                    {job.name || 'Company Name'}
-                  </span>
-                  {job.url && (
-                    <a 
-                      href={job.url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="company-link"
-                      aria-label={`Visit ${job.name} website`}
-                    >
-                      <ExternalLink size={12} />
-                    </a>
-                  )}
-                </div>
               </div>
               
               <div className="item-date-group">
                 <div className="item-date">
-                  <Calendar size={12} />
-                  <span>
-                    {formatDateRange(job.startDate, job.endDate)}
-                  </span>
+                  {formatDateRange(job.startDate, job.endDate)}
                 </div>
-                {job.startDate && (
-                  <div className="duration">
-                    {calculateDuration(job.startDate, job.endDate)}
-                  </div>
-                )}
               </div>
             </div>
 
             {job.summary && (
-              <div className="item-summary">
-                <p>{job.summary}</p>
-              </div>
+              <div 
+                className="item-summary"
+                dangerouslySetInnerHTML={{ __html: parseFormattedText(job.summary) }}
+              />
             )}
 
             {job.highlights && job.highlights.length > 0 && (
@@ -132,19 +95,19 @@ const WorkExperience: React.FC<WorkExperienceProps> = ({
         .experience-list {
           display: flex;
           flex-direction: column;
-          gap: 18px;
+          gap: 12px;
         }
         
         .experience-item {
           page-break-inside: avoid;
-          margin-bottom: 16px;
+          margin-bottom: 12px;
         }
         
         .item-header {
           display: flex;
           justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 8px;
+          align-items: baseline;
+          margin-bottom: 6px;
           gap: 16px;
         }
         
@@ -154,61 +117,48 @@ const WorkExperience: React.FC<WorkExperienceProps> = ({
         }
         
         .item-title {
-          font-size: 12pt;
-          font-weight: 600;
+          font-size: ${template.globalStyles.fontSize};
+          font-weight: 700;
           color: ${template.globalStyles.primaryColor};
-          margin: 0 0 4px 0;
-          line-height: 1.3;
+          margin: 0;
+          line-height: ${template.globalStyles.lineHeight};
         }
         
         .company-info {
-          display: flex;
-          align-items: center;
-          gap: 8px;
+          display: inline;
         }
         
         .company-name {
-          font-size: 11pt;
-          color: ${template.globalStyles.secondaryColor};
-          font-style: italic;
-          font-weight: 500;
+          font-size: ${template.globalStyles.fontSize};
+          color: ${template.globalStyles.primaryColor};
+          font-style: normal;
+          font-weight: 400;
         }
         
         .company-link {
-          color: ${template.globalStyles.secondaryColor};
-          text-decoration: none;
-          display: flex;
-          align-items: center;
-        }
-        
-        .company-link:hover {
           color: ${template.globalStyles.primaryColor};
+          text-decoration: none;
+          display: none;
         }
         
         .item-date-group {
           text-align: right;
           white-space: nowrap;
-          min-width: 140px;
         }
         
         .item-date {
-          display: flex;
-          align-items: center;
-          justify-content: flex-end;
-          gap: 4px;
-          font-size: 10pt;
-          color: ${template.globalStyles.secondaryColor};
-          margin-bottom: 2px;
+          font-size: ${template.globalStyles.fontSize};
+          font-weight: 700;
+          color: ${template.globalStyles.primaryColor};
+          text-align: right;
         }
         
         .duration {
-          font-size: 9pt;
-          color: ${template.globalStyles.secondaryColor};
-          opacity: 0.8;
+          display: none;
         }
         
         .item-summary {
-          margin: 8px 0;
+          margin: 4px 0;
           color: ${template.globalStyles.primaryColor};
           font-size: ${template.globalStyles.fontSize};
           line-height: ${template.globalStyles.lineHeight};
@@ -216,43 +166,32 @@ const WorkExperience: React.FC<WorkExperienceProps> = ({
         
         .item-summary p {
           margin: 0;
-          text-align: justify;
+          text-align: left;
         }
         
         .highlight-list {
-          margin: 8px 0 0 16px;
+          margin: 4px 0 0 20px;
           padding: 0;
+          list-style-type: none;
         }
         
         .highlight-list li {
-          margin-bottom: 4px;
+          margin-bottom: 3px;
           line-height: ${template.globalStyles.lineHeight};
           color: ${template.globalStyles.primaryColor};
           font-size: ${template.globalStyles.fontSize};
+          position: relative;
+          padding-left: 15px;
         }
         
-        @media (max-width: 768px) {
-          .item-header {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 8px;
-          }
-          
-          .item-date-group {
-            text-align: left;
-            min-width: auto;
-          }
-          
-          .item-date {
-            justify-content: flex-start;
-          }
+        .highlight-list li::before {
+          content: '•';
+          position: absolute;
+          left: 0;
+          color: ${template.globalStyles.primaryColor};
         }
         
         @media print {
-          .company-link {
-            color: inherit !important;
-          }
-          
           .experience-item {
             break-inside: avoid;
           }

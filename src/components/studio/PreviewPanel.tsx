@@ -42,6 +42,7 @@ interface PreviewPanelProps {
   setPagePadding: (padding: { top: number; bottom: number }) => void;
   onDocumentTypeChange?: (type: 'cv' | 'cover-letter') => void;
   isMasterCV?: boolean;
+  coverLetterData?: any;
 }
 
 const PreviewPanel: React.FC<PreviewPanelProps> = ({
@@ -53,14 +54,15 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
   paperSize,
   setPaperSize,
   documentType,
-  sectionOrder = ['basics', 'work', 'education', 'skills', 'projects', 'certificates', 'languages'],
+  sectionOrder = ['personal_header', 'work_experience', 'education', 'skills', 'projects', 'certificates', 'languages'],
   sectionVisibility = {},
   pagePadding,
   setPagePadding,
   onDocumentTypeChange,
-  isMasterCV = false
+  isMasterCV = false,
+  coverLetterData
 }) => {
-  console.log('PreviewPanel received cvData:', cvData);
+  // Removed console log to prevent toast notifications
   
   const { theme } = useTheme();
   const [currentPage, setCurrentPage] = useState(1);
@@ -189,8 +191,7 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
     const customCSS = template?.customCSS || template?.globalStyles?.customCSS;
     const templateName = template?.name;
     
-    console.log('PreviewPanel - Template:', template);
-    console.log('PreviewPanel - Template Styles:', templateStyles);
+    // Removed console logs to prevent toast notifications
     
     return (
       <div 
@@ -198,7 +199,6 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
         className="relative bg-white shadow-lg mx-auto"
         style={{
           width: currentDimensions.width,
-          minHeight: currentDimensions.height,
           transform: `scale(${zoom})`,
           transformOrigin: 'top center',
           marginTop: '0',
@@ -236,16 +236,18 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
   const renderCoverLetterPreview = () => {
     return (
       <div 
-        className="bg-white shadow-lg mx-auto"
+        ref={contentRef}
+        className="relative bg-white shadow-lg mx-auto"
         style={{
-          width: currentDimensions.width * zoom,
-          height: currentDimensions.height * zoom,
+          width: currentDimensions.width,
           transform: `scale(${zoom})`,
-          transformOrigin: 'top center'
+          transformOrigin: 'top center',
+          marginTop: '0',
+          marginBottom: '0'
         }}
       >
         <CoverLetterPreview
-          content={cvData?.basics?.summary || ''}
+          content={coverLetterData?.content || ''}
           cvData={cvData}
           jobData={jobData}
           selectedCVData={null}

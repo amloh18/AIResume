@@ -28,6 +28,7 @@ import {
 import { useSession } from 'next-auth/react';
 import { v4 as uuidv4 } from 'uuid';
 import { ApplicationPackageService } from '@/lib/services/applicationPackageService';
+import { useNotifications } from '@/contexts/NotificationContext';
 
 interface Job {
   id?: string;
@@ -72,6 +73,7 @@ const AddEditJobModal: React.FC<AddEditJobModalProps> = ({
   userId
 }) => {
   const { data: session } = useSession();
+  const { addNotification } = useNotifications();
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
@@ -109,9 +111,10 @@ const AddEditJobModal: React.FC<AddEditJobModalProps> = ({
   const [jobDescriptionCount, setJobDescriptionCount] = useState(0);
   const [notesCount, setNotesCount] = useState(0);
 
-  // Initialize form data when editingJob changes
+  // Initialize form data when editingJob changes or modal opens
   useEffect(() => {
     if (editingJob) {
+      // Editing existing job - populate with job data
       const data = {
         ...editingJob,
         tags: editingJob.tags || [],
@@ -121,6 +124,7 @@ const AddEditJobModal: React.FC<AddEditJobModalProps> = ({
       setFormData(data);
       lastSavedDataRef.current = data;
     } else {
+      // Creating new job - reset to clean defaults
       const newJobData = {
         id: uuidv4(),
         jobTitle: '',
@@ -147,7 +151,7 @@ const AddEditJobModal: React.FC<AddEditJobModalProps> = ({
       lastSavedDataRef.current = newJobData;
     }
     setHasUnsavedChanges(false);
-  }, [editingJob]);
+  }, [editingJob, isOpen]); // Added isOpen dependency to reset when modal opens
 
   // Update character counters
   useEffect(() => {
@@ -250,18 +254,18 @@ const AddEditJobModal: React.FC<AddEditJobModalProps> = ({
               if (packageResult.success) {
                 console.log('✅ AddEditJobModal - Application Package created:', packageResult.data?.journeyId);
                 
-                // Optionally notify user that the application package is ready
-                // and redirect them to the CV creation step
-                const shouldStartApplication = confirm(
-                  `Job "${savedJob.jobTitle}" has been saved successfully!\n\n` +
-                  `Would you like to start creating your application package (CV + Cover Letter) for this job now?`
-                );
-                
-                if (shouldStartApplication) {
-                  // Navigate to the Studio in CV onboarding mode for this job
-                  window.location.href = `/studio?journeyId=${packageResult.data?.journeyId}&mode=cv-onboarding`;
-                  return; // Exit early to prevent normal close
-                }
+                // Show interactive toast notification instead of browser confirm
+                addNotification({
+                  type: 'success',
+                  title: 'Job Saved Successfully!',
+                  message: `Job "${savedJob.jobTitle}" has been saved successfully! Would you like to start creating your application package (CV + Cover Letter) for this job now?`,
+                  actionRequired: true,
+                  actionLabel: 'Start Application',
+                  onAction: () => {
+                    // Navigate to the Studio in CV onboarding mode for this job
+                    window.location.href = `/studio?journeyId=${packageResult.data?.journeyId}&mode=cv-onboarding`;
+                  }
+                });
               } else {
                 console.warn('⚠️ AddEditJobModal - Failed to create Application Package:', packageResult.message);
                 // Don't fail the job creation if package creation fails
@@ -274,6 +278,29 @@ const AddEditJobModal: React.FC<AddEditJobModalProps> = ({
 
           if (!isAutoSave) {
             onJobSaved(savedJob);
+            // Reset form state after successful save
+            setFormData({
+              jobTitle: '',
+              company: '',
+              location: '',
+              jobUrl: '',
+              jobDescription: '',
+              notes: '',
+              priority: 'medium',
+              status: 'created',
+              deadline: '',
+              applicationDate: '',
+              sponsorship: 'unknown',
+              tags: [],
+              salary: {
+                min: undefined,
+                max: undefined,
+                currency: 'USD',
+                period: 'yearly'
+              },
+              contacts: []
+            });
+            setHasUnsavedChanges(false);
             onClose();
           } else {
             console.log('✅ Auto-save completed successfully');
@@ -312,12 +339,58 @@ const AddEditJobModal: React.FC<AddEditJobModalProps> = ({
     if (hasUnsavedChanges) {
       setShowUnsavedWarning(true);
     } else {
+      // Reset form state when closing
+      setFormData({
+        jobTitle: '',
+        company: '',
+        location: '',
+        jobUrl: '',
+        jobDescription: '',
+        notes: '',
+        priority: 'medium',
+        status: 'created',
+        deadline: '',
+        applicationDate: '',
+        sponsorship: 'unknown',
+        tags: [],
+        salary: {
+          min: undefined,
+          max: undefined,
+          currency: 'USD',
+          period: 'yearly'
+        },
+        contacts: []
+      });
+      setHasUnsavedChanges(false);
       onClose();
     }
   };
 
   const handleConfirmClose = () => {
     setShowUnsavedWarning(false);
+    // Reset form state when confirming close
+    setFormData({
+      jobTitle: '',
+      company: '',
+      location: '',
+      jobUrl: '',
+      jobDescription: '',
+      notes: '',
+      priority: 'medium',
+      status: 'created',
+      deadline: '',
+      applicationDate: '',
+      sponsorship: 'unknown',
+      tags: [],
+      salary: {
+        min: undefined,
+        max: undefined,
+        currency: 'USD',
+        period: 'yearly'
+      },
+      contacts: []
+    });
+    setHasUnsavedChanges(false);
     onClose();
   };
 
@@ -512,7 +585,7 @@ const AddEditJobModal: React.FC<AddEditJobModalProps> = ({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                   <div>
                     <label className="block text-white/80 text-xs font-medium mb-1.5">Priority</label>
                     <select
@@ -523,24 +596,6 @@ const AddEditJobModal: React.FC<AddEditJobModalProps> = ({
                       <option value="low">Low</option>
                       <option value="medium">Medium</option>
                       <option value="high">High</option>
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-white/80 text-xs font-medium mb-1.5">Status</label>
-                    <select
-                      value={formData.status || 'created'}
-                      onChange={(e) => handleFormChange('status', e.target.value)}
-                      className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:border-lime-400/50 focus:outline-none"
-                    >
-                      <option value="created">Created</option>
-                      <option value="applied">Applied</option>
-                      <option value="screening">Screening</option>
-                      <option value="interview">Interview</option>
-                      <option value="offer">Offer</option>
-                      <option value="rejected">Rejected</option>
-                      <option value="accepted">Accepted</option>
-                      <option value="withdrawn">Withdrawn</option>
                     </select>
                   </div>
                   

@@ -26,11 +26,41 @@ yarn-debug.log*
 yarn-error.log*
 
 # local env files
+.env
 .env*.local
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Sensitive files
+firebase-key.json
+*.pem
+*.key
+*.csv
+cookies.txt
 
 # vercel
 .vercel
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts 
+next-env.d.ts
+
+# Test and debug files
+**/test-*.tsx
+**/test-*.ts
+**/debug-*.tsx
+**/debug-*.ts
+*.backup
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db 

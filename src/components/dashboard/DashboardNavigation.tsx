@@ -7,14 +7,12 @@ import { useRouter } from 'next/navigation';
 import { 
   FileText, 
   Briefcase, 
-  MessageSquare, 
   BarChart3,
   Shield,
   Route,
   RefreshCw,
   CheckCircle,
-  Target,
-  Settings
+  Target
 } from 'lucide-react';
 import { getSidebarClasses } from '@/lib/utils/themeUtils';
 
@@ -91,9 +89,7 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
     { id: 'analytics', name: 'Analytics', icon: BarChart3, description: 'Progress Tracking' },
     { id: 'application-tracker', name: 'Application Tracker', icon: Target, description: 'Manage jobs with integrated CV journeys', tourId: 'application-tracker' },
     { id: 'application-journey', name: 'Application Journey', icon: Route, description: 'Guided Application Process', tourId: 'application-journey' },
-    { id: 'canvas', name: 'CV Studio', icon: FileText, description: 'Saved CV/Cover Letters', tourId: 'cv-studio' },
-    { id: 'quillbox', name: 'Snippets', icon: MessageSquare, description: 'Content Library' },
-    { id: 'settings', name: 'Settings', icon: Settings, description: 'Account & preferences', tourId: 'settings' }
+    { id: 'canvas', name: 'CV Studio', icon: FileText, description: 'Saved CV/Cover Letters', tourId: 'cv-studio' }
   ];
 
   const getUserInitials = (name: string) => {
@@ -176,7 +172,9 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
                 <CheckCircle size={20} className="text-gray-900 dark:text-white" />
               </div>
             ) : (
-              <span className="text-lime-600 dark:text-lime-400 drop-shadow-lg">CVCircle.io</span>
+              <span className="drop-shadow-lg">
+                <span className="text-lime-400">CV</span><span className="text-gray-600 dark:text-gray-300">Circle.io</span>
+              </span>
             )}
           </button>
         </div>
@@ -194,7 +192,7 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
               className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-300 group ${
                 activeSection === section.id
                   ? 'bg-gradient-to-r from-lime-100 to-lime-200 dark:from-lime-400/20 dark:to-lime-500/20 border border-lime-300 dark:border-lime-400/30 text-lime-700 dark:text-lime-400 shadow-lg'
-                  : 'text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-gray-700/60'
+                  : 'text-gray-700 dark:text-gray-200 hover:text-white dark:hover:text-white hover:bg-gray-600 dark:hover:bg-gray-700/60'
               }`}
               whileHover={{ x: screenSize === 'tablet' ? 0 : 5, scale: 1.02 }}
               whileTap={{ scale: 0.95 }}

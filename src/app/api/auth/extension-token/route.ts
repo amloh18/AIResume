@@ -1,60 +1,73 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import connectDB from '@/lib/database';
+import { User } from '@/models';
 import jwt from 'jsonwebtoken';
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🔍 Extension Token API - Generating JWT token');
+    console.log('🔍 Extension token request received');
     
-    // Get session from NextAuth
+    // Get the session from NextAuth
     const session = await getServerSession(authOptions);
     
-    if (!session || !session.user) {
-      console.log('❌ Extension Token - No valid session found');
+    if (!session?.user?.email) {
+      console.log('❌ No valid session found');
       return NextResponse.json(
-        { success: false, message: 'No valid session found' },
+        { success: false, error: 'Not authenticated' },
         { status: 401 }
       );
     }
     
-    console.log('✅ Extension Token - Session found for user:', session.user.id);
+    console.log('✅ Valid session found for:', session.user.email);
     
-    // Generate JWT token
-    const token = jwt.sign(
-      { 
-        userId: session.user.id,
-        email: session.user.email,
-        name: session.user.name
+    await connectDB();
+    
+    // Find the user in the database
+    const user = await User.findOne({ email: session.user.email });
+    
+    if (!user) {
+      console.log('❌ User not found in database');
+      return NextResponse.json(
+        { success: false, error: 'User not found' },
+        { status: 404 }
+      );
+    }
+    
+    console.log('✅ User found in database:', user._id);
+    
+    // Create a JWT token for the extension
+    const extensionToken = jwt.sign(
+      {
+        userId: user._id.toString(),
+        email: user.email,
+        type: 'extension'
       },
-      process.env.NEXTAUTH_SECRET || 'fallback-secret',
-      { expiresIn: '7d' } // Token valid for 7 days
+      process.env.NEXTAUTH_SECRET!,
+      { expiresIn: '30d' } // Token valid for 30 days
     );
     
-    console.log('✅ Extension Token - JWT token generated');
+    console.log('✅ Extension token created');
     
     return NextResponse.json({
       success: true,
-      message: 'Token generated successfully',
-      token: token,
+      token: extensionToken,
       user: {
-        id: session.user.id,
-        email: session.user.email,
-        name: session.user.name,
-        image: session.user.image
+        id: user._id.toString(),
+        email: user.email,
+        name: `${user.firstName} ${user.lastName}`,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        avatar: user.avatar
       }
     });
     
-  } catch (error) {
-    console.error('❌ Extension Token - Error:', error);
+  } catch (error: any) {
+    console.error('❌ Extension token error:', error);
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { success: false, error: 'Failed to create extension token' },
       { status: 500 }
     );
   }
-}
-
-// Handle GET requests (for testing)
-export async function GET(request: NextRequest) {
-  return POST(request);
 }

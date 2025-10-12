@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 export interface IUser extends Document {
   // SINGLE SOURCE OF TRUTH: Authentication linking
   authProviderId: string; // The unique string ID from NextAuth
-  authProvider: 'nextauth' | 'local';
+  authProvider: 'nextauth' | 'local' | 'firebase';
   firebaseUid?: string; // Firebase UID for linking with Firebase users
   
   // Core user information
@@ -97,7 +97,7 @@ const userSchema = new Schema<IUser>({
   },
   authProvider: {
     type: String,
-    enum: ['nextauth', 'local'],
+    enum: ['nextauth', 'local', 'firebase'],
     required: false, // Make optional for NextAuth compatibility
     default: 'nextauth',
     index: true

@@ -4,8 +4,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { 
-  BarChart3, Target, Route, FileText, MessageSquare, Settings,
-  Sparkles, Bell, Sun, Moon, Menu, X
+  BarChart3, Target, Route, FileText,
+  Sparkles, Bell, Sun, Moon, Menu, X, Shield
 } from 'lucide-react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
@@ -20,6 +20,9 @@ const OptimizedNavigation: React.FC = () => {
   const { userData } = useUserData();
   const { preloadOnHover } = useRoutePreloader();
   const [activeSection, setActiveSection] = useState('analytics');
+  
+  // Check if user is admin
+  const isAdmin = userData?.role === 'admin';
 
   // Update active section based on current path
   useEffect(() => {
@@ -85,20 +88,6 @@ const OptimizedNavigation: React.FC = () => {
       icon: FileText, 
       description: 'Saved CV/Cover Letters',
       route: '/dashboard/canvas'
-    },
-    { 
-      id: 'quillbox', 
-      name: 'Snippets', 
-      icon: MessageSquare, 
-      description: 'Content Library',
-      route: '/dashboard/quillbox'
-    },
-    { 
-      id: 'settings', 
-      name: 'Settings', 
-      icon: Settings, 
-      description: 'Account & preferences',
-      route: '/dashboard/settings'
     }
   ];
 
@@ -106,9 +95,8 @@ const OptimizedNavigation: React.FC = () => {
     <div className="flex flex-col h-full m-4 bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700">
       {/* Header */}
       <div className="flex items-center justify-center p-6 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center gap-2">
-          <span className="text-2xl font-bold text-lime-500">CV</span>
-          <span className="text-2xl font-bold text-gray-400">Circle</span>
+        <div className="flex items-center">
+          <span className="text-2xl font-bold text-lime-500">CV</span><span className="text-2xl font-bold text-gray-400">Circle.io</span>
         </div>
       </div>
 
@@ -143,6 +131,26 @@ const OptimizedNavigation: React.FC = () => {
         })}
       </nav>
 
+      {/* Admin Button - Only show for admin users */}
+      {isAdmin && (
+        <div className="px-4 pb-4">
+          <motion.button
+            onClick={() => router.push('/admin')}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-left bg-gradient-to-r from-purple-100 to-purple-200 dark:from-purple-400/20 dark:to-purple-500/20 border border-purple-300 dark:border-purple-400/30 text-purple-700 dark:text-purple-400 shadow-lg hover:shadow-xl"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <Shield className="w-5 h-5 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium truncate">Switch to Admin</div>
+              <div className="text-xs text-purple-600 dark:text-purple-300 truncate">
+                Access admin dashboard
+              </div>
+            </div>
+          </motion.button>
+        </div>
+      )}
+
       {/* Membership Card */}
       <div className="p-4">
         <div className="bg-gradient-to-r from-lime-500 to-lime-600 rounded-xl p-4 text-white">
@@ -166,8 +174,21 @@ const OptimizedNavigation: React.FC = () => {
       {/* User Profile */}
       <div className="p-4 border-t border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-lime-400 to-lime-600 flex items-center justify-center text-white text-sm font-medium">
-            {getUserDisplayName(userData).charAt(0)}
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-lime-400 to-lime-600 flex items-center justify-center text-white text-sm font-medium overflow-hidden">
+            {getUserAvatar(userData) ? (
+              <img 
+                src={getUserAvatar(userData)} 
+                alt={getUserDisplayName(userData)}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  e.currentTarget.nextElementSibling.style.display = 'flex';
+                }}
+              />
+            ) : null}
+            <div style={{ display: getUserAvatar(userData) ? 'none' : 'flex' }} className="w-full h-full items-center justify-center">
+              {getUserDisplayName(userData).charAt(0)}
+            </div>
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-sm font-medium text-gray-900 dark:text-white truncate">

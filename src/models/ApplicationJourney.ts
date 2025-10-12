@@ -22,6 +22,20 @@ export interface IApplicationJourney extends Document {
     completedAt?: Date;
     data?: any;
   }>;
+  // New fields for journey completion system
+  completedAt?: Date;
+  lastWorkedOn: Date;
+  atsScoreHistory: Array<{
+    score: number;
+    calculatedAt: Date;
+    cvVersion?: string;
+  }>;
+  downloadHistory: Array<{
+    type: 'zip' | 'cv' | 'coverLetter' | 'jobDescription';
+    downloadedAt: Date;
+  }>;
+  journeyDuration?: number; // in minutes
+  applicationDate?: Date; // when moved to applied
   metadata: {
     createdAt: Date;
     updatedAt: Date;
@@ -118,6 +132,52 @@ const ApplicationJourneySchema = new Schema<IApplicationJourney>({
       type: Schema.Types.Mixed
     }
   }],
+  // New fields for journey completion system
+  completedAt: {
+    type: Date,
+    index: true
+  },
+  lastWorkedOn: {
+    type: Date,
+    default: Date.now,
+    index: true
+  },
+  atsScoreHistory: [{
+    score: {
+      type: Number,
+      required: true,
+      min: 0,
+      max: 100
+    },
+    calculatedAt: {
+      type: Date,
+      required: true,
+      default: Date.now
+    },
+    cvVersion: {
+      type: String
+    }
+  }],
+  downloadHistory: [{
+    type: {
+      type: String,
+      enum: ['zip', 'cv', 'coverLetter', 'jobDescription'],
+      required: true
+    },
+    downloadedAt: {
+      type: Date,
+      required: true,
+      default: Date.now
+    }
+  }],
+  journeyDuration: {
+    type: Number,
+    min: 0
+  },
+  applicationDate: {
+    type: Date,
+    index: true
+  },
   metadata: {
     createdAt: {
       type: Date,
@@ -151,11 +211,15 @@ ApplicationJourneySchema.index({ userId: 1, jobId: 1 }); // Index for performanc
 ApplicationJourneySchema.index({ userId: 1, createdAt: -1 });
 ApplicationJourneySchema.index({ firebaseUid: 1, status: 1 }); // For Firebase user queries
 ApplicationJourneySchema.index({ status: 1, updatedAt: -1 }); // For status-based queries
+ApplicationJourneySchema.index({ userId: 1, completedAt: -1 }); // For completed journeys queries
+ApplicationJourneySchema.index({ userId: 1, lastWorkedOn: -1 }); // For inactivity detection
+ApplicationJourneySchema.index({ applicationDate: -1 }); // For application date queries
 // Note: cvId and coverLetterId indexes are already defined in field definitions above
 
-// Update the updatedAt field on save
+// Update the updatedAt and lastWorkedOn fields on save
 ApplicationJourneySchema.pre('save', function(next) {
   this.metadata.updatedAt = new Date();
+  this.lastWorkedOn = new Date();
   next();
 });
 

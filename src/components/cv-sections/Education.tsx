@@ -2,6 +2,7 @@ import React from 'react';
 import { Calendar, GraduationCap, ExternalLink, Award } from 'lucide-react';
 import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ISectionBlueprint, ITemplate } from '@/models/Template';
+import { parseFormattedText, formatDate, formatDateRange } from '@/lib/utils/textFormatting';
 
 interface EducationProps {
   data: UnifiedCVDataStructure['education'];
@@ -18,24 +19,6 @@ const Education: React.FC<EducationProps> = ({
 }) => {
   if (!data || data.length === 0) return null;
 
-  const formatDate = (dateString: string) => {
-    if (!dateString) return '';
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('en-US', { 
-        year: 'numeric', 
-        month: 'short' 
-      });
-    } catch {
-      return dateString;
-    }
-  };
-
-  const formatDateRange = (startDate: string, endDate: string) => {
-    const start = formatDate(startDate);
-    const end = endDate ? formatDate(endDate) : 'Present';
-    return `${start} - ${end}`;
-  };
 
   return (
     <section className="education-section">
@@ -52,46 +35,27 @@ const Education: React.FC<EducationProps> = ({
                   {education.studyType && education.area 
                     ? `${education.studyType} in ${education.area}`
                     : education.studyType || education.area || 'Degree Program'
-                  }
+                  }, {education.institution || 'Institution Name'}
                 </h3>
-                <div className="institution-info">
-                  <GraduationCap size={14} className="institution-icon" />
-                  <span className="institution-name">
-                    {education.institution || 'Institution Name'}
-                  </span>
-                  {education.url && (
-                    <a 
-                      href={education.url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="institution-link"
-                      aria-label={`Visit ${education.institution} website`}
-                    >
-                      <ExternalLink size={12} />
-                    </a>
-                  )}
-                </div>
               </div>
               
               <div className="item-date-group">
                 <div className="item-date">
-                  <Calendar size={12} />
-                  <span>
-                    {formatDateRange(education.startDate, education.endDate)}
-                  </span>
+                  {formatDateRange(education.startDate, education.endDate)}
                 </div>
-                {education.score && (
-                  <div className="score">
-                    <Award size={12} />
-                    <span>{education.score}</span>
-                  </div>
-                )}
               </div>
             </div>
 
+            {education.description && (
+              <div className="education-description">
+                <div 
+                  dangerouslySetInnerHTML={{ __html: parseFormattedText(education.description) }}
+                />
+              </div>
+            )}
+            
             {education.courses && education.courses.length > 0 && (
               <div className="courses-section">
-                <h4 className="courses-title">Relevant Coursework:</h4>
                 <div className="courses-list">
                   {education.courses.map((course, courseIndex) => (
                     <span key={courseIndex} className="course-item">
@@ -117,12 +81,12 @@ const Education: React.FC<EducationProps> = ({
         .education-list {
           display: flex;
           flex-direction: column;
-          gap: 16px;
+          gap: 10px;
         }
         
         .education-item {
           page-break-inside: avoid;
-          margin-bottom: 14px;
+          margin-bottom: 10px;
         }
         
         .item-header {
@@ -139,63 +103,46 @@ const Education: React.FC<EducationProps> = ({
         }
         
         .item-title {
-          font-size: 12pt;
-          font-weight: 600;
+          font-size: ${template.globalStyles.fontSize};
+          font-weight: 700;
           color: ${template.globalStyles.primaryColor};
-          margin: 0 0 6px 0;
-          line-height: 1.3;
+          margin: 0;
+          line-height: ${template.globalStyles.lineHeight};
         }
         
         .institution-info {
-          display: flex;
-          align-items: center;
-          gap: 8px;
+          display: inline;
         }
         
         .institution-icon {
-          color: ${template.globalStyles.secondaryColor};
-          opacity: 0.8;
+          display: none;
         }
         
         .institution-name {
-          font-size: 11pt;
-          color: ${template.globalStyles.secondaryColor};
-          font-style: italic;
-          font-weight: 500;
+          font-size: ${template.globalStyles.fontSize};
+          color: ${template.globalStyles.primaryColor};
+          font-style: normal;
+          font-weight: 400;
         }
         
         .institution-link {
-          color: ${template.globalStyles.secondaryColor};
-          text-decoration: none;
-          display: flex;
-          align-items: center;
-        }
-        
-        .institution-link:hover {
-          color: ${template.globalStyles.primaryColor};
+          display: none;
         }
         
         .item-date-group {
           text-align: right;
           white-space: nowrap;
-          min-width: 140px;
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
         }
         
         .item-date, .score {
-          display: flex;
-          align-items: center;
-          justify-content: flex-end;
-          gap: 4px;
-          font-size: 10pt;
-          color: ${template.globalStyles.secondaryColor};
+          font-size: ${template.globalStyles.fontSize};
+          font-weight: 700;
+          color: ${template.globalStyles.primaryColor};
+          text-align: right;
         }
         
         .score {
-          font-weight: 500;
-          color: ${template.globalStyles.primaryColor};
+          display: none;
         }
         
         .courses-section {

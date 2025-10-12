@@ -53,37 +53,16 @@ const Skills: React.FC<SkillsProps> = ({
       <div className="skills-container">
         {data.map((skillGroup, index) => (
           <div key={index} className="skill-group">
-            <div className="skill-header">
-              <h3 className="skill-category-title">
-                {skillGroup.name || 'Skills'}
-              </h3>
-              {skillGroup.level && (
-                <div className="skill-level">
-                  {getSkillLevelIcon(skillGroup.level)}
-                  <span className="skill-level-text">
-                    {skillGroup.level}
-                  </span>
-                </div>
+            <div className="skill-category">
+              <span className="skill-category-title">
+                {skillGroup.name || 'Skills'}:
+              </span>
+              {skillGroup.keywords && skillGroup.keywords.length > 0 && (
+                <span className="skill-list">
+                  {skillGroup.keywords.join(', ')}
+                </span>
               )}
             </div>
-            
-            {skillGroup.keywords && skillGroup.keywords.length > 0 && (
-              <div className="skill-tags">
-                {skillGroup.keywords.map((skill, skillIndex) => (
-                  <span 
-                    key={skillIndex} 
-                    className="skill-tag"
-                    style={{
-                      borderColor: getSkillLevelColor(skillGroup.level) + '40',
-                      backgroundColor: getSkillLevelColor(skillGroup.level) + '15',
-                      color: getSkillLevelColor(skillGroup.level)
-                    }}
-                  >
-                    {skill}
-                  </span>
-                ))}
-              </div>
-            )}
           </div>
         ))}
       </div>
@@ -94,109 +73,41 @@ const Skills: React.FC<SkillsProps> = ({
         }
         
         .skills-container {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-          gap: 16px;
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
         }
         
         .skill-group {
           page-break-inside: avoid;
-          margin-bottom: 12px;
+          margin-bottom: 0;
         }
         
-        .skill-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 8px;
-          gap: 12px;
+        .skill-category {
+          display: block;
+          line-height: ${template.globalStyles.lineHeight};
         }
         
         .skill-category-title {
-          font-size: 11pt;
-          font-weight: 600;
+          font-size: ${template.globalStyles.fontSize};
+          font-weight: 700;
           color: ${template.globalStyles.primaryColor};
           margin: 0;
-          line-height: 1.3;
+          display: inline;
+          margin-right: 6px;
         }
         
-        .skill-level {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          font-size: 9pt;
-          color: ${template.globalStyles.secondaryColor};
-          white-space: nowrap;
-        }
-        
-        .skill-level-icon {
-          opacity: 0.8;
-        }
-        
-        .skill-level-icon.expert {
-          color: #059669;
-        }
-        
-        .skill-level-icon.intermediate {
-          color: #f59e0b;
-        }
-        
-        .skill-level-icon.beginner {
-          color: #6b7280;
-        }
-        
-        .skill-level-text {
-          font-weight: 500;
-          text-transform: capitalize;
-        }
-        
-        .skill-tags {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 6px;
-        }
-        
-        .skill-tag {
-          padding: 3px 8px;
-          border-radius: 12px;
-          font-size: 9pt;
-          font-weight: 500;
-          border: 1px solid;
-          white-space: nowrap;
-          transition: all 0.2s ease;
-        }
-        
-        .skill-tag:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        
-        @media (max-width: 768px) {
-          .skills-container {
-            grid-template-columns: 1fr;
-            gap: 12px;
-          }
-          
-          .skill-header {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 4px;
-          }
+        .skill-list {
+          font-size: ${template.globalStyles.fontSize};
+          font-weight: 400;
+          color: ${template.globalStyles.primaryColor};
+          display: inline;
+          line-height: ${template.globalStyles.lineHeight};
         }
         
         @media print {
-          .skill-tag {
-            border: 1px solid rgba(0,0,0,0.3) !important;
-            background: rgba(0,0,0,0.05) !important;
-            color: ${template.globalStyles.primaryColor} !important;
-          }
-          
           .skill-group {
             break-inside: avoid;
-          }
-          
-          .skills-container {
-            grid-template-columns: repeat(2, 1fr);
           }
         }
       `}</style>

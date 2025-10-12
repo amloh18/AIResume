@@ -119,14 +119,28 @@ const MasterCVOnboardingContent: React.FC = () => {
              sessionStorage.getItem('fromLogin') === 'true');
           
           if (result.success && result.data.cvs && result.data.cvs.length > 0 && !cameFromCallbackUrl) {
-            // User has CVs and didn't come via callback URL, redirect to dashboard
-            console.log('✅ User already has CVs, redirecting to dashboard');
-            if (typeof window !== 'undefined') {
-              sessionStorage.removeItem('needsCVSetup');
-              sessionStorage.removeItem('fromOnboarding');
+            // Check if user has any master CVs specifically
+            // Handle both old format (isMaster at root) and new format (metadata.isMaster)
+            const hasMasterCV = result.data.cvs.some((cv: any) => {
+              const isMasterAtRoot = cv.isMaster === true;
+              const isMasterInMetadata = cv.metadata?.isMaster === true;
+              const isMasterInMetadataString = cv.metadata?.isMaster === 'true';
+              return isMasterAtRoot || isMasterInMetadata || isMasterInMetadataString;
+            });
+            
+            if (hasMasterCV) {
+              // User has master CV, redirect to dashboard
+              console.log('✅ User already has master CV, redirecting to dashboard');
+              if (typeof window !== 'undefined') {
+                sessionStorage.removeItem('needsCVSetup');
+                sessionStorage.removeItem('fromOnboarding');
+              }
+              router.push('/dashboard');
+              return;
+            } else {
+              // User has CVs but no master CV, allow access to onboarding
+              console.log('📝 User has CVs but no master CV, allowing access to master CV onboarding');
             }
-            router.push('/dashboard');
-            return;
           } else if (cameFromCallbackUrl) {
             console.log('🔗 User came via callback URL or login, allowing access to master CV onboarding');
           }

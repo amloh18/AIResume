@@ -16,7 +16,8 @@ const Certificates: React.FC<CertificatesProps> = ({
   template, 
   cvData 
 }) => {
-  if (!data || data.length === 0) return null;
+  // Always render the section, even if empty, so users can see the structure
+  const certificates = data || [];
 
   const formatDate = (dateString: string) => {
     if (!dateString) return '';
@@ -55,7 +56,7 @@ const Certificates: React.FC<CertificatesProps> = ({
       </h2>
       
       <div className="certificates-list">
-        {data.map((certificate, index) => (
+        {certificates.map((certificate, index) => (
           <div 
             key={index} 
             className={`certificate-item ${
@@ -66,46 +67,12 @@ const Certificates: React.FC<CertificatesProps> = ({
             <div className="item-header">
               <div className="item-title-group">
                 <h3 className="item-title">
-                  <Award size={16} className="certificate-icon" />
-                  {certificate.name || 'Certification Name'}
+                  {certificate.name || 'Certification Name'}, {certificate.issuer || 'Issuing Organization'}
+                  {certificate.date && ` (${formatDate(certificate.date)})`}
                 </h3>
-                <div className="issuer-info">
-                  <span className="issuer-name">
-                    {certificate.issuer || 'Issuing Organization'}
-                  </span>
-                  {certificate.url && (
-                    <a 
-                      href={certificate.url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="certificate-link"
-                      aria-label={`View ${certificate.name} certificate`}
-                    >
-                      <ExternalLink size={12} />
-                      <span className="link-text">View</span>
-                    </a>
-                  )}
-                </div>
-              </div>
-              
-              <div className="date-info">
-                {certificate.date && (
-                  <div className="issue-date">
-                    <Calendar size={12} />
-                    <span>Issued: {formatDate(certificate.date)}</span>
-                  </div>
-                )}
-                
-                {/* Show expiry warning for expiring or expired certificates */}
-                {(isExpired(certificate.date) || isExpiringSoon(certificate.date)) && (
-                  <div className="expiry-warning">
-                    <AlertTriangle size={12} />
-                    <span>
-                      {isExpired(certificate.date) 
-                        ? 'Expired' 
-                        : 'Expires Soon'
-                      }
-                    </span>
+                {certificate.url && (
+                  <div className="certificate-link">
+                    {certificate.url}
                   </div>
                 )}
               </div>

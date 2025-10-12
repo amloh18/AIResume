@@ -1,191 +1,194 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { setupEventErrorHandling, validateNotEventObject } from '@/lib/utils/errorHandler';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { AlertTriangle, RefreshCw, Home, Bug } from 'lucide-react';
+import { handlePreviewError, ErrorType } from '@/lib/accessibility-utils';
 
-interface ErrorBoundaryProps {
-  children: React.ReactNode;
-  fallback?: React.ComponentType<{ error: Error; resetError: () => void }>;
+interface Props {
+  children: ReactNode;
+  fallback?: ReactNode;
+  onError?: (error: Error, errorInfo: ErrorInfo) => void;
+  showDetails?: boolean;
 }
 
-interface ErrorBoundaryState {
+interface State {
   hasError: boolean;
-  error?: Error;
-  errorInfo?: React.ErrorInfo;
+  error: Error | null;
+  errorInfo: ErrorInfo | null;
+  userFriendlyError: ReturnType<typeof handlePreviewError> | null;
 }
 
-/**
- * Error boundary component to catch and handle Event object errors
- */
-export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  constructor(props: ErrorBoundaryProps) {
+class ErrorBoundary extends Component<Props, State> {
+  constructor(props: Props) {
     super(props);
-    this.state = { hasError: false };
+    this.state = {
+      hasError: false,
+      error: null,
+      errorInfo: null,
+      userFriendlyError: null
+    };
   }
 
-  static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
-    // Check if the error is related to Event objects
-    const isEventError = 
-      error.message.includes('[object Event]') ||
-      error.message.includes('Event') ||
-      String(error).includes('[object Event]');
-    
-    if (isEventError) {
-      console.error('Event object error caught by ErrorBoundary:', error);
-      return { hasError: true, error };
-    }
-    
-    return { hasError: false };
+  static getDerivedStateFromError(error: Error): Partial<State> {
+    return {
+      hasError: true,
+      error
+    };
   }
 
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    const userFriendlyError = handlePreviewError(error, {
+      componentStack: errorInfo.componentStack,
+      errorBoundary: true
+    });
+
+    this.setState({
+      error,
+      errorInfo,
+      userFriendlyError
+    });
+
+    // Call optional error handler
+    this.props.onError?.(error, errorInfo);
+
+    // Log error for debugging
     console.error('ErrorBoundary caught an error:', error, errorInfo);
-    this.setState({ error, errorInfo });
   }
 
-  resetError = () => {
-    this.setState({ hasError: false, error: undefined, errorInfo: undefined });
+  handleRetry = () => {
+    this.setState({
+      hasError: false,
+      error: null,
+      errorInfo: null,
+      userFriendlyError: null
+    });
+  };
+
+  handleGoHome = () => {
+    window.location.href = '/';
+  };
+
+  handleReportBug = () => {
+    const { error, errorInfo, userFriendlyError } = this.state;
+    
+    const bugReport = {
+      error: error?.message,
+      stack: error?.stack,
+      componentStack: errorInfo?.componentStack,
+      userFriendlyError: userFriendlyError,
+      timestamp: new Date().toISOString(),
+      userAgent: navigator.userAgent,
+      url: window.location.href
+    };
+
+    // In a real application, you would send this to your error reporting service
+    console.log('Bug Report:', bugReport);
+    
+    // For now, copy to clipboard
+    navigator.clipboard.writeText(JSON.stringify(bugReport, null, 2))
+      .then(() => {
+        alert('Bug report copied to clipboard. Please share this with the development team.');
+      })
+      .catch(() => {
+        alert('Unable to copy bug report. Please contact support.');
+      });
   };
 
   render() {
     if (this.state.hasError) {
-      const { fallback: Fallback } = this.props;
-      
-      if (Fallback) {
-        return <Fallback error={this.state.error!} resetError={this.resetError} />;
+      // Use custom fallback if provided
+      if (this.props.fallback) {
+        return this.props.fallback;
       }
+
+      const { userFriendlyError } = this.state;
       
-      return <DefaultErrorFallback error={this.state.error!} resetError={this.resetError} />;
+      return (
+        <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+          <Card className="w-full max-w-2xl">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="h-5 w-5" />
+                {userFriendlyError?.title || 'Something went wrong'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* User-friendly error message */}
+              <div className="space-y-2">
+                <p className="text-muted-foreground">
+                  {userFriendlyError?.message || 'An unexpected error occurred while rendering your CV preview.'}
+                </p>
+                
+                {userFriendlyError?.action && (
+                  <Badge variant="outline" className="text-sm">
+                    Suggested Action: {userFriendlyError.action}
+                  </Badge>
+                )}
+              </div>
+
+              {/* Error details (if enabled) */}
+              {this.props.showDetails && this.state.error && (
+                <details className="space-y-2">
+                  <summary className="cursor-pointer text-sm font-medium">
+                    Technical Details
+                  </summary>
+                  <div className="bg-muted p-3 rounded text-sm font-mono text-xs overflow-auto max-h-32">
+                    <div className="font-semibold mb-1">Error:</div>
+                    <div className="text-destructive">{this.state.error.message}</div>
+                    
+                    {this.state.error.stack && (
+                      <>
+                        <div className="font-semibold mb-1 mt-2">Stack Trace:</div>
+                        <div className="whitespace-pre-wrap">{this.state.error.stack}</div>
+                      </>
+                    )}
+                    
+                    {this.state.errorInfo?.componentStack && (
+                      <>
+                        <div className="font-semibold mb-1 mt-2">Component Stack:</div>
+                        <div className="whitespace-pre-wrap">{this.state.errorInfo.componentStack}</div>
+                      </>
+                    )}
+                  </div>
+                </details>
+              )}
+
+              {/* Action buttons */}
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={this.handleRetry} className="flex items-center gap-2">
+                  <RefreshCw className="h-4 w-4" />
+                  Try Again
+                </Button>
+                
+                <Button variant="outline" onClick={this.handleGoHome} className="flex items-center gap-2">
+                  <Home className="h-4 w-4" />
+                  Go Home
+                </Button>
+                
+                <Button variant="outline" onClick={this.handleReportBug} className="flex items-center gap-2">
+                  <Bug className="h-4 w-4" />
+                  Report Bug
+                </Button>
+              </div>
+
+              {/* Additional help */}
+              <div className="text-sm text-muted-foreground">
+                <p>
+                  If this problem persists, please try refreshing the page or contact support.
+                  Error ID: {this.state.userFriendlyError?.timestamp.toISOString()}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      );
     }
 
     return this.props.children;
   }
 }
-
-/**
- * Default error fallback component
- */
-const DefaultErrorFallback: React.FC<{ error: Error; resetError: () => void }> = ({ 
-  error, 
-  resetError 
-}) => {
-  const isEventError = 
-    error.message.includes('[object Event]') ||
-    error.message.includes('Event') ||
-    String(error).includes('[object Event]');
-
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full bg-white shadow-lg rounded-lg p-6">
-        <div className="flex items-center mb-4">
-          <div className="flex-shrink-0">
-            <svg className="h-8 w-8 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 19.5c-.77.833.192 2.5 1.732 2.5z" />
-            </svg>
-          </div>
-          <div className="ml-3">
-            <h3 className="text-lg font-medium text-gray-900">
-              {isEventError ? 'Event Handling Error' : 'Application Error'}
-            </h3>
-          </div>
-        </div>
-        
-        <div className="mb-4">
-          <p className="text-sm text-gray-600">
-            {isEventError ? (
-              <>
-                An error occurred with event handling. This usually happens when an Event object 
-                is passed where a string value is expected. This is a common issue in React forms.
-              </>
-            ) : (
-              <>
-                An unexpected error occurred. Please try refreshing the page or contact support 
-                if the problem persists.
-              </>
-            )}
-          </p>
-        </div>
-        
-        {process.env.NODE_ENV === 'development' && (
-          <details className="mb-4">
-            <summary className="text-sm font-medium text-gray-700 cursor-pointer">
-              Error Details (Development)
-            </summary>
-            <pre className="mt-2 text-xs text-gray-600 bg-gray-100 p-2 rounded overflow-auto">
-              {error.message}
-              {error.stack && `\n\nStack trace:\n${error.stack}`}
-            </pre>
-          </details>
-        )}
-        
-        <div className="flex space-x-3">
-          <button
-            onClick={resetError}
-            className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            Try Again
-          </button>
-          <button
-            onClick={() => window.location.reload()}
-            className="flex-1 bg-gray-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500"
-          >
-            Refresh Page
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-/**
- * Hook to set up global error handling
- */
-export const useGlobalErrorHandling = () => {
-  useEffect(() => {
-    const cleanup = setupEventErrorHandling();
-    return cleanup;
-  }, []);
-};
-
-/**
- * Higher-order component to wrap components with error handling
- */
-export const withErrorBoundary = <P extends object>(
-  Component: React.ComponentType<P>,
-  fallback?: React.ComponentType<{ error: Error; resetError: () => void }>
-) => {
-  const WrappedComponent = (props: P) => (
-    <ErrorBoundary fallback={fallback}>
-      <Component {...props} />
-    </ErrorBoundary>
-  );
-  
-  WrappedComponent.displayName = `withErrorBoundary(${Component.displayName || Component.name})`;
-  
-  return WrappedComponent;
-};
-
-/**
- * Event object error detector hook
- */
-export const useEventObjectDetector = () => {
-  const [eventObjectErrors, setEventObjectErrors] = useState<Error[]>([]);
-  
-  useEffect(() => {
-    const handleError = (event: ErrorEvent) => {
-      if (event.message && event.message.includes('[object Event]')) {
-        const error = new Error(event.message);
-        setEventObjectErrors(prev => [...prev, error]);
-      }
-    };
-    
-    window.addEventListener('error', handleError);
-    return () => window.removeEventListener('error', handleError);
-  }, []);
-  
-  const clearErrors = () => setEventObjectErrors([]);
-  
-  return { eventObjectErrors, clearErrors };
-};
 
 export default ErrorBoundary;

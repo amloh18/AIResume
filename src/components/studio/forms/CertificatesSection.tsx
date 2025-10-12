@@ -46,12 +46,8 @@ const CertificatesSection: React.FC<CertificatesSectionProps> = ({
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-          <Award className="w-5 h-5 text-blue-500" />
-          Certifications
-        </h3>
+    <div className="space-y-4 p-4">
+      <div className="flex items-center justify-end">
         <motion.button
           onClick={addCertificate}
           className="flex items-center gap-2 px-3 py-2 bg-lime-500 hover:bg-lime-600 text-white rounded-lg transition-colors"
@@ -97,6 +93,9 @@ const CertificatesSection: React.FC<CertificatesSectionProps> = ({
                   onChange={(value) => updateCertificate(index, 'name', value)}
                   placeholder="e.g., AWS Certified Solutions Architect"
                   showFullToolbar={false}
+                  showFormattingHelp={false}
+                  showStatistics={false}
+                  showPreview={false}
                 />
 
                 <ProfessionalTextField
@@ -105,6 +104,9 @@ const CertificatesSection: React.FC<CertificatesSectionProps> = ({
                   onChange={(value) => updateCertificate(index, 'date', value)}
                   placeholder="MM/YYYY"
                   showFullToolbar={false}
+                  showFormattingHelp={false}
+                  showStatistics={false}
+                  showPreview={false}
                 />
 
                 <ProfessionalTextField
@@ -113,6 +115,9 @@ const CertificatesSection: React.FC<CertificatesSectionProps> = ({
                   onChange={(value) => updateCertificate(index, 'issuer', value)}
                   placeholder="e.g., Amazon Web Services, Microsoft"
                   showFullToolbar={false}
+                  showFormattingHelp={false}
+                  showStatistics={false}
+                  showPreview={false}
                 />
 
                 <ProfessionalTextField
@@ -121,6 +126,9 @@ const CertificatesSection: React.FC<CertificatesSectionProps> = ({
                   onChange={(value) => updateCertificate(index, 'url', value)}
                   placeholder="https://credential-url.com"
                   showFullToolbar={false}
+                  showFormattingHelp={false}
+                  showStatistics={false}
+                  showPreview={false}
                 />
               </div>
 

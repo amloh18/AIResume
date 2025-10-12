@@ -21,6 +21,7 @@ import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
 import toast from 'react-hot-toast';
 import { useOptimizedDataFetching } from '@/lib/hooks/useOptimizedDataFetching';
 import { ApplicationTrackerSkeleton } from '@/components/ui/OptimizedSkeletons';
+import { formatCardTime } from '@/lib/utils/timeUtils';
 
 interface JobApplication {
   id: string;
@@ -112,6 +113,7 @@ const ApplicationTracker: React.FC = () => {
   const [cvContext, setCvContext] = useState<any>(null); // Store CV context when navigating from CV card
   const [showAddJobModal, setShowAddJobModal] = useState(false);
   const [editingJob, setEditingJob] = useState<JobApplication | null>(null);
+  const [zoomedStage, setZoomedStage] = useState<string | null>(null);
 
   // Load data on component mount
   useEffect(() => {
@@ -230,14 +232,44 @@ const ApplicationTracker: React.FC = () => {
 
   // Calculate journey progress
   const getJourneyProgress = (journey: CVJourney) => {
-    if (!journey.steps || journey.steps.length === 0) {
-      return 0;
+    // If journey is completed, return 100%
+    if (journey.status === 'completed') {
+      return 100;
     }
     
-    const completedSteps = journey.steps.filter(step => step.status === 'completed').length;
-    const totalSteps = journey.steps.length;
+    // If journey is paused, return current progress
+    if (journey.status === 'paused') {
+      const completedSteps = journey.steps?.filter(step => step.status === 'completed').length || 0;
+      const totalSteps = journey.steps?.length || 5;
+      return Math.round((completedSteps / totalSteps) * 100);
+    }
     
-    return Math.round((completedSteps / totalSteps) * 100);
+    // For in-progress journeys, calculate based on current step and completed steps
+    if (journey.steps && journey.steps.length > 0) {
+      const completedSteps = journey.steps.filter(step => step.status === 'completed').length;
+      const totalSteps = journey.steps.length;
+      
+      // If we have a currentStep, use it for more accurate progress
+      if (journey.currentStep && journey.currentStep > 0) {
+        // Calculate progress based on current step (more accurate)
+        const stepProgress = (journey.currentStep - 1) / totalSteps * 100;
+        const completedProgress = (completedSteps / totalSteps) * 100;
+        
+        // Return the higher of the two for better accuracy
+        return Math.round(Math.max(stepProgress, completedProgress));
+      }
+      
+      // Fallback to completed steps calculation
+      return Math.round((completedSteps / totalSteps) * 100);
+    }
+    
+    // If no steps data, use currentStep if available
+    if (journey.currentStep && journey.currentStep > 0) {
+      const totalSteps = journey.totalSteps || 5;
+      return Math.round(((journey.currentStep - 1) / totalSteps) * 100);
+    }
+    
+    return 0;
   };
 
   // Get journey status text
@@ -246,15 +278,23 @@ const ApplicationTracker: React.FC = () => {
     if (jobJourneys.length === 1) {
       const journey = jobJourneys[0];
       if (journey.status === 'completed') return '1 Ready to Apply';
+      if (journey.status === 'paused') return '1 CV Journey Paused';
       return '1 CV Journey Active';
     }
     const completedCount = jobJourneys.filter(j => j.status === 'completed').length;
     const activeCount = jobJourneys.filter(j => j.status === 'in-progress').length;
+    const pausedCount = jobJourneys.filter(j => j.status === 'paused').length;
     
     if (completedCount > 0 && activeCount > 0) {
       return `${completedCount} Ready, ${activeCount} Active`;
+    } else if (completedCount > 0 && pausedCount > 0) {
+      return `${completedCount} Ready, ${pausedCount} Paused`;
     } else if (completedCount > 0) {
       return `${completedCount} Ready to Apply`;
+    } else if (pausedCount > 0 && activeCount > 0) {
+      return `${activeCount} Active, ${pausedCount} Paused`;
+    } else if (pausedCount > 0) {
+      return `${pausedCount} CV Journeys Paused`;
     } else {
       return `${activeCount} CV Journeys Active`;
     }
@@ -457,8 +497,23 @@ const ApplicationTracker: React.FC = () => {
     }
   };
 
+  // Helper function to check if a stage allows drag operations
+  const isDraggableStage = (stage: string) => {
+    return ['applied', 'interview', 'offer', 'rejected'].includes(stage);
+  };
+
+  // Helper function to check if a job can be dragged
+  const isJobDraggable = (job: JobApplication) => {
+    return isDraggableStage(job.status);
+  };
+
   // Drag and drop handlers
   const handleDragStart = (e: React.DragEvent, jobId: string) => {
+    const job = jobs.find(j => j.id === jobId);
+    if (!job || !isJobDraggable(job)) {
+      e.preventDefault();
+      return;
+    }
     setDraggedJob(jobId);
     e.dataTransfer.effectAllowed = 'move';
   };
@@ -471,6 +526,18 @@ const ApplicationTracker: React.FC = () => {
   const handleDrop = async (e: React.DragEvent, newStatus: string) => {
     e.preventDefault();
     if (!draggedJob) return;
+
+    // Validate that target stage allows drops
+    if (!isDraggableStage(newStatus)) {
+      setDraggedJob(null);
+      return;
+    }
+
+    const job = jobs.find(j => j.id === draggedJob);
+    if (!job || !isJobDraggable(job)) {
+      setDraggedJob(null);
+      return;
+    }
 
     try {
       // Update job status
@@ -491,6 +558,15 @@ const ApplicationTracker: React.FC = () => {
       console.error('Error updating job status:', error);
     } finally {
       setDraggedJob(null);
+    }
+  };
+
+  // Stage zoom handlers
+  const handleStageClick = (stageStatus: string) => {
+    if (zoomedStage === stageStatus) {
+      setZoomedStage(null);
+    } else {
+      setZoomedStage(stageStatus);
     }
   };
 
@@ -631,7 +707,7 @@ const ApplicationTracker: React.FC = () => {
                 placeholder="Search jobs, companies, locations... (Ctrl+K)"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 rounded-lg bg-white/10 backdrop-blur-md border border-white/20 text-white placeholder-white/60 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 focus:bg-white/20 transition-all duration-200"
+                className="w-full pl-10 pr-4 py-2 rounded-lg bg-gray-700 dark:bg-white/10 backdrop-blur-md border border-gray-600 dark:border-white/20 text-white placeholder-white/80 dark:placeholder-white/60 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 focus:bg-gray-600 dark:focus:bg-white/20 transition-all duration-200"
                 aria-label="Search jobs"
                 role="searchbox"
               />
@@ -640,13 +716,13 @@ const ApplicationTracker: React.FC = () => {
 
           <div className="flex items-center gap-2">
             {/* View Mode Toggle */}
-            <div className="flex items-center bg-white/10 backdrop-blur-md border border-white/20 rounded-lg p-1">
+            <div className="flex items-center bg-gray-800 dark:bg-white/10 backdrop-blur-md border border-gray-700 dark:border-white/20 rounded-lg p-1">
               <motion.button
                 onClick={() => handleViewModeChange('kanban')}
                 disabled={isLoadingViewMode}
                 className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
                   viewMode === 'kanban' 
-                    ? 'bg-white/20 text-white shadow-sm' 
+                    ? 'bg-gray-700 dark:bg-white/20 text-white shadow-sm' 
                     : 'text-white/60 hover:text-white/80'
                 } ${isLoadingViewMode ? 'opacity-50 cursor-not-allowed' : ''}`}
                 whileHover={isLoadingViewMode ? {} : { scale: 1.02 }}
@@ -659,7 +735,7 @@ const ApplicationTracker: React.FC = () => {
                 disabled={isLoadingViewMode}
                 className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
                   viewMode === 'list' 
-                    ? 'bg-white/20 text-white shadow-sm' 
+                    ? 'bg-gray-700 dark:bg-white/20 text-white shadow-sm' 
                     : 'text-white/60 hover:text-white/80'
                 } ${isLoadingViewMode ? 'opacity-50 cursor-not-allowed' : ''}`}
                 whileHover={isLoadingViewMode ? {} : { scale: 1.02 }}
@@ -675,7 +751,7 @@ const ApplicationTracker: React.FC = () => {
               className={`px-3 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
                 showFilters 
                   ? 'bg-blue-500/20 border border-blue-500/30 text-blue-400' 
-                  : 'bg-white/10 backdrop-blur-md border border-white/20 text-white/60 hover:text-white/80 hover:bg-white/20'
+                  : 'bg-gray-600 dark:bg-white/10 backdrop-blur-md border border-gray-500 dark:border-white/20 text-white/60 hover:text-white hover:bg-gray-700 dark:hover:bg-white/20'
               }`}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -693,7 +769,7 @@ const ApplicationTracker: React.FC = () => {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="bg-blue-500/10 backdrop-blur-md border border-blue-500/20 rounded-lg p-4"
+              className="bg-blue-600 dark:bg-blue-500/10 backdrop-blur-md border border-blue-700 dark:border-blue-500/20 rounded-lg p-4 text-white"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -745,7 +821,7 @@ const ApplicationTracker: React.FC = () => {
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: 'auto' }}
           exit={{ opacity: 0, height: 0 }}
-          className="bg-white/10 backdrop-blur-md border border-white/20 rounded-lg p-4 space-y-4"
+          className="bg-gray-700 dark:bg-white/10 backdrop-blur-md border border-gray-600 dark:border-white/20 rounded-lg p-4 space-y-4 text-white"
         >
           {/* Application-Specific Metrics Filters */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -755,7 +831,7 @@ const ApplicationTracker: React.FC = () => {
               <select
                 value={lastUpdatedFilter}
                 onChange={(e) => setLastUpdatedFilter(e.target.value as any)}
-                className="w-full px-3 py-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg text-white text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 focus:bg-white/20 transition-all duration-200"
+                className="w-full px-3 py-2 bg-gray-600 dark:bg-white/10 backdrop-blur-md border border-gray-500 dark:border-white/20 rounded-lg text-white text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 focus:bg-gray-500 dark:focus:bg-white/20 transition-all duration-200"
               >
                 <option value="all" className="bg-gray-800 text-white">All Time</option>
                 <option value="today" className="bg-gray-800 text-white">Today</option>
@@ -770,7 +846,7 @@ const ApplicationTracker: React.FC = () => {
               <select
                 value={followUpFilter}
                 onChange={(e) => setFollowUpFilter(e.target.value as any)}
-                className="w-full px-3 py-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg text-white text-sm focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 focus:bg-white/20 transition-all duration-200"
+                className="w-full px-3 py-2 bg-white/90 dark:bg-white/10 backdrop-blur-md border border-gray-300 dark:border-white/20 rounded-lg text-white text-sm focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 focus:bg-white/95 dark:focus:bg-white/20 transition-all duration-200"
               >
                 <option value="all" className="bg-gray-800 text-white">All</option>
                 <option value="upcoming" className="bg-gray-800 text-white">Upcoming (Next 7 Days)</option>
@@ -784,7 +860,7 @@ const ApplicationTracker: React.FC = () => {
               <select
                 value={salaryRangeFilter}
                 onChange={(e) => setSalaryRangeFilter(e.target.value as any)}
-                className="w-full px-3 py-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg text-white text-sm focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 focus:bg-white/20 transition-all duration-200"
+                className="w-full px-3 py-2 bg-white/90 dark:bg-white/10 backdrop-blur-md border border-gray-300 dark:border-white/20 rounded-lg text-white text-sm focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 focus:bg-white/95 dark:focus:bg-white/20 transition-all duration-200"
               >
                 <option value="all" className="bg-gray-800 text-white">All Salaries</option>
                 <option value="under50k" className="bg-gray-800 text-white">Under $50k</option>
@@ -802,7 +878,7 @@ const ApplicationTracker: React.FC = () => {
               <select
                 value={priorityFilter}
                 onChange={(e) => setPriorityFilter(e.target.value as any)}
-                className="w-full px-3 py-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg text-white text-sm focus:ring-2 focus:ring-red-500/50 focus:border-red-500/50 focus:bg-white/20 transition-all duration-200"
+                className="w-full px-3 py-2 bg-white/90 dark:bg-white/10 backdrop-blur-md border border-gray-300 dark:border-white/20 rounded-lg text-white text-sm focus:ring-2 focus:ring-red-500/50 focus:border-red-500/50 focus:bg-white/95 dark:focus:bg-white/20 transition-all duration-200"
               >
                 <option value="all" className="bg-gray-800 text-white">All Priorities</option>
                 <option value="high" className="bg-gray-800 text-white">High Priority</option>
@@ -817,7 +893,7 @@ const ApplicationTracker: React.FC = () => {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
-                className="w-full px-3 py-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-lg text-white text-sm focus:ring-2 focus:ring-green-500/50 focus:border-green-500/50 focus:bg-white/20 transition-all duration-200"
+                className="w-full px-3 py-2 bg-white/90 dark:bg-white/10 backdrop-blur-md border border-gray-300 dark:border-white/20 rounded-lg text-white text-sm focus:ring-2 focus:ring-green-500/50 focus:border-green-500/50 focus:bg-white/95 dark:focus:bg-white/20 transition-all duration-200"
               >
                 <option value="lastUpdated" className="bg-gray-800 text-white">Last Updated</option>
                 <option value="followUpDate" className="bg-gray-800 text-white">Follow-Up Date</option>
@@ -854,30 +930,67 @@ const ApplicationTracker: React.FC = () => {
       )}
 
       {/* Enhanced Kanban Board */}
-      <div className={`grid gap-4 ${
-        viewMode === 'kanban' 
-          ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5' 
-          : 'grid-cols-1'
-      }`}>
-        {viewMode === 'kanban' ? (
-          [
-            { status: 'created', title: 'Created', color: 'bg-purple-500/20 border-purple-500/30' },
-            { status: 'applied', title: 'Applied', color: 'bg-blue-500/20 border-blue-500/30' },
-            { status: 'interview', title: 'Interview', color: 'bg-orange-500/20 border-orange-500/30' },
-            { status: 'offer', title: 'Offer', color: 'bg-green-500/20 border-green-500/30' },
-            { status: 'rejected', title: 'Rejected', color: 'bg-red-500/20 border-red-500/30' }
-          ].map((stage) => (
+      <AnimatePresence mode="wait">
+        <motion.div 
+          key={zoomedStage || 'all-stages'}
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          transition={{ duration: 0.3 }}
+          className={`grid gap-4 ${
+            viewMode === 'kanban' 
+              ? zoomedStage 
+                ? 'grid-cols-1' 
+                : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5'
+              : 'grid-cols-1'
+          }`}
+        >
+          {viewMode === 'kanban' ? (
+          (zoomedStage 
+            ? [
+                { status: zoomedStage, title: zoomedStage.charAt(0).toUpperCase() + zoomedStage.slice(1), color: 
+                  zoomedStage === 'created' ? 'bg-purple-600 dark:bg-purple-500/20 border-purple-700 dark:border-purple-500/30 text-white' :
+                  zoomedStage === 'applied' ? 'bg-blue-600 dark:bg-blue-500/20 border-blue-700 dark:border-blue-500/30 text-white' :
+                  zoomedStage === 'interview' ? 'bg-orange-600 dark:bg-orange-500/20 border-orange-700 dark:border-orange-500/30 text-white' :
+                  zoomedStage === 'offer' ? 'bg-green-600 dark:bg-green-500/20 border-green-700 dark:border-green-500/30 text-white' :
+                  'bg-red-600 dark:bg-red-500/20 border-red-700 dark:border-red-500/30 text-white'
+                }
+              ]
+            : [
+                { status: 'created', title: 'Created', color: 'bg-purple-600 dark:bg-purple-500/20 border-purple-700 dark:border-purple-500/30 text-white' },
+                { status: 'applied', title: 'Applied', color: 'bg-blue-600 dark:bg-blue-500/20 border-blue-700 dark:border-blue-500/30 text-white' },
+                { status: 'interview', title: 'Interview', color: 'bg-orange-600 dark:bg-orange-500/20 border-orange-700 dark:border-orange-500/30 text-white' },
+                { status: 'offer', title: 'Offer', color: 'bg-green-600 dark:bg-green-500/20 border-green-700 dark:border-green-500/30 text-white' },
+                { status: 'rejected', title: 'Rejected', color: 'bg-red-600 dark:bg-red-500/20 border-red-700 dark:border-red-500/30 text-white' }
+              ]
+          ).map((stage) => (
           <div key={stage.status} className="space-y-4">
             {/* Stage Header */}
-            <div className={`p-3 rounded-xl border ${stage.color}`}>
-              <div className="flex items-center justify-between">
-                <h3 className={`text-base font-bold ${
-                  stage.status === 'created' ? 'text-purple-400' :
-                  stage.status === 'applied' ? 'text-blue-400' :
-                  stage.status === 'interview' ? 'text-orange-400' :
-                  stage.status === 'offer' ? 'text-green-400' :
-                  'text-red-400'
-                }`}>{stage.title}</h3>
+            <div 
+              className={`p-3 rounded-xl border-2 border-dashed ${stage.color} min-h-[60px] flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity duration-200`}
+              onClick={() => handleStageClick(stage.status)}
+            >
+              <div className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-2">
+                  {zoomedStage && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setZoomedStage(null);
+                      }}
+                      className="p-1 rounded-md bg-white/20 hover:bg-white/30 transition-colors"
+                    >
+                      <ArrowRight className="w-4 h-4 rotate-180" />
+                    </button>
+                  )}
+                  <h3 className={`text-base font-bold ${
+                    stage.status === 'created' ? 'text-purple-400' :
+                    stage.status === 'applied' ? 'text-blue-400' :
+                    stage.status === 'interview' ? 'text-orange-400' :
+                    stage.status === 'offer' ? 'text-green-400' :
+                    'text-red-400'
+                  }`}>{stage.title}</h3>
+                </div>
                 <span className={`text-sm ${
                   stage.status === 'created' ? 'text-purple-400' :
                   stage.status === 'applied' ? 'text-blue-400' :
@@ -890,8 +1003,16 @@ const ApplicationTracker: React.FC = () => {
               </div>
             </div>
 
-            {/* Job Cards */}
-            <div className="space-y-3">
+            {/* Drop Zone */}
+            <div 
+              className={`min-h-[100px] rounded-xl border-2 border-dashed border-transparent transition-all duration-300 ${
+                draggedJob && isDraggableStage(stage.status) ? 'border-blue-400 bg-blue-400/10' : ''
+              }`}
+              onDragOver={handleDragOver}
+              onDrop={(e) => handleDrop(e, stage.status)}
+            >
+              {/* Job Cards */}
+              <div className={zoomedStage ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : "space-y-3"}>
               {loading ? (
                 // Show skeleton loading for job cards
                 Array.from({ length: 3 }).map((_, i) => (
@@ -918,18 +1039,21 @@ const ApplicationTracker: React.FC = () => {
                   : 0;
                 const isSelected = selectedJobs.has(job.id);
                 const isDragging = draggedJob === job.id;
+                const canDrag = isJobDraggable(job);
 
                 return (
                   <div
                     key={job.id}
-                    draggable
+                    draggable={canDrag}
                     onDragStart={(e: React.DragEvent) => handleDragStart(e, job.id)}
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleDrop(e, stage.status)}
                     onClick={() => handleJobClick(job)}
                     className={`group relative overflow-hidden cursor-pointer transition-all duration-300 ${
                       isSelected ? 'ring-2 ring-blue-500 ring-opacity-50' : ''
-                    } ${isDragging ? 'opacity-50' : ''}`}
+                    } ${isDragging ? 'opacity-50' : ''} ${
+                      !canDrag ? 'opacity-60 cursor-not-allowed' : ''
+                    }`}
                     role="button"
                     tabIndex={0}
                     aria-label={`Job application: ${job.jobTitle} at ${job.company}`}
@@ -957,6 +1081,28 @@ const ApplicationTracker: React.FC = () => {
                              </div>
                            </div>
                            <div className="flex items-center gap-2">
+                             {/* Journey completion indicator */}
+                             {jobJourneys.length > 0 && (() => {
+                               const completedJourneys = jobJourneys.filter(j => j.status === 'completed');
+                               const hasCompleted = completedJourneys.length > 0;
+                               const allCompleted = completedJourneys.length === jobJourneys.length;
+                               
+                               return (
+                                 <div className="flex items-center gap-1">
+                                   {hasCompleted && (
+                                     <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs ${
+                                       allCompleted 
+                                         ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' 
+                                         : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+                                     }`}>
+                                       <CheckCircle size={10} />
+                                       <span>{completedJourneys.length}/{jobJourneys.length}</span>
+                                     </div>
+                                   )}
+                                 </div>
+                               );
+                             })()}
+                             
                              {/* Hover indicator */}
                              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                                <ChevronDown size={12} className="text-gray-400" />
@@ -1041,6 +1187,41 @@ const ApplicationTracker: React.FC = () => {
                             )}
                           </div>
                           
+                          {/* Journey Completion Status */}
+                          {jobJourneys.length > 0 && (
+                            <div className="space-y-1">
+                              {(() => {
+                                const completedJourneys = jobJourneys.filter(j => j.status === 'completed');
+                                const totalJourneys = jobJourneys.length;
+                                const completionPercentage = totalJourneys > 0 ? Math.round((completedJourneys.length / totalJourneys) * 100) : 0;
+                                
+                                return (
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <div className="flex items-center gap-1">
+                                        <CheckCircle size={12} className="text-green-500" />
+                                        <span className="text-xs text-gray-600 dark:text-gray-400">
+                                          {completedJourneys.length}/{totalJourneys} Completed
+                                        </span>
+                                      </div>
+                                      {completionPercentage === 100 && (
+                                        <div className="flex items-center gap-1">
+                                          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                                          <span className="text-xs text-green-600 dark:text-green-400 font-medium">
+                                            All Complete
+                                          </span>
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-500">
+                                      {completionPercentage}%
+                                    </div>
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                          )}
+                          
                           {jobJourneys.length > 0 && (
                             <div className="space-y-1">
                               <div className="flex items-center justify-between text-xs">
@@ -1081,6 +1262,7 @@ const ApplicationTracker: React.FC = () => {
                 );
               })
               )}
+              </div>
             </div>
           </div>
         ))
@@ -1129,10 +1311,10 @@ const ApplicationTracker: React.FC = () => {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-white/60 text-sm">
-                          {job.status === 'created' ? (job.createdAt ? new Date(job.createdAt).toLocaleDateString() : '-') :
-                           job.status === 'applied' ? (job.applicationDate || job.createdAt ? new Date(job.applicationDate || job.createdAt).toLocaleDateString() : '-') :
-                           job.status === 'interview' ? (job.applicationDate || job.createdAt ? new Date(job.applicationDate || job.createdAt).toLocaleDateString() : '-') :
-                           (job.updatedAt || job.createdAt ? new Date(job.updatedAt || job.createdAt).toLocaleDateString() : '-')}
+                          {job.status === 'created' ? (job.createdAt ? formatCardTime(job.createdAt) : '-') :
+                           job.status === 'applied' ? (job.applicationDate || job.createdAt ? formatCardTime(job.applicationDate || job.createdAt) : '-') :
+                           job.status === 'interview' ? (job.applicationDate || job.createdAt ? formatCardTime(job.applicationDate || job.createdAt) : '-') :
+                           (job.updatedAt || job.createdAt ? formatCardTime(job.updatedAt || job.createdAt) : '-')}
                         </td>
                         <td className="px-4 py-3 text-white/60 text-sm">{job.location || '-'}</td>
                         <td className="px-4 py-3">
@@ -1203,7 +1385,8 @@ const ApplicationTracker: React.FC = () => {
             </div>
           </div>
         )}
-      </div>
+        </motion.div>
+      </AnimatePresence>
 
       {/* Application Journey Modal */}
       {showModal && selectedJob && (

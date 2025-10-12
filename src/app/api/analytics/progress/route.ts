@@ -10,7 +10,10 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get('userId');
     const range = searchParams.get('range') || '30d';
 
+    console.log('Progress API: Request received', { userId, range });
+
     if (!userId) {
+      console.log('Progress API: No userId provided');
       return NextResponse.json(
         { success: false, message: 'User ID is required' },
         { status: 400 }
@@ -29,22 +32,31 @@ export async function GET(request: NextRequest) {
       ? { userId: userId } // MongoDB ObjectId
       : { firebaseUid: userId }; // Firebase UID
 
-    // Fetch jobs created in the date range
+    // Fetch jobs created in the date range OR updated in the date range
     const jobs = await Job.find({
       ...queryCondition,
-      createdAt: { $gte: startDate }
+      $or: [
+        { createdAt: { $gte: startDate } }, // Jobs created in the date range
+        { updatedAt: { $gte: startDate } } // Jobs updated (status changes) in the date range
+      ]
     }).sort({ createdAt: 1 });
 
-    // Fetch CVs created in the date range
+    // Fetch CVs created or updated in the date range
     const cvs = await CV.find({
       ...queryCondition,
-      createdAt: { $gte: startDate }
+      $or: [
+        { createdAt: { $gte: startDate } }, // CVs created in the date range
+        { updatedAt: { $gte: startDate } } // CVs updated in the date range
+      ]
     }).sort({ createdAt: 1 });
 
-    // Fetch cover letters created in the date range
+    // Fetch cover letters created or updated in the date range
     const coverLetters = await CoverLetter.find({
       ...queryCondition,
-      createdAt: { $gte: startDate }
+      $or: [
+        { createdAt: { $gte: startDate } }, // Cover letters created in the date range
+        { updatedAt: { $gte: startDate } } // Cover letters updated in the date range
+      ]
     }).sort({ createdAt: 1 });
 
     // Group data by date
@@ -57,27 +69,51 @@ export async function GET(request: NextRequest) {
       dataByDate[dateKey] = { jobs: 0, cvs: 0, coverLetters: 0 };
     }
 
-    // Count jobs by date
+    // Count jobs by date (consider both creation and update dates)
     jobs.forEach(job => {
-      const dateKey = job.createdAt.toISOString().split('T')[0];
-      if (dataByDate[dateKey]) {
-        dataByDate[dateKey].jobs++;
+      const createdDate = job.createdAt.toISOString().split('T')[0];
+      const updatedDate = job.updatedAt ? job.updatedAt.toISOString().split('T')[0] : null;
+      
+      // Count job creation
+      if (dataByDate[createdDate]) {
+        dataByDate[createdDate].jobs++;
+      }
+      
+      // If job was updated in the date range (status change), count it again for the update date
+      if (updatedDate && updatedDate !== createdDate && dataByDate[updatedDate]) {
+        dataByDate[updatedDate].jobs++;
       }
     });
 
-    // Count CVs by date
+    // Count CVs by date (consider both creation and update dates)
     cvs.forEach(cv => {
-      const dateKey = cv.createdAt.toISOString().split('T')[0];
-      if (dataByDate[dateKey]) {
-        dataByDate[dateKey].cvs++;
+      const createdDate = cv.createdAt.toISOString().split('T')[0];
+      const updatedDate = cv.updatedAt ? cv.updatedAt.toISOString().split('T')[0] : null;
+      
+      // Count CV creation
+      if (dataByDate[createdDate]) {
+        dataByDate[createdDate].cvs++;
+      }
+      
+      // If CV was updated in the date range, count it again for the update date
+      if (updatedDate && updatedDate !== createdDate && dataByDate[updatedDate]) {
+        dataByDate[updatedDate].cvs++;
       }
     });
 
-    // Count cover letters by date
+    // Count cover letters by date (consider both creation and update dates)
     coverLetters.forEach(coverLetter => {
-      const dateKey = coverLetter.createdAt.toISOString().split('T')[0];
-      if (dataByDate[dateKey]) {
-        dataByDate[dateKey].coverLetters++;
+      const createdDate = coverLetter.createdAt.toISOString().split('T')[0];
+      const updatedDate = coverLetter.updatedAt ? coverLetter.updatedAt.toISOString().split('T')[0] : null;
+      
+      // Count cover letter creation
+      if (dataByDate[createdDate]) {
+        dataByDate[createdDate].coverLetters++;
+      }
+      
+      // If cover letter was updated in the date range, count it again for the update date
+      if (updatedDate && updatedDate !== createdDate && dataByDate[updatedDate]) {
+        dataByDate[updatedDate].coverLetters++;
       }
     });
 
@@ -88,6 +124,14 @@ export async function GET(request: NextRequest) {
       cvs: counts.cvs,
       coverLetters: counts.coverLetters
     }));
+
+    console.log('Progress API: Data summary', {
+      totalJobs: jobs.length,
+      totalCVs: cvs.length,
+      totalCoverLetters: coverLetters.length,
+      progressDataPoints: progressData.length,
+      sampleData: progressData.slice(0, 3)
+    });
 
     return NextResponse.json({
       success: true,

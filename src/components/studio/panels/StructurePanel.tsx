@@ -235,7 +235,7 @@ function CVStructureSections({
   onUpdateCV: (data: UnifiedCVDataStructure) => void;
   jobContext?: JobData;
 }) {
-  const [openSections, setOpenSections] = React.useState<Set<string>>(new Set(['basics', 'work']));
+  const [openSections, setOpenSections] = React.useState<Set<string>>(new Set(['personal_header', 'work_experience']));
 
   const toggleSection = (sectionId: string) => {
     const newOpenSections = new Set(openSections);
@@ -261,18 +261,16 @@ function CVStructureSections({
   };
 
   const sections = [
-    { id: 'basics', title: 'Personal Information', icon: '👤' },
-    { id: 'work', title: 'Work Experience', icon: '💼' },
-    { id: 'volunteer', title: 'Volunteer Experience', icon: '🤝' },
+    { id: 'personal_header', title: 'Personal Information', icon: '👤' },
+    { id: 'work_experience', title: 'Work Experience', icon: '💼' },
     { id: 'education', title: 'Education', icon: '🎓' },
-    { id: 'awards', title: 'Awards & Recognition', icon: '🏆' },
-    { id: 'certificates', title: 'Certifications', icon: '📜' },
-    { id: 'publications', title: 'Publications', icon: '📚' },
     { id: 'skills', title: 'Skills', icon: '🛠️' },
+    { id: 'projects', title: 'Projects', icon: '🚀' },
+    { id: 'certificates', title: 'Certificates', icon: '📜' },
     { id: 'languages', title: 'Languages', icon: '🌐' },
-    { id: 'interests', title: 'Interests', icon: '❤️' },
-    { id: 'references', title: 'References', icon: '👥' },
-    { id: 'projects', title: 'Projects', icon: '🚀' }
+    { id: 'volunteer', title: 'Volunteer Experience', icon: '🤝' },
+    { id: 'awards', title: 'Awards & Recognition', icon: '🏆' },
+    { id: 'publications', title: 'Publications', icon: '📚' }
   ];
 
   return (
@@ -302,7 +300,7 @@ function CVStructureSections({
               <div className="flex items-center space-x-3">
                 <span className="text-lg">{section.icon}</span>
                 <span className="font-medium">{section.title}</span>
-                {section.id === 'work' && jobContext && (
+                {section.id === 'work_experience' && jobContext && (
                   <Badge variant="secondary" size="sm">ATS</Badge>
                 )}
               </div>
@@ -336,7 +334,7 @@ function renderSectionContent(
   jobContext?: JobData
 ) {
   switch (sectionId) {
-    case 'basics':
+    case 'personal_header':
       return (
         <PersonalInfoForm
           personalInfo={cvData.basics || {}}
@@ -347,7 +345,7 @@ function renderSectionContent(
         />
       );
     
-    case 'work':
+    case 'work_experience':
       return (
         <WorkExperienceSection
           data={cvData.work || []}
