@@ -14,21 +14,77 @@ function StudioPageContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [currentJourney, setCurrentJourney] = useState(null);
 
   // Get URL parameters - NEW STRUCTURE: journeyId-first approach
   const journeyId = searchParams.get('journeyId'); // PRIMARY: Journey ID for proper Application Package context
-  const type = searchParams.get('type'); // 'cv' or 'cover_letter'
+  const type = searchParams.get('type'); // 'cv' or 'cover_letter' (legacy)
+  const documentType = searchParams.get('documentType'); // 'cv' or 'cover-letter' (new format)
   const cvId = searchParams.get('cvId');
   const coverLetterId = searchParams.get('coverLetterId');
-  const jobId = searchParams.get('jobId'); // DEPRECATED: Direct jobId usage violates Application Package model
   const mode = searchParams.get('mode'); // 'cv-onboarding', 'ats-edit', 'cover-letter-edit', 'document-first'
-  const cvJourneyId = searchParams.get('cvJourneyId'); // LEGACY: Being replaced by journeyId
 
   // Determine which ID to use based on type
-  const documentId = type === 'cover_letter' ? coverLetterId : cvId;
+  const finalDocumentType = documentType || (type === 'cover_letter' ? 'cover-letter' : 'cv');
+  const documentId = finalDocumentType === 'cover-letter' ? coverLetterId : cvId;
+
+  // NEW APPROACH: Use journeyId for reliable Application Package context
+  const primaryJourneyId = journeyId;
   
-  // Determine document type - default to 'cv' if not specified
-  const documentType = type === 'cover_letter' ? 'cover-letter' : 'cv';
+  // Clear any hardcoded localStorage data on mount
+  useEffect(() => {
+    // Clear any old journey state that might contain hardcoded data
+    localStorage.removeItem('jobJourneyState');
+    console.log('🔍 Studio Page - Cleared localStorage jobJourneyState');
+  }, []);
+
+  // Load current journey data for the banner - MUST be before any conditional returns
+  useEffect(() => {
+    const loadCurrentJourney = async () => {
+      if (!primaryJourneyId || !session?.user?.id) {
+        console.log('🔍 Studio Page - Missing journeyId or userId:', { primaryJourneyId, userId: session?.user?.id });
+        return;
+      }
+      
+      console.log('🔍 Studio Page - Loading journey data for:', primaryJourneyId);
+      
+      try {
+        const response = await fetch(`/api/application-journey/${primaryJourneyId}?userId=${session.user.id}`);
+        console.log('🔍 Studio Page - API response status:', response.status);
+        
+        if (response.ok) {
+          const journeyData = await response.json();
+          console.log('🔍 Studio Page - Journey data received:', journeyData);
+          
+          if (journeyData.success && journeyData.data) {
+            const journeyInfo = {
+              id: journeyData.data.journeyId,
+              jobId: journeyData.data.jobId,
+              jobTitle: journeyData.data.jobTitle,
+              company: journeyData.data.company,
+              status: journeyData.data.status,
+              currentStep: journeyData.data.currentStep,
+              totalSteps: journeyData.data.totalSteps,
+              atsScore: journeyData.data.atsScore,
+              cvId: journeyData.data.cvId,
+              coverLetterId: journeyData.data.coverLetterId
+            };
+            
+            console.log('🔍 Studio Page - Setting current journey:', journeyInfo);
+            setCurrentJourney(journeyInfo);
+          } else {
+            console.warn('🔍 Studio Page - No journey data found in response');
+          }
+        } else {
+          console.error('🔍 Studio Page - API request failed:', response.status, response.statusText);
+        }
+      } catch (error) {
+        console.error('🔍 Studio Page - Error loading current journey:', error);
+      }
+    };
+    
+    loadCurrentJourney();
+  }, [primaryJourneyId, session?.user?.id]);
 
   // Show loading state while session is loading
   if (status === 'loading') {
@@ -53,13 +109,6 @@ function StudioPageContent() {
       </div>
     );
   }
-
-  console.log('🔍 Studio Page - Session user ID:', session.user.id);
-  console.log('🔍 Studio Page - URL params:', { journeyId, type, cvId, coverLetterId, jobId, mode, cvJourneyId });
-  
-  // NEW APPROACH: Prioritize journeyId for reliable Application Package context
-  // Fallback to cvJourneyId only for legacy compatibility
-  const primaryJourneyId = journeyId || cvJourneyId;
   
   // Validate required parameters for new structure
   if (!primaryJourneyId) {
@@ -70,16 +119,14 @@ function StudioPageContent() {
     <RouteGuard requireAuth={true}>
       <JobJourneyProvider>
         <div className={getPageBackground('studio')}>
-          <JourneyStatusBanner />
+          <JourneyStatusBanner journey={currentJourney} />
           <CVStudio
             journeyId={primaryJourneyId}
-            jobId={jobId} // DEPRECATED: Kept for backwards compatibility
             cvId={cvId} // Pass cvId directly from URL parameter
             coverLetterId={coverLetterId} // Pass coverLetterId directly from URL parameter
-            documentType={documentType}
+            documentType={finalDocumentType}
             userId={session.user.id}
             mode={mode}
-            cvJourneyId={cvJourneyId} // LEGACY: Kept for backwards compatibility
           />
         </div>
       </JobJourneyProvider>

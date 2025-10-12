@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/database';
+import { User } from '@/models';
 import AIUsageLog from '@/models/AIUsageLog';
 
 // Add error handling for Firebase imports
@@ -16,13 +17,19 @@ try {
 
 export async function GET(request: NextRequest) {
   try {
-    // Check authentication and admin role
+    // Check authentication
     const session = await getServerSession(authOptions);
-    if (!session || session.user?.role !== 'admin') {
+    if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     await connectDB();
+
+    // Check admin role from database
+    const user = await User.findOne({ email: session.user.email }).select('role');
+    if (!user || user.role !== 'admin') {
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    }
 
     const { searchParams } = new URL(request.url);
     const range = searchParams.get('range') || '30d';

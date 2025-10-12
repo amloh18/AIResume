@@ -16,7 +16,8 @@ const Awards: React.FC<AwardsProps> = ({
   template, 
   cvData 
 }) => {
-  if (!data || data.length === 0) return null;
+  // Always render the section, even if empty, so users can see the structure
+  const awards = data || [];
 
   const formatDate = (dateString: string) => {
     if (!dateString) return '';
@@ -38,7 +39,7 @@ const Awards: React.FC<AwardsProps> = ({
       </h2>
       
       <div className="awards-list">
-        {data.map((award, index) => (
+        {awards.map((award, index) => (
           <div key={index} className="award-item">
             <div className="item-header">
               <div className="item-title-group">

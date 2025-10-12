@@ -44,12 +44,8 @@ const ReferencesSection: React.FC<ReferencesSectionProps> = ({
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-          <Users className="w-5 h-5 text-indigo-500" />
-          References
-        </h3>
+    <div className="space-y-4 p-4">
+      <div className="flex items-center justify-end">
         <motion.button
           onClick={addReference}
           className="flex items-center gap-2 px-3 py-2 bg-lime-500 hover:bg-lime-600 text-white rounded-lg transition-colors"
@@ -94,6 +90,9 @@ const ReferencesSection: React.FC<ReferencesSectionProps> = ({
                   value={reference.name || ''}
                   onChange={(value) => updateReference(index, 'name', value)}
                   placeholder="e.g., Dr. John Smith, Sarah Johnson"
+                  showFormattingHelp={false}
+                  showStatistics={false}
+                  showPreview={false}
                 />
 
                 <div>

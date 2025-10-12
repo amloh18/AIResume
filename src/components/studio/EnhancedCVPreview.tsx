@@ -149,7 +149,7 @@ const EnhancedCVPreview: React.FC<EnhancedCVPreviewProps> = ({
         <TemplateRenderer
           cvData={cvData}
           template={template}
-          sectionOrder={sectionOrder}
+          sectionOrder={['personal_header', ...(sectionOrder?.filter(s => s !== 'personal_header') || ['work_experience', 'education', 'skills', 'projects', 'certificates', 'languages'])]}
           sectionVisibility={sectionVisibility}
           enabledSections={enabledSections}
           className="template-rendered-content"

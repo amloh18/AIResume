@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { AdminUserManagementSkeleton } from './AdminSkeletons';
 import { 
   Users, 
   Search, 
@@ -60,6 +61,7 @@ interface User {
 const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState('all');
   const [filterPlan, setFilterPlan] = useState('all');
@@ -80,13 +82,28 @@ const UserManagement: React.FC = () => {
 
   const fetchUsers = async () => {
     try {
+      setError(null);
+      console.log('🔍 Fetching users from admin API...');
       const response = await fetch('/api/admin/users');
+      console.log('📥 Response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('📥 Response data:', data);
+        console.log('👥 Users found:', data.users ? data.users.length : 0);
         setUsers(data.users || data);
+        setError(null);
+      } else {
+        const errorData = await response.json();
+        console.error('❌ API Error:', errorData);
+        console.error('❌ Response status:', response.status);
+        setUsers([]);
+        setError(`Failed to fetch users: ${errorData.error || 'Unknown error'}`);
       }
     } catch (error) {
-      console.error('Error fetching users:', error);
+      console.error('❌ Error fetching users:', error);
+      setUsers([]);
+      setError(`Network error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
@@ -237,10 +254,28 @@ const UserManagement: React.FC = () => {
     return matchesSearch && matchesRole && matchesPlan;
   });
 
-  if (loading) {
+  // Always show the structure, only skeleton the data portions
+
+  if (error) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-lime-400"></div>
+      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
+        <div className="flex items-center">
+          <AlertCircle className="h-5 w-5 text-red-400 mr-3" />
+          <div>
+            <h3 className="text-sm font-medium text-red-800 dark:text-red-200">
+              Error Loading Users
+            </h3>
+            <p className="text-sm text-red-700 dark:text-red-300 mt-1">
+              {error}
+            </p>
+            <button
+              onClick={fetchUsers}
+              className="mt-3 text-sm bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-200 px-3 py-1 rounded hover:bg-red-200 dark:hover:bg-red-700"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -266,7 +301,13 @@ const UserManagement: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Total Users</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{metrics.totalUsers.toLocaleString()}</p>
+              {loading ? (
+                <div className="animate-pulse">
+                  <div className="h-8 bg-gray-200 dark:bg-gray-600 rounded w-16 mt-1"></div>
+                </div>
+              ) : (
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{metrics.totalUsers.toLocaleString()}</p>
+              )}
             </div>
             <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
               <Users size={24} className="text-blue-600 dark:text-blue-400" />
@@ -278,7 +319,13 @@ const UserManagement: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Active Users</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{metrics.activeUsers.toLocaleString()}+</p>
+              {loading ? (
+                <div className="animate-pulse">
+                  <div className="h-8 bg-gray-200 dark:bg-gray-600 rounded w-16 mt-1"></div>
+                </div>
+              ) : (
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{metrics.activeUsers.toLocaleString()}+</p>
+              )}
             </div>
             <div className="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
               <Activity size={24} className="text-green-600 dark:text-green-400" />
@@ -290,7 +337,13 @@ const UserManagement: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Jobs Landed</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{metrics.jobsLanded.toLocaleString()}+</p>
+              {loading ? (
+                <div className="animate-pulse">
+                  <div className="h-8 bg-gray-200 dark:bg-gray-600 rounded w-16 mt-1"></div>
+                </div>
+              ) : (
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{metrics.jobsLanded.toLocaleString()}+</p>
+              )}
             </div>
             <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center">
               <Award size={24} className="text-purple-600 dark:text-purple-400" />
@@ -302,7 +355,13 @@ const UserManagement: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Success Rate</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{metrics.successRate}%</p>
+              {loading ? (
+                <div className="animate-pulse">
+                  <div className="h-8 bg-gray-200 dark:bg-gray-600 rounded w-16 mt-1"></div>
+                </div>
+              ) : (
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{metrics.successRate}%</p>
+              )}
             </div>
             <div className="w-12 h-12 bg-lime-100 dark:bg-lime-900 rounded-lg flex items-center justify-center">
               <TrendingUp size={24} className="text-lime-600 dark:text-lime-400" />
@@ -378,7 +437,33 @@ const UserManagement: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {filteredUsers.map((user) => (
+              {filteredUsers.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-12 text-center">
+                    <div className="flex flex-col items-center">
+                      <Users className="h-12 w-12 text-gray-400 mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                        {users.length === 0 ? 'No users found' : 'No users match your filters'}
+                      </h3>
+                      <p className="text-gray-500 dark:text-gray-400 mb-4">
+                        {users.length === 0 
+                          ? 'There are no users in the database. Check the console for errors or create some users.'
+                          : 'Try adjusting your search or filter criteria.'
+                        }
+                      </p>
+                      {users.length === 0 && (
+                        <button
+                          onClick={fetchUsers}
+                          className="text-lime-600 hover:text-lime-700 font-medium"
+                        >
+                          Refresh
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filteredUsers.map((user) => (
                 <tr key={user._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
@@ -462,7 +547,8 @@ const UserManagement: React.FC = () => {
                     </div>
                   </td>
                 </tr>
-              ))}
+                ))
+              )}
             </tbody>
           </table>
         </div>

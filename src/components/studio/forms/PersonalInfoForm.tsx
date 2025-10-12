@@ -135,16 +135,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="p-2 bg-lime-100 dark:bg-lime-900/20 rounded-lg">
-          <User className="w-5 h-5 text-lime-600 dark:text-lime-400" />
-        </div>
-        <h2 className={`text-lg font-semibold ${themeClasses.text.primary}`}>
-          Personal Information
-        </h2>
-      </div>
-      
+    <div className="space-y-4 p-4">
       {/* Name and Title - Compact Row */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
@@ -267,9 +258,9 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
           </motion.button>
         </div>
         <RichTextEditor
-          value={safePersonalInfo.summary}
+          content={safePersonalInfo.summary}
           onChange={(value) => onUpdate('summary', value)}
-          placeholder=""
+          placeholder="Write a brief professional summary highlighting your key skills, experience, and career objectives..."
         />
       </div>
 

@@ -26,6 +26,7 @@ interface MasterCV {
   cvData?: any;
   isStarred?: boolean;
   thumbnail?: string; // URL to PNG snapshot
+  metadata?: any; // Full metadata object
 }
 
 interface MasterCVCardOverlayProps {
@@ -49,6 +50,8 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<'edit' | 'duplicate' | null>(null);
   const [isHovered, setIsHovered] = useState(false);
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
+  const [thumbnailLoading, setThumbnailLoading] = useState(false);
 
   useEffect(() => {
     console.log('🔍 MasterCVCardOverlay - useEffect triggered');
@@ -77,6 +80,36 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
       setLoading(false);
     }
   }, [userId, masterCVData]);
+
+  // Fetch thumbnail if missing
+  useEffect(() => {
+    const fetchThumbnail = async () => {
+      if (!masterCV || thumbnailUrl || thumbnailLoading) return;
+      
+      try {
+        setThumbnailLoading(true);
+        const response = await fetch(`/api/cv/${masterCV.id}/generate-thumbnail`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.thumbnailUrl) {
+            setThumbnailUrl(result.thumbnailUrl);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching thumbnail:', error);
+      } finally {
+        setThumbnailLoading(false);
+      }
+    };
+
+    fetchThumbnail();
+  }, [masterCV, thumbnailUrl, thumbnailLoading]);
 
   const fetchMasterCV = async () => {
     try {
@@ -117,6 +150,7 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
         };
         
         setMasterCV(transformedMasterCV);
+        setThumbnailUrl(transformedMasterCV.thumbnail);
       } else {
         console.log('❌ MasterCVCardOverlay - No master CV found');
         setError('No master CV found');
@@ -179,6 +213,7 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
       year: 'numeric'
     });
   };
+
 
   // Loading state
   if (loading) {
@@ -271,13 +306,22 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
       {/* Main CV Thumbnail Container */}
       <div className="relative aspect-[3/4] bg-gradient-to-br from-lime-50 to-emerald-50 dark:from-gray-700 dark:to-gray-600 overflow-hidden">
         {/* CV Thumbnail Image */}
-        {masterCV.thumbnail ? (
+        {thumbnailUrl ? (
           <img
-            src={masterCV.thumbnail}
+            src={thumbnailUrl}
             alt={`Master CV Preview: ${masterCV.title}`}
             className="w-full h-full object-cover"
             loading="lazy"
           />
+        ) : thumbnailLoading ? (
+          /* Loading state */
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-lime-50 to-emerald-50 dark:from-gray-700 dark:to-gray-600">
+            <div className="text-center text-gray-500 dark:text-gray-400">
+              <Loader2 size={32} className="mx-auto mb-2 animate-spin opacity-50" />
+              <p className="text-sm font-medium">Generating preview...</p>
+              <p className="text-xs opacity-75">Please wait</p>
+            </div>
+          </div>
         ) : (
           /* Fallback when no thumbnail available */
           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-lime-50 to-emerald-50 dark:from-gray-700 dark:to-gray-600">
@@ -304,7 +348,7 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
                 <motion.button
                   onClick={handleEdit}
                   disabled={actionLoading === 'edit'}
-                  className="p-4 rounded-full bg-lime-500/30 hover:bg-lime-500/40 text-white transition-all duration-200 backdrop-blur-sm border border-lime-400/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="p-4 rounded-full bg-lime-600 dark:bg-lime-500/30 hover:bg-lime-700 dark:hover:bg-lime-500/40 text-white transition-all duration-200 backdrop-blur-sm border border-lime-700 dark:border-lime-400/50 disabled:opacity-50 disabled:cursor-not-allowed"
                   whileHover={{ scale: actionLoading === 'edit' ? 1 : 1.1 }}
                   whileTap={{ scale: actionLoading === 'edit' ? 1 : 0.9 }}
                   title="Edit Master CV"
@@ -320,22 +364,15 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
           )}
         </AnimatePresence>
 
-        {/* Master Badge - Always visible */}
-        <div className="absolute top-3 left-3">
-          <span className="px-2 py-1 rounded-full text-xs font-medium bg-lime-500/20 text-lime-400 border border-lime-500/30 backdrop-blur-sm flex items-center gap-1">
-            <Crown size={12} />
-            Master
-          </span>
-        </div>
 
 
         {/* Title Overlay - Positioned at bottom of preview */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 bg-lime-500/10 dark:bg-black/20 backdrop-blur-md border-t border-lime-400/20">
+        <div className="absolute bottom-0 left-0 right-0 p-4 bg-lime-600 dark:bg-black/20 backdrop-blur-md border-t border-lime-700 dark:border-lime-400/20 text-white">
           {/* CV Name */}
           <div className="mb-2">
             <div className="flex items-center gap-2">
-              <Crown size={16} className="text-lime-300" />
-              <h3 className="font-semibold text-white text-sm truncate flex-1">
+              <Crown size={14} className="text-lime-300" />
+              <h3 className="font-semibold text-white text-xs truncate flex-1">
                 {masterCV.title}
               </h3>
             </div>
@@ -348,13 +385,19 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
           <div className="flex items-center justify-between text-xs text-white/80">
             <span>Modified: {formatDate(masterCV.lastModified)}</span>
             {(() => {
-              const percentage = CVProgressService.calculateCompletionPercentage(masterCV);
+              // Use completion percentage for master CV cards
+              const cvWithData = {
+                ...masterCV,
+                cvData: masterCV.cvData || {},
+                status: masterCV.status || 'draft'
+              };
+              const percentage = CVProgressService.calculateCompletionPercentage(cvWithData);
               const progressColors = CVProgressService.getProgressColor(percentage);
               return (
                 <div className="flex items-center gap-2">
                   <div className="flex items-center gap-1">
-                    <CheckCircle size={12} className="text-lime-300" />
-                    <span className="text-lime-300 font-medium">Master</span>
+                    <CheckCircle size={10} className="text-lime-300" />
+                    <span className="text-lime-300 font-medium text-xs">Master</span>
                   </div>
                   <div className={`px-2 py-1 rounded-full text-xs font-medium backdrop-blur-sm border ${progressColors.bg} ${progressColors.text} ${progressColors.border}`}>
                     {percentage}%

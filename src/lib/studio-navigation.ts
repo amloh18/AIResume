@@ -33,7 +33,7 @@ export function navigateToStudioFromJourney(
 ): string {
   const params = new URLSearchParams({
     journeyId,
-    documentType,
+    type: documentType === 'cover-letter' ? 'cover_letter' : 'cv',
     mode: 'journey'
   });
 

@@ -18,7 +18,8 @@ async function getAdminConnection(): Promise<mongoose.Connection> {
 
   const adminMongoUri = process.env.ADMIN_MONGODB_URI || process.env.MONGODB_URI;
   if (!adminMongoUri) {
-    throw new Error('ADMIN_MONGODB_URI not found in environment variables');
+    console.warn('⚠️ No MongoDB URI found, using fallback templates');
+    return null; // Return null to indicate no database connection
   }
 
   // Create a separate connection for admin database
@@ -123,6 +124,13 @@ export class AdminTemplateService {
   } = {}): Promise<ITemplate[]> {
     try {
       const connection = await getAdminConnection();
+      
+      // If no database connection, return fallback templates
+      if (!connection) {
+        console.log('📋 Using fallback templates (no database connection)');
+        return this.getFallbackTemplates(options);
+      }
+      
       const AdminTemplate = connection.model('Template');
       
       const query: any = {};
@@ -146,7 +154,7 @@ export class AdminTemplateService {
       
       console.log(`📋 Retrieved ${templates.length} templates from admin database`);
       
-      return templates.map(template => ({
+      return templates.map((template: any) => ({
         ...template,
         id: template._id.toString(),
         _id: template._id.toString()
@@ -164,6 +172,14 @@ export class AdminTemplateService {
   static async getTemplateById(templateId: string): Promise<ITemplate | null> {
     try {
       const connection = await getAdminConnection();
+      
+      // If no database connection, return fallback template
+      if (!connection) {
+        console.log('📋 Using fallback template (no database connection)');
+        const fallbackTemplates = this.getFallbackTemplates();
+        return fallbackTemplates.find(t => t.id === templateId) || fallbackTemplates[0] || null;
+      }
+      
       const AdminTemplate = connection.model('Template');
       
       if (!mongoose.Types.ObjectId.isValid(templateId)) {
@@ -222,6 +238,14 @@ export class AdminTemplateService {
   static async getDefaultTemplate(category: string = 'cv'): Promise<ITemplate | null> {
     try {
       const connection = await getAdminConnection();
+      
+      // If no database connection, return fallback default template
+      if (!connection) {
+        console.log('📋 Using fallback default template (no database connection)');
+        const fallbackTemplates = this.getFallbackTemplates({ category });
+        return fallbackTemplates.find(t => t.isDefault) || fallbackTemplates[0] || null;
+      }
+      
       const AdminTemplate = connection.model('Template');
       
       const template = await AdminTemplate.findOne({
@@ -282,7 +306,7 @@ export class AdminTemplateService {
       
       console.log(`🔍 Search for "${searchTerm}" found ${templates.length} templates`);
       
-      return templates.map(template => ({
+      return templates.map((template: any) => ({
         ...template,
         id: template._id.toString(),
         _id: template._id.toString()
@@ -292,6 +316,209 @@ export class AdminTemplateService {
       console.error('❌ Error searching admin templates:', error);
       throw new Error('Failed to search templates in admin database');
     }
+  }
+
+  /**
+   * Get fallback templates when database is not available
+   */
+  static getFallbackTemplates(options: {
+    category?: string;
+    tier?: 'free' | 'premium';
+    isActive?: boolean;
+  } = {}): ITemplate[] {
+    const fallbackTemplates: ITemplate[] = [
+      {
+        _id: 'fallback-1' as any,
+        id: 'fallback-1',
+        name: 'Professional CV',
+        description: 'Clean and professional CV template',
+        category: 'cv',
+        tier: 'free',
+        layoutType: 'one-column',
+        globalStyles: {
+          fontFamily: 'Inter, sans-serif',
+          primaryColor: '#1f2937',
+          secondaryColor: '#6b7280',
+          backgroundColor: '#ffffff',
+          fontSize: '14px',
+          lineHeight: '1.6',
+          spacing: '24px',
+          customCSS: ''
+        },
+        columnLayout: {
+          main: {
+            width: '100%',
+            sections: ['header', 'summary', 'experience', 'education', 'skills']
+          }
+        },
+        sectionStyling: {},
+        availableSections: [
+          {
+            key: 'header',
+            displayName: 'Header',
+            componentName: 'HeaderSection',
+            isList: false,
+            defaultItemContent: {}
+          },
+          {
+            key: 'summary',
+            displayName: 'Professional Summary',
+            componentName: 'SummarySection',
+            isList: false,
+            defaultItemContent: {}
+          },
+          {
+            key: 'experience',
+            displayName: 'Work Experience',
+            componentName: 'ExperienceSection',
+            isList: true,
+            defaultItemContent: {}
+          },
+          {
+            key: 'education',
+            displayName: 'Education',
+            componentName: 'EducationSection',
+            isList: true,
+            defaultItemContent: {}
+          },
+          {
+            key: 'skills',
+            displayName: 'Skills',
+            componentName: 'SkillsSection',
+            isList: true,
+            defaultItemContent: {}
+          }
+        ],
+        pageSettings: {
+          format: 'A4',
+          orientation: 'portrait',
+          margins: {
+            top: '20mm',
+            bottom: '20mm',
+            left: '20mm',
+            right: '20mm'
+          },
+          maxHeight: '297mm'
+        },
+        isActive: true,
+        isDefault: true,
+        isPublished: true,
+        globalAccess: true,
+        version: 1,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        _id: 'fallback-2' as any,
+        id: 'fallback-2',
+        name: 'Modern CV',
+        description: 'Modern and stylish CV template',
+        category: 'cv',
+        tier: 'free',
+        layoutType: 'two-column',
+        globalStyles: {
+          fontFamily: 'Inter, sans-serif',
+          primaryColor: '#3b82f6',
+          secondaryColor: '#64748b',
+          backgroundColor: '#ffffff',
+          fontSize: '14px',
+          lineHeight: '1.6',
+          spacing: '20px',
+          customCSS: ''
+        },
+        columnLayout: {
+          leftColumn: {
+            width: '30%',
+            sections: ['header', 'skills', 'contact']
+          },
+          rightColumn: {
+            width: '70%',
+            sections: ['summary', 'experience', 'education']
+          }
+        },
+        sectionStyling: {},
+        availableSections: [
+          {
+            key: 'header',
+            displayName: 'Header',
+            componentName: 'HeaderSection',
+            isList: false,
+            defaultItemContent: {}
+          },
+          {
+            key: 'summary',
+            displayName: 'Professional Summary',
+            componentName: 'SummarySection',
+            isList: false,
+            defaultItemContent: {}
+          },
+          {
+            key: 'experience',
+            displayName: 'Work Experience',
+            componentName: 'ExperienceSection',
+            isList: true,
+            defaultItemContent: {}
+          },
+          {
+            key: 'education',
+            displayName: 'Education',
+            componentName: 'EducationSection',
+            isList: true,
+            defaultItemContent: {}
+          },
+          {
+            key: 'skills',
+            displayName: 'Skills',
+            componentName: 'SkillsSection',
+            isList: true,
+            defaultItemContent: {}
+          },
+          {
+            key: 'contact',
+            displayName: 'Contact Info',
+            componentName: 'ContactSection',
+            isList: false,
+            defaultItemContent: {}
+          }
+        ],
+        pageSettings: {
+          format: 'A4',
+          orientation: 'portrait',
+          margins: {
+            top: '20mm',
+            bottom: '20mm',
+            left: '20mm',
+            right: '20mm'
+          },
+          maxHeight: '297mm'
+        },
+        isActive: true,
+        isDefault: false,
+        isPublished: true,
+        globalAccess: true,
+        version: 1,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+    ];
+
+    // Filter templates based on options
+    let filteredTemplates = fallbackTemplates;
+
+    if (options.category && options.category !== 'all') {
+      filteredTemplates = filteredTemplates.filter(t => t.category === options.category);
+    }
+
+    if (options.tier) {
+      filteredTemplates = filteredTemplates.filter(t => t.tier === options.tier);
+    }
+
+    if (options.isActive !== undefined) {
+      filteredTemplates = filteredTemplates.filter(t => t.isActive === options.isActive);
+    }
+
+    console.log(`📋 Returning ${filteredTemplates.length} fallback templates`);
+    return filteredTemplates;
   }
 
   /**

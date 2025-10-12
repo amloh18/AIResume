@@ -304,6 +304,7 @@ export function useStudio(): UseStudioReturn {
         }
       } else {
         const coverLetterData = {
+          userId: sessionContext.userId,
           title: documentTitle,
           content: documentData as string
         };
@@ -328,7 +329,7 @@ export function useStudio(): UseStudioReturn {
           
           if (!response.ok) throw new Error('Failed to create cover letter');
           const result = await response.json();
-          documentId = result.coverLetter.id;
+          documentId = result.data?.id || result.coverLetter?.id;
         }
       }
 
@@ -495,6 +496,7 @@ async function createJourneyCV(journey: ApplicationJourneyData, job: JobData, us
 
 async function createJourneyCoverLetter(journey: ApplicationJourneyData, job: JobData, userId: string): Promise<{ newCoverLetter: CoverLetterData; newContent: string }> {
   const coverLetterData = {
+    userId,
     title: `Cover Letter for ${job.jobTitle} at ${job.company}`,
     content: `Dear Hiring Manager,\n\nI am writing to express my interest in the ${job.jobTitle} position at ${job.company}.\n\nSincerely,\n[Your Name]`
   };
@@ -508,9 +510,10 @@ async function createJourneyCoverLetter(journey: ApplicationJourneyData, job: Jo
   if (!response.ok) throw new Error('Failed to create journey cover letter');
   
   const result = await response.json();
+  const coverLetter = result.data || result.coverLetter;
   return {
-    newCoverLetter: result.coverLetter,
-    newContent: result.coverLetter.content
+    newCoverLetter: coverLetter,
+    newContent: coverLetter.content
   };
 }
 
@@ -538,6 +541,7 @@ async function createStandaloneCV(userId: string): Promise<{ newCV: CVData; newD
 
 async function createStandaloneCoverLetter(userId: string): Promise<{ newCoverLetter: CoverLetterData; newContent: string }> {
   const coverLetterData = {
+    userId,
     title: 'Untitled Cover Letter',
     content: 'Dear Hiring Manager,\n\n\n\nSincerely,\n[Your Name]'
   };
@@ -551,9 +555,10 @@ async function createStandaloneCoverLetter(userId: string): Promise<{ newCoverLe
   if (!response.ok) throw new Error('Failed to create standalone cover letter');
   
   const result = await response.json();
+  const coverLetter = result.data || result.coverLetter;
   return {
-    newCoverLetter: result.coverLetter,
-    newContent: result.coverLetter.content
+    newCoverLetter: coverLetter,
+    newContent: coverLetter.content
   };
 }
 

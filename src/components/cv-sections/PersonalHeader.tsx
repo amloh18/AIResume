@@ -2,6 +2,7 @@ import React from 'react';
 import { Mail, Phone, MapPin, Globe, Linkedin, Github } from 'lucide-react';
 import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ISectionBlueprint, ITemplate } from '@/models/Template';
+import { parseFormattedText, stripHtmlTags } from '@/lib/utils/textFormatting';
 
 interface PersonalHeaderProps {
   data: UnifiedCVDataStructure['basics'];
@@ -18,7 +19,7 @@ const PersonalHeader: React.FC<PersonalHeaderProps> = ({
 }) => {
   if (!data) return null;
 
-  const { name, email, phone, location, url, summary, profiles } = data;
+  const { name, email, phone, location, url, summary, profiles, image } = data;
 
   // Get relevant profiles
   const linkedinProfile = profiles?.find(p => p.network.toLowerCase() === 'linkedin');
@@ -30,6 +31,83 @@ const PersonalHeader: React.FC<PersonalHeaderProps> = ({
     return parts.join(', ');
   };
 
+  // Check if this template uses the header-section layout (like The Executive Accent)
+  const usesHeaderSection = template.globalStyles.customCSS?.includes('.header-section');
+
+  // If template uses header-section layout with image on right
+  if (usesHeaderSection) {
+    return (
+      <header className="personal-header">
+        <div className="header-section">
+          {/* Left side: Personal info */}
+          <div className="header-content">
+            <h1 className="person-name">
+              {name || 'Your Name'}
+            </h1>
+            
+            {data.label && (
+              <h2 className="person-title">
+                {data.label}
+              </h2>
+            )}
+
+            {/* Contact information - vertical layout */}
+            <div className="contact-info">
+              {email && (
+                <div className="contact-item">
+                  <span>Email: </span>
+                  <a href={`mailto:${email}`} className="contact-link">
+                    {email}
+                  </a>
+                </div>
+              )}
+              
+              {phone && (
+                <div className="contact-item">
+                  <span>Phone: </span>
+                  <a href={`tel:${phone}`} className="contact-link">
+                    {phone}
+                  </a>
+                </div>
+              )}
+              
+              {linkedinProfile && (
+                <div className="contact-item">
+                  <span>LinkedIn: </span>
+                  <a href={linkedinProfile.url} target="_blank" rel="noopener noreferrer" className="contact-link">
+                    {linkedinProfile.url.replace(/^https?:\/\/(www\.)?/, '')}
+                  </a>
+                </div>
+              )}
+              
+              {location && formatLocation() && (
+                <div className="contact-item">
+                  <span>Location: </span>
+                  <span>{formatLocation()}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right side: Profile image */}
+          {image && (
+            <div className="header-image">
+              <img src={image} alt={name || 'Profile'} className="profile-image" />
+            </div>
+          )}
+        </div>
+
+        {/* Professional summary is rendered separately as a section in this layout */}
+        <style jsx>{`
+          .personal-header {
+            margin-bottom: ${template.globalStyles.spacing};
+          }
+        `}</style>
+      </header>
+    );
+  }
+
+  // Default layout (original)
   return (
     <header className="personal-header">
       {/* Name and title */}
@@ -61,7 +139,6 @@ const PersonalHeader: React.FC<PersonalHeaderProps> = ({
       <div className="contact-info">
         {email && (
           <div className="contact-item">
-            <Mail size={12} />
             <a href={`mailto:${email}`} className="contact-link">
               {email}
             </a>
@@ -70,7 +147,6 @@ const PersonalHeader: React.FC<PersonalHeaderProps> = ({
         
         {phone && (
           <div className="contact-item">
-            <Phone size={12} />
             <a href={`tel:${phone}`} className="contact-link">
               {phone}
             </a>
@@ -79,14 +155,12 @@ const PersonalHeader: React.FC<PersonalHeaderProps> = ({
         
         {location && formatLocation() && (
           <div className="contact-item">
-            <MapPin size={12} />
             <span>{formatLocation()}</span>
           </div>
         )}
         
         {url && (
           <div className="contact-item">
-            <Globe size={12} />
             <a href={url} target="_blank" rel="noopener noreferrer" className="contact-link">
               {url.replace(/^https?:\/\//, '')}
             </a>
@@ -95,7 +169,6 @@ const PersonalHeader: React.FC<PersonalHeaderProps> = ({
         
         {linkedinProfile && (
           <div className="contact-item">
-            <Linkedin size={12} />
             <a href={linkedinProfile.url} target="_blank" rel="noopener noreferrer" className="contact-link">
               LinkedIn
             </a>
@@ -104,7 +177,6 @@ const PersonalHeader: React.FC<PersonalHeaderProps> = ({
         
         {githubProfile && (
           <div className="contact-item">
-            <Github size={12} />
             <a href={githubProfile.url} target="_blank" rel="noopener noreferrer" className="contact-link">
               GitHub
             </a>
@@ -115,37 +187,45 @@ const PersonalHeader: React.FC<PersonalHeaderProps> = ({
       {/* Professional summary */}
       {summary && (
         <div className="personal-summary">
-          <p style={{
-            margin: '0',
-            fontSize: template.globalStyles.fontSize,
-            lineHeight: template.globalStyles.lineHeight,
-            color: template.globalStyles.primaryColor
-          }}>
-            {summary}
-          </p>
+          <div 
+            style={{
+              margin: '0',
+              fontSize: template.globalStyles.fontSize,
+              lineHeight: template.globalStyles.lineHeight,
+              color: template.globalStyles.primaryColor,
+              textAlign: 'justify'
+            }}
+            dangerouslySetInnerHTML={{ __html: parseFormattedText(stripHtmlTags(summary)) }}
+          />
         </div>
       )}
 
       <style jsx>{`
         .personal-header {
           margin-bottom: ${template.globalStyles.spacing};
-          padding-bottom: 16px;
-          border-bottom: 1px solid rgba(0,0,0,0.1);
+          padding-bottom: 0;
+          border-bottom: none;
         }
         
         .contact-info {
           display: flex;
           flex-wrap: wrap;
-          gap: 16px;
-          margin: 12px 0;
+          gap: 0;
+          margin: 4px 0 12px 0;
           font-size: 10pt;
-          color: ${template.globalStyles.secondaryColor};
+          color: ${template.globalStyles.primaryColor};
         }
         
         .contact-item {
-          display: flex;
+          display: inline-flex;
           align-items: center;
-          gap: 6px;
+          gap: 4px;
+        }
+        
+        .contact-item:not(:last-child)::after {
+          content: ' / ';
+          margin: 0 6px;
+          color: ${template.globalStyles.primaryColor};
         }
         
         .contact-link {
@@ -154,21 +234,20 @@ const PersonalHeader: React.FC<PersonalHeaderProps> = ({
         }
         
         .contact-link:hover {
-          color: ${template.globalStyles.primaryColor};
-          text-decoration: underline;
+          color: inherit;
+          text-decoration: none;
         }
         
         .personal-summary {
-          margin-top: 16px;
-          padding-top: 16px;
-          border-top: 1px solid rgba(0,0,0,0.05);
+          margin-top: 12px;
+          margin-bottom: 20px;
+          padding-top: 0;
+          border-top: none;
+          line-height: 1.5;
         }
         
-        @media (max-width: 768px) {
-          .contact-info {
-            flex-direction: column;
-            gap: 8px;
-          }
+        .personal-summary p {
+          text-align: justify;
         }
         
         @media print {

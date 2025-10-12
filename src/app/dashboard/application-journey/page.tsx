@@ -75,7 +75,7 @@ const ApplicationJourneyPageContent: React.FC = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [sortBy, setSortBy] = useState<'lastUpdated' | 'creationDate' | 'jobTitle'>('lastUpdated');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'in-progress' | 'completed'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'in-progress' | 'completed' | 'recently-completed'>('in-progress');
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
 
@@ -301,7 +301,14 @@ const ApplicationJourneyPageContent: React.FC = () => {
 
     const filtered = journeys.filter(journey => {
       // Filter by status
-      if (filterStatus !== 'all' && journey.status !== filterStatus) {
+      if (filterStatus === 'recently-completed') {
+        // Show journeys completed in the last 7 days
+        if (journey.status !== 'completed') return false;
+        const completedAt = journey.completedAt ? new Date(journey.completedAt) : new Date(journey.updatedAt);
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        return completedAt >= sevenDaysAgo;
+      } else if (filterStatus !== 'all' && journey.status !== filterStatus) {
         return false;
       }
 
@@ -384,16 +391,6 @@ const ApplicationJourneyPageContent: React.FC = () => {
         {/* Action Buttons */}
         <div className="flex gap-3">
           <motion.button
-            onClick={() => startJourney(currentJobId || '')}
-            className="flex items-center gap-2 px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors shadow-sm"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <Briefcase className="h-4 w-4" />
-            Resume Journey
-          </motion.button>
-          
-          <motion.button
             onClick={handleStartNewJourney}
             className="flex items-center gap-2 px-6 py-2 bg-lime-500 hover:bg-lime-600 text-black font-medium rounded-lg transition-colors shadow-sm"
             whileHover={{ scale: 1.02 }}
@@ -444,12 +441,48 @@ const ApplicationJourneyPageContent: React.FC = () => {
                   <option value="all">All Journeys</option>
                   <option value="in-progress">In Progress</option>
                   <option value="completed">Completed</option>
+                  <option value="recently-completed">Recently Completed</option>
                 </select>
               </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Quick Filter Chips */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        {(() => {
+          const ongoingCount = journeys.filter(j => j.status === 'in-progress').length;
+          const completedCount = journeys.filter(j => j.status === 'completed').length;
+          const recentlyCompletedCount = journeys.filter(j => {
+            if (j.status !== 'completed') return false;
+            const completedAt = j.completedAt ? new Date(j.completedAt) : new Date(j.updatedAt);
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+            return completedAt >= sevenDaysAgo;
+          }).length;
+
+          return [
+            { key: 'in-progress', label: 'Ongoing', count: ongoingCount, color: 'lime' },
+            { key: 'completed', label: 'Completed', count: completedCount, color: 'blue' },
+            { key: 'recently-completed', label: 'Recently Completed', count: recentlyCompletedCount, color: 'green' }
+          ];
+        })().map(({ key, label, count, color }) => (
+          <motion.button
+            key={key}
+            onClick={() => setFilterStatus(key as any)}
+            className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+              filterStatus === key
+                ? `bg-${color}-500 text-white`
+                : `bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-${color}-100 dark:hover:bg-${color}-900/30`
+            }`}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            {label} ({count})
+          </motion.button>
+        ))}
+      </div>
 
       {/* Journeys Grid */}
       <div className="space-y-4">

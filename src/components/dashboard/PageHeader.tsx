@@ -52,7 +52,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({
   const [showNotificationDropdown, setShowNotificationDropdown] = React.useState(false);
 
   return (
-    <div className="mb-8">
+    <div className="mb-3">
       {/* Desktop Layout */}
       <div className="hidden xl:flex items-center justify-between py-6">
         {/* Title and Description */}
@@ -168,11 +168,13 @@ const PageHeader: React.FC<PageHeaderProps> = ({
               name: user?.name || 'User',
               email: user?.email || '',
               profilePhoto: user?.profilePhoto,
-              isEmailVerified: true, // You can add this to user data
-              subscription: user?.subscription
+              isEmailVerified: user?.isEmailVerified || false,
+              subscription: user?.subscription || {
+                planName: 'Free Plan',
+                status: 'active'
+              }
             }}
           />
-          
         </div>
       </div>
 
@@ -300,13 +302,15 @@ const PageHeader: React.FC<PageHeaderProps> = ({
             <UserAvatar 
               user={{
                 name: user?.name || 'User',
-                email: user?.email || 'user@example.com',
+                email: user?.email || '',
                 profilePhoto: user?.profilePhoto,
-                isEmailVerified: true, // You can add this to user data
-                subscription: user?.subscription
+                isEmailVerified: user?.isEmailVerified || false,
+                subscription: user?.subscription || {
+                  planName: 'Free Plan',
+                  status: 'active'
+                }
               }}
             />
-            
           </div>
         </div>
       </div>

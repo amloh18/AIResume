@@ -16,7 +16,8 @@ const Volunteer: React.FC<VolunteerProps> = ({
   template, 
   cvData 
 }) => {
-  if (!data || data.length === 0) return null;
+  // Always render the section, even if empty, so users can see the structure
+  const volunteer = data || [];
 
   const formatDate = (dateString: string) => {
     if (!dateString) return '';
@@ -44,7 +45,7 @@ const Volunteer: React.FC<VolunteerProps> = ({
       </h2>
       
       <div className="volunteer-list">
-        {data.map((volunteer, index) => (
+        {volunteer.map((volunteerItem, index) => (
           <div key={index} className="volunteer-item">
             <div className="item-header">
               <div className="item-title-group">

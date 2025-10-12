@@ -18,6 +18,7 @@ interface TabbedStudioPanelProps {
   templateContent: React.ReactNode;
   jobATSContent?: React.ReactNode;
   parserContent?: React.ReactNode;
+  cvSectionsAndOrderingContent?: React.ReactNode;
 }
 
 const TabbedStudioPanel: React.FC<TabbedStudioPanelProps> = ({
@@ -25,7 +26,8 @@ const TabbedStudioPanel: React.FC<TabbedStudioPanelProps> = ({
   designContent,
   templateContent,
   jobATSContent,
-  parserContent
+  parserContent,
+  cvSectionsAndOrderingContent
 }) => {
   const themeClasses = getThemeClasses;
   const [activeTab, setActiveTab] = useState<'structure' | 'design' | 'template'>('structure');
@@ -54,10 +56,19 @@ const TabbedStudioPanel: React.FC<TabbedStudioPanelProps> = ({
             )}
           </div>
 
-          {/* Structure Content */}
-          <div>
-            {structureContent}
-          </div>
+          {/* CV Sections & Ordering - Merged Section */}
+          {cvSectionsAndOrderingContent && (
+            <div>
+              {cvSectionsAndOrderingContent}
+            </div>
+          )}
+
+          {/* Structure Content - Fallback for other content */}
+          {!cvSectionsAndOrderingContent && (
+            <div>
+              {structureContent}
+            </div>
+          )}
         </div>
       )
     },

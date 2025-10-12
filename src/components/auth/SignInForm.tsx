@@ -40,31 +40,9 @@ export default function SignInForm() {
       if (result.success) {
         console.log(`✅ Authentication successful via ${result.method}`);
         
-        // Check if user has CVs before deciding where to route
-        try {
-          // Get session to access user data
-          const session = await getSession();
-          if (session?.user) {
-            console.log('🔍 Checking CVs for user:', session.user.id);
-            const response = await fetch(`/api/cvs?userId=${session.user.id}&projection=count`);
-            const cvResult = await response.json();
-            
-            if (cvResult.success && cvResult.count > 0) {
-              console.log('✅ User has CVs, redirecting to dashboard');
-              window.location.href = '/dashboard';
-            } else {
-              console.log('📝 User needs onboarding, redirecting to master CV onboarding');
-              window.location.href = '/master-cv-onboarding';
-            }
-          } else {
-            // Fallback to dashboard if no session data
-            window.location.href = '/dashboard';
-          }
-        } catch (error) {
-          console.error('❌ Error checking CV status:', error);
-          // Default to dashboard if we can't check
-          window.location.href = '/dashboard';
-        }
+        // Always redirect to dashboard - let the dashboard handle CV checking and onboarding redirect
+        console.log('🔄 Redirecting to dashboard...');
+        window.location.href = '/dashboard';
       } else {
         setError(result.error || 'Authentication failed. Please try again.');
       }

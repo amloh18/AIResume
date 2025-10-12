@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { useToast } from '@/hooks/use-toast';
+import { useNotifications } from '@/contexts/NotificationContext';
 
 interface CalendarSyncSettingsProps {
   userSettings: any;
@@ -21,7 +21,7 @@ export default function CalendarSyncSettings({ userSettings, onUpdateSettings }:
   const [isLoading, setIsLoading] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
-  const { toast } = useToast();
+  const { addNotification } = useNotifications();
 
   const calendarSettings = userSettings?.advanced?.integrations?.calendar || {
     connected: false,
@@ -64,10 +64,11 @@ export default function CalendarSyncSettings({ userSettings, onUpdateSettings }:
       }
     } catch (error) {
       console.error('Error connecting calendar:', error);
-      toast({
+      addNotification({
+        type: 'error',
         title: 'Connection Failed',
-        description: 'Failed to connect to Google Calendar. Please try again.',
-        variant: 'destructive',
+        message: 'Failed to connect to Google Calendar. Please try again.',
+        persistent: false
       });
       setIsConnecting(false);
     }
@@ -91,19 +92,22 @@ export default function CalendarSyncSettings({ userSettings, onUpdateSettings }:
       
       if (data.success) {
         setLastSyncTime(new Date());
-        toast({
+        addNotification({
+          type: 'success',
           title: 'Sync Successful',
-          description: `Synced ${data.syncedCount} job applications to your calendar.`,
+          message: `Synced ${data.syncedCount} job applications to your calendar.`,
+          persistent: false
         });
       } else {
         throw new Error(data.error || 'Failed to sync to calendar');
       }
     } catch (error) {
       console.error('Error syncing calendar:', error);
-      toast({
+      addNotification({
+        type: 'error',
         title: 'Sync Failed',
-        description: 'Failed to sync job applications to calendar. Please try again.',
-        variant: 'destructive',
+        message: 'Failed to sync job applications to calendar. Please try again.',
+        persistent: false
       });
     } finally {
       setIsLoading(false);
@@ -131,16 +135,19 @@ export default function CalendarSyncSettings({ userSettings, onUpdateSettings }:
 
       onUpdateSettings(updatedSettings);
       
-      toast({
+      addNotification({
+        type: 'success',
         title: 'Calendar Disconnected',
-        description: 'Your calendar has been disconnected successfully.',
+        message: 'Your calendar has been disconnected successfully.',
+        persistent: false
       });
     } catch (error) {
       console.error('Error disconnecting calendar:', error);
-      toast({
+      addNotification({
+        type: 'error',
         title: 'Disconnect Failed',
-        description: 'Failed to disconnect calendar. Please try again.',
-        variant: 'destructive',
+        message: 'Failed to disconnect calendar. Please try again.',
+        persistent: false
       });
     }
   };

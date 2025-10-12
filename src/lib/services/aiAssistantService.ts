@@ -388,6 +388,42 @@ export class AIAssistantService {
       
       const suggestions: AISuggestion[] = [];
       
+      // Use the new cover letter generation API
+      try {
+        const response = await fetch('/api/ai/cover-letter-generate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            cvData,
+            jobData,
+            recipientName: 'Hiring Manager',
+            companyName: jobData.company
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.content) {
+            suggestions.push({
+              id: 'cover-letter-1',
+              title: 'Cover Letter Draft',
+              content: data.content,
+              type: 'replacement',
+              section: 'cover-letter',
+              field: 'content',
+              generatedAt: new Date().toISOString(),
+              isOutOfDate: false
+            });
+            return suggestions;
+          }
+        }
+      } catch (apiError) {
+        console.error('Cover letter API error:', apiError);
+      }
+      
+      // Fallback to basic cover letter
       suggestions.push({
         id: 'cover-letter-1',
         title: 'Cover Letter Draft',
@@ -539,10 +575,10 @@ export class AIAssistantService {
         company: jobData.company
       });
       
-      // Try the comprehensive analysis API first
+      // Try the new comprehensive ATS analysis API first
       try {
-        console.log('🌐 AIAssistantService - Attempting API call...');
-        const response = await fetch('/api/ai/comprehensive-analysis', {
+        console.log('🌐 AIAssistantService - Attempting new comprehensive ATS analysis API...');
+        const response = await fetch('/api/ai/comprehensive-ats-analysis', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -560,12 +596,41 @@ export class AIAssistantService {
           console.log('📄 AIAssistantService - API response:', result);
           
           if (result.success) {
-            console.log('✅ AIAssistantService - Comprehensive analysis completed via API');
+            console.log('✅ AIAssistantService - Comprehensive ATS analysis completed via API');
             return result.data;
           }
         }
       } catch (apiError) {
-        console.log('⚠️ AIAssistantService - API failed, falling back to local analysis:', apiError);
+        console.log('⚠️ AIAssistantService - New API failed, trying legacy API:', apiError);
+      }
+
+      // Try the legacy comprehensive analysis API
+      try {
+        console.log('🌐 AIAssistantService - Attempting legacy API call...');
+        const response = await fetch('/api/ai/comprehensive-analysis', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            cvData,
+            jobData
+          }),
+        });
+
+        console.log('📡 AIAssistantService - Legacy API response status:', response.status);
+
+        if (response.ok) {
+          const result = await response.json();
+          console.log('📄 AIAssistantService - Legacy API response:', result);
+          
+          if (result.success) {
+            console.log('✅ AIAssistantService - Comprehensive analysis completed via legacy API');
+            return result.data;
+          }
+        }
+      } catch (apiError) {
+        console.log('⚠️ AIAssistantService - Legacy API failed, falling back to local analysis:', apiError);
       }
 
       // Fallback to local analysis when API is not available
@@ -909,24 +974,34 @@ export class AIAssistantService {
     return suggestions;
   }
 
-  // AI Content Improvement Methods
+  // AI Content Improvement Methods - Updated with new prompting strategy
   static async improveSummary(currentText: string, cvData: any, jobData: any): Promise<string> {
     try {
-      const prompt = `Improve this professional summary following CV guidelines:
-      
-Current Summary: "${currentText}"
-CV Data: ${JSON.stringify(cvData?.basics || {})}
-Job Context: ${jobData ? JSON.stringify(jobData) : 'No specific job'}
+      // Use the new section generation API
+      const response = await fetch('/api/ai/section-generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          cvData,
+          jobData,
+          currentText,
+          sectionType: 'summary',
+          jobTitle: jobData?.title || jobData?.jobTitle,
+          companyName: jobData?.company
+        }),
+      });
 
-Guidelines:
-- Length: 3-4 lines (~50-80 words)
-- Focus: High-level pitch, top skills, career goal
-- Style: Professional, concise, impactful
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.content) {
+          return data.content;
+        }
+      }
 
-Return only the improved summary text.`;
-
-      const response = await this.callAI(prompt);
-      return response || currentText;
+      // Fallback to local processing
+      return this.processLocally(`Improve summary: ${currentText}`);
     } catch (error) {
       console.error('Error improving summary:', error);
       return currentText;
@@ -935,22 +1010,31 @@ Return only the improved summary text.`;
 
   static async improveDescription(currentText: string, cvData: any, jobData: any): Promise<string> {
     try {
-      const prompt = `Improve this work/project description:
+      // Use the new section generation API
+      const response = await fetch('/api/ai/section-generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          cvData,
+          jobData,
+          currentText,
+          sectionType: 'workExperience',
+          jobTitle: jobData?.title || jobData?.jobTitle,
+          companyName: jobData?.company
+        }),
+      });
 
-Current Description: "${currentText}"
-CV Data: ${JSON.stringify(cvData || {})}
-Job Context: ${jobData ? JSON.stringify(jobData) : 'No specific job'}
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.content) {
+          return data.content;
+        }
+      }
 
-Guidelines:
-- Be specific and quantifiable
-- Use action verbs
-- Focus on achievements and impact
-- Keep it concise but informative
-
-Return only the improved description text.`;
-
-      const response = await this.callAI(prompt);
-      return response || currentText;
+      // Fallback to local processing
+      return this.processLocally(`Improve description: ${currentText}`);
     } catch (error) {
       console.error('Error improving description:', error);
       return currentText;
@@ -959,23 +1043,31 @@ Return only the improved description text.`;
 
   static async improveHighlights(currentText: string, cvData: any, jobData: any): Promise<string> {
     try {
-      const prompt = `Improve these bullet points/highlights:
+      // Use the new section generation API
+      const response = await fetch('/api/ai/section-generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          cvData,
+          jobData,
+          currentText,
+          sectionType: 'workExperience',
+          jobTitle: jobData?.title || jobData?.jobTitle,
+          companyName: jobData?.company
+        }),
+      });
 
-Current Highlights: "${currentText}"
-CV Data: ${JSON.stringify(cvData || {})}
-Job Context: ${jobData ? JSON.stringify(jobData) : 'No specific job'}
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.content) {
+          return data.content;
+        }
+      }
 
-Guidelines:
-- 3-5 bullet points per role
-- Quantified achievements with numbers/percentages
-- Action verbs at the start
-- Focus on results and impact
-- Each bullet should be 1-2 lines
-
-Return only the improved bullet points, one per line.`;
-
-      const response = await this.callAI(prompt);
-      return response || currentText;
+      // Fallback to local processing
+      return this.processLocally(`Improve highlights: ${currentText}`);
     } catch (error) {
       console.error('Error improving highlights:', error);
       return currentText;

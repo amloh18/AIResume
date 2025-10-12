@@ -4,6 +4,7 @@ import React from 'react';
 import TemplateSelector from './TemplateSelector';
 import { ITemplate } from '@/models/Template';
 import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { useTemplateStore } from '@/lib/stores/templateStore';
 
 interface TemplateContentProps {
   selectedTemplate?: ITemplate | null;
@@ -18,7 +19,12 @@ const TemplateContent: React.FC<TemplateContentProps> = ({
   onTemplatePreview,
   cvData
 }) => {
+  const { selectedTemplate: globalSelectedTemplate, setSelectedTemplate } = useTemplateStore();
+
   const handleTemplateSelect = (template: ITemplate) => {
+    // Update the global template store
+    setSelectedTemplate(template);
+    
     if (onTemplateSelect) {
       onTemplateSelect(template);
     }
@@ -30,7 +36,7 @@ const TemplateContent: React.FC<TemplateContentProps> = ({
   return (
     <div className="template-content">
       <TemplateSelector
-        selectedTemplate={selectedTemplate || null}
+        selectedTemplate={globalSelectedTemplate || null}
         onTemplateSelect={handleTemplateSelect}
         cvData={cvData}
         className="w-full h-full"

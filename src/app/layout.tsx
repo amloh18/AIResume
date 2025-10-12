@@ -8,13 +8,19 @@ import PerformanceMonitor from '@/components/ui/PerformanceMonitor'
 import { LoadingProvider } from '@/components/providers/LoadingProvider'
 import { PaymentModalProvider } from '@/contexts/PaymentModalContext'
 import CookieConsent from '@/components/CookieConsent'
-import { Toaster } from 'react-hot-toast'
+import { NotificationProvider } from '@/contexts/NotificationContext'
+import { ConsoleLoggerProvider } from '@/contexts/ConsoleLoggerProvider'
 
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'CVCircle.io - AI-Powered CV Builder',
   description: 'Create stunning CVs with AI assistance. Professional templates, ATS optimization, and real-time analytics.',
+  icons: {
+    icon: '/images/favicon.png',
+    shortcut: '/images/favicon.png',
+    apple: '/images/favicon.png',
+  },
 }
 
 export default function RootLayout({
@@ -29,7 +35,11 @@ export default function RootLayout({
           <ThemeProvider>
             <LoadingProvider>
               <PaymentModalProvider>
-                {children}
+                <NotificationProvider>
+                  <ConsoleLoggerProvider>
+                    {children}
+                  </ConsoleLoggerProvider>
+                </NotificationProvider>
               </PaymentModalProvider>
             </LoadingProvider>
           </ThemeProvider>
@@ -37,30 +47,6 @@ export default function RootLayout({
         <Analytics />
         <PerformanceMonitor />
         <CookieConsent />
-        <Toaster 
-          position="top-right"
-          toastOptions={{
-            duration: 4000,
-            style: {
-              background: '#363636',
-              color: '#fff',
-            },
-            success: {
-              duration: 3000,
-              iconTheme: {
-                primary: '#4ade80',
-                secondary: '#fff',
-              },
-            },
-            error: {
-              duration: 5000,
-              iconTheme: {
-                primary: '#ef4444',
-                secondary: '#fff',
-              },
-            },
-          }}
-        />
       </body>
     </html>
   )

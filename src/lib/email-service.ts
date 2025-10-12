@@ -82,7 +82,7 @@ const createTransporter = () => {
     return null;
   }
 
-  return nodemailer.createTransporter(config);
+  return nodemailer.createTransport(config);
 };
 
 // Get sender email address
@@ -245,6 +245,34 @@ export async function testEmailService() {
     await transporter.verify();
     return { success: true, message: 'Email service is properly configured' };
   } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+// Generic email sending function
+export async function sendEmail({ to, subject, text, html }: { to: string; subject: string; text: string; html: string }) {
+  const transporter = createTransporter();
+  
+  if (!transporter) {
+    console.error('❌ Email service not configured');
+    return { success: false, error: 'Email service not configured' };
+  }
+
+  try {
+    const senderEmail = getSenderEmail();
+    const mailOptions = {
+      from: `"Circle CV" <${senderEmail}>`,
+      to,
+      subject,
+      text,
+      html,
+    };
+
+    const result = await transporter.sendMail(mailOptions);
+    console.log('✅ Email sent successfully:', result.messageId);
+    return { success: true, messageId: result.messageId };
+  } catch (error: any) {
+    console.error('❌ Failed to send email:', error);
     return { success: false, error: error.message };
   }
 }

@@ -50,7 +50,13 @@ const GoogleOneTap = () => {
             
             if (result.success && result.data.cvs && result.data.cvs.length > 0) {
               // Check if user has any master CVs
-              const hasMasterCV = result.data.cvs.some((cv: any) => cv.isMaster === true);
+              // Handle both old format (isMaster at root) and new format (metadata.isMaster)
+              const hasMasterCV = result.data.cvs.some((cv: any) => {
+                const isMasterAtRoot = cv.isMaster === true;
+                const isMasterInMetadata = cv.metadata?.isMaster === true;
+                const isMasterInMetadataString = cv.metadata?.isMaster === 'true';
+                return isMasterAtRoot || isMasterInMetadata || isMasterInMetadataString;
+              });
               
               if (hasMasterCV) {
                 // User has master CV, redirect to dashboard

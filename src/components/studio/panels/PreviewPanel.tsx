@@ -85,17 +85,19 @@ export function PreviewPanel({
 
   return (
     <div className="h-full flex flex-col bg-gray-100 dark:bg-gray-900">
-      {/* Preview Header */}
-      <PreviewHeader
-        documentType={documentType}
-        previewMode={previewMode}
-        zoom={zoom}
-        paperSize={previewSettings.paperSize}
-        onPreviewModeChange={setPreviewMode}
-        onZoomChange={setZoom}
-        onExport={() => handleExport(documentType, documentData)}
-        onShare={() => handleShare(documentType)}
-      />
+      {/* Preview Header - Only show for CV */}
+      {documentType === 'cv' && (
+        <PreviewHeader
+          documentType={documentType}
+          previewMode={previewMode}
+          zoom={zoom}
+          paperSize={previewSettings.paperSize}
+          onPreviewModeChange={setPreviewMode}
+          onZoomChange={setZoom}
+          onExport={() => handleExport(documentType, documentData)}
+          onShare={() => handleShare(documentType)}
+        />
+      )}
 
       {/* Preview Content */}
       <div className="flex-1 overflow-auto p-4">
@@ -113,12 +115,14 @@ export function PreviewPanel({
         </div>
       </div>
 
-      {/* Preview Footer */}
-      <PreviewFooter
-        documentType={documentType}
-        documentData={documentData}
-        zoom={zoom}
-      />
+      {/* Preview Footer - Only show for CV */}
+      {documentType === 'cv' && (
+        <PreviewFooter
+          documentType={documentType}
+          documentData={documentData}
+          zoom={zoom}
+        />
+      )}
     </div>
   );
 }
@@ -297,7 +301,7 @@ function PreviewRenderer({
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.3 }}
-      className="bg-white shadow-lg rounded-lg overflow-hidden"
+      className={documentType === 'cv' ? "bg-white shadow-lg rounded-lg overflow-hidden" : "bg-white overflow-hidden"}
       style={{
         width: dimensions.width,
         height: dimensions.height,
@@ -305,12 +309,13 @@ function PreviewRenderer({
       }}
     >
       <div 
-        className="w-full h-full p-6 overflow-auto"
+        className="w-full h-full overflow-auto"
         style={{
           fontFamily: appliedStyles?.fontFamily || 'Inter, sans-serif',
           fontSize: appliedStyles?.fontSize || '14px',
           lineHeight: appliedStyles?.lineHeight || '1.6',
-          color: appliedStyles?.primaryColor || '#1f2937'
+          color: '#1f2937', // Force black text for visibility
+          padding: documentType === 'cv' ? '24px' : '0'
         }}
       >
         {documentType === 'cv' ? (
@@ -352,7 +357,7 @@ function CVPreview({
       {/* Header Section */}
       {cvData.basics && (
         <div className="text-center pb-4 border-b-2" style={{ borderColor: appliedStyles?.primaryColor }}>
-          <h1 className="text-2xl font-bold mb-2" style={{ color: appliedStyles?.primaryColor }}>
+          <h1 className="text-2xl font-bold mb-2 text-gray-900">
             {cvData.basics.name || 'Your Name'}
           </h1>
           {cvData.basics.label && (
@@ -369,7 +374,7 @@ function CVPreview({
       {/* Summary */}
       {cvData.basics?.summary && (
         <section>
-          <h2 className="text-lg font-semibold mb-3" style={{ color: appliedStyles?.primaryColor }}>
+          <h2 className="text-lg font-semibold mb-3 text-gray-900">
             Professional Summary
           </h2>
           <p className="text-gray-700 leading-relaxed">{cvData.basics.summary}</p>
@@ -379,13 +384,13 @@ function CVPreview({
       {/* Work Experience */}
       {cvData.work && cvData.work.length > 0 && (
         <section>
-          <h2 className="text-lg font-semibold mb-3" style={{ color: appliedStyles?.primaryColor }}>
+          <h2 className="text-lg font-semibold mb-3 text-gray-900">
             Work Experience
           </h2>
           <div className="space-y-4">
             {cvData.work.map((job, index) => (
               <div key={index} className="border-l-2 pl-4" style={{ borderColor: appliedStyles?.secondaryColor }}>
-                <h3 className="font-semibold">{job.position}</h3>
+                <h3 className="font-semibold text-gray-900">{job.position}</h3>
                 <p className="text-gray-600">{job.name} • {job.startDate} - {job.endDate || 'Present'}</p>
                 {job.summary && <p className="mt-2 text-gray-700">{job.summary}</p>}
                 {job.highlights && job.highlights.length > 0 && (
@@ -404,7 +409,7 @@ function CVPreview({
       {/* Education */}
       {cvData.education && cvData.education.length > 0 && (
         <section>
-          <h2 className="text-lg font-semibold mb-3" style={{ color: appliedStyles?.primaryColor }}>
+          <h2 className="text-lg font-semibold mb-3 text-gray-900">
             Education
           </h2>
           <div className="space-y-3">
@@ -422,7 +427,7 @@ function CVPreview({
       {/* Skills */}
       {cvData.skills && cvData.skills.length > 0 && (
         <section>
-          <h2 className="text-lg font-semibold mb-3" style={{ color: appliedStyles?.primaryColor }}>
+          <h2 className="text-lg font-semibold mb-3 text-gray-900">
             Skills
           </h2>
           <div className="flex flex-wrap gap-2">
@@ -432,7 +437,7 @@ function CVPreview({
                 className="px-3 py-1 rounded text-sm"
                 style={{ 
                   backgroundColor: `${appliedStyles?.primaryColor}20`,
-                  color: appliedStyles?.primaryColor
+                  color: '#1f2937'
                 }}
               >
                 {skill.name}
@@ -459,21 +464,150 @@ function CoverLetterPreview({
   appliedStyles: any;
   previewMode: string;
 }) {
+  // Parse the content to extract different parts
+  const parseCoverLetterContent = (content: string) => {
+    const lines = content.split('\n').filter(line => line.trim());
+    
+    // Extract sender information from cvData
+    const senderName = cvData?.basics?.name?.toUpperCase() || 'YOUR NAME';
+    const location = cvData?.basics?.location || 'Your Location';
+    const phone = cvData?.basics?.phone || '555-555-5555';
+    const email = cvData?.basics?.email || 'email@example.com';
+    const senderInfo = `${location} | ${phone} | ${email}`;
+    
+    // Date
+    const date = new Date().toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+    
+    // Extract recipient information from jobData
+    const recipientName = jobData?.contactPerson || 'Hiring Manager';
+    const companyName = jobData?.company || 'Company Name';
+    const companyLocation = jobData?.location || '';
+    const companyAddress = companyLocation ? `${companyLocation}` : '';
+    
+    // Generate salutation
+    let salutation = 'Dear Hiring Manager,';
+    if (jobData?.contactPerson) {
+      const nameparts = jobData.contactPerson.split(' ');
+      if (nameparts.length > 1) {
+        salutation = `Dear ${nameparts[0]},`;
+      }
+    }
+    
+    // Body content - extract actual letter content
+    let body = content;
+    
+    // Remove common greetings if they're at the start
+    if (content.startsWith('Dear ')) {
+      const greetingEnd = content.indexOf('\n');
+      if (greetingEnd > -1) {
+        body = content.substring(greetingEnd + 1).trim();
+      }
+    }
+    
+    // Extract closing if present
+    let closing = 'Thank you for considering my application.\n\nSincerely,\n' + (cvData?.basics?.name || 'Your Name');
+    const closingKeywords = ['Sincerely', 'Best regards', 'Thank you'];
+    for (const keyword of closingKeywords) {
+      const closingIndex = content.lastIndexOf(keyword);
+      if (closingIndex > -1) {
+        closing = content.substring(closingIndex).trim();
+        body = content.substring(0, closingIndex).trim();
+        // Remove greeting from body if present
+        if (body.startsWith('Dear ')) {
+          const greetingEnd = body.indexOf('\n');
+          if (greetingEnd > -1) {
+            body = body.substring(greetingEnd + 1).trim();
+          }
+        }
+        break;
+      }
+    }
+    
+    return {
+      senderName,
+      senderInfo,
+      date,
+      recipientName,
+      companyName,
+      companyAddress,
+      salutation,
+      body,
+      closing
+    };
+  };
+
+  const letterData = parseCoverLetterContent(content);
+
   return (
-    <div className="space-y-6">
-      <div 
-        className="prose max-w-none"
-        style={{
-          fontFamily: appliedStyles?.fontFamily,
-          fontSize: appliedStyles?.fontSize,
-          lineHeight: appliedStyles?.lineHeight
-        }}
-      >
-        {content.split('\n').map((paragraph, index) => (
-          <p key={index} className="mb-4 text-gray-700">
-            {paragraph}
-          </p>
+    <div 
+      className="cover-letter-container"
+      style={{
+        fontFamily: appliedStyles?.fontFamily || 'Arial, sans-serif',
+        fontSize: appliedStyles?.fontSize || '11pt',
+        lineHeight: appliedStyles?.lineHeight || '1.2',
+        color: '#000000',
+        backgroundColor: '#ffffff',
+        maxWidth: '8.5in',
+        margin: '0 auto',
+        padding: '0.5in',
+        minHeight: '11in'
+      }}
+    >
+      {/* Header - Sender Information */}
+      <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+        <div style={{ 
+          fontSize: '16pt', 
+          fontWeight: 'bold', 
+          marginBottom: '8px',
+          color: '#000000'
+        }}>
+          {letterData.senderName}
+        </div>
+        <div style={{ 
+          fontSize: '10pt', 
+          color: '#000000'
+        }}>
+          {letterData.senderInfo}
+        </div>
+      </div>
+
+      {/* Date */}
+      <div style={{ marginBottom: '20px', textAlign: 'left' }}>
+        {letterData.date}
+      </div>
+
+      {/* Recipient Information */}
+      <div style={{ marginBottom: '20px', textAlign: 'left' }}>
+        <div>{letterData.recipientName}</div>
+        <div>{letterData.companyName}</div>
+        <div style={{ whiteSpace: 'pre-line' }}>{letterData.companyAddress}</div>
+      </div>
+
+      {/* Salutation */}
+      <div style={{ marginBottom: '16px', textAlign: 'left' }}>
+        {letterData.salutation}
+      </div>
+
+      {/* Body Content */}
+      <div style={{ marginBottom: '16px' }}>
+        {letterData.body.split('\n\n').map((paragraph, index) => (
+          <div key={index} style={{ 
+            marginBottom: '12px',
+            textAlign: 'left',
+            lineHeight: '1.5'
+          }}>
+            {paragraph.trim()}
+          </div>
         ))}
+      </div>
+
+      {/* Closing */}
+      <div style={{ marginTop: '20px', textAlign: 'left' }}>
+        <div style={{ whiteSpace: 'pre-line' }}>{letterData.closing}</div>
       </div>
     </div>
   );

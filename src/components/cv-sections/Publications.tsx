@@ -16,7 +16,8 @@ const Publications: React.FC<PublicationsProps> = ({
   template, 
   cvData 
 }) => {
-  if (!data || data.length === 0) return null;
+  // Always render the section, even if empty, so users can see the structure
+  const publications = data || [];
 
   const formatDate = (dateString: string) => {
     if (!dateString) return '';
@@ -38,7 +39,7 @@ const Publications: React.FC<PublicationsProps> = ({
       </h2>
       
       <div className="publications-list">
-        {data.map((publication, index) => (
+        {publications.map((publication, index) => (
           <div key={index} className="publication-item">
             <div className="item-header">
               <div className="item-title-group">

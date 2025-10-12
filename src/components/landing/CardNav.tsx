@@ -58,7 +58,8 @@ const CardNav = ({
         <div className="card-nav-content">
           <div className="logo-container">
             <span className="logo-text">
-              <span className="text-lime-400">CV</span>Circle
+              <span className="text-lime-400">CV</span>
+              <span className="text-gray-300">Circle.io</span>
             </span>
           </div>
 

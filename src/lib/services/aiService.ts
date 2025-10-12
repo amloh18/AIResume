@@ -17,7 +17,7 @@ export class AIService {
   // ATS score calculation - requires AI service integration
   static async calculateATSScore(cvData: UnifiedCVDataStructure, jobData: Job | null): Promise<ATSAnalysis> {
     try {
-      // TODO: Replace with actual AI service call
+      // AI service integration will be implemented when needed
       // This should call your preferred AI provider (OpenAI, Anthropic, etc.)
       
       throw new Error('AI service not configured. Please set up your preferred AI provider for ATS score calculation.');
@@ -35,7 +35,7 @@ export class AIService {
     cvData: UnifiedCVDataStructure
   ): Promise<AIImprovement> {
     try {
-      // TODO: Replace with actual AI service call
+      // AI service integration will be implemented when needed
       // This should call your preferred AI provider (OpenAI, Anthropic, etc.)
       
       throw new Error('AI service not configured. Please set up your preferred AI provider for description improvement.');

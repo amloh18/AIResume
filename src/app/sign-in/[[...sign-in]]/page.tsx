@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn, useSession } from 'next-auth/react';
 import { Eye, EyeOff, Mail, Lock, Loader2, CheckCircle, AlertCircle, ArrowRight } from 'lucide-react';
+import { useConsoleLoggerContext } from '@/contexts/ConsoleLoggerProvider';
+import InlineMessages from '@/components/auth/InlineMessages';
 
 interface SignInFormData {
   email: string;
@@ -16,6 +18,7 @@ function SignInPageContent() {
   const searchParams = useSearchParams();
   const { data: session, status } = useSession();
   const redirectUrl = searchParams.get('redirect_url') || '/dashboard';
+  const { messages, clearMessages } = useConsoleLoggerContext();
 
   const [formData, setFormData] = useState<SignInFormData>({
     email: '',
@@ -290,6 +293,13 @@ function SignInPageContent() {
                   <span className="text-sm">{success}</span>
                 </div>
               )}
+
+              {/* Inline Messages from Console Logs */}
+              <InlineMessages 
+                messages={messages} 
+                onClear={clearMessages}
+                className="mt-4"
+              />
 
               {/* Submit Button */}
               <button
