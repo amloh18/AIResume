@@ -245,30 +245,15 @@ const UserAvatar: React.FC<UserAvatarProps> = ({ user, className = '' }) => {
                 </motion.button>
               </div>
 
-              {/* Plan Information */}
-              {user.subscription && (
-                <div className="mb-4 p-3 bg-lime-50 dark:bg-lime-900/20 rounded-lg border border-lime-200 dark:border-lime-800">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-lime-500 rounded-full"></div>
-                    <span className="text-sm font-medium text-lime-700 dark:text-lime-300">
-                      {user.subscription.planName}
-                    </span>
-                    <span className="text-xs text-lime-600 dark:text-lime-400 ml-auto">
-                      {user.subscription.status}
-                    </span>
-                  </div>
-                </div>
-              )}
-
               {/* Sign Out Button */}
               <motion.button
                 onClick={handleSignOut}
-                className="w-full flex items-center gap-3 p-3 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                className="w-full flex items-center justify-center gap-2 p-2 text-white bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700 rounded-lg transition-colors"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
-                <LogOut size={18} />
-                <span className="font-medium">Sign Out</span>
+                <LogOut size={14} />
+                <span className="text-sm font-medium">Sign Out</span>
               </motion.button>
             </div>
           </motion.div>

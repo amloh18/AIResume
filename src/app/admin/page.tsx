@@ -68,13 +68,18 @@ const AdminPage: React.FC<AdminPageProps> = () => {
       return;
     }
 
-    // If role is not in session, check via API
-    if (!session.user?.role && !roleCheckLoading) {
+    // If role is not in session, check via API (but only once)
+    if (!session.user?.role && !roleCheckLoading && userRole === null) {
       console.log('🔍 Role not in session, checking via API...');
       setRoleCheckLoading(true);
       
       fetch('/api/admin/check-user-role')
-        .then(response => response.json())
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          return response.json();
+        })
         .then(data => {
           setRoleCheckLoading(false);
           if (data.success && data.user.role === 'admin') {
@@ -88,6 +93,7 @@ const AdminPage: React.FC<AdminPageProps> = () => {
         .catch(error => {
           console.error('❌ Error checking user role:', error);
           setRoleCheckLoading(false);
+          // If API fails, redirect to dashboard to avoid infinite loop
           router.push('/dashboard');
         });
       return;
@@ -99,7 +105,7 @@ const AdminPage: React.FC<AdminPageProps> = () => {
       router.push('/dashboard');
       return;
     }
-  }, [session, status, router, roleCheckLoading]);
+  }, [session, status, router, roleCheckLoading, userRole]);
 
   const handleLogout = async () => {
     try {
@@ -159,7 +165,7 @@ const AdminPage: React.FC<AdminPageProps> = () => {
   const renderContent = () => {
     switch (activeTab) {
       case 'kpis':
-        return <AdminKPIs />;
+        return <AdminKPIs onNotificationClick={() => setNotificationsOpen(true)} />;
       case 'cv-journey-kpis':
         return <CVJourneyKPIs />;
       case 'templates':
@@ -175,7 +181,7 @@ const AdminPage: React.FC<AdminPageProps> = () => {
       case 'system':
         return <SystemHealth />;
       default:
-        return <AdminKPIs />;
+        return <AdminKPIs onNotificationClick={() => setNotificationsOpen(true)} />;
     }
   };
 
@@ -227,21 +233,26 @@ const AdminPage: React.FC<AdminPageProps> = () => {
       )}
 
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:h-screen flex flex-col ${
+      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:h-screen flex flex-col p-4 m-2 mb-4 rounded-xl ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
         {/* Header */}
-        <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-          <h1 className="text-xl font-bold">
-            <span className="text-lime-500">CV</span>
-            <span className="text-gray-900 dark:text-white">Circle</span>
-          </h1>
-          <button
-            onClick={() => setSidebarOpen(false)}
-            className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-600"
-          >
-            <Close size={20} />
-          </button>
+        <div className="flex flex-col px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+          <div className="flex items-center justify-between mb-2">
+            <h1 className="text-xl font-bold">
+              <span className="text-lime-400">CV</span>
+              <span className="text-gray-600 dark:text-gray-300">Circle.io</span>
+            </h1>
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-600"
+            >
+              <Close size={20} />
+            </button>
+          </div>
+          <div className="text-sm text-gray-600 dark:text-gray-400">
+            Welcome, {session?.user?.name || 'Admin'}
+          </div>
         </div>
 
         {/* Navigation */}
@@ -256,7 +267,7 @@ const AdminPage: React.FC<AdminPageProps> = () => {
                     setActiveTab(item.id);
                     setSidebarOpen(false);
                   }}
-                  className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
+                  className={`w-full flex items-center px-4 py-3 text-xs font-medium rounded-lg transition-colors ${
                     activeTab === item.id
                       ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
                       : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
@@ -329,51 +340,32 @@ const AdminPage: React.FC<AdminPageProps> = () => {
             Back to App
           </button>
         </div>
+
+        {/* Logout Button */}
+        <div className="flex-shrink-0 p-4 border-t border-gray-200 dark:border-gray-700">
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center px-4 py-3 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-700 dark:hover:text-red-300 rounded-lg transition-colors"
+          >
+            <LogOut size={20} className="mr-3" />
+            Sign Out
+          </button>
+        </div>
       </div>
 
       {/* Main content */}
-      <div className="flex-1 lg:ml-64 min-w-0 flex">
+      <div className="flex-1 lg:ml-72 min-w-0 flex">
         {/* Content area */}
         <div className="flex-1 min-w-0 flex flex-col h-screen">
-          {/* Top bar */}
-          <div className="sticky top-0 z-30 bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+          {/* Mobile menu button */}
+          <div className="lg:hidden sticky top-0 z-30 bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
             <div className="flex items-center justify-between h-16 px-6">
               <button
                 onClick={() => setSidebarOpen(true)}
-                className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-gray-100"
+                className="p-2 rounded-md text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-gray-100"
               >
                 <Menu size={20} />
               </button>
-              
-              <div className="flex items-center space-x-4">
-                <div className="text-base font-bold text-gray-900 dark:text-white">
-                  Welcome, {session?.user?.name || 'Admin'}
-                </div>
-              </div>
-
-              {/* Right side controls */}
-              <div className="flex items-center space-x-2">
-                
-                <button
-                  onClick={() => setNotificationsOpen(true)}
-                  className="p-2 rounded-md text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-gray-100 transition-colors relative"
-                  title="Notifications"
-                >
-                  <Bell size={20} />
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                    3
-                  </span>
-                </button>
-
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg transition-all duration-200 text-sm font-medium shadow-lg hover:shadow-red-500/25"
-                  title="Sign Out"
-                >
-                  <LogOut size={16} />
-                  <span>Sign Out</span>
-                </button>
-              </div>
             </div>
           </div>
 

@@ -26,89 +26,176 @@ const CoverLetterPreview: React.FC<CoverLetterPreviewProps> = ({
     });
   };
 
+  // Parse content to extract body (removing greetings and closings)
+  const parseContent = (text: string) => {
+    if (!text) return { body: '', closing: '' };
+    
+    let body = text;
+    let closing = `Thank you for considering my application.\n\nSincerely,\n${cvData?.basics?.name || 'Your Name'}`;
+    
+    // Remove greeting if present
+    if (text.startsWith('Dear ')) {
+      const greetingEnd = text.indexOf('\n');
+      if (greetingEnd > -1) {
+        body = text.substring(greetingEnd + 1).trim();
+      }
+    }
+    
+    // Extract closing if present
+    const closingKeywords = ['Sincerely', 'Best regards', 'Thank you for considering'];
+    for (const keyword of closingKeywords) {
+      const closingIndex = body.lastIndexOf(keyword);
+      if (closingIndex > -1) {
+        closing = body.substring(closingIndex).trim();
+        body = body.substring(0, closingIndex).trim();
+        break;
+      }
+    }
+    
+    // If no closing found, use the full text as body
+    if (body === text) {
+      body = text;
+    }
+    
+    return { body, closing };
+  };
+
+  const { body, closing } = parseContent(content);
+  
+  // Debug logging
+  console.log('CoverLetterPreview Debug:', {
+    content,
+    body,
+    closing,
+    hasContent: !!content,
+    contentLength: content?.length || 0
+  });
+  const senderName = cvData?.basics?.name?.toUpperCase() || 'YOUR NAME';
+  
+  // Handle location object properly
+  let locationStr = 'Your Location';
+  if (cvData?.basics?.location) {
+    if (typeof cvData.basics.location === 'string') {
+      locationStr = cvData.basics.location;
+    } else if (typeof cvData.basics.location === 'object') {
+      // Handle location object with city, state, country, etc.
+      const parts = [];
+      if (cvData.basics.location.city) parts.push(cvData.basics.location.city);
+      if (cvData.basics.location.state) parts.push(cvData.basics.location.state);
+      if (cvData.basics.location.country) parts.push(cvData.basics.location.country);
+      locationStr = parts.join(', ') || 'Your Location';
+    }
+  }
+  
+  const phone = cvData?.basics?.phone || '555-555-5555';
+  const email = cvData?.basics?.email || 'email@example.com';
+  const senderInfo = `${locationStr} | ${phone} | ${email}`;
+  
+  const recipientName = jobData?.contactPerson || 'Hiring Manager';
+  const companyName = jobData?.company || 'Company Name';
+  const companyLocation = jobData?.location || 'Company Address';
+
   return (
-    <div className="h-full bg-white dark:bg-gray-900 p-8 overflow-y-auto">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center space-x-2">
-              <FileText className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                Cover Letter Preview
-              </h1>
-            </div>
+    <div className="bg-white w-full" style={{ padding: '0.75in', minHeight: '11in', color: '#000000' }}>
+        {/* Header - Sender Information */}
+        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+          <div style={{ 
+            fontSize: '18pt', 
+            fontWeight: 'bold', 
+            marginBottom: '8px',
+            color: '#000000'
+          }}>
+            {senderName}
           </div>
-          
-          {/* Document Info */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-              <div className="flex items-center space-x-2 mb-2">
-                <User className="h-4 w-4 text-gray-500" />
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">From</span>
-              </div>
-              <div className="text-sm text-gray-900 dark:text-white">
-                {cvData?.basics?.name || 'Your Name'}
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">
-                {cvData?.basics?.email || 'your.email@example.com'}
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">
-                {cvData?.basics?.phone || '+1 (555) 123-4567'}
-              </div>
-            </div>
-            
-            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-              <div className="flex items-center space-x-2 mb-2">
-                <Building className="h-4 w-4 text-gray-500" />
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">To</span>
-              </div>
-              <div className="text-sm text-gray-900 dark:text-white">
-                Hiring Manager
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">
-                {jobData?.company || 'Company Name'}
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">
-                {jobData?.location || 'Company Location'}
-              </div>
-            </div>
+          <div style={{ 
+            fontSize: '10pt', 
+            color: '#000000'
+          }}>
+            {senderInfo}
           </div>
-          
-          <div className="flex items-center space-x-2 mb-4">
-            <Calendar className="h-4 w-4 text-gray-500" />
-            <span className="text-sm text-gray-600 dark:text-gray-400">
-              {formatDate()}
-            </span>
-          </div>
+        </div>
+
+        {/* Date */}
+        <div style={{ marginBottom: '24px', textAlign: 'left', fontSize: '11pt', color: '#000000' }}>
+          {formatDate()}
+        </div>
+
+        {/* Recipient Information */}
+        <div style={{ marginBottom: '24px', textAlign: 'left', fontSize: '11pt', color: '#000000' }}>
+          <div style={{ marginBottom: '4px', color: '#000000' }}>{recipientName}</div>
+          <div style={{ marginBottom: '4px', color: '#000000' }}>{companyName}</div>
+          <div style={{ color: '#000000' }}>{companyLocation}</div>
+        </div>
+
+        {/* Salutation */}
+        <div style={{ marginBottom: '16px', textAlign: 'left', fontSize: '11pt', color: '#000000' }}>
+          Dear {recipientName === 'Hiring Manager' ? 'Hiring Manager' : recipientName.split(' ')[0]},
         </div>
 
         {/* Cover Letter Content */}
-        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-8">
-          {content ? (
-            <div className="prose prose-gray dark:prose-invert max-w-none">
-              <div className="whitespace-pre-wrap text-gray-900 dark:text-white leading-relaxed">
-                {content}
-              </div>
+        {content && content.trim() ? (
+          <>
+            {/* Body Content */}
+            <div style={{ marginBottom: '24px', fontSize: '11pt', lineHeight: '1.6', color: '#000000' }}>
+              {body && body.trim() ? (
+                body.split('\n\n').map((paragraph, index) => (
+                  <div key={index} style={{ 
+                    marginBottom: '16px',
+                    textAlign: 'left',
+                    color: '#000000'
+                  }}>
+                    {paragraph.trim().split('\n').map((line, lineIndex) => {
+                      // Handle formatting
+                      let formattedLine = line;
+                      
+                      // Handle bold text **text**
+                      formattedLine = formattedLine.replace(/\*\*(.*?)\*\*/g, '<strong style="color: #000000;">$1</strong>');
+                      
+                      // Handle italic text *text*
+                      formattedLine = formattedLine.replace(/\*(.*?)\*/g, '<em style="color: #000000;">$1</em>');
+                      
+                      // Handle bullet points
+                      if (line.trim().startsWith('•')) {
+                        return (
+                          <div key={lineIndex} style={{ marginLeft: '20px', marginBottom: '8px', color: '#000000' }}>
+                            <span dangerouslySetInnerHTML={{ __html: formattedLine }} />
+                          </div>
+                        );
+                      }
+                      
+                      return (
+                        <div key={lineIndex} style={{ marginBottom: '4px', color: '#000000' }}>
+                          <span dangerouslySetInnerHTML={{ __html: formattedLine }} />
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))
+              ) : (
+                <div style={{ color: '#666', fontStyle: 'italic' }}>
+                  No body content found. Content: "{content}"
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="text-center py-12">
-              <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                No Content Yet
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400">
-                Start writing your cover letter or use AI to generate one.
-              </p>
-            </div>
-          )}
-        </div>
 
-        {/* Footer */}
-        <div className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">
-          <p>Generated with Circle CV Studio</p>
-        </div>
-      </div>
+            {/* Closing */}
+            {closing && closing.trim() && (
+              <div style={{ marginTop: '24px', textAlign: 'left', fontSize: '11pt', color: '#000000' }}>
+                <div style={{ whiteSpace: 'pre-line', color: '#000000' }}>{closing}</div>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="text-center py-12">
+            <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              No Content Yet
+            </h3>
+            <p className="text-gray-600">
+              Start writing your cover letter or use AI to generate one.
+            </p>
+          </div>
+        )}
     </div>
   );
 };

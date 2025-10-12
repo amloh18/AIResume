@@ -108,7 +108,13 @@ export const useCVSetup = () => {
             console.log('🔍 useCVSetup - User CVs found:', userCVs.length);
             
             // Check if user has any master CVs
-            const hasMasterCV = userCVs.some((cv: any) => cv.isMaster === true);
+            // Handle both old format (isMaster at root) and new format (metadata.isMaster)
+            const hasMasterCV = userCVs.some((cv: any) => {
+              const isMasterAtRoot = cv.isMaster === true;
+              const isMasterInMetadata = cv.metadata?.isMaster === true;
+              const isMasterInMetadataString = cv.metadata?.isMaster === 'true';
+              return isMasterAtRoot || isMasterInMetadata || isMasterInMetadataString;
+            });
             console.log('🔍 useCVSetup - User has master CV:', hasMasterCV);
             
             // Set hasCV based on master CV existence

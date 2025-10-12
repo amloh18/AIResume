@@ -7,6 +7,8 @@ import { Eye, EyeOff, Mail, Lock, User, Loader2, CheckCircle, AlertCircle } from
 import LoadingAnimation from '@/components/ui/LoadingAnimation';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import { useConsoleLoggerContext } from '@/contexts/ConsoleLoggerProvider';
+import InlineMessages from '@/components/auth/InlineMessages';
 
 interface SignUpFormData {
   firstName: string;
@@ -19,6 +21,7 @@ interface SignUpFormData {
 export default function SignUpPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { messages, clearMessages } = useConsoleLoggerContext();
 
   const [formData, setFormData] = useState<SignUpFormData>({
     firstName: '',
@@ -28,10 +31,16 @@ export default function SignUpPage() {
     confirmPassword: '',
   });
 
-  // Redirect if already authenticated
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  // Redirect if already authenticated (only for existing users, not new signups)
   useEffect(() => {
-    if (status === 'authenticated' && session) {
-      // Pass signup data to master-cv-onboarding
+    if (status === 'authenticated' && session && !success) {
+      // Only redirect if user is already authenticated and this isn't a new signup
       const signupData = {
         firstName: formData.firstName,
         lastName: formData.lastName,
@@ -44,12 +53,7 @@ export default function SignUpPage() {
       
       router.push('/master-cv-onboarding');
     }
-  }, [session, status, router, formData]);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  }, [session, status, router, formData, success]);
   const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
   const [emailError, setEmailError] = useState('');
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
@@ -209,24 +213,44 @@ export default function SignUpPage() {
         displayName: `${formData.firstName} ${formData.lastName}`,
       });
 
-      // Sign in with NextAuth using credentials provider (same as manual sign-in)
-      console.log('🔑 Attempting automatic sign-in with credentials provider...');
-      
-      const result = await signIn('credentials', {
-        email: formData.email,
-        password: formData.password,
-        redirect: false,
+      // Send verification email
+      console.log('📧 Sending verification email...');
+      const verificationResponse = await fetch('/api/auth/send-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+        }),
       });
 
-      console.log('🔍 NextAuth signIn result:', result);
-
-      if (result?.ok) {
-        setSuccess('Account created successfully! Redirecting...');
-        // Redirect will be handled by useEffect when session updates
-      } else {
-        console.error('❌ NextAuth signIn failed:', result?.error);
-        setError('Account created but sign in failed. Please try signing in manually.');
+      if (!verificationResponse.ok) {
+        const errorData = await verificationResponse.json();
+        console.error('❌ Verification email failed:', errorData);
+        throw new Error(errorData.message || 'Failed to send verification email');
       }
+
+      const verificationResult = await verificationResponse.json();
+      console.log('✅ Verification email result:', verificationResult);
+      
+      // Store password temporarily for automatic sign-in after verification
+      localStorage.setItem('temp_password', formData.password);
+      
+      if (verificationResult.fallback) {
+        setSuccess('Account created successfully! Please check your email to verify your account before signing in. (Email sent via Firebase)');
+      } else {
+        setSuccess('Account created successfully! Please check your email to verify your account before signing in.');
+      }
+      
+      // Reset form
+      setFormData({
+        firstName: '',
+        lastName: '',
+        email: '',
+        password: '',
+        confirmPassword: '',
+      });
 
     } catch (error: any) {
       console.error('Sign up error:', error);
@@ -237,7 +261,7 @@ export default function SignUpPage() {
       } else if (error.code === 'auth/password-does-not-meet-requirements') {
         setError('Password does not meet security requirements. Please ensure your password contains uppercase letters, lowercase letters, numbers, and special characters.');
       } else {
-        setError('Failed to create account. Please check your information and try again.');
+        setError(error.message || 'Failed to create account. Please check your information and try again.');
       }
     } finally {
       setIsLoading(false);
@@ -671,16 +695,50 @@ export default function SignUpPage() {
 
               {/* Success Message */}
               {success && (
-                <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/20 rounded-lg text-green-400">
-                  <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                  <span className="text-sm">{success}</span>
+                <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
+                  <div className="flex items-center gap-2 text-green-400 mb-3">
+                    <CheckCircle className="w-5 h-5 flex-shrink-0" />
+                    <span className="font-medium">Account Created Successfully!</span>
+                  </div>
+                  <div className="text-sm text-green-300 space-y-2">
+                    <p>Please check your email inbox for a verification link.</p>
+                    <p className="text-xs text-gray-400">
+                      Don't see the email? Check your spam folder or{' '}
+                      <button 
+                        onClick={() => {
+                          // Resend verification email
+                          fetch('/api/auth/send-verification', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              email: formData.email,
+                              firstName: formData.firstName,
+                              lastName: formData.lastName,
+                            }),
+                          }).then(() => {
+                            setSuccess('New verification email sent! Please check your inbox.');
+                          });
+                        }}
+                        className="text-green-400 hover:text-green-300 underline"
+                      >
+                        resend verification email
+                      </button>
+                    </p>
+                  </div>
                 </div>
               )}
+
+              {/* Inline Messages from Console Logs */}
+              <InlineMessages 
+                messages={messages} 
+                onClear={clearMessages}
+                className="mt-4"
+              />
 
               {/* Submit Button */}
               <button
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || success}
                 className="w-full bg-gradient-to-r from-lime-400 to-lime-500 hover:from-lime-300 hover:to-lime-400 text-black font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-lg hover:shadow-lime-400/50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {isLoading ? (
@@ -688,6 +746,8 @@ export default function SignUpPage() {
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Creating Account...
                   </>
+                ) : success ? (
+                  'Account Created - Check Your Email'
                 ) : (
                   'Create Account'
                 )}

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { AdminSystemHealthSkeleton } from './AdminSkeletons';
 import { 
   Server, 
   Database, 
@@ -68,36 +69,10 @@ interface PerformanceData {
 }
 
 const SystemHealth: React.FC = () => {
-  const [systemStatus, setSystemStatus] = useState<SystemStatus>({
-    database: {
-      status: 'healthy',
-      responseTime: 23,
-      connections: 45,
-      uptime: '23 days, 7 hours'
-    },
-    api: {
-      status: 'healthy',
-      responseTime: 89,
-      requestsPerMinute: 156,
-      errorRate: 0.08
-    },
-    storage: {
-      status: 'healthy',
-      used: 67.8,
-      total: 500,
-      percentage: 13.56
-    },
-    memory: {
-      status: 'healthy',
-      used: 3.2,
-      total: 16,
-      percentage: 20.0
-    },
-    uptime: '23 days, 7 hours, 42 minutes',
-    lastCheck: new Date().toISOString()
-  });
+  const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
   const [performanceData, setPerformanceData] = useState<PerformanceData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchSystemStatus();
@@ -113,10 +88,30 @@ const SystemHealth: React.FC = () => {
     try {
       setLoading(true);
       const response = await fetch('/api/admin/system-health');
+      
+      if (!response.ok) {
+        console.error('System health API error:', response.status, response.statusText);
+        setError(`Failed to fetch system health: ${response.status} ${response.statusText}`);
+        setSystemStatus(null);
+        return;
+      }
+      
       const data = await response.json();
-      setSystemStatus(data);
+      
+      // Ensure all required properties exist
+      const safeData = {
+        database: data.database || { status: 'error', responseTime: 0, connections: 0, uptime: 'Unknown' },
+        api: data.api || { status: 'error', responseTime: 0, requestsPerMinute: 0, errorRate: 100 },
+        storage: data.storage || { status: 'error', used: 0, total: 0, percentage: 0 },
+        memory: data.memory || { status: 'error', used: 0, total: 0, percentage: 0 },
+        lastCheck: data.lastCheck || new Date().toISOString()
+      };
+      
+      setSystemStatus(safeData);
     } catch (error) {
       console.error('Error fetching system status:', error);
+      setError(`Network error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setSystemStatus(null);
     } finally {
       setLoading(false);
     }
@@ -182,41 +177,41 @@ const SystemHealth: React.FC = () => {
     {
       name: 'Database',
       icon: Database,
-      data: systemStatus.database,
+      data: systemStatus.database || { status: 'unknown', responseTime: 0, connections: 0, uptime: 'Unknown' },
       metrics: [
-        { label: 'Response Time', value: `${systemStatus.database.responseTime}ms` },
-        { label: 'Connections', value: systemStatus.database.connections },
-        { label: 'Uptime', value: systemStatus.database.uptime }
+        { label: 'Response Time', value: `${systemStatus.database?.responseTime || 0}ms` },
+        { label: 'Connections', value: systemStatus.database?.connections || 0 },
+        { label: 'Uptime', value: systemStatus.database?.uptime || 'Unknown' }
       ]
     },
     {
       name: 'API Server',
       icon: Server,
-      data: systemStatus.api,
+      data: systemStatus.api || { status: 'unknown', responseTime: 0, requestsPerMinute: 0, errorRate: 0 },
       metrics: [
-        { label: 'Response Time', value: `${systemStatus.api.responseTime}ms` },
-        { label: 'Requests/min', value: systemStatus.api.requestsPerMinute },
-        { label: 'Error Rate', value: `${systemStatus.api.errorRate}%` }
+        { label: 'Response Time', value: `${systemStatus.api?.responseTime || 0}ms` },
+        { label: 'Requests/min', value: systemStatus.api?.requestsPerMinute || 0 },
+        { label: 'Error Rate', value: `${systemStatus.api?.errorRate || 0}%` }
       ]
     },
     {
       name: 'Storage',
       icon: HardDrive,
-      data: systemStatus.storage,
+      data: systemStatus.storage || { status: 'unknown', used: 0, total: 0, percentage: 0 },
       metrics: [
-        { label: 'Used', value: `${systemStatus.storage.used}GB` },
-        { label: 'Total', value: `${systemStatus.storage.total}GB` },
-        { label: 'Usage', value: `${systemStatus.storage.percentage}%` }
+        { label: 'Used', value: `${systemStatus.storage?.used || 0}GB` },
+        { label: 'Total', value: `${systemStatus.storage?.total || 0}GB` },
+        { label: 'Usage', value: `${systemStatus.storage?.percentage || 0}%` }
       ]
     },
     {
       name: 'Memory',
       icon: Cpu,
-      data: systemStatus.memory,
+      data: systemStatus.memory || { status: 'unknown', used: 0, total: 0, percentage: 0 },
       metrics: [
-        { label: 'Used', value: `${systemStatus.memory.used}GB` },
-        { label: 'Total', value: `${systemStatus.memory.total}GB` },
-        { label: 'Usage', value: `${systemStatus.memory.percentage}%` }
+        { label: 'Used', value: `${systemStatus.memory?.used || 0}GB` },
+        { label: 'Total', value: `${systemStatus.memory?.total || 0}GB` },
+        { label: 'Usage', value: `${systemStatus.memory?.percentage || 0}%` }
       ]
     }
   ];
@@ -226,16 +221,40 @@ const SystemHealth: React.FC = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">System Health</h1>
-          <div className="animate-pulse bg-gray-200 dark:bg-gray-600 h-10 w-32 rounded"></div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow animate-pulse">
+            <div key={i} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 animate-pulse">
               <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-3/4 mb-4"></div>
               <div className="h-8 bg-gray-200 dark:bg-gray-600 rounded w-1/2 mb-2"></div>
               <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-1/4"></div>
             </div>
           ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !systemStatus) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">System Health</h1>
+        </div>
+        <div className="text-center py-12">
+          <div className="text-red-500 text-6xl mb-4">⚠️</div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Failed to Load System Health</h3>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">{error || 'Unable to fetch system health data.'}</p>
+          <button
+            onClick={() => {
+              setLoading(true);
+              fetchSystemStatus();
+              generatePerformanceData();
+            }}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Retry
+          </button>
         </div>
       </div>
     );
@@ -252,7 +271,7 @@ const SystemHealth: React.FC = () => {
         
         <div className="flex items-center gap-4">
           <div className="text-sm text-gray-600 dark:text-gray-400">
-            Last updated: {new Date(systemStatus.lastCheck).toLocaleTimeString()}
+            Last updated: {new Date(systemStatus.lastCheck || new Date().toISOString()).toLocaleTimeString()}
           </div>
           <button
             onClick={() => {
@@ -403,7 +422,7 @@ const SystemHealth: React.FC = () => {
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="text-center">
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">{systemStatus.uptime}</div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">{systemStatus.uptime || 'Unknown'}</div>
             <div className="text-sm text-gray-600 dark:text-gray-400">Total Uptime</div>
           </div>
           <div className="text-center">
@@ -533,11 +552,11 @@ const SystemHealth: React.FC = () => {
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-600 dark:text-gray-400">API Average</span>
-              <span className="text-sm font-medium text-gray-900 dark:text-white">{systemStatus.api.responseTime}ms</span>
+              <span className="text-sm font-medium text-gray-900 dark:text-white">{systemStatus.api?.responseTime || 0}ms</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-600 dark:text-gray-400">Database Average</span>
-              <span className="text-sm font-medium text-gray-900 dark:text-white">{systemStatus.database.responseTime}ms</span>
+              <span className="text-sm font-medium text-gray-900 dark:text-white">{systemStatus.database?.responseTime || 0}ms</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-gray-600 dark:text-gray-400">Page Load Average</span>
@@ -552,30 +571,30 @@ const SystemHealth: React.FC = () => {
             <div>
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm text-gray-600 dark:text-gray-400">Storage</span>
-                <span className="text-sm font-medium text-gray-900 dark:text-white">{systemStatus.storage.percentage}%</span>
+                <span className="text-sm font-medium text-gray-900 dark:text-white">{systemStatus.storage?.percentage || 0}%</span>
               </div>
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                 <div 
                   className={`h-2 rounded-full ${
-                    systemStatus.storage.percentage > 80 ? 'bg-red-500' : 
-                    systemStatus.storage.percentage > 60 ? 'bg-yellow-500' : 'bg-green-500'
+                    (systemStatus.storage?.percentage || 0) > 80 ? 'bg-red-500' : 
+                    (systemStatus.storage?.percentage || 0) > 60 ? 'bg-yellow-500' : 'bg-green-500'
                   }`}
-                  style={{ width: `${systemStatus.storage.percentage}%` }}
+                  style={{ width: `${systemStatus.storage?.percentage || 0}%` }}
                 ></div>
               </div>
             </div>
             <div>
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm text-gray-600 dark:text-gray-400">Memory</span>
-                <span className="text-sm font-medium text-gray-900 dark:text-white">{systemStatus.memory.percentage}%</span>
+                <span className="text-sm font-medium text-gray-900 dark:text-white">{systemStatus.memory?.percentage || 0}%</span>
               </div>
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                 <div 
                   className={`h-2 rounded-full ${
-                    systemStatus.memory.percentage > 80 ? 'bg-red-500' : 
-                    systemStatus.memory.percentage > 60 ? 'bg-yellow-500' : 'bg-green-500'
+                    (systemStatus.memory?.percentage || 0) > 80 ? 'bg-red-500' : 
+                    (systemStatus.memory?.percentage || 0) > 60 ? 'bg-yellow-500' : 'bg-green-500'
                   }`}
-                  style={{ width: `${systemStatus.memory.percentage}%` }}
+                  style={{ width: `${systemStatus.memory?.percentage || 0}%` }}
                 ></div>
               </div>
             </div>

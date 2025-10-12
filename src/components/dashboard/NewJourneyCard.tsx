@@ -115,12 +115,20 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
           
           // Separate CVs according to Application Package model
           const masters = allCVs.filter((cv: CV) => 
-            cv.isMaster === true || cv.isMaster === 'true' || 
-            cv.metadata?.isMaster === true || cv.metadata?.isMaster === 'true'
+            (() => {
+              const isMasterAtRoot = cv.isMaster === true;
+              const isMasterInMetadata = cv.metadata?.isMaster === true;
+              const isMasterInMetadataString = cv.metadata?.isMaster === 'true';
+              return isMasterAtRoot || isMasterInMetadata || isMasterInMetadataString;
+            })()
           );
           const freestanding = allCVs.filter((cv: CV) => 
-            !cv.isMaster && cv.isMaster !== 'true' && 
-            !cv.metadata?.isMaster && cv.metadata?.isMaster !== 'true' && 
+            !(() => {
+              const isMasterAtRoot = cv.isMaster === true;
+              const isMasterInMetadata = cv.metadata?.isMaster === true;
+              const isMasterInMetadataString = cv.metadata?.isMaster === 'true';
+              return isMasterAtRoot || isMasterInMetadata || isMasterInMetadataString;
+            })() && 
             (cv.journeyId === null || cv.journeyId === undefined)
           );
           

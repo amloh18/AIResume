@@ -64,14 +64,8 @@ const EducationSection: React.FC<EducationSectionProps> = ({
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <GraduationCap className="w-4 h-4 text-purple-600" />
-          <h4 className={`font-medium ${themeClasses.text.primary}`}>
-            Education
-          </h4>
-        </div>
+    <div className="space-y-4 p-4">
+      <div className="flex items-center justify-end">
         <motion.button
           onClick={onAdd}
           className={`flex items-center gap-2 px-3 py-1.5 text-sm ${themeClasses.button.primary} rounded-lg`}

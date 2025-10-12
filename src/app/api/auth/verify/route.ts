@@ -1,70 +1,79 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { User } from '@/models';
 import connectDB from '@/lib/database';
+import { User } from '@/models';
+import jwt from 'jsonwebtoken';
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🔍 Auth Verify API - Verifying token');
+    console.log('🔍 Token verification request received');
     
-    // Get session from NextAuth
-    const session = await getServerSession(authOptions);
+    // Get the authorization header
+    const authHeader = request.headers.get('authorization');
     
-    if (!session || !session.user) {
-      console.log('❌ Auth Verify API - No valid session found');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('❌ No valid authorization header');
       return NextResponse.json(
-        { success: false, message: 'No valid session found' },
+        { success: false, error: 'No authorization token provided' },
         { status: 401 }
       );
     }
     
-    console.log('✅ Auth Verify API - Session found for user:', session.user.id);
+    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
     
-    // Connect to database
+    // Verify the JWT token
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.NEXTAUTH_SECRET!) as any;
+    } catch (error) {
+      console.log('❌ Invalid token:', error);
+      return NextResponse.json(
+        { success: false, error: 'Invalid token' },
+        { status: 401 }
+      );
+    }
+    
+    if (decoded.type !== 'extension') {
+      console.log('❌ Invalid token type');
+      return NextResponse.json(
+        { success: false, error: 'Invalid token type' },
+        { status: 401 }
+      );
+    }
+    
+    console.log('✅ Token verified for user:', decoded.userId);
+    
     await connectDB();
     
-    // Get user from database
-    const user = await User.findById(session.user.id);
+    // Find the user in the database
+    const user = await User.findById(decoded.userId);
     
     if (!user) {
-      console.log('❌ Auth Verify API - User not found in database');
+      console.log('❌ User not found in database');
       return NextResponse.json(
-        { success: false, message: 'User not found' },
+        { success: false, error: 'User not found' },
         { status: 404 }
       );
     }
     
-    console.log('✅ Auth Verify API - User verified:', user.email);
-    
-    // Return user data (without sensitive information)
-    const userData = {
-      id: user._id,
-      email: user.email,
-      name: user.name,
-      image: user.image,
-      role: user.role,
-      plan: user.plan,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt
-    };
+    console.log('✅ User found:', user.email);
     
     return NextResponse.json({
       success: true,
-      message: 'Token verified successfully',
-      user: userData
+      user: {
+        id: user._id.toString(),
+        email: user.email,
+        name: `${user.firstName} ${user.lastName}`,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        avatar: user.avatar
+      }
     });
     
-  } catch (error) {
-    console.error('❌ Auth Verify API - Error:', error);
+  } catch (error: any) {
+    console.error('❌ Token verification error:', error);
     return NextResponse.json(
-      { success: false, message: 'Internal server error' },
+      { success: false, error: 'Failed to verify token' },
       { status: 500 }
     );
   }
-}
-
-// Handle GET requests (for testing)
-export async function GET(request: NextRequest) {
-  return POST(request);
 }

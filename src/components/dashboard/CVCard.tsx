@@ -15,6 +15,7 @@ import {
   X,
   Crown
 } from 'lucide-react';
+import { formatCardTime } from '@/lib/utils/timeUtils';
 
 interface CV {
   id: string;
@@ -77,18 +78,7 @@ const CVCard: React.FC<CVCardProps> = ({
   };
 
   const formatDate = (dateString: string) => {
-    if (!dateString) return 'Unknown';
-    
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) {
-      return 'Unknown';
-    }
-    
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
+    return formatCardTime(dateString);
   };
 
   return (

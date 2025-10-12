@@ -19,6 +19,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import toast from 'react-hot-toast';
 import { useStudioNavigation } from '@/lib/studio-navigation';
 
 interface ApplicationJourneyModalProps {
@@ -103,10 +104,11 @@ export default function ApplicationJourneyModal({
     },
     {
       id: 5,
-      title: 'Follow-up',
-      description: 'Track application and follow up',
+      title: 'Move to Applied',
+      description: 'Move this job to the applied stage',
       status: 'pending',
-      icon: <Calendar className="w-4 h-4" />
+      icon: <Calendar className="w-4 h-4" />,
+      action: 'move-to-applied'
     }
   ];
 
@@ -114,6 +116,29 @@ export default function ApplicationJourneyModal({
 
   // Get the navigation functions for this journey
   const studioActions = journeyActions(journey.id);
+
+  // Handle moving job to applied status
+  const handleMoveToApplied = async () => {
+    try {
+      const response = await fetch(`/api/jobs/${journey.job.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: 'applied' }),
+      });
+
+      if (response.ok) {
+        toast.success('Job moved to Applied stage!');
+        onClose();
+      } else {
+        toast.error('Failed to update job status');
+      }
+    } catch (error) {
+      console.error('Error updating job status:', error);
+      toast.error('Error updating job status');
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -174,6 +199,8 @@ export default function ApplicationJourneyModal({
                   studioActions.navigateToCVTailoring();
                 } else if (action === 'cover-letter') {
                   studioActions.navigateToCoverLetter();
+                } else if (action === 'move-to-applied') {
+                  handleMoveToApplied();
                 }
               }}
             />
@@ -283,7 +310,16 @@ function JourneyStep({
           {/* Action Buttons */}
           {step.action && (
             <div className="flex space-x-2">
-              {step.document ? (
+              {step.action === 'move-to-applied' ? (
+                <Button
+                  size="sm"
+                  onClick={() => onStudioNavigate(step.action)}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  <Calendar className="w-3 h-3 mr-1" />
+                  Move to Applied
+                </Button>
+              ) : step.document ? (
                 <Button
                   variant="outline"
                   size="sm"

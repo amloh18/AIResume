@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { AdminAIAnalyticsSkeleton } from './AdminSkeletons';
 import { 
   Activity, 
   DollarSign, 
@@ -56,28 +57,9 @@ interface AIUsageData {
 }
 
 const AIAnalytics: React.FC = () => {
-  const [aiData, setAiData] = useState<AIUsageData>({
-    totalTokens: 156780,
-    totalCost: 284.70,
-    totalRequests: 2847,
-    averageTokensPerRequest: 55,
-    costPerToken: 0.0018,
-    usageByEndpoint: [
-      { endpoint: 'CV Analysis', requests: 1247, tokens: 68785, cost: 123.81 },
-      { endpoint: 'Cover Letter Generation', requests: 423, tokens: 46530, cost: 83.75 },
-      { endpoint: 'Job Parsing', requests: 156, tokens: 23400, cost: 42.12 },
-      { endpoint: 'Content Optimization', requests: 1021, tokens: 18065, cost: 32.52 }
-    ],
-    usageByUser: [
-      { userId: 'user_001', userName: 'Sarah Johnson', requests: 45, tokens: 2475, cost: 4.46 },
-      { userId: 'user_002', userName: 'Mike Chen', requests: 38, tokens: 2090, cost: 3.76 },
-      { userId: 'user_003', userName: 'Emma Wilson', requests: 32, tokens: 1760, cost: 3.17 },
-      { userId: 'user_004', userName: 'Alex Rodriguez', requests: 28, tokens: 1540, cost: 2.77 },
-      { userId: 'user_005', userName: 'David Kim', requests: 25, tokens: 1375, cost: 2.48 }
-    ],
-    dailyUsage: []
-  });
+  const [aiData, setAiData] = useState<AIUsageData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [timeRange, setTimeRange] = useState('30d');
 
   useEffect(() => {
@@ -102,17 +84,8 @@ const AIAnalytics: React.FC = () => {
       setAiData(data);
     } catch (error) {
       console.error('Error fetching AI data:', error);
-      // Set default data to prevent crashes
-      setAiData({
-        totalTokens: 0,
-        totalCost: 0,
-        totalRequests: 0,
-        averageTokensPerRequest: 0,
-        costPerToken: 0,
-        usageByEndpoint: [],
-        usageByUser: [],
-        dailyUsage: []
-      });
+      setError(`Failed to fetch AI analytics: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setAiData(null);
     } finally {
       setLoading(false);
     }
@@ -223,16 +196,36 @@ const AIAnalytics: React.FC = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">AI Analytics</h1>
-          <div className="animate-pulse bg-gray-200 dark:bg-gray-600 h-10 w-32 rounded"></div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow animate-pulse">
+            <div key={i} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 animate-pulse">
               <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-3/4 mb-4"></div>
               <div className="h-8 bg-gray-200 dark:bg-gray-600 rounded w-1/2 mb-2"></div>
               <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-1/4"></div>
             </div>
           ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !aiData) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">AI Analytics</h1>
+        </div>
+        <div className="text-center py-12">
+          <div className="text-red-500 text-6xl mb-4">⚠️</div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Failed to Load AI Analytics</h3>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">{error || 'Unable to fetch AI analytics data.'}</p>
+          <button
+            onClick={fetchAIData}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Retry
+          </button>
         </div>
       </div>
     );

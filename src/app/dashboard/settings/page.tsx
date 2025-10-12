@@ -23,19 +23,19 @@ import {
   Moon,
   AlertCircle,
   CheckCircle,
-  XCircle
+  XCircle,
+  RefreshCw
 } from 'lucide-react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import MembershipModal from '@/components/payment/MembershipModal';
 import RouteGuard from '@/components/auth/RouteGuard';
-import Toast from '@/components/ui/Toast';
+import { useNotifications } from '@/contexts/NotificationContext';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import AddPaymentMethodModal from '@/components/payment/AddPaymentMethodModal';
 import ChangePasswordModal from '@/components/auth/ChangePasswordModal';
 import TwoFactorModal from '@/components/auth/TwoFactorModal';
 import PageHeader from '@/components/dashboard/PageHeader';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
-import CalendarSyncSettings from '@/components/settings/CalendarSyncSettings';
 
 // --- TYPES ---
 
@@ -164,6 +164,22 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
   });
 
   const [avatar, setAvatar] = useState(user.avatar || user.profilePhoto || '');
+  const [masterCVData, setMasterCVData] = useState<any>(null);
+  const [hasUserModified, setHasUserModified] = useState({
+    firstName: false,
+    lastName: false,
+    phone: false,
+    location: false,
+    website: false,
+    linkedin: false,
+    github: false,
+    summary: false,
+    company: false,
+    address: false,
+    dateOfBirth: false,
+    gender: false,
+    nationality: false,
+  });
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -181,8 +197,125 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
     };
   }, [usernameTimeout]);
 
+  // Fetch Master CV data and populate form if user hasn't modified fields
+  React.useEffect(() => {
+    const fetchMasterCV = async () => {
+      try {
+        const response = await fetch('/api/cvs?type=cv&master=true');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.cvs && data.cvs.length > 0) {
+            const masterCV = data.cvs[0];
+            setMasterCVData(masterCV);
+            
+            // Only update fields that haven't been manually modified by user
+            const updatedFormData = { ...formData };
+            const updatedHasUserModified = { ...hasUserModified };
+            
+            if (!hasUserModified.firstName && masterCV.cvData?.basics?.name) {
+              const fullName = masterCV.cvData.basics.name;
+              const nameParts = fullName.split(' ');
+              updatedFormData.firstName = nameParts[0] || '';
+              updatedFormData.lastName = nameParts.slice(1).join(' ') || '';
+            }
+            
+            if (!hasUserModified.phone && masterCV.cvData?.basics?.phone) {
+              updatedFormData.phone = masterCV.cvData.basics.phone;
+            }
+            
+            if (!hasUserModified.location && masterCV.cvData?.basics?.location) {
+              const location = masterCV.cvData.basics.location;
+              updatedFormData.location = location.city || location.address || '';
+            }
+            
+            if (!hasUserModified.website && masterCV.cvData?.basics?.website) {
+              updatedFormData.website = masterCV.cvData.basics.website;
+            }
+            
+            if (!hasUserModified.linkedin && masterCV.cvData?.basics?.profiles) {
+              const linkedinProfile = masterCV.cvData.basics.profiles.find((p: any) => p.network === 'LinkedIn');
+              if (linkedinProfile) {
+                updatedFormData.linkedin = linkedinProfile.url || '';
+              }
+            }
+            
+            if (!hasUserModified.github && masterCV.cvData?.basics?.profiles) {
+              const githubProfile = masterCV.cvData.basics.profiles.find((p: any) => p.network === 'GitHub');
+              if (githubProfile) {
+                updatedFormData.github = githubProfile.url || '';
+              }
+            }
+            
+            if (!hasUserModified.summary && masterCV.cvData?.basics?.summary) {
+              updatedFormData.summary = masterCV.cvData.basics.summary;
+            }
+            
+            setFormData(updatedFormData);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching Master CV:', error);
+      }
+    };
+
+    fetchMasterCV();
+  }, []); // Only run once on mount
+
+  // Function to refresh data from Master CV
+  const refreshFromMasterCV = async () => {
+    if (!masterCVData) return;
+    
+    const updatedFormData = { ...formData };
+    
+    // Only update fields that haven't been manually modified by user
+    if (!hasUserModified.firstName && masterCVData.cvData?.basics?.name) {
+      const fullName = masterCVData.cvData.basics.name;
+      const nameParts = fullName.split(' ');
+      updatedFormData.firstName = nameParts[0] || '';
+      updatedFormData.lastName = nameParts.slice(1).join(' ') || '';
+    }
+    
+    if (!hasUserModified.phone && masterCVData.cvData?.basics?.phone) {
+      updatedFormData.phone = masterCVData.cvData.basics.phone;
+    }
+    
+    if (!hasUserModified.location && masterCVData.cvData?.basics?.location) {
+      const location = masterCVData.cvData.basics.location;
+      updatedFormData.location = location.city || location.address || '';
+    }
+    
+    if (!hasUserModified.website && masterCVData.cvData?.basics?.website) {
+      updatedFormData.website = masterCVData.cvData.basics.website;
+    }
+    
+    if (!hasUserModified.linkedin && masterCVData.cvData?.basics?.profiles) {
+      const linkedinProfile = masterCVData.cvData.basics.profiles.find((p: any) => p.network === 'LinkedIn');
+      if (linkedinProfile) {
+        updatedFormData.linkedin = linkedinProfile.url || '';
+      }
+    }
+    
+    if (!hasUserModified.github && masterCVData.cvData?.basics?.profiles) {
+      const githubProfile = masterCVData.cvData.basics.profiles.find((p: any) => p.network === 'GitHub');
+      if (githubProfile) {
+        updatedFormData.github = githubProfile.url || '';
+      }
+    }
+    
+    if (!hasUserModified.summary && masterCVData.cvData?.basics?.summary) {
+      updatedFormData.summary = masterCVData.cvData.basics.summary;
+    }
+    
+    setFormData(updatedFormData);
+  };
+
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    
+    // Mark field as user-modified to prevent Master CV from overriding it
+    if (field in hasUserModified) {
+      setHasUserModified(prev => ({ ...prev, [field]: true }));
+    }
   };
 
   const checkUsernameAvailability = async (username: string) => {
@@ -295,66 +428,84 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
     <div className="p-8 h-full">
       <div className="space-y-8">
         {/* Avatar Section */}
-        <div className="flex items-start justify-between py-6 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex-1">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Avatar</h3>
-            <p className="text-gray-600 dark:text-gray-300 text-sm">
-              Choose an image that best reflects your identity or brand.
-            </p>
-            <p className="text-gray-500 dark:text-gray-500 text-xs mt-2">
-              We only support .JPG, .JPEG, or .PNG file. 1 MB max.
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="w-16 h-16 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center overflow-hidden">
-              {avatar ? (
-                <img 
-                  src={avatar} 
-                  alt="Profile" 
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <User size={24} className="text-gray-500 dark:text-gray-300" />
-              )}
+        <div className="py-6 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Avatar</h3>
+              <p className="text-gray-600 dark:text-gray-300 text-sm">
+                Choose an image that best reflects your identity or brand.
+              </p>
+              <p className="text-gray-500 dark:text-gray-500 text-xs mt-2">
+                We only support .JPG, .JPEG, or .PNG file. 1 MB max.
+              </p>
             </div>
-            <input
-              type="file"
-              accept="image/jpeg,image/jpg,image/png"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  // Convert to base64 for now (in production, upload to cloud storage)
-                  const reader = new FileReader();
-                  reader.onload = (event) => {
-                    const result = event.target?.result as string;
-                    setAvatar(result);
-                  };
-                  reader.readAsDataURL(file);
-                }
-              }}
-              className="hidden"
-              id="avatar-upload"
-            />
-            <label 
-              htmlFor="avatar-upload"
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
-            >
-              Upload Image
-            </label>
-            {avatar && (
-              <button 
-                onClick={() => setAvatar('')}
-                className="p-2 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition-colors"
-              >
-                <Trash2 size={16} />
-              </button>
-            )}
+            <div className="flex flex-col md:flex-row md:items-center gap-3">
+              <div className="w-16 h-16 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center overflow-hidden mx-auto md:mx-0">
+                {avatar ? (
+                  <img 
+                    src={avatar} 
+                    alt="Profile" 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <User size={24} className="text-gray-500 dark:text-gray-300" />
+                )}
+              </div>
+              <div className="flex flex-col md:flex-row gap-2">
+                <input
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      // Convert to base64 for now (in production, upload to cloud storage)
+                      const reader = new FileReader();
+                      reader.onload = (event) => {
+                        const result = event.target?.result as string;
+                        setAvatar(result);
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  className="hidden"
+                  id="avatar-upload"
+                />
+                <label 
+                  htmlFor="avatar-upload"
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer text-center"
+                >
+                  Upload Image
+                </label>
+                {avatar && (
+                  <button 
+                    onClick={() => setAvatar('')}
+                    className="px-4 py-2 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition-colors border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium"
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      <Trash2 size={16} />
+                      Delete
+                    </div>
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Personal Information */}
         <div className="space-y-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Personal Information</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Personal Information</h3>
+            {masterCVData && (
+              <button
+                onClick={refreshFromMasterCV}
+                className="flex items-center gap-2 px-3 py-2 text-sm bg-lime-100 dark:bg-lime-400/20 text-lime-700 dark:text-lime-400 border border-lime-300 dark:border-lime-400/30 rounded-lg hover:bg-lime-200 dark:hover:bg-lime-400/30 transition-colors"
+              >
+                <RefreshCw size={14} />
+                Sync with Master CV
+              </button>
+            )}
+          </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
@@ -388,9 +539,13 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
               <input
                 type="email"
                 value={formData.email}
-                onChange={(e) => handleInputChange('email', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white/80 dark:bg-gray-800/80 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                readOnly
+                disabled
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
               />
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Email cannot be changed. Contact support if you need to update your email address.
+              </p>
             </div>
             
             <div>
@@ -637,14 +792,14 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
   const [isTwoFactorModalOpen, setIsTwoFactorModalOpen] = useState(false);
   
   // Toast notification state
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
-  const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('info');
 
   const showToastNotification = (type: 'success' | 'error' | 'info', message: string) => {
-    setToastType(type);
-    setToastMessage(message);
-    setShowToast(true);
+    addNotification({
+      type,
+      title: type === 'success' ? 'Success' : type === 'error' ? 'Error' : 'Info',
+      message,
+      persistent: false
+    });
   };
 
   const handlePasswordChanged = () => {
@@ -754,13 +909,6 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
       />
 
       {/* Toast Notifications */}
-      <Toast
-        message={toastMessage}
-        type={toastType}
-        isVisible={showToast}
-        onClose={() => setShowToast(false)}
-        duration={4000}
-      />
     </div>
   );
 };
@@ -777,9 +925,6 @@ const MembershipBilling = ({ user }: { user: User }) => {
   const [isAddPaymentModalOpen, setIsAddPaymentModalOpen] = useState(false);
   
   // Toast notification state
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
-  const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('info');
   
   // Error states for individual API calls
   const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
@@ -792,9 +937,12 @@ const MembershipBilling = ({ user }: { user: User }) => {
   }, []);
 
   const showToastNotification = (type: 'success' | 'error' | 'info', message: string) => {
-    setToastType(type);
-    setToastMessage(message);
-    setShowToast(true);
+    addNotification({
+      type,
+      title: type === 'success' ? 'Success' : type === 'error' ? 'Error' : 'Info',
+      message,
+      persistent: false
+    });
   };
 
   const handlePaymentMethodAdded = (paymentMethod: any) => {
@@ -1295,33 +1443,26 @@ const MembershipBilling = ({ user }: { user: User }) => {
       />
 
       {/* Toast Notifications */}
-      <Toast
-        message={toastMessage}
-        type={toastType}
-        isVisible={showToast}
-        onClose={() => setShowToast(false)}
-        duration={4000}
-      />
     </div>
   );
 };
 
-// Referrals & Rewards Component
-const ReferralsRewards = () => {
+// Referrals & Rewards Component - REMOVED
+const ReferralsRewards_OLD = () => {
   const [referralStats, setReferralStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   // Toast notification state
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
-  const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('info');
 
   const showToastNotification = (type: 'success' | 'error' | 'info', message: string) => {
-    setToastType(type);
-    setToastMessage(message);
-    setShowToast(true);
+    addNotification({
+      type,
+      title: type === 'success' ? 'Success' : type === 'error' ? 'Error' : 'Info',
+      message,
+      persistent: false
+    });
   };
 
   useEffect(() => {
@@ -1522,19 +1663,12 @@ const ReferralsRewards = () => {
       </div>
 
       {/* Toast Notifications */}
-      <Toast
-        message={toastMessage}
-        type={toastType}
-        isVisible={showToast}
-        onClose={() => setShowToast(false)}
-        duration={4000}
-      />
     </div>
   );
 };
 
-// Connected Apps & Integrations Component
-const ConnectedAppsIntegrations = () => {
+// Connected Apps & Integrations Component - REMOVED
+const ConnectedAppsIntegrations_OLD = () => {
   const [connectedApps, setConnectedApps] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [userSettings, setUserSettings] = useState<any>(null);
@@ -1744,22 +1878,27 @@ const SettingsSidebar = ({
   const personalItems = [
     { id: 'account', name: 'Account & Profile', icon: User },
     { id: 'security', name: 'Security & Notifications', icon: Shield },
+    { id: 'membership', name: 'Membership & Billing', icon: CreditCard },
   ];
 
   const workspaceItems = [
-    { id: 'membership', name: 'Membership & Billing', icon: CreditCard },
-    { id: 'referrals', name: 'Referrals & Rewards', icon: Gift },
     { id: 'integrations', name: 'Connected Apps & Integrations', icon: Link },
     { id: 'workspace', name: 'Workspace & Team', icon: Users },
   ];
 
   return (
-    <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border border-gray-200 dark:border-gray-700 p-6 h-full overflow-y-auto rounded-tl-lg rounded-bl-lg flex flex-col">
+    <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border border-gray-200 dark:border-gray-700 p-3 md:p-6 h-full overflow-y-auto rounded-tl-lg rounded-bl-lg flex flex-col">
       {/* Personal Section */}
-      <div className="mb-8">
-        <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-4">
+      <div className="mb-6 md:mb-8">
+        <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-3 md:mb-4 hidden md:block">
           PERSONAL
         </h3>
+        <div className="block md:hidden mb-3">
+          <div className="flex flex-col items-center gap-1">
+            <User size={14} className="text-gray-500 dark:text-gray-300" />
+            <div className="w-full h-px bg-gray-300 dark:bg-gray-600"></div>
+          </div>
+        </div>
         <div className="space-y-1">
           {personalItems.map(item => {
             const IconComponent = item.icon;
@@ -1767,14 +1906,15 @@ const SettingsSidebar = ({
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`w-full flex items-center gap-3 px-2 md:px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   activeTab === item.id
                     ? 'bg-lime-100 dark:bg-lime-400/20 text-lime-700 dark:text-lime-400 border border-lime-300 dark:border-lime-400/30'
                     : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                 }`}
+                title={item.name}
               >
                 <IconComponent size={16} />
-                {item.name}
+                <span className="hidden md:inline">{item.name}</span>
               </button>
             );
           })}
@@ -1783,9 +1923,15 @@ const SettingsSidebar = ({
 
       {/* Workspace Section */}
       <div className="flex-1">
-        <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-4">
+        <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-3 md:mb-4 hidden md:block">
           WORKSPACE
         </h3>
+        <div className="block md:hidden mb-3">
+          <div className="flex flex-col items-center gap-1">
+            <Users size={14} className="text-gray-500 dark:text-gray-300" />
+            <div className="w-full h-px bg-gray-300 dark:bg-gray-600"></div>
+          </div>
+        </div>
         <div className="space-y-1">
           {workspaceItems.map(item => {
             const IconComponent = item.icon;
@@ -1793,16 +1939,17 @@ const SettingsSidebar = ({
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`w-full flex items-center gap-3 px-2 md:px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   activeTab === item.id
                     ? 'bg-lime-100 dark:bg-lime-400/20 text-lime-700 dark:text-lime-400 border border-lime-300 dark:border-lime-400/30'
                     : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                 }`}
+                title={item.name}
               >
                 <IconComponent size={16} />
-                {item.name}
+                <span className="hidden md:inline">{item.name}</span>
                 {item.id === 'workspace' && (
-                  <span className="ml-auto text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded">
+                  <span className="ml-auto text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded hidden md:inline">
                     Soon
                   </span>
                 )}
@@ -1864,6 +2011,7 @@ const SettingsContent = () => {
   const router = useRouter();
   const { toggleSidebar, isMobileMenuOpen } = useMobileSidebar();
   const searchParams = useSearchParams();
+  const { addNotification } = useNotifications();
   const [activeTab, setActiveTab] = useState('account');
   const [userData, setUserData] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -1947,10 +2095,20 @@ const SettingsContent = () => {
         return <SecurityAndNotifications user={userData} />;
       case 'membership':
         return <MembershipBilling user={userData} />;
-      case 'referrals':
-        return <ReferralsRewards />;
       case 'integrations':
-        return <ConnectedAppsIntegrations />;
+        return (
+          <div className="p-8 h-full">
+            <div className="max-w-7xl mx-auto">
+              <div className="text-center py-12">
+                <Link size={48} className="mx-auto mb-4 text-gray-400 dark:text-gray-500" />
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Coming Soon</h3>
+                <p className="text-gray-600 dark:text-gray-300">
+                  Connected apps and integrations are currently in development.
+                </p>
+              </div>
+            </div>
+          </div>
+        );
       case 'workspace':
         return (
           <div className="p-8 h-full">
@@ -1979,33 +2137,35 @@ const SettingsContent = () => {
 
   return (
     <RouteGuard requireAuth={true}>
-      <div className="space-y-6">
-        {/* Page Header */}
-        <PageHeader
-          title="Settings"
-          description={getTabDescription(activeTab)}
-          user={{
-            name: userData ? `${userData?.firstName || ''} ${userData?.lastName || ''}`.trim() || user?.name || 'User' : user?.name || 'User',
-            email: userData?.email || user?.email || '',
-            username: userData?.username || user?.username,
-            profilePhoto: userData?.profilePhoto || user?.image,
-            designation: 'Software Developer',
-            subscription: userData?.subscription
-          }}
-          showSettings={true}
-          onMobileMenuToggle={toggleSidebar}
-          isMobileMenuOpen={isMobileMenuOpen}
-        />
+      <div className="h-screen flex flex-col">
+        {/* Page Header - Fixed */}
+        <div className="flex-shrink-0">
+          <PageHeader
+            title="Settings"
+            description={getTabDescription(activeTab)}
+            user={{
+              name: userData ? `${userData?.firstName || ''} ${userData?.lastName || ''}`.trim() || user?.name || 'User' : user?.name || 'User',
+              email: userData?.email || user?.email || '',
+              username: userData?.username || user?.username,
+              profilePhoto: userData?.profilePhoto || user?.image,
+              designation: 'Software Developer',
+              subscription: userData?.subscription
+            }}
+            showSettings={true}
+            onMobileMenuToggle={toggleSidebar}
+            isMobileMenuOpen={isMobileMenuOpen}
+          />
+        </div>
         
-        {/* Main Layout */}
-        <div className="flex h-[calc(100vh-180px)] w-full">
-          {/* Settings Sidebar */}
-          <div className="w-80 sticky top-0 h-[calc(100vh-180px)]">
+        {/* Main Layout - Flexible */}
+        <div className="flex flex-1 min-h-0">
+          {/* Settings Sidebar - Fixed */}
+          <div className="w-16 md:w-80 flex-shrink-0">
             <SettingsSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
           </div>
           
-          {/* Content Area */}
-          <div className="flex-1 sticky top-0 h-[calc(100vh-180px)] overflow-y-auto w-full bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border border-gray-200 dark:border-gray-700 rounded-tr-2xl rounded-br-2xl">
+          {/* Content Area - Scrollable */}
+          <div className="flex-1 overflow-y-auto bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border border-gray-200 dark:border-gray-700 rounded-tr-2xl rounded-br-2xl">
             {/* Main Content */}
             {renderTabContent()}
           </div>

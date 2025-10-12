@@ -9,8 +9,10 @@ import {
   Calendar,
   DollarSign,
   Eye,
-  Download
+  Download,
+  Bell
 } from 'lucide-react';
+import { AdminKPISkeleton } from './AdminSkeletons';
 import {
   LineChart,
   Line,
@@ -49,19 +51,15 @@ interface ChartData {
   aiUsage: number;
 }
 
-const AdminKPIs: React.FC = () => {
-  const [kpiData, setKpiData] = useState<KPIData>({
-    totalUsers: 1247,
-    activeUsers: 892,
-    totalCVs: 2847,
-    totalJobs: 156,
-    totalCoverLetters: 423,
-    aiUsage: 15678,
-    revenue: 28470,
-    growthRate: 23.5
-  });
+interface AdminKPIsProps {
+  onNotificationClick?: () => void;
+}
+
+const AdminKPIs: React.FC<AdminKPIsProps> = ({ onNotificationClick }) => {
+  const [kpiData, setKpiData] = useState<KPIData | null>(null);
   const [chartData, setChartData] = useState<ChartData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [dataLoading, setDataLoading] = useState(true);
   const [timeRange, setTimeRange] = useState('today');
 
   useEffect(() => {
@@ -71,7 +69,7 @@ const AdminKPIs: React.FC = () => {
 
   const fetchKPIData = async () => {
     try {
-      setLoading(true);
+      setDataLoading(true);
       const response = await fetch(`/api/admin/kpis?range=${timeRange}`);
       
       if (!response.ok) {
@@ -87,37 +85,10 @@ const AdminKPIs: React.FC = () => {
       setKpiData(data);
     } catch (error) {
       console.error('Error fetching KPI data:', error);
-      // Set hardwired realistic data for CV Circle dashboard
-      const today = new Date();
-      const isWeekend = today.getDay() === 0 || today.getDay() === 6;
-      const isWorkHours = today.getHours() >= 9 && today.getHours() <= 17;
-      
-      // Adjust data based on time range and current time
-      let multiplier = 1;
-      if (timeRange === 'today') {
-        multiplier = isWeekend ? 0.6 : isWorkHours ? 1.2 : 0.8;
-      } else if (timeRange === '7d') {
-        multiplier = 1;
-      } else if (timeRange === '30d') {
-        multiplier = 4.2;
-      } else if (timeRange === '90d') {
-        multiplier = 12.5;
-      } else if (timeRange === '1y') {
-        multiplier = 52;
-      }
-      
-      setKpiData({
-        totalUsers: Math.floor(1247 * multiplier),
-        activeUsers: Math.floor(892 * multiplier * 0.7),
-        totalCVs: Math.floor(2847 * multiplier),
-        totalJobs: Math.floor(156 * multiplier),
-        totalCoverLetters: Math.floor(423 * multiplier),
-        aiUsage: Math.floor(15678 * multiplier),
-        revenue: Math.floor(28470 * multiplier),
-        growthRate: 23.5
-      });
+      // Don't set fallback data - let the component handle the error state
+      setKpiData(null);
     } finally {
-      setLoading(false);
+      setDataLoading(false);
     }
   };
 
@@ -128,9 +99,8 @@ const AdminKPIs: React.FC = () => {
       setChartData(data);
     } catch (error) {
       console.error('Error fetching chart data:', error);
-      // Generate mock data for demonstration
-      const mockData = generateMockChartData();
-      setChartData(mockData);
+      // Don't set fallback data - let the component handle the error state
+      setChartData([]);
     }
   };
 
@@ -297,28 +267,36 @@ const AdminKPIs: React.FC = () => {
     }
   ];
 
-  const pieChartData = [
+  const pieChartData = kpiData ? [
     { name: 'CVs', value: kpiData.totalCVs, color: '#8B5CF6' },
     { name: 'Jobs', value: kpiData.totalJobs, color: '#F59E0B' },
     { name: 'Cover Letters', value: kpiData.totalCoverLetters, color: '#3B82F6' },
     { name: 'AI Usage', value: kpiData.aiUsage, color: '#EC4899' }
-  ];
+  ] : [];
 
-  if (loading) {
+  // Show error state if no data is available
+  if (!dataLoading && !kpiData) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">KPIs & Analytics</h1>
-          <div className="animate-pulse bg-gray-200 dark:bg-gray-600 h-10 w-32 rounded"></div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">KPIs & Analytics</h1>
+            <p className="text-gray-600 dark:text-gray-400">Monitor your application's performance and growth</p>
+          </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[...Array(8)].map((_, i) => (
-            <div key={i} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow animate-pulse">
-              <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-3/4 mb-4"></div>
-              <div className="h-8 bg-gray-200 dark:bg-gray-600 rounded w-1/2 mb-2"></div>
-              <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-1/4"></div>
-            </div>
-          ))}
+        <div className="text-center py-12">
+          <div className="text-red-500 text-6xl mb-4">⚠️</div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Failed to Load KPIs</h3>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">Unable to fetch KPI data. Please try again.</p>
+          <button
+            onClick={() => {
+              fetchKPIData();
+              fetchChartData();
+            }}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Retry
+          </button>
         </div>
       </div>
     );
@@ -334,6 +312,16 @@ const AdminKPIs: React.FC = () => {
         </div>
         
         <div className="flex items-center space-x-2">
+          <button
+            onClick={onNotificationClick}
+            className="p-2 rounded-md text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-gray-100 transition-colors relative"
+            title="Notifications"
+          >
+            <Bell size={20} />
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+              3
+            </span>
+          </button>
           <select
             value={timeRange}
             onChange={(e) => setTimeRange(e.target.value)}
@@ -357,19 +345,33 @@ const AdminKPIs: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{card.title}</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{card.value}</p>
+                  {dataLoading ? (
+                    <div className="animate-pulse">
+                      <div className="h-8 bg-gray-200 dark:bg-gray-600 rounded w-20 mt-1"></div>
+                    </div>
+                  ) : (
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{card.value}</p>
+                  )}
                 </div>
                 <div className={`p-3 rounded-full ${card.color} bg-opacity-10`}>
                   <Icon className={`h-6 w-6 ${card.color.replace('bg-', 'text-')}`} />
                 </div>
               </div>
               <div className="mt-4 flex items-center">
-                <span className={`text-sm font-medium ${
-                  card.changeType === 'positive' ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  {card.change}
-                </span>
-                <span className="text-sm text-gray-500 dark:text-gray-400 ml-1">from last period</span>
+                {dataLoading ? (
+                  <div className="animate-pulse">
+                    <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-16"></div>
+                  </div>
+                ) : (
+                  <>
+                    <span className={`text-sm font-medium ${
+                      card.changeType === 'positive' ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {card.change}
+                    </span>
+                    <span className="text-sm text-gray-500 dark:text-gray-400 ml-1">from last period</span>
+                  </>
+                )}
               </div>
             </div>
           );
@@ -383,8 +385,13 @@ const AdminKPIs: React.FC = () => {
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             {timeRange === 'today' ? 'Hourly Growth' : 'User Growth'}
           </h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={chartData}>
+          {dataLoading ? (
+            <div className="animate-pulse">
+              <div className="h-64 bg-gray-200 dark:bg-gray-600 rounded"></div>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={chartData}>
               <XAxis 
                 dataKey="date" 
                 stroke="#6B7280"
@@ -423,7 +430,8 @@ const AdminKPIs: React.FC = () => {
                 name="CVs"
               />
             </AreaChart>
-          </ResponsiveContainer>
+            </ResponsiveContainer>
+          )}
         </div>
 
         {/* Activity Chart */}
@@ -431,8 +439,13 @@ const AdminKPIs: React.FC = () => {
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             {timeRange === 'today' ? 'Hourly Activity' : 'Daily Activity'}
           </h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={chartData}>
+          {dataLoading ? (
+            <div className="animate-pulse">
+              <div className="h-64 bg-gray-200 dark:bg-gray-600 rounded"></div>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={chartData}>
               <XAxis 
                 dataKey="date" 
                 stroke="#6B7280"
@@ -456,7 +469,8 @@ const AdminKPIs: React.FC = () => {
               <Bar dataKey="coverLetters" fill="#10B981" name="Cover Letters" />
               <Bar dataKey="aiUsage" fill="#EC4899" name="AI Usage" />
             </BarChart>
-          </ResponsiveContainer>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
 

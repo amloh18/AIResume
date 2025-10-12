@@ -46,23 +46,52 @@ export async function POST(request: NextRequest) {
 
     switch (type) {
       case 'rewrite':
-        systemPrompt = `You are an expert CV/resume writer. Rewrite the following content to be more professional, impactful, and engaging while maintaining the original meaning and facts. Use action verbs and quantifiable achievements where possible.`;
-        userPrompt = `Content to rewrite: ${prompt}\n\nPlease provide the rewritten version:`;
+        systemPrompt = `You are an expert career coach and a highly effective copywriter. Your task is to rewrite content into powerful, ATS-friendly bullet points following the "Challenge-Action-Result" (CAR) framework.`;
+        userPrompt = `Content to rewrite: ${prompt}\n\nInstructions:
+1. Rewrite into 3-5 distinct bullet points
+2. Each bullet point MUST follow the "Challenge-Action-Result" (CAR) framework
+3. Use strong, quantifiable action verbs at the beginning
+4. Remove any headers like "Tasks:", "Requirements:", "Benefits:", or special characters
+5. Be concise and impactful
+6. Format as clean markdown bulleted list
+
+Please provide the rewritten version:`;
         break;
 
       case 'optimize':
         systemPrompt = `You are an expert CV/resume optimizer. Optimize the following content for Applicant Tracking Systems (ATS) by incorporating relevant keywords, improving structure, and ensuring it's easily scannable.`;
-        userPrompt = `Content to optimize: ${prompt}\n\nSection: ${section || 'general'}\n\nPlease provide the optimized version with relevant keywords:`;
+        userPrompt = `Content to optimize: ${prompt}\n\nSection: ${section || 'general'}\n\nInstructions:
+1. Integrate relevant keywords naturally
+2. Use strong action verbs
+3. Focus on quantifiable achievements
+4. Ensure ATS-friendly formatting
+5. Make content more scannable
+
+Please provide the optimized version:`;
         break;
 
       case 'suggest':
-        systemPrompt = `You are an expert CV/resume consultant. Analyze the following content and provide specific suggestions for improvement, including what to add, remove, or modify to make it more compelling.`;
-        userPrompt = `Content to analyze: ${prompt}\n\nSection: ${section || 'general'}\n\nPlease provide specific suggestions for improvement:`;
+        systemPrompt = `You are an expert CV/resume consultant. Analyze the following content and provide specific, actionable suggestions for improvement.`;
+        userPrompt = `Content to analyze: ${prompt}\n\nSection: ${section || 'general'}\n\nInstructions:
+1. Provide specific, actionable recommendations
+2. Focus on quantifiable improvements
+3. Consider ATS optimization
+4. Be realistic and implementable
+5. Use professional language
+
+Please provide specific suggestions for improvement:`;
         break;
 
       case 'generate':
         systemPrompt = `You are an expert CV/resume writer. Generate professional content based on the following requirements. Make it compelling, specific, and tailored to the request.`;
-        userPrompt = `Generate content for: ${prompt}\n\nContext: ${context || 'No additional context provided'}\n\nPlease provide the generated content:`;
+        userPrompt = `Generate content for: ${prompt}\n\nContext: ${context || 'No additional context provided'}\n\nInstructions:
+1. Be specific and compelling
+2. Use action verbs and quantifiable achievements
+3. Tailor to the specific request
+4. Focus on results and impact
+5. Keep it professional and concise
+
+Please provide the generated content:`;
         break;
 
       default:

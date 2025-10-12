@@ -87,17 +87,19 @@ async function generateProjectDescription(projectItem: any, jobData: any) {
   const jobDescription = jobData?.description || jobData?.jobDescription || '';
   const relevantTech = extractRelevantTechnologies(jobDescription);
   
-  let description = `Developed and maintained ${projectName}, a comprehensive solution `;
+  // Generate a more dynamic description based on project name and technologies
+  let description = `Worked on ${projectName}`;
   
   if (relevantTech.length > 0) {
-    description += `built using ${relevantTech.slice(0, 3).join(', ')}. `;
-  } else {
-    description += `using modern technologies and best practices. `;
+    description += ` using ${relevantTech.slice(0, 3).join(', ')}`;
   }
   
-  description += `Implemented key features including user authentication, data management, and responsive design. `;
-  description += `Collaborated with stakeholders to gather requirements and ensure project deliverables met business objectives. `;
-  description += `Applied agile methodologies and version control practices to maintain code quality and project timeline.`;
+  description += `. `;
+  
+  // Add role-specific context if available
+  if (targetRole && targetRole !== 'Developer') {
+    description += `Applied ${targetRole.toLowerCase()} skills to deliver quality solutions. `;
+  }
   
   return description;
 }

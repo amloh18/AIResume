@@ -82,6 +82,11 @@ export default function ComprehensiveATSAnalyzer({
   const [activeTab, setActiveTab] = useState<'analysis' | 'optimization' | 'preview'>('analysis');
   const [optimizationProgress, setOptimizationProgress] = useState(0);
   const [linkedJobData, setLinkedJobData] = useState<any>(null);
+  
+  // Auto Fix state
+  const [isAutoFixing, setIsAutoFixing] = useState(false);
+  const [autoFixProgress, setAutoFixProgress] = useState(0);
+  const [autoFixLogs, setAutoFixLogs] = useState<string[]>([]);
 
   // Load linked job from journey
   useEffect(() => {
@@ -205,11 +210,25 @@ export default function ComprehensiveATSAnalyzer({
       
       console.log('🔍 Comprehensive ATS Analyzer - Sending request to API');
       
-      const response = await fetch('/api/ats/comprehensive-analysis', {
+      // Try the new enhanced ATS analysis API first
+      let response = await fetch('/api/ai/comprehensive-ats-analysis', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify({
+          cvData,
+          jobData
+        })
       });
+
+      // If the new API fails, fall back to the legacy API
+      if (!response.ok) {
+        console.log('🔍 Comprehensive ATS Analyzer - New API failed, trying legacy API');
+        response = await fetch('/api/ats/comprehensive-analysis', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestBody)
+        });
+      }
       
       console.log('🔍 Comprehensive ATS Analyzer - Response status:', response.status);
       
@@ -339,6 +358,94 @@ export default function ComprehensiveATSAnalyzer({
     }
   }, [atsResult, onUpdateField, cvData, cvId, userId, selectedJobId, journeyState.currentJobId, calculateComprehensiveATSScore]);
 
+  const handleAutoFix = useCallback(async () => {
+    if (!atsResult || !onUpdateField || !cvId) return;
+    
+    setIsAutoFixing(true);
+    setAutoFixProgress(0);
+    setAutoFixLogs([]);
+    
+    try {
+      // Step 1: Fix Keywords
+      setAutoFixLogs(prev => [...prev, "🔍 Analyzing keyword matches..."]);
+      setAutoFixProgress(10);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      if (atsResult.optimizations.keywords.length > 0) {
+        setAutoFixLogs(prev => [...prev, "✅ Adding missing keywords to CV"]);
+        setAutoFixProgress(20);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+      
+      // Step 2: Fix Skills
+      setAutoFixLogs(prev => [...prev, "🔍 Analyzing skills match..."]);
+      setAutoFixProgress(30);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      if (atsResult.optimizations.skills.length > 0) {
+        setAutoFixLogs(prev => [...prev, "✅ Adding missing skills to CV"]);
+        setAutoFixProgress(40);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+      
+      // Step 3: Fix Action Verbs
+      setAutoFixLogs(prev => [...prev, "🔍 Analyzing action verbs..."]);
+      setAutoFixProgress(50);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      setAutoFixLogs(prev => [...prev, "✅ Optimizing action verbs in work experience"]);
+      setAutoFixProgress(60);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Step 4: Fix Experience & Education
+      setAutoFixLogs(prev => [...prev, "🔍 Analyzing experience and education..."]);
+      setAutoFixProgress(70);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      if (atsResult.optimizations.workExperience.length > 0) {
+        setAutoFixLogs(prev => [...prev, "✅ Optimizing work experience descriptions"]);
+        setAutoFixProgress(80);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+      
+      // Step 5: Fix Formatting
+      setAutoFixLogs(prev => [...prev, "🔍 Analyzing formatting issues..."]);
+      setAutoFixProgress(90);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      setAutoFixLogs(prev => [...prev, "✅ Optimizing CV formatting for ATS"]);
+      setAutoFixProgress(95);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Apply actual optimizations
+      if (atsResult.optimizations.summary) {
+        onUpdateField('basics.summary', atsResult.optimizations.summary);
+      }
+      
+      if (atsResult.optimizations.workExperience.length > 0) {
+        atsResult.optimizations.workExperience.forEach(({ index, optimizedText }) => {
+          onUpdateField(`work.${index}.summary`, optimizedText);
+        });
+      }
+      
+      setAutoFixLogs(prev => [...prev, "🎉 Auto-fix completed successfully!"]);
+      setAutoFixProgress(100);
+      
+      // Recalculate score after optimizations
+      setTimeout(() => {
+        calculateComprehensiveATSScore();
+        setAutoFixProgress(0);
+        setAutoFixLogs([]);
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Error in auto fix:', error);
+      setAutoFixLogs(prev => [...prev, "❌ Auto-fix failed. Please try again."]);
+    } finally {
+      setIsAutoFixing(false);
+    }
+  }, [atsResult, onUpdateField, cvId, calculateComprehensiveATSScore]);
+
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'text-green-600 bg-green-100 dark:bg-green-900/20 dark:text-green-400';
     if (score >= 60) return 'text-yellow-600 bg-yellow-100 dark:bg-yellow-900/20 dark:text-yellow-400';
@@ -361,29 +468,10 @@ export default function ComprehensiveATSAnalyzer({
           </h3>
         </div>
         <div className="flex items-center space-x-3">
-          {/* ATS Compatibility Score Display */}
-          {atsResult && (
-            <div className="px-3 py-1.5 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">ATS Compatibility Score</span>
-                <span className={`text-sm font-bold ${
-                  atsResult.score >= 80 ? 'text-green-600' : 
-                  atsResult.score >= 60 ? 'text-yellow-600' : 
-                  'text-red-600'
-                }`}>
-                  {atsResult.score}%
-                </span>
-              </div>
-              <div className={`text-xs mt-1 ${
-                atsResult.score >= 80 ? 'text-green-700 dark:text-green-300' :
-                atsResult.score >= 60 ? 'text-yellow-700 dark:text-yellow-300' :
-                'text-red-700 dark:text-red-300'
-              }`}>
-                {atsResult.score >= 80 ? 'Excellent' : 
-                 atsResult.score >= 60 ? 'Good' : 
-                 'Needs optimization to pass ATS screening'}
-              </div>
-            </div>
+          {!atsResult && jobData && (
+            <p className="text-gray-500 dark:text-gray-400 text-sm mr-3">
+              Click "Analyze" to get comprehensive ATS insights and optimizations
+            </p>
           )}
           <button
             onClick={calculateComprehensiveATSScore}
@@ -478,60 +566,192 @@ export default function ComprehensiveATSAnalyzer({
           <div className="min-h-[200px]">
             {activeTab === 'analysis' && (
               <div className="space-y-4">
-                {/* Breakdown Cards */}
-                <div className="grid grid-cols-1 gap-3">
-                  {Object.entries(atsResult.breakdown).map(([key, value]) => (
-                    <div key={key} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium text-gray-700 dark:text-gray-300 capitalize">
-                          {key.replace(/([A-Z])/g, ' $1').trim()}
-                        </span>
-                        <span className={`text-sm font-bold ${value >= 80 ? 'text-green-600' : value >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
-                          {value}%
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-1.5 mt-2">
-                        <div 
-                          className={`h-1.5 rounded-full ${value >= 80 ? 'bg-green-500' : value >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
-                          style={{ width: `${value}%` }}
+                {/* Two-Column Layout: Overall ATS Score + Detailed Metrics */}
+                <div className="grid grid-cols-2 gap-4 h-48">
+                  {/* Column 1: Overall ATS Score */}
+                  <div className="flex flex-col items-center justify-center space-y-3 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 rounded-lg p-4">
+                    {/* ATS Compatibility Score - Circular Progress */}
+                    <div className="relative inline-flex items-center justify-center">
+                      <svg className="w-20 h-20 transform -rotate-90" viewBox="0 0 100 100">
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r="35"
+                          stroke="currentColor"
+                          strokeWidth="6"
+                          fill="none"
+                          className="text-gray-200 dark:text-gray-600"
                         />
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r="35"
+                          stroke="currentColor"
+                          strokeWidth="6"
+                          fill="none"
+                          strokeDasharray={`${2 * Math.PI * 35}`}
+                          strokeDashoffset={`${2 * Math.PI * 35 * (1 - atsResult.score / 100)}`}
+                          className={`${atsResult.score >= 80 ? 'text-green-500' : atsResult.score >= 60 ? 'text-yellow-500' : 'text-red-500'}`}
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className={`text-xl font-bold ${atsResult.score >= 80 ? 'text-green-600' : atsResult.score >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
+                          {atsResult.score}%
+                        </span>
                       </div>
                     </div>
-                  ))}
-                </div>
-
-                {/* Keywords Analysis */}
-                <div className="space-y-3">
-                  <div>
-                    <h5 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-                      Matched Keywords ({atsResult.details.matchedKeywords.length})
-                    </h5>
-                    <div className="flex flex-wrap gap-1">
-                      {atsResult.details.matchedKeywords.slice(0, 10).map((keyword, index) => (
-                        <span
-                          key={index}
-                          className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full"
-                        >
-                          {keyword}
-                        </span>
-                      ))}
+                    
+                    {/* Status Message */}
+                    <div className="text-center">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">Overall ATS Score</p>
+                      <p className={`text-xs font-medium ${atsResult.score >= 80 ? 'text-green-600' : atsResult.score >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
+                        {atsResult.score >= 80 ? 'Well-optimized' : 
+                         atsResult.score >= 60 ? 'Good compatibility' : 
+                         'Needs optimization'}
+                      </p>
                     </div>
                   </div>
 
-                  <div>
-                    <h5 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-                      Missing Keywords ({atsResult.details.missingKeywords.length})
-                    </h5>
-                    <div className="flex flex-wrap gap-1">
-                      {atsResult.details.missingKeywords.slice(0, 10).map((keyword, index) => (
-                        <span
-                          key={index}
-                          className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full"
-                        >
-                          {keyword}
+                  {/* Column 2: Detailed Metrics */}
+                  <div className="flex flex-col justify-center space-y-2">
+                    {/* Keywords */}
+                    <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Keywords</span>
+                      <div className="flex items-center gap-2">
+                        <div className="w-12 bg-gray-200 dark:bg-gray-600 rounded-full h-1.5">
+                          <div 
+                            className={`h-1.5 rounded-full ${atsResult.breakdown.keywordMatch >= 80 ? 'bg-green-500' : atsResult.breakdown.keywordMatch >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                            style={{ width: `${atsResult.breakdown.keywordMatch}%` }}
+                          />
+                        </div>
+                        <span className={`text-xs font-bold ${atsResult.breakdown.keywordMatch >= 80 ? 'text-green-600' : atsResult.breakdown.keywordMatch >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
+                          {atsResult.breakdown.keywordMatch}%
                         </span>
-                      ))}
+                      </div>
                     </div>
+                    
+                    {/* Experience */}
+                    <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Experience</span>
+                      <div className="flex items-center gap-2">
+                        <div className="w-12 bg-gray-200 dark:bg-gray-600 rounded-full h-1.5">
+                          <div 
+                            className={`h-1.5 rounded-full ${atsResult.breakdown.experienceEducation >= 80 ? 'bg-green-500' : atsResult.breakdown.experienceEducation >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                            style={{ width: `${atsResult.breakdown.experienceEducation}%` }}
+                          />
+                        </div>
+                        <span className={`text-xs font-bold ${atsResult.breakdown.experienceEducation >= 80 ? 'text-green-600' : atsResult.breakdown.experienceEducation >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
+                          {atsResult.breakdown.experienceEducation}%
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {/* Action Verbs */}
+                    <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Action Verbs</span>
+                      <div className="flex items-center gap-2">
+                        <div className="w-12 bg-gray-200 dark:bg-gray-600 rounded-full h-1.5">
+                          <div 
+                            className={`h-1.5 rounded-full ${atsResult.breakdown.actionVerbs >= 80 ? 'bg-green-500' : atsResult.breakdown.actionVerbs >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                            style={{ width: `${atsResult.breakdown.actionVerbs}%` }}
+                          />
+                        </div>
+                        <span className={`text-xs font-bold ${atsResult.breakdown.actionVerbs >= 80 ? 'text-green-600' : atsResult.breakdown.actionVerbs >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
+                          {atsResult.breakdown.actionVerbs}%
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {/* Skills */}
+                    <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Skills</span>
+                      <div className="flex items-center gap-2">
+                        <div className="w-12 bg-gray-200 dark:bg-gray-600 rounded-full h-1.5">
+                          <div 
+                            className={`h-1.5 rounded-full ${atsResult.breakdown.skills >= 80 ? 'bg-green-500' : atsResult.breakdown.skills >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                            style={{ width: `${atsResult.breakdown.skills}%` }}
+                          />
+                        </div>
+                        <span className={`text-xs font-bold ${atsResult.breakdown.skills >= 80 ? 'text-green-600' : atsResult.breakdown.skills >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
+                          {atsResult.breakdown.skills}%
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {/* Formatting */}
+                    <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Formatting</span>
+                      <div className="flex items-center gap-2">
+                        <div className="w-12 bg-gray-200 dark:bg-gray-600 rounded-full h-1.5">
+                          <div 
+                            className={`h-1.5 rounded-full ${atsResult.breakdown.formatting >= 80 ? 'bg-green-500' : atsResult.breakdown.formatting >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                            style={{ width: `${atsResult.breakdown.formatting}%` }}
+                          />
+                        </div>
+                        <span className={`text-xs font-bold ${atsResult.breakdown.formatting >= 80 ? 'text-green-600' : atsResult.breakdown.formatting >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
+                          {atsResult.breakdown.formatting}%
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Actionable Insights & Guidance */}
+                <div className="space-y-3">
+                  <h5 className="text-sm font-semibold text-gray-900 dark:text-white">
+                    Your Next Steps to Improve Your Score
+                  </h5>
+                  
+                  {/* Missing Keywords - Most Actionable */}
+                  {atsResult.details.missingKeywords.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-xs text-gray-600 dark:text-gray-400">
+                        Add these missing keywords to improve your match:
+                      </p>
+                      <div className="flex flex-wrap gap-1">
+                        {atsResult.details.missingKeywords.slice(0, 8).map((keyword, index) => (
+                          <span
+                            key={index}
+                            className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full border border-red-200"
+                          >
+                            {keyword}
+                          </span>
+                        ))}
+                        {atsResult.details.missingKeywords.length > 8 && (
+                          <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
+                            +{atsResult.details.missingKeywords.length - 8} more
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Contextual Guidance */}
+                  <div className="space-y-2">
+                    {atsResult.breakdown.actionVerbs < 60 && (
+                      <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
+                        <p className="text-xs text-blue-800 dark:text-blue-200">
+                          💡 <strong>Action Verbs:</strong> Go to 'Work Experience' and use the AI to optimize your descriptions with stronger action verbs.
+                        </p>
+                      </div>
+                    )}
+                    
+                    {atsResult.breakdown.skills < 60 && (
+                      <div className="p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-700">
+                        <p className="text-xs text-purple-800 dark:text-purple-200">
+                          💡 <strong>Skills:</strong> Add the missing skills to your 'Skills' section to improve your match.
+                        </p>
+                      </div>
+                    )}
+                    
+                    {atsResult.breakdown.keywordMatch < 60 && (
+                      <div className="p-2 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-700">
+                        <p className="text-xs text-orange-800 dark:text-orange-200">
+                          💡 <strong>Keywords:</strong> Include more job-relevant keywords in your summary and work experience.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -655,14 +875,6 @@ export default function ComprehensiveATSAnalyzer({
         </div>
       )}
 
-      {!atsResult && jobData && (
-        <div className="text-center py-8">
-          <BarChart3 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-500 dark:text-gray-400 text-sm">
-            Click "Analyze" to get comprehensive ATS insights and optimizations
-          </p>
-        </div>
-      )}
     </div>
   );
 }

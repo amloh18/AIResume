@@ -27,7 +27,7 @@ const ApplicationStatsWidget: React.FC<ApplicationStatsWidgetProps> = ({ userId 
     offerApplications: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('30d');
+  const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('7d');
 
   useEffect(() => {
     fetchApplicationStats();
@@ -162,7 +162,7 @@ const ApplicationStatsWidget: React.FC<ApplicationStatsWidgetProps> = ({ userId 
       {/* Pie Chart */}
       <div className="bg-white/5 rounded-lg">
         <h3 className="text-sm font-semibold text-white mb-4 text-center p-4 pb-0">Created vs Applied</h3>
-        <div className="h-72" style={{ height: '300px' }}>
+        <div className="h-60" style={{ height: '240px', minHeight: '240px', maxHeight: '240px' }}>
           {loading ? (
             <div className="flex items-center justify-center h-full">
               <div className="w-8 h-8 border-2 border-purple-400 border-t-transparent rounded-full animate-spin"></div>

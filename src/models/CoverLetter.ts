@@ -4,6 +4,9 @@ export interface ICoverLetter extends Document {
   userId: mongoose.Types.ObjectId; // ObjectId, references the User schema
   title: string;
   content: string;
+  status?: string; // draft, published, archived
+  jobId?: mongoose.Types.ObjectId; // Optional link to a job
+  cvId?: mongoose.Types.ObjectId; // Optional link to a CV
   createdAt: Date;
   updatedAt: Date;
   metadata: {
@@ -15,6 +18,10 @@ export interface ICoverLetter extends Document {
     isPublic: boolean;
     viewCount: number;
     downloadCount: number;
+    targetCompany?: string;
+    targetPosition?: string;
+    keywords?: string[];
+    version?: number;
     atsScore?: number;
     atsScoreDate?: Date;
   };
@@ -37,6 +44,21 @@ const coverLetterSchema = new Schema<ICoverLetter>({
     required: [true, 'Cover letter content is required'],
     trim: true,
     maxlength: [10000, 'Content cannot exceed 10000 characters']
+  },
+  status: {
+    type: String,
+    enum: ['draft', 'published', 'archived'],
+    default: 'draft'
+  },
+  jobId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Job',
+    required: false
+  },
+  cvId: {
+    type: Schema.Types.ObjectId,
+    ref: 'CV',
+    required: false
   },
   metadata: {
     lastModified: {
@@ -76,6 +98,23 @@ const coverLetterSchema = new Schema<ICoverLetter>({
       type: Number,
       default: 0,
       min: 0
+    },
+    targetCompany: {
+      type: String,
+      trim: true
+    },
+    targetPosition: {
+      type: String,
+      trim: true
+    },
+    keywords: [{
+      type: String,
+      trim: true
+    }],
+    version: {
+      type: Number,
+      default: 1,
+      min: 1
     },
     atsScore: {
       type: Number,

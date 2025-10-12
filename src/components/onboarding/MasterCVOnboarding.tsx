@@ -30,62 +30,10 @@ import PersonalInfoStep from './steps/PersonalInfoStep';
 import ExperienceStep from './steps/ExperienceStep';
 import SkillsStep from './steps/SkillsStep';
 import PreviewStep from './steps/PreviewStep';
+import { adaptMasterCVToUnified, MasterCVOnboardingData } from '@/lib/data-adapters/cv-data-adapter';
 
-interface MasterCVData {
-  // Personal Information
-  fullName: string;
-  professionalTitle: string;
-  email: string;
-  phone: string;
-  location: string;
-  summary: string;
-  website: string;
-  linkedin: string;
-  github: string;
-  
-  // Experience
-  workExperience: Array<{
-    id: string;
-    jobTitle: string;
-    company: string;
-    location: string;
-    startDate: string;
-    endDate: string;
-    isCurrent: boolean;
-    description: string;
-  }>;
-  
-  education: Array<{
-    id: string;
-    degree: string;
-    institution: string;
-    location: string;
-    startDate: string;
-    endDate: string;
-    isCurrent: boolean;
-    description: string;
-  }>;
-  
-  projects: Array<{
-    id: string;
-    name: string;
-    description: string;
-    technologies: string;
-    url: string;
-    startDate: string;
-    endDate: string;
-  }>;
-  
-  // Skills & Achievements
-  skills: string[];
-  languages: Array<{
-    id: string;
-    language: string;
-    proficiency: 'Native' | 'Fluent' | 'Conversational' | 'Basic';
-  }>;
-  achievements: string;
-  interests: string[];
-}
+// Use the standardized MasterCVOnboardingData interface
+type MasterCVData = MasterCVOnboardingData;
 
 interface MasterCVOnboardingProps {
   isOpen: boolean;
@@ -169,11 +117,14 @@ const MasterCVOnboarding: React.FC<MasterCVOnboardingProps> = ({
     setIsLoading(true);
     
     try {
+      // Convert master CV data to unified structure
+      const unifiedData = adaptMasterCVToUnified(formData);
+      
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // Call the completion handler
-      onComplete(formData);
+      // Call the completion handler with unified data
+      onComplete(unifiedData);
       
       // Show success animation
       setTimeout(() => {

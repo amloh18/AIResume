@@ -2,13 +2,14 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-// import { useSession  } from 'next-auth/react'; // Removed - using Clerk now
+import { useSession } from 'next-auth/react';
 import FloatingStudioLayout from './FloatingStudioLayout';
 import TabbedStudioPanel from './TabbedStudioPanel';
 import JobATSSection from './JobATSSection';
 import ComprehensiveATSAnalyzer from './ComprehensiveATSAnalyzer';
 import CVHealthScore from './CVHealthScore';
 import DraggableSections from './DraggableSections';
+import CVSectionsAndOrdering from './CVSectionsAndOrdering';
 import DesignContent from './DesignContent';
 import TemplateContent from './TemplateContent';
 import PreviewPanel from './PreviewPanel';
@@ -27,7 +28,11 @@ import {
   Code,
   FolderOpen,
   Award,
-  Globe
+  Globe,
+  Heart,
+  Star,
+  BookOpen,
+  Users
 } from 'lucide-react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { useTemplateStore } from '@/lib/stores/templateStore';
@@ -36,7 +41,6 @@ import { UnifiedCVService as CVService } from '@/lib/services/unified-cv-service
 import { TemplateService } from '@/lib/services/templateService';
 import { JobService } from '@/lib/services/jobService';
 import { debounce } from 'lodash';
-import Toast from '@/components/ui/Toast';
 import { Skeleton } from '@/components/ui/SkeletonLoader';
 import { generateCVName, generateCVDescription, getCVMetadata } from '@/lib/utils/cvNamingUtils';
 import { generateDocumentName } from '@/lib/utils/documentNaming';
@@ -45,31 +49,27 @@ import { useJobJourney } from '@/contexts/JobJourneyContext';
 import ActionBlockerDialog from '@/components/modals/ActionBlockerDialog';
 import { CVJourneyLookupService, CVJourneyInfo } from '@/lib/services/cvJourneyLookupService';
 import { ApplicationPackageService } from '@/lib/services/applicationPackageService';
+import { useNotifications } from '@/contexts/NotificationContext';
 
 interface CVStudioProps {
   journeyId?: string | null; // PRIMARY: Journey ID for proper Application Package context
-  jobId?: string | null; // DEPRECATED: Direct jobId usage violates Application Package model
   cvId?: string | null;
   coverLetterId?: string | null;
   documentType?: 'cv' | 'cover-letter';
   userId: string;
   mode?: string | null; // 'cv-onboarding', 'ats-edit', 'cover-letter-edit', 'document-first'
-  cvJourneyId?: string | null; // LEGACY: Being replaced by journeyId
 }
 
 const CVStudio: React.FC<CVStudioProps> = ({
   journeyId,
-  jobId, // DEPRECATED
   cvId,
   coverLetterId,
   documentType: initialDocumentType = 'cv',
   userId,
   mode,
-  cvJourneyId // LEGACY
 }) => {
   const router = useRouter();
-  // const { data: session } = useSession(); // Removed - using Clerk now
-  const session = null; // Temporary - will replace with Clerk user
+  const { data: session } = useSession();
   const { theme } = useTheme();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -80,9 +80,9 @@ const CVStudio: React.FC<CVStudioProps> = ({
     right: true
   });
   const [justCreated, setJustCreated] = useState(false);
-  const [showSavedMessage, setShowSavedMessage] = useState(false);
+  const { addNotification } = useNotifications();
 
-  const [selectedJobId, setSelectedJobId] = useState<string | null>(jobId || null);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [jobAutoLoadedFromJourney, setJobAutoLoadedFromJourney] = useState(false);
   const [pagePadding, setPagePadding] = useState({ top: 32, bottom: 32 });
 
@@ -117,11 +117,11 @@ const CVStudio: React.FC<CVStudioProps> = ({
 
   // Section management state
   const [sectionOrder, setSectionOrder] = useState([
-    'basics', 'work', 'education', 'skills', 'projects', 'certificates', 'languages'
+    'personal_header', 'work_experience', 'education', 'skills', 'projects', 'certificates', 'languages'
   ]);
   const [sectionVisibility, setSectionVisibility] = useState<Record<string, boolean>>({
-    basics: true,
-    work: true,
+    personal_header: true,
+    work_experience: true,
     education: true,
     skills: true,
     projects: true,
@@ -129,7 +129,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
     languages: true
   });
   const [expandedSections, setExpandedSections] = useState(new Set([
-    'basics', 'work', 'skills'
+    'personal_header', 'work_experience', 'skills'
   ]));
   const [allSectionsCollapsed, setAllSectionsCollapsed] = useState(false);
 
@@ -149,16 +149,12 @@ const CVStudio: React.FC<CVStudioProps> = ({
   const [zoom, setZoom] = useState(1);
   const [paperSize, setPaperSize] = useState<'A4' | 'Letter'>('A4');
 
-
-
   const {
     templates,
     selectedTemplate,
     setTemplates,
     setSelectedTemplate
   } = useTemplateStore();
-
-
 
   const {
     currentJob,
@@ -177,10 +173,295 @@ const CVStudio: React.FC<CVStudioProps> = ({
     updateCoverLetterId
   } = useJobJourney();
 
+  // Debounced autosave - defined early to avoid reference errors
+  const debouncedSave = useCallback(
+    debounce(async (data: CVDataStructure) => {
+      try {
+        setSaveStatus('saving');
+
+        // Add timeout protection
+        const saveTimeout = setTimeout(() => {
+          console.error('❌ Studio - Save operation timed out');
+          setSaveStatus('error');
+        }, 10000); // 10 second timeout
+
+        if (documentType === 'cover-letter') {
+          // Handle cover letter save
+          if (coverLetterId) {
+            const response = await fetch(`/api/cover-letters/${coverLetterId}?userId=${userId}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                title: coverLetterTitle,
+                content: data.basics?.summary || '',
+                cvId: cvId,
+                jobId: selectedJobId
+              })
+            });
+
+            if (!response.ok) {
+              throw new Error('Failed to update cover letter');
+            }
+
+            clearTimeout(saveTimeout);
+            setSaveStatus('saved');
+            addNotification({
+              type: 'success',
+              title: 'Cover Letter Updated',
+              message: 'Your cover letter has been saved successfully',
+              persistent: false
+            });
+          } else {
+            // Check if journey already has a cover letter
+            const existingCoverLetterId = journeyInfo?.coverLetterId;
+            if (existingCoverLetterId) {
+              
+              // Update the existing cover letter
+              const response = await fetch(`/api/cover-letters/${existingCoverLetterId}?userId=${userId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  title: coverLetterTitle,
+                  content: data.basics?.summary || '',
+                  cvId: cvId,
+                  jobId: journeyInfo?.jobId || selectedJobId,
+                  targetCompany: '',
+                  targetPosition: '',
+                  keywords: []
+                })
+              });
+
+              if (response.ok) {
+                
+                // Update URL to use existing cover letter
+                const urlParams = new URLSearchParams();
+                urlParams.set('type', 'cover_letter');
+                urlParams.set('coverLetterId', existingCoverLetterId);
+                if (journeyInfo?.jobId || selectedJobId) {
+                  urlParams.set('jobId', journeyInfo?.jobId || selectedJobId);
+                }
+                if (journeyInfo?.journeyId) {
+                  urlParams.set('journeyId', journeyInfo?.journeyId);
+                }
+                router.replace(`/studio?${urlParams.toString()}`);
+                
+                clearTimeout(saveTimeout);
+                setSaveStatus('saved');
+                addNotification({
+                  type: 'success',
+                  title: 'Cover Letter Updated',
+                  message: 'Your cover letter has been saved successfully',
+                  persistent: false
+                });
+                return;
+              }
+            }
+
+            // Create new cover letter
+            if (justCreated) {
+              clearTimeout(saveTimeout);
+              setSaveStatus('saved');
+              return;
+            }
+
+            const response = await fetch('/api/cover-letters', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                userId,
+                title: coverLetterTitle,
+                content: data.basics?.summary || '',
+                cvId: cvId,
+                jobId: journeyInfo?.jobId || selectedJobId,
+                targetCompany: '',
+                targetPosition: '',
+                keywords: []
+              })
+            });
+
+            if (!response.ok) {
+              throw new Error('Failed to create cover letter');
+            }
+
+            const result = await response.json();
+            const newCoverLetterId = result.data.id;
+
+            // Update journey with new cover letter ID
+            await updateJourneyWithDocument(newCoverLetterId, 'cover-letter');
+
+            // Update URL to include the new cover letter ID and preserve cvJourneyId
+            const urlParams = new URLSearchParams();
+            urlParams.set('type', 'cover_letter');
+            urlParams.set('coverLetterId', newCoverLetterId);
+            if (journeyInfo?.jobId || selectedJobId) {
+              urlParams.set('jobId', journeyInfo?.jobId || selectedJobId);
+            }
+            if (journeyInfo?.journeyId || cvJourneyId) {
+              urlParams.set('cvJourneyId', journeyInfo?.journeyId || cvJourneyId);
+            }
+            router.replace(`/studio?${urlParams.toString()}`);
+
+            clearTimeout(saveTimeout);
+            setSaveStatus('saved');
+            
+            // Only show notification if not just created to avoid spam
+            if (!justCreated) {
+              addNotification({
+                type: 'success',
+                title: 'Cover Letter Updated',
+                message: 'Your cover letter has been saved successfully',
+                persistent: false
+              });
+            }
+
+            setJustCreated(true);
+            setTimeout(() => setJustCreated(false), 2000);
+          }
+        } else {
+          // Handle CV save
+          if (cvId) {
+            await CVService.updateCV(cvId, {
+              title: cvTitle,
+              cvData: data,
+              templateId: selectedTemplate?.id || selectedTemplate?._id || '',
+              metadata: {
+                isMaster: isMasterCV
+              }
+            }, userId || undefined);
+            clearTimeout(saveTimeout);
+            setSaveStatus('saved');
+            
+            // Only show notification for master CV saves
+            if (isMasterCV) {
+              addNotification({
+                type: 'success',
+                title: 'Master CV Updated',
+                message: 'Your master CV has been saved successfully',
+                persistent: false
+              });
+            }
+            
+            // Update last saved data
+            setLastSavedData(JSON.stringify(data));
+          } else {
+            // Check if journey already has a CV
+            const existingCvId = journeyInfo?.cvId;
+            if (existingCvId) {
+              
+              // Update the existing CV
+              await CVService.updateCV(existingCvId, {
+                title: cvTitle,
+                cvData: data,
+                templateId: selectedTemplate?.id || selectedTemplate?._id || '',
+                metadata: {
+                  isMaster: isMasterCV
+                }
+              }, userId || undefined);
+              
+              // Update URL to use existing CV
+              const urlParams = new URLSearchParams();
+              urlParams.set('type', 'cv');
+              urlParams.set('cvId', existingCvId);
+              if (journeyInfo?.jobId || selectedJobId || jobId) {
+                urlParams.set('jobId', journeyInfo?.jobId || selectedJobId || jobId);
+              }
+              if (journeyInfo?.journeyId || cvJourneyId) {
+                urlParams.set('cvJourneyId', journeyInfo?.journeyId || cvJourneyId);
+              }
+              router.replace(`/studio?${urlParams.toString()}`);
+              
+              clearTimeout(saveTimeout);
+              setSaveStatus('saved');
+              addNotification({
+                type: 'success',
+                title: 'CV Updated',
+                message: 'Your CV has been saved successfully',
+                persistent: false
+              });
+              return;
+            }
+
+            // Prevent multiple CV creation - only create if we don't have a CV ID
+            if (justCreated) {
+              clearTimeout(saveTimeout);
+              setSaveStatus('saved');
+              return;
+            }
+
+            // Create new CV
+            const newCV = await CVService.createCV({
+              userId: userId || '',
+              title: cvTitle || 'Untitled CV',
+              cvData: data,
+              templateId: selectedTemplate?.id || selectedTemplate?._id || '',
+              metadata: {
+                isMaster: isMasterCV
+              }
+            });
+
+            // Extract CV ID and update URL
+            const newCvId = newCV.data?.cv?.id || newCV.data?.cv?._id || newCV.id || newCV._id;
+
+            // Update journey with new CV ID
+            await updateJourneyWithDocument(newCvId, 'cv');
+
+            // Update URL using new structure with journeyId as primary context
+            const urlParams = new URLSearchParams();
+            urlParams.set('type', 'cv');
+            urlParams.set('cvId', newCvId);
+            
+            // Prioritize journeyId for reliable Application Package context
+            const primaryJourneyId = journeyId || journeyInfo?.journeyId || cvJourneyId;
+            if (primaryJourneyId) {
+              urlParams.set('journeyId', primaryJourneyId);
+            }
+            
+            // Keep jobId for backwards compatibility
+            if (journeyInfo?.jobId || selectedJobId) {
+              urlParams.set('jobId', journeyInfo?.jobId || selectedJobId);
+            }
+            
+            router.replace(`/studio?${urlParams.toString()}`);
+
+            // Set save status to saved since we just created the CV
+            clearTimeout(saveTimeout);
+            setSaveStatus('saved');
+            
+            // Only show notification for master CV saves
+            if (isMasterCV) {
+              addNotification({
+                type: 'success',
+                title: 'Master CV Updated',
+                message: 'Your master CV has been saved successfully',
+                persistent: false
+              });
+            }
+
+            // Set flag to prevent immediate autosave
+            setJustCreated(true);
+            setTimeout(() => setJustCreated(false), 2000); // Reset after 2 seconds
+
+            // Update journey status for new CV
+            if (updateCVId) {
+              updateCVId(newCvId);
+            }
+            if (updateJourneyStatus) {
+              updateJourneyStatus('cv-created');
+            }
+          }
+        }
+      } catch (err) {
+        console.error('❌ Studio - Error saving document:', err);
+        setSaveStatus('error');
+      }
+    }, 3000), // Increased from 1000ms to 3000ms
+    [cvId, coverLetterId, selectedJobId, selectedTemplate, userId, justCreated, documentType, coverLetterTitle]
+  );
+
+
   // Function to initialize CV journey
   const initializeCVJourney = async () => {
     if (journeyInitialized) {
-      console.log('🔍 Journey already initialized');
       return;
     }
 
@@ -188,18 +469,15 @@ const CVStudio: React.FC<CVStudioProps> = ({
       console.log('🔍 Initializing CV journey for studio:', {
         cvId,
         coverLetterId,
-        jobId,
-        cvJourneyId,
         userId
       });
 
       let journey: CVJourneyInfo | null = null;
 
       // CORRECTED APPROACH: Prioritize journeyId for proper Application Package context
-      const primaryJourneyId = journeyId || cvJourneyId;
+      const primaryJourneyId = journeyId;
       
       if (primaryJourneyId) {
-        console.log('🎯 CVStudio - Loading context from journey ID (Application Package):', primaryJourneyId);
         
         try {
           // Fetch the complete journey data from the journey ID
@@ -219,7 +497,6 @@ const CVStudio: React.FC<CVStudioProps> = ({
                 jobTitle: journeyData.jobTitle,
                 company: journeyData.company
               };
-              console.log('✅ CVStudio - Journey context loaded successfully:', journey);
             }
           }
         } catch (error) {
@@ -227,7 +504,6 @@ const CVStudio: React.FC<CVStudioProps> = ({
         }
       } else {
         // FALLBACK: Legacy approach for backwards compatibility
-        console.log('🔍 CVStudio - No journey ID provided, using legacy context discovery');
         journey = await CVJourneyLookupService.getJourneyInfoForStudio(
           cvId,
           coverLetterId,
@@ -237,7 +513,6 @@ const CVStudio: React.FC<CVStudioProps> = ({
       }
 
       if (journey) {
-        console.log('✅ Found existing journey:', journey);
         setJourneyInfo(journey);
         
         // Update selected job ID if we found a journey with a job
@@ -256,7 +531,6 @@ const CVStudio: React.FC<CVStudioProps> = ({
           updateCurrentJobId(journey.jobId);
         }
       } else {
-        console.log('🔍 No existing journey found, will create new one when needed');
       }
 
       setJourneyInitialized(true);
@@ -268,15 +542,13 @@ const CVStudio: React.FC<CVStudioProps> = ({
 
   // Function to update CV journey with document IDs
   const updateJourneyWithDocument = async (documentId: string, documentType: 'cv' | 'cover-letter') => {
-    const targetJobId = journeyInfo?.jobId || selectedJobId || jobId;
+    const targetJobId = journeyInfo?.jobId || selectedJobId;
     
     if (!targetJobId) {
-      console.log('🔍 No jobId available for journey update');
       return;
     }
 
     try {
-      console.log(`🔍 Updating journey with ${documentType} ID:`, documentId);
       
       const updateData: any = {
         userId,
@@ -301,7 +573,6 @@ const CVStudio: React.FC<CVStudioProps> = ({
 
       if (response.ok) {
         const result = await response.json();
-        console.log('✅ Journey updated successfully:', result);
         
         // Update local journey state
         if (documentType === 'cv') {
@@ -358,7 +629,6 @@ const CVStudio: React.FC<CVStudioProps> = ({
               await CVService.updateCV(cvId, {
                 title: newTitle
               }, userId || undefined);
-              console.log('✅ Auto-updated CV title to:', newTitle);
             } catch (error) {
               console.error('❌ Failed to auto-update CV title:', error);
             }
@@ -368,9 +638,19 @@ const CVStudio: React.FC<CVStudioProps> = ({
         }
       }
 
+      // Trigger auto-save for CV data changes
+      if (cvId && documentType === 'cv') {
+        const saveTimeout = setTimeout(() => {
+          debouncedSave(newData);
+        }, 2000);
+        
+        // Store the timeout ID for cleanup if needed
+        // Note: We don't return the cleanup function here as it would break the state update
+      }
+
       return newData;
     });
-  }, [cvId, userId]);
+  }, [cvId, userId, documentType, debouncedSave]);
 
   // Add section
   const addSection = useCallback((sectionType: keyof CVDataStructure, item?: any) => {
@@ -390,7 +670,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
   }, []);
 
   // Remove section
-  const removeSection = useCallback((sectionType: keyof CVDataStructure, id: string) => {
+  const removeSection = useCallback((sectionType: keyof CVDataStructure, index: number) => {
     setCvData(prev => {
       if (!prev) return prev;
 
@@ -398,15 +678,8 @@ const CVStudio: React.FC<CVStudioProps> = ({
       const section = newData[sectionType];
 
       if (Array.isArray(section)) {
-        newData[sectionType] = section.filter((item: any) => {
-          if (sectionType === 'work') return item.name !== id;
-          if (sectionType === 'education') return item.institution !== id;
-          if (sectionType === 'skills') return item.name !== id;
-          if (sectionType === 'projects') return item.name !== id;
-          if (sectionType === 'certificates') return item.name !== id;
-          if (sectionType === 'languages') return item.language !== id;
-          return true;
-        }) as any;
+        // Remove the item at the specified index
+        newData[sectionType] = section.filter((_, i) => i !== index) as any;
       }
 
       return newData;
@@ -471,329 +744,159 @@ const CVStudio: React.FC<CVStudioProps> = ({
 
   // Manual save function
   const manualSave = useCallback(async () => {
-    if (!cvData) return;
-
     try {
-      console.log('🔍 Studio - Manual save triggered...');
       setSaveStatus('saving');
 
-      if (cvId) {
-        console.log('🔍 Studio - Manually updating existing CV:', cvId);
-        // Properly format the request with cvData wrapped in the expected structure
-        await CVService.updateCV(cvId, {
-          title: cvTitle,
-          cvData: cvData,
-          templateId: selectedTemplate?.id || selectedTemplate?._id || '',
-          metadata: {
-            isMaster: isMasterCV
+      if (documentType === 'cover-letter') {
+        // Save cover letter
+        if (!coverLetterData) {
+          console.log('❌ Studio - No cover letter data to save');
+          addNotification({
+            type: 'error',
+            title: 'Save Failed',
+            message: 'No cover letter data to save',
+            persistent: false
+          });
+          setSaveStatus('error');
+          return;
+        }
+
+        console.log('🔍 Studio - Starting cover letter save...', { coverLetterId, userId, coverLetterTitle });
+        
+        if (coverLetterId) {
+          console.log('🔍 Studio - Updating existing cover letter...');
+          const response = await fetch(`/api/cover-letters/${coverLetterId}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              title: coverLetterTitle,
+              content: coverLetterData.content,
+              status: 'draft',
+              cvId: cvId,
+              jobId: selectedJobId,
+              metadata: coverLetterData.metadata || {}
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to update cover letter');
           }
-        }, userId || undefined);
-        console.log('✅ Studio - Manual CV update successful');
-        setSaveStatus('saved');
-        setShowSavedMessage(true);
-        setTimeout(() => setShowSavedMessage(false), 2000); // Hide after 2 seconds
-        // Update last saved data to prevent immediate auto-save
-        setLastSavedData(JSON.stringify(cvData));
+
+          setSaveStatus('saved');
+          addNotification({
+            type: 'success',
+            title: 'Cover Letter Updated',
+            message: 'Your cover letter has been saved successfully',
+            persistent: false
+          });
+        } else {
+          console.log('🔍 Studio - Creating new cover letter...');
+          const response = await fetch('/api/cover-letters', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              userId: userId,
+              title: coverLetterTitle,
+              content: coverLetterData.content,
+              status: 'draft',
+              cvId: cvId,
+              jobId: selectedJobId,
+              metadata: coverLetterData.metadata || {}
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to create cover letter');
+          }
+
+          const result = await response.json();
+          console.log('✅ Studio - Cover letter created:', result);
+          
+          setSaveStatus('saved');
+          addNotification({
+            type: 'success',
+            title: 'Cover Letter Created',
+            message: 'Your cover letter has been saved successfully',
+            persistent: false
+          });
+        }
       } else {
-        console.log('🔍 Studio - Manual save for new CV');
-        // Create new CV with proper structure
-        const newCV = await CVService.createCV({
-          userId: userId || '',
-          title: cvTitle || 'Untitled CV',
-          cvData: cvData,
-          templateId: selectedTemplate?.id || selectedTemplate?._id || '',
-          metadata: {
-            isMaster: isMasterCV
-          }
-        });
+        // Save CV
+        if (!cvData) {
+          console.log('❌ Studio - No CV data to save');
+          addNotification({
+            type: 'error',
+            title: 'Save Failed',
+            message: 'No CV data to save',
+            persistent: false
+          });
+          setSaveStatus('error');
+          return;
+        }
 
-        const newCvId = newCV.id;
-        console.log('🔍 Studio - Manual CV creation with ID:', newCvId);
-
-        router.replace(`/studio?cvId=${newCvId}${selectedJobId || jobId ? `&jobId=${selectedJobId || jobId}` : ''}`);
-        setSaveStatus('saved');
-        setShowSavedMessage(true);
-        setTimeout(() => setShowSavedMessage(false), 2000); // Hide after 2 seconds
-        // Update last saved data to prevent immediate auto-save
-        setLastSavedData(JSON.stringify(cvData));
-        setJustCreated(true);
-        setTimeout(() => setJustCreated(false), 2000);
+        console.log('🔍 Studio - Starting CV save...', { cvId, userId, cvTitle });
+        
+        if (cvId) {
+          console.log('🔍 Studio - Updating existing CV...');
+          const updateData = {
+            title: cvTitle,
+            cvData: cvData,
+            templateId: selectedTemplate?.id || selectedTemplate?._id || '',
+            metadata: {
+              isMaster: isMasterCV
+            }
+          };
+          console.log('🔍 Studio - Update data:', updateData);
+          
+          await CVService.updateCV(cvId, updateData, userId || undefined);
+          setSaveStatus('saved');
+          addNotification({
+            type: 'success',
+            title: 'CV Updated',
+            message: 'Your CV has been saved successfully',
+            persistent: false
+          });
+          setLastSavedData(JSON.stringify(cvData));
+        } else {
+          // Create new CV with proper structure
+          const newCV = await CVService.createCV({
+            userId: userId || '',
+            title: cvTitle || 'Untitled CV',
+            cvData: cvData,
+            templateId: selectedTemplate?.id || selectedTemplate?._id || '',
+            metadata: {
+              isMaster: isMasterCV
+            }
+          });
+          
+          console.log('✅ Studio - CV created:', newCV);
+          setSaveStatus('saved');
+          addNotification({
+            type: 'success',
+            title: 'CV Created',
+            message: 'Your CV has been saved successfully',
+            persistent: false
+          });
+          setLastSavedData(JSON.stringify(cvData));
+        }
       }
-    } catch (err) {
-      console.error('❌ Studio - Manual save error:', err);
+    } catch (error) {
+      console.error('❌ Studio - Save error:', error);
       setSaveStatus('error');
+      addNotification({
+        type: 'error',
+        title: 'Save Failed',
+        message: `Failed to save ${documentType === 'cover-letter' ? 'cover letter' : 'CV'}. Please try again.`,
+        persistent: false
+      });
     }
-  }, [cvData, cvId, cvTitle, isMasterCV, userId, selectedJobId, jobId, router, selectedTemplate]);
+  }, [documentType, coverLetterData, coverLetterId, coverLetterTitle, cvData, cvId, cvTitle, userId, selectedTemplate, isMasterCV, selectedJobId, addNotification]);
 
   // Track if data has actually changed
-
-  // Debounced autosave
-  const debouncedSave = useCallback(
-    debounce(async (data: CVDataStructure) => {
-      try {
-        console.log('🔍 Studio - Starting save operation...');
-        setSaveStatus('saving');
-
-        // Add timeout protection
-        const saveTimeout = setTimeout(() => {
-          console.error('❌ Studio - Save operation timed out');
-          setSaveStatus('error');
-        }, 10000); // 10 second timeout
-
-        if (documentType === 'cover-letter') {
-          // Handle cover letter save
-          if (coverLetterId) {
-            console.log('🔍 Studio - Updating existing cover letter:', coverLetterId);
-            const response = await fetch(`/api/cover-letters/${coverLetterId}?userId=${userId}`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                title: coverLetterTitle,
-                content: data.basics?.summary || '',
-                cvId: cvId,
-                jobId: selectedJobId || jobId
-              })
-            });
-
-            if (!response.ok) {
-              throw new Error('Failed to update cover letter');
-            }
-
-            console.log('✅ Studio - Cover letter updated successfully');
-            clearTimeout(saveTimeout);
-            setSaveStatus('saved');
-            setShowSavedMessage(true);
-            setTimeout(() => setShowSavedMessage(false), 2000);
-          } else {
-            // Check if journey already has a cover letter
-            const existingCoverLetterId = journeyInfo?.coverLetterId;
-            if (existingCoverLetterId) {
-              console.log('🔍 Studio - Using existing cover letter from journey:', existingCoverLetterId);
-              
-              // Update the existing cover letter
-              const response = await fetch(`/api/cover-letters/${existingCoverLetterId}?userId=${userId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  title: coverLetterTitle,
-                  content: data.basics?.summary || '',
-                  cvId: cvId,
-                  jobId: journeyInfo?.jobId || selectedJobId || jobId,
-                  targetCompany: '',
-                  targetPosition: '',
-                  keywords: []
-                })
-              });
-
-              if (response.ok) {
-                console.log('✅ Studio - Existing cover letter updated successfully');
-                
-                // Update URL to use existing cover letter
-                const urlParams = new URLSearchParams();
-                urlParams.set('type', 'cover_letter');
-                urlParams.set('coverLetterId', existingCoverLetterId);
-                if (journeyInfo?.jobId || selectedJobId || jobId) {
-                  urlParams.set('jobId', journeyInfo?.jobId || selectedJobId || jobId);
-                }
-                if (journeyInfo?.journeyId || cvJourneyId) {
-                  urlParams.set('cvJourneyId', journeyInfo?.journeyId || cvJourneyId);
-                }
-                router.replace(`/studio?${urlParams.toString()}`);
-                
-                clearTimeout(saveTimeout);
-                setSaveStatus('saved');
-                setShowSavedMessage(true);
-                setTimeout(() => setShowSavedMessage(false), 2000);
-                return;
-              }
-            }
-
-            // Create new cover letter
-            if (justCreated) {
-              console.log('🔍 Studio - Skipping cover letter creation, just created one');
-              clearTimeout(saveTimeout);
-              setSaveStatus('saved');
-              return;
-            }
-
-            console.log('🔍 Studio - Creating new cover letter for user:', userId);
-            const response = await fetch('/api/cover-letters', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                userId,
-                title: coverLetterTitle,
-                content: data.basics?.summary || '',
-                cvId: cvId,
-                jobId: journeyInfo?.jobId || selectedJobId || jobId,
-                targetCompany: '',
-                targetPosition: '',
-                keywords: []
-              })
-            });
-
-            if (!response.ok) {
-              throw new Error('Failed to create cover letter');
-            }
-
-            const result = await response.json();
-            const newCoverLetterId = result.data.id;
-            console.log('🔍 Studio - New cover letter created with ID:', newCoverLetterId);
-
-            // Update journey with new cover letter ID
-            await updateJourneyWithDocument(newCoverLetterId, 'cover-letter');
-
-            // Update URL to include the new cover letter ID and preserve cvJourneyId
-            const urlParams = new URLSearchParams();
-            urlParams.set('type', 'cover_letter');
-            urlParams.set('coverLetterId', newCoverLetterId);
-            if (journeyInfo?.jobId || selectedJobId || jobId) {
-              urlParams.set('jobId', journeyInfo?.jobId || selectedJobId || jobId);
-            }
-            if (journeyInfo?.journeyId || cvJourneyId) {
-              urlParams.set('cvJourneyId', journeyInfo?.journeyId || cvJourneyId);
-            }
-            router.replace(`/studio?${urlParams.toString()}`);
-
-            clearTimeout(saveTimeout);
-            setSaveStatus('saved');
-            setShowSavedMessage(true);
-            setTimeout(() => setShowSavedMessage(false), 2000);
-
-            setJustCreated(true);
-            setTimeout(() => setJustCreated(false), 2000);
-          }
-        } else {
-          // Handle CV save
-          if (cvId) {
-            console.log('🔍 Studio - Updating existing CV:', cvId);
-            await CVService.updateCV(cvId, {
-              title: cvTitle,
-              cvData: data,
-              templateId: selectedTemplate?.id || selectedTemplate?._id || '',
-              metadata: {
-                isMaster: isMasterCV
-              }
-            }, userId || undefined);
-            console.log('✅ Studio - CV updated successfully');
-            clearTimeout(saveTimeout);
-            setSaveStatus('saved');
-            setShowSavedMessage(true);
-            setTimeout(() => setShowSavedMessage(false), 2000); // Hide after 2 seconds
-            // Update last saved data
-            setLastSavedData(JSON.stringify(data));
-          } else {
-            // Check if journey already has a CV
-            const existingCvId = journeyInfo?.cvId;
-            if (existingCvId) {
-              console.log('🔍 Studio - Using existing CV from journey:', existingCvId);
-              
-              // Update the existing CV
-              await CVService.updateCV(existingCvId, {
-                title: cvTitle,
-                cvData: data,
-                templateId: selectedTemplate?.id || selectedTemplate?._id || '',
-                metadata: {
-                  isMaster: isMasterCV
-                }
-              }, userId || undefined);
-              console.log('✅ Studio - Existing CV updated successfully');
-              
-              // Update URL to use existing CV
-              const urlParams = new URLSearchParams();
-              urlParams.set('type', 'cv');
-              urlParams.set('cvId', existingCvId);
-              if (journeyInfo?.jobId || selectedJobId || jobId) {
-                urlParams.set('jobId', journeyInfo?.jobId || selectedJobId || jobId);
-              }
-              if (journeyInfo?.journeyId || cvJourneyId) {
-                urlParams.set('cvJourneyId', journeyInfo?.journeyId || cvJourneyId);
-              }
-              router.replace(`/studio?${urlParams.toString()}`);
-              
-              clearTimeout(saveTimeout);
-              setSaveStatus('saved');
-              setShowSavedMessage(true);
-              setTimeout(() => setShowSavedMessage(false), 2000);
-              return;
-            }
-
-            // Prevent multiple CV creation - only create if we don't have a CV ID
-            if (justCreated) {
-              console.log('🔍 Studio - Skipping CV creation, just created one');
-              clearTimeout(saveTimeout);
-              setSaveStatus('saved');
-              return;
-            }
-
-            // Create new CV
-            console.log('🔍 Studio - Creating new CV for user:', userId);
-            console.log('🔍 Studio - CV creation payload:', {
-              userId,
-              title: cvTitle || 'Untitled CV',
-              jobId: journeyInfo?.jobId || selectedJobId || jobId || undefined
-            });
-            const newCV = await CVService.createCV({
-              userId: userId || '',
-              title: cvTitle || 'Untitled CV',
-              cvData: data,
-              templateId: selectedTemplate?.id || selectedTemplate?._id || '',
-              metadata: {
-                isMaster: isMasterCV
-              }
-            });
-
-            // Extract CV ID and update URL
-            const newCvId = newCV.data?.cv?.id || newCV.data?.cv?._id || newCV.id || newCV._id;
-            console.log('🔍 Studio - New CV created with ID:', newCvId);
-
-            // Update journey with new CV ID
-            await updateJourneyWithDocument(newCvId, 'cv');
-
-            // Update URL using new structure with journeyId as primary context
-            const urlParams = new URLSearchParams();
-            urlParams.set('type', 'cv');
-            urlParams.set('cvId', newCvId);
-            
-            // Prioritize journeyId for reliable Application Package context
-            const primaryJourneyId = journeyId || journeyInfo?.journeyId || cvJourneyId;
-            if (primaryJourneyId) {
-              urlParams.set('journeyId', primaryJourneyId);
-            }
-            
-            // Keep jobId for backwards compatibility
-            if (journeyInfo?.jobId || selectedJobId || jobId) {
-              urlParams.set('jobId', journeyInfo?.jobId || selectedJobId || jobId);
-            }
-            
-            router.replace(`/studio?${urlParams.toString()}`);
-
-            // Set save status to saved since we just created the CV
-            clearTimeout(saveTimeout);
-            setSaveStatus('saved');
-            setShowSavedMessage(true);
-            setTimeout(() => setShowSavedMessage(false), 2000); // Hide after 2 seconds
-
-            // Set flag to prevent immediate autosave
-            setJustCreated(true);
-            setTimeout(() => setJustCreated(false), 2000); // Reset after 2 seconds
-
-            // Update journey status for new CV
-            if (updateCVId) {
-              updateCVId(newCvId);
-            }
-            if (updateJourneyStatus) {
-              updateJourneyStatus('cv-created');
-            }
-          }
-        }
-      } catch (err) {
-        console.error('❌ Studio - Error saving document:', err);
-        setSaveStatus('error');
-      }
-    }, 3000), // Increased from 1000ms to 3000ms
-    [cvId, coverLetterId, jobId, selectedJobId, selectedTemplate, userId, justCreated, documentType, coverLetterTitle]
-  );
 
   // Autosave on actual changes only
   useEffect(() => {
@@ -831,24 +934,77 @@ const CVStudio: React.FC<CVStudioProps> = ({
   // Initialize CV journey on component mount
   useEffect(() => {
     initializeCVJourney();
-  }, [journeyId, cvId, coverLetterId, jobId, cvJourneyId, userId]);
+  }, [journeyId, cvId, coverLetterId, userId]);
+
+  // Load CV and Job data when journeyInfo becomes available (for cover letters)
+  useEffect(() => {
+    const loadDataFromJourney = async () => {
+      if (!journeyInfo || documentType !== 'cover-letter') return;
+      
+      console.log('🔍 CVStudio - Loading CV and job data from journeyInfo:', journeyInfo);
+
+      // Load job data if we have jobId and job is not loaded
+      if (journeyInfo.jobId && !currentJob) {
+        try {
+          console.log('🔍 CVStudio - Loading job from journey:', journeyInfo.jobId);
+          const jobResponse = await fetch(`/api/jobs?userId=${userId}&jobId=${journeyInfo.jobId}`);
+          if (jobResponse.ok) {
+            const jobResult = await jobResponse.json();
+            const loadedJob = jobResult.data?.jobs?.find((job: any) => job.id === journeyInfo.jobId) || jobResult.job || jobResult;
+            if (loadedJob) {
+              console.log('✅ CVStudio - Job loaded from journey:', loadedJob);
+              setCurrentJob(loadedJob);
+              setSelectedJobId(journeyInfo.jobId);
+            }
+          }
+        } catch (error) {
+          console.error('❌ CVStudio - Failed to load job from journey:', error);
+        }
+      }
+
+      // Load CV data if we have cvId and CV is not loaded
+      if (journeyInfo.cvId && !cvData) {
+        try {
+          console.log('🔍 CVStudio - Loading CV from journey:', journeyInfo.cvId);
+          const cvResponse = await fetch(`/api/cvs/${journeyInfo.cvId}?userId=${userId}`);
+          if (cvResponse.ok) {
+            const cvResult = await cvResponse.json();
+            const loadedCvData = cvResult.data?.cv?.cvData || cvResult.cv?.cvData;
+            if (loadedCvData) {
+              console.log('✅ CVStudio - CV loaded from journey:', loadedCvData);
+              setCvData(loadedCvData);
+              setCvTitle(cvResult.data?.cv?.title || cvResult.cv?.title || 'Untitled CV');
+              
+              // Check if this is a master CV
+              const isMasterCV = cvResult.data?.cv?.isMaster || false;
+              if (isMasterCV) {
+                setIsMasterCV(true);
+                setCurrentMasterCV({ id: journeyInfo.cvId, title: cvResult.data?.cv?.title || cvResult.cv?.title });
+              }
+            }
+          }
+        } catch (error) {
+          console.error('❌ CVStudio - Failed to load CV from journey:', error);
+        }
+      }
+    };
+
+    loadDataFromJourney();
+  }, [journeyInfo, documentType, userId]); // Only re-run when journeyInfo changes
 
   // Auto-duplicate master CV function
   const autoDuplicateMasterCV = async () => {
     try {
-      console.log('🔍 Auto-duplicating master CV for cv-onboarding mode');
       
       // Fetch master CV first
       const masterResponse = await fetch(`/api/cvs/master?userId=${userId}`);
       const masterResult = await masterResponse.json();
       
       if (!masterResult.success || !masterResult.data?.masterCV) {
-        console.log('❌ No master CV found for auto-duplication');
         return;
       }
       
       const masterCV = masterResult.data.masterCV;
-      console.log('🔍 Found master CV for auto-duplication:', masterCV.title);
       
       // Create duplicate CV using ApplicationPackageService
       const duplicateResult = await ApplicationPackageService.duplicateCV({
@@ -859,7 +1015,6 @@ const CVStudio: React.FC<CVStudioProps> = ({
       
       if (duplicateResult.success && duplicateResult.data?.cvId) {
         const duplicatedCVId = duplicateResult.data.cvId;
-        console.log('✅ Auto-duplicated master CV:', duplicatedCVId);
         
         // Load the duplicated CV data
         const cvResult = await CVService.getCV(duplicatedCVId, userId);
@@ -878,12 +1033,11 @@ const CVStudio: React.FC<CVStudioProps> = ({
           urlParams.set('cvId', duplicatedCVId);
           if (journeyId) {
             urlParams.set('journeyId', journeyId);
-          } else if (selectedJobId || jobId) {
-            urlParams.set('jobId', selectedJobId || jobId);
+          } else if (selectedJobId) {
+            urlParams.set('jobId', selectedJobId);
           }
           router.replace(`/studio?${urlParams.toString()}`);
           
-          console.log('✅ Auto-duplication completed successfully');
         }
       } else {
         throw new Error(duplicateResult.message || 'Failed to auto-duplicate master CV');
@@ -897,29 +1051,19 @@ const CVStudio: React.FC<CVStudioProps> = ({
   // Handle journey mode and initialization
   useEffect(() => {
     // NEW APPROACH: Initialize journey using journeyId for reliable Application Package context
-    const primaryJourneyId = journeyId || cvJourneyId;
+    const primaryJourneyId = journeyId;
     
     if (primaryJourneyId) {
-      console.log('🎯 CVStudio - Initializing journey from journeyId:', primaryJourneyId);
       // Journey context will be loaded in initializeCVJourney()
-    } else if (jobId && !journeyState.isJourneyActive) {
-      // FALLBACK: Legacy approach for backwards compatibility
-      console.log('🔍 CVStudio - Starting journey for job (legacy):', jobId);
-      startJourney(jobId);
-    } else if (jobId && journeyState.currentJobId !== jobId) {
-      console.log('🔍 CVStudio - Updating journey job ID (legacy):', jobId);
-      updateCurrentJobId(jobId);
     }
 
     // Update journey status based on current state
     if (cvId && journeyState.cvId !== cvId) {
-      console.log('🔍 CVStudio - Updating journey CV ID:', cvId);
       updateCVId(cvId);
       updateJourneyStatus('cv-created');
     }
 
     if (mode) {
-      console.log('🔍 CVStudio - Journey mode detected:', mode);
 
       switch (mode) {
         case 'cv-onboarding':
@@ -927,7 +1071,6 @@ const CVStudio: React.FC<CVStudioProps> = ({
           updateJourneyStatus('job-added');
           // Auto-duplicate master CV for cv-onboarding mode
           if (!cvData && !cvId) {
-            console.log('🔍 CVStudio - Auto-duplicating master CV for cv-onboarding mode');
             autoDuplicateMasterCV();
           }
           break;
@@ -944,7 +1087,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
               actionRequired: 'Improve your CV to get an ATS score above 80%',
               onAction: () => {
                 // Navigate to ATS editing mode
-                router.push(`/studio?jobId=${jobId}&mode=ats-edit`);
+                router.push(`/studio?mode=ats-edit`);
               }
             });
             setShowActionBlocker(true);
@@ -954,7 +1097,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
           break;
       }
     }
-  }, [mode, journeyState, jobId, cvId, router, updateJourneyStatus, updateCVId, updateCurrentJobId, startJourney]);
+  }, [mode, journeyState, cvId, router, updateJourneyStatus, updateCVId, updateCurrentJobId, startJourney]);
 
   // Load initial data
   useEffect(() => {
@@ -963,7 +1106,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
         setIsLoading(true);
         setError(null);
 
-        console.log('🔍 CVStudio - Loading initial data...', { cvId, coverLetterId, jobId, userId, documentType });
+        console.log('🔍 CVStudio - Loading initial data...', { cvId, coverLetterId, userId, documentType });
         console.log('🔍 CVStudio - User ID type:', typeof userId, 'Value:', userId);
 
         // Validate userId
@@ -984,8 +1127,8 @@ const CVStudio: React.FC<CVStudioProps> = ({
         }
 
         // NEW APPROACH: Load job data prioritizing journeyId for reliable Application Package context
-        const primaryJourneyId = journeyId || cvJourneyId;
-        const targetJobId = journeyInfo?.jobId || jobId;
+        const primaryJourneyId = journeyId;
+        const targetJobId = journeyInfo?.jobId;
         
         if (targetJobId) {
           try {
@@ -1060,37 +1203,88 @@ const CVStudio: React.FC<CVStudioProps> = ({
               setCoverLetterData(coverLetterResult.coverLetter || coverLetterResult);
               setCoverLetterTitle(coverLetterResult.coverLetter?.title || coverLetterResult.title || 'Untitled Cover Letter');
 
-              // Load CV Journey data to get job and CV information
-              try {
-                const journeyInfo = await CVJourneyLookupService.getJourneyInfoForStudio(
-                  null, // cvId
-                  coverLetterId, // coverLetterId
-                  jobId, // jobId from URL
-                  userId
-                );
-                
-                if (journeyInfo) {
-                  console.log('🔍 CVStudio - Loaded CV Journey data for cover letter:', journeyInfo);
-                  
-                  // Set job information from CV Journey
-                  if (journeyInfo.jobTitle && journeyInfo.company) {
-                    setCurrentJob({
-                      id: journeyInfo.jobId,
-                      title: journeyInfo.jobTitle,
-                      company: journeyInfo.company
-                    });
-                    // Auto-select the job in the job selector
-                    setSelectedJobId(journeyInfo.jobId);
-                    setJobAutoLoadedFromJourney(true);
+              // Load CV and Job data from journey context
+              let loadedJourneyInfo = null;
+              
+              // PRIORITY 1: If journeyId is provided, fetch journey data directly
+              if (journeyId) {
+                try {
+                  console.log('🔍 CVStudio - Loading journey data from journeyId:', journeyId);
+                  const journeyResponse = await fetch(`/api/application-journey/${journeyId}?userId=${userId}`);
+                  if (journeyResponse.ok) {
+                    const journeyResult = await journeyResponse.json();
+                    if (journeyResult.success && journeyResult.data?.journey) {
+                      const journeyData = journeyResult.data.journey;
+                      loadedJourneyInfo = {
+                        journeyId: journeyId,
+                        cvId: journeyData.cvId || undefined,
+                        coverLetterId: journeyData.coverLetterId || undefined,
+                        jobId: journeyData.jobId || '',
+                        userId,
+                        status: journeyData.status || 'in-progress',
+                        currentStep: journeyData.currentStep || 1,
+                        jobTitle: journeyData.jobTitle,
+                        company: journeyData.company
+                      };
+                      console.log('✅ CVStudio - Journey data loaded:', loadedJourneyInfo);
+                      setJourneyInfo(loadedJourneyInfo);
+                    }
                   }
-                  
-                  // Set CV information if available
-                  if (journeyInfo.cvId) {
-                    try {
-                      const cvResponse = await fetch(`/api/cvs/${journeyInfo.cvId}?userId=${userId}`);
-                      if (cvResponse.ok) {
-                        const cvResult = await cvResponse.json();
-                        const cvData = cvResult.data?.cv?.cvData || cvResult.cv?.cvData;
+                } catch (error) {
+                  console.error('❌ CVStudio - Failed to load journey data:', error);
+                }
+              }
+              
+              // PRIORITY 2: Fallback to CVJourneyLookupService if no journeyId
+              if (!loadedJourneyInfo) {
+                try {
+                  loadedJourneyInfo = await CVJourneyLookupService.getJourneyInfoForStudio(
+                    null, // cvId
+                    coverLetterId, // coverLetterId
+                    jobId, // jobId from URL
+                    userId
+                  );
+                  if (loadedJourneyInfo) {
+                    console.log('🔍 CVStudio - Loaded CV Journey data from lookup service:', loadedJourneyInfo);
+                    setJourneyInfo(loadedJourneyInfo);
+                  }
+                } catch (error) {
+                  console.error('❌ CVStudio - Failed to load CV Journey data:', error);
+                }
+              }
+              
+              // Now load Job and CV data using the journey info
+              if (loadedJourneyInfo) {
+                // Load job data if we have jobId
+                if (loadedJourneyInfo.jobId) {
+                  try {
+                    console.log('🔍 CVStudio - Loading job from journey:', loadedJourneyInfo.jobId);
+                    const jobResponse = await fetch(`/api/jobs?userId=${userId}&jobId=${loadedJourneyInfo.jobId}`);
+                    if (jobResponse.ok) {
+                      const jobResult = await jobResponse.json();
+                      const loadedJob = jobResult.data?.jobs?.find((job: any) => job.id === loadedJourneyInfo.jobId) || jobResult.job || jobResult;
+                      if (loadedJob) {
+                        console.log('✅ CVStudio - Job loaded:', loadedJob);
+                        setCurrentJob(loadedJob);
+                        setSelectedJobId(loadedJourneyInfo.jobId);
+                        setJobAutoLoadedFromJourney(true);
+                      }
+                    }
+                  } catch (error) {
+                    console.error('❌ CVStudio - Failed to load job:', error);
+                  }
+                }
+                
+                // Load CV data if we have cvId
+                if (loadedJourneyInfo.cvId) {
+                  try {
+                    console.log('🔍 CVStudio - Loading CV from journey:', loadedJourneyInfo.cvId);
+                    const cvResponse = await fetch(`/api/cvs/${loadedJourneyInfo.cvId}?userId=${userId}`);
+                    if (cvResponse.ok) {
+                      const cvResult = await cvResponse.json();
+                      const cvData = cvResult.data?.cv?.cvData || cvResult.cv?.cvData;
+                      if (cvData) {
+                        console.log('✅ CVStudio - CV loaded:', cvData);
                         setCvData(cvData);
                         setCvTitle(cvResult.data?.cv?.title || cvResult.cv?.title || 'Untitled CV');
                         
@@ -1098,44 +1292,57 @@ const CVStudio: React.FC<CVStudioProps> = ({
                         const isMasterCV = cvResult.data?.cv?.isMaster || false;
                         if (isMasterCV) {
                           setIsMasterCV(true);
-                          setCurrentMasterCV({ id: journeyInfo.cvId, title: cvResult.data?.cv?.title || cvResult.cv?.title });
+                          setCurrentMasterCV({ id: loadedJourneyInfo.cvId, title: cvResult.data?.cv?.title || cvResult.cv?.title });
                         } else {
                           setIsMasterCV(false);
                           setCurrentMasterCV(null);
                         }
+                        
+                        // Store cvId for seamless switching
+                        setOriginalCvId(loadedJourneyInfo.cvId);
                       }
-                    } catch (cvError) {
-                      console.error('Error loading linked CV from journey:', cvError);
                     }
-                  }
-                } else {
-                  console.log('🔍 CVStudio - No CV Journey data found for cover letter');
-                  
-                  // Fallback: Auto-load linked job and CV data if available (old logic)
-                  const coverLetter = coverLetterResult.coverLetter || coverLetterResult;
-                  if (coverLetter.jobId && !currentJob) {
-                    console.log('🔍 CVStudio - Auto-loading linked job (fallback):', coverLetter.jobId);
-                    setSelectedJobId(coverLetter.jobId);
-                  }
-                  if (coverLetter.cvId && !cvData) {
-                    console.log('🔍 CVStudio - Auto-loading linked CV (fallback):', coverLetter.cvId);
-                    // Load the linked CV data for context
-                    try {
-                      const cvResponse = await fetch(`/api/cvs/${coverLetter.cvId}?userId=${userId}`);
-                      if (cvResponse.ok) {
-                        const cvResult = await cvResponse.json();
-                        // The API returns data in the correct format, use cvData directly
-                        const cvData = cvResult.data?.cv?.cvData || cvResult.cv?.cvData;
-                        setCvData(cvData);
-                        setCvTitle(cvResult.data?.cv?.title || cvResult.cv?.title || 'Untitled CV');
-                      }
-                    } catch (cvError) {
-                      console.error('Error loading linked CV:', cvError);
-                    }
+                  } catch (error) {
+                    console.error('❌ CVStudio - Failed to load CV:', error);
                   }
                 }
-              } catch (error) {
-                console.error('❌ CVStudio - Failed to load CV Journey data for cover letter:', error);
+              } else {
+                // No journey info - fallback to direct links from cover letter
+                console.log('🔍 CVStudio - No journey data found, using direct links from cover letter');
+                const coverLetter = coverLetterResult.coverLetter || coverLetterResult;
+                
+                if (coverLetter.jobId) {
+                  console.log('🔍 CVStudio - Auto-loading linked job:', coverLetter.jobId);
+                  setSelectedJobId(coverLetter.jobId);
+                  try {
+                    const jobResponse = await fetch(`/api/jobs?userId=${userId}&jobId=${coverLetter.jobId}`);
+                    if (jobResponse.ok) {
+                      const jobResult = await jobResponse.json();
+                      const loadedJob = jobResult.data?.jobs?.find((job: any) => job.id === coverLetter.jobId) || jobResult.job || jobResult;
+                      if (loadedJob) {
+                        setCurrentJob(loadedJob);
+                      }
+                    }
+                  } catch (error) {
+                    console.error('Error loading linked job:', error);
+                  }
+                }
+                
+                if (coverLetter.cvId) {
+                  console.log('🔍 CVStudio - Auto-loading linked CV:', coverLetter.cvId);
+                  try {
+                    const cvResponse = await fetch(`/api/cvs/${coverLetter.cvId}?userId=${userId}`);
+                    if (cvResponse.ok) {
+                      const cvResult = await cvResponse.json();
+                      const cvData = cvResult.data?.cv?.cvData || cvResult.cv?.cvData;
+                      setCvData(cvData);
+                      setCvTitle(cvResult.data?.cv?.title || cvResult.cv?.title || 'Untitled CV');
+                      setOriginalCvId(coverLetter.cvId);
+                    }
+                  } catch (error) {
+                    console.error('Error loading linked CV:', error);
+                  }
+                }
               }
             } catch (error) {
               console.error('Error loading cover letter:', error);
@@ -1143,13 +1350,54 @@ const CVStudio: React.FC<CVStudioProps> = ({
             }
           } else {
             // Create default cover letter data with auto-linked job and CV
-            console.log('🔍 CVStudio - Creating new cover letter with auto-linked data:', { jobId: selectedJobId || jobId, cvId });
+            console.log('🔍 CVStudio - Creating new cover letter with auto-linked data:', { jobId: selectedJobId, cvId, journeyInfo });
+
+            // Load CV and job data from journeyInfo if available
+            if (journeyInfo) {
+              console.log('🔍 CVStudio - Loading CV and job data from journey for new cover letter');
+              
+              // Load job data if we have jobId
+              if (journeyInfo.jobId && !currentJob) {
+                try {
+                  const jobResponse = await fetch(`/api/jobs?userId=${userId}&jobId=${journeyInfo.jobId}`);
+                  if (jobResponse.ok) {
+                    const jobResult = await jobResponse.json();
+                    const loadedJob = jobResult.data?.jobs?.find((job: any) => job.id === journeyInfo.jobId) || jobResult.job || jobResult;
+                    if (loadedJob) {
+                      console.log('✅ CVStudio - Job loaded from journey:', loadedJob);
+                      setCurrentJob(loadedJob);
+                      setSelectedJobId(journeyInfo.jobId);
+                    }
+                  }
+                } catch (error) {
+                  console.error('❌ CVStudio - Failed to load job from journey:', error);
+                }
+              }
+
+              // Load CV data if we have cvId
+              if (journeyInfo.cvId && !cvData) {
+                try {
+                  const cvResponse = await fetch(`/api/cvs/${journeyInfo.cvId}?userId=${userId}`);
+                  if (cvResponse.ok) {
+                    const cvResult = await cvResponse.json();
+                    const loadedCvData = cvResult.data?.cv?.cvData || cvResult.cv?.cvData;
+                    if (loadedCvData) {
+                      console.log('✅ CVStudio - CV loaded from journey:', loadedCvData);
+                      setCvData(loadedCvData);
+                      setCvTitle(cvResult.data?.cv?.title || cvResult.cv?.title || 'Untitled CV');
+                    }
+                  }
+                } catch (error) {
+                  console.error('❌ CVStudio - Failed to load CV from journey:', error);
+                }
+              }
+            }
 
             // Generate smart cover letter title based on job context
             const jobData = currentJob;
             const smartTitle = generateDocumentName({
-              jobTitle: jobData?.title || jobData?.jobTitle,
-              company: jobData?.company,
+              jobTitle: jobData?.title || jobData?.jobTitle || journeyInfo?.jobTitle,
+              company: jobData?.company || journeyInfo?.company,
               documentType: 'cover-letter'
             });
 
@@ -1157,11 +1405,11 @@ const CVStudio: React.FC<CVStudioProps> = ({
               title: smartTitle,
               content: '',
               status: 'draft',
-              cvId: cvId || null, // Auto-link CV from URL params
-              jobId: selectedJobId || jobId, // Auto-link job from URL params
+              cvId: cvId || journeyInfo?.cvId || null, // Auto-link CV from URL params or journey
+              jobId: selectedJobId || journeyInfo?.jobId, // Auto-link job from URL params or journey
               metadata: {
-                targetCompany: jobData?.company || '',
-                targetPosition: jobData?.title || jobData?.jobTitle || '',
+                targetCompany: jobData?.company || journeyInfo?.company || '',
+                targetPosition: jobData?.title || jobData?.jobTitle || journeyInfo?.jobTitle || '',
                 keywords: [],
                 wordCount: 0,
                 isPublic: false,
@@ -1511,7 +1759,6 @@ const CVStudio: React.FC<CVStudioProps> = ({
         }
 
         setIsLoading(false);
-        console.log('Initial data loading completed');
       } catch (err) {
         console.error('Error loading initial data:', err);
         setError(err instanceof Error ? err.message : 'Failed to load document data');
@@ -1520,7 +1767,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
     };
 
     loadInitialData();
-  }, [cvId, coverLetterId, jobId, userId, documentType, setTemplates, setSelectedTemplate, setCurrentJob]);
+  }, [cvId, coverLetterId, userId, documentType, journeyId, setTemplates, setSelectedTemplate, setCurrentJob]);
 
   const handleExport = async (format: 'pdf' | 'docx' | 'json' = 'pdf') => {
     if (!cvData) {
@@ -1608,7 +1855,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
         setCurrentJob(jobData);
         
         // NEW: Update journey context if we have a journeyId
-        const primaryJourneyId = journeyId || cvJourneyId;
+        const primaryJourneyId = journeyId;
         if (primaryJourneyId && journeyInfo) {
           console.log('🔄 CVStudio - Updating journey with new job selection:', jobId);
           updateCurrentJobId(jobId);
@@ -1715,13 +1962,21 @@ const CVStudio: React.FC<CVStudioProps> = ({
   };
 
   const handleDocumentTypeChange = async (newType: 'cv' | 'cover-letter') => {
+    console.log('🔄 Starting document type change to:', newType);
+    
+    // Save current document before switching to prevent data loss
+    if (documentType === 'cv' && cvData) {
+      console.log('💾 Auto-saving CV before switching...');
+      await manualSave();
+    } else if (documentType === 'cover-letter' && coverLetterData) {
+      console.log('💾 Auto-saving cover letter before switching...');
+      await manualSave();
+    }
+    
+    // Update local state first
     setDocumentType(newType);
     
-    // Update URL to reflect the document type change
-    const url = new URL(window.location.href);
-    const searchParams = new URLSearchParams(url.search);
-    
-    // NEW APPROACH: Prioritize journeyId for reliable Application Package context
+    // Build new URL parameters
     const currentJourneyId = journeyId || journeyInfo?.journeyId || cvJourneyId;
     const currentJobId = journeyInfo?.jobId || selectedJobId || jobId;
     
@@ -1731,130 +1986,147 @@ const CVStudio: React.FC<CVStudioProps> = ({
       cvJourneyId,
       currentJourneyId,
       currentJobId,
+      originalCvId,
+      originalCoverLetterId,
       cvId,
       coverLetterId
     });
     
-    // Always preserve journeyId as the primary context identifier
-    if (currentJourneyId) {
-      searchParams.set('journeyId', currentJourneyId);
-      // Remove legacy cvJourneyId to avoid confusion
-      searchParams.delete('cvJourneyId');
-      console.log('✅ Preserving journeyId in URL:', currentJourneyId);
-    } else {
-      console.warn('⚠️ No journeyId found - this may cause context loading issues');
+    // CRITICAL: Always reload job data from journey to ensure it's available
+    if (currentJobId && userId) {
+      try {
+        console.log('🔄 Reloading job data from journey:', currentJobId);
+        const jobResponse = await fetch(`/api/jobs?userId=${userId}&jobId=${currentJobId}`);
+        if (jobResponse.ok) {
+          const jobResult = await jobResponse.json();
+          const loadedJob = jobResult.data?.jobs?.find((job: any) => job.id === currentJobId) || jobResult.job || jobResult;
+          if (loadedJob) {
+            console.log('✅ Job data reloaded for switching:', loadedJob.title || loadedJob.jobTitle);
+            setCurrentJob(loadedJob);
+            setSelectedJobId(currentJobId);
+          }
+        }
+      } catch (error) {
+        console.error('❌ Failed to reload job data:', error);
+      }
     }
     
-    // Keep jobId for backwards compatibility but it's now secondary to journeyId
+    // Build the new URL params object
+    const newParams = new URLSearchParams();
+    
+    // Always preserve journeyId as the primary context identifier
+    if (currentJourneyId) {
+      newParams.set('journeyId', currentJourneyId);
+      console.log('✅ Preserving journeyId in URL:', currentJourneyId);
+    }
+    
+    // Keep jobId for backwards compatibility
     if (currentJobId) {
-      searchParams.set('jobId', currentJobId);
+      newParams.set('jobId', currentJobId);
     }
     
     if (newType === 'cover-letter') {
       // Switch to cover letter mode
-      searchParams.set('type', 'cover_letter');
+      newParams.set('type', 'cover_letter');
       
-      // FIXED: Preserve existing coverLetterId from original state first, then component props, then URL params, then journeyInfo
-      const existingCoverLetterId = originalCoverLetterId || coverLetterId || searchParams.get('coverLetterId') || journeyInfo?.coverLetterId;
-      console.log('🔄 Switching to cover letter - Looking for coverLetterId:', {
-        originalCoverLetterId,
-        coverLetterIdFromProps: coverLetterId,
-        coverLetterIdFromUrl: searchParams.get('coverLetterId'),
-        coverLetterIdFromJourney: journeyInfo?.coverLetterId,
-        finalCoverLetterId: existingCoverLetterId
-      });
+      // CRITICAL: Ensure CV data is loaded for AI generation in cover letters
+      const existingCvId = originalCvId || cvId || journeyInfo?.cvId;
+      if (existingCvId && !cvData) {
+        console.log('🔄 Loading CV data for cover letter context:', existingCvId);
+        await reloadCVData(existingCvId);
+      }
+      
+      // Find existing cover letter ID
+      const existingCoverLetterId = originalCoverLetterId || coverLetterId || journeyInfo?.coverLetterId;
+      console.log('🔄 Switching to cover letter - Found:', existingCoverLetterId);
       
       if (existingCoverLetterId) {
-        searchParams.set('coverLetterId', existingCoverLetterId);
-        console.log('✅ Switching to existing cover letter:', existingCoverLetterId);
+        newParams.set('coverLetterId', existingCoverLetterId);
         
-        // Reload cover letter data to ensure we have the latest version
+        // Update state to ensure we track this coverLetterId
+        setOriginalCoverLetterId(existingCoverLetterId);
+        
+        // Reload cover letter data
         await reloadCoverLetterData(existingCoverLetterId);
+      } else if (journeyInfo?.coverLetterId) {
+        // Use cover letter from journey
+        newParams.set('coverLetterId', journeyInfo.coverLetterId);
+        setOriginalCoverLetterId(journeyInfo.coverLetterId);
+        await reloadCoverLetterData(journeyInfo.coverLetterId);
       } else {
-        console.log('🔍 No existing cover letter found');
-        
-        // Check if there's a cover letter in the journey context that we can load
-        if (journeyInfo?.coverLetterId) {
-          console.log('🔍 Found cover letter in journey context, loading:', journeyInfo.coverLetterId);
-          searchParams.set('coverLetterId', journeyInfo.coverLetterId);
-          await reloadCoverLetterData(journeyInfo.coverLetterId);
-        } else {
-          console.log('🔍 No existing cover letter found, creating new one');
+        // Create new cover letter
+        console.log('🔍 Creating new cover letter for journey');
+        try {
+          const coverLetterTitle = `Cover Letter for ${journeyInfo?.jobTitle || currentJob?.title || 'Position'}`;
+          const coverLetterResponse = await fetch('/api/cover-letters', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: userId,
+              title: coverLetterTitle,
+              content: `Dear Hiring Manager,\n\nI am writing to express my interest in the ${journeyInfo?.jobTitle || currentJob?.title || 'position'} at ${journeyInfo?.company || currentJob?.company || 'your company'}.\n\n[Your cover letter content will go here]\n\nSincerely,\n[Your Name]`,
+              jobId: currentJobId,
+              cvId: originalCvId || cvId
+            })
+          });
           
-          // Auto-create cover letter in the same journey
-          try {
-            const coverLetterTitle = `Cover Letter for ${journeyInfo?.jobTitle || currentJob?.title || 'Position'}`;
-            const coverLetterResponse = await fetch('/api/cover-letters', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                userId: userId,
-                title: coverLetterTitle,
-                content: `Dear Hiring Manager,\n\nI am writing to express my interest in the ${journeyInfo?.jobTitle || currentJob?.title || 'position'} at ${journeyInfo?.company || currentJob?.company || 'your company'}.\n\n[Your cover letter content will go here]\n\nSincerely,\n[Your Name]`,
-                jobId: journeyInfo?.jobId || currentJob?.id || jobId
-              })
-            });
+          if (coverLetterResponse.ok) {
+            const coverLetterResult = await coverLetterResponse.json();
+            const newCoverLetterData = coverLetterResult.data || coverLetterResult;
+            const newCoverLetter = newCoverLetterData.coverLetter || newCoverLetterData;
             
-            if (coverLetterResponse.ok) {
-              const coverLetterResult = await coverLetterResponse.json();
-              if (coverLetterResult.success && coverLetterResult.data?.coverLetter) {
-                const newCoverLetterId = coverLetterResult.data.coverLetter.id;
-                searchParams.set('coverLetterId', newCoverLetterId);
-                console.log('✅ Created new cover letter:', newCoverLetterId);
+            if (newCoverLetter && (newCoverLetter.id || newCoverLetter._id)) {
+              const newCoverLetterId = newCoverLetter.id || newCoverLetter._id;
+              newParams.set('coverLetterId', newCoverLetterId);
+              
+              // Update component state
+              setOriginalCoverLetterId(newCoverLetterId);
+              setCoverLetterData(newCoverLetter);
+              setCoverLetterTitle(newCoverLetter.title || coverLetterTitle);
+              
+              // Update journey with new cover letter
+              if (currentJourneyId) {
+                await updateJourneyWithDocument(newCoverLetterId, 'cover-letter');
               }
+              
+              console.log('✅ Created new cover letter:', newCoverLetterId);
             }
-          } catch (error) {
-            console.error('❌ Failed to create cover letter:', error);
           }
+        } catch (error) {
+          console.error('❌ Failed to create cover letter:', error);
         }
       }
-      
-      // Remove CV-specific params when switching to cover letter
-      searchParams.delete('cvId');
     } else {
       // Switch to CV mode
-      searchParams.set('type', 'cv');
+      newParams.set('type', 'cv');
       
-      // FIXED: Preserve existing cvId from original state first, then component props, then URL params, then journeyInfo
-      const existingCvId = originalCvId || cvId || searchParams.get('cvId') || journeyInfo?.cvId;
-      console.log('🔄 Switching to CV - Looking for cvId:', {
-        originalCvId,
-        cvIdFromProps: cvId,
-        cvIdFromUrl: searchParams.get('cvId'),
-        cvIdFromJourney: journeyInfo?.cvId,
-        finalCvId: existingCvId
-      });
+      // Find existing CV ID
+      const existingCvId = originalCvId || cvId || journeyInfo?.cvId;
+      console.log('🔄 Switching to CV - Found:', existingCvId);
       
       if (existingCvId) {
-        searchParams.set('cvId', existingCvId);
-        console.log('✅ Switching to existing CV:', existingCvId);
+        newParams.set('cvId', existingCvId);
         
-        // Reload CV data to ensure we have the latest version
+        // Update state to ensure we track this cvId
+        setOriginalCvId(existingCvId);
+        
+        // Reload CV data
         await reloadCVData(existingCvId);
+      } else if (journeyInfo?.cvId) {
+        // Use CV from journey
+        newParams.set('cvId', journeyInfo.cvId);
+        setOriginalCvId(journeyInfo.cvId);
+        await reloadCVData(journeyInfo.cvId);
       } else {
-        console.log('🔍 No existing CV found');
-        
-        // Check if there's a CV in the journey context that we can load
-        if (journeyInfo?.cvId) {
-          console.log('🔍 Found CV in journey context, loading:', journeyInfo.cvId);
-          searchParams.set('cvId', journeyInfo.cvId);
-          await reloadCVData(journeyInfo.cvId);
-        } else {
-          console.warn('⚠️ No CV found in any context - this may indicate a data issue');
-          setError('No existing CV found. Please ensure you have a CV linked to this journey.');
-        }
+        console.warn('⚠️ No CV found in any context');
+        setError('No existing CV found. Please ensure you have a CV linked to this journey.');
       }
-      
-      // Remove cover letter-specific params when switching to CV
-      searchParams.delete('coverLetterId');
     }
     
-    // Update the URL without page reload
-    const newUrl = `${url.pathname}?${searchParams.toString()}`;
-    window.history.pushState({}, '', newUrl);
-    
-    console.log('🔄 Document type changed to:', newType, 'with journey:', currentJourneyId);
-    console.log('🔗 New URL structure:', `${url.pathname}?${searchParams.toString()}`);
+    // Use Next.js router to update URL - this will trigger proper re-render with new props
+    const newUrl = `/studio?${newParams.toString()}`;
+    console.log('🔗 Navigating to new URL:', newUrl);
+    router.replace(newUrl);
   };
 
 
@@ -1937,8 +2209,8 @@ const CVStudio: React.FC<CVStudioProps> = ({
             urlParams.set('type', 'cv');
             urlParams.set('cvId', masterCV.id);
             urlParams.set('master', 'true');
-            if (selectedJobId || jobId) {
-              urlParams.set('jobId', selectedJobId || jobId);
+            if (selectedJobId) {
+              urlParams.set('jobId', selectedJobId);
             }
             router.replace(`/studio?${urlParams.toString()}`);
             
@@ -2039,8 +2311,15 @@ const CVStudio: React.FC<CVStudioProps> = ({
 
   // Create sections for draggable component
   const createSections = () => {
+    // All possible sections from CV JSON structure
+    const allSections = [
+      'personal_header', 'work_experience', 'education', 'skills', 'projects', 
+      'certificates', 'languages', 'volunteer', 'awards', 'publications', 
+      'interests', 'references'
+    ];
+
     const sectionComponents: Record<string, React.ReactNode> = {
-      basics: (
+      personal_header: (
         <PersonalInfoForm
           personalInfo={cvData?.basics || {
             name: '', label: '', image: '', email: '', phone: '', url: '', summary: '',
@@ -2053,18 +2332,12 @@ const CVStudio: React.FC<CVStudioProps> = ({
           userId={userId}
         />
       ),
-      work: (
+      work_experience: (
         <WorkExperienceSection
-          data={(() => {
-            const workData = cvData?.work || [];
-            console.log('🔍 CVStudio - Passing work data to WorkExperienceSection:', workData);
-            console.log('🔍 CVStudio - Work data length:', workData.length);
-            console.log('🔍 CVStudio - Work data type:', Array.isArray(workData) ? 'array' : typeof workData);
-            return workData;
-          })()}
+          data={cvData?.work || []}
           onUpdate={updateCVField}
           onAdd={() => addSection('work')}
-          onRemove={(index) => removeSection('work', index.toString())}
+          onRemove={(index) => removeSection('work', index)}
           jobData={currentJob}
           userId={userId}
         />
@@ -2074,7 +2347,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
           data={cvData?.education || []}
           onUpdate={updateCVField}
           onAdd={() => addSection('education')}
-          onRemove={(index) => removeSection('education', index.toString())}
+          onRemove={(index) => removeSection('education', index)}
           jobData={currentJob}
           userId={userId}
         />
@@ -2084,7 +2357,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
           data={cvData?.skills || []}
           onUpdate={updateCVField}
           onAdd={() => addSection('skills')}
-          onRemove={(index) => removeSection('skills', index.toString())}
+          onRemove={(index) => removeSection('skills', index)}
         />
       ),
       projects: (
@@ -2092,9 +2365,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
           data={cvData?.projects || []}
           onUpdate={updateCVField}
           onAdd={() => addSection('projects')}
-          onRemove={(index) => removeSection('projects', index.toString())}
-          jobData={currentJob}
-          userId={userId}
+          onRemove={(index) => removeSection('projects', index)}
         />
       ),
       certificates: (
@@ -2102,9 +2373,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
           data={cvData?.certificates || []}
           onUpdate={updateCVField}
           onAdd={() => addSection('certificates')}
-          onRemove={(index) => removeSection('certificates', index.toString())}
-          jobData={currentJob}
-          userId={userId}
+          onRemove={(index) => removeSection('certificates', index)}
         />
       ),
       languages: (
@@ -2112,30 +2381,116 @@ const CVStudio: React.FC<CVStudioProps> = ({
           data={cvData?.languages || []}
           onUpdate={updateCVField}
           onAdd={() => addSection('languages')}
-          onRemove={(index) => removeSection('languages', index.toString())}
+          onRemove={(index) => removeSection('languages', index)}
         />
+      ),
+      volunteer: (
+        <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+          <p>Volunteer Experience section - Coming soon</p>
+        </div>
+      ),
+      awards: (
+        <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+          <p>Awards & Recognition section - Coming soon</p>
+        </div>
+      ),
+      publications: (
+        <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+          <p>Publications section - Coming soon</p>
+        </div>
+      ),
+      interests: (
+        <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+          <p>Interests section - Coming soon</p>
+        </div>
+      ),
+      references: (
+        <div className="p-4 text-center text-gray-500 dark:text-gray-400">
+          <p>References section - Coming soon</p>
+        </div>
       )
     };
 
-    return sectionOrder.map(sectionId => ({
-      id: sectionId,
-      title: sectionId.charAt(0).toUpperCase() + sectionId.slice(1),
-      icon: getSectionIcon(sectionId),
-      isVisible: sectionVisibility[sectionId],
-      isExpanded: expandedSections.has(sectionId),
-      component: sectionComponents[sectionId]
-    }));
+    const sectionTitles: Record<string, string> = {
+      personal_header: 'Personal Information',
+      work_experience: 'Work Experience',
+      education: 'Education',
+      skills: 'Skills',
+      projects: 'Projects',
+      certificates: 'Certificates',
+      languages: 'Languages',
+      volunteer: 'Volunteer Experience',
+      awards: 'Awards & Recognition',
+      publications: 'Publications',
+      interests: 'Interests',
+      references: 'References'
+    };
+
+    // Function to check if a section has data
+    const hasSectionData = (sectionId: string): boolean => {
+      if (!cvData) return false;
+      
+      switch (sectionId) {
+        case 'personal_header':
+          return !!(cvData.basics?.name || cvData.basics?.email || cvData.basics?.phone);
+        case 'work_experience':
+          return Array.isArray(cvData.work) && cvData.work.length > 0;
+        case 'education':
+          return Array.isArray(cvData.education) && cvData.education.length > 0;
+        case 'skills':
+          return Array.isArray(cvData.skills) && cvData.skills.length > 0;
+        case 'projects':
+          return Array.isArray(cvData.projects) && cvData.projects.length > 0;
+        case 'certificates':
+          return Array.isArray(cvData.certificates) && cvData.certificates.length > 0;
+        case 'languages':
+          return Array.isArray(cvData.languages) && cvData.languages.length > 0;
+        case 'volunteer':
+          return Array.isArray(cvData.volunteer) && cvData.volunteer.length > 0;
+        case 'awards':
+          return Array.isArray(cvData.awards) && cvData.awards.length > 0;
+        case 'publications':
+          return Array.isArray(cvData.publications) && cvData.publications.length > 0;
+        case 'interests':
+          return Array.isArray(cvData.interests) && cvData.interests.length > 0;
+        case 'references':
+          return Array.isArray(cvData.references) && cvData.references.length > 0;
+        default:
+          return false;
+      }
+    };
+
+    return allSections.map(sectionId => {
+      const hasData = hasSectionData(sectionId);
+      const isDisabled = !hasData;
+      
+      return {
+        id: sectionId,
+        title: sectionTitles[sectionId] || sectionId.charAt(0).toUpperCase() + sectionId.slice(1),
+        icon: getSectionIcon(sectionId),
+        visible: sectionVisibility[sectionId] || false,
+        expanded: expandedSections.has(sectionId),
+        component: sectionComponents[sectionId],
+        hasData,
+        isDisabled
+      };
+    });
   };
 
   const getSectionIcon = (sectionId: string) => {
     const icons: Record<string, any> = {
-      basics: User,
-      work: Briefcase,
+      personal_header: User,
+      work_experience: Briefcase,
       education: GraduationCap,
       skills: Code,
       projects: FolderOpen,
       certificates: Award,
-      languages: Globe
+      languages: Globe,
+      volunteer: Heart,
+      awards: Star,
+      publications: BookOpen,
+      interests: Users,
+      references: Users
     };
     return icons[sectionId] || User;
   };
@@ -2153,17 +2508,6 @@ const CVStudio: React.FC<CVStudioProps> = ({
             structureContent={
               documentType === 'cover-letter' ? (
                 <div className="space-y-6">
-                  {/* Cover Letter Content */}
-                  <div className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6`}>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Cover Letter Content</h3>
-                    <textarea
-                      className="w-full h-64 p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
-                      placeholder="Write your cover letter content here or use AI to generate it..."
-                      value={cvData?.basics?.summary || ''}
-                      onChange={(e) => updateCVField('basics.summary', e.target.value)}
-                    />
-                  </div>
-
                   {/* AI Cover Letter Generator */}
                   <div className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6`}>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">AI Assistant</h3>
@@ -2171,14 +2515,286 @@ const CVStudio: React.FC<CVStudioProps> = ({
                       Generate a personalized cover letter based on your CV and the selected job position.
                     </p>
                     <button
-                      onClick={() => {
-                        // AI generation logic here
-                        console.log('Generate AI cover letter');
+                      onClick={async (e) => {
+                        // Add loading state
+                        const button = e.target as HTMLButtonElement;
+                        const originalText = button.textContent;
+                        button.disabled = true;
+                        button.textContent = 'Generating...';
+                        
+                        console.log('🔍 AI Cover Letter Generation - Starting:', {
+                          hasCvData: !!cvData,
+                          hasCurrentJob: !!currentJob,
+                          hasJourneyInfo: !!journeyInfo,
+                          journeyInfo
+                        });
+
+                        try {
+                          let finalCvData = cvData;
+                          let finalJobData = currentJob;
+
+                          // If data is missing and we have journeyInfo, load it
+                          if ((!finalCvData || !finalJobData) && journeyInfo) {
+                            console.log('📥 Loading missing data from journey...');
+                            
+                            // Load both in parallel
+                            const promises = [];
+                            
+                            if (!finalCvData && journeyInfo.cvId) {
+                              promises.push(
+                                fetch(`/api/cvs/${journeyInfo.cvId}?userId=${userId}`)
+                                  .then(res => res.json())
+                                  .then(result => {
+                                    const data = result.data?.cv?.cvData || result.cv?.cvData;
+                                    if (data) {
+                                      finalCvData = data;
+                                      setCvData(data);
+                                      console.log('✅ CV loaded');
+                                    }
+                                  })
+                                  .catch(err => console.error('❌ CV load failed:', err))
+                              );
+                            }
+                            
+                            if (!finalJobData && journeyInfo.jobId) {
+                              promises.push(
+                                fetch(`/api/jobs?userId=${userId}&jobId=${journeyInfo.jobId}`)
+                                  .then(res => res.json())
+                                  .then(result => {
+                                    const job = result.data?.jobs?.find((j: any) => j.id === journeyInfo.jobId) || result.job || result;
+                                    if (job) {
+                                      finalJobData = job;
+                                      setCurrentJob(job);
+                                      console.log('✅ Job loaded');
+                                    }
+                                  })
+                                  .catch(err => console.error('❌ Job load failed:', err))
+                              );
+                            }
+                            
+                            if (promises.length > 0) {
+                              await Promise.all(promises);
+                              // Small delay to ensure state updates
+                              await new Promise(resolve => setTimeout(resolve, 100));
+                            }
+                          }
+
+                          // Final validation
+                          if (!finalCvData || !finalJobData) {
+                            console.error('❌ Still missing data after load attempt:', {
+                              hasCvData: !!finalCvData,
+                              hasJobData: !!finalJobData
+                            });
+                            
+                            addNotification({
+                              type: 'error',
+                              title: 'Missing Data',
+                              message: 'Please select both a CV and a job first. If you are in a journey, please wait for the data to load.',
+                              persistent: false
+                            });
+                            button.disabled = false;
+                            button.textContent = originalText;
+                            return;
+                          }
+
+                          console.log('✅ Data validated, generating cover letter...');
+                          
+                          // Try the main API endpoint first
+                          let response = await fetch('/api/ai/cover-letter-generate', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                              cvData: finalCvData,
+                              jobData: finalJobData,
+                              recipientName: 'Hiring Manager',
+                              companyName: finalJobData.company
+                            }),
+                          });
+
+                          // If main endpoint fails, try the fallback
+                          if (!response.ok) {
+                            console.log('Main API failed, trying fallback...');
+                            response = await fetch('/api/ai/generate-cover-letter', {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json',
+                              },
+                              body: JSON.stringify({
+                                cvInfo: {
+                                  name: finalCvData?.basics?.name || '',
+                                  summary: finalCvData?.basics?.summary || '',
+                                  experience: finalCvData?.work?.slice(0, 3) || [],
+                                  skills: finalCvData?.skills?.slice(0, 5) || []
+                                },
+                                jobInfo: {
+                                  title: finalJobData?.title || finalJobData?.jobTitle || '',
+                                  company: finalJobData?.company || '',
+                                  description: finalJobData?.description || finalJobData?.jobDescription || '',
+                                  requirements: finalJobData?.requirements || []
+                                }
+                              }),
+                            });
+                          }
+
+                          if (!response.ok) {
+                            const errorData = await response.json().catch(() => ({}));
+                            console.error('API Error:', response.status, errorData);
+                            throw new Error(`API Error: ${response.status} - ${errorData.error || 'Unknown error'}`);
+                          }
+
+                          const result = await response.json();
+                          console.log('API Response:', result);
+                          
+                          if (result.success && result.content) {
+                            // Update cover letter data with the generated content
+                            setCoverLetterData((prev: any) => ({
+                              ...prev,
+                              content: result.content
+                            }));
+                            addNotification({
+                              type: 'success',
+                              title: 'Cover Letter Generated',
+                              message: 'Your AI-generated cover letter is ready!',
+                              persistent: false
+                            });
+                          } else {
+                            console.error('No content in response:', result);
+                            throw new Error(`No content generated: ${result.error || 'Unknown error'}`);
+                          }
+                        } catch (error) {
+                          console.error('Error generating cover letter:', error);
+                          addNotification({
+                            type: 'error',
+                            title: 'Generation Failed',
+                            message: 'Failed to generate cover letter. Please try again.',
+                            persistent: false
+                          });
+                        } finally {
+                          // Restore button state
+                          button.disabled = false;
+                          button.textContent = originalText;
+                        }
                       }}
                       className="px-4 py-2 bg-lime-600 text-white rounded-lg hover:bg-lime-700 transition-colors"
                     >
                       Generate with AI
                     </button>
+                  </div>
+
+                  {/* Cover Letter Content */}
+                  <div className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6`}>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Cover Letter Content</h3>
+                    
+                    {/* Formatting Options */}
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      <button
+                        onClick={() => {
+                          const textarea = document.querySelector('textarea[data-cover-letter]') as HTMLTextAreaElement;
+                          if (textarea) {
+                            const start = textarea.selectionStart;
+                            const end = textarea.selectionEnd;
+                            const selectedText = textarea.value.substring(start, end);
+                            const newText = textarea.value.substring(0, start) + `**${selectedText}**` + textarea.value.substring(end);
+                            setCoverLetterData((prev: any) => ({
+                              ...prev,
+                              content: newText
+                            }));
+                            // Force re-render by updating the textarea value
+                            setTimeout(() => {
+                              textarea.focus();
+                              textarea.setSelectionRange(start + 2, end + 2);
+                            }, 0);
+                          }
+                        }}
+                        className="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                        title="Bold"
+                      >
+                        <strong>B</strong>
+                      </button>
+                      <button
+                        onClick={() => {
+                          const textarea = document.querySelector('textarea[data-cover-letter]') as HTMLTextAreaElement;
+                          if (textarea) {
+                            const start = textarea.selectionStart;
+                            const end = textarea.selectionEnd;
+                            const selectedText = textarea.value.substring(start, end);
+                            const newText = textarea.value.substring(0, start) + `*${selectedText}*` + textarea.value.substring(end);
+                            setCoverLetterData((prev: any) => ({
+                              ...prev,
+                              content: newText
+                            }));
+                            // Force re-render by updating the textarea value
+                            setTimeout(() => {
+                              textarea.focus();
+                              textarea.setSelectionRange(start + 1, end + 1);
+                            }, 0);
+                          }
+                        }}
+                        className="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                        title="Italic"
+                      >
+                        <em>I</em>
+                      </button>
+                      <button
+                        onClick={() => {
+                          const textarea = document.querySelector('textarea[data-cover-letter]') as HTMLTextAreaElement;
+                          if (textarea) {
+                            const start = textarea.selectionStart;
+                            const end = textarea.selectionEnd;
+                            const selectedText = textarea.value.substring(start, end);
+                            const newText = textarea.value.substring(0, start) + `\n\n${selectedText}\n\n` + textarea.value.substring(end);
+                            setCoverLetterData((prev: any) => ({
+                              ...prev,
+                              content: newText
+                            }));
+                            textarea.focus();
+                            textarea.setSelectionRange(start + 2, end + 2);
+                          }
+                        }}
+                        className="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                        title="New Paragraph"
+                      >
+                        ¶
+                      </button>
+                      <button
+                        onClick={() => {
+                          const textarea = document.querySelector('textarea[data-cover-letter]') as HTMLTextAreaElement;
+                          if (textarea) {
+                            const start = textarea.selectionStart;
+                            const end = textarea.selectionEnd;
+                            const selectedText = textarea.value.substring(start, end);
+                            const newText = textarea.value.substring(0, start) + `\n• ${selectedText}` + textarea.value.substring(end);
+                            setCoverLetterData((prev: any) => ({
+                              ...prev,
+                              content: newText
+                            }));
+                            textarea.focus();
+                            textarea.setSelectionRange(start + 3, end + 3);
+                          }
+                        }}
+                        className="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                        title="Bullet Point"
+                      >
+                        •
+                      </button>
+                    </div>
+                    
+                    <textarea
+                      data-cover-letter
+                      className="w-full h-64 p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
+                      placeholder="Write your cover letter content here or use AI to generate it..."
+                      value={coverLetterData?.content || ''}
+                      onChange={(e) => setCoverLetterData((prev: any) => ({
+                        ...prev,
+                        content: e.target.value
+                      }))}
+                      style={{ whiteSpace: 'pre-wrap' }}
+                    />
+                    <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                      Tip: Use **bold** for emphasis, *italic* for style, and double line breaks for paragraphs
+                    </div>
                   </div>
                 </div>
               ) : isLoading ? (
@@ -2204,18 +2820,35 @@ const CVStudio: React.FC<CVStudioProps> = ({
                     isMasterCV={isMasterCV}
                   />
                 </div>
-              ) : (
-                <DraggableSections
+              ) : null
+            }
+            cvSectionsAndOrderingContent={
+              documentType === 'cv' && cvData ? (
+                <CVSectionsAndOrdering
                   sections={createSections()}
                   onSectionToggle={handleSectionToggle}
                   onSectionVisibilityToggle={handleSectionVisibilityToggle}
-                  onSectionReorder={(newSections) => {
-                    setSectionOrder(newSections.map(s => s.id));
+                  onSectionReorder={async (newSections) => {
+                    const newOrder = newSections.map(s => s.id);
+                    setSectionOrder(newOrder);
+                    
+                    // Save section order to database
+                    if (cvId && newOrder.length > 0) {
+                      try {
+                        await CVService.updateCV(cvId, {
+                          sectionOrder: newOrder
+                        }, userId || undefined);
+                        console.log('✅ Section order saved to database');
+                      } catch (error) {
+                        console.error('❌ Failed to save section order:', error);
+                      }
+                    }
                   }}
                   allCollapsed={allSectionsCollapsed}
                   onToggleAllSections={handleToggleAllSections}
+                  onUpdateDocument={setCvData}
                 />
-              )
+              ) : null
             }
             designContent={
               <DesignContent
@@ -2303,6 +2936,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
               setPagePadding={setPagePadding}
               onDocumentTypeChange={handleDocumentTypeChange}
               isMasterCV={isMasterCV}
+              coverLetterData={coverLetterData}
             />
           )
         }

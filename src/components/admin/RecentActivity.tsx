@@ -34,8 +34,28 @@ interface ActivityItem {
 const RecentActivity: React.FC = () => {
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Generate dynamic activity data
+  const fetchActivities = async () => {
+    try {
+      setError(null);
+      const response = await fetch('/api/admin/activity?limit=20');
+      if (response.ok) {
+        const data = await response.json();
+        setActivities(data.activities || []);
+      } else {
+        const errorData = await response.json();
+        setError(`Failed to fetch activities: ${errorData.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error fetching activities:', error);
+      setError(`Network error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Generate dynamic activity data (fallback for demo purposes)
   const generateDynamicActivities = (): ActivityItem[] => {
     const activityTypes = [
       {
@@ -169,24 +189,11 @@ const RecentActivity: React.FC = () => {
   };
 
   useEffect(() => {
-    // Simulate loading and fetching data
-    const loadActivities = async () => {
-      setLoading(true);
-      
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      const dynamicActivities = generateDynamicActivities();
-      setActivities(dynamicActivities);
-      setLoading(false);
-    };
-
-    loadActivities();
+    fetchActivities();
 
     // Refresh activities every 5 minutes
     const interval = setInterval(() => {
-      const newActivities = generateDynamicActivities();
-      setActivities(newActivities);
+      fetchActivities();
     }, 5 * 60 * 1000);
 
     return () => clearInterval(interval);
@@ -239,6 +246,27 @@ const RecentActivity: React.FC = () => {
               </div>
             </div>
           ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Recent Activity</h2>
+        </div>
+        <div className="text-center py-8">
+          <div className="text-red-500 text-4xl mb-4">⚠️</div>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Error Loading Activities</h3>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">{error}</p>
+          <button
+            onClick={fetchActivities}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Retry
+          </button>
         </div>
       </div>
     );

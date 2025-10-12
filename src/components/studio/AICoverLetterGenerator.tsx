@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles, Loader2, Copy, Check } from 'lucide-react';
+import { useNotifications } from '@/contexts/NotificationContext';
 
 interface AICoverLetterGeneratorProps {
   onGenerate: (content: string) => void;
@@ -19,10 +20,16 @@ const AICoverLetterGenerator: React.FC<AICoverLetterGeneratorProps> = ({
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
+  const { addNotification } = useNotifications();
 
   const generateCoverLetter = async () => {
     if (!cvData || !jobData) {
-      alert('Please select both a CV and a job first.');
+      addNotification({
+        type: 'error',
+        title: 'Missing Data',
+        message: 'Please select both a CV and a job first.',
+        persistent: false
+      });
       return;
     }
 
@@ -67,12 +74,23 @@ const AICoverLetterGenerator: React.FC<AICoverLetterGeneratorProps> = ({
       
       if (result.success && result.content) {
         onGenerate(result.content);
+        addNotification({
+          type: 'success',
+          title: 'Cover Letter Generated',
+          message: 'Your AI-generated cover letter is ready!',
+          persistent: false
+        });
       } else {
         throw new Error('No content generated');
       }
     } catch (error) {
       console.error('Error generating cover letter:', error);
-      alert('Failed to generate cover letter. Please try again.');
+      addNotification({
+        type: 'error',
+        title: 'Generation Failed',
+        message: 'Failed to generate cover letter. Please try again.',
+        persistent: false
+      });
     } finally {
       setIsGenerating(false);
     }

@@ -1,4 +1,5 @@
 import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { adaptParsedCVToUnified, validateCVData } from '@/lib/data-adapters/cv-data-adapter';
 
 export interface ParsedCVData {
   success: boolean;
@@ -88,38 +89,15 @@ export class AICVParser {
   }
 
   private static validateAndCleanData(data: any): UnifiedCVDataStructure {
-    // Ensure all required fields exist with proper defaults
-    const cleaned: UnifiedCVDataStructure = {
-      basics: {
-        name: data.basics?.name || '',
-        label: data.basics?.label || '',
-        image: data.basics?.image || '',
-        email: data.basics?.email || '',
-        phone: data.basics?.phone || '',
-        url: data.basics?.url || '',
-        summary: data.basics?.summary || '',
-        location: {
-          address: data.basics?.location?.address || '',
-          postalCode: data.basics?.location?.postalCode || '',
-          city: data.basics?.location?.city || '',
-          countryCode: data.basics?.location?.countryCode || '',
-          region: data.basics?.location?.region || ''
-        },
-        profiles: Array.isArray(data.basics?.profiles) ? data.basics.profiles : []
-      },
-      work: Array.isArray(data.work) ? data.work : [],
-      volunteer: Array.isArray(data.volunteer) ? data.volunteer : [],
-      education: Array.isArray(data.education) ? data.education : [],
-      awards: Array.isArray(data.awards) ? data.awards : [],
-      certificates: Array.isArray(data.certificates) ? data.certificates : [],
-      publications: Array.isArray(data.publications) ? data.publications : [],
-      skills: Array.isArray(data.skills) ? data.skills : [],
-      languages: Array.isArray(data.languages) ? data.languages : [],
-      interests: Array.isArray(data.interests) ? data.interests : [],
-      references: Array.isArray(data.references) ? data.references : [],
-      projects: Array.isArray(data.projects) ? data.projects : []
-    };
-
-    return cleaned;
+    // Use the data adapter to convert parsed data to unified structure
+    const adaptedData = adaptParsedCVToUnified(data);
+    
+    // Validate the adapted data
+    const validation = validateCVData(adaptedData);
+    if (!validation.isValid) {
+      console.warn('CV data validation warnings:', validation.errors);
+    }
+    
+    return adaptedData;
   }
 }

@@ -7,9 +7,7 @@ import { authenticatedFetch, authenticatedFetchWithUserId } from '@/lib/utils/ap
 import { 
   X, Briefcase, MapPin, DollarSign, Calendar, ExternalLink,
   FileText, CheckCircle, Clock, AlertCircle, Plus, Edit, Trash2,
-  Download, Eye, ArrowRight, ChevronDown, ChevronUp, Target,
-  Sparkles, Zap, Star, Copy, Share2, Archive, Bookmark,
-  TrendingUp, Users, Building2, Globe, Award, Lightbulb, Settings
+  Target, Building2, Star, Copy, Archive, ChevronDown, ChevronUp
 } from 'lucide-react';
 import JourneyTimelineCard from './JourneyTimelineCard';
 import JobInfoContent from './JobInfoContent';
@@ -87,13 +85,12 @@ const ApplicationJourneyModal: React.FC<ApplicationJourneyModalProps> = ({
   onRefresh
 }) => {
   const { data: session } = useSession();
-  const [activeTab, setActiveTab] = useState<'job-info' | 'journey'>('job-info');
-  const [journeyAnalytics, setJourneyAnalytics] = useState<any>(null);
   const [isCreatingJourney, setIsCreatingJourney] = useState(false);
   const [journeys, setJourneys] = useState<CVJourney[]>(initialJourneys);
   const [loadingJourneys, setLoadingJourneys] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isJobDescriptionExpanded, setIsJobDescriptionExpanded] = useState(false);
   
   // Job editing states
   const [isEditingJob, setIsEditingJob] = useState(false);
@@ -237,6 +234,7 @@ const ApplicationJourneyModal: React.FC<ApplicationJourneyModalProps> = ({
     
     console.log('✅ ApplicationJourneyModal - Journey updated in local state');
   };
+
 
   const handleDeleteJourney = async (journeyId: string) => {
     try {
@@ -491,17 +489,6 @@ const ApplicationJourneyModal: React.FC<ApplicationJourneyModalProps> = ({
     return new Date(date).toLocaleDateString();
   };
 
-  // Calculate journey progress
-  const getJourneyProgress = (journey: CVJourney) => {
-    if (!journey.steps || journey.steps.length === 0) {
-      return 0;
-    }
-    
-    const completedSteps = journey.steps.filter(step => step.status === 'completed').length;
-    const totalSteps = journey.steps.length;
-    
-    return Math.round((completedSteps / totalSteps) * 100);
-  };
 
   return (
     <AnimatePresence>
@@ -545,6 +532,53 @@ const ApplicationJourneyModal: React.FC<ApplicationJourneyModalProps> = ({
                     <span>{job.location}</span>
                   </div>
                 )}
+                
+                {/* Job Details in Header */}
+                <div className="flex flex-wrap items-center gap-4 mt-3 text-sm">
+                  {/* Salary */}
+                  <div className="flex items-center gap-1">
+                    <DollarSign size={14} className="text-green-500" />
+                    <span className="text-gray-600 dark:text-gray-400">Salary:</span>
+                    <span className="text-gray-700 dark:text-gray-300 font-medium">
+                      {job.salary?.min && job.salary?.max 
+                        ? `${job.salary.currency || '$'}${job.salary.min.toLocaleString()} - ${job.salary.max.toLocaleString()} ${job.salary.period || 'yearly'}`
+                        : job.salary?.min 
+                          ? `${job.salary.currency || '$'}${job.salary.min.toLocaleString()}+ ${job.salary.period || 'yearly'}`
+                          : job.salary?.max
+                            ? `Up to ${job.salary.currency || '$'}${job.salary.max.toLocaleString()} ${job.salary.period || 'yearly'}`
+                            : 'Not specified'
+                      }
+                    </span>
+                  </div>
+
+                  {/* Status */}
+                  <div className="flex items-center gap-1">
+                    <CheckCircle size={14} className="text-blue-500" />
+                    <span className="text-gray-600 dark:text-gray-400">Status:</span>
+                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                      job.status === 'applied' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
+                      job.status === 'interview' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' :
+                      job.status === 'offer' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' :
+                      job.status === 'rejected' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' :
+                      'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300'
+                    }`}>
+                      {job.status?.charAt(0).toUpperCase() + job.status?.slice(1) || 'Created'}
+                    </span>
+                  </div>
+
+                  {/* Priority */}
+                  <div className="flex items-center gap-1">
+                    <Star size={14} className="text-yellow-500" />
+                    <span className="text-gray-600 dark:text-gray-400">Priority:</span>
+                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                      job.priority === 'high' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' :
+                      job.priority === 'medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' :
+                      'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300'
+                    }`}>
+                      {job.priority?.charAt(0).toUpperCase() + job.priority?.slice(1) || 'Medium'}
+                    </span>
+                  </div>
+                </div>
               </div>
               <motion.button
                 onClick={onClose}
@@ -557,62 +591,10 @@ const ApplicationJourneyModal: React.FC<ApplicationJourneyModalProps> = ({
             </div>
           </div>
 
-          {/* Enhanced Tab Navigation */}
-          <div className="flex border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-            <motion.button
-              onClick={() => setActiveTab('job-info')}
-              className={`relative flex-1 px-6 py-4 text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
-                activeTab === 'job-info'
-                  ? 'text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-800'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-gray-700/50'
-              }`}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <Briefcase size={16} />
-              Job Info
-              {activeTab === 'job-info' && (
-                <motion.div
-                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400"
-                  layoutId="activeTab"
-                  initial={false}
-                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                />
-              )}
-            </motion.button>
-            <motion.button
-              onClick={() => setActiveTab('journey')}
-              className={`relative flex-1 px-6 py-4 text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
-                activeTab === 'journey'
-                  ? 'text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-800'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-gray-700/50'
-              }`}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <Target size={16} />
-              CV Journeys
-              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                activeTab === 'journey'
-                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                  : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
-              }`}>
-                {journeys.length}
-              </span>
-              {activeTab === 'journey' && (
-                <motion.div
-                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400"
-                  layoutId="activeTab"
-                  initial={false}
-                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                />
-              )}
-            </motion.button>
-          </div>
 
-          {/* Tab Content */}
+          {/* Merged Content */}
           <div className="p-6 max-h-[60vh] overflow-y-auto">
-            {activeTab === 'job-info' ? (
+            {isEditingJob ? (
               <JobInfoContent
                 job={job}
                 isEditingJob={isEditingJob}
@@ -629,83 +611,38 @@ const ApplicationJourneyModal: React.FC<ApplicationJourneyModalProps> = ({
               />
             ) : (
               <div className="space-y-6">
-                {/* Journey Management */}
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                      🎯 CV Journeys for this Job
-                    </h3>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-gray-600 dark:text-gray-400">
-                        {journeys.filter(j => j.status === 'completed').length} completed
-                      </span>
-                      <span className="text-sm text-gray-600 dark:text-gray-400">
-                        {journeys.filter(j => j.status === 'in-progress').length} in progress
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Journey Analytics */}
-                  {journeys.length > 0 && (
-                    <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg p-4 mb-6">
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                        <TrendingUp size={16} className="text-blue-500" />
-                        Journey Analytics
-                      </h4>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="text-center">
-                          <div className="text-lg font-bold text-blue-500">
-                            {Math.round(journeys.reduce((sum, j) => sum + getJourneyProgress(j), 0) / journeys.length)}%
-                          </div>
-                          <div className="text-xs text-gray-600 dark:text-gray-400">Avg Progress</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-lg font-bold text-green-500">
-                            {journeys.reduce((sum, j) => j.steps?.filter(s => s.status === 'completed').length || 0, 0)}
-                          </div>
-                          <div className="text-xs text-gray-600 dark:text-gray-400">Steps Completed</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-lg font-bold text-purple-500">
-                            {journeys.filter(j => j.atsScore && j.atsScore >= 80).length}
-                          </div>
-                          <div className="text-xs text-gray-600 dark:text-gray-400">High ATS Scores</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-lg font-bold text-orange-500">
-                            {Math.round(journeys.reduce((sum, j) => sum + (j.atsScore || 0), 0) / journeys.filter(j => j.atsScore).length) || 0}
-                          </div>
-                          <div className="text-xs text-gray-600 dark:text-gray-400">Avg ATS Score</div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {journeys.length > 0 ? (
-                    <div className="space-y-4">
-                      {journeys.map((journey) => (
-                        <JourneyTimelineCard
-                            key={journey.id} 
-                          journey={journey}
-                          onResume={handleContinueJourney}
-                          onDownload={handleApplyNow}
-                          onDelete={handleDeleteJourney}
-                          onRefresh={onRefresh}
-                          onUpdateJourney={handleUpdateJourney}
-                          onShowDeleteConfirm={setShowDeleteConfirm}
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <Target size={48} className="text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-                      <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No CV Journeys Started</h4>
-                      <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-                        Create your first CV journey to start preparing for this job application.
-                      </p>
-                    </div>
-                  )}
+              {/* Journey Section - At the top */}
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    🎯 CV Journeys for this Job
+                  </h3>
                 </div>
+
+                {journeys.length > 0 ? (
+                  <div className="space-y-4">
+                    {journeys.map((journey) => (
+                      <JourneyTimelineCard
+                          key={journey.id} 
+                        journey={journey}
+                        onResume={handleContinueJourney}
+                        onDownload={handleApplyNow}
+                        onDelete={handleDeleteJourney}
+                        onRefresh={onRefresh}
+                        onUpdateJourney={handleUpdateJourney}
+                        onShowDeleteConfirm={setShowDeleteConfirm}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Target size={48} className="text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+                    <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No CV Journeys Started</h4>
+                    <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
+                      Create your first CV journey to start preparing for this job application.
+                    </p>
+                  </div>
+                )}
 
                 {/* Journey Creation - Only show if no journeys exist */}
                 {journeys.length === 0 && (
@@ -737,6 +674,141 @@ const ApplicationJourneyModal: React.FC<ApplicationJourneyModalProps> = ({
                   </div>
                 )}
               </div>
+
+              {/* Compact Job Information Section */}
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                  <Briefcase size={20} />
+                  Job Information
+                </h3>
+                
+                {/* Job URL and Dates */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  {/* Job URL */}
+                  {job.jobUrl && (
+                    <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <ExternalLink size={14} className="text-blue-500" />
+                        <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Job URL</span>
+                      </div>
+                      <a 
+                        href={job.jobUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-blue-600 dark:text-blue-400 hover:underline text-sm break-all"
+                      >
+                        {job.jobUrl.length > 40 ? `${job.jobUrl.substring(0, 40)}...` : job.jobUrl}
+                      </a>
+                    </div>
+                  )}
+
+                  {/* Application Date */}
+                  {job.applicationDate && (
+                    <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Calendar size={14} className="text-purple-500" />
+                        <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Applied</span>
+                      </div>
+                      <p className="text-sm text-gray-700 dark:text-gray-300">
+                        {formatDate(job.applicationDate)}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Deadline */}
+                  {job.deadline && (
+                    <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Clock size={14} className="text-orange-500" />
+                        <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Deadline</span>
+                      </div>
+                      <p className="text-sm text-gray-700 dark:text-gray-300">
+                        {formatDate(job.deadline)}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Job Description - Expandable */}
+                {job.jobDescription && (
+                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <FileText size={16} className="text-blue-500" />
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Job Description</span>
+                      </div>
+                      <motion.button
+                        onClick={() => setIsJobDescriptionExpanded(!isJobDescriptionExpanded)}
+                        className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        {isJobDescriptionExpanded ? 'Show Less' : 'Show More'}
+                        {isJobDescriptionExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                      </motion.button>
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      {isJobDescriptionExpanded ? (
+                        <div className="max-h-96 overflow-y-auto">
+                          {job.jobDescription}
+                        </div>
+                      ) : (
+                        <div>
+                          {job.jobDescription.split('\n').slice(0, 3).join('\n')}
+                          {job.jobDescription.split('\n').length > 3 && (
+                            <span className="text-gray-500 dark:text-gray-400">...</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Job Actions - Compact */}
+                <div className="flex flex-wrap gap-2">
+                  <motion.button
+                    onClick={() => setIsEditingJob(true)}
+                    className="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <Edit size={14} />
+                    Edit
+                  </motion.button>
+                  <motion.button
+                    onClick={handleDuplicateJob}
+                    className="px-3 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <Copy size={14} />
+                    Duplicate
+                  </motion.button>
+                  <motion.button
+                    onClick={handleDeleteJob}
+                    className="px-3 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <Trash2 size={14} />
+                    Delete
+                  </motion.button>
+                  <motion.button
+                    onClick={handleArchiveJob}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                      job.isArchived 
+                        ? 'bg-green-500 hover:bg-green-600 text-white' 
+                        : 'bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200'
+                    }`}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <Archive size={14} />
+                    {job.isArchived ? 'Unarchive' : 'Archive'}
+                  </motion.button>
+                </div>
+              </div>
+            </div>
             )}
           </div>
         </motion.div>

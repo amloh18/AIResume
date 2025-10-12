@@ -4,6 +4,7 @@ import { ITemplate } from '@/models/Template';
 import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { generateTemplatePreview } from '@/lib/templates/template-renderer';
 import EnhancedCVPreview from './EnhancedCVPreview';
+import { useTemplateStore } from '@/lib/stores/templateStore';
 
 interface TemplateSelectorProps {
   selectedTemplate: ITemplate | null;
@@ -53,7 +54,12 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
     setShowPreview(true);
   };
 
+  const { setSelectedTemplate } = useTemplateStore();
+
   const handleTemplateSelect = (template: ITemplate) => {
+    // Update the global template store
+    setSelectedTemplate(template);
+    
     onTemplateSelect(template);
     setShowPreview(false);
   };
@@ -151,13 +157,16 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
       </div>
 
       <div className="templates-grid">
-        {templates.map((template) => (
+        {templates.map((template) => {
+          const templateId = template.id || template._id;
+          const selectedId = selectedTemplate?.id || selectedTemplate?._id;
+          const isSelected = selectedId === templateId;
+          
+          return (
           <div
-            key={template.id || template._id}
+            key={templateId}
             className={`template-card ${
-              selectedTemplate?.id === template.id || selectedTemplate?._id === template._id
-                ? 'selected'
-                : ''
+              isSelected ? 'selected' : ''
             }`}
             onClick={() => handleTemplateSelect(template)}
           >
@@ -202,14 +211,15 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
                 </div>
               </div>
 
-              {(selectedTemplate?.id === template.id || selectedTemplate?._id === template._id) && (
+              {isSelected && (
                 <div className="selected-indicator">
                   <Check size={16} />
                 </div>
               )}
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Preview Modal */}

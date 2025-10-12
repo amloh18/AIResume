@@ -12,11 +12,13 @@ import {
   X,
   Link,
   FileText,
-  ExternalLink
+  ExternalLink,
+  Loader2
 } from 'lucide-react';
 import { CVJourneyLookupService } from '@/lib/services/cvJourneyLookupService';
 import { CVProgressService } from '@/lib/services/cvProgressService';
 import { useSession } from 'next-auth/react';
+import { formatDetailedTime } from '@/lib/utils/timeUtils';
 
 interface CV {
   id: string;
@@ -31,6 +33,8 @@ interface CV {
   completionPercentage?: number;
   isMaster?: boolean;
   journeyId?: string; // For linked journey functionality
+  atsScore?: number; // ATS score for regular CVs
+  metadata?: any; // Full metadata object
 }
 
 interface CVCardOverlayProps {
@@ -71,6 +75,8 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [linkedJourney, setLinkedJourney] = useState<any>(null);
   const [checkingJourney, setCheckingJourney] = useState(false);
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(cv.thumbnail || null);
+  const [thumbnailLoading, setThumbnailLoading] = useState(false);
 
   // Check if CV is linked to any journey
   useEffect(() => {
@@ -91,27 +97,38 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
     checkForLinkedJourney();
   }, [cv.id, session?.user?.id]);
 
+  // Fetch thumbnail if missing
+  useEffect(() => {
+    const fetchThumbnail = async () => {
+      if (thumbnailUrl || thumbnailLoading) return;
+      
+      try {
+        setThumbnailLoading(true);
+        const response = await fetch(`/api/cv/${cv.id}/generate-thumbnail`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.thumbnailUrl) {
+            setThumbnailUrl(result.thumbnailUrl);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching thumbnail:', error);
+      } finally {
+        setThumbnailLoading(false);
+      }
+    };
+
+    fetchThumbnail();
+  }, [cv.id, thumbnailUrl, thumbnailLoading]);
+
   const formatDate = (dateString: string) => {
-    if (!dateString) return 'Unknown';
-    
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) {
-      return 'Unknown';
-    }
-    
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - date.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 7) return `${diffDays} days ago`;
-    if (diffDays < 30) return `${Math.ceil(diffDays / 7)} weeks ago`;
-    
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
+    return formatDetailedTime(dateString);
   };
 
   const handleDelete = () => {
@@ -140,13 +157,22 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
       {/* Main CV Thumbnail Container - Now includes title overlay */}
       <div className="relative aspect-[3/4] bg-gray-100 dark:bg-gray-700 overflow-hidden">
         {/* CV Thumbnail Image */}
-        {cv.thumbnail ? (
+        {thumbnailUrl ? (
           <img
-            src={cv.thumbnail}
+            src={thumbnailUrl}
             alt={`CV Preview: ${cv.title}`}
             className="w-full h-full object-cover"
             loading="lazy"
           />
+        ) : thumbnailLoading ? (
+          /* Loading state */
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-700 dark:to-gray-600">
+            <div className="text-center text-gray-500 dark:text-gray-400">
+              <Loader2 size={32} className="mx-auto mb-2 animate-spin opacity-50" />
+              <p className="text-sm font-medium">Generating preview...</p>
+              <p className="text-xs opacity-75">Please wait</p>
+            </div>
+          </div>
         ) : (
           /* Fallback when no thumbnail available */
           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-700 dark:to-gray-600">
@@ -178,7 +204,7 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
                   className={`p-3 rounded-full transition-all duration-200 backdrop-blur-sm border ${
                     cv.isStarred 
                       ? 'bg-yellow-500/30 border-yellow-400/50 text-yellow-400' 
-                      : 'bg-white/20 hover:bg-white/30 border-white/20 text-white hover:text-yellow-400'
+                      : 'bg-gray-700 dark:bg-white/20 hover:bg-gray-600 dark:hover:bg-white/30 border-gray-600 dark:border-white/20 text-white hover:text-yellow-400'
                   }`}
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
@@ -194,7 +220,7 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
                       e.stopPropagation();
                       onEditJourney?.(cv, linkedJourney);
                     }}
-                    className="p-3 rounded-full bg-blue-500/30 hover:bg-blue-500/40 text-white transition-all duration-200 backdrop-blur-sm border border-blue-400/50"
+                    className="p-3 rounded-full bg-blue-600 dark:bg-blue-500/30 hover:bg-blue-700 dark:hover:bg-blue-500/40 text-white transition-all duration-200 backdrop-blur-sm border border-blue-700 dark:border-blue-400/50"
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
                     title="Edit Journey"
@@ -209,7 +235,7 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
                     e.stopPropagation();
                     onDownload(cv);
                   }}
-                  className="p-3 rounded-full bg-green-500/30 hover:bg-green-500/40 text-white transition-all duration-200 backdrop-blur-sm border border-green-400/50"
+                    className="p-3 rounded-full bg-green-600 dark:bg-green-500/30 hover:bg-green-700 dark:hover:bg-green-500/40 text-white transition-all duration-200 backdrop-blur-sm border border-green-700 dark:border-green-400/50"
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                   title="Download CV"
@@ -223,7 +249,7 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
                     e.stopPropagation();
                     handleDelete();
                   }}
-                  className="p-3 rounded-full bg-red-500/30 hover:bg-red-500/40 text-white transition-all duration-200 backdrop-blur-sm border border-red-400/50"
+                    className="p-3 rounded-full bg-red-600 dark:bg-red-500/30 hover:bg-red-700 dark:hover:bg-red-500/40 text-white transition-all duration-200 backdrop-blur-sm border border-red-700 dark:border-red-400/50"
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                   title="Delete CV"
@@ -246,7 +272,7 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
         )}
 
         {/* Title Overlay - Positioned at bottom of preview */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 bg-white/10 dark:bg-black/20 backdrop-blur-md border-t border-white/20">
+        <div className="absolute bottom-0 left-0 right-0 p-4 bg-gray-800 dark:bg-black/20 backdrop-blur-md border-t border-gray-700 dark:border-white/20 text-white">
           {/* CV Name */}
           <div className="mb-2">
             {editingCVId === cv.id ? (
@@ -255,7 +281,7 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
                   type="text"
                   value={editingTitle || ''}
                   onChange={(e) => onTitleEdit?.(cv.id, e.target.value)}
-                  className="flex-1 bg-white/20 border border-white/30 rounded-lg px-3 py-2 text-white text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-400 backdrop-blur-sm"
+                  className="flex-1 bg-gray-700 dark:bg-white/20 border border-gray-600 dark:border-white/30 rounded-lg px-3 py-2 text-white text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-400 backdrop-blur-sm"
                   autoFocus
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
@@ -290,7 +316,7 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-white text-sm truncate flex-1">
+                <h3 className="font-semibold text-white text-xs truncate flex-1">
                   {cv.title}
                 </h3>
                 <motion.button
@@ -298,11 +324,11 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
                     e.stopPropagation();
                     onStartEditing?.(cv);
                   }}
-                  className="p-1 rounded-lg bg-white/20 hover:bg-white/30 text-white/80 hover:text-white transition-all duration-200 opacity-0 group-hover:opacity-100"
+                  className="p-1 rounded-lg bg-gray-600 dark:bg-white/20 hover:bg-gray-700 dark:hover:bg-white/30 text-white/80 hover:text-white transition-all duration-200 opacity-0 group-hover:opacity-100"
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                 >
-                  <Pencil size={14} />
+                  <Pencil size={12} />
                 </motion.button>
               </div>
             )}
@@ -312,16 +338,44 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
           <div className="flex items-center justify-between text-xs text-white/80">
             <span>Modified: {formatDate(cv.lastModified)}</span>
             {(() => {
-              const percentage = CVProgressService.calculateCompletionPercentage(cv);
-              const progressColors = CVProgressService.getProgressColor(percentage);
-              return (
-                <div className="flex items-center gap-2">
-                  <span>{cv.views} views</span>
-                  <div className={`px-2 py-1 rounded-full text-xs font-medium backdrop-blur-sm border ${progressColors.bg} ${progressColors.text} ${progressColors.border}`}>
-                    {percentage}% complete
+              // Use ATS score for regular CV cards
+              const atsScore = cv.metadata?.atsScore || cv.atsScore;
+              const hasATSScore = atsScore !== null && atsScore !== undefined && atsScore > 0;
+              
+              if (hasATSScore) {
+                const progressColors = CVProgressService.getProgressColor(atsScore);
+                return (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs">{cv.views} views</span>
+                    <div className={`px-2 py-1 rounded-full text-xs font-medium backdrop-blur-sm border ${progressColors.bg} ${progressColors.text} ${progressColors.border}`}>
+                      {atsScore}% ATS
+                    </div>
                   </div>
-                </div>
-              );
+                );
+              } else {
+                // Check if CV is linked to a job journey
+                const isLinkedToJob = cv.journeyId || cv.metadata?.linkedJobId;
+                
+                if (isLinkedToJob) {
+                  return (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs">{cv.views} views</span>
+                      <div className="px-2 py-1 rounded-full text-xs font-medium backdrop-blur-sm border bg-blue-600 dark:bg-blue-500/20 text-white border-blue-700 dark:border-blue-400/30">
+                        Link to Job
+                      </div>
+                    </div>
+                  );
+                } else {
+                  return (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs">{cv.views} views</span>
+                      <div className="px-2 py-1 rounded-full text-xs font-medium backdrop-blur-sm border bg-gray-600 dark:bg-gray-500/20 text-white border-gray-700 dark:border-gray-400/30">
+                        No ATS
+                      </div>
+                    </div>
+                  );
+                }
+              }
             })()}
           </div>
         </div>

@@ -16,19 +16,56 @@ export async function POST(request: NextRequest) {
 
     await connectDB();
 
-    // Find user by email
-    const user = await User.findOne({ email });
+    // Find user by email (case insensitive) - include password field
+    const user = await User.findOne({ 
+      email: { $regex: new RegExp(`^${email}$`, 'i') } 
+    }).select('+password');
+    
     if (!user) {
-      // Don't reveal if user exists or not for security
-      return NextResponse.json({
-        message: 'If an account with this email exists, a password reset link has been sent.'
-      });
+      return NextResponse.json(
+        { 
+          success: false,
+          error: 'No account found with this email address. Please check your email address or create a new account if you haven\'t signed up yet.' 
+        },
+        { status: 404 }
+      );
     }
 
-    // Check if user has a password (local auth)
-    if (!user.password) {
+    // Check if user can reset password
+    const hasPassword = user.password && 
+                       typeof user.password === 'string' && 
+                       user.password.length > 0;
+    
+    // Check if email is from a custom domain (not Gmail/Google)
+    const isCustomDomain = !email.includes('@gmail.com') && 
+                          !email.includes('@googlemail.com') &&
+                          !email.includes('@google.com');
+    
+    // Check if user has Google OAuth data
+    const hasGoogleAuth = user.firebaseUid || user.authProviderId;
+    
+    // Debug logging
+    console.log('🔍 Password reset debug for:', email);
+    console.log('   Password field type:', typeof user.password);
+    console.log('   Password field value:', user.password ? 'EXISTS' : 'NULL/UNDEFINED');
+    console.log('   Password length:', user.password ? user.password.length : 0);
+    console.log('   Auth provider:', user.authProvider);
+    console.log('   Firebase UID:', user.firebaseUid || 'None');
+    console.log('   Auth Provider ID:', user.authProviderId || 'None');
+    console.log('   Has password:', hasPassword);
+    console.log('   Is custom domain:', isCustomDomain);
+    console.log('   Has Google auth:', hasGoogleAuth);
+    
+    // Allow password reset if user has a password (regardless of auth method)
+    // This handles NextAuth users with passwords, local users, and mixed scenarios
+    if (hasPassword) {
+      console.log('✅ Allowing password reset for user with password');
+    } else {
       return NextResponse.json(
-        { error: 'This email is registered with a different sign-in method' },
+        { 
+          success: false,
+          error: 'This email is registered with a different sign-in method (Google, etc.). Please use the original sign-in method.' 
+        },
         { status: 400 }
       );
     }
@@ -148,33 +185,20 @@ export async function POST(request: NextRequest) {
       CV Circle Team
     `;
 
-    // Send email using the configured email server
-    const response = await fetch(`${process.env.EMAIL_SERVER_HOST}:${process.env.EMAIL_SERVER_PORT}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(
-          `${process.env.EMAIL_SERVER_USER}:${process.env.EMAIL_SERVER_PASSWORD}`
-        ).toString('base64')}`,
-      },
-      body: JSON.stringify({
-        from: process.env.EMAIL_SERVER_USER,
-        to: email,
-        subject: 'Reset your CV Circle password',
-        text: emailText,
-        html: emailHtml,
-      }),
+    // Send email using the email service
+    const { sendEmail } = await import('@/lib/email-service');
+    
+    await sendEmail({
+      to: email,
+      subject: 'Reset your CV Circle password',
+      text: emailText,
+      html: emailHtml,
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Failed to send password reset email:', errorText);
-      throw new Error('Failed to send email');
-    }
 
     console.log('✅ Password reset email sent successfully to:', email);
     return NextResponse.json({
-      message: 'If an account with this email exists, a password reset link has been sent.'
+      success: true,
+      message: 'Password reset link has been sent to your email address. Please check your inbox and follow the instructions.'
     });
   } catch (error: any) {
     console.error('❌ Error sending password reset email:', error.message);

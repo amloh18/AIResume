@@ -4,7 +4,6 @@ import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/database';
 import { CV, Template } from '@/models';
 import { toObjectId, createErrorResponse } from '@/lib/db-utils';
-import { extractUserIdentifier } from '@/lib/firebase-uid-utils';
 import { getCVWithTemplate } from '@/lib/cv-template-utils';
 import mongoose from 'mongoose';
 
@@ -29,34 +28,16 @@ export async function GET(
     console.log('🔍 CV GET API - Database connected');
     
     const { id } = await params;
-    
-    // Extract user identifier from request and session
-    const userIdentifier = extractUserIdentifier(request, session);
-    
-    if (!userIdentifier.id || !userIdentifier.type) {
-      console.log('❌ CV GET API - No valid user identifier found');
-      return NextResponse.json(
-        { success: false, error: 'User identification failed' },
-        { status: 401 }
-      );
-    }
-
-    console.log('🔍 CV GET API - User identifier:', userIdentifier);
     console.log('🔍 CV GET API - CV ID from params:', id);
 
     const cvId = toObjectId(id);
     console.log('🔍 CV GET API - Converted CV ID:', cvId);
     
-    // Build query based on user identifier type
-    let query: Record<string, any> = { _id: cvId };
-    
-    if (userIdentifier.type === 'firebase') {
-      query.firebaseUid = userIdentifier.id;
-      console.log('🔍 CV GET API - Using Firebase UID query:', userIdentifier.id);
-    } else {
-      query.userId = new mongoose.Types.ObjectId(userIdentifier.id);
-      console.log('🔍 CV GET API - Using MongoDB ObjectId query:', userIdentifier.id);
-    }
+    // Build query using session user ID
+    const query: Record<string, any> = { 
+      _id: cvId,
+      userId: new mongoose.Types.ObjectId(session.user.id)
+    };
     
     console.log('🔍 CV GET API - Final query:', query);
     
@@ -126,7 +107,12 @@ export async function PUT(
     
     // Check authentication
     const session = await getServerSession(authOptions);
+    console.log('🔍 CV UPDATE API - Session:', session);
+    console.log('🔍 CV UPDATE API - User ID:', session?.user?.id);
+    console.log('🔍 CV UPDATE API - User email:', session?.user?.email);
+    
     if (!session?.user?.email) {
+      console.log('❌ CV UPDATE API - No valid session found');
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -140,27 +126,13 @@ export async function PUT(
     const body = await request.json();
     console.log('🔍 CV UPDATE API - Request body received');
     
-    // Extract user identifier from request and session
-    const userIdentifier = extractUserIdentifier(request, session);
-    
-    if (!userIdentifier.id || !userIdentifier.type) {
-      console.log('❌ CV UPDATE API - No valid user identifier found');
-      return NextResponse.json(
-        { success: false, error: 'User identification failed' },
-        { status: 401 }
-      );
-    }
-
     const cvId = toObjectId(id);
     
-    // Build query based on user identifier type
-    let query: Record<string, any> = { _id: cvId };
-    
-    if (userIdentifier.type === 'firebase') {
-      query.firebaseUid = userIdentifier.id;
-    } else {
-      query.userId = new mongoose.Types.ObjectId(userIdentifier.id);
-    }
+    // Build query using session user ID
+    const query: Record<string, any> = { 
+      _id: cvId,
+      userId: new mongoose.Types.ObjectId(session.user.id)
+    };
     
     console.log('🔍 CV UPDATE API - Query:', query);
     
@@ -219,7 +191,9 @@ export async function PUT(
 
     return NextResponse.json({
       success: true,
-      cv: updatedCV
+      data: {
+        cv: updatedCV
+      }
     });
 
   } catch (error: any) {

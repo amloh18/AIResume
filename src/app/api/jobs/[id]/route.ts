@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/database';
 import { JobApplication } from '@/models';
+import jwt from 'jsonwebtoken';
+import { extractUserIdentifier } from '@/lib/firebase-uid-utils';
 
 export async function GET(
   request: NextRequest,
@@ -9,13 +13,62 @@ export async function GET(
   try {
     await connectDB();
     
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-    const resolvedParams = await params;
+    let userId: string;
     
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+    // Check if this is an extension request (with JWT token)
+    const authHeader = request.headers.get('authorization');
+    
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      // Extension request with JWT token
+      const token = authHeader.substring(7);
+      
+      try {
+        const decoded = jwt.verify(token, process.env.NEXTAUTH_SECRET!) as any;
+        
+        if (decoded.type !== 'extension') {
+          console.log('❌ Invalid token type');
+          return NextResponse.json(
+            { success: false, error: 'Invalid token type' },
+            { status: 401 }
+          );
+        }
+        
+        userId = decoded.userId;
+        console.log('✅ Extension token verified for user:', userId);
+      } catch (error) {
+        console.log('❌ Invalid extension token:', error);
+        return NextResponse.json(
+          { success: false, error: 'Invalid token' },
+          { status: 401 }
+        );
+      }
+    } else {
+      // Web interface request with session
+      const session = await getServerSession(authOptions);
+      if (!session?.user?.email) {
+        console.log('❌ No valid session for web request');
+        return NextResponse.json(
+          { success: false, error: 'No authorization token provided' },
+          { status: 401 }
+        );
+      }
+      
+      // Extract user identifier from request and session
+      const userIdentifier = extractUserIdentifier(request, session);
+      
+      if (!userIdentifier.id || !userIdentifier.type) {
+        console.log('❌ No valid user identifier found');
+        return NextResponse.json(
+          { success: false, error: 'User identification failed' },
+          { status: 401 }
+        );
+      }
+      
+      userId = userIdentifier.id;
+      console.log('✅ Web session verified for user:', userId);
     }
+    
+    const resolvedParams = await params;
 
     const job = await JobApplication.findOne({
       _id: resolvedParams.id,
@@ -75,13 +128,62 @@ export async function PUT(
   try {
     await connectDB();
     
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-    const resolvedParams = await params;
+    let userId: string;
     
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+    // Check if this is an extension request (with JWT token)
+    const authHeader = request.headers.get('authorization');
+    
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      // Extension request with JWT token
+      const token = authHeader.substring(7);
+      
+      try {
+        const decoded = jwt.verify(token, process.env.NEXTAUTH_SECRET!) as any;
+        
+        if (decoded.type !== 'extension') {
+          console.log('❌ Invalid token type');
+          return NextResponse.json(
+            { success: false, error: 'Invalid token type' },
+            { status: 401 }
+          );
+        }
+        
+        userId = decoded.userId;
+        console.log('✅ Extension token verified for user:', userId);
+      } catch (error) {
+        console.log('❌ Invalid extension token:', error);
+        return NextResponse.json(
+          { success: false, error: 'Invalid token' },
+          { status: 401 }
+        );
+      }
+    } else {
+      // Web interface request with session
+      const session = await getServerSession(authOptions);
+      if (!session?.user?.email) {
+        console.log('❌ No valid session for web request');
+        return NextResponse.json(
+          { success: false, error: 'No authorization token provided' },
+          { status: 401 }
+        );
+      }
+      
+      // Extract user identifier from request and session
+      const userIdentifier = extractUserIdentifier(request, session);
+      
+      if (!userIdentifier.id || !userIdentifier.type) {
+        console.log('❌ No valid user identifier found');
+        return NextResponse.json(
+          { success: false, error: 'User identification failed' },
+          { status: 401 }
+        );
+      }
+      
+      userId = userIdentifier.id;
+      console.log('✅ Web session verified for user:', userId);
     }
+    
+    const resolvedParams = await params;
 
     const body = await request.json();
 
@@ -122,6 +224,40 @@ export async function PUT(
       }
     }
 
+    // Bidirectional sync: If job status changed to 'applied', mark associated journeys as completed
+    if (body.status === 'applied' && job.status === 'applied') {
+      try {
+        const { ApplicationJourney } = await import('@/models');
+        const now = new Date();
+        
+        // Find and update associated journeys
+        const updatedJourneys = await ApplicationJourney.updateMany(
+          { 
+            jobId: resolvedParams.id,
+            userId: userId,
+            status: { $ne: 'completed' } // Only update non-completed journeys
+          },
+          {
+            $set: {
+              status: 'completed',
+              completedAt: now,
+              applicationDate: now,
+              currentStep: 5,
+              'steps.4.status': 'completed',
+              'steps.4.completedAt': now
+            }
+          }
+        );
+
+        if (updatedJourneys.modifiedCount > 0) {
+          console.log(`✅ Bidirectional sync: Marked ${updatedJourneys.modifiedCount} journeys as completed for job ${resolvedParams.id}`);
+        }
+      } catch (error) {
+        console.error('Error in bidirectional sync:', error);
+        // Don't fail the job update if journey sync fails
+      }
+    }
+
     return NextResponse.json({ job });
   } catch (error) {
     console.error('Error updating job:', error);
@@ -139,13 +275,62 @@ export async function DELETE(
   try {
     await connectDB();
     
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-    const resolvedParams = await params;
+    let userId: string;
     
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+    // Check if this is an extension request (with JWT token)
+    const authHeader = request.headers.get('authorization');
+    
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      // Extension request with JWT token
+      const token = authHeader.substring(7);
+      
+      try {
+        const decoded = jwt.verify(token, process.env.NEXTAUTH_SECRET!) as any;
+        
+        if (decoded.type !== 'extension') {
+          console.log('❌ Invalid token type');
+          return NextResponse.json(
+            { success: false, error: 'Invalid token type' },
+            { status: 401 }
+          );
+        }
+        
+        userId = decoded.userId;
+        console.log('✅ Extension token verified for user:', userId);
+      } catch (error) {
+        console.log('❌ Invalid extension token:', error);
+        return NextResponse.json(
+          { success: false, error: 'Invalid token' },
+          { status: 401 }
+        );
+      }
+    } else {
+      // Web interface request with session
+      const session = await getServerSession(authOptions);
+      if (!session?.user?.email) {
+        console.log('❌ No valid session for web request');
+        return NextResponse.json(
+          { success: false, error: 'No authorization token provided' },
+          { status: 401 }
+        );
+      }
+      
+      // Extract user identifier from request and session
+      const userIdentifier = extractUserIdentifier(request, session);
+      
+      if (!userIdentifier.id || !userIdentifier.type) {
+        console.log('❌ No valid user identifier found');
+        return NextResponse.json(
+          { success: false, error: 'User identification failed' },
+          { status: 401 }
+        );
+      }
+      
+      userId = userIdentifier.id;
+      console.log('✅ Web session verified for user:', userId);
     }
+    
+    const resolvedParams = await params;
 
     const job = await JobApplication.findOneAndDelete({
       _id: resolvedParams.id,

@@ -185,20 +185,20 @@ export const defaultSectionBlueprints: ISectionBlueprint[] = [
 
 // Default professional template
 export const defaultProfessionalTemplate: Omit<ITemplate, '_id' | 'createdAt' | 'updatedAt'> = {
-  name: 'Modern Professional',
+  name: 'The Modern Professional',
   description: 'A clean, professional template perfect for any industry. Features a clear layout with emphasis on readability and ATS compatibility.',
   thumbnail: '/templates/modern-professional-thumb.png',
   category: 'cv',
   categories: ['Professional', 'Modern'],
   tier: 'free',
   globalStyles: {
-    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-    primaryColor: '#1f2937',
-    secondaryColor: '#4b5563',
+    fontFamily: 'Calibri, Arial, sans-serif',
+    primaryColor: '#000000',
+    secondaryColor: '#000000',
     backgroundColor: '#ffffff',
     fontSize: '11pt',
-    lineHeight: '1.5',
-    spacing: '20px',
+    lineHeight: '1.2',
+    spacing: '16px',
     borderRadius: '0px',
     boxShadow: 'none',
     customCSS: `
@@ -206,119 +206,176 @@ export const defaultProfessionalTemplate: Omit<ITemplate, '_id' | 'createdAt' | 
         max-width: 8.5in;
         margin: 0 auto;
         background: white;
-        box-shadow: 0 0 0 1px rgba(0,0,0,.1);
         min-height: 11in;
+        padding: 0.5in 0.5in;
       }
       
       .section-header {
-        font-weight: 600;
-        font-size: 14pt;
-        color: var(--primary-color);
-        margin-bottom: 12px;
-        border-bottom: 2px solid var(--primary-color);
-        padding-bottom: 4px;
+        font-weight: 700;
+        font-size: 12pt;
+        color: #000000;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 4px;
+        border-bottom: 1px solid #000000;
+        padding-bottom: 2px;
       }
       
       .section-content {
-        margin-bottom: var(--spacing);
+        margin-bottom: 16px;
       }
       
       .experience-item, .education-item, .project-item {
-        margin-bottom: 16px;
+        margin-bottom: 18px;
         page-break-inside: avoid;
       }
       
       .item-header {
         display: flex;
         justify-content: space-between;
-        align-items: flex-start;
-        margin-bottom: 4px;
+        align-items: baseline;
+        margin-bottom: 6px;
       }
       
       .item-title {
-        font-weight: 600;
-        font-size: 12pt;
-        color: var(--primary-color);
+        font-weight: 700;
+        font-size: 11pt;
+        color: #000000;
+        flex: 1;
       }
       
       .item-subtitle {
         font-size: 11pt;
-        color: var(--secondary-color);
-        font-style: italic;
+        color: #000000;
+        font-weight: 400;
       }
       
       .item-date {
-        font-size: 10pt;
-        color: var(--secondary-color);
+        font-size: 11pt;
+        font-weight: 700;
+        color: #000000;
         white-space: nowrap;
+        text-align: right;
+        margin-left: 16px;
       }
       
       .item-description {
-        margin-top: 6px;
-        line-height: var(--line-height);
+        margin-top: 4px;
+        line-height: 1.2;
+        text-align: justify;
       }
       
       .highlight-list {
-        margin: 8px 0;
-        padding-left: 16px;
+        margin: 4px 0;
+        padding-left: 20px;
+        list-style-type: disc;
       }
       
       .highlight-list li {
-        margin-bottom: 4px;
-        line-height: var(--line-height);
+        margin-bottom: 3px;
+        line-height: 1.2;
+        font-size: 11pt;
+        color: #000000;
       }
       
       .skills-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 12px;
+        display: block;
       }
       
       .skill-category {
-        margin-bottom: 8px;
+        margin-bottom: 6px;
+        line-height: 1.2;
       }
       
       .skill-category-title {
-        font-weight: 600;
+        font-weight: 700;
         font-size: 11pt;
-        color: var(--primary-color);
-        margin-bottom: 4px;
+        color: #000000;
+        display: inline;
+        margin-right: 6px;
       }
       
       .skill-tags {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
+        display: inline;
       }
       
       .skill-tag {
-        background: rgba(var(--primary-color-rgb), 0.1);
-        color: var(--primary-color);
-        padding: 2px 8px;
-        border-radius: 12px;
-        font-size: 10pt;
-        border: 1px solid rgba(var(--primary-color-rgb), 0.2);
+        display: inline;
+        font-size: 11pt;
+        color: #000000;
+        font-weight: 400;
+      }
+      
+      .skill-tag:not(:last-child)::after {
+        content: ', ';
       }
       
       .contact-info {
         display: flex;
         flex-wrap: wrap;
-        gap: 16px;
-        margin-top: 8px;
+        gap: 0;
+        margin-top: 4px;
+        margin-bottom: 12px;
         font-size: 10pt;
-        color: var(--secondary-color);
+        color: #000000;
       }
       
       .contact-item {
-        display: flex;
+        display: inline-flex;
         align-items: center;
         gap: 4px;
       }
       
+      .contact-item:not(:last-child)::after {
+        content: ' / ';
+        margin: 0 6px;
+      }
+      
       .personal-summary {
-        margin: 12px 0;
-        line-height: var(--line-height);
+        margin: 8px 0 12px 0;
+        line-height: 1.5;
         text-align: justify;
+        font-size: 11pt;
+      }
+      
+      .personal-summary p {
+        text-align: justify;
+      }
+      
+      .item-summary, .item-description, .project-description, .education-description {
+        text-align: justify;
+      }
+      
+      .item-summary p, .item-description p, .project-description p, .education-description p {
+        text-align: justify;
+      }
+      
+      /* ATS-Friendly Professional Styling */
+      .person-name {
+        font-size: 16pt !important;
+        font-weight: 700 !important;
+        color: #000000 !important;
+        margin: 0 0 4px 0 !important;
+        line-height: 1.2 !important;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+      
+      .person-title {
+        font-size: 11pt !important;
+        font-weight: 400 !important;
+        color: #000000 !important;
+        margin: 0 0 8px 0 !important;
+        font-style: normal !important;
+      }
+      
+      .company-name, .institution-name {
+        font-weight: 400 !important;
+        font-style: normal !important;
+      }
+      
+      .education-item .item-header {
+        margin-bottom: 4px;
       }
       
       @media print {
@@ -326,11 +383,38 @@ export const defaultProfessionalTemplate: Omit<ITemplate, '_id' | 'createdAt' | 
           box-shadow: none;
           margin: 0;
           max-width: none;
+          padding: 1in;
         }
         
         .section-content {
           page-break-inside: avoid;
         }
+        
+        .experience-item, .education-item, .project-item {
+          page-break-inside: avoid;
+          break-inside: avoid;
+        }
+        
+        .section-header {
+          page-break-after: avoid;
+          break-after: avoid;
+        }
+        
+        body {
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+      }
+      
+      /* General page break rules */
+      .experience-item, .education-item, .project-item {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      
+      .section-header {
+        break-after: avoid;
+        page-break-after: avoid;
       }
     `
   },

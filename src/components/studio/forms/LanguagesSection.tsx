@@ -51,12 +51,8 @@ const LanguagesSection: React.FC<LanguagesSectionProps> = ({
   ];
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-          <Globe className="w-5 h-5 text-blue-500" />
-          Languages
-        </h3>
+    <div className="space-y-4 p-4">
+      <div className="flex items-center justify-end">
         <motion.button
           onClick={addLanguage}
           className="flex items-center gap-2 px-3 py-2 bg-lime-500 hover:bg-lime-600 text-white rounded-lg transition-colors"
@@ -102,6 +98,9 @@ const LanguagesSection: React.FC<LanguagesSectionProps> = ({
                   onChange={(value) => updateLanguage(index, 'language', value)}
                   placeholder="e.g., Spanish, French, Mandarin"
                   showFullToolbar={false}
+                  showFormattingHelp={false}
+                  showStatistics={false}
+                  showPreview={false}
                 />
 
                 <div>

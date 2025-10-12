@@ -28,7 +28,7 @@ const ChromeExtension = () => {
           </h2>
           <p className="text-xl text-gray-300 max-w-3xl mx-auto">
             Our Chrome extension makes job hunting effortless. Save jobs from LinkedIn, Indeed, 
-            and 15+ other job sites directly to your CVCircle dashboard with just one click.
+            and 15+ other job sites directly to your <span className="text-lime-400">CV</span><span className="text-gray-300">Circle.io</span> dashboard with just one click.
           </p>
         </motion.div>
 
@@ -74,7 +74,7 @@ const ChromeExtension = () => {
                 </div>
                 <div>
                   <h3 className="text-xl font-semibold text-white mb-2">Instant Sync</h3>
-                  <p className="text-gray-300">Saved jobs appear immediately in your CVCircle dashboard for easy tracking and management.</p>
+                  <p className="text-gray-300">Saved jobs appear immediately in your <span className="text-lime-400">CV</span><span className="text-gray-300">Circle.io</span> dashboard for easy tracking and management.</p>
                 </div>
               </div>
             </div>
@@ -197,7 +197,7 @@ const ChromeExtension = () => {
               <div className="bg-white rounded-lg p-4 shadow-lg">
                 <div className="flex items-center space-x-3 mb-3">
                   <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded"></div>
-                  <span className="text-sm font-semibold text-gray-800">CVCircle Job Saver</span>
+                  <span className="text-sm font-semibold text-gray-800"><span className="text-lime-600">CV</span><span className="text-gray-800">Circle.io</span> Job Saver</span>
                 </div>
                 <div className="space-y-2">
                   <div className="h-2 bg-gray-200 rounded"></div>
