@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CVCircle Extension Test Page</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            background: #f8f9fa;
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .test-section h3 {
+            color: #84cc16;
+            margin-top: 0;
+        }
+        .status {
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-weight: 500;
+            margin: 10px 0;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        button {
+            background: #84cc16;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #65a30d;
+        }
+        .code {
+            background: #f1f3f4;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 CVCircle Extension Test Page</h1>
+    
+    <div class="test-section">
+        <h3>📋 Extension Status Check</h3>
+        <div id="extension-status" class="status warning">Checking extension status...</div>
+        <button onclick="checkExtensionStatus()">Check Extension Status</button>
+    </div>
+    
+    <div class="test-section">
+        <h3>🍪 Cookie Test</h3>
+        <div id="cookie-status" class="status warning">Testing cookie access...</div>
+        <button onclick="testCookies()">Test Cookie Access</button>
+    </div>
+    
+    <div class="test-section">
+        <h3>🔐 Session Test</h3>
+        <div id="session-status" class="status warning">Testing session...</div>
+        <button onclick="testSession()">Test Session</button>
+    </div>
+    
+    <div class="test-section">
+        <h3>🌍 Environment Test</h3>
+        <div id="environment-status" class="status warning">Testing environment...</div>
+        <button onclick="testEnvironment()">Test Environment</button>
+    </div>
+    
+    <div class="test-section">
+        <h3>📊 Debug Information</h3>
+        <div id="debug-info" class="code">Click "Run Debug" to see detailed information</div>
+        <button onclick="runDebug()">Run Debug</button>
+        <button onclick="clearDebug()">Clear Debug</button>
+    </div>
+    
+    <div class="test-section">
+        <h3>📝 Instructions</h3>
+        <ol>
+            <li>Make sure the CVCircle extension is installed and enabled in Chrome</li>
+            <li>Click "Check Extension Status" to verify the extension is loaded</li>
+            <li>Use the debug button in the extension popup for more detailed information</li>
+            <li>If the extension is stuck on loading, check the browser console for errors</li>
+            <li>Try refreshing this page and testing again</li>
+        </ol>
+    </div>
+
+    <script>
+        // Test extension status
+        function checkExtensionStatus() {
+            const statusDiv = document.getElementById('extension-status');
+            
+            try {
+                // Check if chrome extension APIs are available
+                if (typeof chrome !== 'undefined' && chrome.runtime) {
+                    statusDiv.textContent = '✅ Extension APIs available';
+                    statusDiv.className = 'status success';
+                } else {
+                    statusDiv.textContent = '❌ Extension APIs not available';
+                    statusDiv.className = 'status error';
+                }
+            } catch (error) {
+                statusDiv.textContent = `❌ Error: ${error.message}`;
+                statusDiv.className = 'status error';
+            }
+        }
+        
+        // Test cookie access
+        async function testCookies() {
+            const statusDiv = document.getElementById('cookie-status');
+            statusDiv.textContent = 'Testing cookie access...';
+            statusDiv.className = 'status warning';
+            
+            try {
+                const response = await chrome.runtime.sendMessage({ action: 'testCookies' });
+                if (response.success) {
+                    statusDiv.textContent = '✅ Cookie access working';
+                    statusDiv.className = 'status success';
+                } else {
+                    statusDiv.textContent = `❌ Cookie test failed: ${response.message || 'Unknown error'}`;
+                    statusDiv.className = 'status error';
+                }
+            } catch (error) {
+                statusDiv.textContent = `❌ Cookie test error: ${error.message}`;
+                statusDiv.className = 'status error';
+            }
+        }
+        
+        // Test session
+        async function testSession() {
+            const statusDiv = document.getElementById('session-status');
+            statusDiv.textContent = 'Testing session...';
+            statusDiv.className = 'status warning';
+            
+            try {
+                const response = await chrome.runtime.sendMessage({ action: 'getSession' });
+                if (response.success && response.isAuthenticated) {
+                    statusDiv.textContent = '✅ User authenticated';
+                    statusDiv.className = 'status success';
+                } else {
+                    statusDiv.textContent = `⚠️ Not authenticated: ${response.message || 'No session found'}`;
+                    statusDiv.className = 'status warning';
+                }
+            } catch (error) {
+                statusDiv.textContent = `❌ Session test error: ${error.message}`;
+                statusDiv.className = 'status error';
+            }
+        }
+        
+        // Test environment
+        async function testEnvironment() {
+            const statusDiv = document.getElementById('environment-status');
+            statusDiv.textContent = 'Testing environment...';
+            statusDiv.className = 'status warning';
+            
+            try {
+                const response = await chrome.runtime.sendMessage({ action: 'getEnvironment' });
+                if (response.success) {
+                    statusDiv.textContent = `✅ Environment detected: ${response.isDevelopment ? 'Development' : 'Production'} (${response.apiBaseUrl})`;
+                    statusDiv.className = 'status success';
+                } else {
+                    statusDiv.textContent = `❌ Environment test failed: ${response.message || 'Unknown error'}`;
+                    statusDiv.className = 'status error';
+                }
+            } catch (error) {
+                statusDiv.textContent = `❌ Environment test error: ${error.message}`;
+                statusDiv.className = 'status error';
+            }
+        }
+        
+        // Run comprehensive debug
+        async function runDebug() {
+            const debugDiv = document.getElementById('debug-info');
+            debugDiv.textContent = 'Running debug tests...';
+            
+            const results = {
+                timestamp: new Date().toISOString(),
+                extensionAvailable: typeof chrome !== 'undefined' && !!chrome.runtime,
+                tests: {}
+            };
+            
+            // Test each component
+            try {
+                results.tests.cookies = await chrome.runtime.sendMessage({ action: 'testCookies' });
+            } catch (error) {
+                results.tests.cookies = { error: error.message };
+            }
+            
+            try {
+                results.tests.session = await chrome.runtime.sendMessage({ action: 'getSession' });
+            } catch (error) {
+                results.tests.session = { error: error.message };
+            }
+            
+            try {
+                results.tests.environment = await chrome.runtime.sendMessage({ action: 'getEnvironment' });
+            } catch (error) {
+                results.tests.environment = { error: error.message };
+            }
+            
+            debugDiv.textContent = JSON.stringify(results, null, 2);
+        }
+        
+        // Clear debug info
+        function clearDebug() {
+            document.getElementById('debug-info').textContent = 'Debug information cleared';
+        }
+        
+        // Auto-run initial checks
+        document.addEventListener('DOMContentLoaded', () => {
+            checkExtensionStatus();
+        });
+    </script>
+</body>
+</html>

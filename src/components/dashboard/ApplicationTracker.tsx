@@ -8,7 +8,7 @@ import {
   CheckCircle, Clock, AlertCircle, Target, FileText,
   ArrowRight, ChevronDown, ChevronUp, Star, Zap,
   TrendingUp, Users, Building2, Globe, Bookmark,
-  Archive, Copy, Share2, Download, Upload
+  Archive, Copy, Share2, Download, Upload, X
 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { authenticatedFetch } from '@/lib/utils/apiUtils';
@@ -17,6 +17,7 @@ import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
 import PageHeader from './PageHeader';
 import ApplicationJourneyModal from './ApplicationJourneyModal';
 import AddEditJobModal from '@/components/modals/AddEditJobModal';
+import JourneyTimelineCard from './JourneyTimelineCard';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
 import toast from 'react-hot-toast';
 import { useOptimizedDataFetching } from '@/lib/hooks/useOptimizedDataFetching';
@@ -273,11 +274,17 @@ const ApplicationTracker: React.FC = () => {
   };
 
   // Get journey status text
-  const getJourneyStatusText = (jobJourneys: CVJourney[]) => {
+  const getJourneyStatusText = (jobJourneys: CVJourney[], jobStatus?: string) => {
     if (jobJourneys.length === 0) return 'No CV Journeys Started';
     if (jobJourneys.length === 1) {
       const journey = jobJourneys[0];
-      if (journey.status === 'completed') return '1 Ready to Apply';
+      if (journey.status === 'completed') {
+        // Don't show "Ready to Apply" for Applied/Interview/Offer/Rejected stages
+        if (['applied', 'interview', 'offer', 'rejected'].includes(jobStatus || '')) {
+          return '1 CV Journey Completed';
+        }
+        return '1 Ready to Apply';
+      }
       if (journey.status === 'paused') return '1 CV Journey Paused';
       return '1 CV Journey Active';
     }
@@ -290,6 +297,10 @@ const ApplicationTracker: React.FC = () => {
     } else if (completedCount > 0 && pausedCount > 0) {
       return `${completedCount} Ready, ${pausedCount} Paused`;
     } else if (completedCount > 0) {
+      // Don't show "Ready to Apply" for Applied/Interview/Offer/Rejected stages
+      if (['applied', 'interview', 'offer', 'rejected'].includes(jobStatus || '')) {
+        return `${completedCount} CV Journeys Completed`;
+      }
       return `${completedCount} Ready to Apply`;
     } else if (pausedCount > 0 && activeCount > 0) {
       return `${activeCount} Active, ${pausedCount} Paused`;
@@ -297,6 +308,45 @@ const ApplicationTracker: React.FC = () => {
       return `${pausedCount} CV Journeys Paused`;
     } else {
       return `${activeCount} CV Journeys Active`;
+    }
+  };
+
+  // Calculate days since job status last changed
+  const getDaysSinceLastUpdate = (job: JobApplication) => {
+    const lastUpdate = new Date(job.updatedAt);
+    const now = new Date();
+    return Math.floor((now.getTime() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24));
+  };
+
+  // Determine if follow-up is needed based on stage and days
+  const isFollowUpNeeded = (job: JobApplication) => {
+    const days = getDaysSinceLastUpdate(job);
+    
+    switch(job.status) {
+      case 'applied':
+        return days >= 3 || days >= 7; // Show after 3 or 7 days
+      case 'interview':
+        return days >= 3 || days >= 7;
+      case 'offer':
+        return days >= 3 || days >= 7;
+      case 'rejected':
+        return false; // No follow-up for rejected
+      default:
+        return false;
+    }
+  };
+
+  // Get follow-up suggestion text
+  const getFollowUpSuggestion = (job: JobApplication, days: number) => {
+    switch(job.status) {
+      case 'applied':
+        return `It's been ${days} days since you applied. Consider sending a polite follow-up email to check on your application status.`;
+      case 'interview':
+        return `It's been ${days} days since your interview. Consider reaching out to thank them and inquire about next steps.`;
+      case 'offer':
+        return `It's been ${days} days since receiving the offer. Make sure to respond within their deadline.`;
+      default:
+        return '';
     }
   };
 
@@ -967,7 +1017,7 @@ const ApplicationTracker: React.FC = () => {
           <div key={stage.status} className="space-y-4">
             {/* Stage Header */}
             <div 
-              className={`p-3 rounded-xl border-2 border-dashed ${stage.color} min-h-[60px] flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity duration-200`}
+              className={`p-3 rounded-xl border-2 ${stage.status === 'created' ? 'border-solid' : 'border-dashed'} ${stage.color} min-h-[60px] flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity duration-200`}
               onClick={() => handleStageClick(stage.status)}
             >
               <div className="flex items-center justify-between w-full">
@@ -1011,8 +1061,8 @@ const ApplicationTracker: React.FC = () => {
               onDragOver={handleDragOver}
               onDrop={(e) => handleDrop(e, stage.status)}
             >
-              {/* Job Cards */}
-              <div className={zoomedStage ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : "space-y-3"}>
+              {/* Job Cards or Journey Cards for Created Stage */}
+              <div className={zoomedStage && stage.status === 'created' ? "space-y-4" : zoomedStage ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : "space-y-3"}>
               {loading ? (
                 // Show skeleton loading for job cards
                 Array.from({ length: 3 }).map((_, i) => (
@@ -1030,10 +1080,49 @@ const ApplicationTracker: React.FC = () => {
                     </div>
                   </div>
                 ))
+              ) : stage.status === 'created' && zoomedStage ? (
+                // Show journey cards for created stage when zoomed
+                jobsByStatus[stage.status as keyof typeof jobsByStatus].map((job) => {
+                  const jobJourneys = getJobJourneys(job.id);
+                  return jobJourneys.map((journey) => (
+                    <JourneyTimelineCard
+                      key={journey.id}
+                      journey={journey}
+                      onResume={(journeyId) => {
+                        // Handle resume journey
+                        console.log('Resume journey:', journeyId);
+                      }}
+                      onDownload={(type) => {
+                        // Handle download
+                        console.log('Download:', type);
+                      }}
+                      onDelete={(journeyId) => {
+                        // Handle delete journey
+                        console.log('Delete journey:', journeyId);
+                      }}
+                      onRefresh={() => {
+                        // Handle refresh
+                        loadData();
+                      }}
+                      onUpdateJourney={(journeyId, updates) => {
+                        // Handle journey update
+                        console.log('Update journey:', journeyId, updates);
+                        // Update local state
+                        setJourneys(prev => prev.map(j => 
+                          j.id === journeyId ? { ...j, ...updates } : j
+                        ));
+                      }}
+                      onShowDeleteConfirm={(journeyId) => {
+                        // Handle show delete confirmation
+                        console.log('Show delete confirm:', journeyId);
+                      }}
+                    />
+                  ));
+                }).flat()
               ) : (
                 jobsByStatus[stage.status as keyof typeof jobsByStatus].map((job) => {
                 const jobJourneys = getJobJourneys(job.id);
-                const journeyStatusText = getJourneyStatusText(jobJourneys);
+                const journeyStatusText = getJourneyStatusText(jobJourneys, job.status);
                 const avgProgress = jobJourneys.length > 0 
                   ? Math.round(jobJourneys.reduce((sum, journey) => sum + getJourneyProgress(journey), 0) / jobJourneys.length)
                   : 0;
@@ -1081,27 +1170,64 @@ const ApplicationTracker: React.FC = () => {
                              </div>
                            </div>
                            <div className="flex items-center gap-2">
-                             {/* Journey completion indicator */}
-                             {jobJourneys.length > 0 && (() => {
-                               const completedJourneys = jobJourneys.filter(j => j.status === 'completed');
-                               const hasCompleted = completedJourneys.length > 0;
-                               const allCompleted = completedJourneys.length === jobJourneys.length;
-                               
-                               return (
-                                 <div className="flex items-center gap-1">
-                                   {hasCompleted && (
-                                     <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs ${
-                                       allCompleted 
-                                         ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' 
-                                         : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
-                                     }`}>
-                                       <CheckCircle size={10} />
-                                       <span>{completedJourneys.length}/{jobJourneys.length}</span>
+                             {/* Show CV/CL/ATS indicators for Applied, Interview, Offer, Rejected stages */}
+                             {['applied', 'interview', 'offer', 'rejected'].includes(stage.status) && jobJourneys.length > 0 ? (
+                               (() => {
+                                 const primaryJourney = jobJourneys[0];
+                                 const hasCV = !!primaryJourney.cvId;
+                                 const hasCoverLetter = !!primaryJourney.coverLetterId;
+                                 const atsScore = primaryJourney.atsScore;
+                                 
+                                 return (
+                                   <div className="flex items-center gap-2">
+                                     {/* CV Status */}
+                                     <div className={`flex items-center gap-1 ${hasCV ? 'text-green-500' : 'text-red-500'}`}>
+                                       {hasCV ? <CheckCircle size={14} /> : <X size={14} />}
+                                       <span className="text-xs">CV</span>
                                      </div>
-                                   )}
-                                 </div>
-                               );
-                             })()}
+                                     
+                                     {/* Cover Letter Status */}
+                                     <div className={`flex items-center gap-1 ${hasCoverLetter ? 'text-green-500' : 'text-red-500'}`}>
+                                       {hasCoverLetter ? <CheckCircle size={14} /> : <X size={14} />}
+                                       <span className="text-xs">CL</span>
+                                     </div>
+                                     
+                                     {/* ATS Score */}
+                                     {atsScore !== null && (
+                                       <div className={`flex items-center gap-1 text-xs font-medium ${
+                                         atsScore >= 85 ? 'text-green-500' :
+                                         atsScore >= 70 ? 'text-blue-500' :
+                                         'text-red-500'
+                                       }`}>
+                                         <span>ATS {atsScore}%</span>
+                                       </div>
+                                     )}
+                                   </div>
+                                 );
+                               })()
+                             ) : (
+                               /* Show journey completion indicator for other stages */
+                               jobJourneys.length > 0 && (() => {
+                                 const completedJourneys = jobJourneys.filter(j => j.status === 'completed');
+                                 const hasCompleted = completedJourneys.length > 0;
+                                 const allCompleted = completedJourneys.length === jobJourneys.length;
+                                 
+                                 return (
+                                   <div className="flex items-center gap-1">
+                                     {hasCompleted && (
+                                       <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs ${
+                                         allCompleted 
+                                           ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' 
+                                           : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+                                       }`}>
+                                         <CheckCircle size={10} />
+                                         <span>{completedJourneys.length}/{jobJourneys.length}</span>
+                                       </div>
+                                     )}
+                                   </div>
+                                 );
+                               })()
+                             )}
                              
                              {/* Hover indicator */}
                              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
@@ -1110,8 +1236,8 @@ const ApplicationTracker: React.FC = () => {
                            </div>
                          </div>
                          
-                         {/* Progress Bar - Only show if job has journeys */}
-                         {jobJourneys.length > 0 && (
+                         {/* Progress Bar - Only show for non-Applied/Interview/Offer/Rejected stages */}
+                         {jobJourneys.length > 0 && !['applied', 'interview', 'offer', 'rejected'].includes(stage.status) && (
                            <div className="w-full bg-white/30 dark:bg-gray-700/50 rounded-full h-2 overflow-hidden group-hover:h-0 group-hover:opacity-0 transition-all duration-300">
                              <motion.div 
                                className={`h-2 rounded-full transition-all duration-500 ${
@@ -1131,6 +1257,31 @@ const ApplicationTracker: React.FC = () => {
                       {/* Expanded View - Visible on Hover */}
                       <div className="max-h-0 group-hover:max-h-96 overflow-hidden transition-all duration-300 ease-out">
                         <div className="mt-4 space-y-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-100">
+                        
+
+                        {/* Follow-up notification */}
+                        {['applied', 'interview', 'offer', 'rejected'].includes(stage.status) && isFollowUpNeeded(job) && (
+                          <div className="mb-3 p-2 bg-orange-100 dark:bg-orange-900/30 border border-orange-300 dark:border-orange-700 rounded-lg">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <AlertCircle size={14} className="text-orange-600" />
+                                <span className="text-xs text-orange-700 dark:text-orange-400">
+                                  Follow-up recommended - {getDaysSinceLastUpdate(job)} days since {job.status}
+                                </span>
+                              </div>
+                              <button 
+                                className="px-2 py-1 bg-orange-500 hover:bg-orange-600 text-white text-xs rounded"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleJobClick(job);
+                                }}
+                              >
+                                Take Action
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
                         {/* Key Info */}
                         <div className="space-y-2">
                           {job.location && (

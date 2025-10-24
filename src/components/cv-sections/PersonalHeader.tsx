@@ -32,7 +32,7 @@ const PersonalHeader: React.FC<PersonalHeaderProps> = ({
   };
 
   // Check if this template uses the header-section layout (like The Executive Accent)
-  const usesHeaderSection = template.globalStyles.customCSS?.includes('.header-section');
+  const usesHeaderSection = template?.globalStyles?.customCSS?.includes('.header-section');
 
   // If template uses header-section layout with image on right
   if (usesHeaderSection) {
@@ -100,7 +100,7 @@ const PersonalHeader: React.FC<PersonalHeaderProps> = ({
         {/* Professional summary is rendered separately as a section in this layout */}
         <style jsx>{`
           .personal-header {
-            margin-bottom: ${template.globalStyles.spacing};
+            margin-bottom: ${template?.globalStyles?.spacing || '16px'};
           }
         `}</style>
       </header>
@@ -115,7 +115,7 @@ const PersonalHeader: React.FC<PersonalHeaderProps> = ({
         <h1 className="person-name" style={{ 
           fontSize: 'clamp(20pt, 5vw, 24pt)',
           fontWeight: '700',
-          color: template.globalStyles.primaryColor,
+          color: template?.globalStyles?.primaryColor || '#1f2937',
           margin: '0 0 4px 0',
           lineHeight: '1.2'
         }}>
@@ -126,7 +126,7 @@ const PersonalHeader: React.FC<PersonalHeaderProps> = ({
           <h2 className="person-title" style={{
             fontSize: '14pt',
             fontWeight: '400',
-            color: template.globalStyles.secondaryColor,
+            color: template?.globalStyles?.secondaryColor || '#6b7280',
             margin: '0 0 12px 0',
             fontStyle: 'italic'
           }}>
@@ -190,9 +190,9 @@ const PersonalHeader: React.FC<PersonalHeaderProps> = ({
           <div 
             style={{
               margin: '0',
-              fontSize: template.globalStyles.fontSize,
-              lineHeight: template.globalStyles.lineHeight,
-              color: template.globalStyles.primaryColor,
+              fontSize: template?.globalStyles?.fontSize || '14px',
+              lineHeight: template?.globalStyles?.lineHeight || '1.6',
+              color: template?.globalStyles?.primaryColor || '#1f2937',
               textAlign: 'justify'
             }}
             dangerouslySetInnerHTML={{ __html: parseFormattedText(stripHtmlTags(summary)) }}
@@ -202,7 +202,7 @@ const PersonalHeader: React.FC<PersonalHeaderProps> = ({
 
       <style jsx>{`
         .personal-header {
-          margin-bottom: ${template.globalStyles.spacing};
+          margin-bottom: ${template?.globalStyles?.spacing || '16px'};
           padding-bottom: 0;
           border-bottom: none;
         }
@@ -213,7 +213,7 @@ const PersonalHeader: React.FC<PersonalHeaderProps> = ({
           gap: 0;
           margin: 4px 0 12px 0;
           font-size: 10pt;
-          color: ${template.globalStyles.primaryColor};
+          color: ${template?.globalStyles?.primaryColor || '#1f2937'};
         }
         
         .contact-item {
@@ -225,7 +225,7 @@ const PersonalHeader: React.FC<PersonalHeaderProps> = ({
         .contact-item:not(:last-child)::after {
           content: ' / ';
           margin: 0 6px;
-          color: ${template.globalStyles.primaryColor};
+          color: ${template?.globalStyles?.primaryColor || '#1f2937'};
         }
         
         .contact-link {

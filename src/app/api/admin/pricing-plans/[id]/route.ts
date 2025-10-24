@@ -6,7 +6,7 @@ import { getAdminPricingPlan, getAdminSubscription } from '@/models/admin-models
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Check authentication and admin role
@@ -17,8 +17,9 @@ export async function GET(
 
     await connectDB();
 
+    const { id } = await params;
     const PricingPlan = await getAdminPricingPlan();
-    const plan = await PricingPlan.findById(params.id).lean();
+    const plan = await PricingPlan.findById(id).lean();
     
     if (!plan) {
       return NextResponse.json({ error: 'Pricing plan not found' }, { status: 404 });
@@ -36,7 +37,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Check authentication and admin role
@@ -47,6 +48,7 @@ export async function PUT(
 
     await connectDB();
 
+    const { id } = await params;
     const body = await request.json();
     const {
       name,
@@ -69,7 +71,7 @@ export async function PUT(
     }
 
     const PricingPlan = await getAdminPricingPlan();
-    const plan = await PricingPlan.findById(params.id);
+    const plan = await PricingPlan.findById(id);
     
     if (!plan) {
       return NextResponse.json({ error: 'Pricing plan not found' }, { status: 404 });
@@ -118,7 +120,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Check authentication and admin role
@@ -129,8 +131,9 @@ export async function DELETE(
 
     await connectDB();
 
+    const { id } = await params;
     const PricingPlan = await getAdminPricingPlan();
-    const plan = await PricingPlan.findById(params.id);
+    const plan = await PricingPlan.findById(id);
     
     if (!plan) {
       return NextResponse.json({ error: 'Pricing plan not found' }, { status: 404 });
@@ -139,7 +142,7 @@ export async function DELETE(
     // Check if plan is being used by any active subscriptions
     const Subscription = await getAdminSubscription();
     const activeSubscriptions = await Subscription.countDocuments({
-      planId: params.id,
+      planId: id,
       status: 'active'
     });
 
@@ -150,7 +153,7 @@ export async function DELETE(
       );
     }
 
-    await PricingPlan.findByIdAndDelete(params.id);
+    await PricingPlan.findByIdAndDelete(id);
 
     return NextResponse.json({ message: 'Pricing plan deleted successfully' });
   } catch (error) {

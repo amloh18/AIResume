@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 // Removed - using Clerk now
 import { connectToDatabase } from '@/lib/database';
-import PricingPlan from '@/models/PricingPlan';
+import { getAdminPricingPlan } from '@/models/admin-models';
 import { Types } from 'mongoose';
 
 export async function GET(
@@ -20,6 +20,8 @@ export async function GET(
     const { planId } = params;
 
     await connectToDatabase();
+
+    const PricingPlan = await getAdminPricingPlan();
 
     // Find plan by ID or key
     let plan;
@@ -82,6 +84,8 @@ export async function PUT(
       return NextResponse.json({ error: 'At least one feature is required' }, { status: 400 });
     }
 
+    const PricingPlan = await getAdminPricingPlan();
+
     // Update the plan by ID or key
     let updatedPlan;
     if (Types.ObjectId.isValid(planId)) {
@@ -135,6 +139,8 @@ export async function PATCH(
 
     await connectToDatabase();
 
+    const PricingPlan = await getAdminPricingPlan();
+
     // Update the plan by ID or key
     let updatedPlan;
     if (Types.ObjectId.isValid(planId)) {
@@ -180,6 +186,8 @@ export async function DELETE(
     const { planId } = params;
 
     await connectToDatabase();
+
+    const PricingPlan = await getAdminPricingPlan();
 
     // Delete the plan by ID or key
     let deletedPlan;

@@ -492,38 +492,6 @@ const AddEditJobModal: React.FC<AddEditJobModalProps> = ({
               </div>
             </div>
 
-            {/* Quick Job Import Section */}
-            <div className="mb-6 p-4 bg-gradient-to-r from-lime-500/10 to-emerald-500/10 rounded-xl border border-lime-500/20">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="p-1 bg-lime-500/20 rounded-lg">
-                  <Sparkles size={14} className="text-lime-400" />
-                </div>
-                <h3 className="text-sm font-semibold text-white">Quick Job Import</h3>
-                <div className="px-2 py-0.5 bg-lime-500/20 text-lime-300 text-xs rounded-lg border border-lime-500/30">
-                  AI
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <input
-                  id="jobUrlParser"
-                  type="url"
-                  placeholder="Paste job posting URL..."
-                  className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
-                />
-                <motion.button
-                  onClick={handleParseJobUrl}
-                  className="px-4 py-2 bg-gradient-to-r from-lime-500 to-lime-600 text-black font-semibold rounded-lg text-sm hover:from-lime-400 hover:to-lime-500 transition-all shadow-lg"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <div className="flex items-center gap-1.5">
-                    <Zap size={14} />
-                    Parse
-                  </div>
-                </motion.button>
-              </div>
-            </div>
-
             {/* Form Sections */}
             <div className="space-y-4">
               {/* Basic Information */}

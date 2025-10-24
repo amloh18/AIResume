@@ -85,7 +85,7 @@ const TermsOfService: React.FC = () => {
               By accessing and using CVCircle.io ("Service"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.
             </p>
             <p className="text-white/80 leading-relaxed">
-              These Terms of Service ("Terms") govern your use of our website and services operated by CVCircle.io ("Company," "we," "us," or "our").
+              These Terms of Service ("Terms") govern your use of our AI-powered CV creation and job application management platform operated by CVCircle.io ("Company," "we," "us," or "our").
             </p>
           </div>
 
@@ -99,12 +99,15 @@ const TermsOfService: React.FC = () => {
               CVCircle.io provides a comprehensive CV creation and management platform that includes:
             </p>
             <ul className="list-disc list-inside space-y-2 text-white/80">
-              <li>AI-powered CV creation and optimization</li>
-              <li>Professional CV templates and designs</li>
-              <li>Cover letter creation and management</li>
-              <li>Job application tracking and analytics</li>
-              <li>ATS (Applicant Tracking System) optimization</li>
-              <li>Career insights and recommendations</li>
+              <li>AI-powered CV creation and optimization using OpenAI technology</li>
+              <li>Professional CV templates with real-time editing capabilities</li>
+              <li>Cover letter creation and management with AI assistance</li>
+              <li>Job application tracking and career journey analytics</li>
+              <li>ATS (Applicant Tracking System) optimization and scoring</li>
+              <li>Email verification and user authentication systems</li>
+              <li>Multi-format CV export (PDF, Word, Web)</li>
+              <li>Version control and CV revision tracking</li>
+              <li>Career insights and job matching recommendations</li>
             </ul>
           </div>
 

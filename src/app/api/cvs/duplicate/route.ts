@@ -212,20 +212,35 @@ export async function POST(request: NextRequest) {
     if (journeyId && jobId) {
       try {
         const { ApplicationJourney } = await import('@/models');
-        await ApplicationJourney.findOneAndUpdate(
-          { 
-            _id: toObjectId(journeyId),
-            userId: toObjectId(userId),
-            jobId: toObjectId(jobId)
-          },
+        
+        // Build query based on user type
+        let journeyQuery: any = { 
+          _id: toObjectId(journeyId),
+          jobId: toObjectId(jobId)
+        };
+        
+        if (isFirebaseUser) {
+          journeyQuery.firebaseUid = userId;
+        } else {
+          journeyQuery.userId = toObjectId(userId);
+        }
+        
+        const updatedJourney = await ApplicationJourney.findOneAndUpdate(
+          journeyQuery,
           { 
             cvId: savedCV._id,
-            currentStep: 2, // CV step completed
+            currentStep: Math.max(2, await ApplicationJourney.findById(toObjectId(journeyId)).then(j => j?.currentStep || 2)),
             status: 'in-progress',
             'metadata.updatedAt': new Date()
-          }
+          },
+          { new: true }
         );
-        console.log('✅ CV Duplicate API - Journey updated with new CV');
+        
+        if (updatedJourney) {
+          console.log('✅ CV Duplicate API - Journey updated with new CV:', updatedJourney._id);
+        } else {
+          console.warn('⚠️ CV Duplicate API - Journey not found for update');
+        }
       } catch (error) {
         console.error('⚠️ CV Duplicate API - Failed to update journey:', error);
         // Don't fail the request if journey update fails

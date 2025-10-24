@@ -187,6 +187,21 @@ export async function PUT(
 
     const body = await request.json();
 
+    // Get the current job to check for status changes
+    const currentJob = await JobApplication.findById(resolvedParams.id);
+    
+    // Track status changes
+    if (body.status && body.status !== currentJob?.status) {
+      if (!currentJob.statusHistory) {
+        currentJob.statusHistory = [];
+      }
+      currentJob.statusHistory.push({
+        status: body.status,
+        changedAt: new Date(),
+        previousStatus: currentJob.status
+      });
+    }
+
     const job = await JobApplication.findOneAndUpdate(
       {
         _id: resolvedParams.id,

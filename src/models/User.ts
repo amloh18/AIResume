@@ -37,6 +37,23 @@ export interface IUser extends Document {
     deviceFingerprint?: string;
   };
   
+  // Grace period for promotional legacy users
+  gracePeriod?: {
+    isActive: boolean;
+    reason: string; // e.g., "promotional_legacy", "admin_granted"
+    expiresAt: Date;
+    originalPlan: string;
+    allowedResources: {
+      maxCVs: number;
+      maxCoverLetters: number;
+      maxJobs: number;
+      maxJourneys: number;
+      maxExports: number;
+    };
+    grantedBy?: string; // Admin user ID who granted the grace period
+    grantedAt: Date;
+  };
+  
   // Core Profile Information
   phone?: string;
   location?: string;
@@ -212,6 +229,59 @@ const userSchema = new Schema<IUser>({
     deviceFingerprint: {
       type: String,
       trim: true
+    }
+  },
+  gracePeriod: {
+    isActive: {
+      type: Boolean,
+      default: false
+    },
+    reason: {
+      type: String,
+      trim: true,
+      maxlength: [100, 'Grace period reason cannot exceed 100 characters']
+    },
+    expiresAt: {
+      type: Date
+    },
+    originalPlan: {
+      type: String,
+      trim: true
+    },
+    allowedResources: {
+      maxCVs: {
+        type: Number,
+        default: 0,
+        min: 0
+      },
+      maxCoverLetters: {
+        type: Number,
+        default: 0,
+        min: 0
+      },
+      maxJobs: {
+        type: Number,
+        default: 0,
+        min: 0
+      },
+      maxJourneys: {
+        type: Number,
+        default: 0,
+        min: 0
+      },
+      maxExports: {
+        type: Number,
+        default: 0,
+        min: 0
+      }
+    },
+    grantedBy: {
+      type: String,
+      trim: true
+    },
+    grantedAt: {
+      type: Date,
+      default: Date.now
     }
   },
   phone: {

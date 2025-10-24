@@ -6,10 +6,18 @@ import User from '@/models/User'
 
 export const authOptionsMinimal: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
+  debug: process.env.NODE_ENV === 'development',
   providers: [
     GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      authorization: {
+        params: {
+          prompt: "consent",
+          access_type: "offline",
+          response_type: "code"
+        }
+      }
     }),
     CredentialsProvider({
       name: 'credentials',
@@ -18,30 +26,41 @@ export const authOptionsMinimal: NextAuthOptions = {
         password: { label: 'Password', type: 'password' }
       },
       async authorize(credentials) {
+        console.log('🔍 Credentials authorize called with:', { email: credentials?.email });
+        
         if (!credentials?.email || !credentials?.password) {
+          console.log('❌ Missing credentials');
           return null;
         }
 
         try {
           await connectDB();
+          console.log('🔍 Database connected, searching for user:', credentials.email);
+          
           const user = await User.findOne({ email: credentials.email }).select('+password');
+          console.log('🔍 User found:', { found: !!user, hasPassword: !!user?.password });
 
           if (!user || !user.password) {
+            console.log('❌ User not found or no password set');
             return null;
           }
 
           const isPasswordValid = await user.comparePassword(credentials.password);
+          console.log('🔍 Password validation result:', isPasswordValid);
+          
           if (!isPasswordValid) {
+            console.log('❌ Invalid password');
             return null;
           }
 
+          console.log('✅ Credentials valid for user:', user.email);
           return {
             id: user._id.toString(),
             email: user.email,
             name: `${user.firstName} ${user.lastName}`,
           };
         } catch (error) {
-          console.error('Credentials authorization error:', error);
+          console.error('❌ Credentials authorization error:', error);
           return null;
         }
       }
@@ -52,8 +71,13 @@ export const authOptionsMinimal: NextAuthOptions = {
     error: '/auth/error',
   },
   callbacks: {
-    async signIn({ user, account }) {
-      console.log('🔍 SignIn callback:', { provider: account?.provider, email: user.email });
+    async signIn({ user, account, profile }) {
+      console.log('🔍 SignIn callback:', { 
+        provider: account?.provider, 
+        email: user.email,
+        account: account,
+        profile: profile
+      });
 
       // Handle user creation in database after successful OAuth
       if (account?.provider === 'google') {
@@ -89,6 +113,11 @@ export const authOptionsMinimal: NextAuthOptions = {
         }
       }
 
+      // For credentials provider, user.id should already be set
+      if (account?.provider === 'credentials') {
+        console.log('✅ Credentials sign-in successful for user:', user.email);
+      }
+
       return true;
     },
 
@@ -113,5 +142,44 @@ export const authOptionsMinimal: NextAuthOptions = {
   session: {
     strategy: 'jwt',
   },
+  cookies: {
+    sessionToken: {
+      name: process.env.NODE_ENV === 'production' 
+        ? '__Secure-next-auth.session-token' 
+        : 'next-auth.session-token',
+      options: {
+        httpOnly: true,
+        sameSite: 'none',
+        secure: process.env.NODE_ENV === 'production',
+        path: '/',
+        domain: process.env.NODE_ENV === 'production' ? '.cvcircle.io' : undefined,
+      },
+    },
+    callbackUrl: {
+      name: process.env.NODE_ENV === 'production' 
+        ? '__Secure-next-auth.callback-url' 
+        : 'next-auth.callback-url',
+      options: {
+        httpOnly: true,
+        sameSite: 'none',
+        secure: process.env.NODE_ENV === 'production',
+        path: '/',
+        domain: process.env.NODE_ENV === 'production' ? '.cvcircle.io' : undefined,
+      },
+    },
+    csrfToken: {
+      name: process.env.NODE_ENV === 'production' 
+        ? '__Secure-next-auth.csrf-token' 
+        : 'next-auth.csrf-token',
+      options: {
+        httpOnly: true,
+        sameSite: 'none',
+        secure: process.env.NODE_ENV === 'production',
+        path: '/',
+        domain: process.env.NODE_ENV === 'production' ? '.cvcircle.io' : undefined,
+      },
+    },
+  },
+  useSecureCookies: process.env.NODE_ENV === 'production',
   debug: true,
 }

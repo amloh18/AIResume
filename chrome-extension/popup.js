@@ -1,201 +1,229 @@
-// Popup script for CVCircle Job Saver Extension
-console.log('CVCircle Job Saver popup loaded');
+// CVCircle Job Tracker Extension - Simple Popup Script
+console.log('CVCircle Job Tracker popup loaded');
 
-// DOM elements
-const authSection = document.getElementById('auth-section');
-const userSection = document.getElementById('user-section');
-const jobSection = document.getElementById('job-section');
-const statusSection = document.getElementById('status-section');
-
-const authStatusText = document.getElementById('auth-status-text');
-const authStatusDot = document.querySelector('.status-dot');
-const loginBtn = document.getElementById('login-btn');
-const logoutBtn = document.getElementById('logout-btn');
-
-const userName = document.getElementById('user-name');
-const userEmail = document.getElementById('user-email');
-const dashboardBtn = document.getElementById('dashboard-btn');
-
-const jobTitle = document.getElementById('job-title');
-const jobCompany = document.getElementById('job-company');
-const jobLocation = document.getElementById('job-location');
-const jobSource = document.getElementById('job-source');
-const saveJobBtn = document.getElementById('save-job-btn');
-
-const statusText = document.getElementById('status-text');
-
-// State
+// State management
 let currentUser = null;
 let currentJob = null;
-let isAuthenticated = false;
+let kpis = {};
+
+// DOM elements
+const sections = {
+  loading: document.getElementById('loading-section'),
+  login: document.getElementById('login-section'),
+  dashboard: document.getElementById('dashboard-section')
+};
+
+const elements = {
+  // Login
+  loginBtn: document.getElementById('login-btn'),
+  debugBtn: document.getElementById('debug-btn'),
+  refreshBtn: document.getElementById('refresh-btn'),
+  
+  // User info
+  userName: document.getElementById('user-name'),
+  userEmail: document.getElementById('user-email'),
+  userAvatarImg: document.getElementById('user-avatar-img'),
+  userAvatarInitials: document.getElementById('user-avatar-initials'),
+  
+  // Stats
+  totalJobs: document.getElementById('total-jobs'),
+  appliedJobs: document.getElementById('applied-jobs'),
+  interviewJobs: document.getElementById('interview-jobs'),
+  
+  // Current job
+  currentJobCard: document.getElementById('current-job-card'),
+  noJobState: document.getElementById('no-job-state'),
+  jobTitle: document.getElementById('job-title'),
+  jobCompany: document.getElementById('job-company'),
+  jobLocation: document.getElementById('job-location'),
+  jobCompanyLogo: document.getElementById('job-company-logo'),
+  jobCompanyInitials: document.getElementById('job-company-initials'),
+  jobDescriptionText: document.getElementById('job-description-text'),
+  saveJobBtn: document.getElementById('save-job-btn'),
+  
+  // Footer
+  dashboardLink: document.getElementById('dashboard-link'),
+  helpLink: document.getElementById('help-link')
+};
 
 // Initialize popup
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('Initializing popup');
-  
-  // Set up event listeners
   setupEventListeners();
   
-  // Check authentication status
-  await checkAuthStatus();
+  // Add a fallback timeout to prevent infinite loading
+  const fallbackTimeout = setTimeout(() => {
+    console.log('⚠️ Fallback timeout reached, showing login');
+    showView('login');
+  }, 15000); // 15 second fallback
   
-  // Load current job data
-  await loadCurrentJob();
-  
-  // Update saved jobs count
-  await updateSavedJobsCount();
-  
-  // Show appropriate section
-  updateUI();
+  try {
+    await initializeApp();
+    clearTimeout(fallbackTimeout);
+    
+    // Start periodic session check if not authenticated
+    if (!currentUser) {
+      startPeriodicSessionCheck();
+    }
+  } catch (error) {
+    console.error('❌ Popup initialization failed:', error);
+    clearTimeout(fallbackTimeout);
+    showView('login');
+  }
 });
+
+// Periodic session check for when user logs in
+let sessionCheckInterval = null;
+
+function startPeriodicSessionCheck() {
+  if (sessionCheckInterval) {
+    clearInterval(sessionCheckInterval);
+  }
+  
+  console.log('🔄 Starting periodic session check...');
+  sessionCheckInterval = setInterval(async () => {
+    try {
+      console.log('🔍 Periodic session check...');
+      const sessionResponse = await chrome.runtime.sendMessage({ action: 'getSession' });
+      
+      if (sessionResponse && sessionResponse.success && sessionResponse.isAuthenticated) {
+        console.log('✅ Session detected, stopping periodic check');
+        clearInterval(sessionCheckInterval);
+        sessionCheckInterval = null;
+        
+        currentUser = sessionResponse.user;
+        await loadUserData();
+      }
+    } catch (error) {
+      console.log('⚠️ Periodic session check failed:', error);
+    }
+  }, 3000); // Check every 3 seconds
+}
 
 // Set up event listeners
 function setupEventListeners() {
-  // Auth buttons
-  loginBtn.addEventListener('click', handleLogin);
-  logoutBtn.addEventListener('click', handleLogout);
+  // Login
+  elements.loginBtn.addEventListener('click', handleLogin);
+  elements.debugBtn.addEventListener('click', handleDebug);
+  elements.refreshBtn.addEventListener('click', handleRefresh);
   
-  // User buttons
-  dashboardBtn.addEventListener('click', handleOpenDashboard);
-  
-  // Job buttons
-  saveJobBtn.addEventListener('click', handleSaveJob);
+  // Job saving
+  elements.saveJobBtn.addEventListener('click', handleSaveJob);
   
   // Footer links
-  document.getElementById('help-link').addEventListener('click', handleHelp);
-  document.getElementById('settings-link').addEventListener('click', handleSettings);
-  document.getElementById('about-link').addEventListener('click', handleAbout);
+  elements.dashboardLink.addEventListener('click', handleDashboardLink);
+  elements.helpLink.addEventListener('click', handleHelpLink);
 }
 
-// Check authentication status (simplified for now)
-async function checkAuthStatus() {
+// Initialize app
+async function initializeApp() {
   try {
-    console.log('Checking extension status');
-    updateAuthStatus('connected', 'Extension ready - No login required');
+    showView('loading');
     
-    // For now, we'll work without authentication
-    currentUser = { name: 'Extension User', email: 'extension@cvcircle.io' };
-    isAuthenticated = true;
+    console.log('🔍 Initializing app...');
+    
+    // First, test cookie access
+    try {
+      const cookieTest = await chrome.runtime.sendMessage({ action: 'testCookies' });
+      console.log('🧪 Cookie test results:', cookieTest);
+    } catch (error) {
+      console.log('⚠️ Cookie test failed:', error);
+    }
+    
+    // Check session with timeout and better error handling
+    let sessionResponse;
+    try {
+      sessionResponse = await Promise.race([
+        chrome.runtime.sendMessage({ action: 'getSession' }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Session check timeout')), 10000)) // Increased timeout
+      ]);
+    } catch (error) {
+      console.log('⚠️ Session check failed:', error.message);
+      // If session check fails, show login after a brief delay
+      setTimeout(() => {
+        showView('login');
+      }, 1000);
+      return;
+    }
+    
+    console.log('🔍 Session response:', sessionResponse);
+    
+    if (sessionResponse && sessionResponse.success && sessionResponse.isAuthenticated) {
+      currentUser = sessionResponse.user;
+      console.log('✅ User authenticated:', currentUser);
+      await loadUserData();
+    } else {
+      console.log('❌ Not authenticated, showing login');
+      showView('login');
+    }
     
   } catch (error) {
-    console.error('Error checking status:', error);
-    currentUser = null;
-    isAuthenticated = false;
-    updateAuthStatus('error', 'Extension check failed');
+    console.error('❌ Error initializing app:', error);
+    console.log('🔍 Showing login due to error');
+    // Add a small delay before showing login to prevent flickering
+    setTimeout(() => {
+      showView('login');
+    }, 500);
   }
 }
 
-// Update auth status display
-function updateAuthStatus(status, text) {
-  authStatusText.textContent = text;
-  authStatusDot.className = `status-dot ${status}`;
-}
-
-// Handle login
-async function handleLogin() {
+// Load user data and stats
+async function loadUserData() {
   try {
-    console.log('Opening login page');
+    // Load jobs and KPIs
+    const jobsResponse = await chrome.runtime.sendMessage({ action: 'fetchJobs' });
     
-    // Open CVCircle login page in new tab
-    const loginUrl = 'http://localhost:3000/auth/signin'; // Change to https://cvcircle.io for production
-    const tab = await chrome.tabs.create({ url: loginUrl });
+    if (jobsResponse.success) {
+      kpis = jobsResponse.kpis || {};
+      updateUserInfo();
+      updateStats();
+    }
     
-    // Listen for tab updates to detect when user logs in
-    const tabUpdateListener = async (tabId, changeInfo, updatedTab) => {
-      if (tabId === tab.id && changeInfo.status === 'complete') {
-        // Check if user is now logged in by trying to get a token
-        try {
-          const response = await fetch('http://localhost:3000/api/auth/extension-token', {
-            method: 'POST',
-            credentials: 'include'
-          });
-          
-          if (response.ok) {
-            const result = await response.json();
-            if (result.success) {
-              // Store the token
-              await chrome.storage.local.set({
-                authToken: result.token,
-                userData: result.user
-              });
-              
-              console.log('✅ Token stored successfully');
-              chrome.tabs.remove(tabId);
-              chrome.tabs.onUpdated.removeListener(tabUpdateListener);
-              
-              // Update UI
-              currentUser = result.user;
-              isAuthenticated = true;
-              updateUI();
-              updateAuthStatus('connected', `Connected as ${result.user.name || result.user.email}`);
-            }
-          }
-        } catch (error) {
-          console.log('User not logged in yet');
-        }
-      }
-    };
+    // Load current job from active tab
+    await loadCurrentJob();
     
-    chrome.tabs.onUpdated.addListener(tabUpdateListener);
-    
-    // Close popup
-    window.close();
+    showView('dashboard');
     
   } catch (error) {
-    console.error('Error opening login page:', error);
-    showStatus('error', 'Failed to open login page');
+    console.error('Error loading user data:', error);
+    showView('dashboard');
   }
 }
 
-// Handle logout
-async function handleLogout() {
-  try {
-    console.log('Logging out');
-    
-    // Clear stored auth data
-    await chrome.storage.local.remove(['authToken', 'userData']);
-    
-    // Update state
-    currentUser = null;
-    isAuthenticated = false;
-    
-    // Update UI
-    updateUI();
-    updateAuthStatus('error', 'Not authenticated');
-    
-  } catch (error) {
-    console.error('Error logging out:', error);
-    showStatus('error', 'Failed to logout');
+// Update user info display
+function updateUserInfo() {
+  if (!currentUser) return;
+  
+  elements.userName.textContent = currentUser.name || 'User';
+  elements.userEmail.textContent = currentUser.email || '';
+  
+  // Set avatar
+  if (currentUser.image) {
+    elements.userAvatarImg.src = currentUser.image;
+    elements.userAvatarImg.style.display = 'block';
+    elements.userAvatarInitials.style.display = 'none';
+  } else {
+    const initials = getInitials(currentUser.name || currentUser.email);
+    elements.userAvatarInitials.textContent = initials;
+    elements.userAvatarInitials.style.display = 'flex';
+    elements.userAvatarImg.style.display = 'none';
   }
 }
 
-// Handle open dashboard
-async function handleOpenDashboard() {
-  try {
-    console.log('Opening dashboard');
-    
-    const dashboardUrl = 'http://localhost:3000/dashboard'; // Change to https://cvcircle.io for production
-    await chrome.tabs.create({ url: dashboardUrl });
-    
-    // Close popup
-    window.close();
-    
-  } catch (error) {
-    console.error('Error opening dashboard:', error);
-    showStatus('error', 'Failed to open dashboard');
-  }
+// Update stats display
+function updateStats() {
+  elements.totalJobs.textContent = kpis.totalJobs || 0;
+  elements.appliedJobs.textContent = kpis.appliedJobs || 0;
+  elements.interviewJobs.textContent = kpis.interviewJobs || 0;
 }
 
-// Load current job data
+// Load current job from active tab
 async function loadCurrentJob() {
   try {
-    console.log('Loading current job data');
-    
-    // Get current tab
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     
     if (!tab) {
-      console.log('No active tab found');
+      showNoJobState();
       return;
     }
     
@@ -211,21 +239,25 @@ async function loadCurrentJob() {
     if (isJobSite) {
       // Extract job data from page
       const jobData = await extractJobDataFromPage(tab.id);
-      if (jobData) {
+      if (jobData && jobData.title && jobData.company) {
         currentJob = jobData;
-        updateJobDisplay(jobData);
+        showCurrentJob(jobData);
+      } else {
+        showNoJobState();
       }
+    } else {
+      showNoJobState();
     }
     
   } catch (error) {
     console.error('Error loading current job:', error);
+    showNoJobState();
   }
 }
 
 // Extract job data from page
 async function extractJobDataFromPage(tabId) {
   try {
-    // Inject content script to extract job data
     const results = await chrome.scripting.executeScript({
       target: { tabId: tabId },
       function: extractJobData
@@ -255,13 +287,12 @@ function extractJobData() {
     extractedAt: new Date().toISOString()
   };
   
-  // LinkedIn-specific selectors
   const hostname = window.location.hostname.toLowerCase();
   
+  // LinkedIn-specific selectors
   if (hostname.includes('linkedin')) {
     data.source = 'LinkedIn';
     
-    // LinkedIn job title selectors
     const titleSelectors = [
       '.jobs-unified-top-card__job-title',
       '.job-details-jobs-unified-top-card__job-title',
@@ -270,31 +301,25 @@ function extractJobData() {
       'h1'
     ];
     
-    // LinkedIn company selectors
     const companySelectors = [
       '.jobs-unified-top-card__company-name',
       '.job-details-jobs-unified-top-card__company-name',
-      '.jobs-unified-top-card__company-name a',
-      '[data-test-id="job-details-job-title"] + div span'
+      '.jobs-unified-top-card__company-name a'
     ];
     
-    // LinkedIn location selectors
     const locationSelectors = [
       '.jobs-unified-top-card__bullet',
       '.job-details-jobs-unified-top-card__bullet',
-      '.jobs-unified-top-card__subtitle-item',
-      '[data-test-id="job-details-location"]'
+      '.jobs-unified-top-card__subtitle-item'
     ];
     
-    // LinkedIn description selectors
     const descriptionSelectors = [
       '.jobs-description-content__text',
       '.jobs-description',
-      '.jobs-box__html-content',
-      '[data-test-id="job-details-description"]'
+      '.jobs-box__html-content'
     ];
     
-    // Extract title
+    // Extract data
     for (const selector of titleSelectors) {
       const element = document.querySelector(selector);
       if (element && element.textContent.trim()) {
@@ -303,7 +328,6 @@ function extractJobData() {
       }
     }
     
-    // Extract company
     for (const selector of companySelectors) {
       const element = document.querySelector(selector);
       if (element && element.textContent.trim()) {
@@ -312,7 +336,6 @@ function extractJobData() {
       }
     }
     
-    // Extract location
     for (const selector of locationSelectors) {
       const element = document.querySelector(selector);
       if (element && element.textContent.trim()) {
@@ -321,7 +344,6 @@ function extractJobData() {
       }
     }
     
-    // Extract description
     for (const selector of descriptionSelectors) {
       const element = document.querySelector(selector);
       if (element && element.textContent.trim()) {
@@ -332,39 +354,12 @@ function extractJobData() {
     
   } else {
     // Generic selectors for other sites
-    const titleSelectors = [
-      'h1[data-test-id="job-title"]',
-      'h1[data-testid="job-title"]',
-      'h1[data-test="job-title"]',
-      'h1.job-title',
-      'h1'
-    ];
+    const titleSelectors = ['h1[data-test-id="job-title"]', 'h1[data-testid="job-title"]', 'h1'];
+    const companySelectors = ['[data-test-id="company-name"]', '[data-testid="company-name"]', '[class*="company"]'];
+    const locationSelectors = ['[data-test-id="job-location"]', '[data-testid="job-location"]', '[class*="location"]'];
+    const descriptionSelectors = ['[data-test-id="job-description"]', '[data-testid="job-description"]', '[class*="description"]'];
     
-    const companySelectors = [
-      '[data-test-id="company-name"]',
-      '[data-testid="company-name"]',
-      '[data-test="company-name"]',
-      '.company-name',
-      '[class*="company"]'
-    ];
-    
-    const locationSelectors = [
-      '[data-test-id="job-location"]',
-      '[data-testid="job-location"]',
-      '[data-test="job-location"]',
-      '.job-location',
-      '[class*="location"]'
-    ];
-    
-    const descriptionSelectors = [
-      '[data-test-id="job-description"]',
-      '[data-testid="job-description"]',
-      '[data-test="job-description"]',
-      '.job-description',
-      '[class*="description"]'
-    ];
-    
-    // Extract title
+    // Extract data
     for (const selector of titleSelectors) {
       const element = document.querySelector(selector);
       if (element && element.textContent.trim()) {
@@ -373,7 +368,6 @@ function extractJobData() {
       }
     }
     
-    // Extract company
     for (const selector of companySelectors) {
       const element = document.querySelector(selector);
       if (element && element.textContent.trim()) {
@@ -382,7 +376,6 @@ function extractJobData() {
       }
     }
     
-    // Extract location
     for (const selector of locationSelectors) {
       const element = document.querySelector(selector);
       if (element && element.textContent.trim()) {
@@ -391,7 +384,6 @@ function extractJobData() {
       }
     }
     
-    // Extract description
     for (const selector of descriptionSelectors) {
       const element = document.querySelector(selector);
       if (element && element.textContent.trim()) {
@@ -417,43 +409,163 @@ function extractJobData() {
   return data;
 }
 
-// Update job display
-function updateJobDisplay(jobData) {
-  jobTitle.textContent = jobData.title || '-';
-  jobCompany.textContent = jobData.company || '-';
-  jobLocation.textContent = jobData.location || '-';
-  jobSource.textContent = jobData.source || '-';
+// Show current job
+function showCurrentJob(jobData) {
+  elements.jobTitle.textContent = jobData.title;
+  elements.jobCompany.textContent = jobData.company;
+  elements.jobLocation.textContent = jobData.location || 'Not specified';
+  
+  const companyInitials = getCompanyInitials(jobData.company);
+  const logoClass = getCompanyLogoClass(jobData.company);
+  elements.jobCompanyInitials.textContent = companyInitials;
+  elements.jobCompanyLogo.className = `company-logo ${logoClass}`;
+  
+  elements.jobDescriptionText.textContent = jobData.description || 'No description available.';
+  
+  elements.currentJobCard.classList.remove('hidden');
+  elements.noJobState.classList.add('hidden');
 }
 
-// Handle save job (simplified without authentication)
-async function handleSaveJob() {
+// Show no job state
+function showNoJobState() {
+  elements.currentJobCard.classList.add('hidden');
+  elements.noJobState.classList.remove('hidden');
+}
+
+// Show different views
+function showView(viewName) {
+  Object.values(sections).forEach(section => {
+    section.classList.add('hidden');
+  });
+  
+  if (sections[viewName]) {
+    sections[viewName].classList.remove('hidden');
+  }
+}
+
+// Event handlers
+function handleLogin() {
+  chrome.tabs.create({ url: 'https://www.cvcircle.io/sign-in' });
+  window.close();
+}
+
+async function handleRefresh() {
   try {
-    console.log('Saving job:', currentJob);
+    console.log('🔄 Refreshing session...');
+    elements.refreshBtn.disabled = true;
+    elements.refreshBtn.innerHTML = 'Refreshing...';
     
-    if (!currentJob) {
-      showStatus('error', 'No job data to save');
-      return;
+    // Force reinitialize the app
+    await initializeApp();
+    
+  } catch (error) {
+    console.error('❌ Error refreshing session:', error);
+    elements.refreshBtn.innerHTML = 'Error';
+    setTimeout(() => {
+      elements.refreshBtn.disabled = false;
+      elements.refreshBtn.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M21 3v5h-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M3 21v-5h5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Refresh Session
+      `;
+    }, 2000);
+  }
+}
+
+async function handleDebug() {
+  try {
+    console.log('🔍 Running debug...');
+    
+    const debugResults = {
+      timestamp: new Date().toISOString(),
+      popupLoaded: true,
+      currentUser: currentUser,
+      currentJob: currentJob,
+      kpis: kpis
+    };
+    
+    // Test cookie access
+    try {
+      const cookieTest = await chrome.runtime.sendMessage({ action: 'testCookies' });
+      debugResults.cookieTest = cookieTest;
+      console.log('🧪 Cookie test results:', cookieTest);
+    } catch (error) {
+      debugResults.cookieTestError = error.message;
+      console.log('⚠️ Cookie test failed:', error);
     }
     
-    // Show loading state
-    saveJobBtn.disabled = true;
-    saveJobBtn.innerHTML = `
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-        <path d="M12 6V12L16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-      Saving...
+    // Test session
+    try {
+      const sessionTest = await chrome.runtime.sendMessage({ action: 'getSession' });
+      debugResults.sessionTest = sessionTest;
+      console.log('🔍 Session test results:', sessionTest);
+    } catch (error) {
+      debugResults.sessionTestError = error.message;
+      console.log('⚠️ Session test failed:', error);
+    }
+    
+    // Test environment
+    try {
+      const envTest = await chrome.runtime.sendMessage({ action: 'getEnvironment' });
+      debugResults.environmentTest = envTest;
+      console.log('🌍 Environment test results:', envTest);
+    } catch (error) {
+      debugResults.environmentTestError = error.message;
+      console.log('⚠️ Environment test failed:', error);
+    }
+    
+    // Show results in alert
+    const debugInfo = `
+CVCircle Extension Debug Results:
+================================
+
+Timestamp: ${debugResults.timestamp}
+Popup Loaded: ${debugResults.popupLoaded}
+Current User: ${debugResults.currentUser ? 'Yes' : 'No'}
+Current Job: ${debugResults.currentJob ? 'Yes' : 'No'}
+
+Cookie Test: ${debugResults.cookieTest ? 'Success' : 'Failed'}
+${debugResults.cookieTestError ? `Error: ${debugResults.cookieTestError}` : ''}
+
+Session Test: ${debugResults.sessionTest ? 'Success' : 'Failed'}
+${debugResults.sessionTestError ? `Error: ${debugResults.sessionTestError}` : ''}
+
+Environment Test: ${debugResults.environmentTest ? 'Success' : 'Failed'}
+${debugResults.environmentTestError ? `Error: ${debugResults.environmentTestError}` : ''}
+
+Full Results:
+${JSON.stringify(debugResults, null, 2)}
     `;
     
-    // Send to background script
+    alert(debugInfo);
+    
+  } catch (error) {
+    console.error('❌ Debug error:', error);
+    alert(`Debug Error: ${error.message}`);
+  }
+}
+
+async function handleSaveJob() {
+  if (!currentJob) return;
+  
+  try {
+    elements.saveJobBtn.disabled = true;
+    elements.saveJobBtn.classList.add('loading');
+    elements.saveJobBtn.innerHTML = 'Saving...';
+    
     const response = await chrome.runtime.sendMessage({
       action: 'saveJob',
       jobData: currentJob
     });
     
     if (response.success) {
-      showStatus('success', 'Job saved successfully!');
-      saveJobBtn.innerHTML = `
+      elements.saveJobBtn.classList.remove('loading');
+      elements.saveJobBtn.classList.add('success');
+      elements.saveJobBtn.innerHTML = `
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M22 11.08V12C21.9988 14.1564 21.3005 16.2547 20.0093 17.9818C18.7182 19.7088 16.9033 20.9725 14.8354 21.5839C12.7674 22.1953 10.5573 22.1219 8.53447 21.3746C6.51168 20.6273 4.78465 19.2461 3.61096 17.4371C2.43727 15.628 1.87979 13.4881 2.02168 11.3363C2.16356 9.18455 2.99721 7.13631 4.39828 5.49706C5.79935 3.85781 7.69279 2.71537 9.79619 2.24013C11.8996 1.7649 14.1003 1.98232 16.07 2.85999" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           <path d="M22 4L12 14.01L9 11.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -461,103 +573,105 @@ async function handleSaveJob() {
         Saved!
       `;
       
-      // Update saved jobs count
-      await updateSavedJobsCount();
+      // Update stats
+      await loadUserData();
+      
     } else {
       throw new Error(response.message || 'Failed to save job');
     }
     
   } catch (error) {
     console.error('Error saving job:', error);
-    showStatus('error', error.message || 'Failed to save job');
-    saveJobBtn.innerHTML = `
+    elements.saveJobBtn.classList.remove('loading');
+    elements.saveJobBtn.classList.add('error');
+    elements.saveJobBtn.innerHTML = `
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H16L21 8V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M17 21V13H7V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M7 3V8H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+        <path d="M15 9L9 15M9 9L15 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
-      Save Job
+      Error
     `;
   } finally {
-    saveJobBtn.disabled = false;
+    elements.saveJobBtn.disabled = false;
   }
 }
 
-// Show status message
-function showStatus(type, message) {
-  statusText.textContent = message;
-  
-  // Show status section
-  hideAllSections();
-  statusSection.classList.remove('hidden');
-  
-  // Auto-hide after 3 seconds
-  setTimeout(() => {
-    statusSection.classList.add('hidden');
-    updateUI();
-  }, 3000);
+function handleDashboardLink(e) {
+  e.preventDefault();
+  chrome.runtime.sendMessage({ action: 'getEnvironment' }).then(env => {
+    const baseUrl = env.apiBaseUrl;
+    chrome.tabs.create({ url: `${baseUrl}/dashboard` });
+    window.close();
+  });
 }
 
-// Update UI based on current state
-function updateUI() {
-  hideAllSections();
-  
-  if (isAuthenticated && currentUser) {
-    // Show user section
-    userSection.classList.remove('hidden');
-    
-    // Update user info
-    userName.textContent = currentUser.name || 'User';
-    userEmail.textContent = currentUser.email || '';
-    
-    // Show job section if we have job data
-    if (currentJob) {
-      jobSection.classList.remove('hidden');
-    }
-  } else {
-    // Show auth section
-    authSection.classList.remove('hidden');
+function handleHelpLink(e) {
+  e.preventDefault();
+  chrome.tabs.create({ url: 'https://www.cvcircle.io/help' });
+  window.close();
+}
+
+// Utility functions
+function getInitials(name) {
+  if (!name) return 'U';
+  const words = name.trim().split(' ');
+  if (words.length === 1) {
+    return words[0].substring(0, 2).toUpperCase();
   }
+  return words.slice(0, 2).map(word => word.charAt(0)).join('').toUpperCase();
 }
 
-// Hide all sections
-function hideAllSections() {
-  authSection.classList.add('hidden');
-  userSection.classList.add('hidden');
-  jobSection.classList.add('hidden');
-  statusSection.classList.add('hidden');
-}
-
-// Update saved jobs count
-async function updateSavedJobsCount() {
-  try {
-    const result = await chrome.storage.local.get(['savedJobs']);
-    const savedJobs = result.savedJobs || [];
-    const countElement = document.getElementById('saved-jobs-count');
-    
-    if (countElement) {
-      countElement.textContent = savedJobs.length.toString();
-    }
-  } catch (error) {
-    console.error('Error updating saved jobs count:', error);
+function getCompanyInitials(companyName) {
+  if (!companyName) return 'CO';
+  const words = companyName.trim().split(' ');
+  if (words.length === 1) {
+    return words[0].substring(0, 2).toUpperCase();
   }
+  return words.slice(0, 2).map(word => word.charAt(0)).join('').toUpperCase();
 }
 
-// Handle footer links
-function handleHelp(e) {
-  e.preventDefault();
-  chrome.tabs.create({ url: 'https://cvcircle.io/help' });
-  window.close();
+function getCompanyLogoClass(companyName) {
+  if (!companyName) return 'default';
+  const name = companyName.toLowerCase();
+  
+  if (name.includes('tech') || name.includes('software') || name.includes('ai') || name.includes('data')) {
+    return 'tech';
+  } else if (name.includes('bank') || name.includes('finance') || name.includes('capital') || name.includes('investment')) {
+    return 'finance';
+  } else if (name.includes('health') || name.includes('medical') || name.includes('pharma') || name.includes('care')) {
+    return 'healthcare';
+  } else if (name.includes('retail') || name.includes('store') || name.includes('shop') || name.includes('commerce')) {
+    return 'retail';
+  }
+  
+  return 'default';
 }
 
-function handleSettings(e) {
-  e.preventDefault();
-  chrome.tabs.create({ url: 'https://cvcircle.io/settings' });
-  window.close();
-}
+// Handle messages from background script
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  console.log('Popup received message:', request);
+  
+  switch (request.action) {
+    case 'jobSaved':
+      // Refresh data when a job is saved
+      if (currentUser) {
+        loadUserData();
+      }
+      break;
+      
+    case 'sessionUpdated':
+      // Handle session updates
+      if (request.isAuthenticated) {
+        currentUser = request.user;
+        loadUserData();
+      } else {
+        currentUser = null;
+        showView('login');
+      }
+      break;
+  }
+});
 
-function handleAbout(e) {
-  e.preventDefault();
-  chrome.tabs.create({ url: 'https://cvcircle.io/about' });
-  window.close();
-}
+console.log('CVCircle Job Tracker popup script loaded');
+
+

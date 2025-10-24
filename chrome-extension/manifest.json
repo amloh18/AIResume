@@ -28,6 +28,7 @@
     "https://jobs.smartrecruiters.com/*",
     "https://www.workday.com/*",
     "https://localhost:3000/*",
+    "https://www.cvcircle.io/*",
     "https://cvcircle.io/*"
   ],
   "background": {
@@ -55,6 +56,14 @@
       ],
       "js": ["content.js"],
       "css": ["content.css"],
+      "run_at": "document_end"
+    },
+    {
+      "matches": [
+        "https://www.cvcircle.io/*",
+        "https://cvcircle.io/*"
+      ],
+      "js": ["content-cvcircle.js"],
       "run_at": "document_end"
     }
   ],

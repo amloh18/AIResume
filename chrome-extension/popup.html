@@ -3,107 +3,103 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CVCircle Job Saver</title>
+  <title>CVCircle Job Tracker</title>
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
   <div class="popup-container">
-    <div class="header">
-      <div class="logo">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H16L21 8V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21Z" stroke="#84cc16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M17 21V13H7V21" stroke="#84cc16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M7 3V8H15" stroke="#84cc16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <h1><span class="cv-text">CV</span><span class="circle-text">CIRCLE</span></h1>
+    <!-- Loading State -->
+    <div id="loading-section" class="section">
+      <div class="loading-container">
+        <div class="loading-spinner"></div>
+        <p>Loading...</p>
       </div>
     </div>
 
-    <div class="content">
-      <div id="auth-section" class="section hidden">
-        <div class="auth-status">
-          <div class="status-indicator">
-            <div class="status-dot"></div>
-            <span id="auth-status-text">Checking authentication...</span>
-          </div>
+    <!-- Login Screen -->
+    <div id="login-section" class="section hidden">
+      <div class="login-container">
+        <div class="logo">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H16L21 8V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21Z" stroke="#84cc16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M17 21V13H7V21" stroke="#84cc16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M7 3V8H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
         </div>
-        
-        <div class="auth-actions">
-          <button id="login-btn" class="btn btn-primary hidden">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M15 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M10 17L15 12L10 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M15 12H3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            Login to CVCircle
-          </button>
-          
-          <button id="logout-btn" class="btn btn-secondary hidden">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M16 17L21 12L16 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            Logout
-          </button>
-        </div>
+        <h1><span class="cv-text">CV</span><span class="circle-text">CIRCLE</span></h1>
+        <p>Please log in to track your job applications</p>
+        <button id="login-btn" class="btn btn-primary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M15 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M10 17L15 12L10 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M15 12H3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Login to CVCircle
+        </button>
+        <button id="debug-btn" class="btn btn-secondary" style="margin-top: 8px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+            <path d="M19.4 15C19.2669 15.3016 19.2272 15.6362 19.286 15.9606C19.3448 16.285 19.4995 16.5843 19.73 16.82L19.79 16.88C19.976 17.0657 20.1235 17.2863 20.2241 17.5291C20.3248 17.7719 20.3766 18.0322 20.3766 18.295C20.3766 18.5578 20.3248 18.8181 20.2241 19.0609C19.3037 19.87653 19.5243 4.02405 19.71 4.21C19.896 4.39575 20.0435 4.61632 20.1441 4.85912C20.2448 5.10192 20.2966 5.36217 20.2966 5.625C20.2966 5.88783 20.2448 6.14808 20.1441 6.39088C20.0435 6.63368 19.896 6.85425 19.71 7.04L19.65 7.1C19.4195 7.33568 19.2648 7.63502 19.206 7.95941C19.1472 8.28381 19.1869 8.61838 19.32 8.92V9C19.4468 9.29577 19.6572 9.54802 19.9255 9.72569C20.1938 9.90337 20.5082 9.99872 20.83 10H21C21.5304 10 22.0391 10.2107 22.4142 10.5858C22.7893 10.9609 23 11.4696 23 12C23 12.5304 22.7893 13.0391 22.4142 13.4142C22.0391 13.7893 21.5304 14 21 14H20.91C20.5882 14.0013 20.2738 14.0966 20.0055 14.2743C19.7372 14.452 19.5268 14.7042 19.4 15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Debug Info
+        </button>
+        <button id="refresh-btn" class="btn btn-secondary" style="margin-top: 8px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M21 3v5h-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M3 21v-5h5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Refresh Session
+        </button>
       </div>
+    </div>
 
-      <div id="user-section" class="section hidden">
+    <!-- Main Dashboard -->
+    <div id="dashboard-section" class="section hidden">
+      <!-- User Card -->
+      <div class="user-card">
+        <div class="user-avatar">
+          <img id="user-avatar-img" src="" alt="User Avatar" style="display: none;">
+          <div id="user-avatar-initials" class="avatar-initials">U</div>
+        </div>
         <div class="user-info">
-          <div class="user-avatar">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </div>
-          <div class="user-details">
-            <h3 id="user-name">User Name</h3>
-            <p id="user-email">user@example.com</p>
-          </div>
-        </div>
-        
-        <div class="user-actions">
-          <button id="dashboard-btn" class="btn btn-primary">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="3" y="3" width="7" height="7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <rect x="14" y="3" width="7" height="7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <rect x="14" y="14" width="7" height="7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <rect x="3" y="14" width="7" height="7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            Open Dashboard
-          </button>
-          
-          <div class="stats-section">
-            <div class="stat-item">
-              <span class="stat-label">Jobs Saved:</span>
-              <span id="saved-jobs-count" class="stat-value">0</span>
-            </div>
-          </div>
+          <h2 id="user-name">User Name</h2>
+          <p id="user-email">user@example.com</p>
         </div>
       </div>
 
-      <div id="job-section" class="section hidden">
-        <div class="job-info">
-          <h3>Current Job</h3>
-          <div class="job-details">
-            <div class="job-field">
-              <label>Title:</label>
-              <span id="job-title">-</span>
-            </div>
-            <div class="job-field">
-              <label>Company:</label>
-              <span id="job-company">-</span>
-            </div>
-            <div class="job-field">
-              <label>Location:</label>
-              <span id="job-location">-</span>
-            </div>
-            <div class="job-field">
-              <label>Source:</label>
-              <span id="job-source">-</span>
-            </div>
+      <!-- Stats Cards -->
+      <div class="stats-container">
+        <div class="stat-card">
+          <div class="stat-number" id="total-jobs">0</div>
+          <div class="stat-label">Saved Jobs</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="applied-jobs">0</div>
+          <div class="stat-label">Applied</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="interview-jobs">0</div>
+          <div class="stat-label">Interviews</div>
+        </div>
+      </div>
+
+      <!-- Current Job Card -->
+      <div id="current-job-card" class="job-card hidden">
+        <div class="job-header">
+          <div class="company-logo" id="job-company-logo">
+            <span id="job-company-initials">CO</span>
           </div>
+          <div class="job-info">
+            <h3 id="job-title">Job Title</h3>
+            <p id="job-company">Company Name</p>
+            <p id="job-location">Location</p>
+          </div>
+        </div>
+        
+        <div class="job-description">
+          <p id="job-description-text">Job description will appear here...</p>
         </div>
         
         <div class="job-actions">
@@ -118,27 +114,30 @@
         </div>
       </div>
 
-      <div id="status-section" class="section hidden">
-        <div class="status-message">
-          <div class="status-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M22 11.08V12C21.9988 14.1564 21.3005 16.2547 20.0093 17.9818C18.7182 19.7088 16.9033 20.9725 14.8354 21.5839C12.7674 22.1953 10.5573 22.1219 8.53447 21.3746C6.51168 20.6273 4.78465 19.2461 3.61096 17.4371C2.43727 15.628 1.87979 13.4881 2.02168 11.3363C2.16356 9.18455 2.99721 7.13631 4.39828 5.49706C5.79935 3.85781 7.69279 2.71537 9.79619 2.24013C11.8996 1.7649 14.1003 1.98232 16.07 2.85999" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M22 4L12 14.01L9 11.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </div>
-          <p id="status-text">Job saved successfully!</p>
+      <!-- No Job State -->
+      <div id="no-job-state" class="no-job-container">
+        <div class="no-job-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M7 10L12 15L17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
         </div>
+        <h3>No job detected</h3>
+        <p>Visit a job posting page to save jobs to your tracker</p>
       </div>
     </div>
 
+    <!-- Footer -->
     <div class="footer">
-      <div class="footer-links">
-        <a href="#" id="help-link">Help</a>
-        <a href="#" id="settings-link">Settings</a>
-        <a href="#" id="about-link">About</a>
-      </div>
-      <div class="footer-text">
-        <span>CVCircle Job Saver v1.0.0</span>
+      <div class="footer-content">
+        <div class="footer-logo">
+          <span class="cv-text">CV</span><span class="circle-text">CIRCLE</span>
+        </div>
+        <div class="footer-links">
+          <a href="#" id="dashboard-link">Dashboard</a>
+          <a href="#" id="help-link">Help</a>
+        </div>
       </div>
     </div>
   </div>

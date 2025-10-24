@@ -63,27 +63,37 @@ class ConsoleLogger {
 
     // Override console methods
     console.log = (...args) => {
-      this.originalConsole.log(...args);
+      if (this.originalConsole && this.originalConsole.log) {
+        this.originalConsole.log(...args);
+      }
       this.handleLog('log', args);
     };
 
     console.info = (...args) => {
-      this.originalConsole.info(...args);
+      if (this.originalConsole && this.originalConsole.info) {
+        this.originalConsole.info(...args);
+      }
       this.handleLog('info', args);
     };
 
     console.warn = (...args) => {
-      this.originalConsole.warn(...args);
+      if (this.originalConsole && this.originalConsole.warn) {
+        this.originalConsole.warn(...args);
+      }
       this.handleLog('warn', args);
     };
 
     console.error = (...args) => {
-      this.originalConsole.error(...args);
+      if (this.originalConsole && this.originalConsole.error) {
+        this.originalConsole.error(...args);
+      }
       this.handleLog('error', args);
     };
 
     console.debug = (...args) => {
-      this.originalConsole.debug(...args);
+      if (this.originalConsole && this.originalConsole.debug) {
+        this.originalConsole.debug(...args);
+      }
       this.handleLog('debug', args);
     };
 

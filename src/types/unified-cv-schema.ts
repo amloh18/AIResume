@@ -123,6 +123,7 @@ export interface UnifiedCVDataStructure {
     endDate: string;
     description: string;
     highlights: string[];
+    keywords: string[];  // Technologies/skills used in the project
     url: string;
   }>;
 }
@@ -310,6 +311,7 @@ export const UNIFIED_CV_VALIDATION_SCHEMA = {
           endDate: { type: "string" },
           description: { type: "string" },
           highlights: { type: "array", items: { type: "string" } },
+          keywords: { type: "array", items: { type: "string" } },
           url: { type: "string" }
         }
       }

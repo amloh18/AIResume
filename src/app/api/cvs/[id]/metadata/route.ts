@@ -5,12 +5,12 @@ import { toObjectId } from '@/lib/db-utils';
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await connectDB();
     
-    const cvId = params.id;
+    const { id: cvId } = await params;
     const { userId, title, description } = await request.json();
     
     console.log('🔍 CV Metadata Update - Request:', { cvId, userId, title, description });

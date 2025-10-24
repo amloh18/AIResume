@@ -24,10 +24,12 @@ import {
   AlertCircle,
   CheckCircle,
   XCircle,
-  RefreshCw
+  RefreshCw,
+  Send,
+  Loader2
 } from 'lucide-react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
-import MembershipModal from '@/components/payment/MembershipModal';
+import UniversalPaymentModal from '@/components/payment/UniversalPaymentModal';
 import RouteGuard from '@/components/auth/RouteGuard';
 import { useNotifications } from '@/contexts/NotificationContext';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
@@ -90,6 +92,7 @@ interface User {
   github?: string;
   summary?: string;
   avatar?: string;
+  isEmailVerified?: boolean;
   settings?: {
     company?: string;
     address?: string;
@@ -187,6 +190,10 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
   const [usernameStatus, setUsernameStatus] = useState<'idle' | 'available' | 'taken'>('idle');
   const [usernameTimeout, setUsernameTimeout] = useState<NodeJS.Timeout | null>(null);
+  
+  // Email verification states
+  const [isSendingVerification, setIsSendingVerification] = useState(false);
+  const [verificationMessage, setVerificationMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Cleanup timeout on unmount
   React.useEffect(() => {
@@ -424,6 +431,51 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
     }
   };
 
+  const handleSendVerification = async () => {
+    if (isSendingVerification) return;
+    
+    try {
+      setIsSendingVerification(true);
+      setVerificationMessage(null);
+      
+      console.log('🔍 Settings - Current user verification status:', user.isEmailVerified);
+      console.log('🔍 Settings - Sending verification for email:', user.email);
+      
+      const response = await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: user.email })
+      });
+      
+      const result = await response.json();
+      console.log('🔍 Settings - API response:', result);
+      
+      if (result.success) {
+        setVerificationMessage({ 
+          type: 'success', 
+          text: 'Verification email sent! Please check your inbox.' 
+        });
+        
+        // Dispatch event to refresh user data across the app
+        window.dispatchEvent(new CustomEvent('userProfileUpdated', { 
+          detail: { refreshUserData: true } 
+        }));
+      } else {
+        setVerificationMessage({ 
+          type: 'error', 
+          text: result.message || 'Failed to send verification email' 
+        });
+      }
+    } catch (error) {
+      setVerificationMessage({ 
+        type: 'error', 
+        text: 'Failed to send verification email' 
+      });
+    } finally {
+      setIsSendingVerification(false);
+    }
+  };
+
   return (
     <div className="p-8 h-full">
       <div className="space-y-8">
@@ -536,16 +588,64 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Email
               </label>
-              <input
-                type="email"
-                value={formData.email}
-                readOnly
-                disabled
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
-              />
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Email cannot be changed. Contact support if you need to update your email address.
-              </p>
+              <div className="space-y-2">
+                <input
+                  type="email"
+                  value={formData.email}
+                  readOnly
+                  disabled
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Email cannot be changed. Contact support if you need to update your email address.
+                </p>
+                
+                {/* Email Verification Status */}
+                <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    {user.isEmailVerified ? (
+                      <>
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span className="text-sm text-green-600 dark:text-green-400 font-medium">
+                          Email Verified
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <XCircle className="h-4 w-4 text-orange-500" />
+                        <span className="text-sm text-orange-600 dark:text-orange-400 font-medium">
+                          Email Not Verified
+                        </span>
+                      </>
+                    )}
+                  </div>
+                  
+                  {!user.isEmailVerified && (
+                    <button
+                      onClick={handleSendVerification}
+                      disabled={isSendingVerification}
+                      className="flex items-center gap-2 px-3 py-1.5 text-sm bg-orange-100 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 rounded-md hover:bg-orange-200 dark:hover:bg-orange-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isSendingVerification ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Send className="h-3 w-3" />
+                      )}
+                      {isSendingVerification ? 'Sending...' : 'Verify Email'}
+                    </button>
+                  )}
+                </div>
+                
+                {verificationMessage && (
+                  <div className={`text-sm px-3 py-2 rounded-md ${
+                    verificationMessage.type === 'success' 
+                      ? 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300' 
+                      : 'bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300'
+                  }`}>
+                    {verificationMessage.text}
+                  </div>
+                )}
+              </div>
             </div>
             
             <div>
@@ -1424,10 +1524,10 @@ const MembershipBilling = ({ user }: { user: User }) => {
       </div>
 
       {/* Membership Modal */}
-      <MembershipModal
+      <UniversalPaymentModal
         isOpen={isMembershipModalOpen}
         onClose={() => setIsMembershipModalOpen(false)}
-        currentPlanKey={subscription?.planKey || 'free'}
+        currentUserPlan={subscription?.planKey || 'free'}
         onSuccess={() => {
           setIsMembershipModalOpen(false);
           fetchPaymentData();
@@ -2025,30 +2125,55 @@ const SettingsContent = () => {
   }, [searchParams]);
 
   // Fetch user data from database
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch('/api/user');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && data.user) {
-            setUserData(data.user);
-          }
-        } else {
-          console.error('Failed to fetch user data');
+  const fetchUserData = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/user');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.user) {
+          setUserData(data.user);
         }
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-      } finally {
-        setLoading(false);
+      } else {
+        console.error('Failed to fetch user data');
       }
-    };
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     if (user) {
       fetchUserData();
     }
   }, [user]);
+
+  // Listen for user profile updates from other components
+  useEffect(() => {
+    const handleUserProfileUpdate = (event: CustomEvent) => {
+      const updatedUser = event.detail.user;
+      const refreshUserData = event.detail.refreshUserData;
+      
+      if (refreshUserData) {
+        console.log('🔄 Settings - Refreshing user data due to profile update');
+        fetchUserData();
+      } else if (updatedUser) {
+        console.log('🔄 Settings - Received user profile update:', updatedUser);
+        setUserData(prev => ({
+          ...prev,
+          ...updatedUser,
+        }));
+      }
+    };
+
+    window.addEventListener('userProfileUpdated', handleUserProfileUpdate as EventListener);
+    
+    return () => {
+      window.removeEventListener('userProfileUpdated', handleUserProfileUpdate as EventListener);
+    };
+  }, []);
 
   const handleSaveUser = async (userData: User) => {
     try {
@@ -2139,7 +2264,7 @@ const SettingsContent = () => {
     <RouteGuard requireAuth={true}>
       <div className="h-screen flex flex-col">
         {/* Page Header - Fixed */}
-        <div className="flex-shrink-0">
+        <div className="flex-shrink-0 sticky top-0 z-10 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-200 dark:border-gray-700">
           <PageHeader
             title="Settings"
             description={getTabDescription(activeTab)}
@@ -2158,9 +2283,9 @@ const SettingsContent = () => {
         </div>
         
         {/* Main Layout - Flexible */}
-        <div className="flex flex-1 min-h-0">
+        <div className="flex flex-1 min-h-0 h-[calc(100vh-8rem)]">
           {/* Settings Sidebar - Fixed */}
-          <div className="w-16 md:w-80 flex-shrink-0">
+          <div className="w-16 md:w-80 flex-shrink-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-r border-gray-200 dark:border-gray-700">
             <SettingsSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
           </div>
           

@@ -102,9 +102,12 @@ const PrivacyPolicy: React.FC = () => {
                 <ul className="list-disc list-inside space-y-2 text-white/80">
                   <li>Name, email address, and contact information</li>
                   <li>Professional information (work experience, education, skills)</li>
-                  <li>CV content and cover letter data</li>
-                  <li>Job application tracking information</li>
+                  <li>CV content and cover letter data stored in MongoDB</li>
+                  <li>Job application tracking and career journey data</li>
                   <li>Payment and billing information (for premium plans)</li>
+                  <li>Authentication data (NextAuth.js and Firebase)</li>
+                  <li>User preferences and settings</li>
+                  <li>Email verification status and tokens</li>
                 </ul>
               </div>
 
@@ -116,6 +119,9 @@ const PrivacyPolicy: React.FC = () => {
                   <li>Pages visited and time spent on our platform</li>
                   <li>Features used and interactions with our service</li>
                   <li>Error logs and performance data</li>
+                  <li>AI usage patterns and optimization requests</li>
+                  <li>CV export and download activities</li>
+                  <li>Session data and authentication tokens</li>
                 </ul>
               </div>
 
@@ -192,11 +198,15 @@ const PrivacyPolicy: React.FC = () => {
             </p>
 
             <ul className="list-disc list-inside space-y-3 text-white/80">
-              <li>Encryption of data in transit and at rest</li>
+              <li>Encryption of data in transit and at rest using industry standards</li>
+              <li>MongoDB database security with access controls</li>
+              <li>NextAuth.js and Firebase authentication security</li>
+              <li>JWT token-based session management</li>
+              <li>CSRF protection and secure cookie settings</li>
               <li>Regular security audits and vulnerability assessments</li>
-              <li>Access controls and authentication mechanisms</li>
               <li>Secure data centers with physical and digital security</li>
               <li>Regular backups and disaster recovery procedures</li>
+              <li>Email verification and account security measures</li>
             </ul>
 
             <p className="text-white/80 mt-4">
@@ -229,6 +239,55 @@ const PrivacyPolicy: React.FC = () => {
                   <li>Data is deleted within 30 days of account deletion</li>
                   <li>Some information may be retained for legal compliance</li>
                   <li>You can request data deletion at any time</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* AI and Third-Party Services */}
+          <div className="bg-white/5 backdrop-blur-sm rounded-xl p-8 mb-8 border border-white/10">
+            <h2 className="text-2xl font-semibold mb-6 flex items-center">
+              <Eye className="w-6 h-6 text-lime-400 mr-2" />
+              AI Services and Third-Party Integrations
+            </h2>
+            
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-xl font-medium mb-3 text-lime-400">OpenAI Integration</h3>
+                <p className="text-white/80 mb-3">
+                  We use OpenAI's API to provide AI-powered CV optimization and content generation. When you use these features, your CV content may be processed by OpenAI to provide suggestions and improvements.
+                </p>
+                <ul className="list-disc list-inside space-y-2 text-white/80">
+                  <li>CV content is sent to OpenAI for analysis and optimization</li>
+                  <li>OpenAI processes data according to their privacy policy</li>
+                  <li>We do not store your CV content on OpenAI's servers permanently</li>
+                  <li>You can opt-out of AI features if you prefer manual editing</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 className="text-xl font-medium mb-3 text-lime-400">Authentication Services</h3>
+                <p className="text-white/80 mb-3">
+                  We use NextAuth.js and Firebase for user authentication and session management.
+                </p>
+                <ul className="list-disc list-inside space-y-2 text-white/80">
+                  <li>Google OAuth for social login (handled by NextAuth.js)</li>
+                  <li>Firebase Authentication for additional security</li>
+                  <li>Session data is stored securely with JWT tokens</li>
+                  <li>Email verification through our secure email service</li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 className="text-xl font-medium mb-3 text-lime-400">Email Services</h3>
+                <p className="text-white/80 mb-3">
+                  We use Hostinger SMTP for sending verification emails and notifications.
+                </p>
+                <ul className="list-disc list-inside space-y-2 text-white/80">
+                  <li>Email addresses are used for account verification</li>
+                  <li>Transactional emails for account management</li>
+                  <li>Marketing emails only with your consent</li>
+                  <li>Email data is processed securely through our SMTP service</li>
                 </ul>
               </div>
             </div>

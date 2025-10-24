@@ -97,7 +97,12 @@ export function useUserData(): UseUserDataReturn {
   useEffect(() => {
     const handleUserProfileUpdate = (event: CustomEvent) => {
       const updatedUser = event.detail.user;
-      if (updatedUser) {
+      const refreshUserData = event.detail.refreshUserData;
+      
+      if (refreshUserData) {
+        console.log('🔄 useUserData - Refreshing user data due to profile update');
+        fetchUserData();
+      } else if (updatedUser) {
         console.log('🔄 useUserData - Received user profile update:', updatedUser);
         setUserData(prev => ({
           ...prev,

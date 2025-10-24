@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
+import { useSearchParams } from 'next/navigation';
 import { 
   FileText, Briefcase, PenTool, TrendingUp, Target, Sparkles, Zap, 
   Lightbulb, Plus, Edit, Eye, Trash2, Calendar, CheckCircle, Heart,
@@ -20,6 +21,7 @@ import { authenticatedFetch } from '@/lib/utils/apiUtils';
 import { useParallelDataFetching } from '@/lib/hooks/useOptimizedDataFetching';
 import { AnalyticsSkeleton } from '@/components/ui/OptimizedSkeletons';
 import { usePerformanceMonitor } from '@/lib/utils/performanceMonitor';
+import UniversalPaymentModal from '@/components/payment/UniversalPaymentModal';
 
 // Helper functions for CV scoring
 const calculatePersonalInfoScore = (basics: any): number => {
@@ -139,7 +141,7 @@ const calculateCompletionPercentage = (cv: any): number => {
   return Math.max(0, Math.min(100, completionPercentage));
 };
 
-// 1. Combined CV Management Section - CV Health Score + Master CV Management + Quick Actions
+// 1. Combined CV Management Section - CV Health Score + Master CV Management + Quick Actions + Monthly Goal
 const CVManagementSection: React.FC<{ 
   cvHealthScore: number; 
   cvs: any[];
@@ -151,7 +153,9 @@ const CVManagementSection: React.FC<{
   onCreateCoverLetter: () => void;
   onCreateJob: () => void;
   onSetMasterCV: (cvId: string) => void;
-}> = ({ cvHealthScore, cvs, drafts, onImproveScore, onCreateCV, onAddJob, onWriteCoverLetter, onCreateCoverLetter, onCreateJob, onSetMasterCV }) => {
+  predictions?: any;
+  onUpdateGoal?: (goal: number) => void;
+}> = ({ cvHealthScore, cvs, drafts, onImproveScore, onCreateCV, onAddJob, onWriteCoverLetter, onCreateCoverLetter, onCreateJob, onSetMasterCV, predictions, onUpdateGoal }) => {
   const getStatus = (score: number) => {
     if (score >= 80) return { label: 'Excellent', color: 'text-green-400' };
     if (score >= 60) return { label: 'Good', color: 'text-yellow-400' };
@@ -187,29 +191,51 @@ const CVManagementSection: React.FC<{
         </div>
       </div>
       
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 flex-1">
-        {/* CV Health Score */}
-        <div className="text-center flex flex-col justify-center">
-          <div className="relative w-32 h-32 lg:w-40 lg:h-40 mx-auto mb-4">
-            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="45" stroke="currentColor" strokeWidth="10" fill="none" className="text-gray-200 dark:text-white/10" />
-                <defs>
-                  <linearGradient id="cvHealthGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#ef4444" />
-                    <stop offset="100%" stopColor="#f97316" />
-                  </linearGradient>
-                </defs>
-                <circle cx="50" cy="50" r="45" stroke="url(#cvHealthGradient)" strokeWidth="10" fill="none" 
-                  strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} 
-                  className="transition-all duration-1000 ease-out" strokeLinecap="round" />
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-lg font-bold text-gray-900 dark:text-white">{cvHealthScore}%</span>
+      <div className="space-y-6 flex-1">
+        {/* Professional Profile - Full Width First Row */}
+        {cvs.length > 0 && (
+          <div className="space-y-3">
+            <h3 className="text-gray-900 dark:text-white font-medium text-sm flex items-center gap-2">
+              <User size={14} className="text-purple-400" />
+              Professional Profile
+            </h3>
+            <div className="glass-card-premium rounded-lg p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border border-purple-200 dark:border-purple-400/20">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-purple-400 rounded-full flex items-center justify-center overflow-hidden">
+                  <User size={20} className="text-white" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="text-gray-900 dark:text-white font-bold text-lg">Mid Level Professional</h4>
+                  <p className="text-gray-600 dark:text-white/60 text-sm">3 years experience • 3 skills</p>
+                </div>
               </div>
             </div>
-          <p className="text-gray-600 dark:text-white/60 text-xs mb-1">Master CV Health</p>
-            <p className={`text-xs font-medium ${status.color}`}>{status.label}</p>
           </div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+          {/* CV Health Score with CV Name */}
+          <div className="text-center flex flex-col justify-center">
+            <div className="relative w-32 h-32 lg:w-40 lg:h-40 mx-auto mb-4">
+              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="45" stroke="currentColor" strokeWidth="10" fill="none" className="text-gray-200 dark:text-white/10" />
+                  <defs>
+                    <linearGradient id="cvHealthGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor="#ef4444" />
+                      <stop offset="100%" stopColor="#f97316" />
+                    </linearGradient>
+                  </defs>
+                  <circle cx="50" cy="50" r="45" stroke="url(#cvHealthGradient)" strokeWidth="10" fill="none" 
+                    strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} 
+                    className="transition-all duration-1000 ease-out" strokeLinecap="round" />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-lg font-bold text-gray-900 dark:text-white">{cvHealthScore}%</span>
+                </div>
+              </div>
+            <p className="text-gray-600 dark:text-white/60 text-xs mb-1">{masterCV?.title || 'Master CV Health'}</p>
+              <p className={`text-xs font-medium ${status.color}`}>{status.label}</p>
+            </div>
 
         {/* Quick Actions */}
         <div className="space-y-3">
@@ -237,64 +263,11 @@ const CVManagementSection: React.FC<{
               <Briefcase size={16} /> Add Job Application
             </motion.button>
           </div>
-          </div>
 
-          {/* Master CV Management */}
-        <div className="space-y-3 sm:col-span-2 xl:col-span-1">
-          <div className="flex items-center justify-between">
-            <h3 className="text-gray-900 dark:text-white font-medium text-sm flex items-center gap-2">
-            <FileText size={14} className="text-lime-400" />
-            Master CV
-          </h3>
-            <div className="flex items-center gap-1 px-2 py-1 bg-orange-400/20 text-orange-400 rounded-full text-xs font-medium">
-              <FileText size={12} />
-              {drafts ? drafts.length : 0} incomplete
-            </div>
-          </div>
-          {masterCV ? (
-            <div className="glass-card-premium rounded-lg p-3">
-              <div className="flex items-start justify-between mb-2 gap-2">
-                <h4 className="text-gray-900 dark:text-white font-medium text-sm truncate flex-1">{masterCV.title || 'Untitled CV'}</h4>
-                <div className="flex items-center gap-1 flex-shrink-0">
-                  <div className="w-2 h-2 bg-lime-400 rounded-full"></div>
-                  <span className="text-xs text-lime-400 font-medium">Master</span>
-                </div>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-xs text-gray-600 dark:text-white/60">
-                <span>Progress: {calculateCompletionPercentage(masterCV)}%</span>
-                <span className="text-xs">{new Date(masterCV.updatedAt || masterCV.createdAt).toLocaleDateString()}</span>
-              </div>
-              <div className="mt-2">
-                <div className="w-full bg-gray-200 dark:bg-white/10 rounded-full h-1.5">
-                  <div className={`h-1.5 rounded-full transition-all duration-300 ${
-                    calculateCompletionPercentage(masterCV) >= 80 ? 'bg-green-400' : 
-                    calculateCompletionPercentage(masterCV) >= 60 ? 'bg-yellow-400' : 
-                    calculateCompletionPercentage(masterCV) >= 40 ? 'bg-orange-400' : 'bg-red-400'
-                  }`} style={{ width: `${calculateCompletionPercentage(masterCV)}%` }}></div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="glass-card-premium rounded-lg p-6 text-center">
-              <div className="flex flex-col items-center gap-3">
-                <div className="w-16 h-16 bg-lime-400/20 rounded-full flex items-center justify-center">
-                  <FileText size={24} className="text-lime-400" />
-                </div>
-                <div>
-                  <h4 className="text-gray-900 dark:text-white font-medium text-sm mb-1">No Master CV</h4>
-                  <p className="text-gray-600 dark:text-white/60 text-xs mb-3">Create your master CV to track your progress and get personalized insights.</p>
-                </div>
-                <motion.button 
-                  onClick={onCreateCV}
-                  className="px-4 py-2 bg-lime-400/20 text-lime-400 rounded-lg text-sm font-medium hover:bg-lime-400/30 transition-all duration-300 flex items-center gap-2"
-                  whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Plus size={16} />
-                  Create Master CV
-                </motion.button>
-              </div>
-            </div>
-          )}
         </div>
+
+        </div>
+
       </div>
 
     </div>
@@ -650,141 +623,7 @@ const IntelligenceDashboard: React.FC<{
   return (
     <div className="glass-widget-premium glass-shimmer rounded-xl p-6 min-h-[400px]">
       <div className="space-y-4 h-full">
-        {/* Profile Summary with Goal Progress */}
-        <div className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg border border-purple-200 dark:border-purple-400/20 min-h-[120px]">
-          {userProfile ? (
-            <>
-              {/* User Profile Section */}
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-12 h-12 bg-purple-400 rounded-full flex items-center justify-center overflow-hidden">
-                  {userAvatar ? (
-                    <img 
-                      src={userAvatar} 
-                      alt="Profile" 
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                        e.currentTarget.nextElementSibling.style.display = 'flex';
-                      }}
-                    />
-                  ) : null}
-                  <User size={24} className="text-white" style={{ display: userAvatar ? 'none' : 'flex' }} />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-gray-900 dark:text-white font-bold text-xl">{userProfile.experienceLevel.charAt(0).toUpperCase() + userProfile.experienceLevel.slice(1)} Level Professional</h3>
-                  <p className="text-gray-600 dark:text-white/60 text-sm">{userProfile.experience} years experience • {userProfile.skills.length} skills</p>
-                </div>
-                {userProfile.industries.length > 0 && (
-                  <div className="flex gap-1">
-                    {userProfile.industries.slice(0, 2).map((industry, index) => (
-                      <span key={index} className="px-2 py-1 bg-purple-400/20 text-purple-400 text-xs rounded-full">{industry}</span>
-                    ))}
-                  </div>
-                )}
-              </div>
 
-              {/* Monthly Goal Section - Now on its own row */}
-              <div className="border-t border-purple-200 dark:border-purple-400/20 pt-3">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                  <Target size={14} className="text-purple-400" />
-                  <span className="text-gray-900 dark:text-white text-sm font-medium">Monthly Goal</span>
-                    {!isEditingGoal && (
-                      <button onClick={() => setIsEditingGoal(true)} className="text-blue-400 hover:text-blue-300 text-xs">Edit</button>
-                    )}
-                  </div>
-                <span className="text-gray-600 dark:text-white/60 text-sm font-medium">{predictions?.monthlyGoalProgress || 0}%</span>
-                </div>
-                {isEditingGoal ? (
-                    <div className="flex items-center gap-2">
-                      <input type="number" min="1" max="100" value={newGoal} onChange={(e) => setNewGoal(parseInt(e.target.value) || 20)}
-                    className="flex-1 px-3 py-2 bg-white dark:bg-white/10 border border-gray-300 dark:border-white/20 rounded text-gray-900 dark:text-white text-sm" placeholder="Set monthly goal" />
-                  <button onClick={handleUpdateGoal} className="px-3 py-2 bg-blue-400 text-white text-sm rounded hover:bg-blue-300">Save</button>
-                      <button onClick={() => { setIsEditingGoal(false); setNewGoal(predictions?.monthlyGoal || 20); }}
-                    className="px-3 py-2 bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-white text-sm rounded hover:bg-gray-300 dark:hover:bg-white/20">Cancel</button>
-                  </div>
-                ) : (
-                  <>
-                    <div className="w-full bg-gray-200 dark:bg-white/10 rounded-full h-2">
-                      <div className="bg-gradient-to-r from-lime-400 to-lime-500 h-2 rounded-full transition-all duration-500"
-                        style={{ width: `${Math.min(100, predictions?.monthlyGoalProgress || 0)}%` }}></div>
-                    </div>
-                  <div className="flex justify-between text-gray-600 dark:text-white/60 text-sm mt-2">
-                      <span>{predictions?.jobsThisMonth || 0} / {predictions?.monthlyGoal || 20} jobs</span>
-                      <span>{Math.max(0, (predictions?.monthlyGoal || 20) - (predictions?.jobsThisMonth || 0))} remaining</span>
-                    </div>
-                  </>
-                )}
-              </div>
-              </>
-          ) : (
-            <div className="flex items-center justify-center h-full">
-              <div className="animate-pulse flex items-center gap-3">
-                <div className="w-12 h-12 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
-                <div className="space-y-2">
-                  <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-32"></div>
-                  <div className="h-3 bg-gray-300 dark:bg-gray-600 rounded w-24"></div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Competitive Analysis */}
-        {competitiveData && (
-          <div>
-            <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-2 flex items-center gap-2">
-              <BarChart3 size={14} className="text-orange-400" />
-              Competitive Analysis
-            </h3>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              <div className="text-center p-3 bg-gray-100 dark:bg-white/5 rounded-lg">
-                <div className="text-lg font-bold text-gray-900 dark:text-white">{competitiveData.metrics.applicationVolume}</div>
-                <div className="text-gray-600 dark:text-white/60 text-xs mb-1">Applications</div>
-                <div className={`text-xs px-2 py-1 rounded-full ${
-                  competitiveData.percentile.appVolume >= 80 ? 'bg-green-400/20 text-green-400' :
-                  competitiveData.percentile.appVolume >= 60 ? 'bg-yellow-400/20 text-yellow-400' :
-                  'bg-red-400/20 text-red-400'
-                }`}>
-                  {competitiveData.percentile.appVolume}% vs peers
-                </div>
-                </div>
-              <div className="text-center p-3 bg-gray-100 dark:bg-white/5 rounded-lg">
-                <div className="text-lg font-bold text-gray-900 dark:text-white">{competitiveData.metrics.responseRate}%</div>
-                <div className="text-gray-600 dark:text-white/60 text-xs mb-1">Response Rate</div>
-                <div className={`text-xs px-2 py-1 rounded-full ${
-                  competitiveData.percentile.responseRate >= 80 ? 'bg-green-400/20 text-green-400' :
-                  competitiveData.percentile.responseRate >= 60 ? 'bg-yellow-400/20 text-yellow-400' :
-                  'bg-red-400/20 text-red-400'
-                }`}>
-                  {competitiveData.percentile.responseRate}% vs peers
-              </div>
-                </div>
-              <div className="text-center p-3 bg-gray-100 dark:bg-white/5 rounded-lg">
-                <div className="text-lg font-bold text-gray-900 dark:text-white">{competitiveData.metrics.interviewRate}%</div>
-                <div className="text-gray-600 dark:text-white/60 text-xs mb-1">Interview Rate</div>
-                <div className={`text-xs px-2 py-1 rounded-full ${
-                  competitiveData.percentile.interviewRate >= 80 ? 'bg-green-400/20 text-green-400' :
-                  competitiveData.percentile.interviewRate >= 60 ? 'bg-yellow-400/20 text-yellow-400' :
-                  'bg-red-400/20 text-red-400'
-                }`}>
-                  {competitiveData.percentile.interviewRate}% vs peers
-              </div>
-                </div>
-              <div className="text-center p-3 bg-gray-100 dark:bg-white/5 rounded-lg">
-                <div className="text-lg font-bold text-gray-900 dark:text-white">{competitiveData.metrics.timeToOffer || 'N/A'}</div>
-                <div className="text-gray-600 dark:text-white/60 text-xs mb-1">Days to Offer</div>
-                <div className={`text-xs px-2 py-1 rounded-full ${
-                  competitiveData.percentile.timeToOffer >= 80 ? 'bg-green-400/20 text-green-400' :
-                  competitiveData.percentile.timeToOffer >= 60 ? 'bg-yellow-400/20 text-yellow-400' :
-                  'bg-red-400/20 text-red-400'
-                }`}>
-                  {competitiveData.percentile.timeToOffer}% vs peers
-              </div>
-            </div>
-          </div>
-        </div>
-          )}
                     
                     
 
@@ -1077,7 +916,8 @@ const PerformanceInsights: React.FC<{
 const RecentJobsWidget: React.FC<{ 
   jobs: any[];
   onViewJob: (jobId: string) => void;
-}> = ({ jobs, onViewJob }) => {
+  analyticsData?: any;
+}> = ({ jobs, onViewJob, analyticsData }) => {
   const [activeView, setActiveView] = useState<'timeline' | 'status'>('timeline');
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -1121,7 +961,7 @@ const RecentJobsWidget: React.FC<{
 
   const lastJobs = jobs
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 5);
+    .slice(0, 3);
 
   const statusDistribution = jobs.reduce((acc, job) => {
     acc[job.status] = (acc[job.status] || 0) + 1;
@@ -1159,9 +999,33 @@ const RecentJobsWidget: React.FC<{
       </div>
       
       {activeView === 'timeline' ? (
-        lastJobs.length > 0 ? (
-          <div className="space-y-3 flex-1 overflow-y-auto overflow-x-hidden">
-            {lastJobs.map((job) => (
+        <div className="space-y-3 flex-1 overflow-y-auto overflow-x-hidden">
+          {/* Monthly Goal Section - First Row */}
+          {analyticsData?.predictions && (
+            <div className="glass-card-premium rounded-lg p-4 mb-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-gray-900 dark:text-white font-medium text-sm flex items-center gap-2">
+                  <Target size={14} className="text-purple-400" />
+                  Monthly Goal
+                </h3>
+                <span className="text-gray-600 dark:text-white/60 text-sm font-medium">{analyticsData.predictions?.monthlyGoalProgress || 0}%</span>
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-white/10 rounded-full h-2 mb-3">
+                <div 
+                  className="h-2 rounded-full bg-gradient-to-r from-purple-400 to-purple-500 transition-all duration-300" 
+                  style={{ width: `${Math.min(analyticsData.predictions?.monthlyGoalProgress || 0, 100)}%` }}
+                ></div>
+              </div>
+              <div className="flex items-center justify-between text-xs text-gray-600 dark:text-white/60">
+                <span>Target: {analyticsData.predictions?.monthlyGoal || 20} applications</span>
+                <span>Current: {analyticsData.predictions?.currentApplications || 0}</span>
+              </div>
+            </div>
+          )}
+
+          {lastJobs.length > 0 ? (
+            <div className="space-y-3">
+              {lastJobs.map((job) => (
             <motion.div 
               key={job.id || job._id}
               onClick={() => onViewJob(job.id || job._id)}
@@ -1220,21 +1084,22 @@ const RecentJobsWidget: React.FC<{
                </div>
               ) : null}
             </motion.div>
-          ))}
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 flex-1 flex flex-col justify-center">
+              <Briefcase size={32} className="text-gray-400 dark:text-white/40 mx-auto mb-3" />
+              <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-2">No Jobs Yet</h3>
+              <p className="text-gray-600 dark:text-white/60 text-xs mb-4">Start tracking your job applications to see your recent applications here.</p>
+              <motion.button 
+                onClick={() => window.location.href = '/dashboard/application-tracker'}
+                className="px-4 py-2 bg-blue-400/20 text-blue-400 rounded-lg text-sm font-medium hover:bg-blue-400/30 transition-all duration-300"
+                whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                Add Your First Job
+              </motion.button>
+            </div>
+          )}
         </div>
-        ) : (
-          <div className="text-center py-8 flex-1 flex flex-col justify-center">
-            <Briefcase size={32} className="text-gray-400 dark:text-white/40 mx-auto mb-3" />
-            <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-2">No Jobs Yet</h3>
-            <p className="text-gray-600 dark:text-white/60 text-xs mb-4">Start tracking your job applications to see your recent applications here.</p>
-            <motion.button 
-              onClick={() => window.location.href = '/dashboard/application-tracker'}
-              className="px-4 py-2 bg-blue-400/20 text-blue-400 rounded-lg text-sm font-medium hover:bg-blue-400/30 transition-all duration-300"
-              whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              Add Your First Job
-            </motion.button>
-          </div>
-        )
       ) : (
         // Status Overview
         <div className="flex-1 flex flex-col space-y-4 overflow-hidden">
@@ -1253,42 +1118,67 @@ const RecentJobsWidget: React.FC<{
 
           <div className="glass-card-premium rounded-lg p-4 flex-1 overflow-hidden">
             <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-3">Application Status Breakdown</h3>
-            <div className="space-y-3 overflow-y-auto max-h-48">
+            <div className="flex flex-wrap gap-2 items-center">
               {Object.entries(statusDistribution).map(([status, count]) => {
                 const countNum = count as number;
                 const percentage = jobs.length > 0 ? Math.round((countNum / jobs.length) * 100) : 0;
                 const statusColors = {
-                  'created': 'bg-yellow-400',
-                  'applied': 'bg-blue-400',
-                  'screening': 'bg-orange-400',
-                  'interview': 'bg-purple-400',
-                  'offer': 'bg-green-400',
-                  'accepted': 'bg-emerald-400',
-                  'rejected': 'bg-red-400',
-                  'withdrawn': 'bg-gray-400'
+                  'created': 'bg-yellow-400/20 text-yellow-400 border-yellow-400/30',
+                  'applied': 'bg-blue-400/20 text-blue-400 border-blue-400/30',
+                  'screening': 'bg-orange-400/20 text-orange-400 border-orange-400/30',
+                  'interview': 'bg-purple-400/20 text-purple-400 border-purple-400/30',
+                  'offer': 'bg-green-400/20 text-green-400 border-green-400/30',
+                  'accepted': 'bg-emerald-400/20 text-emerald-400 border-emerald-400/30',
+                  'rejected': 'bg-red-400/20 text-red-400 border-red-400/30',
+                  'withdrawn': 'bg-gray-400/20 text-gray-400 border-gray-400/30'
                 };
                 return (
-                  <div key={status} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-4 h-4 rounded-full ${statusColors[status as keyof typeof statusColors] || 'bg-gray-400'}`}></div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-gray-700 dark:text-white/70 capitalize font-medium">{status}</span>
-                          <span className="text-sm text-gray-600 dark:text-white/60">{countNum} ({percentage}%)</span>
-                        </div>
-                        <div className="w-full bg-gray-200 dark:bg-white/10 rounded-full h-2 mt-1">
-                          <div 
-                            className={`${statusColors[status as keyof typeof statusColors] || 'bg-gray-400'} h-2 rounded-full transition-all duration-500`}
-                            style={{ width: `${percentage}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    </div>
+                  <div 
+                    key={status} 
+                    className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium ${statusColors[status as keyof typeof statusColors] || 'bg-gray-400/20 text-gray-400 border-gray-400/30'}`}
+                  >
+                    <span className="capitalize">{status}</span>
+                    <span className="font-bold">{countNum}</span>
+                    <span className="opacity-70">({percentage}%)</span>
                   </div>
                 );
               })}
             </div>
           </div>
+
+          {/* Competitive Analysis */}
+          {analyticsData?.marketIntelligence?.competitiveData && (
+            <div className="glass-card-premium rounded-lg p-4">
+              <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-3 flex items-center gap-2">
+                <BarChart3 size={14} className="text-orange-400" />
+                Competitive Analysis
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="text-center p-3 bg-gray-100 dark:bg-white/5 rounded-lg">
+                  <div className="text-lg font-bold text-gray-900 dark:text-white">{analyticsData.marketIntelligence.competitiveData.metrics.applicationVolume}</div>
+                  <div className="text-gray-600 dark:text-white/60 text-xs mb-1">Applications</div>
+                  <div className={`text-xs px-2 py-1 rounded-full ${
+                    analyticsData.marketIntelligence.competitiveData.percentile.appVolume >= 80 ? 'bg-green-400/20 text-green-400' :
+                    analyticsData.marketIntelligence.competitiveData.percentile.appVolume >= 60 ? 'bg-yellow-400/20 text-yellow-400' :
+                    'bg-red-400/20 text-red-400'
+                  }`}>
+                    {analyticsData.marketIntelligence.competitiveData.percentile.appVolume}% vs peers
+                  </div>
+                </div>
+                <div className="text-center p-3 bg-gray-100 dark:bg-white/5 rounded-lg">
+                  <div className="text-lg font-bold text-gray-900 dark:text-white">{analyticsData.marketIntelligence.competitiveData.metrics.responseRate}%</div>
+                  <div className="text-gray-600 dark:text-white/60 text-xs mb-1">Response Rate</div>
+                  <div className={`text-xs px-2 py-1 rounded-full ${
+                    analyticsData.marketIntelligence.competitiveData.percentile.responseRate >= 80 ? 'bg-green-400/20 text-green-400' :
+                    analyticsData.marketIntelligence.competitiveData.percentile.responseRate >= 60 ? 'bg-yellow-400/20 text-yellow-400' :
+                    'bg-red-400/20 text-red-400'
+                  }`}>
+                    {analyticsData.marketIntelligence.competitiveData.percentile.responseRate}% vs peers
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -1302,53 +1192,71 @@ const Analytics: React.FC = () => {
   const { isOpen: isMobileMenuOpen, toggleSidebar } = useMobileSidebar();
   const { userData, loading: userLoading, error: userError } = useUserData();
   const [selectedPeriod, setSelectedPeriod] = useState('week');
+  const searchParams = useSearchParams();
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedPlanKey, setSelectedPlanKey] = useState<string | null>(null);
   
   // Performance monitoring
   const { startPageLoad, endPageLoad, startDataFetch, endDataFetch } = usePerformanceMonitor('Analytics');
   
+  // Handle URL parameters for payment modal
+  useEffect(() => {
+    const plan = searchParams.get('plan');
+    const showModal = searchParams.get('showPaymentModal');
+    
+    if (plan && showModal === 'true') {
+      setSelectedPlanKey(plan);
+      setShowPaymentModal(true);
+    }
+  }, [searchParams]);
+  
   // Get user ID for data fetching using unified authentication
   const userId = getUserIdForAPI(user);
   
+  // Memoize performance monitoring functions to prevent re-renders
+  const memoizedStartDataFetch = useCallback(() => startDataFetch(), [startDataFetch]);
+  const memoizedEndDataFetch = useCallback(() => endDataFetch(), [endDataFetch]);
+
   // Memoize fetchers with priority-based loading
   const fetchers = useMemo(() => ({
     // High priority - essential for Analytics page
     cvs: () => {
-      startDataFetch();
+      memoizedStartDataFetch();
       return authenticatedFetch('/api/cvs').then(res => {
-        endDataFetch();
+        memoizedEndDataFetch();
         return res.json();
       });
     },
     jobs: () => {
-      startDataFetch();
+      memoizedStartDataFetch();
       return authenticatedFetch('/api/jobs').then(res => {
-        endDataFetch();
+        memoizedEndDataFetch();
         return res.json();
       });
     },
     // Medium priority - analytics data
     analytics: () => {
-      startDataFetch();
+      memoizedStartDataFetch();
       return authenticatedFetch(`/api/analytics/progress?userId=${userId}&period=${selectedPeriod}`).then(res => {
-        endDataFetch();
+        memoizedEndDataFetch();
         return res.json();
       }).catch(() => {
-        endDataFetch();
+        memoizedEndDataFetch();
         return { success: false, data: null };
       });
     },
     // Low priority - optional data
     drafts: () => {
-      startDataFetch();
+      memoizedStartDataFetch();
       return authenticatedFetch('/api/drafts').then(res => {
-        endDataFetch();
+        memoizedEndDataFetch();
         return res.json();
       }).catch(() => {
-        endDataFetch();
+        memoizedEndDataFetch();
         return { success: false, data: { drafts: [] } };
       });
     }
-  }), [userId, selectedPeriod, startDataFetch, endDataFetch]);
+  }), [userId, selectedPeriod, memoizedStartDataFetch, memoizedEndDataFetch]);
   
   // Optimized parallel data fetching with priority
   const {
@@ -1566,12 +1474,15 @@ const Analytics: React.FC = () => {
             onCreateCoverLetter={() => window.location.href = '/studio?type=cover_letter'}
             onCreateJob={() => window.location.href = '/dashboard/application-tracker'}
             onSetMasterCV={handleSetMasterCV}
+            predictions={analyticsData?.predictions}
+            onUpdateGoal={handleUpdateMonthlyGoal}
           />
         </div>
         <div className="flex w-full">
           <RecentJobsWidget
             jobs={jobs}
             onViewJob={(jobId) => window.location.href = `/dashboard/application-tracker?job=${jobId}`}
+            analyticsData={analyticsData}
           />
         </div>
       </div>
@@ -1643,6 +1554,21 @@ const Analytics: React.FC = () => {
           <ApplicationStatsWidget userId={userId || ''} />
         </div>
       </div>
+
+      {/* Enhanced Payment Modal */}
+      <UniversalPaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        preselectedPlanKey={selectedPlanKey || undefined}
+        onSuccess={(subscription) => {
+          console.log('Payment successful:', subscription);
+          setShowPaymentModal(false);
+          // Optionally refresh the page or show success message
+          window.location.reload();
+        }}
+        returnUrl="/dashboard"
+        triggerContext="landing-page-plan-selection"
+      />
 
     </div>
   );
