@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/database';
 import { CV } from '@/models';
 import { JobApplication } from '@/models';
+import { ApplicationJourney } from '@/models/ApplicationJourney';
 import { getCVWithTemplate } from '@/lib/cv-template-utils';
 
 export const runtime = 'nodejs';
@@ -11,7 +12,7 @@ export async function POST(req: NextRequest) {
   try {
     await connectDB();
     
-    const { cvId, jobId, userId } = await req.json();
+    const { cvId, jobId, userId, journeyId } = await req.json();
 
     console.log('🔍 ATS AI API - Request received:', { cvId, jobId, userId });
 
@@ -125,6 +126,44 @@ export async function POST(req: NextRequest) {
     const atsScore = calculateSimpleATSScore(cvText, jobDescription);
     console.log('✅ ATS AI API - ATS calculation completed:', { score: atsScore });
 
+    // Save ATS score to journey database if journeyId is provided
+    if (journeyId && userId) {
+      try {
+        console.log('🔍 ATS AI API - Saving ATS score to journey database:', { journeyId, atsScore });
+        
+        // Create ATS score history entry
+        const atsHistoryEntry = {
+          score: atsScore,
+          calculatedAt: new Date(),
+          cvVersion: cvDoc.version?.toString() || '1'
+        };
+
+        // Update journey with new ATS score and history
+        const updatedJourney = await ApplicationJourney.findByIdAndUpdate(
+          journeyId,
+          {
+            $set: {
+              atsScore: atsScore,
+              lastWorkedOn: new Date()
+            },
+            $push: {
+              atsScoreHistory: atsHistoryEntry
+            }
+          },
+          { new: true }
+        );
+
+        if (updatedJourney) {
+          console.log('✅ ATS AI API - ATS score saved to journey database successfully');
+        } else {
+          console.warn('⚠️ ATS AI API - Journey not found for ID:', journeyId);
+        }
+      } catch (error) {
+        console.error('❌ ATS AI API - Failed to save ATS score to journey:', error);
+        // Don't fail the request if saving to journey fails
+      }
+    }
+
     return NextResponse.json({
       success: true,
       data: {
@@ -235,9 +274,11 @@ function calculateSimpleATSScore(cvText: string, jobDescription: string): number
     return 0;
   }
   
-  let score = 50; // Base score
+  let structureScore = 0;
+  let contentScore = 0;
+  let matchScore = 0;
   
-  // Check for essential CV elements
+  // Check for essential CV structure elements (30% weight)
   const hasName = /[A-Za-z]{2,}/.test(cvText);
   const hasEmail = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/.test(cvText);
   const hasPhone = /(\+?1[-.\s]?)?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}/.test(cvText);
@@ -245,30 +286,53 @@ function calculateSimpleATSScore(cvText: string, jobDescription: string): number
   const hasEducation = /(education|degree|university|college|bachelor|master|phd)/i.test(cvText);
   const hasSkills = /(skills|technologies|programming|software|tools)/i.test(cvText);
   
-  if (hasName) score += 10;
-  if (hasEmail) score += 10;
-  if (hasPhone) score += 5;
-  if (hasExperience) score += 15;
-  if (hasEducation) score += 10;
-  if (hasSkills) score += 10;
+  // Structure score: max 30 points
+  if (hasName) structureScore += 5;
+  if (hasEmail) structureScore += 5;
+  if (hasPhone) structureScore += 3;
+  if (hasExperience) structureScore += 7;
+  if (hasEducation) structureScore += 5;
+  if (hasSkills) structureScore += 5;
   
-  // If job description is provided, do keyword matching
+  // Content quality score (20% weight) - based on content length and depth
+  const wordCount = cvText.split(/\s+/).length;
+  if (wordCount > 50) contentScore += 5;
+  if (wordCount > 150) contentScore += 5;
+  if (wordCount > 300) contentScore += 5;
+  if (wordCount > 500) contentScore += 5;
+  
+  // If job description is provided, do keyword matching (50% weight)
   if (jobDescription && jobDescription.trim().length > 0) {
     const jobKeywords = extractKeywords(jobDescription);
     const cvKeywords = extractKeywords(cvText);
     
-    const matchingKeywords = cvKeywords.filter(keyword => 
-      jobKeywords.some(jobKeyword => 
-        jobKeyword.toLowerCase().includes(keyword.toLowerCase()) ||
-        keyword.toLowerCase().includes(jobKeyword.toLowerCase())
-      )
-    );
-    
-    const keywordScore = Math.min(30, (matchingKeywords.length / Math.max(jobKeywords.length, 1)) * 30);
-    score += keywordScore;
+    if (jobKeywords.length > 0) {
+      const matchingKeywords = cvKeywords.filter(keyword => 
+        jobKeywords.some(jobKeyword => 
+          jobKeyword.toLowerCase().includes(keyword.toLowerCase()) ||
+          keyword.toLowerCase().includes(jobKeyword.toLowerCase())
+        )
+      );
+      
+      // Calculate match percentage based on job keywords found in CV
+      const matchPercentage = matchingKeywords.length / jobKeywords.length;
+      matchScore = Math.round(matchPercentage * 50); // Max 50 points
+      
+      console.log('🔍 ATS Score Calculation:', {
+        jobKeywords: jobKeywords.length,
+        cvKeywords: cvKeywords.length,
+        matchingKeywords: matchingKeywords.length,
+        matchPercentage: Math.round(matchPercentage * 100) + '%',
+        matchScore
+      });
+    }
+  } else {
+    // If no job description, give a baseline match score of 25 (50% of max)
+    matchScore = 25;
   }
   
-  return Math.min(100, Math.max(0, Math.round(score)));
+  const finalScore = structureScore + contentScore + matchScore;
+  return Math.min(100, Math.max(0, Math.round(finalScore)));
 }
 
 // Helper function to extract keywords from text

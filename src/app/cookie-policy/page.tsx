@@ -103,10 +103,12 @@ const CookiePolicy: React.FC = () => {
                   These cookies are necessary for the website to function properly. They enable basic functions like page navigation, access to secure areas, and form submissions.
                 </p>
                 <ul className="list-disc list-inside space-y-2 text-white/80">
-                  <li>Authentication and security cookies</li>
-                  <li>Session management cookies</li>
-                  <li>Load balancing cookies</li>
-                  <li>User interface customization cookies</li>
+                  <li>NextAuth.js session cookies (next-auth.session-token)</li>
+                  <li>Firebase authentication cookies</li>
+                  <li>CSRF protection cookies (csrf-token)</li>
+                  <li>User session management cookies</li>
+                  <li>Email verification token cookies</li>
+                  <li>Security and access control cookies</li>
                 </ul>
               </div>
 
@@ -129,10 +131,12 @@ const CookiePolicy: React.FC = () => {
                   These cookies enable enhanced functionality and personalization, such as remembering your preferences and settings.
                 </p>
                 <ul className="list-disc list-inside space-y-2 text-white/80">
-                  <li>Language preference cookies</li>
-                  <li>Theme and layout preferences</li>
-                  <li>CV template preferences</li>
-                  <li>User interface settings</li>
+                  <li>Theme preferences (dark/light mode)</li>
+                  <li>CV template and design preferences</li>
+                  <li>User interface customization settings</li>
+                  <li>Dashboard layout preferences</li>
+                  <li>Notification preferences</li>
+                  <li>Onboarding completion status</li>
                 </ul>
               </div>
 

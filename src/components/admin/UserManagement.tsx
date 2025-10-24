@@ -26,7 +26,7 @@ import {
   Award,
   TrendingUp
 } from 'lucide-react';
-import MembershipModal from '@/components/payment/MembershipModal';
+import UniversalPaymentModal from '@/components/payment/UniversalPaymentModal';
 
 interface User {
   _id: string;
@@ -556,10 +556,10 @@ const UserManagement: React.FC = () => {
 
       {/* Membership Modal */}
       {selectedUserForModal && (
-        <MembershipModal
+        <UniversalPaymentModal
           isOpen={isMembershipModalOpen}
           onClose={() => setIsMembershipModalOpen(false)}
-          currentPlanKey={selectedUserForModal.currentPlanKey}
+          currentUserPlan={selectedUserForModal.currentPlanKey}
           onSuccess={() => {
             setIsMembershipModalOpen(false);
             fetchUsers();

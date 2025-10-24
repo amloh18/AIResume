@@ -16,6 +16,24 @@ function ErrorContent() {
         return 'Access denied. You do not have permission to sign in.';
       case 'Verification':
         return 'The verification link is invalid or has expired.';
+      case 'OAuthSignin':
+        return 'There was an error with the Google sign-in process. Please try again.';
+      case 'OAuthCallback':
+        return 'There was an error processing the Google sign-in callback.';
+      case 'OAuthCreateAccount':
+        return 'Could not create account with Google. Please try again.';
+      case 'EmailCreateAccount':
+        return 'Could not create account with this email.';
+      case 'Callback':
+        return 'There was an error with the authentication callback.';
+      case 'OAuthAccountNotLinked':
+        return 'This email is already associated with a different account.';
+      case 'EmailSignin':
+        return 'Check your email for a sign-in link.';
+      case 'CredentialsSignin':
+        return 'Sign in failed. Check your credentials and try again.';
+      case 'SessionRequired':
+        return 'Please sign in to access this page.';
       case 'Default':
         return 'An unexpected error occurred.';
       default:
@@ -49,7 +67,7 @@ function ErrorContent() {
           <p className="mt-2 text-sm text-gray-600">
             {getErrorMessage(error)}
           </p>
-          {error === 'Configuration' && (
+          {(error === 'Configuration' || error === 'OAuthSignin' || error === 'OAuthCallback') && (
             <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
               <p className="text-sm text-yellow-800">
                 <strong>Possible solutions:</strong>
@@ -59,6 +77,8 @@ function ErrorContent() {
                 <li>Verify your environment variables</li>
                 <li>Ensure your redirect URIs are correct</li>
                 <li>Try clearing your browser cache</li>
+                <li>Make sure JavaScript is enabled</li>
+                <li>Try using a different browser</li>
               </ul>
             </div>
           )}

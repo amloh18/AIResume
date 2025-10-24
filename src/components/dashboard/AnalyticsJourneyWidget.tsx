@@ -8,8 +8,6 @@ import JourneyTimelineCard from './JourneyTimelineCard';
 import NewJourneyCard from './NewJourneyCard';
 import { 
   Trash2, 
-  ChevronLeft,
-  ChevronRight,
   Eye,
   Plus
 } from 'lucide-react';
@@ -43,7 +41,6 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
   const { data: session } = useSession();
   const { state } = useJobJourney();
   const [journeys, setJourneys] = useState<Journey[]>([]);
-  const [currentPage, setCurrentPage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -53,7 +50,7 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
     if (session?.user?.id) {
       fetchJourneys();
     }
-  }, [session?.user?.id]);
+  }, [session?.user?.id]); // Keep this specific to prevent loops
 
   const fetchJourneys = async () => {
     try {
@@ -247,7 +244,6 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
         <div className="flex items-center gap-2">
           <motion.button
             onClick={() => {
-              console.log('🔍 AnalyticsJourneyWidget - Start Journey button clicked');
               setShowNewJourneyCard(true);
             }}
             className="px-4 py-2 bg-lime-500 hover:bg-lime-600 text-black font-medium rounded-lg transition-colors text-sm shadow-lg shadow-lime-500/25 hover:shadow-lime-500/40"
@@ -287,104 +283,50 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
           </motion.div>
         </div>
       ) : (
-        <div className="relative overflow-hidden">
-          {/* Navigation Arrows */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between mb-4">
-              <motion.button
-                onClick={prevPage}
-                disabled={currentPage === 0}
-                className="p-2 bg-gray-200 dark:bg-white/10 hover:bg-gray-300 dark:hover:bg-white/20 text-gray-700 dark:text-white rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </motion.button>
-              
-              <div className="text-gray-600 dark:text-white/60 text-sm">
-                {currentPage + 1} of {totalPages}
-              </div>
-              
-              <motion.button
-                onClick={nextPage}
-                disabled={currentPage === totalPages - 1}
-                className="p-2 bg-gray-200 dark:bg-white/10 hover:bg-gray-300 dark:hover:bg-white/20 text-gray-700 dark:text-white rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </motion.button>
-            </div>
+        <div className="space-y-4">
+          {/* New Journey Card */}
+          {showNewJourneyCard && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <NewJourneyCard
+                onJourneyCreated={handleJourneyCreated}
+                onCancel={() => {
+                  setShowNewJourneyCard(false);
+                }}
+              />
+            </motion.div>
           )}
           
-          {/* Carousel Container */}
-          <div className="space-y-4">
-            {/* New Journey Card */}
-            {showNewJourneyCard && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-              >
-                {console.log('🔍 AnalyticsJourneyWidget - Rendering NewJourneyCard')}
-                <NewJourneyCard
-                  onJourneyCreated={handleJourneyCreated}
-                  onCancel={() => {
-                    console.log('🔍 AnalyticsJourneyWidget - NewJourneyCard cancelled');
-                    setShowNewJourneyCard(false);
-                  }}
-                />
-              </motion.div>
-            )}
-            
-            {/* Existing Journeys */}
-            {incompleteJourneys.slice(currentPage * journeysPerPage, currentPage * journeysPerPage + journeysPerPage).map((journey, index) => (
-              <motion.div
-                key={journey.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3, delay: index * 0.1 }}
-              >
-                <JourneyTimelineCard
-                  journey={journey}
-                  onResume={onResumeJourney}
-                  onDownload={(journey) => {
-                    // Handle download functionality
-                    console.log('Download journey:', journey);
-                  }}
-                  onDelete={onDeleteJourney}
-                  onRefresh={() => {
-                    // Refresh journeys in AnalyticsJourneyWidget
-                    console.log('Refreshing journeys in AnalyticsJourneyWidget');
-                  }}
-                  onShowDeleteConfirm={setShowDeleteConfirm}
-                />
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Pagination Dots */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center mt-4 pt-4 border-t border-gray-200 dark:border-white/10">
-          <div className="flex items-center gap-2">
-            {Array.from({ length: totalPages }, (_, index) => (
-              <motion.button
-                key={index}
-                onClick={() => goToPage(index)}
-                className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                  currentPage === index 
-                    ? 'bg-lime-500 scale-125' 
-                    : 'bg-gray-300 dark:bg-white/30 hover:bg-gray-400 dark:hover:bg-white/50'
-                }`}
-                whileHover={{ scale: 1.2 }}
-                whileTap={{ scale: 0.9 }}
-                title={`Page ${index + 1}`}
-              />
-            ))}
+          {/* Scrollable Container for Journeys */}
+          <div className="max-h-[505px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
+            <div className="space-y-4 pr-2">
+              {incompleteJourneys.slice(0, journeysPerPage).map((journey, index) => (
+                <motion.div
+                  key={journey.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3, delay: index * 0.1 }}
+                >
+                  <JourneyTimelineCard
+                    journey={journey}
+                    onResume={onResumeJourney}
+                    onDownload={(journey) => {
+                      // Handle download functionality
+                    }}
+                    onDelete={onDeleteJourney}
+                    onRefresh={() => {
+                      // Refresh journeys in AnalyticsJourneyWidget
+                    }}
+                    onShowDeleteConfirm={setShowDeleteConfirm}
+                  />
+                </motion.div>
+              ))}
+            </div>
           </div>
         </div>
       )}

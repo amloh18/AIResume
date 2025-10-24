@@ -139,30 +139,53 @@ const EnhancedCVPreview: React.FC<EnhancedCVPreviewProps> = ({
         </div>
       )}
       
-      <div 
-        className="cv-content"
-        style={{
-          paddingTop: `${pagePadding.top}px`,
-          paddingBottom: `${pagePadding.bottom}px`,
-        }}
-      >
-        <TemplateRenderer
-          cvData={cvData}
-          template={template}
-          sectionOrder={['personal_header', ...(sectionOrder?.filter(s => s !== 'personal_header') || ['work_experience', 'education', 'skills', 'projects', 'certificates', 'languages'])]}
-          sectionVisibility={sectionVisibility}
-          enabledSections={enabledSections}
-          className="template-rendered-content"
-        />
+      {/* Render content in fixed-height page containers */}
+      <div className="cv-pages-container">
+        <div 
+          className="cv-page"
+          style={{
+            width: '210mm', // A4 width
+            minHeight: '297mm', // A4 height
+            paddingTop: `${pagePadding.top}px`,
+            paddingBottom: `${pagePadding.bottom}px`,
+            paddingLeft: '32px',
+            paddingRight: '32px',
+            background: 'white',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+            marginBottom: '20px',
+            overflow: 'visible',
+            position: 'relative'
+          }}
+        >
+          <TemplateRenderer
+            cvData={cvData}
+            template={template}
+            sectionOrder={['personal_header', ...(sectionOrder?.filter(s => s !== 'personal_header') || ['work_experience', 'education', 'skills', 'projects', 'certificates', 'languages'])]}
+            sectionVisibility={sectionVisibility}
+            enabledSections={enabledSections}
+            className="template-rendered-content"
+          />
+        </div>
       </div>
 
       <style jsx>{`
         .enhanced-cv-preview {
           width: 100%;
-          height: 100%;
-          background: white;
+          height: auto;
+          background: transparent;
           position: relative;
-          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          padding: 20px 0;
+        }
+        
+        .cv-pages-container {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 20px;
+          width: 100%;
         }
         
         .template-badge {
@@ -198,41 +221,64 @@ const EnhancedCVPreview: React.FC<EnhancedCVPreviewProps> = ({
           letter-spacing: 0.5px;
         }
         
-        .cv-content {
-          width: 100%;
-          height: 100%;
-          padding-left: 32px;
-          padding-right: 32px;
-        }
-        
         :global(.template-rendered-content) {
           width: 100%;
-          min-height: 100%;
+          height: auto;
+          display: flex;
+          flex-direction: column;
+        }
+        
+        /* A4 Page Container */
+        :global(.cv-page) {
+          display: block;
+          position: relative;
+        }
+        
+        /* Page Break Handling */
+        :global(.enhanced-cv-preview .section) {
+          page-break-inside: avoid;
+          break-inside: avoid;
+        }
+        
+        :global(.enhanced-cv-preview .section-item) {
+          page-break-inside: avoid;
+          break-inside: avoid;
+        }
+        
+        /* Avoid orphaned headings */
+        :global(.enhanced-cv-preview h1),
+        :global(.enhanced-cv-preview h2),
+        :global(.enhanced-cv-preview h3) {
+          page-break-after: avoid;
+          break-after: avoid;
         }
         
         @media print {
           .enhanced-cv-preview {
-            width: 8.5in;
-            min-height: 11in;
+            width: 210mm;
             margin: 0;
             padding: 0;
             background: white;
+          }
+          
+          :global(.cv-page) {
             box-shadow: none;
+            margin-bottom: 0;
+            page-break-after: always;
+            page-break-inside: avoid;
           }
           
           .template-badge {
             display: none;
           }
-          
-          .cv-content {
-            padding: 0.5in;
-          }
         }
         
         @media (max-width: 768px) {
-          .cv-content {
-            padding-left: 16px;
-            padding-right: 16px;
+          :global(.cv-page) {
+            width: 100% !important;
+            min-height: auto !important;
+            padding-left: 16px !important;
+            padding-right: 16px !important;
           }
           
           .template-badge {

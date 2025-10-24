@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/database';
-import { CV } from '@/models';
+import { CV, User } from '@/models';
 import { createErrorResponse } from '@/lib/db-utils';
 import { extractUserIdentifier, findByFirebaseUid, createWithFirebaseUid } from '@/lib/firebase-uid-utils';
 import mongoose from 'mongoose';
@@ -61,7 +61,17 @@ export async function GET(request: NextRequest) {
     };
     
     if (userIdentifier.type === 'firebase') {
-      queryCondition.firebaseUid = userIdentifier.id;
+      // For Firebase users, we need to find the user first to get their MongoDB ObjectId
+      const user = await User.findOne({ firebaseUid: userIdentifier.id });
+      if (!user) {
+        console.log('❌ Master CV API - User not found for Firebase UID:', userIdentifier.id);
+        return NextResponse.json(
+          { success: false, error: 'User not found' },
+          { status: 404 }
+        );
+      }
+      queryCondition.userId = user._id;
+      console.log('🔍 Master CV API - Using Firebase UID, found user ObjectId:', user._id);
     } else if (userIdentifier.type === 'objectid') {
       queryCondition.userId = new mongoose.Types.ObjectId(userIdentifier.id);
     }
@@ -80,7 +90,8 @@ export async function GET(request: NextRequest) {
     // Also check all CVs for this user to see what's in the database
     let allCVsQuery: Record<string, any> = {};
     if (userIdentifier.type === 'firebase') {
-      allCVsQuery.firebaseUid = userIdentifier.id;
+      // Use the same user ObjectId we found above
+      allCVsQuery.userId = queryCondition.userId;
     } else {
       allCVsQuery.userId = new mongoose.Types.ObjectId(userIdentifier.id);
     }

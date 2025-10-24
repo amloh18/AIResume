@@ -210,14 +210,31 @@ const ApplicationJourneyPageContent: React.FC = () => {
     // Navigate to studio with journey context
     let studioUrl = `/studio?journeyId=${journey.jobId}`;
     
+    // Determine the appropriate mode based on journey progress
+    let mode = 'cv-onboarding'; // Default for new journeys
+    
+    if (journey.cvId) {
+      // If CV exists, determine mode based on journey status
+      if (journey.status === 'in-progress') {
+        // Check if we need ATS editing or can proceed to cover letter
+        if (journey.atsScore && journey.atsScore >= 80) {
+          mode = 'cover-letter-edit'; // Ready for cover letter
+        } else {
+          mode = 'ats-edit'; // Need to improve ATS score
+        }
+      } else {
+        mode = 'ats-edit'; // Default to ATS editing for existing CVs
+      }
+    }
+    
     // Add document type and ID based on what's available
     if (journey.cvId) {
-      studioUrl += `&type=cv&cvId=${journey.cvId}`;
+      studioUrl += `&type=cv&mode=${mode}&cvId=${journey.cvId}`;
     } else if (journey.coverLetterId) {
-      studioUrl += `&type=cover_letter&coverLetterId=${journey.coverLetterId}`;
+      studioUrl += `&type=cover_letter&mode=cover-letter-edit&coverLetterId=${journey.coverLetterId}`;
     } else {
       // Default to CV step if no documents are linked
-      studioUrl += `&step=2`;
+      studioUrl += `&type=cv&mode=${mode}&step=2`;
     }
     
     router.push(studioUrl);
@@ -388,18 +405,20 @@ const ApplicationJourneyPageContent: React.FC = () => {
           </button>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex gap-3">
-          <motion.button
-            onClick={handleStartNewJourney}
-            className="flex items-center gap-2 px-6 py-2 bg-lime-500 hover:bg-lime-600 text-black font-medium rounded-lg transition-colors shadow-sm"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <Plus className="h-4 w-4" />
-            Start New Journey
-          </motion.button>
-        </div>
+        {/* Action Buttons - Only show when there are journeys */}
+        {journeys.length > 0 && (
+          <div className="flex gap-3">
+            <motion.button
+              onClick={handleStartNewJourney}
+              className="flex items-center gap-2 px-6 py-2 bg-lime-500 hover:bg-lime-600 text-black font-medium rounded-lg transition-colors shadow-sm"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <Plus className="h-4 w-4" />
+              Start New Journey
+            </motion.button>
+          </div>
+        )}
       </div>
 
       {/* Filters Panel */}

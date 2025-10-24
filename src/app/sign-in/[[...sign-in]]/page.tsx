@@ -18,6 +18,8 @@ function SignInPageContent() {
   const searchParams = useSearchParams();
   const { data: session, status } = useSession();
   const redirectUrl = searchParams.get('redirect_url') || '/dashboard';
+  const planKey = searchParams.get('plan');
+  const returnUrl = searchParams.get('returnUrl');
   const { messages, clearMessages } = useConsoleLoggerContext();
 
   const [formData, setFormData] = useState<SignInFormData>({
@@ -33,21 +35,31 @@ function SignInPageContent() {
   useEffect(() => {
     if (status === 'authenticated' && session?.user) {
       console.log('🔍 User already signed in, redirecting to:', redirectUrl);
-      router.push(redirectUrl);
+      // If plan is specified, redirect to dashboard with plan parameter
+      if (planKey) {
+        router.push(`/dashboard?plan=${planKey}&showPaymentModal=true`);
+      } else {
+        router.push(returnUrl || redirectUrl);
+      }
     }
-  }, [status, session, router, redirectUrl]);
+  }, [status, session, router, redirectUrl, planKey, returnUrl]);
 
   // Handle redirect after successful sign-in
   useEffect(() => {
     if (success && status === 'authenticated' && session?.user) {
       console.log('🔍 Sign-in successful, redirecting to:', redirectUrl);
       const timer = setTimeout(() => {
-        router.push(redirectUrl);
+        // If plan is specified, redirect to dashboard with plan parameter
+        if (planKey) {
+          router.push(`/dashboard?plan=${planKey}&showPaymentModal=true`);
+        } else {
+          router.push(returnUrl || redirectUrl);
+        }
       }, 1500); // Small delay to show success message
       
       return () => clearTimeout(timer);
     }
-  }, [success, status, session, router, redirectUrl]);
+  }, [success, status, session, router, redirectUrl, planKey, returnUrl]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -134,8 +146,8 @@ function SignInPageContent() {
 
   return (
     <div className="h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 flex">
-      {/* Left Side - Full Height Sign In Image (50%) */}
-      <div className="w-1/2 p-4">
+      {/* Left Side - Full Height Sign In Image (50%) - Hidden on Mobile */}
+      <div className="hidden md:flex w-1/2 p-4">
         {/* Full Height Image with Padding */}
         <div className="relative h-full rounded-2xl overflow-hidden bg-gradient-to-br from-lime-400/20 to-lime-500/20">
           <img 
@@ -171,8 +183,8 @@ function SignInPageContent() {
         </div>
       </div>
 
-      {/* Right Side - Sign In Modal (50%) */}
-      <div className="w-1/2 flex flex-col items-center justify-center px-8 lg:px-12 xl:px-16 relative">
+      {/* Right Side - Sign In Modal (50% on desktop, 100% on mobile) */}
+      <div className="w-full md:w-1/2 flex flex-col items-center justify-center px-8 lg:px-12 xl:px-16 relative">
         {/* CVCircle Logo - Top Right */}
         <div className="absolute top-8 right-8">
           <h1 className="text-3xl font-bold">

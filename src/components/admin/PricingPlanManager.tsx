@@ -16,7 +16,7 @@ import {
   Copy,
   Settings
 } from 'lucide-react';
-import MembershipModal from '@/components/payment/MembershipModal';
+import UniversalPaymentModal from '@/components/payment/UniversalPaymentModal';
 import RedesignedPricingCards from '@/components/pricing/RedesignedPricingCards';
 import PricingPlanEditModal from '@/components/admin/PricingPlanEditModal';
 
@@ -361,10 +361,10 @@ const PricingPlanManager: React.FC = () => {
 
       {/* Preview Modal */}
       {selectedPlanForPreview && (
-        <MembershipModal
+        <UniversalPaymentModal
           isOpen={isPreviewModalOpen}
           onClose={() => setIsPreviewModalOpen(false)}
-          currentPlanKey="free"
+          currentUserPlan="free"
           preselectedPlanKey={selectedPlanForPreview.key}
           onSuccess={() => setIsPreviewModalOpen(false)}
           adminMode={true}

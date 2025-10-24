@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { createPortal } from 'react-dom';
 import { X, CheckCircle, Download, AlertTriangle } from 'lucide-react';
 
 interface MoveToAppliedModalProps {
@@ -52,14 +53,20 @@ const MoveToAppliedModal: React.FC<MoveToAppliedModalProps> = ({
 
   if (!isOpen) return null;
 
-  return (
+  // Use portal to render at document root to avoid z-index issues
+  const modalContent = (
     <AnimatePresence>
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div 
+        className="fixed inset-0 bg-black/50 flex items-center justify-center z-[99999] p-4" 
+        style={{ pointerEvents: 'auto' }}
+        onClick={onClose}
+      >
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
           className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full"
+          onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
@@ -171,6 +178,13 @@ const MoveToAppliedModal: React.FC<MoveToAppliedModalProps> = ({
       </div>
     </AnimatePresence>
   );
+
+  // Render using portal to ensure it appears above all other modals
+  if (typeof window !== 'undefined') {
+    return createPortal(modalContent, document.body);
+  }
+  
+  return null;
 };
 
 export default MoveToAppliedModal;

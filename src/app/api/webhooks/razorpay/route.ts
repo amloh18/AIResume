@@ -3,7 +3,7 @@ import { headers } from 'next/headers';
 import { razorpay } from '@/lib/payment/razorpay';
 import connectDB from '@/lib/database';
 import User from '@/models/User';
-import PricingPlan from '@/models/PricingPlan';
+import { getAdminPricingPlan } from '@/models/admin-models';
 import Invoice from '@/models/Invoice';
 import crypto from 'crypto';
 
@@ -80,6 +80,7 @@ async function handlePaymentCaptured(payment: any) {
     }
 
     const user = await User.findById(userId);
+    const PricingPlan = await getAdminPricingPlan();
     const plan = await PricingPlan.findById(planId);
 
     if (!user || !plan) {
@@ -147,6 +148,7 @@ async function handleSubscriptionActivated(subscription: any) {
     }
 
     const user = await User.findById(userId);
+    const PricingPlan = await getAdminPricingPlan();
     const plan = await PricingPlan.findById(planId);
 
     if (!user || !plan) {
@@ -288,6 +290,7 @@ async function handleOrderPaid(order: any) {
     }
 
     const user = await User.findById(userId);
+    const PricingPlan = await getAdminPricingPlan();
     const plan = await PricingPlan.findById(planId);
 
     if (!user || !plan) {

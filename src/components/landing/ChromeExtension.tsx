@@ -11,24 +11,55 @@ const ChromeExtension = () => {
   };
 
   return (
-    <section id="chrome-extension" className="py-20 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
+    <section id="chrome-extension" className="relative h-screen flex items-center bg-gradient-to-b from-gray-900 to-black overflow-hidden pt-20">
+      {/* Grid Pattern Background */}
+      <div className="absolute inset-0">
+        {/* Grid Lines */}
+        <div 
+          className="absolute inset-0 opacity-10"
+          style={{
+            backgroundImage: `
+              linear-gradient(rgba(168, 85, 247, 0.3) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(168, 85, 247, 0.3) 1px, transparent 1px)
+            `,
+            backgroundSize: '50px 50px'
+          }}
+        />
+        
+        {/* Grid Dots */}
+        <div 
+          className="absolute inset-0 opacity-20"
+          style={{
+            backgroundImage: `
+              radial-gradient(circle, rgba(168, 85, 247, 0.4) 2px, transparent 2px)
+            `,
+            backgroundSize: '50px 50px',
+            backgroundPosition: '25px 25px'
+          }}
+        />
+        
+        {/* Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-900/80 to-black/80"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-purple-400/5 to-blue-400/5 rounded-full blur-3xl"></div>
+      </div>
+      
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full h-full flex flex-col justify-center">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 50 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.8 }}
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+          <h2 className="text-3xl sm:text-5xl font-bold text-white mb-6 text-center">
             Save Jobs in{' '}
-            <span className="bg-gradient-to-r from-blue-500 to-blue-600 bg-clip-text text-transparent">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-purple-500">
               Seconds
             </span>
           </h2>
-          <p className="text-xl text-gray-300 max-w-3xl mx-auto">
+          <p className="text-lg text-white/70 max-w-3xl mx-auto leading-relaxed">
             Our Chrome extension makes job hunting effortless. Save jobs from LinkedIn, Indeed, 
-            and 15+ other job sites directly to your <span className="text-lime-400">CV</span><span className="text-gray-300">Circle.io</span> dashboard with just one click.
+            and 15+ other job sites directly to your <span className="text-purple-400">CV</span><span className="text-white/70">Circle.io</span> dashboard with just one click.
           </p>
         </motion.div>
 
@@ -43,47 +74,83 @@ const ChromeExtension = () => {
           >
             <div className="space-y-6">
               <div className="flex items-start space-x-4">
-                <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                <motion.div 
+                  className="flex-shrink-0 w-12 h-12 bg-gradient-to-r from-purple-400 to-purple-500 rounded-lg flex items-center justify-center shadow-lg"
+                  whileHover={{ 
+                    scale: 1.1,
+                    rotateY: 15,
+                    boxShadow: "0 20px 40px -12px rgba(168, 85, 247, 0.5)"
+                  }}
+                  style={{
+                    transformStyle: 'preserve-3d',
+                    perspective: '1000px'
+                  }}
+                >
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                   </svg>
-                </div>
+                </motion.div>
                 <div>
                   <h3 className="text-xl font-semibold text-white mb-2">One-Click Save</h3>
-                  <p className="text-gray-300">Click our extension icon on any job posting to instantly save it to your dashboard.</p>
+                  <p className="text-white/80">Click our extension icon on any job posting to instantly save it to your dashboard.</p>
                 </div>
               </div>
 
               <div className="flex items-start space-x-4">
-                <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg flex items-center justify-center">
+                <motion.div 
+                  className="flex-shrink-0 w-12 h-12 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg flex items-center justify-center shadow-lg"
+                  whileHover={{ 
+                    scale: 1.1,
+                    rotateY: 15,
+                    boxShadow: "0 20px 40px -12px rgba(168, 85, 247, 0.5)"
+                  }}
+                  style={{
+                    transformStyle: 'preserve-3d',
+                    perspective: '1000px'
+                  }}
+                >
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                </div>
+                </motion.div>
                 <div>
                   <h3 className="text-xl font-semibold text-white mb-2">Smart Parsing</h3>
-                  <p className="text-gray-300">Automatically extracts job title, company, location, and description from any job site.</p>
+                  <p className="text-white/80">Automatically extracts job title, company, location, and description from any job site.</p>
                 </div>
               </div>
 
               <div className="flex items-start space-x-4">
-                <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-r from-blue-700 to-blue-800 rounded-lg flex items-center justify-center">
+                <motion.div 
+                  className="flex-shrink-0 w-12 h-12 bg-gradient-to-r from-purple-600 to-purple-700 rounded-lg flex items-center justify-center shadow-lg"
+                  whileHover={{ 
+                    scale: 1.1,
+                    rotateY: 15,
+                    boxShadow: "0 20px 40px -12px rgba(168, 85, 247, 0.5)"
+                  }}
+                  style={{
+                    transformStyle: 'preserve-3d',
+                    perspective: '1000px'
+                  }}
+                >
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
-                </div>
+                </motion.div>
                 <div>
                   <h3 className="text-xl font-semibold text-white mb-2">Instant Sync</h3>
-                  <p className="text-gray-300">Saved jobs appear immediately in your <span className="text-lime-400">CV</span><span className="text-gray-300">Circle.io</span> dashboard for easy tracking and management.</p>
+                  <p className="text-white/80">Saved jobs appear immediately in your <span className="text-purple-400">CV</span><span className="text-white/80">Circle.io</span> dashboard for easy tracking and management.</p>
                 </div>
               </div>
             </div>
 
             <motion.button
-              whileHover={{ scale: 1.05 }}
+              whileHover={{ 
+                scale: 1.05,
+                boxShadow: "0 20px 40px -12px rgba(168, 85, 247, 0.5)"
+              }}
               whileTap={{ scale: 0.95 }}
               onClick={handleDownloadClick}
-              className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl"
+              className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-purple-400 to-purple-500 hover:from-purple-500 hover:to-purple-600 text-white font-semibold rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl"
             >
               {/* Browser Icons */}
               <div className="flex space-x-2 mr-4">
@@ -167,29 +234,56 @@ const ChromeExtension = () => {
                 </div>
               </div>
 
-              {/* Supported Job Sites */}
+              {/* Job Board Logos Ticker */}
               <div className="text-center mb-6">
                 <h3 className="text-lg font-semibold text-white mb-4">Works on 15+ Job Sites</h3>
-                <div className="grid grid-cols-3 gap-3">
-                  {[
-                    { name: 'LinkedIn', color: 'from-blue-600 to-blue-700' },
-                    { name: 'Indeed', color: 'from-blue-500 to-blue-600' },
-                    { name: 'Glassdoor', color: 'from-blue-700 to-blue-800' },
-                    { name: 'ZipRecruiter', color: 'from-blue-400 to-blue-500' },
-                    { name: 'Monster', color: 'from-blue-600 to-blue-700' },
-                    { name: 'AngelList', color: 'from-blue-500 to-blue-600' }
-                  ].map((site, index) => (
-                    <motion.div
-                      key={site.name}
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      whileInView={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.3, delay: 0.6 + index * 0.1 }}
-                      viewport={{ once: true }}
-                      className={`bg-gradient-to-r ${site.color} rounded-lg px-3 py-2 text-white text-sm font-medium shadow-md`}
-                    >
-                      {site.name}
-                    </motion.div>
-                  ))}
+                <div className="relative overflow-hidden rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 p-4">
+                  <div className="flex items-center space-x-8 animate-scroll">
+                    {/* First set of job boards with logos and names */}
+                    <div className="flex items-center space-x-8 whitespace-nowrap">
+                      {[
+                        { name: 'LinkedIn', logo: '🔗', color: 'from-blue-600 to-blue-700' },
+                        { name: 'Indeed', logo: '💼', color: 'from-blue-500 to-blue-600' },
+                        { name: 'Glassdoor', logo: '🏢', color: 'from-blue-700 to-blue-800' },
+                        { name: 'ZipRecruiter', logo: '⚡', color: 'from-blue-400 to-blue-500' },
+                        { name: 'Monster', logo: '👹', color: 'from-blue-600 to-blue-700' },
+                        { name: 'AngelList', logo: '👼', color: 'from-blue-500 to-blue-600' },
+                        { name: 'RemoteOK', logo: '🌍', color: 'from-blue-600 to-blue-700' },
+                        { name: 'We Work Remotely', logo: '🏠', color: 'from-blue-500 to-blue-600' }
+                      ].map((site, index) => (
+                        <motion.div
+                          key={site.name}
+                          className={`bg-gradient-to-r ${site.color} rounded-lg px-4 py-3 text-white text-sm font-medium shadow-md flex items-center space-x-2`}
+                          whileHover={{ scale: 1.05 }}
+                        >
+                          <span className="text-lg">{site.logo}</span>
+                          <span>{site.name}</span>
+                        </motion.div>
+                      ))}
+                    </div>
+                    {/* Duplicate set for seamless loop */}
+                    <div className="flex items-center space-x-8 whitespace-nowrap">
+                      {[
+                        { name: 'LinkedIn', logo: '🔗', color: 'from-blue-600 to-blue-700' },
+                        { name: 'Indeed', logo: '💼', color: 'from-blue-500 to-blue-600' },
+                        { name: 'Glassdoor', logo: '🏢', color: 'from-blue-700 to-blue-800' },
+                        { name: 'ZipRecruiter', logo: '⚡', color: 'from-blue-400 to-blue-500' },
+                        { name: 'Monster', logo: '👹', color: 'from-blue-600 to-blue-700' },
+                        { name: 'AngelList', logo: '👼', color: 'from-blue-500 to-blue-600' },
+                        { name: 'RemoteOK', logo: '🌍', color: 'from-blue-600 to-blue-700' },
+                        { name: 'We Work Remotely', logo: '🏠', color: 'from-blue-500 to-blue-600' }
+                      ].map((site, index) => (
+                        <motion.div
+                          key={`${site.name}-duplicate`}
+                          className={`bg-gradient-to-r ${site.color} rounded-lg px-4 py-3 text-white text-sm font-medium shadow-md flex items-center space-x-2`}
+                          whileHover={{ scale: 1.05 }}
+                        >
+                          <span className="text-lg">{site.logo}</span>
+                          <span>{site.name}</span>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -227,25 +321,69 @@ const ChromeExtension = () => {
           </motion.div>
         </div>
 
-        {/* Stats */}
+        {/* Job Board Logos Ticker */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.6 }}
           viewport={{ once: true }}
-          className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 text-center"
+          className="mt-16"
         >
-          <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-6 shadow-lg">
-            <div className="text-3xl font-bold text-white mb-2">15+</div>
-            <div className="text-gray-300">Supported Job Sites</div>
+          <div className="text-center mb-8">
+            <h3 className="text-2xl font-bold text-white mb-2">Works on 15+ Job Sites</h3>
+            <p className="text-white/70">Save jobs from all major job boards with one click</p>
           </div>
-          <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-6 shadow-lg">
-            <div className="text-3xl font-bold text-white mb-2">1-Click</div>
-            <div className="text-gray-300">Save Process</div>
-          </div>
-          <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-6 shadow-lg">
-            <div className="text-3xl font-bold text-white mb-2">Instant</div>
-            <div className="text-gray-300">Dashboard Sync</div>
+          <div className="relative overflow-hidden rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 p-6">
+            <div className="flex items-center space-x-8 animate-scroll">
+              {/* First set of job boards with logos and names */}
+              <div className="flex items-center space-x-8 whitespace-nowrap">
+                {[
+                  { name: 'LinkedIn', logo: '🔗', color: 'from-blue-600 to-blue-700' },
+                  { name: 'Indeed', logo: '💼', color: 'from-blue-500 to-blue-600' },
+                  { name: 'Glassdoor', logo: '🏢', color: 'from-blue-700 to-blue-800' },
+                  { name: 'ZipRecruiter', logo: '⚡', color: 'from-blue-400 to-blue-500' },
+                  { name: 'Monster', logo: '👹', color: 'from-blue-600 to-blue-700' },
+                  { name: 'AngelList', logo: '👼', color: 'from-blue-500 to-blue-600' },
+                  { name: 'RemoteOK', logo: '🌍', color: 'from-blue-600 to-blue-700' },
+                  { name: 'We Work Remotely', logo: '🏠', color: 'from-blue-500 to-blue-600' },
+                  { name: 'Dice', logo: '🎲', color: 'from-blue-600 to-blue-700' },
+                  { name: 'Stack Overflow', logo: '💻', color: 'from-blue-500 to-blue-600' }
+                ].map((site, index) => (
+                  <motion.div
+                    key={site.name}
+                    className={`bg-gradient-to-r ${site.color} rounded-xl px-6 py-4 text-white text-sm font-medium shadow-lg flex items-center space-x-3`}
+                    whileHover={{ scale: 1.05, y: -2 }}
+                  >
+                    <span className="text-xl">{site.logo}</span>
+                    <span className="font-semibold">{site.name}</span>
+                  </motion.div>
+                ))}
+              </div>
+              {/* Duplicate set for seamless loop */}
+              <div className="flex items-center space-x-8 whitespace-nowrap">
+                {[
+                  { name: 'LinkedIn', logo: '🔗', color: 'from-blue-600 to-blue-700' },
+                  { name: 'Indeed', logo: '💼', color: 'from-blue-500 to-blue-600' },
+                  { name: 'Glassdoor', logo: '🏢', color: 'from-blue-700 to-blue-800' },
+                  { name: 'ZipRecruiter', logo: '⚡', color: 'from-blue-400 to-blue-500' },
+                  { name: 'Monster', logo: '👹', color: 'from-blue-600 to-blue-700' },
+                  { name: 'AngelList', logo: '👼', color: 'from-blue-500 to-blue-600' },
+                  { name: 'RemoteOK', logo: '🌍', color: 'from-blue-600 to-blue-700' },
+                  { name: 'We Work Remotely', logo: '🏠', color: 'from-blue-500 to-blue-600' },
+                  { name: 'Dice', logo: '🎲', color: 'from-blue-600 to-blue-700' },
+                  { name: 'Stack Overflow', logo: '💻', color: 'from-blue-500 to-blue-600' }
+                ].map((site, index) => (
+                  <motion.div
+                    key={`${site.name}-duplicate`}
+                    className={`bg-gradient-to-r ${site.color} rounded-xl px-6 py-4 text-white text-sm font-medium shadow-lg flex items-center space-x-3`}
+                    whileHover={{ scale: 1.05, y: -2 }}
+                  >
+                    <span className="text-xl">{site.logo}</span>
+                    <span className="font-semibold">{site.name}</span>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
           </div>
         </motion.div>
       </div>

@@ -12,12 +12,26 @@ export interface IPricingPlan extends Document {
   billingCycle: 'one-time' | 'monthly' | 'quarterly' | 'yearly';
   maxCVs: number;
   maxExports: number;
+  maxCoverLetters: number;
+  maxJobs: number;
+  maxJourneys: number;
   storageLimit: number; // in MB
   features: string[];
+  notIncludedFeatures: string[];
   status: 'active' | 'inactive';
   isPopular: boolean;
   isBestValue: boolean;
   sortOrder: number;
+  displayOnLanding: boolean;
+  targetAudience: 'all' | 'new_signups' | 'free_users' | 'existing_users';
+  // Promotional pricing
+  promotionalPrice_monthly?: number;
+  promotionalPrice_quarterly?: number;
+  promotionalPrice_yearly?: number;
+  promotionalPrice_one_time?: number;
+  promotionValidFrom?: Date;
+  promotionValidUntil?: Date;
+  promotionDescription?: string;
   // Provider IDs
   stripePriceId_monthly?: string;
   stripePriceId_quarterly?: string;
@@ -90,12 +104,34 @@ const pricingPlanSchema = new Schema<IPricingPlan>({
     min: [0, 'Export limit cannot be negative'],
     default: 1
   },
+  maxCoverLetters: {
+    type: Number,
+    required: [true, 'Maximum cover letters limit is required'],
+    min: [0, 'Cover letter limit cannot be negative'],
+    default: 3
+  },
+  maxJobs: {
+    type: Number,
+    required: [true, 'Maximum jobs limit is required'],
+    min: [0, 'Job limit cannot be negative'],
+    default: 5
+  },
+  maxJourneys: {
+    type: Number,
+    required: [true, 'Maximum journeys limit is required'],
+    min: [0, 'Journey limit cannot be negative'],
+    default: 5
+  },
   storageLimit: {
     type: Number,
     default: 100, // 100MB default
     min: [0, 'Storage limit cannot be negative']
   },
   features: {
+    type: [String],
+    default: []
+  },
+  notIncludedFeatures: {
     type: [String],
     default: []
   },
@@ -116,6 +152,43 @@ const pricingPlanSchema = new Schema<IPricingPlan>({
     type: Number,
     default: 0
   },
+  displayOnLanding: {
+    type: Boolean,
+    default: true
+  },
+  targetAudience: {
+    type: String,
+    enum: ['all', 'new_signups', 'free_users', 'existing_users'],
+    default: 'all'
+  },
+  // Promotional pricing
+  promotionalPrice_monthly: {
+    type: Number,
+    min: [0, 'Promotional price cannot be negative']
+  },
+  promotionalPrice_quarterly: {
+    type: Number,
+    min: [0, 'Promotional price cannot be negative']
+  },
+  promotionalPrice_yearly: {
+    type: Number,
+    min: [0, 'Promotional price cannot be negative']
+  },
+  promotionalPrice_one_time: {
+    type: Number,
+    min: [0, 'Promotional price cannot be negative']
+  },
+  promotionValidFrom: {
+    type: Date
+  },
+  promotionValidUntil: {
+    type: Date
+  },
+  promotionDescription: {
+    type: String,
+    trim: true,
+    maxlength: [200, 'Promotion description cannot exceed 200 characters']
+  },
   // Provider IDs
   stripePriceId_monthly: String,
   stripePriceId_quarterly: String,
@@ -134,10 +207,37 @@ const pricingPlanSchema = new Schema<IPricingPlan>({
   timestamps: true
 });
 
+// Virtual for checking if promotion is active
+pricingPlanSchema.virtual('isPromotionActive').get(function() {
+  if (!this.promotionValidFrom || !this.promotionValidUntil) return false;
+  const now = new Date();
+  return now >= this.promotionValidFrom && now <= this.promotionValidUntil;
+});
+
+// Virtual for getting effective price based on promotion
+pricingPlanSchema.virtual('effectivePrice').get(function() {
+  if (this.isPromotionActive) {
+    return {
+      monthly: this.promotionalPrice_monthly || this.price_monthly,
+      quarterly: this.promotionalPrice_quarterly || this.price_quarterly,
+      yearly: this.promotionalPrice_yearly || this.price_yearly,
+      oneTime: this.promotionalPrice_one_time || this.price_one_time
+    };
+  }
+  return {
+    monthly: this.price_monthly,
+    quarterly: this.price_quarterly,
+    yearly: this.price_yearly,
+    oneTime: this.price_one_time
+  };
+});
+
 // Index for better query performance
 pricingPlanSchema.index({ key: 1 }, { unique: true });
 pricingPlanSchema.index({ status: 1, sortOrder: 1 });
 pricingPlanSchema.index({ billingCycle: 1, currency: 1 });
+pricingPlanSchema.index({ displayOnLanding: 1, targetAudience: 1 });
+pricingPlanSchema.index({ promotionValidFrom: 1, promotionValidUntil: 1 });
 
 // Export the schema for use in admin models
 export { pricingPlanSchema };

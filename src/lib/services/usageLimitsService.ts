@@ -1,6 +1,6 @@
 import { connectToDatabase } from '@/lib/database';
 import User from '@/models/User';
-import PricingPlan from '@/models/PricingPlan';
+import { getAdminPricingPlan } from '@/models/admin-models';
 
 export interface UsageLimitResult {
   allowed: boolean;
@@ -35,6 +35,7 @@ class UsageLimitsService {
         };
       }
 
+      const PricingPlan = await getAdminPricingPlan();
       const plan = await PricingPlan.findOne({ key: user.currentPlanKey });
       if (!plan) {
         return {
@@ -187,6 +188,7 @@ class UsageLimitsService {
         return null;
       }
 
+      const PricingPlan = await getAdminPricingPlan();
       const plan = await PricingPlan.findOne({ key: user.currentPlanKey });
       if (!plan) {
         return null;

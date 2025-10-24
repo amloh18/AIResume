@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 // Removed - using Clerk now
 import { connectToDatabase } from '@/lib/database';
-import PricingPlan from '@/models/PricingPlan';
+import { getAdminPricingPlan } from '@/models/admin-models';
 import { Types } from 'mongoose';
 
 export async function POST(
@@ -21,6 +21,8 @@ export async function POST(
         const { userId } = await request.json();
 
         await connectToDatabase();
+
+        const PricingPlan = await getAdminPricingPlan();
 
         // Find plan by ID or key
         let plan;

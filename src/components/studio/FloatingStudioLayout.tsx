@@ -51,6 +51,7 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
   const [tempTitle, setTempTitle] = useState(documentTitle);
   const [isMobile, setIsMobile] = useState(false);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
   const layoutClasses = getStudioLayoutClasses();
 
   // Handle responsive behavior
@@ -79,7 +80,24 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
 
 
   const handleBackToDashboard = () => {
-    router.push('/dashboard');
+    // Prevent multiple clicks
+    if (isNavigating) return;
+    
+    setIsNavigating(true);
+    
+    try {
+      console.log('🏠 Navigating to application tracker...');
+      // Route to application tracker instead of general dashboard
+      // Use replace to avoid back button issues and ensure immediate navigation
+      router.replace('/dashboard/application-tracker');
+    } catch (error) {
+      console.error('Navigation error:', error);
+      // Fallback: try direct navigation
+      window.location.href = '/dashboard/application-tracker';
+    } finally {
+      // Reset navigation state after a short delay
+      setTimeout(() => setIsNavigating(false), 1000);
+    }
   };
 
   const getSaveStatusColor = () => {
@@ -235,7 +253,7 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
         ) : (
           /* Desktop Floating Header Panel */
           <motion.div
-            className="mx-4 mt-4 mb-2 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 shadow-lg rounded-2xl p-4"
+            className="mx-4 mt-4 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 shadow-lg rounded-2xl p-4"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
@@ -245,11 +263,15 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
               <div className="flex items-center gap-4">
                 <motion.button
                   onClick={handleBackToDashboard}
-                  className="flex items-center gap-2 px-3 py-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                  disabled={isNavigating}
+                  className={`flex items-center gap-2 px-3 py-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors ${
+                    isNavigating ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                  whileHover={!isNavigating ? { scale: 1.02 } : {}}
+                  whileTap={!isNavigating ? { scale: 0.98 } : {}}
                 >
                   <Home size={18} strokeWidth={1.5} />
+                  {isNavigating && <span className="text-xs">...</span>}
                 </motion.button>
 
                 {/* CV Circle Logo / Studio */}
@@ -427,7 +449,6 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
                             {/* Full Journey Download */}
                             <motion.button
                               onClick={() => {
-                                console.log('Full journey download clicked');
                                 setExportMenuOpen(false);
                               }}
                               className="flex items-center gap-2 px-4 py-2 hover:bg-green-600 transition-colors"

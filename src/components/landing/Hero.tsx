@@ -26,7 +26,7 @@ const Hero = () => {
   }, []);
 
   return (
-    <section id="hero" className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16 sm:pt-20 lg:pt-24 bg-gradient-to-br from-gray-900 via-black to-gray-900">
+    <section id="hero" className="relative h-screen flex items-center justify-center overflow-hidden pt-20 bg-gradient-to-br from-gray-900 via-black to-gray-900">
       {/* Background Effects */}
       <div className="absolute inset-0">
         <div className="absolute inset-0 bg-gradient-to-br from-lime-400/5 to-blue-400/5"></div>

@@ -2,69 +2,89 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { FileText, Mail, BarChart3, Palette, Users, Brain, ArrowRight } from 'lucide-react';
+import { FileText, Mail, BarChart3, Palette, Users, Brain, ArrowRight, CheckCircle, Target, Layers, Eye, Edit3, Download, Zap } from 'lucide-react';
 
 const Features = () => {
   const features = [
     {
-      id: 'cv-studio',
-      category: 'CV Studio',
-      title: 'Professional Builder',
-      description: 'Transform your career story with our intuitive CV builder. Features real-time inline editing and AI-powered content suggestions.',
-      icon: FileText,
+      id: 'ats-optimization',
+      category: 'ATS Optimization',
+      title: 'One-Click ATS Check',
+      description: 'Instantly optimize your CV for Applicant Tracking Systems. Get real-time ATS scores and actionable improvements to pass automated screenings.',
+      icon: CheckCircle,
       size: 'normal',
       contentPosition: 'top-left',
       color: 'from-lime-400 to-lime-500'
     },
     {
-      id: 'cover-letter',
-      category: 'Cover Letter Creator',
-      title: 'AI-Powered Letters',
-      description: 'Generate compelling, personalized cover letters in seconds. Simply paste a job URL and our AI analyzes the requirements.',
-      icon: Mail,
+      id: 'application-tracker',
+      category: 'Application Tracker',
+      title: 'Smart Job Management',
+      description: 'Seamlessly add jobs through our browser extension. Track applications, deadlines, and follow-ups with intelligent organization.',
+      icon: Target,
       size: 'normal',
       contentPosition: 'top-left',
       color: 'from-blue-400 to-blue-500'
     },
     {
-      id: 'job-tracker',
-      category: 'Job Tracker',
-      title: 'Smart Organization',
-      description: 'Master your job search with intelligent tracking and organization. Our smart system fetches job details from URLs.',
-      icon: BarChart3,
-      size: 'span-2-col span-2-row',
-      contentPosition: 'split',
+      id: 'journey-manager',
+      category: 'Journey Manager',
+      title: '5-Step Application Process',
+      description: 'Master your job applications with our structured 5-step journey. From research to follow-up, we guide you through every stage.',
+      icon: Layers,
+      size: 'normal',
+      contentPosition: 'top-left',
       color: 'from-purple-400 to-purple-500'
     },
     {
-      id: 'style-snippets',
-      category: 'Style Snippets',
-      title: 'Design Excellence',
-      description: 'Personalize your CV with our curated collection of professional style snippets. Choose from industry-specific designs.',
-      icon: Palette,
-      size: 'span-2-col span-2-row',
-      contentPosition: 'split',
+      id: 'canvas',
+      category: 'Canvas',
+      title: 'Unified Document Hub',
+      description: 'View and manage all your documents in one place. CVs, cover letters, job descriptions, and ATS results at your fingertips.',
+      icon: Eye,
+      size: 'normal',
+      contentPosition: 'top-left',
       color: 'from-pink-400 to-pink-500'
     },
     {
-      id: 'community-support',
-      category: 'Community Support',
-      title: 'Expert Network',
-      description: 'Connect with industry professionals, HR experts, and career coaches in our vibrant community.',
-      icon: Users,
+      id: 'studio',
+      category: 'Studio',
+      title: 'Professional Editor',
+      description: 'Create and update CVs and cover letters with our advanced editor. Real-time ATS scoring and AI-powered suggestions included.',
+      icon: Edit3,
       size: 'normal',
-      contentPosition: 'bottom-left',
+      contentPosition: 'top-left',
+      color: 'from-orange-400 to-orange-500'
+    },
+    {
+      id: 'template-selection',
+      category: 'Templates',
+      title: 'Design Excellence',
+      description: 'Choose from our curated collection of professional templates. Industry-specific designs that make your application stand out.',
+      icon: Palette,
+      size: 'normal',
+      contentPosition: 'top-left',
       color: 'from-cyan-400 to-cyan-500'
     },
     {
-      id: 'ai-assistant',
-      category: 'AI Career Assistant',
-      title: 'Intelligent Guidance',
-      description: 'Leverage cutting-edge AI to accelerate your career growth. Our intelligent assistant provides personalized career advice.',
-      icon: Brain,
+      id: 'one-click-download',
+      category: 'Export',
+      title: 'One-Click Journey Download',
+      description: 'Download your complete application package as a ZIP file. Includes CV, cover letter, job description, and ATS optimization results.',
+      icon: Download,
       size: 'normal',
-      contentPosition: 'bottom-left',
-      color: 'from-orange-400 to-orange-500'
+      contentPosition: 'top-left',
+      color: 'from-green-400 to-green-500'
+    },
+    {
+      id: 'ai-insights',
+      category: 'AI Assistant',
+      title: 'Smart Career Insights',
+      description: 'Get personalized career advice and job matching powered by advanced AI. Optimize your applications with intelligent recommendations.',
+      icon: Zap,
+      size: 'normal',
+      contentPosition: 'top-left',
+      color: 'from-indigo-400 to-indigo-500'
     }
   ];
 
@@ -93,29 +113,29 @@ const Features = () => {
   };
 
   return (
-    <section id="features" className="relative py-32 bg-gradient-to-b from-gray-900 to-black overflow-hidden">
+    <section id="features" className="relative h-screen flex items-center bg-gradient-to-b from-gray-900 to-black overflow-hidden pt-20">
       {/* Enhanced Background Effects */}
       <div className="absolute inset-0">
         <div className="absolute inset-0 bg-gradient-to-br from-lime-400/5 to-blue-400/5"></div>
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-lime-400/3 to-blue-400/3 rounded-full blur-3xl"></div>
       </div>
       
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full h-full flex flex-col justify-center">
         {/* Section Header */}
         <motion.div
-          className="text-center mb-20"
+          className="text-center mb-12"
           initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
           viewport={{ once: true, margin: "-50px" }}
         >
-                 <h2 className="text-4xl sm:text-6xl font-bold text-white mb-8 text-center">
+                 <h2 className="text-3xl sm:text-5xl font-bold text-white mb-6 text-center">
                    Everything you need to{' '}
                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-lime-500">
                      succeed
                    </span>
                  </h2>
-          <p className="text-xl text-white/70 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-lg text-white/70 max-w-3xl mx-auto leading-relaxed">
             Powerful tools designed to streamline your job search process and help you stand out from the competition.
           </p>
         </motion.div>

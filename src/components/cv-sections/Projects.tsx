@@ -78,12 +78,17 @@ const Projects: React.FC<ProjectsProps> = ({
               </div>
             )}
 
+            {project.keywords && project.keywords.length > 0 && (
+              <div className="project-keywords">
+                <strong>Technologies: </strong>
+                {project.keywords.join(' • ')}
+              </div>
+            )}
+
             {project.highlights && project.highlights.length > 0 && (
               <ul className="highlight-list">
                 {project.highlights.map((highlight, highlightIndex) => (
-                  <li key={highlightIndex}>
-                    {highlight}
-                  </li>
+                  <li key={highlightIndex} dangerouslySetInnerHTML={{ __html: parseFormattedText(highlight) }} />
                 ))}
               </ul>
             )}
@@ -187,6 +192,21 @@ const Projects: React.FC<ProjectsProps> = ({
         
         .project-description {
           text-align: justify;
+        }
+        
+        .project-keywords {
+          margin: 8px 0;
+          padding: 8px;
+          background: ${template.globalStyles.primaryColor}10;
+          border-radius: 6px;
+          font-size: 9pt;
+          color: ${template.globalStyles.primaryColor};
+          line-height: 1.4;
+        }
+        
+        .project-keywords strong {
+          font-weight: 600;
+          color: ${template.globalStyles.primaryColor};
         }
         
         .highlight-list {

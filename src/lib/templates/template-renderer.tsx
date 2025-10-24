@@ -117,6 +117,7 @@ export const TemplateRenderer: React.FC<TemplateRendererProps> = ({
     enabledSections
   );
   
+  
   // CRITICAL: Ensure personal_header is ALWAYS first, regardless of any other logic
   sectionsToRender = sectionsToRender.sort((a, b) => {
     if (a.key === 'personal_header') return -1;
@@ -209,8 +210,8 @@ function getSectionsToRender(
 ): ISectionBlueprint[] {
   let sectionsToRender = [...availableSections];
 
-  // Filter by enabled sections if provided
-  if (enabledSections) {
+  // Filter by enabled sections if provided - THIS IS THE KEY FILTER FOR PAGE SPLITTING
+  if (enabledSections && enabledSections.length > 0) {
     sectionsToRender = sectionsToRender.filter(section => 
       enabledSections.includes(section.key)
     );

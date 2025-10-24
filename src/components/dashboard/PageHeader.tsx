@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Bell, Sun, Moon, CheckCircle, AlertCircle, AlertTriangle, X, Check, Menu } from 'lucide-react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import UserAvatar from '@/components/ui/UserAvatar';
+import UserAvatarDropdown from '@/components/ui/UserAvatarDropdown';
 
 interface Notification {
   id: string;
@@ -163,7 +163,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({
           </div>
           
           {/* User Avatar */}
-          <UserAvatar 
+          <UserAvatarDropdown 
             user={{
               name: user?.name || 'User',
               email: user?.email || '',
@@ -299,7 +299,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({
             </div>
             
             {/* User Avatar */}
-            <UserAvatar 
+            <UserAvatarDropdown 
               user={{
                 name: user?.name || 'User',
                 email: user?.email || '',

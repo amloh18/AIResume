@@ -99,11 +99,6 @@ export async function PUT(
       );
     }
 
-    console.log('✅ Cover letter updated successfully:', { 
-      coverLetterId: id, 
-      updatedFields: Object.keys(updateData).filter(k => k !== 'metadata.lastModified')
-    });
-
     return NextResponse.json({
       success: true,
       data: {

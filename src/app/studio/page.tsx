@@ -22,6 +22,7 @@ function StudioPageContent() {
   const documentType = searchParams.get('documentType'); // 'cv' or 'cover-letter' (new format)
   const cvId = searchParams.get('cvId');
   const coverLetterId = searchParams.get('coverLetterId');
+  const jobId = searchParams.get('jobId'); // Job ID for context
   const mode = searchParams.get('mode'); // 'cv-onboarding', 'ats-edit', 'cover-letter-edit', 'document-first'
 
   // Determine which ID to use based on type
@@ -49,25 +50,27 @@ function StudioPageContent() {
       console.log('🔍 Studio Page - Loading journey data for:', primaryJourneyId);
       
       try {
-        const response = await fetch(`/api/application-journey/${primaryJourneyId}?userId=${session.user.id}`);
+        const response = await fetch(`/api/application-journey?userId=${session.user.id}&jobId=${primaryJourneyId}`);
         console.log('🔍 Studio Page - API response status:', response.status);
         
         if (response.ok) {
           const journeyData = await response.json();
           console.log('🔍 Studio Page - Journey data received:', journeyData);
           
-          if (journeyData.success && journeyData.data) {
+          if (journeyData.success && journeyData.data && journeyData.data.journeys && journeyData.data.journeys.length > 0) {
+            // Get the first journey from the array
+            const journey = journeyData.data.journeys[0];
             const journeyInfo = {
-              id: journeyData.data.journeyId,
-              jobId: journeyData.data.jobId,
-              jobTitle: journeyData.data.jobTitle,
-              company: journeyData.data.company,
-              status: journeyData.data.status,
-              currentStep: journeyData.data.currentStep,
-              totalSteps: journeyData.data.totalSteps,
-              atsScore: journeyData.data.atsScore,
-              cvId: journeyData.data.cvId,
-              coverLetterId: journeyData.data.coverLetterId
+              id: journey.journeyId,
+              jobId: journey.jobId,
+              jobTitle: journey.jobTitle,
+              company: journey.company,
+              status: journey.status,
+              currentStep: journey.currentStep,
+              totalSteps: journey.totalSteps,
+              atsScore: journey.atsScore,
+              cvId: journey.cvId,
+              coverLetterId: journey.coverLetterId
             };
             
             console.log('🔍 Studio Page - Setting current journey:', journeyInfo);

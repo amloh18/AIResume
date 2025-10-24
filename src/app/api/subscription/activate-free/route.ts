@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth';
 // Removed - using Clerk now
 import connectDB from '@/lib/database';
 import User from '@/models/User';
-import PricingPlan from '@/models/PricingPlan';
+import { getAdminPricingPlan } from '@/models/admin-models';
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get the plan from database
+    const PricingPlan = await getAdminPricingPlan();
     const plan = await PricingPlan.findOne({ key: planKey, status: 'active' });
     if (!plan) {
       return NextResponse.json({ error: 'Plan not found' }, { status: 404 });

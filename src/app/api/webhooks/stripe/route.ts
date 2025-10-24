@@ -3,7 +3,7 @@ import { headers } from 'next/headers';
 import { stripe } from '@/lib/payment/stripe';
 import connectDB from '@/lib/database';
 import User from '@/models/User';
-import PricingPlan from '@/models/PricingPlan';
+import { getAdminPricingPlan } from '@/models/admin-models';
 import Invoice from '@/models/Invoice';
 import { buffer } from 'micro';
 
@@ -81,6 +81,7 @@ async function handleCheckoutSessionCompleted(session: any) {
       return;
     }
 
+    const PricingPlan = await getAdminPricingPlan();
     const plan = await PricingPlan.findById(planId);
     if (!plan) {
       console.error('Plan not found:', planId);
@@ -248,6 +249,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
     }
 
     const user = await User.findById(userId);
+    const PricingPlan = await getAdminPricingPlan();
     const plan = await PricingPlan.findById(planId);
 
     if (!user || !plan) {

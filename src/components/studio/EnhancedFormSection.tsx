@@ -563,10 +563,10 @@ export const ProjectsSection: React.FC<{
               <AIEnhancedFormField
                 type="input"
                 fieldType="projects"
-                label="Technologies Used"
-                value={project.technologies?.join(', ') || ''}
-                onChange={(value) => onUpdate(`projects.${index}.technologies`, value.split(',').map(s => s.trim()).filter(s => s))}
-                placeholder="e.g., React, Node.js, MongoDB"
+                label="Technologies/Skills Used"
+                value={project.keywords?.join(', ') || ''}
+                onChange={(value) => onUpdate(`projects.${index}.keywords`, value.split(',').map(s => s.trim()).filter(s => s))}
+                placeholder="e.g., React, Node.js, MongoDB, JavaScript"
                 required={false}
                 disabled={false}
                 maxLength={150}

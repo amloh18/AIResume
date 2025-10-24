@@ -55,7 +55,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
           timestamp: new Date(n.timestamp)
         })));
       } catch (error) {
-        console.error('Failed to load notifications from localStorage:', error);
+        // Silently fail - localStorage might be unavailable
       }
     }
   }, []);
@@ -124,7 +124,6 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
         localStorage.removeItem('cv-app-notifications');
       }
     } catch (error) {
-      console.warn('Failed to save notifications to localStorage:', error);
       // If localStorage is full, try to clear old notifications
       try {
         localStorage.removeItem('cv-app-notifications');
@@ -132,7 +131,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
           localStorage.setItem('cv-app-notifications', JSON.stringify(persistentNotifications));
         }
       } catch (retryError) {
-        console.error('Failed to save notifications even after clearing localStorage:', retryError);
+        // Silently fail - localStorage operations might be blocked
       }
     }
   }, [notifications]);

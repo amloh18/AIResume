@@ -75,7 +75,7 @@ const JobSelector: React.FC<JobSelectorProps> = ({
     } else {
       console.log('🔍 JobSelector - No userId provided, skipping job load');
     }
-  }, [userId, session]);
+  }, [userId, session?.user?.id]); // More specific dependency
 
   // Set selected job when selectedJobId changes
   useEffect(() => {

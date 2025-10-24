@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 // Removed - using Clerk now
 import connectDB from '@/lib/database';
-import PricingPlan from '@/models/PricingPlan';
+import { getAdminPricingPlan } from '@/models/admin-models';
 import User from '@/models/User';
 import { stripe } from '@/lib/payment/stripe';
 import { razorpay } from '@/lib/payment/razorpay';
@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get the plan from database
+    const PricingPlan = await getAdminPricingPlan();
     const plan = await PricingPlan.findOne({ key: planKey, status: 'active' });
     if (!plan) {
       return NextResponse.json({ error: 'Plan not found' }, { status: 404 });

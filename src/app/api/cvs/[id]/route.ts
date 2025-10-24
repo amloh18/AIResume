@@ -228,30 +228,16 @@ export async function DELETE(
     console.log('🔍 CV DELETE API - Database connected');
     
     const { id } = await params;
-    
-    // Extract user identifier from request and session
-    const userIdentifier = extractUserIdentifier(request, session);
-    
-    if (!userIdentifier.id || !userIdentifier.type) {
-      console.log('❌ CV DELETE API - No valid user identifier found');
-      return NextResponse.json(
-        { success: false, error: 'User identification failed' },
-        { status: 401 }
-      );
-    }
-
-    console.log('🔍 CV DELETE API - User identifier:', userIdentifier);
+    console.log('🔍 CV DELETE API - CV ID from params:', id);
 
     const cvId = toObjectId(id);
+    console.log('🔍 CV DELETE API - Converted CV ID:', cvId);
     
-    // Build query based on user identifier type
-    let query: Record<string, any> = { _id: cvId };
-    
-    if (userIdentifier.type === 'firebase') {
-      query.firebaseUid = userIdentifier.id;
-    } else {
-      query.userId = new mongoose.Types.ObjectId(userIdentifier.id);
-    }
+    // Build query using session user ID (consistent with GET and PUT)
+    const query: Record<string, any> = { 
+      _id: cvId,
+      userId: new mongoose.Types.ObjectId(session.user.id)
+    };
     
     console.log('🔍 CV DELETE API - Query:', query);
     

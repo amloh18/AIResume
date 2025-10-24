@@ -56,11 +56,21 @@ export async function GET(request: NextRequest) {
     const searchTerm = searchParams.get('search');
 
     // Build query conditions based on user identifier type
+    // Always use userId for CV queries since CVs are linked by userId, not firebaseUid
     let baseQuery: Record<string, any> = {};
     
     if (userIdentifier.type === 'firebase') {
-      baseQuery.firebaseUid = userIdentifier.id;
-      console.log('🔍 CV API - Using Firebase UID query:', userIdentifier.id);
+      // For Firebase users, we need to find the user first to get their MongoDB ObjectId
+      const user = await User.findOne({ firebaseUid: userIdentifier.id });
+      if (!user) {
+        console.log('❌ CV API - User not found for Firebase UID:', userIdentifier.id);
+        return NextResponse.json(
+          { success: false, error: 'User not found' },
+          { status: 404 }
+        );
+      }
+      baseQuery.userId = user._id;
+      console.log('🔍 CV API - Using Firebase UID, found user ObjectId:', user._id);
     } else if (userIdentifier.type === 'objectid') {
       baseQuery.userId = new mongoose.Types.ObjectId(userIdentifier.id);
       console.log('🔍 CV API - Using MongoDB ObjectId query:', userIdentifier.id);

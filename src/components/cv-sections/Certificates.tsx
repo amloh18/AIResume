@@ -16,7 +16,9 @@ const Certificates: React.FC<CertificatesProps> = ({
   template, 
   cvData 
 }) => {
-  // Always render the section, even if empty, so users can see the structure
+  // Hide section if no data to avoid showing empty headers in preview
+  if (!data || data.length === 0) return null;
+  
   const certificates = data || [];
 
   const formatDate = (dateString: string) => {

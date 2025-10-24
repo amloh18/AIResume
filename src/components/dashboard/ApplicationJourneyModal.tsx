@@ -146,6 +146,117 @@ const ApplicationJourneyModal: React.FC<ApplicationJourneyModalProps> = ({
 
 
 
+  // Calculate days since job status last changed
+  const getDaysSinceLastUpdate = (job: JobApplication) => {
+    const lastUpdate = new Date(job.updatedAt);
+    const now = new Date();
+    return Math.floor((now.getTime() - lastUpdate.getTime()) / (1000 * 60 * 60 * 24));
+  };
+
+  // Determine if follow-up is needed based on stage and days
+  const isFollowUpNeeded = (job: JobApplication) => {
+    const days = getDaysSinceLastUpdate(job);
+    
+    switch(job.status) {
+      case 'applied':
+        return days >= 3 || days >= 7; // Show after 3 or 7 days
+      case 'interview':
+        return days >= 3 || days >= 7;
+      case 'offer':
+        return days >= 3 || days >= 7;
+      case 'rejected':
+        return false; // No follow-up for rejected
+      default:
+        return false;
+    }
+  };
+
+  // Get follow-up suggestion text
+  const getFollowUpSuggestion = (job: JobApplication, days: number) => {
+    switch(job.status) {
+      case 'applied':
+        return `It's been ${days} days since you applied. Consider sending a polite follow-up email to check on your application status.`;
+      case 'interview':
+        return `It's been ${days} days since your interview. Consider reaching out to thank them and inquire about next steps.`;
+      case 'offer':
+        return `It's been ${days} days since receiving the offer. Make sure to respond within their deadline.`;
+      default:
+        return '';
+    }
+  };
+
+  const getEmailSubject = (job: JobApplication) => {
+    switch(job.status) {
+      case 'applied':
+        return `Following up on ${job.jobTitle} Application`;
+      case 'interview':
+        return `Thank you for the ${job.jobTitle} Interview`;
+      case 'offer':
+        return `Re: ${job.jobTitle} Offer`;
+      default:
+        return 'Follow-up';
+    }
+  };
+
+  const getEmailTemplate = (job: JobApplication) => {
+    const templates = {
+      applied: `Dear Hiring Manager,
+
+I hope this email finds you well. I recently applied for the ${job.jobTitle} position at ${job.company} and wanted to follow up on the status of my application.
+
+I remain very interested in this opportunity and believe my skills and experience would be a great fit for your team. I would welcome the chance to discuss how I can contribute to ${job.company}.
+
+Thank you for your time and consideration. I look forward to hearing from you.
+
+Best regards,
+[Your Name]`,
+      interview: `Dear [Interviewer Name],
+
+Thank you for taking the time to interview me for the ${job.jobTitle} position at ${job.company}. I enjoyed our conversation and learning more about the role and your team.
+
+I'm very excited about the opportunity to contribute to ${job.company} and believe my skills align well with the position's requirements. 
+
+I wanted to follow up to see if there are any updates on next steps in the hiring process. Please let me know if you need any additional information from me.
+
+Thank you again for your consideration.
+
+Best regards,
+[Your Name]`,
+      offer: `Dear [Hiring Manager],
+
+Thank you for extending an offer for the ${job.jobTitle} position at ${job.company}. I appreciate the opportunity and am excited about the possibility of joining your team.
+
+I would like to discuss a few details regarding the offer. Could we schedule a call to go over the specifics?
+
+Thank you for your patience, and I look forward to our conversation.
+
+Best regards,
+[Your Name]`
+    };
+    return templates[job.status as keyof typeof templates] || '';
+  };
+
+  const getFollowUpTimeline = (job: JobApplication) => {
+    const timelines = {
+      applied: [
+        { day: 'Day 3-5', action: 'Send initial follow-up email' },
+        { day: 'Day 7-10', action: 'Connect with hiring manager on LinkedIn' },
+        { day: 'Day 14', action: 'Send second follow-up if no response' }
+      ],
+      interview: [
+        { day: 'Within 24 hours', action: 'Send thank-you email' },
+        { day: 'Day 5-7', action: 'Follow up on timeline if not provided' },
+        { day: 'Day 14', action: 'Send polite status inquiry if no update' }
+      ],
+      offer: [
+        { day: 'Within 48 hours', action: 'Acknowledge receipt and express interest' },
+        { day: 'Day 3-5', action: 'Ask clarifying questions or negotiate' },
+        { day: 'Before deadline', action: 'Provide final decision' }
+      ]
+    };
+    return timelines[job.status as keyof typeof timelines] || [];
+  };
+
   const handleCreateJourney = async () => {
     if (isCreatingJourney) return; // Prevent multiple clicks
     
@@ -207,8 +318,25 @@ const ApplicationJourneyModal: React.FC<ApplicationJourneyModalProps> = ({
   };
 
   const handleContinueJourney = (journey: CVJourney) => {
-    // Navigate to studio with journey context using new URL structure
-    const url = `/studio?journeyId=${journey.id}&type=cv&mode=cv-onboarding`;
+    // Determine the appropriate mode based on journey progress
+    let mode = 'cv-onboarding'; // Default for new journeys
+    
+    if (journey.cvId) {
+      // If CV exists, determine mode based on journey status
+      if (journey.status === 'in-progress') {
+        // Check if we need ATS editing or can proceed to cover letter
+        if (journey.atsScore && journey.atsScore >= 80) {
+          mode = 'cover-letter-edit'; // Ready for cover letter
+        } else {
+          mode = 'ats-edit'; // Need to improve ATS score
+        }
+      } else {
+        mode = 'ats-edit'; // Default to ATS editing for existing CVs
+      }
+    }
+    
+    // Navigate to studio with journey context using determined mode
+    const url = `/studio?journeyId=${journey.id}&type=cv&mode=${mode}`;
     if (journey.cvId) {
       window.location.href = `${url}&cvId=${journey.cvId}`;
     } else {
@@ -611,6 +739,63 @@ const ApplicationJourneyModal: React.FC<ApplicationJourneyModalProps> = ({
               />
             ) : (
               <div className="space-y-6">
+              {/* Follow-up Plan Section - Show above journey cards */}
+              {isFollowUpNeeded(job) && (
+                <div className="mb-6 p-4 bg-gradient-to-r from-orange-50 to-yellow-50 dark:from-orange-900/20 dark:to-yellow-900/20 border border-orange-200 dark:border-orange-700 rounded-xl">
+                  <div className="flex items-start gap-3 mb-4">
+                    <AlertCircle className="h-5 w-5 text-orange-600 mt-1" />
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                        Follow-up Recommended
+                      </h3>
+                      <p className="text-sm text-gray-700 dark:text-gray-300 mb-4">
+                        {getFollowUpSuggestion(job, getDaysSinceLastUpdate(job))}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Email Template */}
+                  <div className="space-y-4">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                      <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                        Suggested Email Template
+                      </h4>
+                      <div className="text-sm text-gray-700 dark:text-gray-300 space-y-2">
+                        <p><strong>Subject:</strong> {getEmailSubject(job)}</p>
+                        <p className="whitespace-pre-line">{getEmailTemplate(job)}</p>
+                      </div>
+                      <button 
+                        className="mt-3 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm rounded-lg"
+                        onClick={() => {
+                          navigator.clipboard.writeText(getEmailTemplate(job));
+                          toast.success('Email template copied to clipboard!');
+                        }}
+                      >
+                        Copy Template
+                      </button>
+                    </div>
+
+                    {/* Follow-up Timeline */}
+                    <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                      <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+                        Recommended Follow-up Timeline
+                      </h4>
+                      <div className="space-y-2">
+                        {getFollowUpTimeline(job).map((item, idx) => (
+                          <div key={idx} className="flex items-start gap-2 text-sm">
+                            <div className="w-2 h-2 rounded-full bg-orange-500 mt-1.5" />
+                            <div>
+                              <span className="font-medium text-gray-900 dark:text-white">{item.day}:</span>
+                              <span className="text-gray-700 dark:text-gray-300 ml-1">{item.action}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Journey Section - At the top */}
               <div>
                 <div className="flex items-center justify-between mb-4">

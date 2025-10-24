@@ -24,6 +24,11 @@ import { useJobJourney } from '@/contexts/JobJourneyContext';
 
 interface ATSResult {
   score: number;
+  profileLevel?: {
+    title: string;
+    yearsExperience: number;
+    description: string;
+  };
   breakdown: {
     keywordMatch: number;
     experienceEducation: number;
@@ -292,26 +297,26 @@ export default function ComprehensiveATSAnalyzer({
     
     try {
       // Apply summary optimization
-      if (atsResult.optimizations.summary) {
+      if (atsResult.optimizations?.summary) {
         setOptimizationProgress(20);
-        onUpdateField('basics.summary', atsResult.optimizations.summary);
+        onUpdateField('basics.summary', atsResult.optimizations?.summary);
         await new Promise(resolve => setTimeout(resolve, 500));
       }
       
       // Apply work experience optimizations
-      if (atsResult.optimizations.workExperience.length > 0) {
+      if ((atsResult.optimizations?.workExperience?.length || 0) > 0) {
         setOptimizationProgress(50);
-        atsResult.optimizations.workExperience.forEach(({ index, optimizedText }) => {
+        atsResult.optimizations?.workExperience?.forEach(({ index, optimizedText }) => {
           onUpdateField(`work.${index}.summary`, optimizedText);
         });
         await new Promise(resolve => setTimeout(resolve, 500));
       }
       
       // Apply skills optimizations
-      if (atsResult.optimizations.skills.length > 0) {
+      if ((atsResult.optimizations?.skills?.length || 0) > 0) {
         setOptimizationProgress(80);
         const currentSkills = cvData.skills || [];
-        const newSkills = atsResult.optimizations.skills.map(skill => ({
+        const newSkills = atsResult.optimizations?.skills?.map(skill => ({
           name: skill,
           level: 'Intermediate',
           keywords: []
@@ -371,7 +376,7 @@ export default function ComprehensiveATSAnalyzer({
       setAutoFixProgress(10);
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      if (atsResult.optimizations.keywords.length > 0) {
+      if ((atsResult.optimizations?.keywords?.length || 0) > 0) {
         setAutoFixLogs(prev => [...prev, "✅ Adding missing keywords to CV"]);
         setAutoFixProgress(20);
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -382,7 +387,7 @@ export default function ComprehensiveATSAnalyzer({
       setAutoFixProgress(30);
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      if (atsResult.optimizations.skills.length > 0) {
+      if ((atsResult.optimizations?.skills?.length || 0) > 0) {
         setAutoFixLogs(prev => [...prev, "✅ Adding missing skills to CV"]);
         setAutoFixProgress(40);
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -402,7 +407,7 @@ export default function ComprehensiveATSAnalyzer({
       setAutoFixProgress(70);
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      if (atsResult.optimizations.workExperience.length > 0) {
+      if ((atsResult.optimizations?.workExperience?.length || 0) > 0) {
         setAutoFixLogs(prev => [...prev, "✅ Optimizing work experience descriptions"]);
         setAutoFixProgress(80);
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -418,12 +423,12 @@ export default function ComprehensiveATSAnalyzer({
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Apply actual optimizations
-      if (atsResult.optimizations.summary) {
-        onUpdateField('basics.summary', atsResult.optimizations.summary);
+      if (atsResult.optimizations?.summary) {
+        onUpdateField('basics.summary', atsResult.optimizations?.summary);
       }
       
-      if (atsResult.optimizations.workExperience.length > 0) {
-        atsResult.optimizations.workExperience.forEach(({ index, optimizedText }) => {
+      if ((atsResult.optimizations?.workExperience?.length || 0) > 0) {
+        atsResult.optimizations?.workExperience?.forEach(({ index, optimizedText }) => {
           onUpdateField(`work.${index}.summary`, optimizedText);
         });
       }
@@ -535,7 +540,7 @@ export default function ComprehensiveATSAnalyzer({
         </div>
       )}
 
-      {atsResult && (
+      {atsResult && !isLoading && (
         <div className="space-y-4">
 
           {/* Tabs */}
@@ -566,10 +571,27 @@ export default function ComprehensiveATSAnalyzer({
           <div className="min-h-[200px]">
             {activeTab === 'analysis' && (
               <div className="space-y-4">
+                {/* Profile Level Badge */}
+                {(atsResult as any).profileLevel && (
+                  <div className="p-3 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 rounded-lg border border-purple-200 dark:border-purple-700">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-purple-700 dark:text-purple-300 font-medium">Profile Level</p>
+                        <p className="text-sm font-bold text-purple-900 dark:text-purple-100">{(atsResult as any).profileLevel.title}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-purple-700 dark:text-purple-300">Experience</p>
+                        <p className="text-sm font-bold text-purple-900 dark:text-purple-100">{(atsResult as any).profileLevel.yearsExperience} years</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-purple-600 dark:text-purple-400 mt-2">{(atsResult as any).profileLevel.description}</p>
+                  </div>
+                )}
+
                 {/* Two-Column Layout: Overall ATS Score + Detailed Metrics */}
                 <div className="grid grid-cols-2 gap-4 h-48">
                   {/* Column 1: Overall ATS Score */}
-                  <div className="flex flex-col items-center justify-center space-y-3 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 rounded-lg p-4">
+                  <div className="flex flex-col items-center justify-center space-y-3 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
                     {/* ATS Compatibility Score - Circular Progress */}
                     <div className="relative inline-flex items-center justify-center">
                       <svg className="w-20 h-20 transform -rotate-90" viewBox="0 0 100 100">
@@ -590,14 +612,14 @@ export default function ComprehensiveATSAnalyzer({
                           strokeWidth="6"
                           fill="none"
                           strokeDasharray={`${2 * Math.PI * 35}`}
-                          strokeDashoffset={`${2 * Math.PI * 35 * (1 - atsResult.score / 100)}`}
-                          className={`${atsResult.score >= 80 ? 'text-green-500' : atsResult.score >= 60 ? 'text-yellow-500' : 'text-red-500'}`}
+                          strokeDashoffset={`${2 * Math.PI * 35 * (1 - (atsResult.score || 0) / 100)}`}
+                          className={`${(atsResult.score || 0) >= 80 ? 'text-green-500' : (atsResult.score || 0) >= 60 ? 'text-yellow-500' : 'text-red-500'}`}
                           strokeLinecap="round"
                         />
                       </svg>
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <span className={`text-xl font-bold ${atsResult.score >= 80 ? 'text-green-600' : atsResult.score >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
-                          {atsResult.score}%
+                        <span className={`text-xl font-bold ${(atsResult.score || 0) >= 80 ? 'text-green-600 dark:text-green-400' : (atsResult.score || 0) >= 60 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'}`}>
+                          {atsResult.score || 0}%
                         </span>
                       </div>
                     </div>
@@ -605,9 +627,9 @@ export default function ComprehensiveATSAnalyzer({
                     {/* Status Message */}
                     <div className="text-center">
                       <p className="text-sm font-medium text-gray-900 dark:text-white">Overall ATS Score</p>
-                      <p className={`text-xs font-medium ${atsResult.score >= 80 ? 'text-green-600' : atsResult.score >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
-                        {atsResult.score >= 80 ? 'Well-optimized' : 
-                         atsResult.score >= 60 ? 'Good compatibility' : 
+                      <p className={`text-xs font-medium ${(atsResult.score || 0) >= 80 ? 'text-green-600 dark:text-green-400' : (atsResult.score || 0) >= 60 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'}`}>
+                        {(atsResult.score || 0) >= 80 ? 'Well-optimized' : 
+                         (atsResult.score || 0) >= 60 ? 'Good compatibility' : 
                          'Needs optimization'}
                       </p>
                     </div>
@@ -621,12 +643,12 @@ export default function ComprehensiveATSAnalyzer({
                       <div className="flex items-center gap-2">
                         <div className="w-12 bg-gray-200 dark:bg-gray-600 rounded-full h-1.5">
                           <div 
-                            className={`h-1.5 rounded-full ${atsResult.breakdown.keywordMatch >= 80 ? 'bg-green-500' : atsResult.breakdown.keywordMatch >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
-                            style={{ width: `${atsResult.breakdown.keywordMatch}%` }}
+                            className={`h-1.5 rounded-full ${(atsResult.breakdown?.keywordMatch || 0) >= 80 ? 'bg-green-500' : (atsResult.breakdown?.keywordMatch || 0) >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                            style={{ width: `${atsResult.breakdown?.keywordMatch || 0}%` }}
                           />
                         </div>
-                        <span className={`text-xs font-bold ${atsResult.breakdown.keywordMatch >= 80 ? 'text-green-600' : atsResult.breakdown.keywordMatch >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
-                          {atsResult.breakdown.keywordMatch}%
+                        <span className={`text-xs font-bold ${(atsResult.breakdown?.keywordMatch || 0) >= 80 ? 'text-green-600' : (atsResult.breakdown?.keywordMatch || 0) >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
+                          {atsResult.breakdown?.keywordMatch || 0}%
                         </span>
                       </div>
                     </div>
@@ -637,12 +659,12 @@ export default function ComprehensiveATSAnalyzer({
                       <div className="flex items-center gap-2">
                         <div className="w-12 bg-gray-200 dark:bg-gray-600 rounded-full h-1.5">
                           <div 
-                            className={`h-1.5 rounded-full ${atsResult.breakdown.experienceEducation >= 80 ? 'bg-green-500' : atsResult.breakdown.experienceEducation >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
-                            style={{ width: `${atsResult.breakdown.experienceEducation}%` }}
+                            className={`h-1.5 rounded-full ${(atsResult.breakdown?.experienceEducation || 0) >= 80 ? 'bg-green-500' : (atsResult.breakdown?.experienceEducation || 0) >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                            style={{ width: `${atsResult.breakdown?.experienceEducation || 0}%` }}
                           />
                         </div>
-                        <span className={`text-xs font-bold ${atsResult.breakdown.experienceEducation >= 80 ? 'text-green-600' : atsResult.breakdown.experienceEducation >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
-                          {atsResult.breakdown.experienceEducation}%
+                        <span className={`text-xs font-bold ${(atsResult.breakdown?.experienceEducation || 0) >= 80 ? 'text-green-600' : (atsResult.breakdown?.experienceEducation || 0) >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
+                          {atsResult.breakdown?.experienceEducation || 0}%
                         </span>
                       </div>
                     </div>
@@ -653,12 +675,12 @@ export default function ComprehensiveATSAnalyzer({
                       <div className="flex items-center gap-2">
                         <div className="w-12 bg-gray-200 dark:bg-gray-600 rounded-full h-1.5">
                           <div 
-                            className={`h-1.5 rounded-full ${atsResult.breakdown.actionVerbs >= 80 ? 'bg-green-500' : atsResult.breakdown.actionVerbs >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
-                            style={{ width: `${atsResult.breakdown.actionVerbs}%` }}
+                            className={`h-1.5 rounded-full ${(atsResult.breakdown?.actionVerbs || 0) >= 80 ? 'bg-green-500' : (atsResult.breakdown?.actionVerbs || 0) >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                            style={{ width: `${atsResult.breakdown?.actionVerbs || 0}%` }}
                           />
                         </div>
-                        <span className={`text-xs font-bold ${atsResult.breakdown.actionVerbs >= 80 ? 'text-green-600' : atsResult.breakdown.actionVerbs >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
-                          {atsResult.breakdown.actionVerbs}%
+                        <span className={`text-xs font-bold ${(atsResult.breakdown?.actionVerbs || 0) >= 80 ? 'text-green-600' : (atsResult.breakdown?.actionVerbs || 0) >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
+                          {atsResult.breakdown?.actionVerbs || 0}%
                         </span>
                       </div>
                     </div>
@@ -669,12 +691,12 @@ export default function ComprehensiveATSAnalyzer({
                       <div className="flex items-center gap-2">
                         <div className="w-12 bg-gray-200 dark:bg-gray-600 rounded-full h-1.5">
                           <div 
-                            className={`h-1.5 rounded-full ${atsResult.breakdown.skills >= 80 ? 'bg-green-500' : atsResult.breakdown.skills >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
-                            style={{ width: `${atsResult.breakdown.skills}%` }}
+                            className={`h-1.5 rounded-full ${(atsResult.breakdown?.skills || 0) >= 80 ? 'bg-green-500' : (atsResult.breakdown?.skills || 0) >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                            style={{ width: `${atsResult.breakdown?.skills || 0}%` }}
                           />
                         </div>
-                        <span className={`text-xs font-bold ${atsResult.breakdown.skills >= 80 ? 'text-green-600' : atsResult.breakdown.skills >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
-                          {atsResult.breakdown.skills}%
+                        <span className={`text-xs font-bold ${(atsResult.breakdown?.skills || 0) >= 80 ? 'text-green-600' : (atsResult.breakdown?.skills || 0) >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
+                          {atsResult.breakdown?.skills || 0}%
                         </span>
                       </div>
                     </div>
@@ -685,12 +707,12 @@ export default function ComprehensiveATSAnalyzer({
                       <div className="flex items-center gap-2">
                         <div className="w-12 bg-gray-200 dark:bg-gray-600 rounded-full h-1.5">
                           <div 
-                            className={`h-1.5 rounded-full ${atsResult.breakdown.formatting >= 80 ? 'bg-green-500' : atsResult.breakdown.formatting >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
-                            style={{ width: `${atsResult.breakdown.formatting}%` }}
+                            className={`h-1.5 rounded-full ${(atsResult.breakdown?.formatting || 0) >= 80 ? 'bg-green-500' : (atsResult.breakdown?.formatting || 0) >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                            style={{ width: `${atsResult.breakdown?.formatting || 0}%` }}
                           />
                         </div>
-                        <span className={`text-xs font-bold ${atsResult.breakdown.formatting >= 80 ? 'text-green-600' : atsResult.breakdown.formatting >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
-                          {atsResult.breakdown.formatting}%
+                        <span className={`text-xs font-bold ${(atsResult.breakdown?.formatting || 0) >= 80 ? 'text-green-600' : (atsResult.breakdown?.formatting || 0) >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
+                          {atsResult.breakdown?.formatting || 0}%
                         </span>
                       </div>
                     </div>
@@ -704,13 +726,13 @@ export default function ComprehensiveATSAnalyzer({
                   </h5>
                   
                   {/* Missing Keywords - Most Actionable */}
-                  {atsResult.details.missingKeywords.length > 0 && (
+                  {(atsResult.details?.missingKeywords?.length || 0) > 0 && (
                     <div className="space-y-2">
                       <p className="text-xs text-gray-600 dark:text-gray-400">
                         Add these missing keywords to improve your match:
                       </p>
                       <div className="flex flex-wrap gap-1">
-                        {atsResult.details.missingKeywords.slice(0, 8).map((keyword, index) => (
+                        {(atsResult.details?.missingKeywords || []).slice(0, 8).map((keyword, index) => (
                           <span
                             key={index}
                             className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full border border-red-200"
@@ -718,9 +740,9 @@ export default function ComprehensiveATSAnalyzer({
                             {keyword}
                           </span>
                         ))}
-                        {atsResult.details.missingKeywords.length > 8 && (
+                        {(atsResult.details?.missingKeywords?.length || 0) > 8 && (
                           <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
-                            +{atsResult.details.missingKeywords.length - 8} more
+                            +{(atsResult.details?.missingKeywords?.length || 0) - 8} more
                           </span>
                         )}
                       </div>
@@ -729,7 +751,7 @@ export default function ComprehensiveATSAnalyzer({
                   
                   {/* Contextual Guidance */}
                   <div className="space-y-2">
-                    {atsResult.breakdown.actionVerbs < 60 && (
+                    {(atsResult.breakdown?.actionVerbs || 0) < 60 && (
                       <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
                         <p className="text-xs text-blue-800 dark:text-blue-200">
                           💡 <strong>Action Verbs:</strong> Go to 'Work Experience' and use the AI to optimize your descriptions with stronger action verbs.
@@ -737,7 +759,7 @@ export default function ComprehensiveATSAnalyzer({
                       </div>
                     )}
                     
-                    {atsResult.breakdown.skills < 60 && (
+                    {(atsResult.breakdown?.skills || 0) < 60 && (
                       <div className="p-2 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-700">
                         <p className="text-xs text-purple-800 dark:text-purple-200">
                           💡 <strong>Skills:</strong> Add the missing skills to your 'Skills' section to improve your match.
@@ -745,7 +767,7 @@ export default function ComprehensiveATSAnalyzer({
                       </div>
                     )}
                     
-                    {atsResult.breakdown.keywordMatch < 60 && (
+                    {(atsResult.breakdown?.keywordMatch || 0) < 60 && (
                       <div className="p-2 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-700">
                         <p className="text-xs text-orange-800 dark:text-orange-200">
                           💡 <strong>Keywords:</strong> Include more job-relevant keywords in your summary and work experience.
@@ -789,7 +811,7 @@ export default function ComprehensiveATSAnalyzer({
                 )}
 
                 <div className="space-y-3">
-                  {atsResult.optimizations.summary && (
+                  {atsResult.optimizations?.summary && (
                     <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                       <h5 className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
                         Professional Summary Enhancement
@@ -800,24 +822,24 @@ export default function ComprehensiveATSAnalyzer({
                     </div>
                   )}
 
-                  {atsResult.optimizations.workExperience.length > 0 && (
+                  {(atsResult.optimizations?.workExperience?.length || 0) > 0 && (
                     <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
                       <h5 className="text-sm font-medium text-green-800 dark:text-green-200 mb-2">
                         Work Experience Optimization
                       </h5>
                       <p className="text-xs text-green-700 dark:text-green-300">
-                        {atsResult.optimizations.workExperience.length} job descriptions will be enhanced
+                        {atsResult.optimizations?.workExperience?.length || 0} job descriptions will be enhanced
                       </p>
                     </div>
                   )}
 
-                  {atsResult.optimizations.skills.length > 0 && (
+                  {(atsResult.optimizations?.skills?.length || 0) > 0 && (
                     <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
                       <h5 className="text-sm font-medium text-purple-800 dark:text-purple-200 mb-2">
                         Skills Enhancement
                       </h5>
                       <p className="text-xs text-purple-700 dark:text-purple-300">
-                        {atsResult.optimizations.skills.length} relevant skills will be added
+                        {atsResult.optimizations?.skills?.length || 0} relevant skills will be added
                       </p>
                     </div>
                   )}
@@ -831,13 +853,13 @@ export default function ComprehensiveATSAnalyzer({
                   Optimization Preview
                 </h4>
                 
-                {atsResult.optimizations.summary && (
+                {atsResult.optimizations?.summary && (
                   <div className="p-3 border border-gray-200 dark:border-gray-600 rounded-lg">
                     <h5 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
                       Enhanced Professional Summary
                     </h5>
                     <p className="text-xs text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 p-2 rounded">
-                      {atsResult.optimizations.summary}
+                      {atsResult.optimizations?.summary}
                     </p>
                   </div>
                 )}

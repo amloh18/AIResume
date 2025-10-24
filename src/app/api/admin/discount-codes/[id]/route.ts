@@ -7,7 +7,7 @@ import { getAdminDiscountCode } from '@/models/admin-models';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Check authentication and admin role
@@ -18,8 +18,9 @@ export async function GET(
 
     await connectDB();
 
+    const { id } = await params;
     const DiscountCode = await getAdminDiscountCode();
-    const discountCode = await DiscountCode.findById(params.id)
+    const discountCode = await DiscountCode.findById(id)
       .populate('applicablePlans', 'name price currency')
       .populate('createdBy', 'firstName lastName email')
       .lean();
@@ -40,7 +41,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Check authentication and admin role
@@ -51,6 +52,7 @@ export async function PUT(
 
     await connectDB();
 
+    const { id } = await params;
     const body = await request.json();
     const {
       code,
@@ -102,7 +104,7 @@ export async function PUT(
     }
 
     const DiscountCode = await getAdminDiscountCode();
-    const discountCode = await DiscountCode.findById(params.id);
+    const discountCode = await DiscountCode.findById(id);
     
     if (!discountCode) {
       return NextResponse.json({ error: 'Discount code not found' }, { status: 404 });
@@ -159,7 +161,7 @@ export async function DELETE(
     await connectDB();
 
     const DiscountCode = await getAdminDiscountCode();
-    const discountCode = await DiscountCode.findById(params.id);
+    const discountCode = await DiscountCode.findById(id);
     
     if (!discountCode) {
       return NextResponse.json({ error: 'Discount code not found' }, { status: 404 });
@@ -173,7 +175,7 @@ export async function DELETE(
       );
     }
 
-    await DiscountCode.findByIdAndDelete(params.id);
+    await DiscountCode.findByIdAndDelete(id);
 
     return NextResponse.json({ message: 'Discount code deleted successfully' });
   } catch (error) {

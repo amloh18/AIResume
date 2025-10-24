@@ -3,11 +3,11 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 // Removed - using Clerk now
 import connectDB from '@/lib/database';
-import { Testimonial } from '@/models';
+import { getAdminTestimonial } from '@/models/admin-models';
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Check authentication and admin role
@@ -18,6 +18,7 @@ export async function PUT(
 
     await connectDB();
 
+    const { id } = await params;
     const body = await request.json();
     const { username, avatar, designation, company, starRating, message, isActive } = body;
 
@@ -29,8 +30,9 @@ export async function PUT(
       );
     }
 
+    const Testimonial = await getAdminTestimonial();
     const testimonial = await Testimonial.findByIdAndUpdate(
-      params.id,
+      id,
       {
         ...(username && { username }),
         ...(avatar !== undefined && { avatar }),
@@ -62,7 +64,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Check authentication and admin role
@@ -73,7 +75,9 @@ export async function DELETE(
 
     await connectDB();
 
-    const testimonial = await Testimonial.findByIdAndDelete(params.id);
+    const { id } = await params;
+    const Testimonial = await getAdminTestimonial();
+    const testimonial = await Testimonial.findByIdAndDelete(id);
 
     if (!testimonial) {
       return NextResponse.json(

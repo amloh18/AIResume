@@ -235,7 +235,7 @@ function CVStructureSections({
   onUpdateCV: (data: UnifiedCVDataStructure) => void;
   jobContext?: JobData;
 }) {
-  const [openSections, setOpenSections] = React.useState<Set<string>>(new Set(['personal_header', 'work_experience']));
+  const [openSections, setOpenSections] = React.useState<Set<string>>(new Set(['personal_header', 'work_experience', 'projects']));
 
   const toggleSection = (sectionId: string) => {
     const newOpenSections = new Set(openSections);
