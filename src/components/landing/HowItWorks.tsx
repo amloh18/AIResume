@@ -143,7 +143,7 @@ const HowItWorks = () => {
     <section 
       ref={sectionRef}
       id="how-it-works" 
-      className="relative py-32 bg-gradient-to-b from-gray-900 to-black overflow-hidden"
+      className="relative h-screen flex items-center bg-gradient-to-b from-gray-900 to-black overflow-hidden pt-20"
     >
       {/* Enhanced Background Effects */}
       <div className="absolute inset-0">
@@ -152,17 +152,17 @@ const HowItWorks = () => {
         <div className="absolute bottom-1/4 right-1/4 w-[600px] h-[600px] bg-gradient-to-r from-purple-400/2 to-pink-400/2 rounded-full blur-3xl"></div>
       </div>
       
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full h-full flex flex-col justify-center">
         {/* Sophisticated Header Section */}
         <motion.div
-          className="text-center mb-24"
+          className="text-center mb-16"
           initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
           viewport={{ once: true, margin: "-50px" }}
         >
                  <motion.h3
-                   className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-8 text-center"
+                   className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-6 text-center"
                    initial={{ opacity: 0, y: 20 }}
                    whileInView={{ opacity: 1, y: 0 }}
                    transition={{ duration: 0.6, delay: 0.2 }}

@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 // Removed - using Clerk now
 import { connectToDatabase } from '@/lib/database';
-import PricingPlan from '@/models/PricingPlan';
+import { getAdminPricingPlan } from '@/models/admin-models';
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
 
     await connectToDatabase();
 
+    const PricingPlan = await getAdminPricingPlan();
     const plans = await PricingPlan.find({})
       .sort({ sortOrder: 1 })
       .lean();

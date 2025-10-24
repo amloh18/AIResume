@@ -35,6 +35,13 @@ export async function POST(request: NextRequest) {
     user.emailVerificationExpires = undefined;
     await user.save();
 
+    // Clear user cache to ensure fresh data is fetched
+    if (global.userCache) {
+      const cacheKey = `user_${email}`;
+      global.userCache.delete(cacheKey);
+      console.log('🧹 Cleared user cache for verified user:', email);
+    }
+
     console.log('✅ Email verified successfully for user:', email);
 
     return NextResponse.json({

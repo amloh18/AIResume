@@ -11,6 +11,7 @@ import { useTheme } from '@/lib/contexts/ThemeContext';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
 import { useUserData, getUserDisplayName, getUserAvatar } from '@/lib/hooks/useUserData';
 import { useRoutePreloader } from '@/lib/services/routePreloader';
+import UniversalPaymentModal from '@/components/payment/UniversalPaymentModal';
 
 const OptimizedNavigation: React.FC = () => {
   const router = useRouter();
@@ -20,6 +21,7 @@ const OptimizedNavigation: React.FC = () => {
   const { userData } = useUserData();
   const { preloadOnHover } = useRoutePreloader();
   const [activeSection, setActiveSection] = useState('analytics');
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   
   // Check if user is admin
   const isAdmin = userData?.role === 'admin';
@@ -153,22 +155,101 @@ const OptimizedNavigation: React.FC = () => {
 
       {/* Membership Card */}
       <div className="p-4">
-        <div className="bg-gradient-to-r from-lime-500 to-lime-600 rounded-xl p-4 text-white">
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-sm font-medium">Free Plan</div>
-            <div className="text-xs bg-white/20 px-2 py-1 rounded-full">Active</div>
-          </div>
-          <div className="text-xs text-lime-100 mb-3">
-            Upgrade to unlock premium features
-          </div>
-          <motion.button
-            className="w-full bg-white/20 hover:bg-white/30 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            Upgrade Plan
-          </motion.button>
-        </div>
+        {(() => {
+          const currentPlan = userData?.subscription?.planKey || 'free';
+          const planName = userData?.subscription?.planName || 'Free Plan';
+          const planStatus = userData?.subscription?.status || 'active';
+          const endDate = userData?.subscription?.endDate;
+          const isPaidPlan = currentPlan !== 'free';
+          
+          // Calculate days until expiry for monthly plans
+          const getDaysUntilExpiry = (endDate: string) => {
+            if (!endDate) return null;
+            const expiryDate = new Date(endDate);
+            const now = new Date();
+            const diffTime = expiryDate.getTime() - now.getTime();
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return diffDays;
+          };
+          
+          const daysUntilExpiry = endDate ? getDaysUntilExpiry(endDate) : null;
+          const isExpiringSoon = daysUntilExpiry !== null && daysUntilExpiry <= 7 && daysUntilExpiry > 0;
+          
+          // Don't show card for yearly plans (they're stable)
+          if (currentPlan === 'pro_yearly') {
+            return null;
+          }
+          
+          // Don't show card for inactive free plans (they should upgrade)
+          if (currentPlan === 'free' && planStatus !== 'active') {
+            return null;
+          }
+          
+          // Get plan-specific styling and upgrade suggestions
+          const getPlanStyling = (planKey: string, isExpiring: boolean) => {
+            switch (planKey) {
+              case 'pro_monthly':
+                return {
+                  gradient: isExpiring ? 'from-red-500 to-red-600' : 'from-blue-500 to-blue-600',
+                  buttonText: isExpiring ? 'Upgrade to Yearly' : 'Manage Plan',
+                  description: isExpiring 
+                    ? `Expires in ${daysUntilExpiry} days - Save 20% with yearly plan!`
+                    : 'Professional features unlocked'
+                };
+              case 'pro_quarterly':
+                return {
+                  gradient: isExpiring ? 'from-red-500 to-red-600' : 'from-blue-500 to-blue-600',
+                  buttonText: isExpiring ? 'Upgrade to Yearly' : 'Manage Plan',
+                  description: isExpiring 
+                    ? `Expires in ${daysUntilExpiry} days - Save 20% with yearly plan!`
+                    : 'Professional features unlocked'
+                };
+              case 'day_pass':
+                const hoursRemaining = daysUntilExpiry ? Math.max(0, daysUntilExpiry * 24) : 24;
+                return {
+                  gradient: 'from-orange-500 to-orange-600',
+                  buttonText: 'Upgrade to Pro',
+                  description: `${Math.floor(hoursRemaining)} hours remaining - Upgrade for unlimited access!`
+                };
+              case 'free':
+                return {
+                  gradient: 'from-lime-500 to-lime-600',
+                  buttonText: 'Upgrade to Pro',
+                  description: 'Unlock unlimited CVs, ATS optimization, and premium features'
+                };
+              default:
+                return {
+                  gradient: 'from-lime-500 to-lime-600',
+                  buttonText: 'Upgrade Plan',
+                  description: 'Upgrade to unlock premium features'
+                };
+            }
+          };
+          
+          const planStyling = getPlanStyling(currentPlan, isExpiringSoon);
+          
+          return (
+            <div className={`bg-gradient-to-r ${planStyling.gradient} rounded-xl p-4 text-white`}>
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-sm font-medium">{planName}</div>
+                <div className={`text-xs ${planStatus === 'active' ? 'bg-white/20' : 'bg-red-500/50'} px-2 py-1 rounded-full`}>
+                  {planStatus === 'active' ? 'Active' : planStatus}
+                </div>
+              </div>
+              <div className="text-xs text-white/80 mb-3">
+                {planStyling.description}
+              </div>
+              <motion.button
+                onClick={() => setShowSubscriptionModal(true)}
+                className="w-full bg-white/20 hover:bg-white/30 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                {planStyling.buttonText}
+              </motion.button>
+            </div>
+          );
+        })()}
       </div>
 
       {/* User Profile */}
@@ -200,6 +281,13 @@ const OptimizedNavigation: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Subscription Modal */}
+      <UniversalPaymentModal
+        isOpen={showSubscriptionModal}
+        onClose={() => setShowSubscriptionModal(false)}
+        currentUserPlan={userData?.subscription?.planKey || 'free'}
+      />
     </div>
   );
 };

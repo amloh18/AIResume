@@ -19,6 +19,7 @@ interface TabbedStudioPanelProps {
   jobATSContent?: React.ReactNode;
   parserContent?: React.ReactNode;
   cvSectionsAndOrderingContent?: React.ReactNode;
+  documentType?: 'cv' | 'cover-letter'; // NEW: Added document type prop
 }
 
 const TabbedStudioPanel: React.FC<TabbedStudioPanelProps> = ({
@@ -27,12 +28,14 @@ const TabbedStudioPanel: React.FC<TabbedStudioPanelProps> = ({
   templateContent,
   jobATSContent,
   parserContent,
-  cvSectionsAndOrderingContent
+  cvSectionsAndOrderingContent,
+  documentType = 'cv' // Default to CV mode
 }) => {
   const themeClasses = getThemeClasses;
   const [activeTab, setActiveTab] = useState<'structure' | 'design' | 'template'>('structure');
 
-  const tabs = [
+  // Define all possible tabs
+  const allTabs = [
     {
       id: 'structure' as const,
       label: 'Structure',
@@ -41,15 +44,15 @@ const TabbedStudioPanel: React.FC<TabbedStudioPanelProps> = ({
         <div className="space-y-6">
           {/* Dynamic Layout for Job & ATS and CV Parser */}
           <div className={`grid gap-4 ${parserContent ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'}`}>
-            {/* Job & ATS Section */}
-            {jobATSContent && (
+            {/* Job & ATS Section - HIDE for cover letter mode */}
+            {jobATSContent && documentType === 'cv' && (
               <div className="space-y-4">
                 {jobATSContent}
               </div>
             )}
 
-            {/* CV Parser Section - Only show if needed */}
-            {parserContent && (
+            {/* CV Parser Section - Only show if needed and in CV mode */}
+            {parserContent && documentType === 'cv' && (
               <div className="space-y-4">
                 {parserContent}
               </div>
@@ -85,6 +88,11 @@ const TabbedStudioPanel: React.FC<TabbedStudioPanelProps> = ({
       content: templateContent
     }
   ];
+  
+  // Filter tabs based on document type
+  const tabs = documentType === 'cover-letter'
+    ? allTabs.filter(tab => tab.id === 'structure') // Only structure tab for cover letters
+    : allTabs; // All tabs for CVs
 
   return (
     <div className="h-full flex flex-col">

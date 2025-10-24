@@ -1,5 +1,5 @@
 {
-  "name": "circle_cv_app",
+  "name": "cvcircle-app",
   "version": "1.0.0",
   "description": "Circle CV Application - A modern CV builder and management system",
   "private": true,
@@ -25,7 +25,11 @@
     "populate-simple": "node scripts/populate-mongodb-simple.js",
     "fix-firebase-domains": "node scripts/fix-firebase-domains.js",
     "setup-firebase-env": "node scripts/setup-firebase-env.js",
-    "test-google-auth": "node scripts/test-google-auth.js"
+    "test-google-auth": "node scripts/test-google-auth.js",
+    "migrate-cv-firebase-uid": "node scripts/migrate-cv-firebase-uid-simple.js",
+    "migrate-cv-firebase-uid-dry-run": "node scripts/migrate-cv-firebase-uid-simple.js --dry-run",
+    "migrate-cv-firebase-uid-verify": "node scripts/migrate-cv-firebase-uid-simple.js --verify",
+    "test-cv-api": "node scripts/test-cv-api.js"
   },
   "keywords": [
     "cv",

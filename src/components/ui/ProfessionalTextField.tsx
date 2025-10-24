@@ -248,8 +248,18 @@ const ProfessionalTextField: React.FC<ProfessionalTextFieldProps> = ({
       <div className="relative">
         {isPreviewMode ? (
           <div className={`w-full px-3 py-2 ${themeClasses.background.secondary} rounded-lg text-sm border min-h-24 max-h-64 overflow-y-auto`}>
-            <div className="prose prose-sm max-w-none">
-              <pre className="whitespace-pre-wrap font-sans">{value || 'No content to preview'}</pre>
+            <div className="prose prose-sm max-w-none formatted-preview">
+              {value ? (
+                <div dangerouslySetInnerHTML={{ 
+                  __html: value
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                    .replace(/^• (.+)/gm, '<div style="margin-left: 20px;">• $1</div>')
+                    .replace(/\n/g, '<br/>')
+                }} />
+              ) : (
+                <span className="text-gray-400">No content to preview</span>
+              )}
             </div>
           </div>
         ) : (

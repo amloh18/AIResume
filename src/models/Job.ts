@@ -62,6 +62,13 @@ export interface IJob extends Document {
     analyzedAt: Date;
   };
   
+  // Status change tracking
+  statusHistory: Array<{
+    status: string;
+    changedAt: Date;
+    previousStatus?: string;
+  }>;
+  
   createdAt: Date;
   updatedAt: Date;
 }
@@ -293,7 +300,21 @@ const jobSchema = new Schema<IJob>({
     analyzedAt: {
       type: Date
     }
-  }
+  },
+  statusHistory: [{
+    status: {
+      type: String,
+      required: true
+    },
+    changedAt: {
+      type: Date,
+      required: true,
+      default: Date.now
+    },
+    previousStatus: {
+      type: String
+    }
+  }]
 }, {
   timestamps: true,
   toJSON: {
@@ -317,6 +338,21 @@ jobSchema.index({ company: 'text', jobTitle: 'text' }); // Text search
 jobSchema.pre('save', function(next) {
   if (this.isModified()) {
     this.updatedAt = new Date();
+  }
+  next();
+});
+
+// Track status changes
+jobSchema.pre('save', function(next) {
+  if (this.isModified('status') && !this.isNew) {
+    if (!this.statusHistory) {
+      this.statusHistory = [];
+    }
+    this.statusHistory.push({
+      status: this.status,
+      changedAt: new Date(),
+      previousStatus: this.get('status', null, { getters: false })
+    });
   }
   next();
 });

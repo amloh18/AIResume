@@ -77,9 +77,7 @@ const WorkExperience: React.FC<WorkExperienceProps> = ({
             {job.highlights && job.highlights.length > 0 && (
               <ul className="highlight-list">
                 {job.highlights.map((highlight, highlightIndex) => (
-                  <li key={highlightIndex}>
-                    {highlight}
-                  </li>
+                  <li key={highlightIndex} dangerouslySetInnerHTML={{ __html: parseFormattedText(highlight) }} />
                 ))}
               </ul>
             )}

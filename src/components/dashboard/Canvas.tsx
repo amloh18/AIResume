@@ -222,7 +222,6 @@ const Modal: React.FC<ModalProps> = ({
 };
 
 const Canvas: React.FC = () => {
-  console.log('🔍 Canvas - Component rendered');
   const { user, loading: authLoading, isAuthenticated } = useUnifiedAuth();
   const { createCV } = useCreateCV();
   const { isOpen: isMobileMenuOpen, toggleSidebar } = useMobileSidebar();
@@ -241,22 +240,19 @@ const Canvas: React.FC = () => {
     try {
       // Check if it's already a MongoDB ObjectId
       if (/^[0-9a-fA-F]{24}$/.test(userId)) {
-        console.log('🔍 Canvas - Using MongoDB ObjectId:', userId);
         return userId;
       } else {
         // Try to get MongoDB user ID from server
-        console.log('🔍 Canvas - Firebase UID detected, fetching MongoDB user ID...');
         const userResponse = await fetch('/api/user/current');
         if (userResponse.ok) {
           const userData = await userResponse.json();
           if (userData.success && userData.user && userData.user.id) {
-            console.log('✅ Canvas - Found MongoDB user ID:', userData.user.id);
             return userData.user.id;
           }
         }
       }
     } catch (error) {
-      console.error('❌ Canvas - Error resolving user ID:', error);
+      // Silent fail - user ID resolution failed
     }
     return null;
   };
@@ -268,19 +264,15 @@ const Canvas: React.FC = () => {
       if (userId) {
         const resolvedUserId = await resolveMongoDBUserId(userId);
         setMongoDBUserId(resolvedUserId);
-        console.log('🔍 Canvas - MongoDB userId resolved:', resolvedUserId);
       }
     };
     
     initializeUserId();
   }, [user]);
   
-  // Debug CVs state
+  // CVs state monitoring
   useEffect(() => {
-    console.log('🔍 Canvas - CVs state updated:', cvs.length, 'CVs');
-    if (cvs.length > 0) {
-      console.log('🔍 Canvas - First CV:', cvs[0]);
-    }
+    // CVs loaded successfully
   }, [cvs]);
 
   // Handle CV creation
@@ -289,19 +281,15 @@ const Canvas: React.FC = () => {
       const userId = getUserIdForAPI(user);
       if (userId) {
         await createCV({ userId });
-      } else {
-        console.error('No user ID available for CV creation');
       }
     } catch (error) {
-      console.error('Error creating CV:', error);
+      addToast('error', 'Failed to create CV');
     }
   };
 
   // Master CV handlers
   const handleEditMasterCV = async (masterCV: any) => {
     try {
-      console.log('🔍 Editing master CV:', masterCV);
-      
       // Store master CV data in sessionStorage for studio to access
       sessionStorage.setItem('editingMasterCV', JSON.stringify(masterCV));
       sessionStorage.setItem('editingCVId', masterCV.id);
@@ -311,13 +299,12 @@ const Canvas: React.FC = () => {
       // Navigate to studio with master CV
       window.location.href = `/studio?cvId=${masterCV.id}&master=true`;
     } catch (error) {
-      console.error('❌ Error editing master CV:', error);
+      addToast('error', 'Failed to open master CV');
     }
   };
 
   const handleDuplicateMasterCV = async (masterCV: any) => {
     try {
-      console.log('🔍 Duplicating master CV using ApplicationPackageService:', masterCV);
       
       const userId = getUserIdForAPI(user) || getUserIdFromLocalStorage();
       if (!userId) {
@@ -338,13 +325,11 @@ const Canvas: React.FC = () => {
         // Navigate to studio with duplicated CV (freestanding, ready for job linking)
         window.location.href = `/studio?cvId=${duplicatedCVId}&mode=document-first`;
         
-        console.log('✅ Master CV duplicated successfully:', duplicatedCVId);
         addToast('success', 'Master CV duplicated successfully! You can now link it to a job.');
       } else {
         throw new Error(duplicateResult.message || 'Failed to duplicate master CV');
       }
     } catch (error) {
-      console.error('❌ Error duplicating master CV:', error);
       addToast('error', 'Failed to duplicate master CV');
     }
   };
@@ -352,7 +337,6 @@ const Canvas: React.FC = () => {
   // CV Card handlers
   const handleDuplicateCV = async (cv: CV) => {
     try {
-      console.log('🔍 Duplicating CV using ApplicationPackageService:', cv);
       
       const userId = getUserIdForAPI(user) || getUserIdFromLocalStorage();
       if (!userId) {
@@ -371,7 +355,6 @@ const Canvas: React.FC = () => {
         // Refresh CVs list to show the new freestanding duplicate
         loadCVs();
         addToast('success', 'CV duplicated successfully! The copy is ready to be linked to a new job.');
-        console.log('✅ CV duplicated successfully as freestanding document:', duplicateResult.data.cvId);
         
         // If the source CV was linked to a journey, inform user about the duplication principle
         if (cv.journeyId) {
@@ -381,47 +364,40 @@ const Canvas: React.FC = () => {
         throw new Error(duplicateResult.message || 'Failed to duplicate CV');
       }
     } catch (error) {
-      console.error('❌ Error duplicating CV:', error);
       addToast('error', 'Failed to duplicate CV');
     }
   };
 
   const handleDownloadCV = async (cv: CV) => {
     try {
-      console.log('🔍 Downloading CV:', cv);
       // Open download URL in new tab
       window.open(`/api/cvs/download/${cv.id}`, '_blank');
     } catch (error) {
-      console.error('❌ Error downloading CV:', error);
       addToast('error', 'Failed to download CV');
     }
   };
 
   const handleShareCV = async (cv: CV) => {
     try {
-      console.log('🔍 Sharing CV:', cv);
       // Copy shareable link to clipboard
       const shareUrl = `${window.location.origin}/shared/cv/${cv.id}`;
       await navigator.clipboard.writeText(shareUrl);
       addToast('success', 'Share link copied to clipboard!');
     } catch (error) {
-      console.error('❌ Error sharing CV:', error);
       addToast('error', 'Failed to share CV');
     }
   };
 
   const handleDeleteCV = async (cv: CV) => {
     try {
-      console.log('🔍 Deleting CV:', cv);
       await deleteCV(cv.id);
     } catch (error) {
-      console.error('❌ Error deleting CV:', error);
+      addToast('error', 'Failed to delete CV');
     }
   };
 
   const handleEditJourney = async (cv: CV, journey: any) => {
     try {
-      console.log('🔍 Opening journey modal for CV:', cv, 'Journey:', journey);
       
       // Fetch the job details for the journey
       const jobResponse = await fetch(`/api/jobs/${journey.jobId}`);
@@ -447,7 +423,6 @@ const Canvas: React.FC = () => {
         addToast('error', 'Failed to load job details');
       }
     } catch (error) {
-      console.error('❌ Error opening journey modal:', error);
       addToast('error', 'Failed to open journey details');
     }
   };
@@ -510,7 +485,6 @@ const Canvas: React.FC = () => {
     // Check if user is returning from onboarding
     const fromOnboarding = typeof window !== 'undefined' && sessionStorage.getItem('fromOnboarding') === 'true';
     if (fromOnboarding) {
-      console.log('🔍 Canvas - User returning from onboarding, refreshing data');
       sessionStorage.removeItem('fromOnboarding'); // Clear the flag
     }
     
@@ -521,7 +495,6 @@ const Canvas: React.FC = () => {
       loadCoverLetters();
       fetchAvailableJobs();
     } else {
-      console.log('No user ID available, cannot load CVs and Cover Letters');
       setLoading(false);
     }
   }, [user]);
@@ -537,7 +510,7 @@ const Canvas: React.FC = () => {
         }
       }
     } catch (error) {
-      console.error('Error parsing user data from localStorage:', error);
+      // Silent fail - localStorage parsing failed
     }
     return null;
   };
@@ -548,27 +521,16 @@ const Canvas: React.FC = () => {
       const userIdToUse = getUserIdForAPI(user);
       
       if (!userIdToUse) {
-        console.error('No user ID available from session or localStorage');
         setCvs([]);
         return;
       }
       
-      console.log('Loading CVs for user:', userIdToUse);
-      console.log('🔍 Canvas - User ID type:', typeof userIdToUse);
-      console.log('🔍 Canvas - User ID length:', userIdToUse?.toString().length);
-      
       // Use unified service to get CVs
       const result = await UnifiedCVService.getCVs(userIdToUse, { projection: 'summary' });
-      console.log('🔍 Canvas - Unified CV service response:', result);
       
       if (result && result.length > 0) {
-        console.log('🔍 Canvas - CV data received:', result);
-        console.log('🔍 Canvas - Number of CVs:', result.length);
-        
         // Process CVs with unified data structure
         const enrichedCVs = result.map((cv: any) => {
-          console.log('Processing CV:', cv.id, 'Type:', typeof cv.id);
-          console.log('CV data structure:', Object.keys(cv));
           
           return {
             id: cv.id,

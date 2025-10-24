@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { calculateEnhancedATSScore, extractEnhancedKeywords } from '@/lib/services/enhancedATSService';
 
 // Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
@@ -15,43 +16,63 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create the enhanced ATS analysis prompt
-    const prompt = createComprehensiveATSPrompt(cvData, jobData);
+    console.log('🔍 Enhanced ATS Analysis - Starting calculation');
 
-    // Generate analysis using Gemini
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const content = response.text();
+    // Use enhanced ATS calculation
+    const enhancedResult = calculateEnhancedATSScore(cvData, jobData);
 
-    if (!content) {
-      return NextResponse.json(
-        { success: false, error: 'No analysis generated' },
-        { status: 500 }
-      );
-    }
+    console.log('✅ Enhanced ATS Analysis - Complete:', {
+      score: enhancedResult.score,
+      profileLevel: enhancedResult.profileLevel.title,
+      hardSkillsMatch: enhancedResult.breakdown.hardSkillsMatch,
+      matchedKeywords: enhancedResult.details.matchedKeywords.length,
+      missingKeywords: enhancedResult.details.missingKeywords.length
+    });
 
-    // Parse the JSON response
-    let analysis;
-    try {
-      // Extract JSON from the response (it might have additional text)
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        analysis = JSON.parse(jsonMatch[0]);
-      } else {
-        throw new Error('No JSON found in response');
+    // Generate AI-powered optimizations if score < 80
+    let aiOptimizations = null;
+    if (enhancedResult.score < 80 && jobData) {
+      try {
+        aiOptimizations = await generateAIOptimizations(cvData, jobData, enhancedResult);
+      } catch (aiError) {
+        console.error('AI optimization generation failed:', aiError);
+        // Continue without AI optimizations
       }
-    } catch (parseError) {
-      console.error('Failed to parse JSON response:', parseError);
-      return NextResponse.json(
-        { success: false, error: 'Failed to parse analysis response' },
-        { status: 500 }
-      );
     }
+
+    // Format response to match expected structure
+    const response = {
+      score: enhancedResult.score,
+      profileLevel: enhancedResult.profileLevel,
+      breakdown: {
+        keywordMatch: enhancedResult.breakdown.hardSkillsMatch,
+        experienceEducation: enhancedResult.breakdown.jobTitleCompanyMatch,
+        actionVerbs: enhancedResult.breakdown.experienceContentMatch,
+        skills: enhancedResult.breakdown.hardSkillsMatch,
+        formatting: enhancedResult.breakdown.formattingReadability
+      },
+      details: {
+        matchedKeywords: enhancedResult.details.matchedKeywords.map(k => k.keyword),
+        missingKeywords: enhancedResult.details.missingKeywords.slice(0, 15).map(k => k.keyword),
+        experienceYears: enhancedResult.details.experienceYears,
+        educationLevel: enhancedResult.details.educationLevel,
+        actionVerbMatches: enhancedResult.details.actionVerbMatches,
+        skillsMatched: enhancedResult.details.hardSkillsMatched,
+        skillsMissing: enhancedResult.details.hardSkillsMissing.slice(0, 10),
+        formatIssues: []
+      },
+      suggestions: enhancedResult.suggestions,
+      optimizations: aiOptimizations || {
+        summary: '',
+        workExperience: [],
+        skills: enhancedResult.details.hardSkillsMissing.slice(0, 5),
+        keywords: enhancedResult.details.missingKeywords.slice(0, 10).map(k => k.keyword)
+      }
+    };
 
     return NextResponse.json({
       success: true,
-      data: analysis,
+      data: response,
       timestamp: new Date().toISOString()
     });
 
@@ -64,28 +85,62 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function createComprehensiveATSPrompt(cvData: any, jobData: any) {
+async function generateAIOptimizations(cvData: any, jobData: any, atsResult: any) {
   const jobDescription = jobData?.description || jobData?.jobDescription || '';
+  const jobTitle = jobData?.title || jobData?.jobTitle || 'the position';
+  const experienceLevel = atsResult.profileLevel.title;
+  const missingKeywords = atsResult.details.missingKeywords.slice(0, 10).map((k: any) => k.keyword).join(', ');
   
-  return `You are an advanced ATS (Applicant Tracking System) expert and career consultant. Your task is to analyze a user's CV against a specific job description and provide actionable, honest feedback.
+  const prompt = `You are an expert ATS (Applicant Tracking System) and recruiting specialist. Generate ATS-optimized content for a CV.
 
-Here is the full context:
-- User's Full CV: ${JSON.stringify(cvData, null, 2)}
-- Original Job Description: ${jobDescription}
+**USER PROFILE:**
+- Experience Level: ${experienceLevel}
+- Current Professional Summary: ${cvData?.basics?.summary || 'None'}
+- Years of Experience: ${atsResult.details.experienceYears}
+- Target Role: ${jobTitle}
 
-Instructions:
-1. **First, generate a JSON object with the following fields:**
-   * \`keywordMatch\`: A percentage score (0-100) based on how many keywords from the job description are in the CV.
-   * \`experienceEducation\`: A percentage score (0-100) comparing the user's years of experience and education to the job requirements.
-   * \`actionVerbs\`: A percentage score (0-100) based on the usage of strong action verbs in the Work Experience descriptions.
-   * \`skills\`: A percentage score (0-100) for the skills match.
-   * \`formatting\`: A percentage score (0-100) for clean formatting (check for markdown consistency).
-   * \`matchedKeywords\`: An array of strings of all keywords from the job description that were found in the CV.
-   * \`missingKeywords\`: An array of strings of all keywords from the job description that were NOT found in the CV.
+**JOB REQUIREMENTS:**
+${jobDescription.substring(0, 800)}
 
-2. **Next, provide a bulleted list of actionable recommendations.** Do NOT provide a generic score. Instead, give specific advice.
-3. Each bullet point must explain what the user can do to improve.
-4. Be honest about the gaps. If the user is missing a required skill or a specific number of years of experience, state this clearly but professionally.
-5. If the user has a gap in their experience or skills, suggest adding a relevant project or certification.
-6. The final output should be the JSON object followed by the bulleted list.`;
+**MISSING KEYWORDS TO INTEGRATE:**
+${missingKeywords}
+
+**TASK:**
+Generate ONLY a JSON object with these fields:
+
+{
+  "summary": "A 3-4 sentence professional summary that naturally integrates the missing keywords while highlighting the candidate's relevant experience. Focus on measurable achievements.",
+  "workExperience": [
+    {
+      "index": 0,
+      "optimizedText": "Enhanced description for their most recent role that integrates missing keywords naturally and includes quantifiable metrics"
+    }
+  ],
+  "skills": ["skill1", "skill2", "skill3"],
+  "keywords": ["keyword1", "keyword2"]
+}
+
+**RULES:**
+- Use the candidate's actual experience level (${experienceLevel})
+- For Entry-Level: Focus on education, projects, and transferable skills
+- For Mid-Level: Focus on growth and measurable impact
+- For Senior: Focus on leadership and strategic business impact
+- Integrate keywords naturally - do NOT just list them
+- Include specific metrics where possible (%, $, numbers)
+- Keep it professional and truthful
+
+Output ONLY the JSON object.`;
+
+  const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+  const result = await model.generateContent(prompt);
+  const response = await result.response;
+  const content = response.text();
+
+  // Parse JSON response
+  const jsonMatch = content.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    return JSON.parse(jsonMatch[0]);
+  }
+
+  return null;
 }

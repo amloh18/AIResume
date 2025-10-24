@@ -292,8 +292,8 @@ export default function SignUpPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 flex">
-      {/* Left Side - Images (50%) */}
-      <div className="w-1/2 flex flex-col justify-center px-12 lg:px-16 xl:px-20">
+      {/* Left Side - Images (50%) - Hidden on Mobile */}
+      <div className="hidden md:flex w-1/2 flex-col justify-center px-12 lg:px-16 xl:px-20">
         {/* Background Effects */}
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-lime-400/5 to-blue-400/5"></div>
@@ -489,8 +489,8 @@ export default function SignUpPage() {
         </div>
       </div>
 
-      {/* Right Side - Sign Up Modal (50%) */}
-      <div className="w-1/2 flex items-center justify-center px-8 lg:px-12 xl:px-16">
+      {/* Right Side - Sign Up Modal (50% on desktop, 100% on mobile) */}
+      <div className="w-full md:w-1/2 flex items-center justify-center px-8 lg:px-12 xl:px-16">
         <div className="w-full max-w-md">
 
           {/* Sign Up Modal */}

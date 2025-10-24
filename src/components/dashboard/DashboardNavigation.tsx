@@ -61,7 +61,7 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
   // Fetch subscription data and CV journey count
   useEffect(() => {
     const fetchUserData = async () => {
-      if (!session?.user?.email) return;
+      if (!session?.user?.email || !user?.id) return;
       
       try {
         // Fetch subscription data
@@ -71,19 +71,24 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
           setSubscription(subscriptionData.subscription);
         }
 
-        // Fetch CV journey count (completed CVs)
-        const cvsResponse = await fetch(`/api/cvs?userId=${user.id}&type=cv`);
-        if (cvsResponse.ok) {
-          const cvsData = await cvsResponse.json();
-          setCvJourneyCount(cvsData.cvs?.length || 0);
+        // Fetch CV journey count (completed CVs) - only if user.id is stable
+        if (user.id) {
+          const cvsResponse = await fetch(`/api/cvs?userId=${user.id}&type=cv`);
+          if (cvsResponse.ok) {
+            const cvsData = await cvsResponse.json();
+            setCvJourneyCount(cvsData.cvs?.length || 0);
+          }
         }
       } catch (error) {
         console.error('Error fetching user data:', error);
       }
     };
 
-    fetchUserData();
-  }, [session, user.id]);
+    // Only fetch if we have both session and user data
+    if (session?.user?.email && user?.id) {
+      fetchUserData();
+    }
+  }, [session?.user?.email, user?.id]); // More specific dependencies
 
   const sections = [
     { id: 'analytics', name: 'Analytics', icon: BarChart3, description: 'Progress Tracking' },

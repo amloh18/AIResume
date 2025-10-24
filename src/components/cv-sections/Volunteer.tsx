@@ -88,9 +88,7 @@ const Volunteer: React.FC<VolunteerProps> = ({
             {volunteer.highlights && volunteer.highlights.length > 0 && (
               <ul className="highlight-list">
                 {volunteer.highlights.map((highlight, highlightIndex) => (
-                  <li key={highlightIndex}>
-                    {highlight}
-                  </li>
+                  <li key={highlightIndex} dangerouslySetInnerHTML={{ __html: parseFormattedText(highlight) }} />
                 ))}
               </ul>
             )}

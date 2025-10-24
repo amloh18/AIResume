@@ -90,6 +90,7 @@ export interface CVDataStructure {
     endDate: string;
     description: string;
     highlights: string[];
+    keywords: string[];  // Technologies/skills used in the project
     url: string;
   }>;
 }

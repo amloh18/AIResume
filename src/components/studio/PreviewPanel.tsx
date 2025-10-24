@@ -21,8 +21,7 @@ import {
 import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { Template } from '@/lib/stores/templateStore';
 import { Job } from '@/lib/stores/jobStore';
-import CVPreviewContent from './CVPreviewContent';
-import EnhancedCVPreview from './EnhancedCVPreview';
+import CVPreview from './CVPreview';
 import CoverLetterPreview from './CoverLetterPreview';
 import { downloadAsJSON, downloadAsPDF, downloadAsDOCX, downloadAsImage } from '@/lib/utils/download';
 import { useTheme } from '@/lib/contexts/ThemeContext';
@@ -186,50 +185,29 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
   };
 
   const renderCVPreview = () => {
-    // Apply template styles if available
-    const templateStyles = template?.globalStyles;
-    const customCSS = template?.customCSS || template?.globalStyles?.customCSS;
-    const templateName = template?.name;
-    
-    // Removed console logs to prevent toast notifications
-    
     return (
-      <div 
-        ref={contentRef}
-        className="relative bg-white shadow-lg mx-auto"
-        style={{
-          width: currentDimensions.width,
-          transform: `scale(${zoom})`,
-          transformOrigin: 'top center',
-          marginTop: '0',
-          marginBottom: '0'
-        }}
-      >
-        {/* Use new enhanced preview if template has availableSections, otherwise fallback */}
-        {template?.availableSections ? (
-          <EnhancedCVPreview
-            cvData={cvData}
-            template={template}
-            theme="light"
-            showBadge={false}
-            sectionOrder={sectionOrder}
-            sectionVisibility={sectionVisibility}
-            pagePadding={pagePadding}
-          />
-        ) : (
-          <CVPreviewContent 
-            cvData={cvData} 
-            theme="light" // Always use light theme for preview
-            showBadge={false}
-            sectionOrder={sectionOrder}
-            sectionVisibility={sectionVisibility}
-            templateStyles={templateStyles}
-            customCSS={customCSS}
-            templateName={templateName}
-            pagePadding={pagePadding}
-          />
-        )}
-      </div>
+      <CVPreview
+        cvData={cvData}
+        template={template}
+        jobData={jobData}
+        zoom={zoom}
+        setZoom={setZoom}
+        paperSize={paperSize}
+        setPaperSize={setPaperSize}
+        documentType={documentType}
+        sectionOrder={sectionOrder}
+        sectionVisibility={sectionVisibility}
+        pagePadding={pagePadding}
+        setPagePadding={setPagePadding}
+        onDocumentTypeChange={onDocumentTypeChange}
+        isMasterCV={isMasterCV}
+        coverLetterData={coverLetterData}
+        theme="light"
+        showBadge={false}
+        templateStyles={template?.globalStyles}
+        customCSS={template?.customCSS || template?.globalStyles?.customCSS}
+        templateName={template?.name}
+      />
     );
   };
 
@@ -260,7 +238,8 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
     <div className="h-full flex flex-col bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 rounded-2xl shadow-lg relative">
       {/* Document Type Switcher - Centered above the first page */}
       {onDocumentTypeChange && (
-        <div className="flex justify-center pt-6 pb-2">
+        <div className="flex justify-center items-center pt-6 pb-2 space-x-4">
+          {/* Document Type Switch */}
           <div className="flex items-center space-x-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg p-1 shadow-lg">
             <button
               onClick={() => onDocumentTypeChange('cv')}
@@ -287,6 +266,95 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
               Cover Letter
             </button>
           </div>
+
+          {/* Controls - Only show for CV */}
+          {documentType === 'cv' && (
+            <div className="flex items-center space-x-2">
+              {/* Paper Size Toggle */}
+              <div className="flex items-center space-x-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+                <button
+                  onClick={() => setPaperSize('A4')}
+                  className={`px-2 py-1 text-xs rounded ${
+                    paperSize === 'A4' 
+                      ? 'bg-blue-500 text-white' 
+                      : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100'
+                  }`}
+                >
+                  A4
+                </button>
+                <button
+                  onClick={() => setPaperSize('Letter')}
+                  className={`px-2 py-1 text-xs rounded ${
+                    paperSize === 'Letter' 
+                      ? 'bg-blue-500 text-white' 
+                      : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100'
+                  }`}
+                >
+                  Letter
+                </button>
+              </div>
+
+              {/* Zoom Controls */}
+              <div className="flex items-center space-x-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+                <button
+                  onClick={() => setZoom(Math.max(0.25, zoom - 0.25))}
+                  disabled={zoom <= 0.25}
+                  className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50"
+                >
+                  <ZoomOut className="w-3 h-3" />
+                </button>
+                
+                <span className="text-xs font-mono text-gray-600 dark:text-gray-400 min-w-[40px] text-center">
+                  {Math.round(zoom * 100)}%
+                </span>
+                
+                <button
+                  onClick={() => setZoom(Math.min(2, zoom + 0.25))}
+                  disabled={zoom >= 2}
+                  className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50"
+                >
+                  <ZoomIn className="w-3 h-3" />
+                </button>
+                
+                <button
+                  onClick={() => setZoom(1)}
+                  className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                </button>
+              </div>
+
+              {/* Download Options */}
+              <div className="flex items-center space-x-1">
+                <button
+                  onClick={handleDownloadPDF}
+                  disabled={isDownloading}
+                  className="flex items-center space-x-1 px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 disabled:opacity-50"
+                >
+                  {isDownloading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
+                  <span>PDF</span>
+                </button>
+                
+                <button
+                  onClick={handleDownloadDOCX}
+                  disabled={isDownloading}
+                  className="flex items-center space-x-1 px-2 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600 disabled:opacity-50"
+                >
+                  {isDownloading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
+                  <span>DOCX</span>
+                </button>
+                
+                <button
+                  onClick={handleDownloadImage}
+                  disabled={isDownloading}
+                  className="flex items-center space-x-1 px-2 py-1 bg-purple-500 text-white text-xs rounded hover:bg-purple-600 disabled:opacity-50"
+                >
+                  {isDownloading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
+                  <span>PNG</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

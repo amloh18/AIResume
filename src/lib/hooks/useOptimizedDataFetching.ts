@@ -60,6 +60,12 @@ export function useOptimizedDataFetching<T>(
   const [error, setError] = useState<Error | null>(null);
   const retryCountRef = useRef(0);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const fetchFnRef = useRef(fetchFn);
+
+  // Update fetchFnRef when fetchFn changes
+  useEffect(() => {
+    fetchFnRef.current = fetchFn;
+  }, [fetchFn]);
 
   // Start cache cleanup on first use
   useEffect(() => {
@@ -97,7 +103,7 @@ export function useOptimizedDataFetching<T>(
       }
 
       setLoading(true);
-      const result = await fetchFn();
+      const result = await fetchFnRef.current();
       
       if (!abortController.signal.aborted) {
         setData(result);
@@ -132,7 +138,7 @@ export function useOptimizedDataFetching<T>(
         setLoading(false);
       }
     }
-  }, [key, fetchFn, cacheDuration, staleWhileRevalidate, retryAttempts, retryDelay]);
+  }, [key, cacheDuration, staleWhileRevalidate, retryAttempts, retryDelay]);
 
   const refetch = useCallback(() => fetchData(true), [fetchData]);
 
@@ -148,7 +154,7 @@ export function useOptimizedDataFetching<T>(
         abortControllerRef.current.abort();
       }
     };
-  }, [fetchData]);
+  }, [key]); // Only depend on key to prevent infinite loops
 
   return {
     data,
@@ -282,7 +288,7 @@ export function useParallelDataFetching<T extends Record<string, any>>(
         abortControllerRef.current.abort();
       }
     };
-  }, [fetchAllData]);
+  }, []); // Remove fetchAllData dependency to prevent infinite loops
 
   return {
     data,

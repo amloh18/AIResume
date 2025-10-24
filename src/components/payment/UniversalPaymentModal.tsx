@@ -13,6 +13,11 @@ interface UniversalPaymentModalProps {
   onSuccess?: (subscription: any) => void;
   returnUrl?: string; // URL to return to after successful payment
   triggerContext?: string; // Context of what triggered the modal (e.g., 'cv-creation', 'ats-check')
+  // Admin mode features
+  adminMode?: boolean;
+  previewMode?: boolean;
+  subjectUserId?: string; // User ID for admin operations
+  currentUserPlan?: string; // Current plan of the subject user
 }
 
 interface DiscountCode {
@@ -29,20 +34,27 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
   preselectedPlanKey,
   onSuccess,
   returnUrl,
-  triggerContext
+  triggerContext,
+  adminMode = false,
+  previewMode = false,
+  subjectUserId,
+  currentUserPlan: propCurrentUserPlan
 }) => {
   // const { data: session } = useSession(); // Removed - using Clerk now
   const session = null; // Temporary - will replace with Clerk user
   const [step, setStep] = useState(1);
   const [selectedPlan, setSelectedPlan] = useState<PricingPlan | null>(null);
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const [selectedCategory, setSelectedCategory] = useState<'essential' | 'professional'>('professional');
   const [pricingPlans, setPricingPlans] = useState<PricingPlan[]>([]);
   const [loading, setLoading] = useState(false);
   const [discountCode, setDiscountCode] = useState('');
   const [appliedDiscount, setAppliedDiscount] = useState<DiscountCode | null>(null);
   const [discountError, setDiscountError] = useState<string | null>(null);
   const [paymentProvider, setPaymentProvider] = useState<'stripe' | 'razorpay'>('stripe');
-  const [currentUserPlan, setCurrentUserPlan] = useState<string>('free');
+  const [currentUserPlan, setCurrentUserPlan] = useState<string>(propCurrentUserPlan || 'free');
+  const [userCurrentPlan, setUserCurrentPlan] = useState<any>(null);
+  const [promotionalOffers, setPromotionalOffers] = useState<any[]>([]);
+  const [showPromotionalPricing, setShowPromotionalPricing] = useState(false);
 
   // Fetch pricing plans and user data
   useEffect(() => {
@@ -50,13 +62,21 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
       if (!isOpen) return;
 
       try {
-        const [plansResponse, userResponse] = await Promise.all([
+        const fetchPromises = [
           fetch('/api/pricing-plans'),
-          fetch('/api/user')
-        ]);
+          fetch('/api/promotional-offers/active?userType=all')
+        ];
 
-        if (plansResponse.ok) {
-          const plans = await plansResponse.json();
+        // Only fetch user data if not in admin mode
+        if (!adminMode) {
+          fetchPromises.push(fetch('/api/user'));
+          fetchPromises.push(fetch('/api/user/current-plan'));
+        }
+
+        const responses = await Promise.all(fetchPromises);
+
+        if (responses[0].ok) {
+          const plans = await responses[0].json();
           setPricingPlans(plans);
           
           // Set preselected plan or default to first paid plan
@@ -70,11 +90,29 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
           }
         }
 
-        if (userResponse.ok) {
-          const userData = await userResponse.json();
+        if (responses[1].ok) {
+          const offersData = await responses[1].json();
+          if (offersData.success) {
+            setPromotionalOffers(offersData.offers);
+            // Check if any plans have promotional pricing
+            const hasPromotionalPricing = offersData.offers.some((offer: any) => 
+              offer.promotionalPricing && offer.promotionalPricing.length > 0
+            );
+            setShowPromotionalPricing(hasPromotionalPricing);
+          }
+        }
+
+        if (!adminMode && responses[2] && responses[2].ok) {
+          const userData = await responses[2].json();
           if (userData.success && userData.user) {
             setCurrentUserPlan(userData.user.currentPlanKey || 'free');
           }
+        }
+
+        // Handle current plan data response
+        if (!adminMode && responses[3] && responses[3].ok) {
+          const planData = await responses[3].json();
+          setUserCurrentPlan(planData);
         }
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -148,14 +186,9 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
   const getPlanPrice = (plan: PricingPlan) => {
     if (plan.key === 'free') return 0;
     
-    switch (billingCycle) {
-      case 'monthly':
-        return plan.price_monthly || 0;
-      case 'yearly':
-        return plan.price_yearly || 0;
-      default:
-        return plan.price_monthly || 0;
-    }
+    // Use promotional pricing if available
+    const effectivePrice = getEffectivePrice(plan);
+    return effectivePrice || 0;
   };
 
   const getFinalPrice = () => {
@@ -176,11 +209,73 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
 
   const getBillingInterval = (plan: PricingPlan) => {
     if (plan.key === 'day_pass') return 'one-time';
-    return billingCycle === 'monthly' ? 'monthly' : 'yearly';
+    if (plan.key === 'free') return 'free';
+    return plan.billingCycle || 'monthly';
+  };
+
+  // Get promotional pricing for a plan
+  const getPromotionalPricing = (plan: PricingPlan) => {
+    if (!showPromotionalPricing || !promotionalOffers.length) return null;
+    
+    for (const offer of promotionalOffers) {
+      const promotionalPricing = offer.promotionalPricing?.find((pp: any) => 
+        pp.planId === plan._id || pp.planId === plan.key
+      );
+      if (promotionalPricing) {
+        return {
+          offer,
+          pricing: promotionalPricing
+        };
+      }
+    }
+    return null;
+  };
+
+  // Get effective price for a plan (promotional or regular)
+  const getEffectivePrice = (plan: PricingPlan) => {
+    if (plan.key === 'free') return 0;
+    
+    // Use promotional pricing if available
+    const promotional = getPromotionalPricing(plan);
+    if (promotional) {
+      return promotional.monthly || promotional.quarterly || promotional.yearly || plan.price_monthly;
+    }
+    
+    // Return the appropriate price based on plan type
+    return plan.price_monthly || plan.price_quarterly || plan.price_yearly || plan.price_one_time || 0;
+  };
+
+  // Check if a plan is the user's current plan
+  const isCurrentPlan = (plan: PricingPlan) => {
+    if (adminMode) return false;
+    return plan.key === currentUserPlan;
+  };
+
+  // Get plan status text
+  const getPlanStatusText = (plan: PricingPlan) => {
+    if (isCurrentPlan(plan)) {
+      return 'Current Plan';
+    }
+    if (plan.key === 'free' && currentUserPlan !== 'free') {
+      return 'Downgrade';
+    }
+    if (plan.key !== 'free' && currentUserPlan === 'free') {
+      return 'Upgrade';
+    }
+    if (plan.key !== 'free' && currentUserPlan !== 'free') {
+      return 'Change Plan';
+    }
+    return 'Select Plan';
   };
 
   const handlePayment = async () => {
-    if (!selectedPlan || !session) return;
+    if (!selectedPlan) return;
+
+    // In preview mode, just close the modal
+    if (previewMode) {
+      onClose();
+      return;
+    }
 
     setLoading(true);
 
@@ -205,8 +300,31 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
             }
           }
         }
+      } else if (adminMode && subjectUserId) {
+        // Admin mode - grant plan directly
+        const response = await fetch(`/api/admin/users/${subjectUserId}/subscription/upgrade`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            planKey: selectedPlan.key,
+            interval: getBillingInterval(selectedPlan),
+            reason: 'Admin granted via payment modal'
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            onSuccess?.(data.subscription);
+            onClose();
+            alert(`Plan ${selectedPlan.name} granted successfully!`);
+          }
+        } else {
+          const errorData = await response.json();
+          alert(`Error: ${errorData.error || 'Failed to grant plan'}`);
+        }
       } else {
-        // Create checkout session
+        // Regular payment flow
         const body = {
           planKey: selectedPlan.key,
           interval: getBillingInterval(selectedPlan),
@@ -242,8 +360,6 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
       setLoading(false);
     }
   };
-
-  const isCurrentPlan = (plan: PricingPlan) => plan.key === currentUserPlan;
 
   const canUpgrade = (plan: PricingPlan) => {
     if (plan.key === 'free') return false;
@@ -295,11 +411,28 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                Choose Your Plan
-              </h2>
+              <div className="flex items-center gap-3">
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {adminMode ? 'Grant Plan' : previewMode ? 'Preview Plans' : 'Choose Your Plan'}
+                </h2>
+                {adminMode && (
+                  <span className="bg-red-100 text-red-800 text-xs font-medium px-2 py-1 rounded-full">
+                    Admin Mode
+                  </span>
+                )}
+                {previewMode && (
+                  <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">
+                    Preview
+                  </span>
+                )}
+              </div>
               <p className="text-gray-600 dark:text-gray-400 mt-1">
-                Unlock premium features and create unlimited CVs
+                {adminMode 
+                  ? 'Grant a plan to the selected user'
+                  : previewMode 
+                    ? 'Preview available plans and pricing'
+                    : 'Unlock premium features and create unlimited CVs'
+                }
               </p>
             </div>
             <button
@@ -313,49 +446,61 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
           <div className="p-6">
             {step === 1 && (
               <>
-                {/* Billing Cycle Toggle */}
+                {/* Category Toggle */}
                 <div className="flex justify-center mb-8">
                   <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
                     <button
-                      onClick={() => setBillingCycle('monthly')}
+                      onClick={() => setSelectedCategory('essential')}
                       className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                        billingCycle === 'monthly'
+                        selectedCategory === 'essential'
                           ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
                           : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                       }`}
                     >
-                      Monthly
+                      Essential
                     </button>
                     <button
-                      onClick={() => setBillingCycle('yearly')}
+                      onClick={() => setSelectedCategory('professional')}
                       className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                        billingCycle === 'yearly'
+                        selectedCategory === 'professional'
                           ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
                           : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                       }`}
                     >
-                      Yearly
-                      <span className="ml-1 text-xs bg-green-500 text-white px-1.5 py-0.5 rounded">
-                        Save 20%
-                      </span>
+                      Professional
                     </button>
                   </div>
                 </div>
 
                 {/* Plans Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                  {pricingPlans.map((plan) => (
+                  {pricingPlans.filter(plan => {
+                    if (selectedCategory === 'essential') {
+                      return plan.category === 'essential';
+                    } else {
+                      return plan.category === 'professional';
+                    }
+                  }).map((plan) => (
                     <motion.div
                       key={plan.key}
                       whileHover={{ scale: 1.02 }}
                       className={`relative border-2 rounded-xl p-6 cursor-pointer transition-all ${
-                        selectedPlan?.key === plan.key
+                        isCurrentPlan(plan)
+                          ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+                          : selectedPlan?.key === plan.key
                           ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
                           : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                       }`}
                       onClick={() => setSelectedPlan(plan)}
                     >
-                      {plan.isPopular && (
+                      {isCurrentPlan(plan) && (
+                        <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                          <span className="bg-green-500 text-white text-xs font-medium px-3 py-1 rounded-full">
+                            Current Plan
+                          </span>
+                        </div>
+                      )}
+                      {plan.isPopular && !isCurrentPlan(plan) && (
                         <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                           <span className="bg-blue-500 text-white text-xs font-medium px-3 py-1 rounded-full">
                             Most Popular
@@ -383,12 +528,38 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                             </div>
                           ) : (
                             <div>
-                              <div className="text-3xl font-bold text-gray-900 dark:text-white">
-                                €{getPlanPrice(plan)}
-                              </div>
-                              <div className="text-sm text-gray-600 dark:text-gray-400">
-                                per {billingCycle === 'monthly' ? 'month' : 'year'}
-                              </div>
+                              {(() => {
+                                const promotional = getPromotionalPricing(plan);
+                                const originalPrice = plan.price_monthly || plan.price_quarterly || plan.price_yearly || plan.price_one_time;
+                                const currentPrice = getPlanPrice(plan);
+                                
+                                return (
+                                  <div>
+                                    {promotional && originalPrice && originalPrice > currentPrice ? (
+                                      <div>
+                                        <div className="flex items-center justify-center gap-2">
+                                          <span className="text-3xl font-bold text-gray-900 dark:text-white">
+                                            €{currentPrice}
+                                          </span>
+                                          <span className="text-lg text-gray-500 line-through">
+                                            €{originalPrice}
+                                          </span>
+                                        </div>
+                                        <div className="text-xs text-green-600 font-medium">
+                                          {promotional.offer.bannerText || 'Limited Time Offer!'}
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div className="text-3xl font-bold text-gray-900 dark:text-white">
+                                        €{currentPrice}
+                                      </div>
+                                    )}
+                                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                                      per {getBillingInterval(plan)}
+                                    </div>
+                                  </div>
+                                );
+                              })()}
                             </div>
                           )}
                         </div>
@@ -402,19 +573,31 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                           ))}
                         </ul>
 
-                        {isCurrentPlan(plan) ? (
-                          <div className="w-full py-2 px-4 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-lg text-center">
-                            Current Plan
-                          </div>
-                        ) : canUpgrade(plan) ? (
-                          <div className="w-full py-2 px-4 bg-blue-500 text-white rounded-lg text-center font-medium">
-                            Upgrade
-                          </div>
-                        ) : (
-                          <div className="w-full py-2 px-4 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-lg text-center">
-                            Downgrade
-                          </div>
-                        )}
+                        {(() => {
+                          const statusText = getPlanStatusText(plan);
+                          const isCurrent = isCurrentPlan(plan);
+                          const isUpgrade = statusText === 'Upgrade' || statusText === 'Change Plan';
+                          
+                          if (isCurrent) {
+                            return (
+                              <div className="w-full py-2 px-4 bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-lg text-center font-medium">
+                                {statusText}
+                              </div>
+                            );
+                          } else if (isUpgrade) {
+                            return (
+                              <div className="w-full py-2 px-4 bg-blue-500 text-white rounded-lg text-center font-medium">
+                                {statusText}
+                              </div>
+                            );
+                          } else {
+                            return (
+                              <div className="w-full py-2 px-4 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-lg text-center">
+                                {statusText}
+                              </div>
+                            );
+                          }
+                        })()}
                       </div>
                     </motion.div>
                   ))}
@@ -427,7 +610,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                     disabled={!selectedPlan || isCurrentPlan(selectedPlan)}
                     className="px-8 py-3 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
                   >
-                    Continue to Payment
+                    {adminMode ? 'Grant Plan' : previewMode ? 'Preview' : 'Continue to Payment'}
                   </button>
                 </div>
               </>
@@ -459,7 +642,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                         €{getPlanPrice(selectedPlan)}
                       </div>
                       <div className="text-sm text-gray-600 dark:text-gray-400">
-                        per {billingCycle === 'monthly' ? 'month' : 'year'}
+                        per {getBillingInterval(selectedPlan)}
                       </div>
                     </div>
                   </div>
@@ -618,7 +801,12 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                     ) : (
                       <>
                         <CreditCard className="w-4 h-4 mr-2" />
-                        {selectedPlan.key === 'free' ? 'Activate Free Plan' : `Pay €${getFinalPrice()}`}
+                        {adminMode 
+                          ? `Grant ${selectedPlan.name} Plan`
+                          : selectedPlan.key === 'free' 
+                            ? 'Activate Free Plan' 
+                            : `Pay €${getFinalPrice()}`
+                        }
                       </>
                     )}
                   </button>

@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { signOut as firebaseSignOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
+import { comprehensiveSignOut } from '@/lib/utils/signout';
 import { OnboardingProvider, useOnboarding } from '@/contexts/OnboardingContext';
 import RoleSelection from '@/components/onboarding/RoleSelection';
 import CVUpload from '@/components/cv-parser/CVUpload';
@@ -627,41 +628,7 @@ const MasterCVOnboardingContent: React.FC = () => {
               {(session?.user || (typeof window !== 'undefined' && localStorage.getItem('user'))) && (
                 <motion.button
                   onClick={async () => {
-                    try {
-                      // Check if user is from Firebase (has user data in localStorage)
-                      if (typeof window !== 'undefined') {
-                        const userData = localStorage.getItem('user');
-                        if (userData) {
-                          // Firebase user - sign out from Firebase
-                          await firebaseSignOut(auth);
-                          localStorage.removeItem('user');
-                          sessionStorage.removeItem('needsCVSetup');
-                          sessionStorage.removeItem('fromOnboarding');
-                          window.location.href = '/';
-                        } else if (session?.user) {
-                          // NextAuth user - sign out from NextAuth
-                          await signOut({ 
-                            callbackUrl: '/',
-                            redirect: true 
-                          });
-                        }
-                      } else if (session?.user) {
-                        // NextAuth user - sign out from NextAuth
-                        await signOut({ 
-                          callbackUrl: '/',
-                          redirect: true 
-                        });
-                      }
-                    } catch (error) {
-                      console.error('Logout error:', error);
-                      // Fallback - clear storage and redirect
-                      if (typeof window !== 'undefined') {
-                        localStorage.removeItem('user');
-                        sessionStorage.removeItem('needsCVSetup');
-                        sessionStorage.removeItem('fromOnboarding');
-                        window.location.href = '/';
-                      }
-                    }
+                    await comprehensiveSignOut();
                   }}
                   className="flex items-center gap-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white transition-all duration-300 px-3 md:px-4 py-2 rounded-lg shadow-lg hover:shadow-red-500/25"
                   initial={{ opacity: 0, x: 20 }}

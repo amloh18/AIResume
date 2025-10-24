@@ -148,7 +148,7 @@ const Testimonials = () => {
   };
 
   return (
-    <section id="testimonials" className="relative py-32 bg-gradient-to-b from-gray-900 to-black overflow-hidden">
+    <section id="testimonials" className="relative h-screen flex items-center bg-gradient-to-b from-gray-900 to-black overflow-hidden pt-20">
       {/* Grid Pattern Background */}
       <div className="absolute inset-0">
         {/* Grid Lines */}
@@ -180,22 +180,22 @@ const Testimonials = () => {
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-lime-400/5 to-blue-400/5 rounded-full blur-3xl"></div>
       </div>
       
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full h-full flex flex-col justify-center">
         {/* Section Header */}
         <motion.div 
-          className="text-center mb-20"
+          className="text-center mb-16"
           initial={{ opacity: 0, y: 50 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
           viewport={{ once: true }}
         >
-          <h2 className="text-4xl sm:text-6xl font-bold text-white mb-8 text-center">
+          <h2 className="text-3xl sm:text-5xl font-bold text-white mb-6 text-center">
             Trusted by job seekers,{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-lime-500">
               loved by professionals
             </span>
           </h2>
-          <p className="text-xl text-white/70 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-lg text-white/70 max-w-3xl mx-auto leading-relaxed">
             Join thousands of successful job seekers who have landed their dream positions using <span className="text-lime-400">CV</span><span className="text-white/70">Circle.io</span>.
           </p>
         </motion.div>

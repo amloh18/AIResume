@@ -108,6 +108,11 @@ export async function POST(request: NextRequest) {
       
       // Fallback to Firebase email verification
       try {
+        // Check if Firebase is properly configured
+        if (!auth || !process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
+          throw new Error('Firebase is not properly configured');
+        }
+        
         // Create Firebase user (this will send Firebase verification email)
         const userCredential = await createUserWithEmailAndPassword(auth, email, 'temp-password-' + Date.now());
         const user = userCredential.user;
