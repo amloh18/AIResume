@@ -19,7 +19,8 @@ import {
   Server,
   CreditCard,
   Wallet,
-  Bell
+  Bell,
+  Mail
 } from 'lucide-react';
 import AdminKPIs from '@/components/admin/AdminKPIs';
 import CVJourneyKPIs from '@/components/admin/CVJourneyKPIs';
@@ -154,6 +155,7 @@ const AdminPage: React.FC<AdminPageProps> = () => {
   const menuItems = [
     { id: 'kpis', label: 'General KPIs', icon: DashboardIcon },
     { id: 'cv-journey-kpis', label: 'Application Journey KPIs', icon: DashboardIcon },
+    { id: 'email-campaigns', label: 'Email Campaigns', icon: Mail, external: true, href: '/admin/email-campaigns' },
     { id: 'templates', label: 'Template Manager', icon: Template },
     { id: 'users', label: 'User Management', icon: People },
     { id: 'pricing', label: 'Pricing Plans', icon: FileText },
@@ -260,6 +262,22 @@ const AdminPage: React.FC<AdminPageProps> = () => {
           <div className="space-y-2">
             {menuItems.map((item) => {
               const Icon = item.icon;
+              
+              // Handle external links differently
+              if (item.external && item.href) {
+                return (
+                  <a
+                    key={item.id}
+                    href={item.href}
+                    className="w-full flex items-center px-4 py-3 text-xs font-medium rounded-lg transition-colors text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white"
+                  >
+                    <Icon size={20} className="mr-3" />
+                    {item.label}
+                    <ExternalLink size={14} className="ml-auto" />
+                  </a>
+                );
+              }
+              
               return (
                 <button
                   key={item.id}

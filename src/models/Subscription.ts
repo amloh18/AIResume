@@ -157,7 +157,6 @@ subscriptionSchema.methods.renew = function(newEndDate: Date) {
   return this.save();
 };
 
-// Export the schema for use in admin models
-export { subscriptionSchema };
+// Schema export removed - no longer needed for admin models
 
 export default mongoose.models.Subscription || mongoose.model<ISubscription>('Subscription', subscriptionSchema);

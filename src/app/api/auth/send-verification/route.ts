@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sendEmailVerification } from '@/lib/email-service';
-import { createUserWithEmailAndPassword, sendEmailVerification as firebaseSendEmailVerification } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-import crypto from 'crypto';
 import connectDB from '@/lib/database';
 import User from '@/models/User';
+import VerificationToken from '@/models/VerificationToken';
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,17 +26,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate verification token
-    const verificationToken = crypto.randomBytes(32).toString('hex');
-    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    // Create verification token using VerificationToken model
+    const verificationToken = await VerificationToken.createToken(
+      null, // userId will be set after user creation
+      email,
+      'email',
+      24 // 24 hours expiration
+    );
 
     // Create verification link
     const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-    const verificationLink = `${baseUrl}/auth/verify-email?token=${verificationToken}&email=${encodeURIComponent(email)}`;
+    const verificationLink = `${baseUrl}/auth/verify-email?token=${verificationToken.token}&email=${encodeURIComponent(email)}`;
 
-    // Try to send email using custom email service first
+    // Try to send email using custom email service
+    let emailSent = false;
     try {
-      console.log('📧 Attempting to send verification email via Hostinger...');
+      console.log('📧 Attempting to send verification email...');
       
       const emailResult = await sendEmailVerification(
         email,
@@ -47,147 +50,93 @@ export async function POST(request: NextRequest) {
       );
 
       if (emailResult.success) {
-        console.log('✅ Verification email sent via Hostinger');
-        
-        // Store verification token in database for verification
-        await User.create({
-          email,
-          firstName,
-          lastName,
-          emailVerificationToken: verificationToken,
-          emailVerificationExpires: verificationExpires,
-          isEmailVerified: false,
-          authProvider: 'firebase', // Keep as firebase since user was created in Firebase
-          role: 'user',
-          currentPlanKey: 'free',
-          monthlyGoal: 20,
-          usage: {
-            cvJourneyCount: 0,
-            cvCreatedCount: 0,
-            journeysCreated: 0,
-            exportCount: 0,
-            atsCheckCount: 0,
-            lastResetDate: new Date(),
-          },
-          subscription: {
-            planKey: 'free',
-            status: 'inactive',
-            startDate: new Date(),
-            provider: 'stripe',
-            interval: 'monthly',
-            seats: 3,
-            storageUsed: 0,
-          },
-          settings: {
-            theme: 'auto',
-            notifications: {
-              email: true,
-              push: true,
-            },
-            timezone: 'UTC',
-            languagePreference: 'en',
-          },
-        });
+        console.log('✅ Verification email sent successfully');
+        emailSent = true;
+      } else {
+        console.warn('⚠️ Email service returned error:', emailResult.error);
+      }
+    } catch (emailError: any) {
+      console.warn('⚠️ Email service failed:', emailError?.message || 'Unknown error');
+    }
 
+    // Create user in database regardless of email status
+    try {
+      const user = new User({
+        email,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        isEmailVerified: false,
+        role: 'user',
+        currentPlanKey: 'free',
+        usage: {
+          cvJourneyCount: 0,
+          cvCreatedCount: 0,
+          journeysCreated: 0,
+          exportCount: 0,
+          atsCheckCount: 0,
+          lastResetDate: new Date(),
+        },
+        subscription: {
+          planKey: 'free',
+          status: 'inactive',
+          startDate: new Date(),
+          provider: 'stripe',
+          interval: 'monthly',
+          seats: 3,
+          storageUsed: 0
+        },
+        settings: {
+          theme: 'auto',
+          notifications: {
+            email: true,
+            push: true
+          }
+        }
+      });
+
+      await user.save();
+      console.log('✅ User created in database');
+
+      // Update verification token with user ID
+      verificationToken.userId = user._id;
+      await verificationToken.save();
+      
+      if (emailSent) {
         return NextResponse.json({
           success: true,
-          message: 'Verification email sent successfully',
-          emailSent: true
+          message: 'Account created! Please check your email to verify your account.',
+          userId: user._id,
         });
       } else {
-        console.error('❌ Hostinger email failed:', emailResult.error);
-        throw new Error(emailResult.error);
-      }
-    } catch (emailError) {
-      console.error('❌ Custom email service failed, falling back to Firebase:', emailError);
-      console.error('❌ Email error details:', {
-        message: emailError.message,
-        code: emailError.code,
-        response: emailError.response
-      });
-      
-      // Fallback to Firebase email verification
-      try {
-        // Check if Firebase is properly configured
-        if (!auth || !process.env.NEXT_PUBLIC_FIREBASE_API_KEY) {
-          throw new Error('Firebase is not properly configured');
-        }
-        
-        // Create Firebase user (this will send Firebase verification email)
-        const userCredential = await createUserWithEmailAndPassword(auth, email, 'temp-password-' + Date.now());
-        const user = userCredential.user;
-        
-        // Send Firebase verification email
-        await firebaseSendEmailVerification(user);
-        
-        // Create user record in MongoDB
-        await User.create({
-          email,
-          firstName,
-          lastName,
-          firebaseUid: user.uid,
-          isEmailVerified: false,
-          authProvider: 'firebase',
-          role: 'user',
-          currentPlanKey: 'free',
-          monthlyGoal: 20,
-          usage: {
-            cvJourneyCount: 0,
-            cvCreatedCount: 0,
-            journeysCreated: 0,
-            exportCount: 0,
-            atsCheckCount: 0,
-            lastResetDate: new Date(),
-          },
-          subscription: {
-            planKey: 'free',
-            status: 'inactive',
-            startDate: new Date(),
-            provider: 'stripe',
-            interval: 'monthly',
-            seats: 3,
-            storageUsed: 0,
-          },
-          settings: {
-            theme: 'auto',
-            notifications: {
-              email: true,
-              push: true,
-            },
-            timezone: 'UTC',
-            languagePreference: 'en',
-          },
-        });
-
-        console.log('✅ Fallback: Firebase verification email sent');
-        
         return NextResponse.json({
           success: true,
-          message: 'Verification email sent via Firebase (fallback)',
-          emailSent: true,
-          fallback: true
+          message: 'Account created! You can sign in now. Email verification is temporarily unavailable.',
+          userId: newUser._id,
+          emailServiceStatus: 'unavailable'
         });
-      } catch (firebaseError) {
-        console.error('❌ Firebase fallback also failed:', firebaseError);
+      }
+
+    } catch (dbError: any) {
+      console.error('❌ Failed to create user in database:', dbError);
+      
+      // If it's a duplicate key error, user already exists
+      if (dbError.code === 11000) {
         return NextResponse.json(
-          { 
-            success: false, 
-            message: 'Failed to send verification email. Please try again later.',
-            error: 'Both custom and Firebase email services failed'
-          },
-          { status: 500 }
+          { success: false, message: 'An account with this email already exists. Please sign in.' },
+          { status: 409 }
         );
       }
+      
+      return NextResponse.json(
+        { success: false, message: 'Failed to create account. Please try again later.' },
+        { status: 500 }
+      );
     }
 
   } catch (error: any) {
-    console.error('❌ Send verification email error:', error);
+    console.error('❌ Send verification error:', error);
     return NextResponse.json(
-      { 
-        success: false, 
-        message: 'Failed to send verification email',
-        error: error.message 
-      },
+      { success: false, message: error.message || 'Failed to create account' },
       { status: 500 }
     );
   }

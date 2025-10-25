@@ -5,6 +5,7 @@ import connectDB from '@/lib/database';
 import { JobApplication } from '@/models';
 import jwt from 'jsonwebtoken';
 import { extractUserIdentifier } from '@/lib/firebase-uid-utils';
+import { getUnifiedAuth } from '@/lib/auth-helpers';
 
 export async function POST(request: NextRequest) {
   try {

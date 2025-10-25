@@ -116,7 +116,6 @@ invoiceSchema.index({ userId: 1, status: 1 });
 invoiceSchema.index({ userId: 1, createdAt: -1 });
 invoiceSchema.index({ invoiceNumber: 1 }, { unique: true });
 
-// Export the schema for use in admin models
-export { invoiceSchema };
+// Schema export removed - no longer needed for admin models
 
 export default mongoose.models.Invoice || mongoose.model<IInvoice>('Invoice', invoiceSchema);
