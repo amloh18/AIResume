@@ -106,7 +106,7 @@ const CoverLetterSelectionModal: React.FC<CoverLetterSelectionModalProps> = ({
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
-          className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden"
+          className="bg-white dark:bg-[#141810] rounded-xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}

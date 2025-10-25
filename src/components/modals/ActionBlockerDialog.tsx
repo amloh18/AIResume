@@ -33,7 +33,7 @@ const ActionBlockerDialog: React.FC<ActionBlockerDialogProps> = ({
           exit={{ opacity: 0 }}
         >
           <motion.div
-            className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 w-full max-w-md"
+            className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-6 w-full max-w-md"
             initial={{ scale: 0.9, y: 20 }}
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.9, y: 20 }}

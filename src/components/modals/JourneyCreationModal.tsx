@@ -157,7 +157,7 @@ const JourneyCreationModal: React.FC<JourneyCreationModalProps> = ({
         onClick={onClose}
       >
         <motion.div
-          className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden shadow-2xl"
+          className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden shadow-2xl"
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}

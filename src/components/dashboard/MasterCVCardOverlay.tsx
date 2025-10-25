@@ -333,79 +333,61 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
           </div>
         )}
 
-        {/* Hover Overlay */}
-        <AnimatePresence>
-          {isHovered && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center"
-            >
-              {/* Edit Button - Single centered action */}
-              <div className="flex items-center justify-center p-6">
-                {/* Edit Button - Single action */}
-                <motion.button
-                  onClick={handleEdit}
-                  disabled={actionLoading === 'edit'}
-                  className="p-4 rounded-full bg-lime-600 dark:bg-lime-500/30 hover:bg-lime-700 dark:hover:bg-lime-500/40 text-white transition-all duration-200 backdrop-blur-sm border border-lime-700 dark:border-lime-400/50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  whileHover={{ scale: actionLoading === 'edit' ? 1 : 1.1 }}
-                  whileTap={{ scale: actionLoading === 'edit' ? 1 : 0.9 }}
-                  title="Edit Master CV"
-                >
-                  {actionLoading === 'edit' ? (
-                    <Loader2 size={24} className="animate-spin" />
-                  ) : (
-                    <Edit3 size={24} />
-                  )}
-                </motion.button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
 
 
-        {/* Title Overlay - Positioned at bottom of preview */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 bg-lime-600 dark:bg-black/20 backdrop-blur-md border-t border-lime-700 dark:border-lime-400/20 text-white">
-          {/* CV Name */}
-          <div className="mb-2">
-            <div className="flex items-center gap-2">
-              <Crown size={14} className="text-lime-300" />
-              <h3 className="font-semibold text-white text-xs truncate flex-1">
-                {masterCV.title}
-              </h3>
-            </div>
-            <p className="text-white/80 text-xs mt-1">
-              Your primary CV template - edit directly or duplicate for job-specific applications.
-            </p>
+      </div>
+
+      {/* Card Footer - Title, Last Modified, and Action Icons - Outside preview */}
+      <div className="mt-3 h-24 flex flex-col justify-between">
+        {/* CV Title */}
+        <div className="mb-2">
+          <div className="flex items-center gap-2">
+            <Crown size={14} className="text-lime-400" />
+            <h3 className="font-semibold text-white text-sm flex-1">
+              {masterCV.title}
+            </h3>
           </div>
+        </div>
 
-          {/* Progress and Last Modified */}
-          <div className="flex items-center justify-between text-xs text-white/80">
-            <span>Modified: {formatDate(masterCV.lastModified)}</span>
-            {(() => {
-              // Use completion percentage for master CV cards
-              const cvWithData = {
-                ...masterCV,
-                cvData: masterCV.cvData || {},
-                status: masterCV.status || 'draft'
-              };
-              const percentage = CVProgressService.calculateCompletionPercentage(cvWithData);
-              const progressColors = CVProgressService.getProgressColor(percentage);
-              return (
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1">
-                    <CheckCircle size={10} className="text-lime-300" />
-                    <span className="text-lime-300 font-medium text-xs">Master</span>
-                  </div>
-                  <div className={`px-2 py-1 rounded-full text-xs font-medium backdrop-blur-sm border ${progressColors.bg} ${progressColors.text} ${progressColors.border}`}>
-                    {percentage}%
-                  </div>
-                </div>
-              );
-            })()}
-          </div>
+        {/* Last Modified */}
+        <div className="text-xs text-gray-400 mb-3">
+          Last modified: {formatDate(masterCV.lastModified)}
+        </div>
+
+        {/* Action Icons Row - Plain icons without boxes */}
+        <div className="flex items-center justify-center gap-4">
+          {/* Edit Icon */}
+          <motion.button
+            onClick={handleEdit}
+            disabled={actionLoading === 'edit'}
+            className="p-2 text-gray-400 hover:text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            whileHover={{ scale: actionLoading === 'edit' ? 1 : 1.1 }}
+            whileTap={{ scale: actionLoading === 'edit' ? 1 : 0.9 }}
+            title="Edit Master CV"
+          >
+            {actionLoading === 'edit' ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <Edit3 size={16} />
+            )}
+          </motion.button>
+
+          {/* Duplicate Icon */}
+          <motion.button
+            onClick={handleDuplicate}
+            disabled={actionLoading === 'duplicate'}
+            className="p-2 text-gray-400 hover:text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            whileHover={{ scale: actionLoading === 'duplicate' ? 1 : 1.1 }}
+            whileTap={{ scale: actionLoading === 'duplicate' ? 1 : 0.9 }}
+            title="Duplicate Master CV"
+          >
+            {actionLoading === 'duplicate' ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <Copy size={16} />
+            )}
+          </motion.button>
         </div>
       </div>
     </motion.div>

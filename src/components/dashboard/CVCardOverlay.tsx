@@ -146,7 +146,7 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
 
   return (
     <motion.div
-      className="relative bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 group cursor-pointer"
+      className="relative group cursor-pointer"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: "spring", stiffness: 100 }}
@@ -154,8 +154,14 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Main CV Thumbnail Container - Now includes title overlay */}
-      <div className="relative aspect-[3/4] bg-gray-100 dark:bg-gray-700 overflow-hidden">
+      {/* CV Preview Container - Vibrant colored card */}
+      <div className="relative aspect-[3/4] overflow-hidden rounded-xl shadow-lg hover:shadow-xl transition-all duration-300" 
+           style={{
+             background: cv.metadata?.cardColor || 
+               (cv.title.includes('Software') ? '#2D3748' : 
+                cv.title.includes('Product') ? '#F7FAFC' :
+                cv.title.includes('UX') ? '#FED7D7' : '#F7FAFC')
+           }}>
         {/* CV Thumbnail Image */}
         {thumbnailUrl ? (
           <img
@@ -166,8 +172,8 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
           />
         ) : thumbnailLoading ? (
           /* Loading state */
-          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-700 dark:to-gray-600">
-            <div className="text-center text-gray-500 dark:text-gray-400">
+          <div className="w-full h-full flex items-center justify-center">
+            <div className="text-center text-gray-500">
               <Loader2 size={32} className="mx-auto mb-2 animate-spin opacity-50" />
               <p className="text-sm font-medium">Generating preview...</p>
               <p className="text-xs opacity-75">Please wait</p>
@@ -175,8 +181,8 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
           </div>
         ) : (
           /* Fallback when no thumbnail available */
-          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-700 dark:to-gray-600">
-            <div className="text-center text-gray-500 dark:text-gray-400">
+          <div className="w-full h-full flex items-center justify-center">
+            <div className="text-center text-gray-500">
               <FileText size={48} className="mx-auto mb-2 opacity-50" />
               <p className="text-sm font-medium">{cv.title}</p>
               <p className="text-xs opacity-75">No preview available</p>
@@ -184,200 +190,141 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
           </div>
         )}
 
-        {/* Hover Overlay */}
-        <AnimatePresence>
-          {isHovered && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center"
-            >
-              {/* Interactive Elements - Icon Row */}
-              <div className="flex items-center justify-center gap-4 p-6">
-                {/* Star/Favorite Icon */}
-                <motion.button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onToggleStar(cv.id);
-                  }}
-                  className={`p-3 rounded-full transition-all duration-200 backdrop-blur-sm border ${
-                    cv.isStarred 
-                      ? 'bg-yellow-500/30 border-yellow-400/50 text-yellow-400' 
-                      : 'bg-gray-700 dark:bg-white/20 hover:bg-gray-600 dark:hover:bg-white/30 border-gray-600 dark:border-white/20 text-white hover:text-yellow-400'
-                  }`}
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  title={cv.isStarred ? "Remove from favorites" : "Add to favorites"}
-                >
-                  <Star size={20} className={cv.isStarred ? 'fill-current' : ''} />
-                </motion.button>
-
-                {/* Edit Journey Icon - Only show if CV is linked to a journey */}
-                {linkedJourney && !checkingJourney && (
-                  <motion.button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEditJourney?.(cv, linkedJourney);
-                    }}
-                    className="p-3 rounded-full bg-blue-600 dark:bg-blue-500/30 hover:bg-blue-700 dark:hover:bg-blue-500/40 text-white transition-all duration-200 backdrop-blur-sm border border-blue-700 dark:border-blue-400/50"
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    title="Edit Journey"
-                  >
-                    <ExternalLink size={20} />
-                  </motion.button>
-                )}
-
-                {/* Download Icon */}
-                <motion.button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDownload(cv);
-                  }}
-                    className="p-3 rounded-full bg-green-600 dark:bg-green-500/30 hover:bg-green-700 dark:hover:bg-green-500/40 text-white transition-all duration-200 backdrop-blur-sm border border-green-700 dark:border-green-400/50"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  title="Download CV"
-                >
-                  <Download size={20} />
-                </motion.button>
-
-                {/* Delete Icon */}
-                <motion.button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDelete();
-                  }}
-                    className="p-3 rounded-full bg-red-600 dark:bg-red-500/30 hover:bg-red-700 dark:hover:bg-red-500/40 text-white transition-all duration-200 backdrop-blur-sm border border-red-700 dark:border-red-400/50"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  title="Delete CV"
-                >
-                  <Trash2 size={20} />
-                </motion.button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-
-        {/* Master Badge - Always visible */}
+        {/* Master Badge - Top right corner as shown in image */}
         {(cv.isMaster || cv.metadata?.isMaster) && (
           <div className="absolute top-3 right-3">
-            <span className="px-2 py-1 rounded-full text-xs font-medium bg-lime-500/20 text-lime-400 border border-lime-500/30 backdrop-blur-sm">
+            <span className="px-2 py-1 rounded text-xs font-medium bg-lime-400 text-black border border-lime-400">
               Master
             </span>
           </div>
         )}
+      </div>
 
-        {/* Title Overlay - Positioned at bottom of preview */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 bg-gray-800 dark:bg-black/20 backdrop-blur-md border-t border-gray-700 dark:border-white/20 text-white">
-          {/* CV Name */}
-          <div className="mb-2">
-            {editingCVId === cv.id ? (
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={editingTitle || ''}
-                  onChange={(e) => onTitleEdit?.(cv.id, e.target.value)}
-                  className="flex-1 bg-gray-700 dark:bg-white/20 border border-gray-600 dark:border-white/30 rounded-lg px-3 py-2 text-white text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-400 backdrop-blur-sm"
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      onSaveTitle?.(cv.id);
-                    } else if (e.key === 'Escape') {
-                      onCancelEditing?.();
-                    }
-                  }}
-                />
-                <motion.button
-                  onClick={(e) => {
-                    e.stopPropagation();
+      {/* Card Footer - Title, Last Modified, and Action Icons - No background */}
+      <div className="mt-3 h-24 flex flex-col justify-between">
+        {/* CV Title */}
+        <div className="mb-2">
+          {editingCVId === cv.id ? (
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={editingTitle || ''}
+                onChange={(e) => onTitleEdit?.(cv.id, e.target.value)}
+                className="flex-1 bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-white text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-400"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
                     onSaveTitle?.(cv.id);
-                  }}
-                  className="p-1 text-green-400 hover:text-green-300 transition-colors"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                >
-                  <Check size={16} />
-                </motion.button>
-                <motion.button
-                  onClick={(e) => {
-                    e.stopPropagation();
+                  } else if (e.key === 'Escape') {
                     onCancelEditing?.();
-                  }}
-                  className="p-1 text-white/70 hover:text-white transition-colors"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                >
-                  <X size={16} />
-                </motion.button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-white text-xs truncate flex-1">
-                  {cv.title}
-                </h3>
-                <motion.button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onStartEditing?.(cv);
-                  }}
-                  className="p-1 rounded-lg bg-gray-600 dark:bg-white/20 hover:bg-gray-700 dark:hover:bg-white/30 text-white/80 hover:text-white transition-all duration-200 opacity-0 group-hover:opacity-100"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                >
-                  <Pencil size={12} />
-                </motion.button>
-              </div>
-            )}
-          </div>
+                  }
+                }}
+              />
+              <motion.button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSaveTitle?.(cv.id);
+                }}
+                className="p-1 text-green-500 hover:text-green-600 transition-colors"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+              >
+                <Check size={16} />
+              </motion.button>
+              <motion.button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCancelEditing?.();
+                }}
+                className="p-1 text-gray-500 hover:text-gray-600 transition-colors"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+              >
+                <X size={16} />
+              </motion.button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-white text-sm flex-1">
+                {cv.title}
+              </h3>
+              <motion.button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onStartEditing?.(cv);
+                }}
+                className="p-1 text-gray-400 hover:text-white transition-all duration-200 opacity-0 group-hover:opacity-100"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+              >
+                <Pencil size={12} />
+              </motion.button>
+            </div>
+          )}
+        </div>
 
-          {/* Progress and Last Modified */}
-          <div className="flex items-center justify-between text-xs text-white/80">
-            <span>Modified: {formatDate(cv.lastModified)}</span>
-            {(() => {
-              // Use ATS score for regular CV cards
-              const atsScore = cv.metadata?.atsScore || cv.atsScore;
-              const hasATSScore = atsScore !== null && atsScore !== undefined && atsScore > 0;
-              
-              if (hasATSScore) {
-                const progressColors = CVProgressService.getProgressColor(atsScore);
-                return (
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs">{cv.views} views</span>
-                    <div className={`px-2 py-1 rounded-full text-xs font-medium backdrop-blur-sm border ${progressColors.bg} ${progressColors.text} ${progressColors.border}`}>
-                      {atsScore}% ATS
-                    </div>
-                  </div>
-                );
-              } else {
-                // Check if CV is linked to a job journey
-                const isLinkedToJob = cv.journeyId || cv.metadata?.linkedJobId;
-                
-                if (isLinkedToJob) {
-                  return (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs">{cv.views} views</span>
-                      <div className="px-2 py-1 rounded-full text-xs font-medium backdrop-blur-sm border bg-blue-600 dark:bg-blue-500/20 text-white border-blue-700 dark:border-blue-400/30">
-                        Link to Job
-                      </div>
-                    </div>
-                  );
-                } else {
-                  return (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs">{cv.views} views</span>
-                      <div className="px-2 py-1 rounded-full text-xs font-medium backdrop-blur-sm border bg-gray-600 dark:bg-gray-500/20 text-white border-gray-700 dark:border-gray-400/30">
-                        No ATS
-                      </div>
-                    </div>
-                  );
-                }
-              }
-            })()}
-          </div>
+        {/* Last Modified */}
+        <div className="text-xs text-gray-400 mb-3">
+          Last modified: {formatDate(cv.lastModified)}
+        </div>
+
+        {/* Action Icons Row - Plain icons without boxes */}
+        <div className="flex items-center justify-center gap-4">
+          {/* Edit Icon */}
+          <motion.button
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(cv);
+            }}
+            className="p-2 text-gray-400 hover:text-white transition-all duration-200"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            title="Edit CV"
+          >
+            <Pencil size={16} />
+          </motion.button>
+
+          {/* Download Icon */}
+          <motion.button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDownload(cv);
+            }}
+            className="p-2 text-gray-400 hover:text-white transition-all duration-200"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            title="Download CV"
+          >
+            <Download size={16} />
+          </motion.button>
+
+          {/* Delete Icon */}
+          <motion.button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete();
+            }}
+            className="p-2 text-gray-400 hover:text-white transition-all duration-200"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            title="Delete CV"
+          >
+            <Trash2 size={16} />
+          </motion.button>
+
+          {/* Share Icon */}
+          <motion.button
+            onClick={(e) => {
+              e.stopPropagation();
+              // Add share functionality here
+            }}
+            className="p-2 text-gray-400 hover:text-white transition-all duration-200"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            title="Share CV"
+          >
+            <Link size={16} />
+          </motion.button>
         </div>
       </div>
 

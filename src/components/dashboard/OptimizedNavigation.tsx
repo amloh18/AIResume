@@ -94,12 +94,29 @@ const OptimizedNavigation: React.FC = () => {
   ];
 
   return (
-    <div className="flex flex-col h-full m-4 bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700">
+    <div className="flex flex-col h-full m-4 bg-white dark:bg-[#141810] rounded-2xl shadow-lg">
       {/* Header */}
-      <div className="flex items-center justify-center p-6 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center">
-          <span className="text-2xl font-bold text-lime-500">CV</span><span className="text-2xl font-bold text-gray-400">Circle.io</span>
-        </div>
+      <div className="flex items-center justify-start p-6">
+        <motion.button
+          onClick={() => router.push('/dashboard')}
+          className="flex items-center gap-3 hover:opacity-90 transition-opacity"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          {/* Logo Icon */}
+          <div className="w-8 h-8 bg-gradient-to-br from-lime-400 to-lime-600 rounded-lg flex items-center justify-center shadow-lg">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="12" cy="12" r="10" stroke="white" strokeWidth="2"/>
+              <path d="M8 12h8" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+              <path d="M12 8v8" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+              <circle cx="12" cy="12" r="3" fill="white"/>
+            </svg>
+          </div>
+          {/* Logo Text */}
+          <div className="flex items-center">
+            <span className="text-2xl font-bold text-lime-500">CV</span><span className="text-2xl font-bold text-gray-400">Circle.io</span>
+          </div>
+        </motion.button>
       </div>
 
       {/* Navigation */}

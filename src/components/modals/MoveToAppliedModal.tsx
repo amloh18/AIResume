@@ -65,7 +65,7 @@ const MoveToAppliedModal: React.FC<MoveToAppliedModalProps> = ({
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
-          className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full"
+          className="bg-white dark:bg-[#141810] rounded-xl shadow-xl max-w-md w-full"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}

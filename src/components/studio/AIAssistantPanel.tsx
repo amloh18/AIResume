@@ -412,7 +412,7 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
   if (isCollapsed) {
     return (
       <div className={`h-full flex flex-col relative transition-colors ${
-        theme === 'dark' ? 'bg-gray-900' : 'bg-gray-800'
+        theme === 'dark' ? 'bg-[#141810]' : 'bg-gray-800'
       }`}>
         {/* Floating Toggle Button */}
         <button
@@ -438,7 +438,7 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
 
   return (
     <div className={`h-full flex flex-col backdrop-blur-sm relative transition-colors ${
-      theme === 'dark' ? 'bg-gray-900/95' : 'bg-white/95'
+      theme === 'dark' ? 'bg-[#141810]' : 'bg-white/95'
     }`}>
       {/* Floating Toggle Button */}
       <button
@@ -452,7 +452,7 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
       {/* Fixed Job Reference Bar */}
       <div className={`p-4 border-b transition-colors ${
         theme === 'dark' 
-          ? 'border-gray-700 bg-gray-800/50' 
+          ? 'border-white/10 bg-[#141810]' 
           : 'border-lime-200/50 bg-lime-50/50'
       }`}>
         <div className="space-y-3">
@@ -538,7 +538,7 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
                 <div className="space-y-2">
                   {aiSections.slice(0, 4).map((section) => (
                     <div key={section.id} className={`flex items-center space-x-3 p-3 rounded-lg opacity-60 transition-colors ${
-                      theme === 'dark' ? 'bg-gray-800' : 'bg-gray-100'
+                      theme === 'dark' ? 'bg-[#313a28]' : 'bg-gray-100'
                     }`}>
                       <Lock className="h-4 w-4 text-gray-500" />
                       <div>
