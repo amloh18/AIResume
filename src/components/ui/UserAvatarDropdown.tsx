@@ -102,7 +102,7 @@ const UserAvatarDropdown: React.FC<UserAvatarDropdownProps> = ({ user }) => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className="absolute right-0 mt-2 w-72 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-50 overflow-hidden"
+            className="absolute right-0 mt-2 w-72 bg-white dark:bg-[#141810] rounded-xl shadow-2xl border border-gray-200 dark:border-white/10 z-50 overflow-hidden"
           >
             {/* User Info Section */}
             <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-br from-lime-50 to-emerald-50 dark:from-gray-800 dark:to-gray-900">

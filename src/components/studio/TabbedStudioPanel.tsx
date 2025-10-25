@@ -97,7 +97,7 @@ const TabbedStudioPanel: React.FC<TabbedStudioPanelProps> = ({
   return (
     <div className="h-full flex flex-col">
       {/* Tab Navigation */}
-      <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl border border-gray-200/60 dark:border-gray-700/60 rounded-xl shadow-lg shadow-gray-200/50 dark:shadow-gray-900/50 mb-6 flex-shrink-0 overflow-hidden">
+      <div className="bg-white/90 dark:bg-[#141810] border border-gray-200/60 dark:border-white/10 rounded-xl shadow-lg shadow-gray-200/50 dark:shadow-gray-900/50 mb-6 flex-shrink-0 overflow-hidden">
         <div className="flex">
           {tabs.map((tab) => (
             <motion.button

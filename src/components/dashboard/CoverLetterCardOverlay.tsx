@@ -170,16 +170,21 @@ const CoverLetterCardOverlay: React.FC<CoverLetterCardOverlayProps> = ({
 
   return (
     <motion.div
-      className="relative bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 group cursor-pointer max-w-xs"
+      className="relative group cursor-pointer"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: "spring", stiffness: 100 }}
-      whileHover={{ y: -2, scale: 1.02 }}
+      whileHover={{ y: -4 }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Main Cover Letter Preview Container */}
-      <div className="relative aspect-[3/4] bg-gradient-to-br from-purple-50 to-indigo-50 dark:bg-gradient-to-br dark:from-purple-900/20 dark:to-indigo-900/20 overflow-hidden">
+      {/* Cover Letter Preview Container - Vibrant colored card */}
+      <div className="relative aspect-[3/4] overflow-hidden rounded-xl shadow-lg hover:shadow-xl transition-all duration-300" 
+           style={{
+             background: coverLetter.metadata?.cardColor || 
+               (coverLetter.title.includes('Product') ? '#F7FAFC' :
+                coverLetter.title.includes('UX') ? '#FED7D7' : '#F7FAFC')
+           }}>
         {/* Cover Letter Thumbnail Preview */}
         <div className="h-full p-4 bg-gradient-to-br from-purple-400/10 to-purple-500/10">
           <div className="h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-purple-200 dark:border-purple-400/20 p-3 overflow-hidden">
@@ -219,167 +224,133 @@ const CoverLetterCardOverlay: React.FC<CoverLetterCardOverlayProps> = ({
           </div>
         </div>
 
-        {/* Hover Overlay */}
-        <AnimatePresence>
-          {isHovered && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center"
-            >
-              {/* Interactive Elements - Icon Row */}
-              <div className="flex items-center justify-center gap-3 p-4">
-                {/* Star/Favorite Icon */}
-                <motion.button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onToggleStar(coverLetter.id);
-                  }}
-                  className={`p-2 rounded-full transition-all duration-200 backdrop-blur-sm border ${
-                    coverLetter.isStarred 
-                      ? 'bg-yellow-500/30 border-yellow-400/50 text-yellow-400' 
-                      : 'bg-gray-700 dark:bg-white/20 hover:bg-gray-600 dark:hover:bg-white/30 border-gray-600 dark:border-white/20 text-white hover:text-yellow-400'
-                  }`}
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  title={coverLetter.isStarred ? "Remove from favorites" : "Add to favorites"}
-                >
-                  <Star size={16} className={coverLetter.isStarred ? 'fill-current' : ''} />
-                </motion.button>
+      </div>
 
-                {/* Edit Journey Icon - Only show if Cover Letter is linked to a journey */}
-                {linkedJourney && !checkingJourney && (
-                  <motion.button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEditJourney?.(coverLetter, linkedJourney);
-                    }}
-                    className="p-2 rounded-full bg-purple-600 dark:bg-purple-500/30 hover:bg-purple-700 dark:hover:bg-purple-500/40 text-white transition-all duration-200 backdrop-blur-sm border border-purple-700 dark:border-purple-400/50"
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    title="Edit Journey"
-                  >
-                    <ExternalLink size={16} />
-                  </motion.button>
-                )}
-
-                {/* Download Icon */}
-                <motion.button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDownload(coverLetter);
-                  }}
-                  className="p-2 rounded-full bg-green-600 dark:bg-green-500/30 hover:bg-green-700 dark:hover:bg-green-500/40 text-white transition-all duration-200 backdrop-blur-sm border border-green-700 dark:border-green-400/50"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  title="Download Cover Letter"
-                >
-                  <Download size={16} />
-                </motion.button>
-
-                {/* Delete Icon */}
-                <motion.button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDelete();
-                  }}
-                  className="p-2 rounded-full bg-red-600 dark:bg-red-500/30 hover:bg-red-700 dark:hover:bg-red-500/40 text-white transition-all duration-200 backdrop-blur-sm border border-red-700 dark:border-red-400/50"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  title="Delete Cover Letter"
-                >
-                  <Trash2 size={16} />
-                </motion.button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Title Overlay - Positioned at bottom of preview */}
-        <div className="absolute bottom-0 left-0 right-0 p-3 bg-purple-600 dark:bg-black/20 backdrop-blur-md border-t border-purple-700 dark:border-purple-400/20 text-white">
-          {/* Cover Letter Name */}
-          <div className="mb-1">
-            {editingCoverLetterId === coverLetter.id ? (
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={editingTitle || ''}
-                  onChange={(e) => onTitleEdit?.(coverLetter.id, e.target.value)}
-                  className="flex-1 bg-gray-700 dark:bg-white/20 border border-gray-600 dark:border-white/30 rounded-lg px-3 py-2 text-white text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-purple-400 backdrop-blur-sm"
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      onSaveTitle?.(coverLetter.id);
-                    } else if (e.key === 'Escape') {
-                      onCancelEditing?.();
-                    }
-                  }}
-                />
-                <motion.button
-                  onClick={(e) => {
-                    e.stopPropagation();
+      {/* Card Footer - Title, Last Modified, and Action Icons - No background */}
+      <div className="mt-3 h-24 flex flex-col justify-between">
+        {/* Cover Letter Title */}
+        <div className="mb-2">
+          {editingCoverLetterId === coverLetter.id ? (
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={editingTitle || ''}
+                onChange={(e) => onTitleEdit?.(coverLetter.id, e.target.value)}
+                className="flex-1 bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-white text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-purple-400"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
                     onSaveTitle?.(coverLetter.id);
-                  }}
-                  className="p-1 text-green-400 hover:text-green-300 transition-colors"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                >
-                  <Check size={16} />
-                </motion.button>
-                <motion.button
-                  onClick={(e) => {
-                    e.stopPropagation();
+                  } else if (e.key === 'Escape') {
                     onCancelEditing?.();
-                  }}
-                  className="p-1 text-white/70 hover:text-white transition-colors"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                >
-                  <X size={16} />
-                </motion.button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-white text-xs truncate flex-1">
-                  {coverLetter.title}
-                </h3>
-                <motion.button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onStartEditing?.(coverLetter);
-                  }}
-                  className="p-1 rounded-lg bg-gray-600 dark:bg-white/20 hover:bg-gray-700 dark:hover:bg-white/30 text-white/80 hover:text-white transition-all duration-200 opacity-0 group-hover:opacity-100"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                >
-                  <Pencil size={14} />
-                </motion.button>
-              </div>
-            )}
-          </div>
-
-          {/* Progress and Last Modified */}
-          <div className="space-y-1">
-            <div className="flex items-center justify-between text-xs text-white/80">
-              <span className="truncate">{formatDate(coverLetter.lastModified)}</span>
-              {(() => {
-                const wordCount = coverLetter.metadata?.wordCount || coverLetter.content?.split(/\s+/).length || 0;
-                return <span>{wordCount} words</span>;
-              })()}
+                  }
+                }}
+              />
+              <motion.button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSaveTitle?.(coverLetter.id);
+                }}
+                className="p-1 text-green-500 hover:text-green-600 transition-colors"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+              >
+                <Check size={16} />
+              </motion.button>
+              <motion.button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCancelEditing?.();
+                }}
+                className="p-1 text-gray-500 hover:text-gray-600 transition-colors"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+              >
+                <X size={16} />
+              </motion.button>
             </div>
-            {(() => {
-              const percentage = calculateCompletionPercentage(coverLetter);
-              const progressColors = getProgressColor(percentage);
-              return (
-                <div className="flex items-center justify-center">
-                  <div className={`px-2 py-1 rounded-full text-xs font-medium backdrop-blur-sm border ${progressColors.bg} ${progressColors.text} ${progressColors.border}`}>
-                    {percentage}% complete
-                  </div>
-                </div>
-              );
-            })()}
-          </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-white text-sm flex-1">
+                {coverLetter.title}
+              </h3>
+              <motion.button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onStartEditing?.(coverLetter);
+                }}
+                className="p-1 text-gray-400 hover:text-white transition-all duration-200 opacity-0 group-hover:opacity-100"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+              >
+                <Pencil size={12} />
+              </motion.button>
+            </div>
+          )}
+        </div>
+
+        {/* Last Modified */}
+        <div className="text-xs text-gray-400 mb-3">
+          Last modified: {formatDate(coverLetter.lastModified)}
+        </div>
+
+        {/* Action Icons Row - Plain icons without boxes */}
+        <div className="flex items-center justify-center gap-4">
+          {/* Edit Icon */}
+          <motion.button
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(coverLetter);
+            }}
+            className="p-2 text-gray-400 hover:text-white transition-all duration-200"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            title="Edit Cover Letter"
+          >
+            <Pencil size={16} />
+          </motion.button>
+
+          {/* Download Icon */}
+          <motion.button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDownload(coverLetter);
+            }}
+            className="p-2 text-gray-400 hover:text-white transition-all duration-200"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            title="Download Cover Letter"
+          >
+            <Download size={16} />
+          </motion.button>
+
+          {/* Delete Icon */}
+          <motion.button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete();
+            }}
+            className="p-2 text-gray-400 hover:text-white transition-all duration-200"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            title="Delete Cover Letter"
+          >
+            <Trash2 size={16} />
+          </motion.button>
+
+          {/* Share Icon */}
+          <motion.button
+            onClick={(e) => {
+              e.stopPropagation();
+              // Add share functionality here
+            }}
+            className="p-2 text-gray-400 hover:text-white transition-all duration-200"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            title="Share Cover Letter"
+          >
+            <ExternalLink size={16} />
+          </motion.button>
         </div>
       </div>
 

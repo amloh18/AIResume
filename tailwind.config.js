@@ -107,6 +107,18 @@ module.exports = {
   		colors: {
   			background: 'var(--background)',
   			foreground: 'var(--foreground)',
+  			lime: {
+  				400: '#99FF00',
+  				500: '#88e600',
+  			},
+        dark: {
+          bg: '#1a230f',
+          card: '#141810',
+          tertiary: '#313a28',
+        },
+  			grey: {
+  				secondary: '#757575',
+  			},
   		},
   		screens: {
   			'3xl': '1920px'

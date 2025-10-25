@@ -183,7 +183,7 @@ const CVManagementSection: React.FC<{
   
 
   return (
-    <div className="glass-widget-premium glass-shimmer rounded-xl p-4 h-full flex flex-col w-full">
+    <div className="glass-widget-premium rounded-xl p-4 h-full flex flex-col w-full">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-bold text-gray-900 dark:text-white">CV Management</h2>
         <div className="flex items-center gap-2">
@@ -192,32 +192,12 @@ const CVManagementSection: React.FC<{
       </div>
       
       <div className="space-y-6 flex-1">
-        {/* Professional Profile - Full Width First Row */}
-        {cvs.length > 0 && (
-          <div className="space-y-3">
-            <h3 className="text-gray-900 dark:text-white font-medium text-sm flex items-center gap-2">
-              <User size={14} className="text-purple-400" />
-              Professional Profile
-            </h3>
-            <div className="glass-card-premium rounded-lg p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border border-purple-200 dark:border-purple-400/20">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-purple-400 rounded-full flex items-center justify-center overflow-hidden">
-                  <User size={20} className="text-white" />
-                </div>
-                <div className="flex-1">
-                  <h4 className="text-gray-900 dark:text-white font-bold text-lg">Mid Level Professional</h4>
-                  <p className="text-gray-600 dark:text-white/60 text-sm">3 years experience • 3 skills</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {/* CV Health Score with CV Name */}
-          <div className="text-center flex flex-col justify-center">
-            <div className="relative w-32 h-32 lg:w-40 lg:h-40 mx-auto mb-4">
-              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
+          {/* Left Column: CV Health Score - Takes both rows */}
+          <div className="row-span-2">
+            <div className="text-center flex flex-col justify-center h-full">
+              <div className="relative w-32 h-32 lg:w-40 lg:h-40 mx-auto mb-4">
+                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
                   <circle cx="50" cy="50" r="45" stroke="currentColor" strokeWidth="10" fill="none" className="text-gray-200 dark:text-white/10" />
                   <defs>
                     <linearGradient id="cvHealthGradient" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -233,41 +213,57 @@ const CVManagementSection: React.FC<{
                   <span className="text-lg font-bold text-gray-900 dark:text-white">{cvHealthScore}%</span>
                 </div>
               </div>
-            <p className="text-gray-600 dark:text-white/60 text-xs mb-1">{masterCV?.title || 'Master CV Health'}</p>
+              <p className="text-gray-600 dark:text-white/60 text-xs mb-1">{masterCV?.title || 'Master CV Health'}</p>
               <p className={`text-xs font-medium ${status.color}`}>{status.label}</p>
             </div>
-
-        {/* Quick Actions */}
-        <div className="space-y-3">
-          <h3 className="text-gray-900 dark:text-white font-medium text-sm flex items-center gap-2">
-            <Zap size={14} className="text-yellow-400" />
-            Quick Actions
-          </h3>
-          <div className="space-y-2">
-            <motion.button 
-              onClick={onCreateCV}
-              className="w-full p-3 bg-lime-400/20 text-lime-400 rounded-lg text-sm font-medium hover:bg-lime-400/30 transition-all duration-300 flex items-center gap-2"
-              whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              <Plus size={16} /> Create New CV
-            </motion.button>
-            <motion.button 
-              onClick={onCreateCoverLetter}
-              className="w-full p-3 bg-purple-400/20 text-purple-400 rounded-lg text-sm font-medium hover:bg-purple-400/30 transition-all duration-300 flex items-center gap-2"
-              whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              <MessageSquare size={16} /> Create Cover Letter
-            </motion.button>
-            <motion.button 
-              onClick={onCreateJob}
-              className="w-full p-3 bg-blue-400/20 text-blue-400 rounded-lg text-sm font-medium hover:bg-blue-400/30 transition-all duration-300 flex items-center gap-2"
-              whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              <Briefcase size={16} /> Add Job Application
-            </motion.button>
           </div>
 
-        </div>
+          {/* Right Column */}
+          <div className="space-y-6">
+            {/* Top Row: Professional Title */}
+            {cvs.length > 0 && (
+              <div className="glass-card-premium rounded-lg p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border border-purple-200 dark:border-purple-400/20">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-purple-400 rounded-full flex items-center justify-center overflow-hidden">
+                    <User size={20} className="text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-gray-900 dark:text-white font-bold text-lg">Mid Level Professional</h4>
+                    <p className="text-gray-600 dark:text-white/60 text-sm">3 years experience • 3 skills</p>
+                  </div>
+                </div>
+              </div>
+            )}
 
+            {/* Bottom Row: Quick Actions */}
+            <div className="space-y-3">
+              <h3 className="text-gray-900 dark:text-white font-medium text-sm flex items-center gap-2">
+                <Zap size={14} className="text-yellow-400" />
+                Quick Actions
+              </h3>
+              <div className="space-y-2">
+                <motion.button 
+                  onClick={onCreateCV}
+                  className="w-full p-3 bg-lime-400/20 text-lime-400 rounded-lg text-sm font-medium hover:bg-lime-400/30 transition-all duration-300 flex items-center gap-2"
+                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                  <Plus size={16} /> Create New CV
+                </motion.button>
+                <motion.button 
+                  onClick={onCreateCoverLetter}
+                  className="w-full p-3 bg-purple-400/20 text-purple-400 rounded-lg text-sm font-medium hover:bg-purple-400/30 transition-all duration-300 flex items-center gap-2"
+                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                  <MessageSquare size={16} /> Create Cover Letter
+                </motion.button>
+                <motion.button 
+                  onClick={onCreateJob}
+                  className="w-full p-3 bg-blue-400/20 text-blue-400 rounded-lg text-sm font-medium hover:bg-blue-400/30 transition-all duration-300 flex items-center gap-2"
+                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                  <Briefcase size={16} /> Add Job Application
+                </motion.button>
+              </div>
+            </div>
+          </div>
         </div>
-
       </div>
 
     </div>
@@ -359,19 +355,18 @@ const ApplicationHub: React.FC<{
   const weeklyTrend = getWeeklyTrend();
 
   return (
-    <div className="glass-widget-premium glass-shimmer rounded-xl p-6">
-      <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-6">Application Hub</h2>
+    <div className="glass-widget-premium rounded-xl p-6">
       
         <div className="space-y-4">
           {/* Key Metrics */}
 
-          {/* 6-Week Calendar View */}
+          {/* 3-Week Calendar View */}
           <div className="glass-card-premium rounded-lg p-4">
-            <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-4">Application Calendar (6 Weeks)</h3>
+            <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-4">Application Calendar (3 Weeks)</h3>
             <div className="grid grid-cols-7 gap-1">
               {/* Day headers */}
-              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                <div key={day} className="text-center text-xs font-medium text-gray-600 dark:text-white/60 py-2">
+              {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
+                <div key={day} className="text-center text-xs font-medium text-gray-600 dark:text-white/60 py-1">
                   {day}
                 </div>
               ))}
@@ -380,10 +375,14 @@ const ApplicationHub: React.FC<{
               {(() => {
                 const today = new Date();
                 const startDate = new Date(today);
-                startDate.setDate(today.getDate() - (today.getDay() + 35)); // Go back 5 weeks + current week
+                // Go back to start of previous week (Monday)
+                // Adjust for Monday start: getDay() returns 0 for Sunday, so we need to adjust
+                const dayOfWeek = today.getDay();
+                const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Monday = 1, Sunday = 0
+                startDate.setDate(today.getDate() + mondayOffset - 7);
                 
                 const calendarDays = [];
-                for (let i = 0; i < 42; i++) { // 6 weeks * 7 days
+                for (let i = 0; i < 21; i++) { // 3 weeks * 7 days
                   const currentDate = new Date(startDate);
                   currentDate.setDate(startDate.getDate() + i);
                   
@@ -393,27 +392,43 @@ const ApplicationHub: React.FC<{
                     return jobDate.toDateString() === currentDate.toDateString();
                   }).length;
                   
+                  // Count deadlines for this date
+                  const dayDeadlines = jobs.filter(job => {
+                    if (!job.deadline) return false;
+                    const deadlineDate = new Date(job.deadline);
+                    return deadlineDate.toDateString() === currentDate.toDateString();
+                  }).length;
+                  
                   const isToday = currentDate.toDateString() === today.toDateString();
                   const isPast = currentDate < today;
                   const isFuture = currentDate > today;
+                  
+                  // Determine if this is a deadline day
+                  const isDeadlineDay = dayDeadlines > 0;
                   
                   calendarDays.push(
                     <div 
                       key={i} 
                       className={`
-                        aspect-square flex flex-col items-center justify-center text-xs rounded-lg transition-all duration-200
+                        aspect-square flex flex-col items-center justify-center text-xs rounded transition-all duration-200
                         ${isToday ? 'bg-blue-400/20 text-blue-400 font-medium' : 
                           isPast ? 'text-gray-600 dark:text-white/60' : 
                           'text-gray-400 dark:text-white/40'}
                         ${dayApplications > 0 ? 'bg-green-400/20 text-green-400' : ''}
+                        ${isDeadlineDay ? 'bg-red-400/20 text-red-400' : ''}
                         hover:bg-gray-100 dark:hover:bg-white/5 cursor-pointer
                       `}
                     >
-                      <div className="font-medium">{currentDate.getDate()}</div>
-                      {dayApplications > 0 && (
-                        <div className="w-1.5 h-1.5 bg-green-400 rounded-full mt-0.5"></div>
-                      )}
-            </div>
+                      <div className="font-medium text-xs">{currentDate.getDate()}</div>
+                      <div className="flex gap-0.5 mt-0.5">
+                        {dayApplications > 0 && (
+                          <div className="w-1 h-1 bg-green-400 rounded-full"></div>
+                        )}
+                        {isDeadlineDay && (
+                          <div className="w-1 h-1 bg-red-400 rounded-full"></div>
+                        )}
+                      </div>
+                    </div>
                   );
                 }
                 return calendarDays;
@@ -425,11 +440,15 @@ const ApplicationHub: React.FC<{
               <div className="flex items-center gap-1">
                 <div className="w-2 h-2 bg-green-400 rounded-full"></div>
                 <span>Applications</span>
-                    </div>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 bg-red-400 rounded-full"></div>
+                <span>Deadlines</span>
+              </div>
               <div className="flex items-center gap-1">
                 <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
                 <span>Today</span>
-                    </div>
+              </div>
             </div>
           </div>
 
@@ -621,7 +640,7 @@ const IntelligenceDashboard: React.FC<{
 
 
   return (
-    <div className="glass-widget-premium glass-shimmer rounded-xl p-6 min-h-[400px]">
+    <div className="glass-widget-premium rounded-xl p-6 min-h-[400px]">
       <div className="space-y-4 h-full">
 
                     
@@ -692,7 +711,7 @@ const PerformanceInsights: React.FC<{
   const metrics = calculatePerformanceMetrics();
 
   return (
-    <div className="glass-widget-premium glass-shimmer rounded-xl p-6">
+    <div className="glass-widget-premium rounded-xl p-6">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-lg font-bold text-gray-900 dark:text-white">Performance Insights</h2>
         <div className="flex items-center gap-2">
@@ -969,218 +988,50 @@ const RecentJobsWidget: React.FC<{
   }, {} as Record<string, number>);
 
   return (
-    <div className="glass-widget-premium glass-shimmer rounded-xl p-6 h-full flex flex-col w-full">
-      {/* Inline Header with Title, Tabs, and View All */}
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-bold text-gray-900 dark:text-white">Recent Applications</h2>
-        <div className="flex items-center gap-2">
-      {/* Tab Navigation */}
-          <div className="flex items-center gap-1">
-        <motion.button onClick={() => setActiveView('timeline')}
-              className={`px-2 py-1 rounded text-xs font-medium transition-all duration-300 ${
-            activeView === 'timeline' ? 'bg-blue-400/20 text-blue-400 border border-blue-400/30' : 'glass-card-premium text-gray-600 dark:text-white/60'
-          }`} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-          Timeline
-        </motion.button>
-        <motion.button onClick={() => setActiveView('status')}
-              className={`px-2 py-1 rounded text-xs font-medium transition-all duration-300 ${
-            activeView === 'status' ? 'bg-blue-400/20 text-blue-400 border border-blue-400/30' : 'glass-card-premium text-gray-600 dark:text-white/60'
-          }`} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-          Status Overview
-        </motion.button>
-          </div>
-          <motion.button 
-            onClick={() => window.location.href = '/dashboard/application-tracker'}
-            className="px-3 py-1.5 bg-blue-400/20 text-blue-400 rounded-lg text-sm font-medium hover:bg-blue-400/30 transition-all duration-300 flex items-center gap-2"
-            whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Briefcase size={14} /> View All
-          </motion.button>
-        </div>
+    <div className="glass-widget-premium rounded-xl p-6 h-full flex flex-col w-full">
+      {/* Header */}
+      <div className="mb-6">
+        <h2 className="text-lg font-bold text-white">Recent Jobs</h2>
       </div>
       
-      {activeView === 'timeline' ? (
-        <div className="space-y-3 flex-1 overflow-y-auto overflow-x-hidden">
-          {/* Monthly Goal Section - First Row */}
-          {analyticsData?.predictions && (
-            <div className="glass-card-premium rounded-lg p-4 mb-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-gray-900 dark:text-white font-medium text-sm flex items-center gap-2">
-                  <Target size={14} className="text-purple-400" />
-                  Monthly Goal
-                </h3>
-                <span className="text-gray-600 dark:text-white/60 text-sm font-medium">{analyticsData.predictions?.monthlyGoalProgress || 0}%</span>
-              </div>
-              <div className="w-full bg-gray-200 dark:bg-white/10 rounded-full h-2 mb-3">
-                <div 
-                  className="h-2 rounded-full bg-gradient-to-r from-purple-400 to-purple-500 transition-all duration-300" 
-                  style={{ width: `${Math.min(analyticsData.predictions?.monthlyGoalProgress || 0, 100)}%` }}
-                ></div>
-              </div>
-              <div className="flex items-center justify-between text-xs text-gray-600 dark:text-white/60">
-                <span>Target: {analyticsData.predictions?.monthlyGoal || 20} applications</span>
-                <span>Current: {analyticsData.predictions?.currentApplications || 0}</span>
-              </div>
-            </div>
-          )}
-
-          {lastJobs.length > 0 ? (
-            <div className="space-y-3">
-              {lastJobs.map((job) => (
-            <motion.div 
+      {/* Job Applications List */}
+      <div className="space-y-2">
+        {lastJobs.length === 0 ? (
+          <div className="text-center py-8">
+            <div className="text-gray-400 mb-2">No recent applications</div>
+            <div className="text-sm text-gray-500">Start applying to jobs to see them here</div>
+          </div>
+        ) : (
+          lastJobs.map((job, index) => (
+            <motion.div
               key={job.id || job._id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              className="flex items-center justify-between p-4 rounded-lg hover:bg-white/5 transition-all duration-300 cursor-pointer"
               onClick={() => onViewJob(job.id || job._id)}
-              className="p-3 glass-card-premium rounded-lg cursor-pointer w-full"
-              whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-              <div className="flex items-start justify-between w-full gap-2">
-                <div className="flex items-start gap-2 flex-1 min-w-0">
-                  <div className="p-1.5 rounded bg-gray-200 dark:bg-white/10 flex-shrink-0">
-                    <Briefcase size={14} className="text-gray-600 dark:text-white/80" />
-                  </div>
-                                     <div className="flex-1 min-w-0">
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-1 min-w-0">
-                        <h4 className="text-gray-900 dark:text-white font-medium text-sm truncate">{job.jobTitle || job.title}</h4>
-                        <span className="text-gray-500 dark:text-white/40 text-xs flex-shrink-0">-</span>
-                        <span className="text-gray-600 dark:text-white/60 text-sm truncate">{job.company}</span>
-                      </div>
-                     {job.location && (
-                        <p className="text-gray-500 dark:text-white/40 text-xs truncate">{job.location}</p>
-                     )}
-                   </div>
-                </div>
-                </div>
-                <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                  <span className={`text-xs font-medium ${getStatusColor(job.status)}`}>
-                    {getStatusIcon(job.status)} {job.status}
+            >
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className="font-medium text-sm text-white truncate">{job.jobTitle || job.title}</h3>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    job.status === 'applied' ? 'bg-green-600 text-green-300' :
+                    job.status === 'interview' ? 'bg-yellow-600 text-yellow-300' :
+                    job.status === 'offer' ? 'bg-green-600 text-green-300' :
+                    'bg-gray-600 text-gray-300'
+                  }`}>
+                    {job.status === 'applied' ? 'Applied' :
+                     job.status === 'interview' ? 'Interviewing' :
+                     job.status === 'offer' ? 'Offer' :
+                     job.status.charAt(0).toUpperCase() + job.status.slice(1)}
                   </span>
-                  <span className="text-gray-500 dark:text-white/40 text-xs">{formatDate(job.createdAt)}</span>
                 </div>
+                <p className="text-xs text-gray-400">{job.companyName || job.company}</p>
               </div>
-              
-              {/* Additional details - only show if there's space */}
-              {(job.salary && (job.salary.min || job.salary.max)) || job.applicationDate ? (
-                <div className="flex items-center justify-between text-gray-600 dark:text-white/60 text-xs mt-2 gap-2">
-                 {job.salary && (job.salary.min || job.salary.max) && (
-                    <div className="flex items-center gap-1 min-w-0">
-                     <span>💰</span>
-                      <span className="truncate">
-                       {job.salary.min && job.salary.max 
-                         ? `${job.salary.currency || '$'}${job.salary.min.toLocaleString()}-${job.salary.max.toLocaleString()}`
-                         : job.salary.min 
-                           ? `${job.salary.currency || '$'}${job.salary.min.toLocaleString()}+`
-                           : job.salary.max
-                             ? `${job.salary.currency || '$'}${job.salary.max.toLocaleString()}`
-                             : 'Not specified'
-                       } {job.salary.period || 'yearly'}
-                     </span>
-                   </div>
-                 )}
-                 {job.applicationDate && (
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                     <span>📅</span>
-                     <span>Applied: {formatDate(job.applicationDate)}</span>
-                   </div>
-                 )}
-               </div>
-              ) : null}
             </motion.div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8 flex-1 flex flex-col justify-center">
-              <Briefcase size={32} className="text-gray-400 dark:text-white/40 mx-auto mb-3" />
-              <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-2">No Jobs Yet</h3>
-              <p className="text-gray-600 dark:text-white/60 text-xs mb-4">Start tracking your job applications to see your recent applications here.</p>
-              <motion.button 
-                onClick={() => window.location.href = '/dashboard/application-tracker'}
-                className="px-4 py-2 bg-blue-400/20 text-blue-400 rounded-lg text-sm font-medium hover:bg-blue-400/30 transition-all duration-300"
-                whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                Add Your First Job
-              </motion.button>
-            </div>
-          )}
-        </div>
-      ) : (
-        // Status Overview
-        <div className="flex-1 flex flex-col space-y-4 overflow-hidden">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="glass-card-premium rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold text-blue-400 mb-1">{jobs.length}</div>
-              <div className="text-gray-600 dark:text-white/60 text-xs">Total Applications</div>
-            </div>
-            <div className="glass-card-premium rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold text-green-400 mb-1">
-                {jobs.length > 0 ? Math.round(((statusDistribution.interview || 0) + (statusDistribution.offer || 0) + (statusDistribution.accepted || 0)) / jobs.length * 100) : 0}%
-              </div>
-              <div className="text-gray-600 dark:text-white/60 text-xs">Success Rate</div>
-            </div>
-          </div>
-
-          <div className="glass-card-premium rounded-lg p-4 flex-1 overflow-hidden">
-            <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-3">Application Status Breakdown</h3>
-            <div className="flex flex-wrap gap-2 items-center">
-              {Object.entries(statusDistribution).map(([status, count]) => {
-                const countNum = count as number;
-                const percentage = jobs.length > 0 ? Math.round((countNum / jobs.length) * 100) : 0;
-                const statusColors = {
-                  'created': 'bg-yellow-400/20 text-yellow-400 border-yellow-400/30',
-                  'applied': 'bg-blue-400/20 text-blue-400 border-blue-400/30',
-                  'screening': 'bg-orange-400/20 text-orange-400 border-orange-400/30',
-                  'interview': 'bg-purple-400/20 text-purple-400 border-purple-400/30',
-                  'offer': 'bg-green-400/20 text-green-400 border-green-400/30',
-                  'accepted': 'bg-emerald-400/20 text-emerald-400 border-emerald-400/30',
-                  'rejected': 'bg-red-400/20 text-red-400 border-red-400/30',
-                  'withdrawn': 'bg-gray-400/20 text-gray-400 border-gray-400/30'
-                };
-                return (
-                  <div 
-                    key={status} 
-                    className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-medium ${statusColors[status as keyof typeof statusColors] || 'bg-gray-400/20 text-gray-400 border-gray-400/30'}`}
-                  >
-                    <span className="capitalize">{status}</span>
-                    <span className="font-bold">{countNum}</span>
-                    <span className="opacity-70">({percentage}%)</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Competitive Analysis */}
-          {analyticsData?.marketIntelligence?.competitiveData && (
-            <div className="glass-card-premium rounded-lg p-4">
-              <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-3 flex items-center gap-2">
-                <BarChart3 size={14} className="text-orange-400" />
-                Competitive Analysis
-              </h3>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="text-center p-3 bg-gray-100 dark:bg-white/5 rounded-lg">
-                  <div className="text-lg font-bold text-gray-900 dark:text-white">{analyticsData.marketIntelligence.competitiveData.metrics.applicationVolume}</div>
-                  <div className="text-gray-600 dark:text-white/60 text-xs mb-1">Applications</div>
-                  <div className={`text-xs px-2 py-1 rounded-full ${
-                    analyticsData.marketIntelligence.competitiveData.percentile.appVolume >= 80 ? 'bg-green-400/20 text-green-400' :
-                    analyticsData.marketIntelligence.competitiveData.percentile.appVolume >= 60 ? 'bg-yellow-400/20 text-yellow-400' :
-                    'bg-red-400/20 text-red-400'
-                  }`}>
-                    {analyticsData.marketIntelligence.competitiveData.percentile.appVolume}% vs peers
-                  </div>
-                </div>
-                <div className="text-center p-3 bg-gray-100 dark:bg-white/5 rounded-lg">
-                  <div className="text-lg font-bold text-gray-900 dark:text-white">{analyticsData.marketIntelligence.competitiveData.metrics.responseRate}%</div>
-                  <div className="text-gray-600 dark:text-white/60 text-xs mb-1">Response Rate</div>
-                  <div className={`text-xs px-2 py-1 rounded-full ${
-                    analyticsData.marketIntelligence.competitiveData.percentile.responseRate >= 80 ? 'bg-green-400/20 text-green-400' :
-                    analyticsData.marketIntelligence.competitiveData.percentile.responseRate >= 60 ? 'bg-yellow-400/20 text-yellow-400' :
-                    'bg-red-400/20 text-red-400'
-                  }`}>
-                    {analyticsData.marketIntelligence.competitiveData.percentile.responseRate}% vs peers
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+          ))
+        )}
+      </div>
     </div>
   );
 };
@@ -1432,7 +1283,7 @@ const Analytics: React.FC = () => {
   const showPartialData = !loading || hasCriticalData;
 
   return (
-    <div className="space-y-6">
+    <div className="dashboard-page space-y-4">
       {/* Page Header */}
       <PageHeader
         title={`Hello, ${getUserDisplayName(userProfile)}`}
@@ -1452,7 +1303,7 @@ const Analytics: React.FC = () => {
       />
 
       {/* First Row: CV Management and Recent Applications */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="flex w-full">
           <CVManagementSection
             cvHealthScore={cvHealthScore}
@@ -1488,7 +1339,7 @@ const Analytics: React.FC = () => {
       </div>
 
       {/* Second Row: Progress Tracking and Intelligence Dashboard */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2">
           {userId ? (
             <ProgressTrackingWidget userId={userId} />
@@ -1499,13 +1350,14 @@ const Analytics: React.FC = () => {
           )}
         </div>
         <div className="lg:col-span-1">
-          <IntelligenceDashboard
-            predictions={analyticsData?.predictions || {}} 
-            marketIntelligence={analyticsData?.marketIntelligence || {}}
+          <ApplicationHub
+            drafts={drafts}
             jobs={jobs}
-            cvs={cvs}
-            userAvatar={getUserAvatar()}
-            onUpdateGoal={handleUpdateMonthlyGoal}
+            onResumeDraft={(draftId) => window.location.href = `/studio?draft=${draftId}`}
+            onPreviewDraft={(draftId) => window.location.href = `/preview?draft=${draftId}`}
+            onDiscardDraft={(draftId) => {
+              // TODO: Implement discard draft functionality
+            }}
           />
         </div>
       </div>
@@ -1534,25 +1386,9 @@ const Analytics: React.FC = () => {
             onPeriodChange={setSelectedPeriod}
       />
 
-      {/* Fifth Row: Application Hub and Application Stats */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Column 1: Application Hub */}
-        <div className="space-y-6">
-          <ApplicationHub
-            drafts={drafts}
-            jobs={jobs}
-            onResumeDraft={(draftId) => window.location.href = `/studio?draft=${draftId}`}
-            onPreviewDraft={(draftId) => window.location.href = `/preview?draft=${draftId}`}
-            onDiscardDraft={(draftId) => {
-              // TODO: Implement discard draft functionality
-            }}
-          />
-        </div>
-                        
-        {/* Column 2: Application Stats */}
-        <div className="space-y-6">
-          <ApplicationStatsWidget userId={userId || ''} />
-        </div>
+      {/* Fifth Row: Application Stats - Full Width */}
+      <div className="w-full">
+        <ApplicationStatsWidget userId={userId || ''} />
       </div>
 
       {/* Enhanced Payment Modal */}

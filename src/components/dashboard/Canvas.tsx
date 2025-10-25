@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
 import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
@@ -28,6 +28,7 @@ import {
   PenTool,
   ExternalLink,
   Link,
+  Trash,
   MessageSquare,
   Building,
   MapPin,
@@ -221,6 +222,146 @@ const Modal: React.FC<ModalProps> = ({
   );
 };
 
+// Clean Unlinked Button Component
+interface CleanUnlinkedButtonProps {
+  type: 'cv' | 'cover-letter';
+  items: any[];
+  journeys: any[];
+  onClean: (items: any[]) => void;
+  className?: string;
+}
+
+const CleanUnlinkedButton: React.FC<CleanUnlinkedButtonProps> = ({ 
+  type, 
+  items, 
+  journeys,
+  onClean, 
+  className = '' 
+}) => {
+  const [showModal, setShowModal] = useState(false);
+  const [unlinkedItems, setUnlinkedItems] = useState<any[]>([]);
+
+  const checkUnlinkedItems = () => {
+    // Get all CV/cover letter IDs that are linked to journeys
+    const linkedItemIds = new Set();
+    
+    journeys.forEach(journey => {
+      if (type === 'cv' && journey.cvId) {
+        linkedItemIds.add(journey.cvId);
+      } else if (type === 'cover-letter' && journey.coverLetterId) {
+        linkedItemIds.add(journey.coverLetterId);
+      }
+    });
+
+    // Filter items that are not linked to any journeys
+    const unlinked = items.filter(item => {
+      // Skip master CVs
+      if (type === 'cv' && item.isMaster) {
+        return false;
+      }
+      
+      // Check if item is linked to any journey
+      return !linkedItemIds.has(item.id);
+    });
+    
+    setUnlinkedItems(unlinked);
+    setShowModal(true);
+  };
+
+  const handleConfirmClean = () => {
+    onClean(unlinkedItems);
+    setShowModal(false);
+  };
+
+  return (
+    <>
+      <motion.button
+        onClick={checkUnlinkedItems}
+        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 ${className}`}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        disabled={items.length === 0}
+      >
+        <Trash size={16} />
+        Clean Unlinked
+      </motion.button>
+
+      {/* Clean Modal */}
+      <AnimatePresence>
+        {showModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md mx-4 shadow-2xl"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center">
+                  <AlertTriangle className="w-5 h-5 text-red-500" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Clean Unlinked {type === 'cv' ? 'CVs' : 'Cover Letters'}
+                </h3>
+              </div>
+
+              <div className="mb-6">
+                <p className="text-gray-600 dark:text-gray-300 mb-4">
+                  This will permanently delete {unlinkedItems.length} {type === 'cv' ? 'CVs' : 'cover letters'} that are not linked to any application journeys.
+                </p>
+                
+                {unlinkedItems.length > 0 && (
+                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 max-h-32 overflow-y-auto">
+                    <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+                      Items to be deleted:
+                    </h4>
+                    <ul className="space-y-1">
+                      {unlinkedItems.slice(0, 5).map((item, index) => (
+                        <li key={index} className="text-sm text-gray-600 dark:text-gray-300 truncate">
+                          • {item.title}
+                        </li>
+                      ))}
+                      {unlinkedItems.length > 5 && (
+                        <li className="text-sm text-gray-500 dark:text-gray-400">
+                          ... and {unlinkedItems.length - 5} more
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-3">
+                <motion.button
+                  onClick={() => setShowModal(false)}
+                  className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  Cancel
+                </motion.button>
+                <motion.button
+                  onClick={handleConfirmClean}
+                  className="flex-1 px-4 py-2 text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  Delete {unlinkedItems.length} Items
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  );
+};
+
 const Canvas: React.FC = () => {
   const { user, loading: authLoading, isAuthenticated } = useUnifiedAuth();
   const { createCV } = useCreateCV();
@@ -229,6 +370,7 @@ const Canvas: React.FC = () => {
   const [cvs, setCvs] = useState<CV[]>([]);
   const [masterCVs, setMasterCVs] = useState<CV[]>([]);
   const [mongoDBUserId, setMongoDBUserId] = useState<string | null>(null);
+  const [journeys, setJourneys] = useState<any[]>([]);
   
   // ApplicationJourneyModal state
   const [showJourneyModal, setShowJourneyModal] = useState(false);
@@ -427,8 +569,6 @@ const Canvas: React.FC = () => {
     }
   };
 
-  const [selectedCV, setSelectedCV] = useState<CV | null>(null);
-  const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [editingCVId, setEditingCVId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
@@ -493,6 +633,7 @@ const Canvas: React.FC = () => {
     if (userId) {
       loadCVs(userId);
       loadCoverLetters();
+      loadJourneys();
       fetchAvailableJobs();
     } else {
       setLoading(false);
@@ -515,7 +656,7 @@ const Canvas: React.FC = () => {
     return null;
   };
 
-  const loadCVs = async (userId?: string) => {
+  const loadCVs = useCallback(async (userId?: string) => {
     try {
       setLoading(true);
       const userIdToUse = getUserIdForAPI(user);
@@ -582,9 +723,9 @@ const Canvas: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
-  const loadCoverLetters = async () => {
+  const loadCoverLetters = useCallback(async () => {
     try {
       console.log('🔍 Canvas - Loading Cover Letters...');
       const userId = getUserIdForAPI(user);
@@ -624,7 +765,34 @@ const Canvas: React.FC = () => {
       console.error('Error loading Cover Letters:', error);
       setCoverLetters([]);
     }
-  };
+  }, [user]);
+
+  const loadJourneys = useCallback(async () => {
+    try {
+      console.log('🔍 Canvas - Loading Journeys...');
+      const userId = getUserIdForAPI(user);
+      if (!userId) {
+        console.log('🔍 Canvas - No user ID, skipping Journey load');
+        return;
+      }
+
+      const response = await authenticatedFetch(`/api/journeys?userId=${userId}`);
+      const result = await response.json();
+      
+      console.log('🔍 Canvas - Journey API response:', result);
+      
+      if (result.success && result.data?.journeys) {
+        console.log('🔍 Canvas - Setting Journeys:', result.data.journeys.length);
+        setJourneys(result.data.journeys);
+      } else {
+        console.log('🔍 Canvas - Journey API returned success: false');
+        setJourneys([]);
+      }
+    } catch (error) {
+      console.error('Error loading Journeys:', error);
+      setJourneys([]);
+    }
+  }, [user]);
 
   const calculateCompletionPercentage = (cv: any): number => {
     // If CV is published, it's considered complete
@@ -827,13 +995,46 @@ const Canvas: React.FC = () => {
     }
   };
 
-  const handleCVClick = (cv: CV) => {
+  const handleCVClick = async (cv: CV) => {
     console.log('🔍 Canvas - CV clicked:', cv.id);
     console.log('🔍 Canvas - CV data:', cv.cvData);
-    // connectedJobs removed - relationships now managed through CVJourney
     
-    setSelectedCV(cv);
-    setShowModal(true);
+    try {
+      // Find the journey associated with this CV
+      const associatedJourney = journeys.find(journey => journey.cvId === cv.id);
+      
+      if (associatedJourney) {
+        // Fetch the job details for the journey
+        const jobResponse = await fetch(`/api/jobs/${associatedJourney.jobId}`);
+        if (jobResponse.ok) {
+          const jobResult = await jobResponse.json();
+          if (jobResult.success) {
+            setSelectedJobForJourney(jobResult.data);
+            
+            // Fetch journeys for this job
+            const journeysResponse = await fetch(`/api/application-journey?jobId=${associatedJourney.jobId}`);
+            if (journeysResponse.ok) {
+              const journeysResult = await journeysResponse.json();
+              if (journeysResult.success) {
+                setJourneysForSelectedJob(journeysResult.data.journeys || []);
+              }
+            }
+            
+            setShowJourneyModal(true);
+          } else {
+            addToast('error', 'Failed to load job details');
+          }
+        } else {
+          addToast('error', 'Failed to load job details');
+        }
+      } else {
+        // If no journey found, show a message or create a new journey
+        addToast('info', 'This CV is not linked to any application journey. Please create a journey first.');
+      }
+    } catch (error) {
+      console.error('Error opening journey details:', error);
+      addToast('error', 'Failed to open journey details');
+    }
   };
 
   const startEditing = (cv: CV) => {
@@ -995,6 +1196,64 @@ const Canvas: React.FC = () => {
     } catch (error) {
       console.error('Error deleting cover letter:', error);
       addToast('error', 'Error deleting cover letter');
+    }
+  };
+
+  // Clean unlinked CVs handler
+  const handleCleanUnlinkedCVs = async (unlinkedCVs: any[]) => {
+    try {
+      const userId = getUserIdForAPI(user);
+      if (!userId) {
+        addToast('error', 'User not authenticated');
+        return;
+      }
+
+      // Delete each unlinked CV
+      for (const cv of unlinkedCVs) {
+        const response = await authenticatedFetch(`/api/cvs/${cv.id}?userId=${userId}`, {
+          method: 'DELETE',
+        });
+
+        if (!response.ok) {
+          console.error(`Failed to delete CV: ${cv.title}`);
+        }
+      }
+
+      // Refresh CVs list
+      await loadCVs(userId);
+      addToast('success', `Successfully deleted ${unlinkedCVs.length} unlinked CVs`);
+    } catch (error) {
+      console.error('Clean unlinked CVs error:', error);
+      addToast('error', 'Failed to clean unlinked CVs');
+    }
+  };
+
+  // Clean unlinked cover letters handler
+  const handleCleanUnlinkedCoverLetters = async (unlinkedCoverLetters: any[]) => {
+    try {
+      const userId = getUserIdForAPI(user);
+      if (!userId) {
+        addToast('error', 'User not authenticated');
+        return;
+      }
+
+      // Delete each unlinked cover letter
+      for (const coverLetter of unlinkedCoverLetters) {
+        const response = await authenticatedFetch(`/api/cover-letters/${coverLetter.id}?userId=${userId}`, {
+          method: 'DELETE',
+        });
+
+        if (!response.ok) {
+          console.error(`Failed to delete cover letter: ${coverLetter.title}`);
+        }
+      }
+
+      // Refresh cover letters list
+      await loadCoverLetters();
+      addToast('success', `Successfully deleted ${unlinkedCoverLetters.length} unlinked cover letters`);
+    } catch (error) {
+      console.error('Clean unlinked cover letters error:', error);
+      addToast('error', 'Failed to clean unlinked cover letters');
     }
   };
 
@@ -1303,106 +1562,24 @@ const Canvas: React.FC = () => {
         <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
           {/* Left Column - Main Content */}
           <div className="xl:col-span-3 space-y-6">
-            {/* Stats Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-        <motion.div
-          className="frosted-glass-card rounded-xl p-4"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-lime-400/20 to-lime-500/20 rounded-lg flex items-center justify-center">
-              <FileText size={16} className="text-lime-400" />
-            </div>
-            <div>
-              <p className="text-white/60 text-xs">Total CVs</p>
-              <p className="text-lg font-bold text-white">{cvs.length}</p>
-            </div>
-          </div>
-          {cvs.length === 0 && (
-            <div className="mt-2 p-2 bg-lime-400/10 border border-lime-400/20 rounded-lg">
-              <p className="text-lime-400 text-xs">Create your first CV!</p>
-            </div>
-          )}
-        </motion.div>
 
-        <motion.div
-          className="frosted-glass-card rounded-xl p-4"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-400/20 to-blue-500/20 rounded-lg flex items-center justify-center">
-              <Eye size={16} className="text-blue-400" />
-            </div>
-            <div>
-              <p className="text-white/60 text-xs">Total Views</p>
-              <p className="text-lg font-bold text-white">{cvs.reduce((sum, cv) => sum + cv.views, 0)}</p>
-            </div>
-          </div>
-          {cvs.reduce((sum, cv) => sum + cv.views, 0) === 0 && (
-            <div className="mt-2 p-2 bg-blue-400/10 border border-blue-400/20 rounded-lg">
-              <p className="text-blue-400 text-xs">Publish to get views!</p>
-            </div>
-          )}
-        </motion.div>
-
-        <motion.div
-          className="frosted-glass-card rounded-xl p-4"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-purple-400/20 to-purple-500/20 rounded-lg flex items-center justify-center">
-              <Star size={16} className="text-purple-400" />
-            </div>
-            <div>
-              <p className="text-white/60 text-xs">Starred</p>
-              <p className="text-lg font-bold text-white">{cvs.filter(cv => cv.isStarred).length}</p>
-            </div>
-          </div>
-          {cvs.filter(cv => cv.isStarred).length === 0 && (
-            <div className="mt-2 p-2 bg-purple-400/10 border border-purple-400/20 rounded-lg">
-              <p className="text-purple-400 text-xs">Star your favorites!</p>
-            </div>
-          )}
-        </motion.div>
-
-        <motion.div
-          className="frosted-glass-card rounded-xl p-4"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-green-400/20 to-green-500/20 rounded-lg flex items-center justify-center">
-              <CheckCircle size={16} className="text-green-400" />
-            </div>
-            <div>
-              <p className="text-white/60 text-xs">Published</p>
-              <p className="text-lg font-bold text-white">{cvs.filter(cv => cv.status === 'published').length}</p>
-            </div>
-          </div>
-          {cvs.filter(cv => cv.status === 'published').length === 0 && cvs.length > 0 && (
-            <div className="mt-2 p-2 bg-yellow-400/10 border border-yellow-400/20 rounded-lg">
-              <p className="text-yellow-400 text-xs">Click 'Edit' to publish!</p>
-            </div>
-          )}
-        </motion.div>
+      {/* CV Section Header with Clean Button */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <h2 className="text-xl font-semibold text-white">CVs</h2>
+          <span className="text-sm text-gray-400">({cvs.length + masterCVs.length} total)</span>
+        </div>
+        <CleanUnlinkedButton
+          type="cv"
+          items={cvs}
+          journeys={journeys}
+          onClean={handleCleanUnlinkedCVs}
+          className="bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30"
+        />
       </div>
 
       {/* CV Grid */}
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-white">Your CVs</h2>
-          <div className="flex items-center gap-2 text-white/60 text-sm">
-            <Clock size={16} />
-            <span>Recently modified</span>
-          </div>
-        </div>
 
         <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {/* Master CV Card - Always First */}
@@ -1411,7 +1588,17 @@ const Canvas: React.FC = () => {
             onDuplicateMasterCV={handleDuplicateMasterCV}
             userId={mongoDBUserId || getUserIdForAPI(user) || ''}
             onToggleStar={toggleStar}
-            masterCVData={masterCVs.length > 0 ? masterCVs[0] : null}
+            masterCVData={masterCVs.length > 0 ? {
+              id: masterCVs[0].id,
+              title: masterCVs[0].title,
+              lastModified: masterCVs[0].lastModified,
+              status: masterCVs[0].status,
+              isMaster: true,
+              cvData: masterCVs[0].cvData,
+              isStarred: masterCVs[0].isStarred,
+              thumbnail: masterCVs[0].thumbnail || '',
+              metadata: masterCVs[0].metadata
+            } : null}
           />
 
           {loading ? (
@@ -1428,7 +1615,10 @@ const Canvas: React.FC = () => {
             cvs.map((cv, index) => (
               <CVCardOverlay
                 key={cv.id}
-                cv={cv}
+                cv={{
+                  ...cv,
+                  thumbnail: cv.thumbnail || ''
+                }}
                 onEdit={handleCVClick}
                 onDownload={handleDownloadCV}
                 onDelete={handleDeleteCV}
@@ -1453,6 +1643,82 @@ const Canvas: React.FC = () => {
 
         {/* Right Column - Sidebar */}
         <div className="space-y-6">
+          {/* KPI Metrics - 2x2 Grid */}
+          <div className="frosted-glass-widget rounded-xl p-6">
+            <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-4 flex items-center gap-2">
+              <TrendingUp size={14} className="text-blue-400" />
+              CV Metrics
+            </h3>
+            <div className="grid grid-cols-2 gap-3">
+              <motion.div
+                className="frosted-glass-card rounded-lg p-3"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 bg-gradient-to-br from-lime-400/20 to-lime-500/20 rounded-lg flex items-center justify-center">
+                    <FileText size={12} className="text-lime-400" />
+                  </div>
+                  <div>
+                    <p className="text-white/60 text-xs">Total CVs</p>
+                    <p className="text-sm font-bold text-white">{cvs.length}</p>
+                  </div>
+                </div>
+              </motion.div>
+
+              <motion.div
+                className="frosted-glass-card rounded-lg p-3"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 bg-gradient-to-br from-blue-400/20 to-blue-500/20 rounded-lg flex items-center justify-center">
+                    <Eye size={12} className="text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="text-white/60 text-xs">Views</p>
+                    <p className="text-sm font-bold text-white">{cvs.reduce((sum, cv) => sum + cv.views, 0)}</p>
+                  </div>
+                </div>
+              </motion.div>
+
+              <motion.div
+                className="frosted-glass-card rounded-lg p-3"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 bg-gradient-to-br from-purple-400/20 to-purple-500/20 rounded-lg flex items-center justify-center">
+                    <Star size={12} className="text-purple-400" />
+                  </div>
+                  <div>
+                    <p className="text-white/60 text-xs">Starred</p>
+                    <p className="text-sm font-bold text-white">{cvs.filter(cv => cv.isStarred).length}</p>
+                  </div>
+                </div>
+              </motion.div>
+
+              <motion.div
+                className="frosted-glass-card rounded-lg p-3"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 bg-gradient-to-br from-green-400/20 to-green-500/20 rounded-lg flex items-center justify-center">
+                    <CheckCircle size={12} className="text-green-400" />
+                  </div>
+                  <div>
+                    <p className="text-white/60 text-xs">Published</p>
+                    <p className="text-sm font-bold text-white">{cvs.filter(cv => cv.status === 'published').length}</p>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          </div>
 
           {/* CV Tips */}
           <div className="frosted-glass-widget rounded-xl p-6">
@@ -1485,119 +1751,24 @@ const Canvas: React.FC = () => {
         <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
           {/* Left Column - Main Content */}
           <div className="xl:col-span-3 space-y-6">
-            {/* Stats Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-              <motion.div
-                className="bg-gray-50 dark:bg-gray-800 backdrop-blur-xl border border-gray-200 dark:border-gray-700 rounded-xl p-4"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-gradient-to-br from-blue-400/20 to-blue-500/20 rounded-lg flex items-center justify-center">
-                    <PenTool size={16} className="text-blue-400" />
-                  </div>
-                  <div>
-                    <p className="text-gray-600 dark:text-white/60 text-xs">Total Cover Letters</p>
-                    <p className="text-lg font-bold text-gray-900 dark:text-white">{coverLetters.length}</p>
-                  </div>
-                </div>
-                {coverLetters.length === 0 && (
-                  <div className="mt-2 p-2 bg-blue-400/10 border border-blue-400/20 rounded-lg">
-                    <p className="text-blue-400 text-xs">Create your first cover letter!</p>
-                  </div>
-                )}
-              </motion.div>
 
-              <motion.div
-                className="frosted-glass-card rounded-xl p-4"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-gradient-to-br from-purple-400/20 to-purple-500/20 rounded-lg flex items-center justify-center">
-                    <Eye size={16} className="text-purple-400" />
-                  </div>
-                  <div>
-                    <p className="text-white/60 text-xs">Total Views</p>
-                    <p className="text-lg font-bold text-white">{coverLetters.reduce((sum, cl) => sum + cl.views, 0)}</p>
-                  </div>
-                </div>
-                {coverLetters.reduce((sum, cl) => sum + cl.views, 0) === 0 && (
-                  <div className="mt-2 p-2 bg-purple-400/10 border border-purple-400/20 rounded-lg">
-                    <p className="text-purple-400 text-xs">Publish to get views!</p>
-                  </div>
-                )}
-              </motion.div>
-
-              <motion.div
-                className="frosted-glass-card rounded-xl p-4"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-gradient-to-br from-green-400/20 to-green-500/20 rounded-lg flex items-center justify-center">
-                  <Star size={16} className="text-green-400" />
-                  </div>
-                  <div>
-                    <p className="text-white/60 text-xs">Starred</p>
-                    <p className="text-lg font-bold text-white">{coverLetters.filter(cl => cl.isStarred).length}</p>
-                  </div>
-                </div>
-                {coverLetters.filter(cl => cl.isStarred).length === 0 && (
-                  <div className="mt-2 p-2 bg-green-400/10 border border-green-400/20 rounded-lg">
-                    <p className="text-green-400 text-xs">Star your favorites!</p>
-                  </div>
-                )}
-              </motion.div>
-
-              <motion.div
-                className="frosted-glass-card rounded-xl p-4"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-gradient-to-br from-orange-400/20 to-orange-500/20 rounded-lg flex items-center justify-center">
-                    <CheckCircle size={16} className="text-orange-400" />
-                  </div>
-                  <div>
-                    <p className="text-white/60 text-xs">Published</p>
-                    <p className="text-lg font-bold text-white">{coverLetters.filter(cl => cl.status === 'final').length}</p>
-                  </div>
-                </div>
-                {coverLetters.filter(cl => cl.status === 'final').length === 0 && coverLetters.length > 0 && (
-                  <div className="mt-2 p-2 bg-orange-400/10 border border-orange-400/20 rounded-lg">
-                    <p className="text-orange-400 text-xs">Publish your cover letters!</p>
-                  </div>
-                )}
-              </motion.div>
-
-              <motion.div
-                className="frosted-glass-card rounded-xl p-4"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-              >
-                {/* Connected Jobs statistics removed - relationships now managed through CVJourney */}
-              </motion.div>
+            {/* Cover Letter Section Header with Clean Button */}
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <h2 className="text-xl font-semibold text-white">Cover Letters</h2>
+                <span className="text-sm text-gray-400">({coverLetters.length} total)</span>
+              </div>
+              <CleanUnlinkedButton
+                type="cover-letter"
+                items={coverLetters}
+                journeys={journeys}
+                onClean={handleCleanUnlinkedCoverLetters}
+                className="bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30"
+              />
             </div>
 
             {/* Cover Letter Grid */}
             <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-white">Cover Letters</h2>
-                <motion.button
-                  onClick={() => window.location.href = '/studio?type=cover_letter'}
-                  className="px-4 py-2 bg-blue-400/20 text-blue-400 rounded-lg text-sm font-medium hover:bg-blue-400/30 transition-all duration-300 flex items-center gap-2"
-                  whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                >
-                  <Plus size={16} />
-                  Create Cover Letter
-                </motion.button>
-              </div>
 
               <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
                 {coverLetters.map((coverLetter) => (
@@ -1610,6 +1781,8 @@ const Canvas: React.FC = () => {
                       status: coverLetter.status,
                       content: coverLetter.content || '',
                       isStarred: coverLetter.isStarred,
+                      views: coverLetter.views || 0,
+                      thumbnail: coverLetter.thumbnail || '',
                       metadata: coverLetter.metadata
                     }}
                     onEdit={(cl) => window.location.href = `/studio?type=cover_letter&coverLetterId=${cl.id}`}
@@ -1630,6 +1803,83 @@ const Canvas: React.FC = () => {
 
           {/* Right Column - Sidebar */}
           <div className="space-y-6">
+            {/* KPI Metrics - 2x2 Grid */}
+            <div className="frosted-glass-widget rounded-xl p-6">
+              <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-4 flex items-center gap-2">
+                <TrendingUp size={14} className="text-blue-400" />
+                Cover Letter Metrics
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                <motion.div
+                  className="frosted-glass-card rounded-lg p-3"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 bg-gradient-to-br from-blue-400/20 to-blue-500/20 rounded-lg flex items-center justify-center">
+                      <PenTool size={12} className="text-blue-400" />
+                    </div>
+                    <div>
+                      <p className="text-white/60 text-xs">Total</p>
+                      <p className="text-sm font-bold text-white">{coverLetters.length}</p>
+                    </div>
+                  </div>
+                </motion.div>
+
+                <motion.div
+                  className="frosted-glass-card rounded-lg p-3"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 bg-gradient-to-br from-purple-400/20 to-purple-500/20 rounded-lg flex items-center justify-center">
+                      <Eye size={12} className="text-purple-400" />
+                    </div>
+                    <div>
+                      <p className="text-white/60 text-xs">Views</p>
+                      <p className="text-sm font-bold text-white">{coverLetters.reduce((sum, cl) => sum + cl.views, 0)}</p>
+                    </div>
+                  </div>
+                </motion.div>
+
+                <motion.div
+                  className="frosted-glass-card rounded-lg p-3"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 bg-gradient-to-br from-green-400/20 to-green-500/20 rounded-lg flex items-center justify-center">
+                      <Star size={12} className="text-green-400" />
+                    </div>
+                    <div>
+                      <p className="text-white/60 text-xs">Starred</p>
+                      <p className="text-sm font-bold text-white">{coverLetters.filter(cl => cl.isStarred).length}</p>
+                    </div>
+                  </div>
+                </motion.div>
+
+                <motion.div
+                  className="frosted-glass-card rounded-lg p-3"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 bg-gradient-to-br from-orange-400/20 to-orange-500/20 rounded-lg flex items-center justify-center">
+                      <CheckCircle size={12} className="text-orange-400" />
+                    </div>
+                    <div>
+                      <p className="text-white/60 text-xs">Published</p>
+                      <p className="text-sm font-bold text-white">{coverLetters.filter(cl => cl.status === 'final').length}</p>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+            </div>
+
             {/* Cover Letter Tips */}
             <div className="frosted-glass-widget rounded-xl p-6">
               <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-4 flex items-center gap-2">
@@ -1656,180 +1906,6 @@ const Canvas: React.FC = () => {
         </div>
       )}
 
-      {/* CV Details Modal */}
-      <AnimatePresence>
-        {showModal && selectedCV && (
-          <motion.div
-            className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={(e) => e.target === e.currentTarget && setShowModal(false)}
-          >
-            <motion.div
-              className="bg-gray-900/95 backdrop-blur-xl border border-white/20 rounded-lg w-full max-w-[960px] max-h-[80vh] overflow-hidden"
-              initial={{ scale: 0.95, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95, y: 20 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="modal-title"
-            >
-              {/* Modal Header */}
-              <div className="flex items-center justify-between p-6 border-b border-white/10">
-                <div>
-                  <h2 id="modal-title" className="text-xl font-bold text-white">CV — {selectedCV.title}</h2>
-                </div>
-                <motion.button
-                  onClick={() => setShowModal(false)}
-                  className="p-2 rounded-lg bg-gray-700 dark:bg-white/10 hover:bg-gray-600 dark:hover:bg-white/20 transition-colors"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  aria-label="Close modal"
-                >
-                  <X size={20} className="text-white" />
-                </motion.button>
-              </div>
-
-              {/* Modal Body */}
-              <div className="p-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Left Column: CV Preview */}
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                        <FileText size={20} className="text-lime-400" />
-                        CV Preview
-                      </h3>
-                      
-                    {/* CV Preview - Using CVPreviewContent component */}
-                      <div className="bg-gray-300 dark:bg-white/5 border border-gray-400 dark:border-white/10 rounded-xl p-4 h-96 overflow-hidden text-gray-900 dark:text-white">
-                        {selectedCV.cvData ? (
-                          <div className="h-full flex items-center justify-center">
-                            <div className="transform scale-[0.35] origin-center">
-                              <div className="w-[794px] h-[1123px] bg-white rounded-lg shadow-lg overflow-hidden">
-                                <CVPreviewContent 
-                                  cvData={selectedCV.cvData}
-                                  theme="light"
-                                  showBadge={false}
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-center h-full text-gray-600 dark:text-white/60">
-                            <div className="text-center">
-                              <FileText size={48} className="mx-auto mb-4 opacity-50" />
-                              <p className="text-lg font-medium">No CV data available</p>
-                              <p className="text-sm">Start adding your information to see a preview</p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                        </div>
-                        
-                  {/* Right Column: Actions and Metadata */}
-                  <div className="space-y-6">
-                    {/* Primary Actions */}
-                    <div className="space-y-3">
-                      <div className="flex flex-wrap gap-2">
-                        <motion.button
-                          className="px-4 py-2 bg-gradient-to-r from-lime-400 to-lime-500 text-black font-semibold rounded-lg hover:from-lime-300 hover:to-lime-400 transition-all duration-300 flex items-center gap-2 text-sm"
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                          onClick={() => {
-                            setShowModal(false);
-                            // Store CV session data and route to studio
-                            sessionStorage.setItem('editingCVId', selectedCV.id);
-                            sessionStorage.setItem('editingCVTitle', selectedCV.title);
-                            sessionStorage.setItem('editingCVData', JSON.stringify(selectedCV));
-                            window.location.href = `/studio?type=cv&cvId=${selectedCV.id}`;
-                          }}
-                        >
-                          <Edit size={14} />
-                          Edit CV
-                        </motion.button>
-                        
-                        <div className="relative group">
-                        <motion.button
-                            className="px-4 py-2 bg-gray-700 dark:bg-white/10 border border-gray-600 dark:border-white/20 text-white font-medium rounded-lg hover:bg-gray-600 dark:hover:bg-white/20 transition-all duration-300 flex items-center gap-2 text-sm"
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          <Download size={14} />
-                            Download
-                        </motion.button>
-                          <div className="absolute top-full left-0 mt-1 bg-gray-900 border border-white/20 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
-                            <div className="p-1">
-                              <button className="w-full px-3 py-2 text-left text-white/80 hover:text-white hover:bg-white/80 dark:hover:bg-white/10 rounded text-sm flex items-center gap-2">
-                                <FileText size={12} />
-                                Download CV (PDF)
-                              </button>
-                              <button className="w-full px-3 py-2 text-left text-white/40 hover:text-white hover:bg-white/80 dark:hover:bg-white/10 rounded text-sm flex items-center gap-2" disabled>
-                                <PenTool size={12} />
-                                Download Cover Letter (PDF)
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <motion.button
-                          className="px-4 py-2 bg-white/80 dark:bg-white/10 border border-white/40 dark:border-white/20 text-white font-medium rounded-lg hover:bg-white/90 dark:hover:bg-white/20 transition-all duration-300 flex items-center gap-2 text-sm"
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          <Share2 size={14} />
-                          Share CV
-                        </motion.button>
-                    </div>
-                  </div>
-
-                    {/* Linked Jobs */}
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-3">
-                        <label className="text-white/80 text-sm font-medium">Linked Jobs:</label>
-                        <div className="flex-1 min-w-0">
-                          <select 
-                            className="w-full px-3 py-2 bg-gray-700 dark:bg-white/10 border border-gray-600 dark:border-white/20 rounded-lg text-white text-sm focus:outline-none focus:border-lime-400/50"
-                            onChange={(e) => {
-                              console.log('🔍 Canvas - Job selection changed:', e.target.value);
-                              // Here you would link the selected job to the CV
-                              if (e.target.value) {
-                                // Link job to CV logic
-                                console.log('🔍 Canvas - Linking job to CV:', e.target.value);
-                              }
-                            }}
-                          >
-                            <option value="">Job linking removed - use journey system</option>
-                            <option value="" disabled>No jobs available</option>
-                          </select>
-                        </div>
-                        <motion.button
-                          className="p-2 bg-lime-400/20 text-lime-400 rounded-lg hover:bg-lime-400/30 transition-colors"
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          title="Link job to CV"
-                          onClick={() => {
-                            console.log('🔍 Canvas - Link job button clicked');
-                            // Navigate to job tracker to select a job
-                            window.location.href = '/dashboard?linkCV=' + selectedCV.id;
-                          }}
-                        >
-                          <Link size={14} />
-                        </motion.button>
-                      </div>
-                      
-                      {/* Linked jobs section removed - relationships now managed through CVJourney */}
-                    </div>
-
-
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
 
       {/* Main Modal for Errors and Success Messages */}

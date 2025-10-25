@@ -108,7 +108,7 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
   if (!cvData) {
     return (
       <div className="space-y-8 relative">
-        <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} border rounded-xl shadow-2xl p-8`} style={{ 
+        <div className={`${isDark ? 'bg-[#141810]' : 'bg-white'} border rounded-xl shadow-2xl p-8`} style={{ 
           width: '210mm', 
           height: '297mm',
           overflow: 'hidden',
@@ -130,7 +130,7 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
   }
 
   const themeClasses = {
-    page: isDark ? 'bg-gray-800' : 'bg-white',
+    page: isDark ? 'bg-[#141810]' : 'bg-white',
     text: {
       primary: isDark ? 'text-white' : 'text-gray-900',
       secondary: isDark ? 'text-gray-300' : 'text-gray-600',

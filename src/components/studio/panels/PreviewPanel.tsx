@@ -151,7 +151,7 @@ function PreviewHeader({
   onShare: () => void;
 }) {
   return (
-    <div className="h-14 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-4">
+    <div className="h-14 bg-white dark:bg-[#141810] border-b border-gray-200 dark:border-white/10 flex items-center justify-between px-4">
       <div className="flex items-center space-x-3">
         <Eye className="w-4 h-4 text-gray-500" />
         <span className="font-medium text-gray-700 dark:text-gray-300">Preview</span>
@@ -651,7 +651,7 @@ function PreviewFooter({
   const stats = getDocumentStats();
 
   return (
-    <div className="h-10 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between px-4 text-sm text-gray-500 dark:text-gray-400">
+    <div className="h-10 bg-gray-50 dark:bg-[#141810] border-t border-gray-200 dark:border-white/10 flex items-center justify-between px-4 text-sm text-gray-500 dark:text-gray-400">
       <div className="flex items-center space-x-4">
         <span>Zoom: {Math.round(zoom * 100)}%</span>
         {documentType === 'cv' ? (

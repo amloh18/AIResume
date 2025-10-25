@@ -232,7 +232,7 @@ const CVPreview: React.FC<CVPreviewProps> = ({
 
   if (!cvData) {
     return (
-      <div className="flex items-center justify-center h-full bg-gray-100 dark:bg-gray-800">
+      <div className="flex items-center justify-center h-full bg-gray-100 dark:bg-[#141810]">
         <div className="text-center">
           <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <p className="text-gray-500 dark:text-gray-400">No CV data available</p>

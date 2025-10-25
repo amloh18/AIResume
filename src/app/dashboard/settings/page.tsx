@@ -568,7 +568,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                 type="text"
                 value={formData.firstName}
                 onChange={(e) => handleInputChange('firstName', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white/80 dark:bg-gray-800/80 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-lime-500 focus:border-transparent"
               />
             </div>
             
@@ -580,7 +580,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                 type="text"
                 value={formData.lastName}
                 onChange={(e) => handleInputChange('lastName', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white/80 dark:bg-gray-800/80 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-lime-500 focus:border-transparent"
               />
             </div>
             
@@ -712,7 +712,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                 type="tel"
                 value={formData.phone}
                 onChange={(e) => handleInputChange('phone', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white/80 dark:bg-gray-800/80 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-lime-500 focus:border-transparent"
               />
             </div>
             
@@ -724,7 +724,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                 type="text"
                 value={formData.location}
                 onChange={(e) => handleInputChange('location', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white/80 dark:bg-gray-800/80 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-lime-500 focus:border-transparent"
                 placeholder="City, Country"
               />
             </div>
@@ -737,7 +737,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                 type="url"
                 value={formData.website}
                 onChange={(e) => handleInputChange('website', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white/80 dark:bg-gray-800/80 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-lime-500 focus:border-transparent"
                 placeholder="https://yourwebsite.com"
               />
             </div>
@@ -750,7 +750,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                 type="url"
                 value={formData.linkedin}
                 onChange={(e) => handleInputChange('linkedin', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white/80 dark:bg-gray-800/80 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-lime-500 focus:border-transparent"
                 placeholder="https://linkedin.com/in/yourprofile"
               />
             </div>
@@ -763,7 +763,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                 type="url"
                 value={formData.github}
                 onChange={(e) => handleInputChange('github', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white/80 dark:bg-gray-800/80 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-lime-500 focus:border-transparent"
                 placeholder="https://github.com/yourusername"
               />
             </div>
@@ -776,7 +776,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                 type="text"
                 value={formData.company}
                 onChange={(e) => handleInputChange('company', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white/80 dark:bg-gray-800/80 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-lime-500 focus:border-transparent"
               />
             </div>
           </div>
@@ -808,7 +808,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
               <select
                 value={formData.languagePreference}
                 onChange={(e) => handleInputChange('languagePreference', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white/80 dark:bg-gray-800/80 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-lime-500 focus:border-transparent"
               >
                 <option value="English">English</option>
                 <option value="Spanish">Spanish</option>
@@ -824,7 +824,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
               <select
                 value={formData.timezone}
                 onChange={(e) => handleInputChange('timezone', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white/80 dark:bg-gray-800/80 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-lime-500 focus:border-transparent"
               >
                 <option value="UTC +07:00 - Asia / Jakarta">UTC +07:00 - Asia / Jakarta</option>
                 <option value="UTC -05:00 - America / New York">UTC -05:00 - America / New York</option>
@@ -1021,7 +1021,6 @@ const MembershipBilling = ({ user }: { user: User }) => {
   const [availablePlans, setAvailablePlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isMembershipModalOpen, setIsMembershipModalOpen] = useState(false);
-  const [showPlanOptions, setShowPlanOptions] = useState(false);
   const [isAddPaymentModalOpen, setIsAddPaymentModalOpen] = useState(false);
   
   // Toast notification state
@@ -1087,10 +1086,20 @@ const MembershipBilling = ({ user }: { user: User }) => {
           if (paymentData.success) {
             setPaymentMethods(paymentData.paymentMethods || []);
           } else {
-            setPaymentMethodsError(paymentData.error || 'Failed to load payment methods');
+            // Only show error if it's not a "no records" case
+            if (paymentData.error && !paymentData.error.includes('No payment methods found') && !paymentData.error.includes('not found')) {
+              setPaymentMethodsError(paymentData.error);
+            } else {
+              setPaymentMethods([]);
+            }
           }
         } else {
-          setPaymentMethodsError('Failed to load payment methods');
+          // Only show error for actual HTTP errors, not 404s for empty data
+          if (paymentResponse.status !== 404) {
+            setPaymentMethodsError('Failed to load payment methods');
+          } else {
+            setPaymentMethods([]);
+          }
         }
       } catch (error) {
         console.error('Error fetching payment methods:', error);
@@ -1105,10 +1114,20 @@ const MembershipBilling = ({ user }: { user: User }) => {
           if (invoiceData.success) {
             setInvoices(invoiceData.invoices || []);
           } else {
-            setInvoicesError(invoiceData.error || 'Failed to load invoices');
+            // Only show error if it's not a "no records" case
+            if (invoiceData.error && !invoiceData.error.includes('No invoices found') && !invoiceData.error.includes('not found')) {
+              setInvoicesError(invoiceData.error);
+            } else {
+              setInvoices([]);
+            }
           }
         } else {
-          setInvoicesError('Failed to load invoices');
+          // Only show error for actual HTTP errors, not 404s for empty data
+          if (invoiceResponse.status !== 404) {
+            setInvoicesError('Failed to load invoices');
+          } else {
+            setInvoices([]);
+          }
         }
       } catch (error) {
         console.error('Error fetching invoices:', error);
@@ -1232,7 +1251,7 @@ const MembershipBilling = ({ user }: { user: User }) => {
             {/* Change Plan Card */}
             <div 
               className="bg-white/50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl p-6 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              onClick={() => setShowPlanOptions(!showPlanOptions)}
+              onClick={() => setIsMembershipModalOpen(true)}
             >
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
@@ -1248,90 +1267,16 @@ const MembershipBilling = ({ user }: { user: User }) => {
                 </div>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500 dark:text-gray-400">Click to view options</span>
-                <div className={`transform transition-transform duration-200 ${showPlanOptions ? 'rotate-180' : ''}`}>
+                <span className="text-sm text-gray-500 dark:text-gray-400">Click to change plan</span>
+                <div className="transform transition-transform duration-200">
                   <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Plan Options Slide Down */}
-          <div className={`overflow-hidden transition-all duration-300 ${showPlanOptions ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
-            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Available Plans</h4>
-              {availablePlans.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {availablePlans.map((plan) => (
-                    <div key={plan._id} className={`bg-white dark:bg-gray-900 border rounded-lg p-4 relative ${
-                      plan.isPopular ? 'border-lime-200 dark:border-lime-400/20' : 'border-gray-200 dark:border-gray-700'
-                    }`}>
-                      {plan.isPopular && (
-                        <div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
-                          <span className="px-3 py-1 bg-lime-500 text-white text-xs font-medium rounded-full">Popular</span>
-                        </div>
-                      )}
-                      <h5 className="font-semibold text-gray-900 dark:text-white mb-2">{plan.name}</h5>
-                      <p className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                        {formatCurrency(plan.price_monthly || plan.price_one_time || 0, plan.currency)}
-                        <span className="text-sm font-normal text-gray-600 dark:text-gray-300">
-                          /{plan.billingCycle === 'one-time' ? 'one-time' : plan.billingCycle}
-                        </span>
-                      </p>
-                      <div className="text-sm text-gray-600 dark:text-gray-300 space-y-1 mb-4">
-                        <p>• CVs: {plan.maxCVs === -1 ? 'Unlimited' : plan.maxCVs}</p>
-                        <p>• Exports: {plan.maxExports === -1 ? 'Unlimited' : plan.maxExports}</p>
-                        <p>• Storage: {plan.storageLimit}MB</p>
-                        {plan.features && plan.features.length > 0 && (
-                          <div>
-                            {plan.features.slice(0, 3).map((feature: string, index: number) => (
-                              <p key={index}>• {feature}</p>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      <button 
-                        className={`w-full px-4 py-2 rounded-lg transition-colors ${
-                          plan.isPopular 
-                            ? 'bg-lime-500 hover:bg-lime-600 text-white' 
-                            : 'border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                        }`}
-                        onClick={() => {
-                          // Handle plan upgrade logic here
-                          console.log('Upgrade to plan:', plan.key);
-                        }}
-                      >
-                        {plan.key.includes('pro') ? `Upgrade to ${plan.name}` : 
-                         plan.key.includes('enterprise') ? 'Contact Sales' : 
-                         `Choose ${plan.name}`}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <DollarSign className="w-8 h-8 text-gray-400 dark:text-gray-500" />
-                  </div>
-                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Upgrade Plans Available</h4>
-                  <p className="text-gray-600 dark:text-gray-300 mb-4">
-                    We're currently working on new subscription plans. Check back soon for exciting new features!
-                  </p>
-                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 max-w-md mx-auto">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Bell className="w-4 h-4 text-blue-500" />
-                      <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Stay Updated</span>
-                    </div>
-                    <p className="text-sm text-blue-600 dark:text-blue-400">
-                      We'll notify you when new plans become available.
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
         </div>
 
         {/* Payment Methods Section */}
@@ -1987,7 +1932,7 @@ const SettingsSidebar = ({
   ];
 
   return (
-    <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border border-gray-200 dark:border-gray-700 p-3 md:p-6 h-full overflow-y-auto rounded-tl-lg rounded-bl-lg flex flex-col">
+    <div className="p-3 md:p-6 h-full overflow-y-auto flex flex-col">
       {/* Personal Section */}
       <div className="mb-6 md:mb-8">
         <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-3 md:mb-4 hidden md:block">
@@ -2264,7 +2209,7 @@ const SettingsContent = () => {
     <RouteGuard requireAuth={true}>
       <div className="h-screen flex flex-col">
         {/* Page Header - Fixed */}
-        <div className="flex-shrink-0 sticky top-0 z-10 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-b border-gray-200 dark:border-gray-700">
+        <div className="flex-shrink-0 sticky top-0 z-10">
           <PageHeader
             title="Settings"
             description={getTabDescription(activeTab)}
@@ -2285,12 +2230,12 @@ const SettingsContent = () => {
         {/* Main Layout - Flexible */}
         <div className="flex flex-1 min-h-0 h-[calc(100vh-8rem)]">
           {/* Settings Sidebar - Fixed */}
-          <div className="w-16 md:w-80 flex-shrink-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border-r border-gray-200 dark:border-gray-700">
+          <div className="w-16 md:w-80 flex-shrink-0 bg-gray-50/95 dark:bg-[#141810]/95 backdrop-blur-xl rounded-2xl shadow-xl shadow-gray-900/10 dark:shadow-black/20 m-2">
             <SettingsSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
           </div>
           
           {/* Content Area - Scrollable */}
-          <div className="flex-1 overflow-y-auto bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl border border-gray-200 dark:border-gray-700 rounded-tr-2xl rounded-br-2xl">
+          <div className="flex-1 overflow-y-auto bg-gray-50/95 dark:bg-[#141810]/95 backdrop-blur-xl rounded-2xl shadow-xl shadow-gray-900/10 dark:shadow-black/20 m-2 mr-4">
             {/* Main Content */}
             {renderTabContent()}
           </div>

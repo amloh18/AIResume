@@ -127,7 +127,7 @@ function JobContextSection({
                    selectedJobId ? availableJobs.find(j => j.id === selectedJobId) : undefined;
 
   return (
-    <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+    <div className="p-4 bg-gray-50 dark:bg-[#141810] rounded-lg">
       <div className="flex items-center space-x-2 mb-3">
         <Briefcase className="w-4 h-4 text-blue-500" />
         <h3 className="font-semibold text-gray-900 dark:text-white">Job Context</h3>
@@ -152,7 +152,7 @@ function JobContextSection({
             </span>
           </div>
           
-          <div className="p-3 bg-white dark:bg-gray-700 rounded border">
+          <div className="p-3 bg-white dark:bg-[#141810] rounded border border-gray-200 dark:border-white/10">
             <h4 className="font-medium text-gray-900 dark:text-white">{linkedJob.jobTitle}</h4>
             <p className="text-sm text-gray-600 dark:text-gray-400">{linkedJob.company}</p>
             {linkedJob.priority && (
@@ -203,7 +203,7 @@ function JobContextSection({
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
-              className="p-3 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800"
+              className="p-3 bg-green-50 dark:bg-[#141810] rounded border border-green-200 dark:border-white/10"
             >
               <div className="flex items-center space-x-2 mb-2">
                 <Target className="w-4 h-4 text-green-600" />
@@ -541,7 +541,7 @@ Best regards,
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800 mb-4"
+            className="p-3 bg-blue-50 dark:bg-[#141810] rounded border border-blue-200 dark:border-white/10 mb-4"
           >
             <div className="flex items-center space-x-2 mb-2">
               <Target className="w-4 h-4 text-blue-600" />
@@ -582,7 +582,7 @@ Best regards,
         <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
           Content Analysis
         </label>
-        <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded">
+        <div className="p-3 bg-gray-50 dark:bg-[#141810] rounded">
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <span className="text-gray-500">Word Count:</span>

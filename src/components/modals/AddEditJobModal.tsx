@@ -452,7 +452,7 @@ const AddEditJobModal: React.FC<AddEditJobModalProps> = ({
         exit={{ opacity: 0 }}
       >
         <motion.div
-          className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-4 w-full max-w-[1000px] max-h-[70vh] overflow-y-auto shadow-2xl"
+          className="bg-[#141810] border border-white/10 rounded-2xl p-4 w-full max-w-[1000px] max-h-[70vh] overflow-y-auto shadow-2xl"
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}

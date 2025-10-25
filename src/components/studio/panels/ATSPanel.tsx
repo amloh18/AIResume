@@ -165,7 +165,7 @@ function ATSStatusHeader({
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg"
+      className="p-4 bg-gray-50 dark:bg-[#141810] rounded-lg"
     >
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center space-x-2">
@@ -232,7 +232,7 @@ function ATSJobSelector({
       className="p-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-center"
     >
       <div className="flex flex-col items-center space-y-3">
-        <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
+        <div className="w-12 h-12 bg-gray-100 dark:bg-[#313a28] rounded-full flex items-center justify-center">
           <Target className="w-6 h-6 text-gray-500" />
         </div>
         
@@ -306,7 +306,7 @@ function ATSAnalysisResults({
     >
       {/* Score Breakdown */}
       {showAdvanced && (
-        <div className="p-4 bg-white dark:bg-gray-700 rounded-lg border">
+        <div className="p-4 bg-white dark:bg-[#141810] rounded-lg border border-gray-200 dark:border-white/10">
           <h4 className="font-medium text-gray-900 dark:text-white mb-3">Score Breakdown</h4>
           <div className="space-y-3">
             <ScoreItem

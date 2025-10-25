@@ -22,7 +22,7 @@ const DashboardContent: React.FC<{ children?: React.ReactNode }> = ({ children }
 
   // Render immediately - pages handle their own loading states
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#1a230f]">
       <div className="flex h-screen">
         {/* Desktop Sidebar - Hidden on mobile and small screens, visible on xl and up */}
         <div className="hidden xl:flex xl:w-[335px] xl:flex-col xl:fixed xl:inset-y-0 xl:z-50 xl:p-1">

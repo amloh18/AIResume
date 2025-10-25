@@ -96,7 +96,7 @@ export const getPageBackground = (pageType: 'dashboard' | 'studio' | 'admin' | '
     case 'dashboard':
       return 'min-h-screen bg-transparent dark:bg-gradient-to-br dark:from-gray-900 dark:via-black dark:to-gray-900';
     case 'studio':
-      return 'min-h-screen bg-transparent dark:bg-gradient-to-br dark:from-gray-900 dark:via-black dark:to-gray-900';
+      return 'min-h-screen bg-transparent dark:bg-[#1a230f]';
     case 'admin':
       return 'min-h-screen bg-gray-100 dark:bg-gray-900';
     case 'auth':

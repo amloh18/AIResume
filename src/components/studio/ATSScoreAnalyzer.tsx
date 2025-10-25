@@ -309,7 +309,7 @@ export default function ATSScoreAnalyzer({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+    <div className="bg-white dark:bg-[#141810] rounded-lg border border-gray-200 dark:border-white/10 p-4">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-2">
           <Target className="w-5 h-5 text-lime-600" />
@@ -397,7 +397,7 @@ export default function ATSScoreAnalyzer({
             {activeTab === 'score' && (
               <div className="space-y-3">
                 <div className="grid grid-cols-1 gap-3">
-                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                  <div className="bg-gray-50 dark:bg-[#141810] rounded-lg p-3">
                     <div className="flex items-center space-x-2 mb-1">
                       <Target className="w-3 h-3 text-blue-600" />
                       <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Keywords</span>
@@ -410,7 +410,7 @@ export default function ATSScoreAnalyzer({
                     </div>
                   </div>
 
-                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                  <div className="bg-gray-50 dark:bg-[#141810] rounded-lg p-3">
                     <div className="flex items-center space-x-2 mb-1">
                       <TrendingUp className="w-3 h-3 text-green-600" />
                       <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Experience</span>
@@ -423,7 +423,7 @@ export default function ATSScoreAnalyzer({
                     </div>
                   </div>
 
-                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
+                  <div className="bg-gray-50 dark:bg-[#141810] rounded-lg p-3">
                     <div className="flex items-center space-x-2 mb-1">
                       <Wand2 className="w-3 h-3 text-purple-600" />
                       <span className="text-xs font-medium text-gray-700 dark:text-gray-300">Action Verbs</span>
@@ -558,7 +558,7 @@ export default function ATSScoreAnalyzer({
                         <span>Copy</span>
                       </button>
                     </div>
-                    <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 max-h-64 overflow-y-auto">
+                    <div className="bg-gray-50 dark:bg-[#141810] rounded-lg p-4 max-h-64 overflow-y-auto">
                       <pre className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
                         {restructuredContent}
                       </pre>

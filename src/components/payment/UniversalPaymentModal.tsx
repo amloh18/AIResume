@@ -382,12 +382,12 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
 
   const getPlanColor = (planKey: string) => {
     switch (planKey) {
-      case 'free': return 'text-gray-600 bg-gray-100';
-      case 'day_pass': return 'text-blue-600 bg-blue-100';
-      case 'pro_monthly': return 'text-purple-600 bg-purple-100';
-      case 'pro_quarterly': return 'text-orange-600 bg-orange-100';
-      case 'pro_yearly': return 'text-green-600 bg-green-100';
-      default: return 'text-gray-600 bg-gray-100';
+      case 'free': return 'text-gray-600 bg-gray-100 dark:text-gray-300 dark:bg-gray-800';
+      case 'day_pass': return 'text-lime-600 bg-lime-100 dark:text-lime-300 dark:bg-lime-900/20';
+      case 'pro_monthly': return 'text-lime-600 bg-lime-100 dark:text-lime-300 dark:bg-lime-900/20';
+      case 'pro_quarterly': return 'text-lime-600 bg-lime-100 dark:text-lime-300 dark:bg-lime-900/20';
+      case 'pro_yearly': return 'text-lime-600 bg-lime-100 dark:text-lime-300 dark:bg-lime-900/20';
+      default: return 'text-gray-600 bg-gray-100 dark:text-gray-300 dark:bg-gray-800';
     }
   };
 
@@ -406,7 +406,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
-          className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+          className="bg-white dark:bg-[#141810] rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
         >
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
@@ -416,12 +416,12 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                   {adminMode ? 'Grant Plan' : previewMode ? 'Preview Plans' : 'Choose Your Plan'}
                 </h2>
                 {adminMode && (
-                  <span className="bg-red-100 text-red-800 text-xs font-medium px-2 py-1 rounded-full">
+                  <span className="bg-lime-100 dark:bg-lime-900/20 text-lime-800 dark:text-lime-300 text-xs font-medium px-2 py-1 rounded-full">
                     Admin Mode
                   </span>
                 )}
                 {previewMode && (
-                  <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">
+                  <span className="bg-lime-100 dark:bg-lime-900/20 text-lime-800 dark:text-lime-300 text-xs font-medium px-2 py-1 rounded-full">
                     Preview
                   </span>
                 )}
@@ -453,7 +453,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                       onClick={() => setSelectedCategory('essential')}
                       className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                         selectedCategory === 'essential'
-                          ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                          ? 'bg-lime-500 text-white shadow-sm'
                           : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                       }`}
                     >
@@ -463,7 +463,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                       onClick={() => setSelectedCategory('professional')}
                       className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                         selectedCategory === 'professional'
-                          ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                          ? 'bg-lime-500 text-white shadow-sm'
                           : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                       }`}
                     >
@@ -486,23 +486,23 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                       whileHover={{ scale: 1.02 }}
                       className={`relative border-2 rounded-xl p-6 cursor-pointer transition-all ${
                         isCurrentPlan(plan)
-                          ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+                          ? 'border-lime-500 bg-lime-50 dark:bg-lime-900/20'
                           : selectedPlan?.key === plan.key
-                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                          ? 'border-lime-500 bg-lime-50 dark:bg-lime-900/20'
                           : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                       }`}
                       onClick={() => setSelectedPlan(plan)}
                     >
                       {isCurrentPlan(plan) && (
                         <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                          <span className="bg-green-500 text-white text-xs font-medium px-3 py-1 rounded-full">
+                          <span className="bg-lime-500 text-white text-xs font-medium px-3 py-1 rounded-full">
                             Current Plan
                           </span>
                         </div>
                       )}
                       {plan.isPopular && !isCurrentPlan(plan) && (
                         <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                          <span className="bg-blue-500 text-white text-xs font-medium px-3 py-1 rounded-full">
+                          <span className="bg-lime-500 text-white text-xs font-medium px-3 py-1 rounded-full">
                             Most Popular
                           </span>
                         </div>
@@ -580,13 +580,13 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                           
                           if (isCurrent) {
                             return (
-                              <div className="w-full py-2 px-4 bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-lg text-center font-medium">
+                              <div className="w-full py-2 px-4 bg-lime-100 dark:bg-lime-900/20 text-lime-700 dark:text-lime-300 rounded-lg text-center font-medium">
                                 {statusText}
                               </div>
                             );
                           } else if (isUpgrade) {
                             return (
-                              <div className="w-full py-2 px-4 bg-blue-500 text-white rounded-lg text-center font-medium">
+                              <div className="w-full py-2 px-4 bg-lime-500 text-white rounded-lg text-center font-medium">
                                 {statusText}
                               </div>
                             );
@@ -608,7 +608,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                   <button
                     onClick={() => setStep(2)}
                     disabled={!selectedPlan || isCurrentPlan(selectedPlan)}
-                    className="px-8 py-3 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                    className="px-8 py-3 bg-lime-500 text-white rounded-lg font-medium hover:bg-lime-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
                   >
                     {adminMode ? 'Grant Plan' : previewMode ? 'Preview' : 'Continue to Payment'}
                   </button>
@@ -671,10 +671,10 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                   </div>
                   
                   {appliedDiscount && (
-                    <div className="mt-2 flex items-center justify-between bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                    <div className="mt-2 flex items-center justify-between bg-lime-50 dark:bg-lime-900/20 border border-lime-200 dark:border-lime-800 rounded-lg p-3">
                       <div className="flex items-center">
-                        <Gift className="w-4 h-4 text-green-500 mr-2" />
-                        <span className="text-sm text-green-700 dark:text-green-300">
+                        <Gift className="w-4 h-4 text-lime-500 mr-2" />
+                        <span className="text-sm text-lime-700 dark:text-lime-300">
                           {appliedDiscount.description}
                         </span>
                       </div>
@@ -740,7 +740,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                       onClick={() => setPaymentProvider('stripe')}
                       className={`flex items-center px-4 py-3 border-2 rounded-lg transition-colors ${
                         paymentProvider === 'stripe'
-                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                          ? 'border-lime-500 bg-lime-50 dark:bg-lime-900/20'
                           : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                       }`}
                     >
@@ -752,7 +752,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                       onClick={() => setPaymentProvider('razorpay')}
                       className={`flex items-center px-4 py-3 border-2 rounded-lg transition-colors ${
                         paymentProvider === 'razorpay'
-                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                          ? 'border-lime-500 bg-lime-50 dark:bg-lime-900/20'
                           : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                       }`}
                     >
@@ -791,7 +791,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                   <button
                     onClick={handlePayment}
                     disabled={loading}
-                    className="px-8 py-3 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center"
+                    className="px-8 py-3 bg-lime-500 text-white rounded-lg font-medium hover:bg-lime-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center"
                   >
                     {loading ? (
                       <>

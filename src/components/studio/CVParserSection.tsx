@@ -203,7 +203,7 @@ const CVParserSection: React.FC<CVParserSectionProps> = ({
         </div>
 
         {/* Tips */}
-        <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+        <div className="mt-4 p-4 bg-gray-50 dark:bg-[#141810] rounded-lg">
           <h4 className={`text-sm font-medium ${themeClasses.text.primary} mb-2`}>
             💡 Parser Tips
           </h4>

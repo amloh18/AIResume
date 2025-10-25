@@ -235,12 +235,12 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
   };
 
   return (
-    <div className="h-full flex flex-col bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 rounded-2xl shadow-lg relative">
+    <div className="h-full flex flex-col bg-white/95 dark:bg-[#141810] border border-white/20 dark:border-white/10 rounded-2xl shadow-lg relative">
       {/* Document Type Switcher - Centered above the first page */}
       {onDocumentTypeChange && (
         <div className="flex justify-center items-center pt-6 pb-2 space-x-4">
           {/* Document Type Switch */}
-          <div className="flex items-center space-x-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg p-1 shadow-lg">
+          <div className="flex items-center space-x-1 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-lg p-1 shadow-lg">
             <button
               onClick={() => onDocumentTypeChange('cv')}
               className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${

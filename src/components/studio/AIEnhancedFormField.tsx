@@ -183,8 +183,8 @@ const AIEnhancedFormField: React.FC<AIEnhancedFormFieldProps> = ({
 
   const renderField = () => {
     const baseClasses = `
-      w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg 
-      text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400
+      w-full px-3 py-2 bg-white dark:bg-[#313a28] border border-gray-300 dark:border-white/10 rounded-lg 
+      text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400
       focus:outline-none focus:ring-2 focus:ring-lime-500 focus:border-lime-500 transition-all duration-200
       ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
       ${className}

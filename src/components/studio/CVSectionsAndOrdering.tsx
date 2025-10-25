@@ -171,7 +171,7 @@ const CVSectionsAndOrdering: React.FC<CVSectionsAndOrderingProps> = ({
                 onDragStart={() => handleDragStart(index)}
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, index)}
-                className={`flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 cursor-move hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
+                className={`flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141810] cursor-move hover:bg-gray-50 dark:hover:bg-[#313a28] transition-colors ${
                   draggedIndex === index ? 'opacity-50' : ''
                 }`}
                 whileHover={{ scale: 1.01 }}

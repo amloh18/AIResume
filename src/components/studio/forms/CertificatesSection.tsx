@@ -72,7 +72,7 @@ const CertificatesSection: React.FC<CertificatesSectionProps> = ({
               key={index}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4"
+              className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-lg p-4"
             >
               <div className="flex items-center justify-between mb-4">
                 <h4 className="font-medium text-gray-900 dark:text-white">

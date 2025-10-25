@@ -751,13 +751,13 @@ const ApplicationTracker: React.FC = () => {
             </motion.button>
             
             <div className="relative flex-1 max-w-md">
-              <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/60" />
+              <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white" />
               <input
                 type="text"
-                placeholder="Search jobs, companies, locations... (Ctrl+K)"
+                placeholder="Search by company, role..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 rounded-lg bg-gray-700 dark:bg-white/10 backdrop-blur-md border border-gray-600 dark:border-white/20 text-white placeholder-white/80 dark:placeholder-white/60 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 focus:bg-gray-600 dark:focus:bg-white/20 transition-all duration-200"
+                className="w-full pl-10 pr-4 py-3 rounded-lg bg-[#141810] border border-white/10 text-white placeholder-white focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 focus:bg-[#141810] transition-all duration-200"
                 aria-label="Search jobs"
                 role="searchbox"
               />
@@ -795,19 +795,35 @@ const ApplicationTracker: React.FC = () => {
               </motion.button>
             </div>
 
-            {/* Filter Button */}
+            {/* Filter Buttons */}
             <motion.button
               onClick={() => setShowFilters(!showFilters)}
-              className={`px-3 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
-                showFilters 
-                  ? 'bg-blue-500/20 border border-blue-500/30 text-blue-400' 
-                  : 'bg-gray-600 dark:bg-white/10 backdrop-blur-md border border-gray-500 dark:border-white/20 text-white/60 hover:text-white hover:bg-gray-700 dark:hover:bg-white/20'
-              }`}
+              className="px-4 py-2 rounded-lg bg-[#141810] border border-white/10 text-white hover:bg-[#313a28] transition-all duration-200 flex items-center gap-2"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              <Filter size={16} />
-              Filter
+              Status
+              <ChevronDown size={16} />
+            </motion.button>
+            
+            <motion.button
+              onClick={() => setShowFilters(!showFilters)}
+              className="px-4 py-2 rounded-lg bg-[#141810] border border-white/10 text-white hover:bg-[#313a28] transition-all duration-200 flex items-center gap-2"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              Priority
+              <ChevronDown size={16} />
+            </motion.button>
+            
+            <motion.button
+              onClick={() => setShowFilters(!showFilters)}
+              className="px-4 py-2 rounded-lg bg-[#141810] border border-white/10 text-white hover:bg-[#313a28] transition-all duration-200 flex items-center gap-2"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              Date Range
+              <ChevronDown size={16} />
             </motion.button>
           </div>
         </div>
@@ -1066,7 +1082,7 @@ const ApplicationTracker: React.FC = () => {
               {loading ? (
                 // Show skeleton loading for job cards
                 Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="glass-widget-premium rounded-xl p-4 animate-pulse">
+                  <div key={i} className="bg-[#141810] rounded-xl p-4 animate-pulse">
                     <div className="flex items-center justify-between mb-3">
                       <div className="space-y-2">
                         <div className="h-4 bg-white/20 rounded w-32"></div>
@@ -1153,8 +1169,8 @@ const ApplicationTracker: React.FC = () => {
                       }
                     }}
                   >
-                    {/* Glass Morphism Background */}
-                    <div className="absolute inset-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border border-white/20 dark:border-gray-700/50 rounded-xl shadow-lg group-hover:shadow-xl transition-all duration-300" />
+                    {/* Card Background */}
+                    <div className="absolute inset-0 bg-white/80 dark:bg-[#141810] border border-white/20 dark:border-white/10 rounded-xl shadow-lg group-hover:shadow-xl transition-all duration-300" />
                     
                     {/* Card Content */}
                     <div className="relative z-10 p-4">
@@ -1419,18 +1435,18 @@ const ApplicationTracker: React.FC = () => {
         ))
         ) : (
           /* List View */
-          <div className="frosted-glass-widget rounded-xl overflow-hidden">
+          <div className="bg-[#141810] rounded-xl overflow-hidden border border-white/10">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-white/10">
+                <thead className="bg-[#141810]">
                   <tr>
-                    <th className="px-4 py-3 text-left text-white/80 font-medium">Company</th>
-                    <th className="px-4 py-3 text-left text-white/80 font-medium">Role/Title</th>
-                    <th className="px-4 py-3 text-left text-white/80 font-medium">Stage</th>
-                    <th className="px-4 py-3 text-left text-white/80 font-medium">Date</th>
-                    <th className="px-4 py-3 text-left text-white/80 font-medium">Location</th>
-                    <th className="px-4 py-3 text-left text-white/80 font-medium">Journey Status</th>
-                    <th className="px-4 py-3 text-left text-white/80 font-medium">Actions</th>
+                    <th className="px-6 py-4 text-left text-white font-semibold text-sm uppercase tracking-wide">Company Name</th>
+                    <th className="px-6 py-4 text-left text-white font-semibold text-sm uppercase tracking-wide">Job Title</th>
+                    <th className="px-6 py-4 text-left text-white font-semibold text-sm uppercase tracking-wide">Application Date</th>
+                    <th className="px-6 py-4 text-left text-white font-semibold text-sm uppercase tracking-wide">Status</th>
+                    <th className="px-6 py-4 text-left text-white font-semibold text-sm uppercase tracking-wide">Priority</th>
+                    <th className="px-6 py-4 text-left text-white font-semibold text-sm uppercase tracking-wide">Application Journey</th>
+                    <th className="px-6 py-4 text-left text-white font-semibold text-sm uppercase tracking-wide">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1448,30 +1464,42 @@ const ApplicationTracker: React.FC = () => {
                         onClick={() => handleJobClick(job)}
                         whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
                       >
-                        <td className="px-4 py-3 text-white font-medium">{job.company || 'Unknown Company'}</td>
-                        <td className="px-4 py-3 text-white/80">{job.jobTitle || 'Untitled Job'}</td>
-                        <td className="px-4 py-3">
-                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                            job.status === 'created' ? 'bg-purple-500/20 text-purple-400' :
-                            job.status === 'applied' ? 'bg-blue-500/20 text-blue-400' :
-                            job.status === 'interview' ? 'bg-orange-500/20 text-orange-400' :
-                            job.status === 'offer' ? 'bg-green-500/20 text-green-400' :
-                            'bg-red-500/20 text-red-400'
+                        <td className="px-6 py-4 text-white font-medium">{job.company || 'Unknown Company'}</td>
+                        <td className="px-6 py-4 text-white">{job.jobTitle || 'Untitled Job'}</td>
+                        <td className="px-6 py-4 text-white">
+                          {job.applicationDate ? new Date(job.applicationDate).toISOString().split('T')[0] : 
+                           job.createdAt ? new Date(job.createdAt).toISOString().split('T')[0] : '-'}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                            job.status === 'applied' ? 'bg-gray-600 text-white' :
+                            job.status === 'interview' ? 'bg-blue-600 text-white' :
+                            job.status === 'offer' ? 'bg-green-600 text-white' :
+                            'bg-gray-600 text-white'
                           }`}>
-                            {job.status ? job.status.charAt(0).toUpperCase() + job.status.slice(1) : 'Unknown'}
+                            {job.status === 'applied' ? 'Applied' :
+                             job.status === 'interview' ? 'Interviewing' :
+                             job.status === 'offer' ? 'Offer' :
+                             job.status ? job.status.charAt(0).toUpperCase() + job.status.slice(1) : 'Unknown'}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-white/60 text-sm">
-                          {job.status === 'created' ? (job.createdAt ? formatCardTime(job.createdAt) : '-') :
-                           job.status === 'applied' ? (job.applicationDate || job.createdAt ? formatCardTime(job.applicationDate || job.createdAt) : '-') :
-                           job.status === 'interview' ? (job.applicationDate || job.createdAt ? formatCardTime(job.applicationDate || job.createdAt) : '-') :
-                           (job.updatedAt || job.createdAt ? formatCardTime(job.updatedAt || job.createdAt) : '-')}
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            {job.priority === 'high' && <Zap className="w-4 h-4 text-orange-400" />}
+                            {job.priority === 'medium' && <CheckCircle className="w-4 h-4 text-yellow-400" />}
+                            {job.priority === 'low' && <Clock className="w-4 h-4 text-gray-400" />}
+                            <span className={`text-sm font-medium ${
+                              job.priority === 'high' ? 'text-orange-400' :
+                              job.priority === 'medium' ? 'text-yellow-400' :
+                              'text-gray-400'
+                            }`}>
+                              {job.priority ? job.priority.charAt(0).toUpperCase() + job.priority.slice(1) : 'Medium'}
+                            </span>
+                          </div>
                         </td>
-                        <td className="px-4 py-3 text-white/60 text-sm">{job.location || '-'}</td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            <span className="text-white/60 text-sm">{journeyStatusText}</span>
-                            {jobJourneys.length > 0 && (
+                        <td className="px-6 py-4">
+                          <div className="flex items-center justify-center">
+                            {jobJourneys.length > 0 ? (
                               <div className="flex items-center gap-2">
                                 <div className="w-16 bg-white/20 rounded-full h-2 overflow-hidden">
                                   <motion.div 
@@ -1486,45 +1514,36 @@ const ApplicationTracker: React.FC = () => {
                                     transition={{ duration: 0.8, ease: "easeOut" }}
                                   />
                                 </div>
-                                <span className="text-white/60 text-xs font-medium">{avgProgress}%</span>
+                                <span className="text-white text-xs font-medium">{avgProgress}%</span>
                               </div>
+                            ) : (
+                              <span className="text-white/40 text-sm">-</span>
                             )}
                           </div>
                         </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <motion.button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleJobClick(job);
-                              }}
-                              className="p-1 text-white/60 hover:text-white hover:bg-white/10 rounded transition-colors"
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
-                            >
-                              <Eye size={14} />
-                            </motion.button>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-4">
                             <motion.button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleEditJob(job);
                               }}
-                              className="p-1 text-white/60 hover:text-lime-400 hover:bg-lime-500/10 rounded transition-colors"
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
+                              className="text-green-400 hover:text-green-300 text-sm font-medium transition-colors"
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
                             >
-                              <Edit size={14} />
+                              Edit
                             </motion.button>
                             <motion.button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 // Add delete functionality here if needed
                               }}
-                              className="p-1 text-white/60 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
+                              className="text-red-400 hover:text-red-300 text-sm font-medium transition-colors"
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
                             >
-                              <Trash2 size={14} />
+                              Delete
                             </motion.button>
                           </div>
                         </td>

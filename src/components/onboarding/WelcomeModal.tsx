@@ -159,7 +159,7 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({
                   <AnimatePresence>
                     {isDropdownOpen && (
                       <motion.div
-                        className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+                        className="absolute z-10 w-full mt-1 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-lg shadow-lg max-h-60 overflow-y-auto"
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}

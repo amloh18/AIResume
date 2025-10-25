@@ -125,7 +125,7 @@ const CelebrationModal: React.FC<CelebrationModalProps> = ({
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.8, opacity: 0 }}
           transition={{ type: "spring", duration: 0.5 }}
-          className="relative z-10 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full p-8 text-center"
+          className="relative z-10 bg-white dark:bg-[#141810] rounded-2xl shadow-2xl max-w-md w-full p-8 text-center"
         >
           <button
             onClick={onClose}
