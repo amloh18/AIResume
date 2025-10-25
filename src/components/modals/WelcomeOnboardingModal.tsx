@@ -102,7 +102,7 @@ const WelcomeOnboardingModal: React.FC<WelcomeOnboardingModalProps> = ({
         exit={{ opacity: 0 }}
       >
         <motion.div
-          className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden shadow-2xl"
+          className="bg-white dark:bg-[#141810] rounded-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden shadow-2xl"
           initial={{ scale: 0.9, opacity: 0, y: 50 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.9, opacity: 0, y: 50 }}

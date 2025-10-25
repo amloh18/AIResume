@@ -124,7 +124,7 @@ const VolunteerSection: React.FC<VolunteerSectionProps> = ({
               key={index}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4"
+              className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-lg p-4"
             >
               <div className="flex items-center justify-between mb-4">
                 <h4 className="font-medium text-gray-900 dark:text-white">
@@ -199,7 +199,7 @@ const VolunteerSection: React.FC<VolunteerSectionProps> = ({
                   value={volunteer.summary || ''}
                   onChange={(e) => updateVolunteer(index, 'summary', e.target.value)}
                   placeholder="Describe your volunteer work and impact..."
-                  className="w-full p-3 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-lime-500 focus:border-transparent"
+                  className="w-full p-3 border border-gray-200 dark:border-white/10 rounded-lg bg-white dark:bg-[#313a28] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-lime-500 focus:border-transparent"
                   rows={3}
                 />
               </div>
@@ -225,7 +225,7 @@ const VolunteerSection: React.FC<VolunteerSectionProps> = ({
                         value={highlight}
                         onChange={(e) => updateHighlight(index, highlightIndex, e.target.value)}
                         placeholder="e.g., Organized fundraising event that raised $10,000"
-                        className="flex-1 p-2 border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-lime-500 focus:border-transparent"
+                        className="flex-1 p-2 border border-gray-200 dark:border-white/10 rounded bg-white dark:bg-[#313a28] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-lime-500 focus:border-transparent"
                       />
                       <button
                         onClick={() => removeHighlight(index, highlightIndex)}

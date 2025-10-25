@@ -150,14 +150,12 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
       
       case 'tablet':
         return `${baseClasses} ${topOffset} left-2 bottom-2 w-20 ${isOpen ? 'translate-x-0' : '-translate-x-full xl:translate-x-0'} 
-                bg-gray-50/95 dark:bg-gray-800/95 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 
-                rounded-2xl shadow-xl shadow-gray-900/10 dark:shadow-black/20`;
+                bg-gray-50/95 dark:bg-[#141810]/95 backdrop-blur-xl                 rounded-2xl shadow-xl shadow-gray-900/10 dark:shadow-black/20`;
       
       case 'desktop':
       default:
         return `${baseClasses} ${topOffset} left-2 bottom-2 w-72 ${isOpen ? 'translate-x-0' : '-translate-x-full xl:translate-x-0'} 
-                bg-gray-50/95 dark:bg-gray-800/95 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 
-                rounded-2xl shadow-xl shadow-gray-900/10 dark:shadow-black/20`;
+                bg-gray-50/95 dark:bg-[#141810]/95 backdrop-blur-xl                 rounded-2xl shadow-xl shadow-gray-900/10 dark:shadow-black/20`;
     }
   };
 

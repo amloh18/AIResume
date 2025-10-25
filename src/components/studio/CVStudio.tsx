@@ -2585,7 +2585,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
               documentType === 'cover-letter' ? (
                 <div className="space-y-6">
                   {/* AI Cover Letter Generator */}
-                  <div className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6`}>
+                  <div className={`bg-white dark:bg-[#141810] rounded-lg border border-gray-200 dark:border-white/10 p-6`}>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">AI Assistant</h3>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                       Generate a personalized cover letter based on your CV and the selected job position.
@@ -2763,7 +2763,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
                   </div>
 
                   {/* Cover Letter Content */}
-                  <div className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6`}>
+                  <div className={`bg-white dark:bg-[#141810] rounded-lg border border-gray-200 dark:border-white/10 p-6`}>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Cover Letter Content</h3>
                     
                     {/* Formatting Options */}
@@ -2880,7 +2880,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
                 <div className="space-y-4">
                   {/* Skeleton for sections while loading */}
                   {[1, 2, 3, 4, 5].map((i) => (
-                    <div key={i} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 animate-pulse">
+                    <div key={i} className="bg-white dark:bg-[#141810] rounded-lg border border-gray-200 dark:border-white/10 p-4 animate-pulse">
                       <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-32 mb-3"></div>
                       <div className="space-y-2">
                         <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
@@ -2993,7 +2993,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
         }
         rightPanel={
           isLoading ? (
-            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 animate-pulse">
+            <div className="bg-white dark:bg-[#141810] rounded-lg border border-gray-200 dark:border-white/10 p-6 animate-pulse">
               <div className="space-y-4">
                 <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-48 mb-6"></div>
                 <div className="aspect-[8.5/11] bg-gray-200 dark:bg-gray-700 rounded"></div>

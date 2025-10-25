@@ -309,7 +309,7 @@ const JobSelector: React.FC<JobSelectorProps> = ({
     <div className="relative min-w-[200px] max-w-[300px]" ref={dropdownRef}>
       {/* Selected Job Display */}
       {selectedJob ? (
-        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md px-2 py-1.5 shadow-sm">
+        <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-md px-2 py-1.5 shadow-sm">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1 mb-0.5">
@@ -348,7 +348,7 @@ const JobSelector: React.FC<JobSelectorProps> = ({
       ) : (
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border border-gray-200/50 dark:border-gray-600/50 rounded-lg px-3 py-2 text-gray-700 dark:text-gray-200 text-sm flex items-center justify-between hover:bg-white dark:hover:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-500 transition-all duration-200 shadow-sm hover:shadow-md min-w-[200px] group"
+          className="bg-white/80 dark:bg-[#141810] border border-gray-200/50 dark:border-white/10 rounded-lg px-3 py-2 text-gray-700 dark:text-white text-sm flex items-center justify-between hover:bg-white dark:hover:bg-[#313a28] hover:border-gray-300 dark:hover:border-white/20 transition-all duration-200 shadow-sm hover:shadow-md min-w-[200px] group"
         >
           <div className="flex items-center gap-2">
             <div className="p-1 bg-lime-100 dark:bg-lime-900/30 rounded-md group-hover:bg-lime-200 dark:group-hover:bg-lime-900/50 transition-colors">
@@ -370,7 +370,7 @@ const JobSelector: React.FC<JobSelectorProps> = ({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.2 }}
-            className="absolute top-full left-0 right-0 mt-1 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-gray-200/50 dark:border-gray-600/50 rounded-xl shadow-xl overflow-hidden z-[999999] min-w-[280px]"
+            className="absolute top-full left-0 right-0 mt-1 bg-white/95 dark:bg-[#141810] border border-gray-200/50 dark:border-white/10 rounded-xl shadow-xl overflow-hidden z-[999999] min-w-[280px]"
           >
             {/* Search Bar */}
             <div className="p-2 border-b border-gray-100/50 dark:border-gray-700/50">

@@ -27,7 +27,8 @@ import {
   CheckCircle2,
   AlertTriangle,
   MapPin,
-  DollarSign
+  DollarSign,
+  Target
 } from 'lucide-react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { useJobJourney } from '@/contexts/JobJourneyContext';
@@ -102,7 +103,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
   const { hasAI } = useUserPlan();
   const { data: session } = useSession();
   const router = useRouter();
-  const [isExpanded, setIsExpanded] = React.useState(true);
+  const [isExpanded, setIsExpanded] = React.useState(false);
   const [userCVs, setUserCVs] = React.useState<CV[]>([]);
   const [freestandingCVs, setFreestandingCVs] = React.useState<CV[]>([]);
   const [userCoverLetters, setUserCoverLetters] = React.useState<CoverLetter[]>([]);
@@ -1444,7 +1445,120 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
     >
       {/* Compact Banner Bar */}
       <div className="px-6 py-4">
-        <div className="flex items-center justify-between">
+        {/* Mobile View - Inline Layout */}
+        <div className="block md:hidden">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <Building className={`h-4 w-4 ${liveProgress.status === 'completed' ? 'text-blue-400' : 'text-lime-400'}`} />
+                <h3 className="text-sm font-medium text-white truncate">
+                  {journey.jobTitle}
+                </h3>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-white/60">
+                <span>{journey.company}</span>
+                {liveProgress.status !== 'completed' && (() => {
+                  const estimatedTime = JourneyAnalyticsService.calculateEstimatedTimeToCompletion(
+                    journey, 
+                    []
+                  );
+                  const formattedTime = JourneyAnalyticsService.formatEstimatedTime(estimatedTime);
+                  
+                  return (
+                    <>
+                      <span>•</span>
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-3 w-3 text-white/40" />
+                        <span>Est. {formattedTime} remaining</span>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
+          </div>
+          
+          {/* Mobile: Steps Status, ATS Score, and Details */}
+          <div className="flex items-center justify-between">
+            {/* Steps Status */}
+            <div className="flex items-center gap-1">
+              {steps.map((step) => {
+                const stepId = step.id;
+                const status = getStepStatus(stepId);
+                
+                return (
+                  <motion.button
+                    key={stepId}
+                    className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium transition-all duration-200 ${
+                      status === 'completed' 
+                        ? 'bg-lime-500 text-white' 
+                        : status === 'active'
+                        ? 'bg-lime-500/20 text-lime-400 border border-lime-500/30'
+                        : 'bg-gray-600 text-gray-400'
+                    }`}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    animate={status === 'active' ? {
+                      scale: [1, 1.1, 1],
+                      opacity: [0.8, 1, 0.8]
+                    } : {}}
+                    transition={status === 'active' ? {
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    } : {}}
+                    title={step.label}
+                  >
+                    {status === 'completed' ? (
+                      <CheckCircle className="h-3 w-3" />
+                    ) : status === 'active' ? (
+                      <motion.div
+                        className="w-2 h-2 bg-lime-300 rounded-full"
+                        animate={{
+                          scale: [1, 1.2, 1],
+                          opacity: [0.7, 1, 0.7]
+                        }}
+                        transition={{
+                          duration: 1.5,
+                          repeat: Infinity,
+                          ease: "easeInOut"
+                        }}
+                      />
+                    ) : (
+                      stepId
+                    )}
+                  </motion.button>
+                );
+              })}
+            </div>
+
+            {/* ATS Score and Details */}
+            <div className="flex items-center gap-3">
+              {/* ATS Score */}
+              {atsScore !== null && atsScore !== -1 && (
+                <div className="flex items-center gap-1 px-2 py-1 bg-white/10 rounded-full">
+                  <Target className="h-3 w-3 text-white/60" />
+                  <span className="text-xs text-white/80 font-medium">
+                    {atsScore}%
+                  </span>
+                </div>
+              )}
+              
+              {/* Details Dropdown */}
+              <motion.button
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="p-1 text-white/60 hover:text-white hover:bg-white/10 rounded transition-colors"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <ChevronDown className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+              </motion.button>
+            </div>
+          </div>
+        </div>
+
+        {/* Desktop View - Original Layout */}
+        <div className="hidden md:flex items-center justify-between">
           {/* Left: Job Info and Progress */}
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">

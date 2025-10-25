@@ -104,7 +104,7 @@ const PublicationsSection: React.FC<PublicationsSectionProps> = ({
               key={index}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4"
+              className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-lg p-4"
             >
               <div className="flex items-center justify-between mb-4">
                 <h4 className="font-medium text-gray-900 dark:text-white">
@@ -170,7 +170,7 @@ const PublicationsSection: React.FC<PublicationsSectionProps> = ({
                   value={publication.summary || ''}
                   onChange={(e) => updatePublication(index, 'summary', e.target.value)}
                   placeholder="Brief description of the publication and its significance..."
-                  className="w-full p-3 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-lime-500 focus:border-transparent"
+                  className="w-full p-3 border border-gray-200 dark:border-white/10 rounded-lg bg-white dark:bg-[#313a28] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-lime-500 focus:border-transparent"
                   rows={3}
                 />
               </div>

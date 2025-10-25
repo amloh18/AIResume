@@ -119,7 +119,7 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-900 dark:via-black dark:to-gray-900">
+    <div className="min-h-screen">
       {/* Main Studio Container */}
       <div className="h-screen overflow-hidden flex flex-col">
 
@@ -127,7 +127,7 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
         {isMobile ? (
           /* Mobile Header */
           <motion.div
-            className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50 shadow-lg p-4"
+            className="bg-white/95 dark:bg-[#141810] border-b border-gray-200/50 dark:border-white/10 shadow-lg p-4"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
@@ -253,7 +253,7 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
         ) : (
           /* Desktop Floating Header Panel */
           <motion.div
-            className="mx-4 mt-4 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 shadow-lg rounded-2xl p-4"
+            className="mx-4 mt-4 bg-white/95 dark:bg-[#141810] border border-gray-200/50 dark:border-white/10 shadow-lg rounded-2xl p-4"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
@@ -541,7 +541,7 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
           >
             <div className="absolute inset-0 bg-black/50" onClick={() => setMobileMenuOpen(false)} />
             <motion.div
-              className="absolute top-16 left-4 right-4 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 rounded-2xl shadow-xl p-6"
+              className="absolute top-16 left-4 right-4 bg-white/95 dark:bg-[#141810] border border-gray-200/50 dark:border-white/10 rounded-2xl shadow-xl p-6"
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}

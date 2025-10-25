@@ -211,7 +211,7 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
 
   if (loading) {
     return (
-      <div className="glass-widget-premium glass-shimmer rounded-xl p-6">
+      <div className="glass-widget-premium rounded-xl p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1">CV Journeys</h2>
@@ -233,7 +233,7 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
   }
 
   return (
-    <div className="glass-widget-premium glass-shimmer rounded-xl p-6">
+    <div className="glass-widget-premium rounded-xl p-6">
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1">CV Journeys</h2>
