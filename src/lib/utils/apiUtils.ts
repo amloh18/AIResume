@@ -1,5 +1,5 @@
 // Utility function to add authentication headers for API requests
-export const getAuthHeaders = () => {
+export const getAuthHeaders = async () => {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
@@ -12,6 +12,18 @@ export const getAuthHeaders = () => {
         const user = JSON.parse(userData);
         if (user.firebaseUid) {
           headers['x-firebase-user-id'] = user.firebaseUid;
+          
+          // Try to get Firebase ID token for authentication
+          try {
+            const { auth } = await import('@/lib/firebase');
+            const currentUser = auth.currentUser;
+            if (currentUser) {
+              const idToken = await currentUser.getIdToken();
+              headers['authorization'] = `Bearer ${idToken}`;
+            }
+          } catch (error) {
+            console.warn('Could not get Firebase ID token:', error);
+          }
         }
       } catch (error) {
         console.error('Error parsing user data:', error);
@@ -24,8 +36,9 @@ export const getAuthHeaders = () => {
 
 // Enhanced fetch function that automatically includes auth headers
 export const authenticatedFetch = async (url: string, options: RequestInit = {}) => {
+  const authHeaders = await getAuthHeaders();
   const headers = {
-    ...getAuthHeaders(),
+    ...authHeaders,
     ...options.headers,
   };
 
@@ -43,8 +56,9 @@ export const authenticatedFetchWithUserId = async (url: string, userId?: string,
     baseUrl.searchParams.set('userId', userId);
   }
 
+  const authHeaders = await getAuthHeaders();
   const headers = {
-    ...getAuthHeaders(),
+    ...authHeaders,
     ...options.headers,
   };
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/database';
 import User from '@/models/User';
+import VerificationToken from '@/models/VerificationToken';
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,24 +16,26 @@ export async function POST(request: NextRequest) {
 
     await connectDB();
 
-    // Find user by email and verification token
-    const user = await User.findOne({ 
-      email,
-      emailVerificationToken: token,
-      emailVerificationExpires: { $gt: new Date() }
-    });
+    // Verify token using VerificationToken model
+    const tokenResult = await VerificationToken.verifyToken(token, email, 'email');
 
-    if (!user) {
+    if (!tokenResult.valid) {
       return NextResponse.json(
-        { success: false, message: 'Invalid or expired verification token' },
+        { success: false, message: tokenResult.message },
         { status: 400 }
       );
     }
 
-    // Update user as verified
+    // Find and update user as verified
+    const user = await User.findById(tokenResult.userId);
+    if (!user) {
+      return NextResponse.json(
+        { success: false, message: 'User not found' },
+        { status: 404 }
+      );
+    }
+
     user.isEmailVerified = true;
-    user.emailVerificationToken = undefined;
-    user.emailVerificationExpires = undefined;
     await user.save();
 
     // Clear user cache to ensure fresh data is fetched

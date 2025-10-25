@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sendEmailVerification } from '@/lib/email-service';
-import crypto from 'crypto';
 import connectDB from '@/lib/database';
 import User from '@/models/User';
+import VerificationToken from '@/models/VerificationToken';
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,18 +34,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate new verification token
-    const verificationToken = crypto.randomBytes(32).toString('hex');
-    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-
-    // Update user with new verification token
-    user.emailVerificationToken = verificationToken;
-    user.emailVerificationExpires = verificationExpires;
-    await user.save();
+    // Create new verification token using VerificationToken model
+    const verificationToken = await VerificationToken.createToken(
+      user._id,
+      email,
+      'email',
+      24 // 24 hours expiration
+    );
 
     // Create verification link
     const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
-    const verificationLink = `${baseUrl}/auth/verify-email?token=${verificationToken}&email=${encodeURIComponent(email)}`;
+    const verificationLink = `${baseUrl}/auth/verify-email?token=${verificationToken.token}&email=${encodeURIComponent(email)}`;
 
     // Send verification email
     try {

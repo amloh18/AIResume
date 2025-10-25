@@ -18,11 +18,7 @@ export interface IUser extends Document {
   userRole?: 'Student' | 'Professional' | 'Recruiter';
   isEmailVerified: boolean;
   
-  // Authentication tokens (for password reset, email verification)
-  emailVerificationToken?: string;
-  emailVerificationExpires?: Date;
-  resetPasswordToken?: string;
-  resetPasswordExpires?: Date;
+  // Note: Authentication tokens are now stored in separate VerificationToken collection
   
   // Subscription and usage tracking
   currentPlanKey: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly';
@@ -181,10 +177,7 @@ const userSchema = new Schema<IUser>({
     type: Boolean,
     default: false
   },
-  emailVerificationToken: String,
-  emailVerificationExpires: Date,
-  resetPasswordToken: String,
-  resetPasswordExpires: Date,
+  // Token fields removed - now handled by VerificationToken collection
   currentPlanKey: {
     type: String,
     enum: ['free', 'day_pass', 'pro_monthly', 'pro_quarterly', 'pro_yearly'],

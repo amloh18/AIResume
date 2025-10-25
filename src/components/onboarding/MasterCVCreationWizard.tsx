@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ArrowRight, CheckCircle, User, Briefcase, GraduationCap, Award, Star, Upload, FileText, X, Trash2, Code } from 'lucide-react';
 import { useOnboarding } from '@/contexts/OnboardingContext';
@@ -19,6 +19,14 @@ const MasterCVCreationWizard: React.FC<MasterCVCreationWizardProps> = ({ onCompl
   const [uploadError, setUploadError] = useState('');
   const [showUpload, setShowUpload] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Debug: Log when component mounts
+  useEffect(() => {
+    console.log('✅ MasterCVCreationWizard - Component mounted');
+    return () => {
+      console.log('❌ MasterCVCreationWizard - Component unmounted');
+    };
+  }, []);
 
   const wizardSteps = [
     {
@@ -211,9 +219,12 @@ const MasterCVCreationWizard: React.FC<MasterCVCreationWizardProps> = ({ onCompl
       
       const result = await response.json();
       
-      if (result.personalInfo || result.basics) {
-        // Map the parsed data to our form structure
-        const mappedData = mapParsedDataToForm(result);
+      // Handle UnifiedCVDataStructure format (API returns basics, work, education, skills, projects)
+      if (result.basics || result.personalInfo) {
+        console.log('Parsed CV data structure:', result);
+        
+        // Use the data directly from UnifiedCVDataStructure
+        const cvData = result.basics ? result : mapParsedDataToForm(result);
         
         // Update the onboarding context with parsed information
         dispatch({
@@ -222,43 +233,48 @@ const MasterCVCreationWizard: React.FC<MasterCVCreationWizardProps> = ({ onCompl
             ...state.cvData,
             basics: {
               ...state.cvData.basics,
-              name: mappedData.personalInfo.firstName + ' ' + mappedData.personalInfo.lastName,
-              email: mappedData.personalInfo.email,
-              phone: mappedData.personalInfo.phone,
-              summary: mappedData.personalInfo.summary,
-              url: mappedData.personalInfo.website,
+              name: cvData.basics?.name || (cvData.personalInfo ? `${cvData.personalInfo.firstName || ''} ${cvData.personalInfo.lastName || ''}`.trim() : ''),
+              email: cvData.basics?.email || cvData.personalInfo?.email || '',
+              phone: cvData.basics?.phone || cvData.personalInfo?.phone || '',
+              summary: cvData.basics?.summary || cvData.personalInfo?.summary || '',
+              url: cvData.basics?.url || cvData.personalInfo?.website || '',
               location: {
                 ...state.cvData.basics.location,
-                city: mappedData.personalInfo.location
-              }
+                city: cvData.basics?.location?.city || cvData.personalInfo?.location || '',
+                address: cvData.basics?.location?.address || '',
+                postalCode: cvData.basics?.location?.postalCode || '',
+                countryCode: cvData.basics?.location?.countryCode || '',
+                region: cvData.basics?.location?.region || ''
+              },
+              profiles: cvData.basics?.profiles || []
             },
-            work: mappedData.experience.map((exp: any) => ({
-              name: exp.company,
-              position: exp.position,
-              startDate: exp.startDate,
-              endDate: exp.endDate,
-              summary: exp.description,
-              highlights: exp.achievements
+            work: (cvData.work || cvData.experience || []).map((exp: any) => ({
+              name: exp.name || exp.company || '',
+              position: exp.position || '',
+              startDate: exp.startDate || '',
+              endDate: exp.endDate || '',
+              summary: exp.summary || exp.description || '',
+              highlights: exp.highlights || exp.achievements || []
             })),
-            education: mappedData.education.map((edu: any) => ({
-              institution: edu.institution,
-              studyType: edu.degree,
-              area: edu.field,
-              startDate: edu.startDate,
-              endDate: edu.endDate,
-              score: edu.gpa
+            education: (cvData.education || []).map((edu: any) => ({
+              institution: edu.institution || '',
+              studyType: edu.studyType || edu.degree || '',
+              area: edu.area || edu.field || '',
+              startDate: edu.startDate || '',
+              endDate: edu.endDate || '',
+              score: edu.score || edu.gpa || ''
             })),
-            projects: mappedData.projects.map((proj: any) => ({
-              name: proj.title,
-              description: proj.description,
-              startDate: proj.startDate,
-              endDate: proj.endDate,
-              highlights: proj.technologies,
-              url: proj.url
+            projects: (cvData.projects || []).map((proj: any) => ({
+              name: proj.name || proj.title || '',
+              description: proj.description || '',
+              startDate: proj.startDate || '',
+              endDate: proj.endDate || '',
+              highlights: proj.highlights || proj.technologies || [],
+              url: proj.url || ''
             })),
-            skills: mappedData.skills.map((skill: any) => ({
-              name: skill.category,
-              keywords: skill.skills
+            skills: (cvData.skills || []).map((skill: any) => ({
+              name: skill.name || skill.category || '',
+              keywords: skill.keywords || skill.skills || []
             }))
           }
         });
@@ -269,7 +285,31 @@ const MasterCVCreationWizard: React.FC<MasterCVCreationWizardProps> = ({ onCompl
       }
     } catch (error) {
       console.error('CV parsing error:', error);
-      setUploadError(error instanceof Error ? error.message : 'An error occurred while parsing the CV');
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        file: file.name,
+        type: file.type,
+        size: file.size
+      });
+      
+      // Provide more specific error messages
+      let errorMessage = 'An error occurred while parsing the CV';
+      if (error instanceof Error) {
+        if (error.message.includes('Unable to extract text from PDF')) {
+          errorMessage = 'Unable to extract text from PDF. This might be a scanned PDF. Please try converting to DOCX format or copy-pasting the text content.';
+        } else if (error.message.includes('Unable to extract text from DOCX')) {
+          errorMessage = 'Unable to extract text from DOCX file. Please try a different file or convert to PDF format.';
+        } else if (error.message.includes('Unsupported file type')) {
+          errorMessage = 'Unsupported file type. Please upload a PDF, DOCX, or image file.';
+        } else if (error.message.includes('File too large')) {
+          errorMessage = 'File is too large. Please upload a file smaller than 10MB.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      setUploadError(errorMessage);
     } finally {
       setIsUploading(false);
     }

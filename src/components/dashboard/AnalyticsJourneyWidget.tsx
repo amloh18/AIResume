@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { useSession } from 'next-auth/react';
+import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
 import { useJobJourney } from '@/contexts/JobJourneyContext';
 import JourneyTimelineCard from './JourneyTimelineCard';
 import NewJourneyCard from './NewJourneyCard';
@@ -38,7 +38,7 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
   onDeleteJourney,
   onViewJourney
 }) => {
-  const { data: session } = useSession();
+  const { user } = useUnifiedAuth();
   const { state } = useJobJourney();
   const [journeys, setJourneys] = useState<Journey[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,16 +47,19 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
   const [showNewJourneyCard, setShowNewJourneyCard] = useState(false);
 
   useEffect(() => {
-    if (session?.user?.id) {
-      fetchJourneys();
+    const userId = getUserIdForAPI(user);
+    if (userId) {
+      fetchJourneys(userId);
+    } else {
+      setLoading(false);
     }
-  }, [session?.user?.id]); // Keep this specific to prevent loops
+  }, [user]);
 
-  const fetchJourneys = async () => {
+  const fetchJourneys = async (userId: string) => {
     try {
-      const userId = session?.user?.id;
       if (!userId) {
         console.error('No user ID available');
+        setLoading(false);
         return;
       }
       

@@ -19,9 +19,7 @@ const PageHeader = dynamic(() => import('@/components/dashboard/PageHeader'), {
   loading: () => <div className="h-16 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg" />
 });
 
-const OnboardingModal = dynamic(() => import('@/components/modals/OnboardingModal'), {
-  ssr: false
-});
+// OnboardingModal removed - no longer needed
 
 const JourneyStatusBanner = dynamic(() => import('@/components/JourneyStatusBanner'), {
   loading: () => <div className="h-20 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg mb-4" />
@@ -612,11 +610,7 @@ const ApplicationJourneyPageContent: React.FC = () => {
         )}
       </div>
 
-      {/* Modals */}
-      <OnboardingModal 
-        isOpen={showOnboarding} 
-        onClose={() => setShowOnboarding(false)} 
-      />
+      {/* Modals - OnboardingModal removed */}
       
       
 

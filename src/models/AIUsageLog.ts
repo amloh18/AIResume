@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import { getLogsConnection } from '@/lib/logs-database-connection';
 
 export interface IAIUsageLog extends Document {
   userId: mongoose.Types.ObjectId | string;
@@ -92,6 +93,9 @@ aiUsageLogSchema.index({ createdAt: -1 });
 aiUsageLogSchema.index({ userId: 1, createdAt: -1 });
 aiUsageLogSchema.index({ apiEndpoint: 1, createdAt: -1 });
 aiUsageLogSchema.index({ provider: 1, createdAt: -1 });
+
+// TTL index for automatic cleanup (90 days retention)
+aiUsageLogSchema.index({ createdAt: 1 }, { expireAfterSeconds: 7776000 }); // 90 days
 
 // Virtual for cost per token
 aiUsageLogSchema.virtual('costPerToken').get(function() {
@@ -269,4 +273,21 @@ aiUsageLogSchema.statics.getDailyUsage = async function(options: {
   ]);
 };
 
-export default mongoose.models.AIUsageLog || mongoose.model<IAIUsageLog>('AIUsageLog', aiUsageLogSchema); 
+// Create model using logs database connection
+let AIUsageLog: mongoose.Model<IAIUsageLog> | null = null;
+
+export async function getAIUsageLogModel(): Promise<mongoose.Model<IAIUsageLog>> {
+  if (AIUsageLog) {
+    return AIUsageLog;
+  }
+
+  const logsConnection = await getLogsConnection();
+  AIUsageLog = logsConnection.model<IAIUsageLog>('AIUsageLog', aiUsageLogSchema);
+  return AIUsageLog;
+}
+
+// Export the schema for use in other files
+export { aiUsageLogSchema };
+
+// For backward compatibility, export a default that uses the logs database
+export default AIUsageLog; 

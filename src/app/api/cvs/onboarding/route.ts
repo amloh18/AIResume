@@ -16,6 +16,10 @@ export async function POST(request: NextRequest) {
   try {
     console.log('🚀 Starting onboarding CV creation...');
     
+    // Ensure we return JSON content type
+    const headers = new Headers();
+    headers.set('Content-Type', 'application/json');
+    
     await connectDB();
 
     // Try to get auth context from session
@@ -45,7 +49,17 @@ export async function POST(request: NextRequest) {
       console.log('⚠️ Could not get auth context from session, will try request body');
     }
 
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch (parseError) {
+      console.error('❌ Failed to parse request body:', parseError);
+      return NextResponse.json(
+        { success: false, error: 'Invalid JSON in request body' },
+        { status: 400, headers }
+      );
+    }
+    
     const { title, cvData, templateId, metadata, authProviderId, authProvider } = body;
 
     // If no auth context from session, try to resolve from request body
@@ -53,7 +67,7 @@ export async function POST(request: NextRequest) {
       if (!authProviderId) {
         return NextResponse.json(
           { success: false, error: 'Authentication required - no session or authProviderId provided' },
-          { status: 401 }
+          { status: 401, headers }
         );
       }
 
@@ -66,7 +80,7 @@ export async function POST(request: NextRequest) {
       if (!user) {
         return NextResponse.json(
           { success: false, error: 'User not found in database' },
-          { status: 404 }
+          { status: 404, headers }
         );
       }
 
@@ -84,7 +98,7 @@ export async function POST(request: NextRequest) {
     if (!title || !cvData) {
       return NextResponse.json(
         { success: false, error: 'Title and CV data are required' },
-        { status: 400 }
+        { status: 400, headers }
       );
     }
 
@@ -167,7 +181,7 @@ export async function POST(request: NextRequest) {
           updatedAt: newCV.updatedAt
         }
       }
-    });
+    }, { headers });
 
   } catch (error: any) {
     console.error('Onboarding CV creation error:', error);
@@ -178,7 +192,7 @@ export async function POST(request: NextRequest) {
         error: error.message || 'Failed to create master CV',
         details: process.env.NODE_ENV === 'development' ? error.stack : undefined
       },
-      { status: 500 }
+      { status: 500, headers }
     );
   }
 }

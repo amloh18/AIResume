@@ -1,6 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { signOut } from 'next-auth/react';
 import Hero from '@/components/landing/Hero';
 import Features from '@/components/landing/Features';
 import ChromeExtension from '@/components/landing/ChromeExtension';
@@ -12,7 +14,43 @@ import Footer from '@/components/landing/Footer';
 import CardNav from '@/components/landing/CardNav';
 import { motion } from 'framer-motion';
 
-export default function LandingPage() {
+function LandingPageContent() {
+  const searchParams = useSearchParams();
+  
+  // Handle logout cleanup
+  useEffect(() => {
+    const logoutParam = searchParams.get('logout');
+    
+    if (logoutParam === 'success' || logoutParam === 'fallback') {
+      console.log('🔍 Landing page detected logout, ensuring session is cleared...');
+      
+      // Force NextAuth signout (without redirect to avoid loop)
+      signOut({ redirect: false }).catch((error) => {
+        console.error('⚠️ Error during NextAuth signout on landing:', error);
+      });
+      
+      // Clear any remaining localStorage/sessionStorage
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.removeItem('auth-session');
+          localStorage.removeItem('user');
+          sessionStorage.clear();
+          console.log('✅ Landing page cleared all session storage');
+        } catch (error) {
+          console.error('⚠️ Error clearing storage on landing:', error);
+        }
+      }
+      
+      // Clean up URL by removing logout parameter
+      if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('logout');
+        url.searchParams.delete('_t');
+        window.history.replaceState({}, '', url.toString());
+      }
+    }
+  }, [searchParams]);
+  
   const navLinks = [
     { label: 'Features', href: '#features', ariaLabel: 'View features section' },
     { label: 'Extension', href: '#chrome-extension', ariaLabel: 'View Chrome extension section' },
@@ -60,5 +98,17 @@ export default function LandingPage() {
       {/* Footer */}
       <Footer />
     </div>
+  );
+}
+
+export default function LandingPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 flex items-center justify-center">
+        <div className="text-lime-400 text-xl">Loading...</div>
+      </div>
+    }>
+      <LandingPageContent />
+    </Suspense>
   );
 }
