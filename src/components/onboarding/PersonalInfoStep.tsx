@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, FileText, User, Mail, Phone, MapPin, Globe, ArrowRight, X, RotateCcw, CheckCircle } from 'lucide-react';
 import { useOnboarding } from '@/contexts/OnboardingContext';
+import { normalizeWorkDates, normalizeEducationDates, normalizeProjectDates } from '@/lib/utils/dateNormalization';
 
 
 interface PersonalInfoStepProps {
@@ -16,22 +17,16 @@ export default function PersonalInfoStep({ onNext }: PersonalInfoStepProps) {
   const [uploadError, setUploadError] = useState('');
   const [showUpload, setShowUpload] = useState(false);
   const [isFlipped, setIsFlipped] = useState(false);
-  const [isNavigating, setIsNavigating] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isNavigatingRef = useRef(false);
 
-  // Reset navigation state when component mounts or when step changes
+  // Auto-flip to form side if data is prefilled from signup
   useEffect(() => {
-    setIsNavigating(false);
-  }, [state.currentStep]);
-
-  // Only auto-flip if user has manually filled in info (not from pre-filled data)
-  // This allows users to still access CV upload functionality even with pre-filled data
-  useEffect(() => {
-    if (state.cvData.basics.name && state.cvData.basics.email && !isFlipped && !state.prefilledFromSignup) {
-      console.log('🔍 PersonalInfoStep - Auto-flipping card to form side (user filled manually)');
+    if (state.prefilledFromSignup && !isFlipped) {
+      console.log('🔍 PersonalInfoStep - Auto-flipping card to form side (prefilled from signup)');
       setIsFlipped(true);
     }
-  }, [state.cvData.basics.name, state.cvData.basics.email, isFlipped, state.prefilledFromSignup]);
+  }, [state.prefilledFromSignup, isFlipped]);
 
   const handleFileUpload = async (file: File) => {
     setIsUploading(true);
@@ -56,16 +51,27 @@ export default function PersonalInfoStep({ onNext }: PersonalInfoStepProps) {
       
       if (result.basics) {
         // The direct parsing API returns the correct CVDataStructure format
-        // Just update the onboarding context
-        dispatch({ type: 'UPDATE_CV_DATA', payload: result });
+        // Normalize dates before updating context
+        const normalizedResult = {
+          ...result,
+          work: normalizeWorkDates(result.work || []),
+          education: normalizeEducationDates(result.education || []),
+          projects: normalizeProjectDates(result.projects || [])
+        };
+        
+        console.log('✅ PersonalInfoStep - CV parsed successfully');
+        console.log('📅 Work dates normalized:', normalizedResult.work);
+        console.log('📅 Education dates normalized:', normalizedResult.education);
+        console.log('📅 Project dates normalized:', normalizedResult.projects);
+        
+        // Update the onboarding context with normalized data
+        dispatch({ type: 'UPDATE_CV_DATA', payload: normalizedResult });
         setShowUpload(false);
         
-        // Show success message briefly, then flip the card
+        // Flip the card after successful upload
         setTimeout(() => {
-          if (!isFlipped && !isNavigating) {
-            setIsFlipped(true);
-          }
-        }, 2000); // Give user time to see the success message
+          setIsFlipped(true);
+        }, 1500); // Give user time to see the success message
       } else {
         setUploadError('Failed to parse CV data');
       }
@@ -112,14 +118,8 @@ export default function PersonalInfoStep({ onNext }: PersonalInfoStepProps) {
   };
 
   const handleNext = () => {
-    console.log('🔍 PersonalInfoStep - handleNext called');
-    console.log('🔍 PersonalInfoStep - name:', state.cvData.basics.name);
-    console.log('🔍 PersonalInfoStep - email:', state.cvData.basics.email);
-    console.log('🔍 PersonalInfoStep - isNavigating:', isNavigating);
-    console.log('🔍 PersonalInfoStep - isFlipped:', isFlipped);
-    
-    // Prevent multiple clicks
-    if (isNavigating) {
+    // Prevent multiple clicks using ref (synchronous check)
+    if (isNavigatingRef.current) {
       console.log('⚠️ PersonalInfoStep - Already navigating, ignoring click');
       return;
     }
@@ -131,27 +131,13 @@ export default function PersonalInfoStep({ onNext }: PersonalInfoStepProps) {
     }
     
     console.log('✅ PersonalInfoStep - Validation passed, calling onNext');
-    setIsNavigating(true);
+    isNavigatingRef.current = true;
     
-    // Ensure card stays flipped during navigation
-    if (!isFlipped) {
-      console.log('🔍 PersonalInfoStep - Ensuring card is flipped before navigation');
-      setIsFlipped(true);
-    }
-    
-    // Add a small delay to ensure state updates are processed
-    setTimeout(() => {
-      onNext();
-    }, 100);
+    // Call onNext directly
+    onNext();
   };
 
   const handleFlip = () => {
-    // Don't flip if we're navigating
-    if (isNavigating) {
-      console.log('⚠️ PersonalInfoStep - Skipping flip, navigation in progress');
-      return;
-    }
-    
     setIsFlipped(!isFlipped);
     setShowUpload(false);
     setUploadError('');
@@ -421,20 +407,11 @@ export default function PersonalInfoStep({ onNext }: PersonalInfoStepProps) {
                   <div className="mt-8 text-center">
                     <button
                       onClick={handleNext}
-                      disabled={!state.cvData.basics.name || !state.cvData.basics.email || isNavigating}
+                      disabled={!state.cvData.basics.name || !state.cvData.basics.email}
                       className="bg-gradient-to-r from-lime-400 to-lime-500 text-black px-8 py-4 rounded-xl font-semibold text-lg hover:from-lime-300 hover:to-lime-400 transition-all duration-200 shadow-lg shadow-lime-400/25 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto"
                     >
-                      {isNavigating ? (
-                        <>
-                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-black"></div>
-                          Continuing...
-                        </>
-                      ) : (
-                        <>
-                          Continue to Experience
-                          <ArrowRight size={20} />
-                        </>
-                      )}
+                      Continue to Experience
+                      <ArrowRight size={20} />
                     </button>
                   </div>
                 </div>

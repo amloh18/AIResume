@@ -5,11 +5,23 @@ import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/database';
 import { getAdminDiscountCode } from '@/models/admin-models';
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Skip during build time
+    if (process.env.NODE_ENV === 'production' && !process.env.VERCEL) {
+      return NextResponse.json(
+        { error: 'Service unavailable during build' },
+        { status: 503 }
+      );
+    }
+
     // Check authentication and admin role
     const session = await getServerSession(authOptions);
     if (!session || session.user?.role !== 'admin') {
@@ -44,6 +56,14 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Skip during build time
+    if (process.env.NODE_ENV === 'production' && !process.env.VERCEL) {
+      return NextResponse.json(
+        { error: 'Service unavailable during build' },
+        { status: 503 }
+      );
+    }
+
     // Check authentication and admin role
     const session = await getServerSession(authOptions);
     if (!session || session.user?.role !== 'admin') {
@@ -149,9 +169,17 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Skip during build time
+    if (process.env.NODE_ENV === 'production' && !process.env.VERCEL) {
+      return NextResponse.json(
+        { error: 'Service unavailable during build' },
+        { status: 503 }
+      );
+    }
+
     // Check authentication and admin role
     const session = await getServerSession(authOptions);
     if (!session || session.user?.role !== 'admin') {
@@ -160,6 +188,7 @@ export async function DELETE(
 
     await connectDB();
 
+    const { id } = await params;
     const DiscountCode = await getAdminDiscountCode();
     const discountCode = await DiscountCode.findById(id);
     

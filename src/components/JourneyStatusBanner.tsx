@@ -109,12 +109,15 @@ const JourneyStatusBanner: React.FC<JourneyStatusBannerProps> = ({ journey }) =>
   };
 
   const getStepLabel = (step: number) => {
-    switch (step) {
+    // Show the next step to be completed, not the current step
+    const nextStep = step + 1;
+    switch (nextStep) {
       case 1: return 'Add Job';
       case 2: return 'Create CV';
       case 3: return 'ATS Score';
       case 4: return 'Cover Letter';
       case 5: return 'Download';
+      case 6: return 'Complete';
       default: return 'Unknown';
     }
   };

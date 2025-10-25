@@ -6,6 +6,7 @@ import { CV, Template, User } from '@/models';
 import { createPaginationOptions, paginateQuery, createErrorResponse } from '@/lib/db-utils';
 import { extractUserIdentifier, findManyByFirebaseUid, countByFirebaseUid, createWithFirebaseUid } from '@/lib/firebase-uid-utils';
 import { UnifiedCVAPIResponse, UnifiedCVDocument, UnifiedCVRequest } from '@/types/unified-cv-schema';
+import { getUnifiedAuth } from '@/lib/auth-helpers';
 import mongoose from 'mongoose';
 
 // GET - List CVs for a user with comprehensive filtering
@@ -13,16 +14,17 @@ export async function GET(request: NextRequest) {
   try {
     console.log('🔍 CV API - Starting GET request');
 
-    // Check authentication
-    const session = await getServerSession(authOptions);
-    console.log('🔍 CV API - Session check:', { 
-      hasSession: !!session, 
-      hasUser: !!session?.user,
-      email: session?.user?.email 
+    // Check authentication using unified auth
+    const authResult = await getUnifiedAuth(request);
+    console.log('🔍 CV API - Auth check:', { 
+      hasAuth: !!authResult,
+      isNextAuth: authResult?.isNextAuth,
+      isFirebase: authResult?.isFirebase,
+      email: authResult?.userEmail 
     });
     
-    if (!session?.user?.email) {
-      console.log('❌ CV API - No valid session found');
+    if (!authResult) {
+      console.log('❌ CV API - No valid authentication found');
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -32,18 +34,11 @@ export async function GET(request: NextRequest) {
     await connectDB();
     console.log('🔍 CV API - Database connected');
     
-    // Extract user identifier from request and session
-    const userIdentifier = extractUserIdentifier(request, session);
+    // Use unified auth result
+    const userEmail = authResult.userEmail;
+    const userId = authResult.userId;
     
-    if (!userIdentifier.id || !userIdentifier.type) {
-      console.log('❌ CV API - No valid user identifier found');
-      return NextResponse.json(
-        { success: false, error: 'User identification failed' },
-        { status: 401 }
-      );
-    }
-    
-    console.log('🔍 CV API - User identifier:', userIdentifier);
+    console.log('🔍 CV API - User info:', { userEmail, userId });
     
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type'); // 'cv' or 'cover'
@@ -55,15 +50,14 @@ export async function GET(request: NextRequest) {
     const published = searchParams.get('published');
     const searchTerm = searchParams.get('search');
 
-    // Build query conditions based on user identifier type
-    // Always use userId for CV queries since CVs are linked by userId, not firebaseUid
+    // Build query conditions using unified auth result
     let baseQuery: Record<string, any> = {};
     
-    if (userIdentifier.type === 'firebase') {
+    if (authResult.isFirebase) {
       // For Firebase users, we need to find the user first to get their MongoDB ObjectId
-      const user = await User.findOne({ firebaseUid: userIdentifier.id });
+      const user = await User.findOne({ firebaseUid: authResult.user.firebaseUid });
       if (!user) {
-        console.log('❌ CV API - User not found for Firebase UID:', userIdentifier.id);
+        console.log('❌ CV API - User not found for Firebase UID:', authResult.user.firebaseUid);
         return NextResponse.json(
           { success: false, error: 'User not found' },
           { status: 404 }
@@ -71,9 +65,10 @@ export async function GET(request: NextRequest) {
       }
       baseQuery.userId = user._id;
       console.log('🔍 CV API - Using Firebase UID, found user ObjectId:', user._id);
-    } else if (userIdentifier.type === 'objectid') {
-      baseQuery.userId = new mongoose.Types.ObjectId(userIdentifier.id);
-      console.log('🔍 CV API - Using MongoDB ObjectId query:', userIdentifier.id);
+    } else {
+      // For NextAuth users, use the userId directly
+      baseQuery.userId = new mongoose.Types.ObjectId(userId);
+      console.log('🔍 CV API - Using MongoDB ObjectId query:', userId);
     }
 
     console.log('🔍 CV API - Base query:', baseQuery);

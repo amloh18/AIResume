@@ -1541,6 +1541,7 @@ nav {
   grid-auto-rows: 1fr;
   gap: 1.5rem; /* 24px */
   margin: 0 auto;
+  justify-items: center;
 }
 
 /* --- Bento Box General Styling --- */
@@ -1639,6 +1640,7 @@ h3 {
   .bento-grid {
     grid-template-columns: repeat(3, 1fr);
     max-width: 900px;
+    justify-items: center;
   }
   
   .span-2-col {
@@ -1651,6 +1653,7 @@ h3 {
     grid-template-columns: repeat(3, 1fr);
     max-width: 800px;
     gap: 1.25rem;
+    justify-items: center;
   }
   
   .span-2-col {
@@ -1667,6 +1670,7 @@ h3 {
     grid-template-columns: repeat(2, 1fr);
     max-width: 600px;
     gap: 1rem;
+    justify-items: center;
   }
   
   .span-2-col {
@@ -1685,6 +1689,7 @@ h3 {
     gap: 0.5rem;
     padding: 0;
     margin: 0 auto;
+    justify-items: center;
   }
   
   .span-2-col,

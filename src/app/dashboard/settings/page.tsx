@@ -35,7 +35,7 @@ import { useNotifications } from '@/contexts/NotificationContext';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import AddPaymentMethodModal from '@/components/payment/AddPaymentMethodModal';
 import ChangePasswordModal from '@/components/auth/ChangePasswordModal';
-import TwoFactorModal from '@/components/auth/TwoFactorModal';
+// TwoFactorModal removed - 2FA not implemented yet
 import PageHeader from '@/components/dashboard/PageHeader';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
 
@@ -889,7 +889,7 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
   
   // Modal states
   const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
-  const [isTwoFactorModalOpen, setIsTwoFactorModalOpen] = useState(false);
+  // Two-factor modal removed - feature not implemented
   
   // Toast notification state
 
@@ -925,7 +925,7 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
                 <div className="text-xs text-gray-500 dark:text-gray-300">Add an extra layer of security to your account</div>
               </div>
               <button
-                onClick={() => setIsTwoFactorModalOpen(true)}
+                onClick={() => showToastNotification('info', 'Two-factor authentication coming soon!')}
                 className={`w-12 h-6 rounded-full transition-colors ${
                   twoFactorEnabled ? 'bg-orange-500' : 'bg-gray-300 dark:bg-gray-600'
                 }`}
@@ -1000,13 +1000,7 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
         onSuccess={handlePasswordChanged}
       />
 
-      {/* Two-Factor Authentication Modal */}
-      <TwoFactorModal
-        isOpen={isTwoFactorModalOpen}
-        onClose={() => setIsTwoFactorModalOpen(false)}
-        onSuccess={handleTwoFactorToggled}
-        isEnabling={!twoFactorEnabled}
-      />
+      {/* Two-Factor Authentication Modal - Coming Soon */}
 
       {/* Toast Notifications */}
     </div>

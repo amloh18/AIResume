@@ -495,22 +495,32 @@ async function createJourneyCV(journey: ApplicationJourneyData, job: JobData, us
 }
 
 async function createJourneyCoverLetter(journey: ApplicationJourneyData, job: JobData, userId: string): Promise<{ newCoverLetter: CoverLetterData; newContent: string }> {
-  const coverLetterData = {
-    userId,
-    title: `Cover Letter for ${job.jobTitle} at ${job.company}`,
-    content: `Dear Hiring Manager,\n\nI am writing to express my interest in the ${job.jobTitle} position at ${job.company}.\n\nSincerely,\n[Your Name]`
-  };
-
-  const response = await fetch('/api/cover-letters', {
+  // Import the default service
+  const { defaultCoverLetterService } = await import('@/lib/services/defaultCoverLetterService');
+  
+  // Ensure we have a default cover letter to duplicate from
+  const defaultCoverLetterId = await defaultCoverLetterService.ensureDefaultCoverLetter(userId);
+  
+  // Generate cover letter name
+  const coverLetterTitle = `${job.company}_${job.jobTitle} | Cover_Letter`;
+  
+  // Duplicate the default cover letter
+  const response = await fetch('/api/cover-letters/duplicate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(coverLetterData)
+    body: JSON.stringify({
+      sourceCoverLetterId: defaultCoverLetterId,
+      userId: userId,
+      customTitle: coverLetterTitle,
+      jobId: job.id,
+      journeyId: journey.journeyId
+    })
   });
 
-  if (!response.ok) throw new Error('Failed to create journey cover letter');
+  if (!response.ok) throw new Error('Failed to create journey cover letter via duplication');
   
   const result = await response.json();
-  const coverLetter = result.data || result.coverLetter;
+  const coverLetter = result.data?.coverLetter || result.coverLetter;
   return {
     newCoverLetter: coverLetter,
     newContent: coverLetter.content
@@ -540,22 +550,30 @@ async function createStandaloneCV(userId: string): Promise<{ newCV: CVData; newD
 }
 
 async function createStandaloneCoverLetter(userId: string): Promise<{ newCoverLetter: CoverLetterData; newContent: string }> {
-  const coverLetterData = {
-    userId,
-    title: 'Untitled Cover Letter',
-    content: 'Dear Hiring Manager,\n\n\n\nSincerely,\n[Your Name]'
-  };
-
-  const response = await fetch('/api/cover-letters', {
+  // Import the default service
+  const { defaultCoverLetterService } = await import('@/lib/services/defaultCoverLetterService');
+  
+  // Ensure we have a default cover letter to duplicate from
+  const defaultCoverLetterId = await defaultCoverLetterService.ensureDefaultCoverLetter(userId);
+  
+  // Generate cover letter name
+  const coverLetterTitle = 'Untitled Cover Letter';
+  
+  // Duplicate the default cover letter
+  const response = await fetch('/api/cover-letters/duplicate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(coverLetterData)
+    body: JSON.stringify({
+      sourceCoverLetterId: defaultCoverLetterId,
+      userId: userId,
+      customTitle: coverLetterTitle
+    })
   });
 
-  if (!response.ok) throw new Error('Failed to create standalone cover letter');
+  if (!response.ok) throw new Error('Failed to create standalone cover letter via duplication');
   
   const result = await response.json();
-  const coverLetter = result.data || result.coverLetter;
+  const coverLetter = result.data?.coverLetter || result.coverLetter;
   return {
     newCoverLetter: coverLetter,
     newContent: coverLetter.content

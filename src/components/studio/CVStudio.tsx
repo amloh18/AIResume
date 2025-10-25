@@ -480,14 +480,14 @@ const CVStudio: React.FC<CVStudioProps> = ({
       if (primaryJourneyId) {
         
         try {
-          // Fetch the complete journey data from the journey ID
-          const response = await fetch(`/api/application-journey/${primaryJourneyId}?userId=${userId}`);
+          // Fetch the complete journey data using jobId (since primaryJourneyId is now the jobId)
+          const response = await fetch(`/api/application-journey?userId=${userId}&jobId=${primaryJourneyId}`);
           if (response.ok) {
             const result = await response.json();
-            if (result.success && result.data?.journey) {
-              const journeyData = result.data.journey;
+            if (result.success && result.data?.journeys && result.data.journeys.length > 0) {
+              const journeyData = result.data.journeys[0]; // Get the first journey
               journey = {
-                journeyId: primaryJourneyId,
+                journeyId: journeyData.journeyId,
                 cvId: journeyData.cvId || undefined,
                 coverLetterId: journeyData.coverLetterId || undefined,
                 jobId: journeyData.jobId || '',
@@ -2123,48 +2123,58 @@ const CVStudio: React.FC<CVStudioProps> = ({
         setOriginalCoverLetterId(journeyInfo.coverLetterId);
         await reloadCoverLetterData(journeyInfo.coverLetterId);
       } else {
-        // Create new cover letter
-        console.log('🔍 Creating new cover letter for journey');
+        // Create new cover letter using duplication flow
+        console.log('🔍 Creating new cover letter for journey using duplication flow');
         try {
-          const coverLetterTitle = `Cover Letter for ${journeyInfo?.jobTitle || currentJob?.title || 'Position'}`;
-          const coverLetterResponse = await fetch('/api/cover-letters', {
+          // Import the default service
+          const { defaultCoverLetterService } = await import('@/lib/services/defaultCoverLetterService');
+          
+          // Ensure we have a default cover letter to duplicate from
+          const defaultCoverLetterId = await defaultCoverLetterService.ensureDefaultCoverLetter(userId);
+          
+          // Generate cover letter name
+          const coverLetterTitle = `${journeyInfo?.company || currentJob?.company || 'Company'}_${journeyInfo?.jobTitle || currentJob?.title || 'Position'} | Cover_Letter`;
+          
+          // Duplicate the default cover letter
+          const duplicateResponse = await fetch('/api/cover-letters/duplicate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
+              sourceCoverLetterId: defaultCoverLetterId,
               userId: userId,
-              title: coverLetterTitle,
-              content: `Dear Hiring Manager,\n\nI am writing to express my interest in the ${journeyInfo?.jobTitle || currentJob?.title || 'position'} at ${journeyInfo?.company || currentJob?.company || 'your company'}.\n\n[Your cover letter content will go here]\n\nSincerely,\n[Your Name]`,
+              customTitle: coverLetterTitle,
               jobId: currentJobId,
-              cvId: originalCvId || cvId
+              journeyId: currentJourneyId
             })
           });
           
-          if (coverLetterResponse.ok) {
-            const coverLetterResult = await coverLetterResponse.json();
-            const newCoverLetterData = coverLetterResult.data || coverLetterResult;
-            const newCoverLetter = newCoverLetterData.coverLetter || newCoverLetterData;
+          if (duplicateResponse.ok) {
+            const duplicateResult = await duplicateResponse.json();
+            const newCoverLetterData = duplicateResult.data?.coverLetter || duplicateResult.coverLetter;
             
-            if (newCoverLetter && (newCoverLetter.id || newCoverLetter._id)) {
-              const newCoverLetterId = newCoverLetter.id || newCoverLetter._id;
+            if (newCoverLetterData && (newCoverLetterData.id || newCoverLetterData._id)) {
+              const newCoverLetterId = newCoverLetterData.id || newCoverLetterData._id;
               newParams.set('coverLetterId', newCoverLetterId);
               // Remove cvId param when in cover letter mode
               newParams.delete('cvId');
               
               // Update component state
               setOriginalCoverLetterId(newCoverLetterId);
-              setCoverLetterData(newCoverLetter);
-              setCoverLetterTitle(newCoverLetter.title || coverLetterTitle);
+              setCoverLetterData(newCoverLetterData);
+              setCoverLetterTitle(newCoverLetterData.title || coverLetterTitle);
               
               // Update journey with new cover letter
               if (currentJourneyId) {
                 await updateJourneyWithDocument(newCoverLetterId, 'cover-letter');
               }
               
-              console.log('✅ Created new cover letter:', newCoverLetterId);
+              console.log('✅ Created new cover letter via duplication:', newCoverLetterId);
             }
+          } else {
+            console.error('❌ Failed to duplicate cover letter:', duplicateResponse.status);
           }
         } catch (error) {
-          console.error('❌ Failed to create cover letter:', error);
+          console.error('❌ Failed to create cover letter via duplication:', error);
         }
       }
     } else {

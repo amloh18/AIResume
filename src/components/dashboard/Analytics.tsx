@@ -1387,9 +1387,11 @@ const Analytics: React.FC = () => {
       />
 
       {/* Fifth Row: Application Stats - Full Width */}
-      <div className="w-full">
-        <ApplicationStatsWidget userId={userId || ''} />
-      </div>
+      {userId && (
+        <div className="w-full">
+          <ApplicationStatsWidget userId={userId} />
+        </div>
+      )}
 
       {/* Enhanced Payment Modal */}
       <UniversalPaymentModal

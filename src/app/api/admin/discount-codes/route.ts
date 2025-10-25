@@ -5,8 +5,20 @@ import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/database';
 import { getAdminDiscountCode, getAdminPricingPlan } from '@/models/admin-models';
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 export async function GET(request: NextRequest) {
   try {
+    // Skip during build time
+    if (process.env.NODE_ENV === 'production' && !process.env.VERCEL) {
+      return NextResponse.json(
+        { error: 'Service unavailable during build' },
+        { status: 503 }
+      );
+    }
+
     // Check authentication and admin role
     const session = await getServerSession(authOptions);
     if (!session || session.user?.role !== 'admin') {
@@ -48,6 +60,14 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    // Skip during build time
+    if (process.env.NODE_ENV === 'production' && !process.env.VERCEL) {
+      return NextResponse.json(
+        { error: 'Service unavailable during build' },
+        { status: 503 }
+      );
+    }
+
     // Check authentication and admin role
     const session = await getServerSession(authOptions);
     if (!session || session.user?.role !== 'admin') {

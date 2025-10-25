@@ -6,18 +6,10 @@ export async function POST(request: NextRequest) {
   try {
     console.log('🚪 Logout attempt started');
     
-    // CSRF validation
+    // CSRF validation (warn but don't block - logout should always succeed)
     const isValidCSRF = validateCSRFFromRequest(request);
     if (!isValidCSRF) {
-      console.log('❌ CSRF validation failed');
-      return NextResponse.json(
-        {
-          success: false,
-          message: 'Invalid CSRF token',
-          error: 'CSRF_VALIDATION_FAILED'
-        },
-        { status: 403 }
-      );
+      console.warn('⚠️ CSRF validation failed during logout, but continuing anyway');
     }
     
     // Get tokens from cookies
@@ -26,13 +18,21 @@ export async function POST(request: NextRequest) {
     
     // Revoke tokens if they exist
     if (accessToken) {
-      revokeToken(accessToken);
-      console.log('✅ Access token revoked');
+      try {
+        revokeToken(accessToken);
+        console.log('✅ Access token revoked');
+      } catch (error) {
+        console.error('⚠️ Error revoking access token:', error);
+      }
     }
     
     if (refreshToken) {
-      revokeToken(refreshToken);
-      console.log('✅ Refresh token revoked');
+      try {
+        revokeToken(refreshToken);
+        console.log('✅ Refresh token revoked');
+      } catch (error) {
+        console.error('⚠️ Error revoking refresh token:', error);
+      }
     }
     
     // Create response
@@ -41,10 +41,10 @@ export async function POST(request: NextRequest) {
       message: 'Logged out successfully'
     });
     
-    // Clear all session cookies
+    // Clear all session cookies (including NextAuth cookies)
     clearSessionFromResponse(response);
     
-    console.log('✅ Logout successful');
+    console.log('✅ Logout successful - all cookies cleared');
     
     return response;
     
@@ -59,6 +59,8 @@ export async function POST(request: NextRequest) {
     });
     
     clearSessionFromResponse(response);
+    
+    console.log('✅ Logout completed with error, but cookies cleared');
     
     return response;
   }

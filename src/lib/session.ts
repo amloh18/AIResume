@@ -190,21 +190,39 @@ export function clearSessionFromStorage(): void {
     sessionStorage.removeItem('fromLogin');
     sessionStorage.removeItem('fromRegistration');
     
-    // Clear all auth-related cookies
+    // Clear all auth-related cookies (including NextAuth cookies)
     const cookiesToClear = [
       'auth-session',
       'auth-session-secure', 
       'auth-token',
       'refresh-token',
       'csrf-token',
-      'session-info'
+      'session-info',
+      // NextAuth cookies (development)
+      'next-auth.session-token',
+      'next-auth.callback-url',
+      'next-auth.csrf-token',
+      // NextAuth cookies (production)
+      '__Secure-next-auth.session-token',
+      '__Secure-next-auth.callback-url',
+      '__Secure-next-auth.csrf-token',
+      '__Host-next-auth.csrf-token'
     ];
     
     const isSecure = window.location.protocol === 'https:';
     
     cookiesToClear.forEach(cookieName => {
+      // Clear with current path and domain
       document.cookie = `${cookieName}=; path=/; max-age=0; ${isSecure ? 'secure;' : ''} samesite=strict`;
+      // Also try clearing with lax same-site (for NextAuth cookies that might use it)
+      document.cookie = `${cookieName}=; path=/; max-age=0; ${isSecure ? 'secure;' : ''} samesite=lax`;
+      // Also try clearing with none same-site (for NextAuth cookies configured with none)
+      document.cookie = `${cookieName}=; path=/; max-age=0; ${isSecure ? 'secure;' : ''} samesite=none`;
+      // Clear without specifying samesite
+      document.cookie = `${cookieName}=; path=/; max-age=0; ${isSecure ? 'secure;' : ''}`;
     });
+    
+    console.log('✅ Cleared all session cookies including NextAuth cookies');
   } catch (error) {
     console.error('Error clearing session from storage:', error);
   }
@@ -213,16 +231,48 @@ export function clearSessionFromStorage(): void {
 // Server-side session clear function
 export function clearSessionFromResponse(response: NextResponse): void {
   try {
+    const isProduction = process.env.NODE_ENV === 'production';
+    
     const cookiesToClear = [
       'auth-token',
       'refresh-token', 
       'csrf-token',
-      'session-info'
+      'session-info',
+      // NextAuth cookies (development)
+      'next-auth.session-token',
+      'next-auth.callback-url',
+      'next-auth.csrf-token',
+      // NextAuth cookies (production)
+      '__Secure-next-auth.session-token',
+      '__Secure-next-auth.callback-url',
+      '__Secure-next-auth.csrf-token',
+      '__Host-next-auth.csrf-token'
     ];
     
     cookiesToClear.forEach(cookieName => {
+      // Delete the cookie
       response.cookies.delete(cookieName);
+      
+      // Also explicitly set it to expired with max-age=0 (backup method)
+      response.cookies.set(cookieName, '', {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: 'strict',
+        maxAge: 0,
+        path: '/'
+      });
+      
+      // For NextAuth cookies with sameSite: 'none', also try that
+      response.cookies.set(cookieName, '', {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: 'none',
+        maxAge: 0,
+        path: '/'
+      });
     });
+    
+    console.log('✅ Cleared all session cookies from response including NextAuth cookies');
   } catch (error) {
     console.error('Error clearing session from response:', error);
   }

@@ -146,11 +146,11 @@ const MasterCVOnboardingContent: React.FC = () => {
             console.log('🔗 User came via callback URL or login, allowing access to master CV onboarding');
           }
           
-          // Skip to Personal Information step (step 2) if user is already authenticated
-          // or if step parameter is provided
-          if (state.currentStep === 0 && stepParam === '2') {
-            console.log('✅ NextAuth user - moving to step 2 due to stepParam');
-            dispatch({ type: 'SET_CURRENT_STEP', payload: 2 });
+          // User is authenticated, they should start at step 0 (PersonalInfoStep)
+          // Step parameter is no longer needed as authenticated users start at step 0
+          if (state.currentStep !== 0) {
+            console.log('✅ NextAuth user - resetting to step 0 (PersonalInfoStep)');
+            dispatch({ type: 'SET_CURRENT_STEP', payload: 0 });
           }
         } catch (error) {
           console.error('Error checking existing CVs:', error);
@@ -231,11 +231,11 @@ const MasterCVOnboardingContent: React.FC = () => {
                   return;
                 }
                 
-                // Skip to CV setup step (step 2) if user is already authenticated
-                // or if step parameter is provided
-                if (state.currentStep === 0 && stepParam === '2') {
-                  console.log('✅ Firebase user - moving to step 2 due to stepParam');
-                  dispatch({ type: 'SET_CURRENT_STEP', payload: 2 });
+                // User is authenticated, they should start at step 0 (PersonalInfoStep)
+                // Step parameter is no longer needed as authenticated users start at step 0
+                if (state.currentStep !== 0) {
+                  console.log('✅ Firebase user - resetting to step 0 (PersonalInfoStep)');
+                  dispatch({ type: 'SET_CURRENT_STEP', payload: 0 });
                 }
               } catch (error) {
                 console.error('Error checking existing CVs:', error);
@@ -452,18 +452,31 @@ const MasterCVOnboardingContent: React.FC = () => {
     console.log('🔍 renderStep - session?.user:', session?.user);
     console.log('🔍 renderStep - localStorage user:', typeof window !== 'undefined' ? localStorage.getItem('user') : 'N/A');
     
-    // If user is authenticated and on step 0, skip role selection and start from personal info
-    if (isAuthenticated && state.currentStep === 0) {
-      console.log('✅ renderStep - User authenticated on step 0, showing PersonalInfoStep');
-      return <PersonalInfoStep onNext={nextStep} />;
+    // If user is authenticated, adjust the step mapping (skip role selection)
+    // For authenticated users: step 0 = PersonalInfo, step 1 = MasterCV, step 2 = Experience, etc.
+    if (isAuthenticated) {
+      switch (state.currentStep) {
+        case 0:
+          console.log('✅ renderStep - Authenticated user at step 0, showing PersonalInfoStep');
+          return <PersonalInfoStep onNext={nextStep} />;
+        case 1:
+          console.log('✅ renderStep - Authenticated user at step 1, showing MasterCVCreationWizard');
+          return <MasterCVCreationWizard onComplete={handleComplete} onBack={prevStep} />;
+        case 2:
+          console.log('✅ renderStep - Authenticated user at step 2, showing ExperienceStep');
+          return <ExperienceStep onNext={nextStep} onBack={prevStep} />;
+        case 3:
+          console.log('✅ renderStep - Authenticated user at step 3, showing EducationStep');
+          return <EducationStep onNext={nextStep} onBack={prevStep} />;
+        case 4:
+          console.log('✅ renderStep - Authenticated user at step 4, showing CompletionStep');
+          return <CompletionStep onComplete={handleComplete} onBack={prevStep} isLoading={isLoading} />;
+        default:
+          return <PersonalInfoStep onNext={nextStep} />;
+      }
     }
     
-    // If user is authenticated and on step 2, show personal info (skip role selection)
-    if (isAuthenticated && state.currentStep === 2) {
-      console.log('✅ renderStep - User authenticated on step 2, showing PersonalInfoStep');
-      return <PersonalInfoStep onNext={nextStep} />;
-    }
-    
+    // For unauthenticated users, follow the normal flow
     switch (state.currentStep) {
       case 0:
         return <RoleSelection onRoleSelect={handleRoleSelect} />;

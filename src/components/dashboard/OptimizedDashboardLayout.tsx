@@ -6,7 +6,7 @@ import { useUserData } from '@/lib/hooks/useUserData';
 import { MobileSidebarProvider, useMobileSidebar } from '@/contexts/MobileSidebarContext';
 import { JobJourneyProvider } from '@/contexts/JobJourneyContext';
 import OptimizedNavigation from './OptimizedNavigation';
-import DashboardRouter from './DashboardRouter';
+// DashboardRouter removed - using children prop directly
 import CVCheckRedirect from './CVCheckRedirect';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -62,7 +62,7 @@ const DashboardContent: React.FC<{ children?: React.ReactNode }> = ({ children }
           <main className="flex-1 overflow-auto">
             <div className="p-6">
               <CVCheckRedirect>
-                <DashboardRouter />
+                {children}
               </CVCheckRedirect>
             </div>
           </main>

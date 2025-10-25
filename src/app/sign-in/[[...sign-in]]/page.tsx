@@ -106,14 +106,23 @@ function SignInPageContent() {
 
       if (result?.ok) {
         setSuccess('Sign in successful! Redirecting...');
+        
+        // Redirect immediately after showing success message
+        setTimeout(() => {
+          if (planKey) {
+            router.push(`/dashboard?plan=${planKey}&showPaymentModal=true`);
+          } else {
+            router.push(returnUrl || redirectUrl);
+          }
+        }, 500);
       } else {
         setError(result?.error || 'Invalid email or password.');
+        setIsLoading(false);
       }
 
     } catch (error: any) {
       console.error('Sign in error:', error);
       setError('Failed to sign in. Please check your credentials.');
-    } finally {
       setIsLoading(false);
     }
   };

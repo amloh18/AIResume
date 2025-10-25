@@ -22,6 +22,7 @@ const publicRoutes = [
   '/privacy-policy',
   '/terms',
   '/cookie-policy',
+  '/force-logout',
 ]
 
 const isProtectedRoute = (req: NextRequest) => {
@@ -51,16 +52,37 @@ export default async function middleware(req: NextRequest) {
   if (req.nextUrl.pathname.startsWith('/api/')) {
     console.log('🔍 Middleware - API route detected, checking authentication:', req.nextUrl.pathname)
     
-    // Check for NextAuth session token
-    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
-    
-    if (!token) {
-      console.log('❌ Middleware - No session token found for API route, returning 401')
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Allow onboarding API routes without authentication (they handle auth internally)
+    if (req.nextUrl.pathname.startsWith('/api/cvs/onboarding') || 
+        req.nextUrl.pathname.startsWith('/api/auth/')) {
+      console.log('✅ Middleware - Allowing onboarding/auth API route without token check')
+      return NextResponse.next()
     }
     
-    console.log('✅ Middleware - API route authenticated, allowing access')
-    return NextResponse.next()
+    // Check for NextAuth session token first
+    const nextAuthToken = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
+    
+    if (nextAuthToken) {
+      console.log('✅ Middleware - NextAuth token found, allowing access')
+      return NextResponse.next()
+    }
+    
+    // Check for Firebase user ID in headers (for client-side requests)
+    const firebaseUserId = req.headers.get('x-firebase-user-id')
+    if (firebaseUserId) {
+      console.log('✅ Middleware - Firebase user ID found in headers, allowing access')
+      return NextResponse.next()
+    }
+    
+    // Check for Firebase authorization header (basic check without verification in middleware)
+    const authHeader = req.headers.get('authorization')
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      console.log('✅ Middleware - Firebase token found in headers, allowing access (verification will be done in API routes)')
+      return NextResponse.next()
+    }
+    
+    console.log('❌ Middleware - No valid authentication found for API route, returning 401')
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   // Protect routes that require authentication
