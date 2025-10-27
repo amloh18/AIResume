@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Briefcase, FileText, CheckCircle, Download, X, Settings, Mail, ChevronDown, ChevronUp } from 'lucide-react';
 import { useJobJourney } from '@/contexts/JobJourneyContext';
-import { useFirebaseAuth } from '@/lib/hooks/useFirebaseAuth';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface JourneyStatusBannerProps {
   journey?: {
@@ -46,43 +46,110 @@ const JourneyStatusBanner: React.FC<JourneyStatusBannerProps> = ({ journey }) =>
   
   // If we have a journey prop, use it exclusively (don't fall back to context)
   const displayJourney = journey ? journey : activeJourney;
-  const { user } = useFirebaseAuth();
+  const { user } = useAuth();
   const [isExpanded, setIsExpanded] = useState(false);
   const [jobData, setJobData] = useState<any>(null);
   const [cvData, setCvData] = useState<any>(null);
   const [coverLetterData, setCoverLetterData] = useState<any>(null);
+  const [atsScoreState, setAtsScoreState] = useState<number | null>(null);
+  const [atsScoreLoading, setAtsScoreLoading] = useState<boolean>(false);
+  const hasAttemptedATSCalculation = React.useRef(false);
 
+  // Fetch ATS score function (same as journey card)
+  const fetchATSScore = async (cvId: string, jobId: string) => {
+    if (!cvId || !jobId || atsScoreLoading) {
+      console.log('🚫 JourneyStatusBanner - ATS calculation skipped:', {
+        hasCvId: !!cvId,
+        hasJobId: !!jobId,
+        isLoading: atsScoreLoading
+      });
+      return;
+    }
+
+    setAtsScoreLoading(true);
+    console.log('🔍 JourneyStatusBanner - Fetching ATS score for CV:', cvId, 'Job:', jobId);
+
+    try {
+      const response = await fetch('/api/ats/calculate-score', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          cvId,
+          jobId,
+          userId: user?.id
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ JourneyStatusBanner - ATS score fetched:', result);
+      
+      if (result.success && result.data) {
+        const score = result.data.score || result.data.atsScore;
+        if (score !== undefined) {
+          setAtsScoreState(score);
+          console.log('✅ JourneyStatusBanner - ATS score set to:', score);
+        }
+      }
+    } catch (error) {
+      console.error('❌ JourneyStatusBanner - Error fetching ATS score:', error);
+      setAtsScoreState(-1); // Mark as failed
+    } finally {
+      setAtsScoreLoading(false);
+    }
+  };
 
   // Load linked documents data
   useEffect(() => {
     const loadLinkedData = async () => {
-      if (!user?.uid) return;
+      if (!user?.id) return;
 
       try {
         // Load job data
         if (activeJourney.jobId && activeJourney.jobId !== 'temp') {
-          const jobResponse = await fetch(`/api/jobs/${activeJourney.jobId}?userId=${user.uid}`);
+          const jobResponse = await fetch(`/api/jobs/${activeJourney.jobId}?userId=${user.id}`);
           if (jobResponse.ok) {
             const jobResult = await jobResponse.json();
             setJobData(jobResult.job);
           }
         }
 
-        // Load CV data
-        if (activeJourney.cvId) {
-          const cvResponse = await fetch(`/api/cvs/${activeJourney.cvId}?userId=${user.uid}`);
-          if (cvResponse.ok) {
-            const cvResult = await cvResponse.json();
-            setCvData(cvResult.cv);
+        // Load ALL user CVs first, then find the linked one (same as journey card)
+        const cvsResponse = await fetch(`/api/cvs?userId=${user.id}`);
+        if (cvsResponse.ok) {
+          const cvsData = await cvsResponse.json();
+          if (cvsData.success && cvsData.data.cvs) {
+            const cvs = cvsData.data.cvs || [];
+            // Find the CV linked to this journey
+            const linkedCV = cvs.find((cv: any) => String(cv.id) === String(activeJourney.cvId));
+            if (linkedCV) {
+              setCvData(linkedCV);
+              console.log('🔍 JourneyStatusBanner - Found linked CV:', linkedCV);
+            } else {
+              console.log('🔍 JourneyStatusBanner - CV not found in user CVs:', activeJourney.cvId);
+            }
           }
         }
 
-        // Load cover letter data
-        if (activeJourney.coverLetterId) {
-          const coverLetterResponse = await fetch(`/api/cover-letters/${activeJourney.coverLetterId}?userId=${user.uid}`);
-          if (coverLetterResponse.ok) {
-            const coverLetterResult = await coverLetterResponse.json();
-            setCoverLetterData(coverLetterResult.coverLetter);
+        // Load ALL user cover letters first, then find the linked one (same as journey card)
+        const coverLettersResponse = await fetch(`/api/cover-letters?userId=${user.id}`);
+        if (coverLettersResponse.ok) {
+          const coverLettersData = await coverLettersResponse.json();
+          if (coverLettersData.success && coverLettersData.data.coverLetters) {
+            const coverLetters = coverLettersData.data.coverLetters || [];
+            // Find the cover letter linked to this journey
+            const linkedCoverLetter = coverLetters.find((cl: any) => String(cl.id) === String(activeJourney.coverLetterId));
+            if (linkedCoverLetter) {
+              setCoverLetterData(linkedCoverLetter);
+              console.log('🔍 JourneyStatusBanner - Found linked cover letter:', linkedCoverLetter);
+            } else {
+              console.log('🔍 JourneyStatusBanner - Cover letter not found in user cover letters:', activeJourney.coverLetterId);
+            }
           }
         }
       } catch (error) {
@@ -91,7 +158,25 @@ const JourneyStatusBanner: React.FC<JourneyStatusBannerProps> = ({ journey }) =>
     };
 
     loadLinkedData();
-  }, [activeJourney.jobId, activeJourney.cvId, activeJourney.coverLetterId, user?.uid]);
+  }, [activeJourney.jobId, activeJourney.cvId, activeJourney.coverLetterId, user?.id]);
+
+  // Initialize ATS score from journey data or auto-fetch if needed (same as journey card)
+  useEffect(() => {
+    // First, check if journey already has an ATS score
+    if (activeJourney.atsScore !== undefined && activeJourney.atsScore !== null) {
+      console.log('🔍 JourneyStatusBanner - Using existing ATS score from journey:', activeJourney.atsScore);
+      setAtsScoreState(activeJourney.atsScore);
+      hasAttemptedATSCalculation.current = true; // Mark as attempted
+      return;
+    }
+    
+    // Only auto-fetch if we don't have a score, CV is linked, haven't attempted before, and not currently loading
+    if (activeJourney.cvId && activeJourney.jobId && atsScoreState === null && !atsScoreLoading && !hasAttemptedATSCalculation.current) {
+      console.log('🔍 JourneyStatusBanner - Auto-fetching ATS score for linked CV');
+      hasAttemptedATSCalculation.current = true; // Mark as attempted
+      fetchATSScore(activeJourney.cvId, activeJourney.jobId);
+    }
+  }, [activeJourney.cvId, activeJourney.jobId, activeJourney.atsScore, atsScoreState, atsScoreLoading]);
 
   if (!isJourneyActive && !journey) {
     return null;
@@ -109,15 +194,12 @@ const JourneyStatusBanner: React.FC<JourneyStatusBannerProps> = ({ journey }) =>
   };
 
   const getStepLabel = (step: number) => {
-    // Show the next step to be completed, not the current step
-    const nextStep = step + 1;
-    switch (nextStep) {
+    switch (step) {
       case 1: return 'Add Job';
       case 2: return 'Create CV';
       case 3: return 'ATS Score';
       case 4: return 'Cover Letter';
       case 5: return 'Download';
-      case 6: return 'Complete';
       default: return 'Unknown';
     }
   };
@@ -133,9 +215,9 @@ const JourneyStatusBanner: React.FC<JourneyStatusBannerProps> = ({ journey }) =>
           description: status === 'completed' ? 'Job tracking enabled' : 'Add a job to start your application',
           actionText: status === 'completed' ? 'View Job' : 'Add Job',
           details: jobData ? [
-            `Location: ${jobData.location || 'Not specified'}`,
-            `Type: ${jobData.jobType || 'Not specified'}`,
-            `Posted: ${jobData.datePosted ? new Date(jobData.datePosted).toLocaleDateString() : 'Not specified'}`
+            `📍 ${jobData.location || 'Location not specified'}`,
+            `💼 ${jobData.jobType || 'Full-time'}`,
+            `📅 Posted ${jobData.datePosted ? new Date(jobData.datePosted).toLocaleDateString() : 'Recently'}`
           ] : []
         };
       
@@ -150,18 +232,18 @@ const JourneyStatusBanner: React.FC<JourneyStatusBannerProps> = ({ journey }) =>
             : 'Complete job step first',
           actionText: status === 'completed' ? 'Edit CV' : 'Create CV',
           details: cvData ? [
-            `Last modified: ${cvData.lastModified ? new Date(cvData.lastModified).toLocaleDateString() : 'Unknown'}`,
-            `Sections: ${cvData.cvData?.work?.length || 0} experience, ${cvData.cvData?.education?.length || 0} education`,
-            `Template: ${cvData.template || 'Default'}`
+            `📝 ${cvData.cvData?.work?.length || 0} experience, ${cvData.cvData?.education?.length || 0} education`,
+            `🎨 Template: ${cvData.template || 'Default'}`,
+            `📅 Modified ${cvData.lastModified ? new Date(cvData.lastModified).toLocaleDateString() : 'Recently'}`
           ] : []
         };
       
       case 3: // ATS Score
-        const scoreValue = atsScore || cvData?.metadata?.atsScore || 0;
+        const scoreValue = atsScoreState || cvData?.metadata?.atsScore || 0;
         return {
           title: scoreValue > 0 ? `ATS Score: ${scoreValue}%` : 'ATS Score Pending',
           subtitle: scoreValue > 0 
-            ? `${scoreValue >= 80 ? 'Excellent' : scoreValue >= 60 ? 'Good' : scoreValue >= 40 ? 'Fair' : 'Needs Improvement'} match`
+            ? `${scoreValue >= 80 ? '🎉 Excellent' : scoreValue >= 60 ? '⚠️ Good' : scoreValue >= 40 ? '📊 Fair' : '❌ Needs Work'} match`
             : 'Analyze CV compatibility',
           description: status === 'completed'
             ? `Your CV scores ${scoreValue}% for this job`
@@ -170,9 +252,9 @@ const JourneyStatusBanner: React.FC<JourneyStatusBannerProps> = ({ journey }) =>
             : 'Complete CV step first',
           actionText: status === 'completed' ? 'Improve Score' : 'Check Score',
           details: scoreValue > 0 ? [
-            `Match quality: ${scoreValue >= 80 ? 'High' : scoreValue >= 60 ? 'Medium' : 'Low'}`,
-            `Recommendations: ${scoreValue < 80 ? 'Available' : 'Optimized'}`,
-            `Last checked: ${cvData?.metadata?.atsScoreDate ? new Date(cvData.metadata.atsScoreDate).toLocaleDateString() : 'Today'}`
+            `🎯 Match quality: ${scoreValue >= 80 ? 'High' : scoreValue >= 60 ? 'Medium' : 'Low'}`,
+            `💡 ${scoreValue < 80 ? 'Improvement tips available' : 'Optimized for this role'}`,
+            `🕒 Last checked ${cvData?.metadata?.atsScoreDate ? new Date(cvData.metadata.atsScoreDate).toLocaleDateString() : 'Today'}`
           ] : []
         };
       
@@ -187,9 +269,9 @@ const JourneyStatusBanner: React.FC<JourneyStatusBannerProps> = ({ journey }) =>
             : 'Complete ATS scoring first',
           actionText: status === 'completed' ? 'Edit Letter' : 'Create Letter',
           details: coverLetterData ? [
-            `Created: ${coverLetterData.createdAt ? new Date(coverLetterData.createdAt).toLocaleDateString() : 'Unknown'}`,
-            `Tone: ${coverLetterData.tone || 'Professional'}`,
-            `Personalization: ${coverLetterData.isPersonalized ? 'Customized' : 'Template'}`
+            `📝 ${coverLetterData.wordCount || 0} words • ${coverLetterData.tone || 'Professional'} tone`,
+            `📅 Created ${coverLetterData.createdAt ? new Date(coverLetterData.createdAt).toLocaleDateString() : 'Recently'}`,
+            `🎯 ${coverLetterData.isPersonalized ? 'Customized' : 'Template'} for ${jobData?.company || 'this position'}`
           ] : []
         };
       
@@ -203,15 +285,15 @@ const JourneyStatusBanner: React.FC<JourneyStatusBannerProps> = ({ journey }) =>
             : 'Finish all steps to prepare your application',
           actionText: hasAllComponents ? 'Download & Apply' : 'Complete Steps',
           details: hasAllComponents ? [
-            `✓ Job: ${jobData?.title || 'Added'}`,
-            `✓ CV: ${cvData?.title || 'Created'}`,
-            `✓ ATS Score: ${atsScore || cvData?.metadata?.atsScore || 0}%`,
-            `✓ Cover Letter: ${coverLetterData?.title || 'Created'}`
+            `✅ Job: ${jobData?.title || 'Added'}`,
+            `✅ CV: ${cvData?.title || 'Created'}`,
+            `✅ ATS: ${atsScoreState || cvData?.metadata?.atsScore || 0}%`,
+            `✅ Cover Letter: ${coverLetterData?.title || 'Created'}`
           ] : [
-            `${jobData ? '✓' : '○'} Job tracking`,
-            `${cvData ? '✓' : '○'} CV creation`,
-            `${(atsScore > 0 || cvData?.metadata?.atsScore > 0) ? '✓' : '○'} ATS analysis`,
-            `${coverLetterData ? '✓' : '○'} Cover letter`
+            `${jobData ? '✅' : '⭕'} Job tracking`,
+            `${cvData ? '✅' : '⭕'} CV creation`,
+            `${(atsScoreState > 0 || cvData?.metadata?.atsScore > 0) ? '✅' : '⭕'} ATS analysis`,
+            `${coverLetterData ? '✅' : '⭕'} Cover letter`
           ]
         };
       
@@ -226,45 +308,50 @@ const JourneyStatusBanner: React.FC<JourneyStatusBannerProps> = ({ journey }) =>
     }
   };
 
+  // Use the same logic as JourneyTimelineCard for consistency
   const getStepStatus = (stepId: number) => {
+    // Use database values directly like the journey card
+    const liveProgress = {
+      currentStep: activeJourney.currentStep || 1,
+      totalSteps: activeJourney.totalSteps || 5,
+      atsScore: activeJourney.atsScore,
+      cvId: activeJourney.cvId,
+      coverLetterId: activeJourney.coverLetterId,
+      status: activeJourney.status || 'in-progress'
+    };
+
+    console.log(`🔍 JourneyStatusBanner - getStepStatus(${stepId}):`, {
+      stepId,
+      liveProgress,
+      jobData: !!jobData,
+      cvData: !!cvData,
+      coverLetterData: !!coverLetterData,
+      cvNotFound: !cvData && liveProgress.cvId,
+      coverLetterNotFound: !coverLetterData && liveProgress.coverLetterId
+    });
+    
     switch (stepId) {
       case 1: // Job Added
-        return (jobData || activeJourney.jobId) ? 'completed' : 'pending';
+        return activeJourney.jobTitle && activeJourney.company ? 'completed' : 'pending';
       
       case 2: // CV Created/Linked
-        // Check if CV is specifically linked to this journey
-        const hasLinkedCV = (cvData && cvData.jobId === activeJourney.jobId) || 
-                           (activeJourney.cvId && activeJourney.cvId === activeJourney.cvId);
-        return hasLinkedCV ? 'completed' : 
-               (jobData || activeJourney.jobId) ? 'active' : 'pending';
+        return (liveProgress.cvId && cvData) ? 'completed' : 
+               (liveProgress.currentStep >= 2 ? 'active' : 'pending');
       
       case 3: // ATS Score Checked
-        // Check if ATS score exists for this specific job-CV combination
-        const hasATSScore = (activeJourney.atsScore !== null && activeJourney.atsScore > 0) || 
-                           (cvData?.metadata?.atsScore && 
-                            cvData?.metadata?.atsScoreJobId === activeJourney.jobId &&
-                            cvData?.metadata?.atsScore > 0);
-        return hasATSScore ? 'completed' :
-               (cvData || activeJourney.cvId) ? 'active' : 'pending';
+        // Only completed if we have a valid ATS score (not -1) AND CV is linked and available
+        return (atsScoreState !== null && atsScoreState !== -1 && liveProgress.cvId && cvData) ? 'completed' :
+               (liveProgress.currentStep >= 3 && liveProgress.cvId && cvData ? 'active' : 'pending');
       
       case 4: // Cover Letter Created
-        const atsCompleted = (activeJourney.atsScore !== null && activeJourney.atsScore > 0) || 
-                            (cvData?.metadata?.atsScore && 
-                             cvData?.metadata?.atsScoreJobId === activeJourney.jobId &&
-                             cvData?.metadata?.atsScore > 0);
-        return (coverLetterData || activeJourney.coverLetterId) ? 'completed' :
-               atsCompleted ? 'active' : 'pending';
+        // Only completed if cover letter is explicitly linked to this journey and available
+        return (liveProgress.coverLetterId && liveProgress.coverLetterId.trim() !== '' && coverLetterData) ? 'completed' :
+               (liveProgress.currentStep >= 4 && atsScoreState !== null && atsScoreState !== -1 && cvData ? 'active' : 'pending');
       
       case 5: // Download/Apply
-        const atsReady = (activeJourney.atsScore !== null && activeJourney.atsScore > 0) || 
-                        (cvData?.metadata?.atsScore && 
-                         cvData?.metadata?.atsScoreJobId === activeJourney.jobId &&
-                         cvData?.metadata?.atsScore > 0);
-        const hasLinkedCVForDownload = (cvData && cvData.jobId === activeJourney.jobId) || 
-                                     (activeJourney.cvId && activeJourney.cvId === activeJourney.cvId);
-        const hasAllComponents = (jobData || activeJourney.jobId) && hasLinkedCVForDownload && 
-                                atsReady && (coverLetterData || activeJourney.coverLetterId);
-        return hasAllComponents ? 'completed' : 'pending';
+        // Only completed if journey status is explicitly 'completed'
+        return liveProgress.status === 'completed' ? 'completed' :
+               (liveProgress.currentStep >= 5 && liveProgress.coverLetterId ? 'active' : 'pending');
       
       default:
         return 'pending';

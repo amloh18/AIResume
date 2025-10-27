@@ -51,11 +51,11 @@ const LanguagesSection: React.FC<LanguagesSectionProps> = ({
   ];
 
   return (
-    <div className="space-y-4 p-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-end">
         <motion.button
           onClick={addLanguage}
-          className="flex items-center gap-2 px-3 py-2 bg-lime-500 hover:bg-lime-600 text-white rounded-lg transition-colors"
+          className="flex items-center gap-2 px-4 py-2 text-sm bg-[#80FF00] text-black rounded-lg hover:bg-[#70e600] transition-colors"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
         >
@@ -65,56 +65,54 @@ const LanguagesSection: React.FC<LanguagesSectionProps> = ({
       </div>
 
       {safeData.length === 0 ? (
-        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-          <Globe className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+        <div className="text-center py-8 text-white/60">
+          <Globe className="w-12 h-12 mx-auto mb-4 text-white/40" />
           <p>No languages added yet</p>
           <p className="text-sm">Click "Add Language" to get started</p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-6">
           {safeData.map((language, index) => (
             <motion.div
               key={index}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-lg p-4"
+              className="bg-white/5 rounded-2xl border border-white/10 p-6"
             >
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="font-medium text-gray-900 dark:text-white">
+              <div className="flex items-center justify-between mb-6">
+                <h4 className="font-medium text-white">
                   Language #{index + 1}
                 </h4>
                 <button
                   onClick={() => removeLanguage(index)}
-                  className="text-red-500 hover:text-red-700 transition-colors"
+                  className="text-red-400 hover:text-red-300 transition-colors"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <ProfessionalTextField
-                  label="Language"
-                  value={language.language || ''}
-                  onChange={(value) => updateLanguage(index, 'language', value)}
-                  placeholder="e.g., Spanish, French, Mandarin"
-                  showFullToolbar={false}
-                  showFormattingHelp={false}
-                  showStatistics={false}
-                  showPreview={false}
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-white/80 text-sm font-medium mb-2">Language</label>
+                  <input
+                    type="text"
+                    value={language.language || ''}
+                    onChange={(e) => updateLanguage(index, 'language', e.target.value)}
+                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                    placeholder="e.g., Spanish, French, Mandarin"
+                  />
+                </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Proficiency Level
-                  </label>
+                  <label className="block text-white/80 text-sm font-medium mb-2">Proficiency Level</label>
                   <select
                     value={language.fluency || ''}
                     onChange={(e) => updateLanguage(index, 'fluency', e.target.value)}
-                    className="w-full p-3 border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-lime-500 focus:border-transparent"
+                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
                   >
-                    <option value="">Select proficiency level</option>
+                    <option value="" className="bg-gray-800 text-white">Select proficiency level</option>
                     {fluencyLevels.map((level) => (
-                      <option key={level} value={level}>
+                      <option key={level} value={level} className="bg-gray-800 text-white">
                         {level}
                       </option>
                     ))}

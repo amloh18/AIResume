@@ -9,7 +9,11 @@ interface SessionProviderProps {
 
 export default function SessionProvider({ children }: SessionProviderProps) {
   return (
-    <NextAuthSessionProvider>
+    <NextAuthSessionProvider
+      // Add refetch interval to prevent stale sessions
+      refetchInterval={5 * 60} // 5 minutes
+      refetchOnWindowFocus={true}
+    >
       {children}
     </NextAuthSessionProvider>
   );

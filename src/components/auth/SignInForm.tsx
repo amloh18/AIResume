@@ -1,10 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
-import { auth, googleProvider } from '@/lib/firebase';
-import { signIn, getSession } from 'next-auth/react';
-import { signInWithEmail } from '@/lib/unified-auth';
+import { signIn } from 'next-auth/react';
 
 interface SignInFormData {
   email: string;
@@ -34,34 +31,29 @@ export default function SignInForm() {
     setError('');
 
     try {
-      // Use unified authentication (tries Firebase first, falls back to NextAuth)
-      const result = await signInWithEmail(formData.email, formData.password);
+      console.log('🔐 Attempting credentials sign-in...');
+      
+      // Use NextAuth credentials provider
+      const result = await signIn('credentials', {
+        email: formData.email,
+        password: formData.password,
+        redirect: false,
+      });
 
-      if (result.success) {
-        console.log(`✅ Authentication successful via ${result.method}`);
-        
-        // Always redirect to dashboard - let the dashboard handle CV checking and onboarding redirect
-        console.log('🔄 Redirecting to dashboard...');
+      if (result?.error) {
+        console.error('❌ Sign-in failed:', result.error);
+        setError(result.error);
+      } else if (result?.ok) {
+        console.log('✅ Sign-in successful, redirecting to dashboard...');
+        // Redirect to dashboard
         window.location.href = '/dashboard';
       } else {
-        setError(result.error || 'Authentication failed. Please try again.');
+        setError('Authentication failed. Please try again.');
       }
 
     } catch (error: any) {
-      console.error('Sign in error:', error);
-      
-      // Handle specific Firebase errors
-      if (error.code === 'auth/user-not-found') {
-        setError('No account found with this email address');
-      } else if (error.code === 'auth/wrong-password') {
-        setError('Incorrect password');
-      } else if (error.code === 'auth/invalid-email') {
-        setError('Invalid email address');
-      } else if (error.code === 'auth/too-many-requests') {
-        setError('Too many failed attempts. Please try again later');
-      } else {
-        setError(error.message || 'Failed to sign in');
-      }
+      console.error('❌ Sign in error:', error);
+      setError(error.message || 'Failed to sign in. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -72,26 +64,22 @@ export default function SignInForm() {
     setError('');
 
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
-
-      // Get Firebase ID token and sign in with NextAuth
-      const idToken = await user.getIdToken();
-      const signInResult = await signIn('firebase', { 
-        idToken, 
-        redirect: false 
+      console.log('🔐 Attempting Google sign-in...');
+      
+      // Use NextAuth Google provider directly
+      const result = await signIn('google', {
+        callbackUrl: '/dashboard',
+        redirect: true, // Let NextAuth handle the redirect
       });
 
-      if (signInResult?.error) {
-        console.error('NextAuth Google signin error:', signInResult.error);
-        setError('Authentication failed. Please try again.');
-      } else if (signInResult?.ok) {
-        // Redirect manually after successful signin
-        window.location.href = '/dashboard';
+      // If redirect: false, handle result
+      if (result?.error) {
+        console.error('❌ Google sign-in failed:', result.error);
+        setError('Failed to sign in with Google. Please try again.');
       }
 
     } catch (error: any) {
-      console.error('Google sign in error:', error);
+      console.error('❌ Google sign in error:', error);
       setError(error.message || 'Failed to sign in with Google');
     } finally {
       setLoading(false);

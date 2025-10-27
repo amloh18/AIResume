@@ -182,8 +182,8 @@ const RecentActivity: React.FC = () => {
 
     // Sort by time (most recent first)
     return generatedActivities.sort((a, b) => {
-      const timeA = parseInt(a.timestamp.split(' ')[0]);
-      const timeB = parseInt(b.timestamp.split(' ')[0]);
+      const timeA = parseInt((a.timestamp || '0').split(' ')[0]);
+      const timeB = parseInt((b.timestamp || '0').split(' ')[0]);
       return timeA - timeB;
     });
   };

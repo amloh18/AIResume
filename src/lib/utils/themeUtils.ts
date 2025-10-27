@@ -142,7 +142,7 @@ export const getTopBarClasses = () => ({
 export const getStudioLayoutClasses = () => ({
   container: 'min-h-screen space-y-4',
   header: 'bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 shadow-lg',
-  leftPanel: 'bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 rounded-2xl shadow-lg',
+  leftPanel: '',
   mainArea: 'bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 rounded-2xl shadow-lg',
   rightPanel: 'bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 rounded-2xl shadow-lg',
   gap: 'gap-4'

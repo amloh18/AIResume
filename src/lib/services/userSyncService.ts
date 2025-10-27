@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import User from '@/models/User';
 import AdminUser from '@/models/admin/AdminUser';
 import connectDB from '@/lib/database';
-import { getAdminConnection } from '@/lib/admin-database-connection';
+// Admin database connection removed - using main database
 
 export interface SyncResult {
   success: boolean;
@@ -13,7 +13,7 @@ export interface SyncResult {
 }
 
 /**
- * Syncs users from cvcircle.users to cvcircle_admin.users
+ * Syncs users from cvcircle.users to adminusers
  * This function extracts essential user data for campaign targeting
  */
 export async function syncUsersToAdmin(): Promise<SyncResult> {
@@ -26,19 +26,13 @@ export async function syncUsersToAdmin(): Promise<SyncResult> {
   };
 
   try {
-    console.log('🔄 Starting user sync from cvcircle to cvcircle_admin...');
+    console.log('🔄 Starting user sync from cvcircle.users to adminusers...');
 
-    // Connect to both databases
-    await connectDB(); // Main database
-    const adminConnection = await getAdminConnection(); // Admin database
+    // Connect to main database
+    await connectDB();
 
-    if (!adminConnection) {
-      throw new Error('Failed to connect to admin database');
-    }
-
-    // Get AdminUser model from admin connection
-    const AdminUserModel = adminConnection.models.AdminUser || 
-      adminConnection.model('AdminUser', AdminUser.schema);
+    // Get AdminUser model
+    const AdminUserModel = AdminUser;
 
     // Fetch all users from main database
     const users = await User.find({}).lean();
@@ -134,19 +128,13 @@ export async function syncUsersToAdmin(): Promise<SyncResult> {
 export async function syncSingleUser(userId: string): Promise<boolean> {
   try {
     await connectDB();
-    const adminConnection = await getAdminConnection();
-
-    if (!adminConnection) {
-      throw new Error('Failed to connect to admin database');
-    }
 
     const user = await User.findById(userId).lean();
     if (!user) {
       throw new Error('User not found');
     }
 
-    const AdminUserModel = adminConnection.models.AdminUser || 
-      adminConnection.model('AdminUser', AdminUser.schema);
+    const AdminUserModel = AdminUser;
 
     const adminUserData = {
       mainUserId: user._id,
@@ -217,13 +205,9 @@ export async function getTargetedUsers(filters: any): Promise<any[]> {
       return [];
     }
 
-    const adminConnection = await getAdminConnection();
-    if (!adminConnection) {
-      throw new Error('Failed to connect to admin database');
-    }
+    await connectDB();
 
-    const AdminUserModel = adminConnection.models.AdminUser || 
-      adminConnection.model('AdminUser', AdminUser.schema);
+    const AdminUserModel = AdminUser;
 
     const query: any = {
       'emailCampaigns.unsubscribed': false, // Never target unsubscribed users

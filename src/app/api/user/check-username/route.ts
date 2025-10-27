@@ -1,33 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-// Removed - using Clerk now
+import { getAuthenticatedUser } from '@/lib/auth-helpers';
 import connectDB from '@/lib/database';
 import { User } from '@/models';
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const authResult = await getAuthenticatedUser(request);
     
-    // Check for Firebase user ID in headers or query params
-    const firebaseUserId = request.headers.get('x-firebase-user-id') || 
-                          request.nextUrl.searchParams.get('firebaseUserId');
-    
-    let userEmail: string | undefined;
-    let userId: string | undefined;
-    
-    if (session?.user?.email) {
-      // NextAuth user
-      userEmail = session.user.email;
-    } else if (firebaseUserId) {
-      // Firebase user - get user by Firebase UID
-      await connectDB();
-      const firebaseUser = await User.findOne({ firebaseUid: firebaseUserId });
-      if (firebaseUser) {
-        userEmail = firebaseUser.email;
-        userId = firebaseUser._id.toString();
-      }
+    if (!authResult) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
+    
+    const userEmail = authResult.userEmail;
+    const userId = authResult.userId;
     
     if (!userEmail) {
       return NextResponse.json(

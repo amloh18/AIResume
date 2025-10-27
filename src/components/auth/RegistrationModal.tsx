@@ -178,7 +178,7 @@ export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, on
               } else {
                 // New user, redirect to universal onboarding
                 onClose();
-                window.location.href = '/master-cv-onboarding';
+                window.location.href = '/ai-career-report';
               }
             } catch (error) {
               console.log('Error checking CVs, assuming new user:', error);

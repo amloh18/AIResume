@@ -170,7 +170,7 @@ export default function CampaignFilters({ filters, onChange }: FilterProps) {
             <label className="block text-xs text-gray-400 mb-1">From</label>
             <input
               type="date"
-              value={localFilters.registrationDateRange?.startDate?.split('T')[0] || ''}
+              value={localFilters.registrationDateRange?.startDate ? localFilters.registrationDateRange.startDate.split('T')[0] : ''}
               onChange={(e) => handleDateRangeChange('registrationDateRange', 'startDate', e.target.value)}
               className="w-full px-3 py-2 bg-white/5 border border-white/10 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-400/50"
             />
@@ -179,7 +179,7 @@ export default function CampaignFilters({ filters, onChange }: FilterProps) {
             <label className="block text-xs text-gray-400 mb-1">To</label>
             <input
               type="date"
-              value={localFilters.registrationDateRange?.endDate?.split('T')[0] || ''}
+              value={localFilters.registrationDateRange?.endDate ? localFilters.registrationDateRange.endDate.split('T')[0] : ''}
               onChange={(e) => handleDateRangeChange('registrationDateRange', 'endDate', e.target.value)}
               className="w-full px-3 py-2 bg-white/5 border border-white/10 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-400/50"
             />
@@ -195,7 +195,7 @@ export default function CampaignFilters({ filters, onChange }: FilterProps) {
             <label className="block text-xs text-gray-400 mb-1">From</label>
             <input
               type="date"
-              value={localFilters.lastActiveRange?.startDate?.split('T')[0] || ''}
+              value={localFilters.lastActiveRange?.startDate ? localFilters.lastActiveRange.startDate.split('T')[0] : ''}
               onChange={(e) => handleDateRangeChange('lastActiveRange', 'startDate', e.target.value)}
               className="w-full px-3 py-2 bg-white/5 border border-white/10 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-400/50"
             />
@@ -204,7 +204,7 @@ export default function CampaignFilters({ filters, onChange }: FilterProps) {
             <label className="block text-xs text-gray-400 mb-1">To</label>
             <input
               type="date"
-              value={localFilters.lastActiveRange?.endDate?.split('T')[0] || ''}
+              value={localFilters.lastActiveRange?.endDate ? localFilters.lastActiveRange.endDate.split('T')[0] : ''}
               onChange={(e) => handleDateRangeChange('lastActiveRange', 'endDate', e.target.value)}
               className="w-full px-3 py-2 bg-white/5 border border-white/10 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-400/50"
             />

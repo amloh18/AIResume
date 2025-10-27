@@ -491,12 +491,12 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
           /* Mobile Layout: Right Panel First, Then Left Panel Below */
           <div className="flex-1 flex flex-col min-h-0 p-4 gap-4">
             {/* Right Panel - Full Width */}
-            <div className="flex-shrink-0 h-1/2 overflow-hidden">
+            <div className="flex-shrink-0 h-1/2 overflow-hidden scrollbar-hide">
               {rightPanel}
             </div>
 
             {/* Left Panel - Full Width Below */}
-            <div className="flex-shrink-0 h-1/2 overflow-hidden">
+            <div className="flex-shrink-0 h-1/2 overflow-hidden scrollbar-hide">
               {leftPanel}
             </div>
           </div>
@@ -505,7 +505,7 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
           <div className="flex-1 flex gap-4 min-h-0 p-4 pr-8">
             {/* Left Panel - 50% width */}
             <motion.div
-              className={`${layoutClasses.leftPanel} w-1/2 flex-shrink-0 overflow-hidden`}
+              className={`${layoutClasses.leftPanel} w-1/2 flex-shrink-0 overflow-hidden scrollbar-hide`}
               layout
               transition={{ duration: 0.3 }}
             >
@@ -516,7 +516,7 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
             <AnimatePresence>
               {rightPanelOpen && rightPanel && (
                 <motion.div
-                  className="w-1/2 flex-shrink-0 overflow-hidden"
+                  className="w-1/2 flex-shrink-0 overflow-hidden scrollbar-hide"
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 20 }}

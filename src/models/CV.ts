@@ -112,7 +112,8 @@ const cvSchema = new Schema<ICV>({
       name: { type: String },
       date: { type: String },
       issuer: { type: String },
-      url: { type: String }
+      url: { type: String },
+      description: { type: String }
     }],
     publications: [{
       name: { type: String },
@@ -122,9 +123,8 @@ const cvSchema = new Schema<ICV>({
       summary: { type: String }
     }],
     skills: [{
-      name: { type: String },
-      level: { type: String },
-      keywords: [{ type: String }]
+      category: { type: String },
+      skills: [{ type: String }]
     }],
     languages: [{
       language: { type: String },

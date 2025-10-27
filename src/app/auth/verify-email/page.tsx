@@ -1,6 +1,9 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
+
+// Force dynamic rendering to prevent SSR issues
+export const dynamic = 'force-dynamic';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { CheckCircle, XCircle, Loader2, Mail } from 'lucide-react';
 

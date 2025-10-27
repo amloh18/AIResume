@@ -1,5 +1,8 @@
 'use client';
 
+// Force dynamic rendering to prevent SSR issues
+export const dynamic = 'force-dynamic';
+
 import React, { useState, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
@@ -12,24 +15,24 @@ import { ApplicationJourneySkeleton } from '@/components/ui/OptimizedSkeletons';
 import { useUserData, getUserDisplayName, getUserEmail, getUserAvatar } from '@/lib/hooks/useUserData';
 
 // Lazy load heavy components
-import dynamic from 'next/dynamic';
+import dynamicImport from 'next/dynamic';
 
 
-const PageHeader = dynamic(() => import('@/components/dashboard/PageHeader'), {
+const PageHeader = dynamicImport(() => import('@/components/dashboard/PageHeader'), {
   loading: () => <div className="h-16 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg" />
 });
 
 // OnboardingModal removed - no longer needed
 
-const JourneyStatusBanner = dynamic(() => import('@/components/JourneyStatusBanner'), {
+const JourneyStatusBanner = dynamicImport(() => import('@/components/JourneyStatusBanner'), {
   loading: () => <div className="h-20 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg mb-4" />
 });
 
-const JourneyTimelineCard = dynamic(() => import('@/components/dashboard/JourneyTimelineCard'), {
+const JourneyTimelineCard = dynamicImport(() => import('@/components/dashboard/JourneyTimelineCard'), {
   loading: () => <div className="h-32 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg mb-4" />
 });
 
-const NewJourneyCard = dynamic(() => import('@/components/dashboard/NewJourneyCard'), {
+const NewJourneyCard = dynamicImport(() => import('@/components/dashboard/NewJourneyCard'), {
   loading: () => <div className="h-40 bg-gray-100 dark:bg-gray-800 animate-pulse rounded-lg mb-4" />
 });
 

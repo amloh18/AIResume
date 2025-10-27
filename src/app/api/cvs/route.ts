@@ -4,9 +4,8 @@ import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/database';
 import { CV, Template, User } from '@/models';
 import { createPaginationOptions, paginateQuery, createErrorResponse } from '@/lib/db-utils';
-import { extractUserIdentifier, findManyByFirebaseUid, countByFirebaseUid, createWithFirebaseUid } from '@/lib/firebase-uid-utils';
 import { UnifiedCVAPIResponse, UnifiedCVDocument, UnifiedCVRequest } from '@/types/unified-cv-schema';
-import { getUnifiedAuth } from '@/lib/auth-helpers';
+import { getAuthenticatedUser } from '@/lib/auth-helpers';
 import mongoose from 'mongoose';
 
 // GET - List CVs for a user with comprehensive filtering
@@ -14,12 +13,10 @@ export async function GET(request: NextRequest) {
   try {
     console.log('🔍 CV API - Starting GET request');
 
-    // Check authentication using unified auth
-    const authResult = await getUnifiedAuth(request);
+    // Check authentication using NextAuth
+    const authResult = await getAuthenticatedUser();
     console.log('🔍 CV API - Auth check:', { 
       hasAuth: !!authResult,
-      isNextAuth: authResult?.isNextAuth,
-      isFirebase: authResult?.isFirebase,
       email: authResult?.userEmail 
     });
     
@@ -31,10 +28,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    await connectDB();
-    console.log('🔍 CV API - Database connected');
-    
-    // Use unified auth result
+    // Use auth result
     const userEmail = authResult.userEmail;
     const userId = authResult.userId;
     
@@ -50,26 +44,10 @@ export async function GET(request: NextRequest) {
     const published = searchParams.get('published');
     const searchTerm = searchParams.get('search');
 
-    // Build query conditions using unified auth result
-    let baseQuery: Record<string, any> = {};
-    
-    if (authResult.isFirebase) {
-      // For Firebase users, we need to find the user first to get their MongoDB ObjectId
-      const user = await User.findOne({ firebaseUid: authResult.user.firebaseUid });
-      if (!user) {
-        console.log('❌ CV API - User not found for Firebase UID:', authResult.user.firebaseUid);
-        return NextResponse.json(
-          { success: false, error: 'User not found' },
-          { status: 404 }
-        );
-      }
-      baseQuery.userId = user._id;
-      console.log('🔍 CV API - Using Firebase UID, found user ObjectId:', user._id);
-    } else {
-      // For NextAuth users, use the userId directly
-      baseQuery.userId = new mongoose.Types.ObjectId(userId);
-      console.log('🔍 CV API - Using MongoDB ObjectId query:', userId);
-    }
+    // Build query conditions
+    let baseQuery: Record<string, any> = {
+      userId: new mongoose.Types.ObjectId(userId)
+    };
 
     console.log('🔍 CV API - Base query:', baseQuery);
 
@@ -165,12 +143,9 @@ export async function GET(request: NextRequest) {
     });
 
     // Handle count queries efficiently
-    let countBaseQuery = {};
-    if (userIdentifier.type === 'firebase') {
-      countBaseQuery = { firebaseUid: userIdentifier.id };
-    } else {
-      countBaseQuery = { userId: new mongoose.Types.ObjectId(userIdentifier.id) };
-    }
+    let countBaseQuery = {
+      userId: new mongoose.Types.ObjectId(userId)
+    };
     
     const counts = await Promise.all([
       CV.countDocuments(countBaseQuery),
@@ -197,19 +172,19 @@ export async function GET(request: NextRequest) {
         id: cv._id,
         title: cv.title,
         status: cv.status,
-        isMaster: cv.metadata?.isMaster || false,
+        isMaster: cv.metadata?.isMaster || cv.isMaster || false, // Handle both formats
         starred: cv.metadata?.starred || false,
         lastModified: cv.metadata?.lastModified || cv.updatedAt,
         viewCount: cv.metadata?.viewCount || 0,
         downloadCount: cv.metadata?.downloadCount || 0,
         createdAt: cv.createdAt,
         updatedAt: cv.updatedAt,
+        metadata: cv.metadata, // Always include metadata
         ...(projection === 'full' && {
           cvData: cv.cvData,
           templateId: cv.templateId,
           templateName: cv.templateName,
-          styling: cv.styling,
-          metadata: cv.metadata
+          styling: cv.styling
         })
       };
     });
@@ -224,7 +199,7 @@ export async function GET(request: NextRequest) {
     // Convert to unified schema format
     const unifiedCvs: UnifiedCVDocument[] = transformedCvs.map(cv => ({
       id: cv.id,
-      userId: userIdentifier.id,
+      userId: userId, // Use the userId from authResult
       title: cv.title,
       cvData: cv.cvData,
       templateId: cv.templateId,

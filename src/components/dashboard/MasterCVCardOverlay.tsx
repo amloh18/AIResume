@@ -57,6 +57,8 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
     console.log('🔍 MasterCVCardOverlay - useEffect triggered');
     console.log('🔍 MasterCVCardOverlay - masterCVData:', masterCVData);
     console.log('🔍 MasterCVCardOverlay - userId:', userId);
+    console.log('🔍 MasterCVCardOverlay - userId type:', typeof userId);
+    console.log('🔍 MasterCVCardOverlay - userId length:', userId?.length);
     
     if (masterCVData) {
       // Use passed Master CV data
@@ -128,8 +130,13 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
         projection: 'summary'
       });
       
-      // Filter for master CVs based on metadata.isMaster
-      const masterCVs = allCVs.filter(cv => cv.metadata?.isMaster === true);
+      // Filter for master CVs - handle both old format (isMaster at root) and new format (metadata.isMaster)
+      const masterCVs = allCVs.filter(cv => 
+        cv.metadata?.isMaster === true || 
+        cv.metadata?.isMaster === 'true' ||
+        cv.isMaster === true ||
+        cv.isMaster === 'true'
+      );
       
       console.log('🔍 MasterCVCardOverlay - Unified service response:', masterCVs);
       
@@ -137,13 +144,13 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
         const masterCVData = masterCVs[0];
         console.log('✅ MasterCVCardOverlay - Master CV found:', masterCVData);
         
-        // Transform to expected format
+        // Transform to expected format - handle both old and new formats
         const transformedMasterCV = {
           id: masterCVData.id,
           title: masterCVData.title,
           lastModified: new Date(masterCVData.metadata?.lastModified || masterCVData.updatedAt).toLocaleDateString(),
           status: masterCVData.status,
-          isMaster: masterCVData.metadata?.isMaster || false,
+          isMaster: masterCVData.metadata?.isMaster || masterCVData.isMaster || true, // Handle both formats
           cvData: masterCVData.cvData,
           isStarred: masterCVData.metadata?.starred || false,
           thumbnail: masterCVData.metadata?.thumbnailUrl
@@ -254,7 +261,7 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
             className="px-4 py-2 bg-gradient-to-r from-lime-400 to-lime-500 text-black font-semibold rounded-xl hover:from-lime-300 hover:to-lime-400 transition-all duration-300 flex items-center gap-2 mx-auto"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => window.location.href = '/master-cv-onboarding'}
+            onClick={() => window.location.href = '/ai-career-report'}
           >
             <Plus size={16} />
             Create Master CV
@@ -283,7 +290,7 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
             className="px-4 py-2 bg-gradient-to-r from-lime-400 to-lime-500 text-black font-semibold rounded-xl hover:from-lime-300 hover:to-lime-400 transition-all duration-300 flex items-center gap-2 mx-auto"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => window.location.href = '/master-cv-onboarding'}
+            onClick={() => window.location.href = '/ai-career-report'}
           >
             <Plus size={16} />
             Create Master CV

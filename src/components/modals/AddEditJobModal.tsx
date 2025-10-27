@@ -23,7 +23,8 @@ import {
   Zap,
   Info,
   User,
-  Copy
+  Copy,
+  AlertCircle
 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { v4 as uuidv4 } from 'uuid';
@@ -77,6 +78,8 @@ const AddEditJobModal: React.FC<AddEditJobModalProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   
   // Auto-save refs
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -308,7 +311,8 @@ const AddEditJobModal: React.FC<AddEditJobModalProps> = ({
         } else {
           console.error('API returned success: false:', result);
           if (!isAutoSave) {
-            alert(`Failed to save job: ${result.message || 'Unknown error'}`);
+            setErrorMessage(result.message || 'Unknown error');
+            setShowErrorDialog(true);
           }
         }
       } else {
@@ -317,16 +321,19 @@ const AddEditJobModal: React.FC<AddEditJobModalProps> = ({
         if (!isAutoSave) {
           try {
             const errorJson = JSON.parse(errorText);
-            alert(`Failed to save job: ${errorJson.message || 'Unknown error'}`);
+            setErrorMessage(errorJson.message || 'Unknown error');
+            setShowErrorDialog(true);
           } catch {
-            alert(`Failed to save job. Status: ${response.status}`);
+            setErrorMessage(`Failed to save job. Status: ${response.status}`);
+            setShowErrorDialog(true);
           }
         }
       }
     } catch (error) {
       console.error('Error saving job:', error);
       if (!isAutoSave) {
-        alert('Error saving job. Please try again.');
+        setErrorMessage('Error saving job. Please try again.');
+        setShowErrorDialog(true);
       }
     } finally {
       if (!isAutoSave) {
@@ -452,281 +459,281 @@ const AddEditJobModal: React.FC<AddEditJobModalProps> = ({
         exit={{ opacity: 0 }}
       >
         <motion.div
-          className="bg-[#141810] border border-white/10 rounded-2xl p-4 w-full max-w-[1000px] max-h-[70vh] overflow-y-auto shadow-2xl"
+          className="bg-[#1A1A1A] border border-white/10 rounded-2xl p-6 w-full max-w-4xl max-h-[85vh] overflow-y-auto shadow-2xl"
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
         >
           <div className="text-white">
-            {/* Glassmorphism Header */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 bg-lime-500/20 backdrop-blur-sm rounded-lg border border-lime-500/30">
-                  <Briefcase size={16} className="text-lime-400" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-white">
-                    Add/Edit Job Application
-                  </h2>
-                  <p className="text-white/70 text-xs">
-                    Create or update your job application details
-                  </p>
-                </div>
-              </div>
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-white">
+                Add New Job Application
+              </h2>
               
-              <div className="flex items-center gap-3">
-                {hasUnsavedChanges && (
-                  <div className="px-2 py-1 bg-orange-500/20 text-orange-300 text-xs rounded-lg border border-orange-500/30">
-                    Unsaved changes
-                  </div>
-                )}
-                
-                <motion.button
-                  onClick={handleClose}
-                  className="p-1.5 text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                >
-                  <X size={16} />
-                </motion.button>
-              </div>
+              <motion.button
+                onClick={handleClose}
+                className="p-2 text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+              >
+                <X size={20} />
+              </motion.button>
             </div>
 
-            {/* Form Sections */}
-            <div className="space-y-4">
-              {/* Basic Information */}
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/20">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="p-1 bg-blue-500/20 rounded-lg">
-                    <Info size={14} className="text-blue-400" />
-                  </div>
-                  <h3 className="text-sm font-semibold text-white">Basic Information</h3>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-                  <div>
-                    <label className="block text-white/80 text-xs font-medium mb-1.5">Job Title</label>
-                    <input
-                      type="text"
-                      value={formData.jobTitle || ''}
-                      onChange={(e) => handleFormChange('jobTitle', e.target.value)}
-                      className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
-                      placeholder="e.g. Senior Software Engineer"
-                    />
-                    <div className="text-lime-300 text-xs mt-1">{jobTitleCount}/100</div>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-white/80 text-xs font-medium mb-1.5">Company</label>
-                    <input
-                      type="text"
-                      value={formData.company || ''}
-                      onChange={(e) => handleFormChange('company', e.target.value)}
-                      className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
-                      placeholder="e.g. Google"
-                    />
-                    <div className="text-lime-300 text-xs mt-1">{companyCount}/100</div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-                  <div>
-                    <label className="block text-white/80 text-xs font-medium mb-1.5">Location</label>
-                    <input
-                      type="text"
-                      value={formData.location || ''}
-                      onChange={(e) => handleFormChange('location', e.target.value)}
-                      className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
-                      placeholder="e.g. San Francisco, CA"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-white/80 text-xs font-medium mb-1.5">Job URL</label>
-                    <input
-                      type="url"
-                      value={formData.jobUrl || ''}
-                      onChange={(e) => handleFormChange('jobUrl', e.target.value)}
-                      className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
-                      placeholder="https://company.com/job-posting"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-white/80 text-xs font-medium mb-1.5">Priority</label>
-                    <select
-                      value={formData.priority || 'medium'}
-                      onChange={(e) => handleFormChange('priority', e.target.value)}
-                      className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:border-lime-400/50 focus:outline-none"
-                    >
-                      <option value="low">Low</option>
-                      <option value="medium">Medium</option>
-                      <option value="high">High</option>
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-white/80 text-xs font-medium mb-1.5">App Date</label>
-                    <input
-                      type="date"
-                      value={formData.applicationDate || ''}
-                      onChange={(e) => handleFormChange('applicationDate', e.target.value)}
-                      className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:border-lime-400/50 focus:outline-none"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-white/80 text-xs font-medium mb-1.5">Deadline</label>
-                    <input
-                      type="date"
-                      value={formData.deadline || ''}
-                      onChange={(e) => handleFormChange('deadline', e.target.value)}
-                      className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:border-lime-400/50 focus:outline-none"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Salary Information */}
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/20">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="p-1 bg-green-500/20 rounded-lg">
-                    <DollarSign size={14} className="text-green-400" />
-                  </div>
-                  <h3 className="text-sm font-semibold text-white">Salary Information</h3>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                  <div>
-                    <label className="block text-white/80 text-xs font-medium mb-1.5">Min Salary</label>
-                    <input
-                      type="number"
-                      value={formData.salary?.min || ''}
-                      onChange={(e) => handleFormChange('salary', { ...formData.salary, min: e.target.value ? parseInt(e.target.value) : undefined })}
-                      className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
-                      placeholder="80"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-white/80 text-xs font-medium mb-1.5">Max Salary</label>
-                    <input
-                      type="number"
-                      value={formData.salary?.max || ''}
-                      onChange={(e) => handleFormChange('salary', { ...formData.salary, max: e.target.value ? parseInt(e.target.value) : undefined })}
-                      className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
-                      placeholder="120"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-white/80 text-xs font-medium mb-1.5">Currency</label>
-                    <select
-                      value={formData.salary?.currency || 'USD'}
-                      onChange={(e) => handleFormChange('salary', { ...formData.salary, currency: e.target.value })}
-                      className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:border-lime-400/50 focus:outline-none"
-                    >
-                      <option value="USD">USD</option>
-                      <option value="EUR">EUR</option>
-                      <option value="GBP">GBP</option>
-                      <option value="CAD">CAD</option>
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-white/80 text-xs font-medium mb-1.5">Period</label>
-                    <select
-                      value={formData.salary?.period || 'yearly'}
-                      onChange={(e) => handleFormChange('salary', { ...formData.salary, period: e.target.value })}
-                      className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:border-lime-400/50 focus:outline-none"
-                    >
-                      <option value="yearly">Yearly</option>
-                      <option value="monthly">Monthly</option>
-                      <option value="hourly">Hourly</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {/* Job Description */}
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/20">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="p-1 bg-purple-500/20 rounded-lg">
-                    <FileText size={14} className="text-purple-400" />
-                  </div>
-                  <h3 className="text-sm font-semibold text-white">Job Description</h3>
-                </div>
-                
+            {/* Two Column Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Left Column */}
+              <div className="space-y-6">
+                {/* Basic Information */}
                 <div>
-                  <label className="block text-white/80 text-xs font-medium mb-1.5">Description</label>
-                  <textarea
-                    rows={4}
-                    value={formData.jobDescription || ''}
-                    onChange={(e) => handleFormChange('jobDescription', e.target.value)}
-                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none resize-none"
-                    placeholder="Paste the job description here..."
-                  />
-                  <div className="text-lime-300 text-xs mt-1">{jobDescriptionCount}/2000</div>
+                  <h3 className="text-lg font-semibold text-white mb-4">Basic Information</h3>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-white/80 text-sm font-medium mb-2">Job Title</label>
+                      <input
+                        type="text"
+                        value={formData.jobTitle || ''}
+                        onChange={(e) => handleFormChange('jobTitle', e.target.value)}
+                        className="w-full px-4 py-3 bg-[#2C2C2C] border border-white/20 rounded-lg text-white placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
+                        placeholder="e.g. Senior Product Designer"
+                        maxLength={100}
+                      />
+                      <div className="text-white/50 text-xs mt-1">{jobTitleCount}/100</div>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-white/80 text-sm font-medium mb-2">Company</label>
+                      <input
+                        type="text"
+                        value={formData.company || ''}
+                        onChange={(e) => handleFormChange('company', e.target.value)}
+                        className="w-full px-4 py-3 bg-[#2C2C2C] border border-white/20 rounded-lg text-white placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
+                        placeholder="e.g. Acme Corporation"
+                        maxLength={100}
+                      />
+                      <div className="text-white/50 text-xs mt-1">{companyCount}/100</div>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-white/80 text-sm font-medium mb-2">Location</label>
+                      <input
+                        type="text"
+                        value={formData.location || ''}
+                        onChange={(e) => handleFormChange('location', e.target.value)}
+                        className="w-full px-4 py-3 bg-[#2C2C2C] border border-white/20 rounded-lg text-white placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
+                        placeholder="e.g. San Francisco, CA"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-white/80 text-sm font-medium mb-2">Job URL</label>
+                      <input
+                        type="url"
+                        value={formData.jobUrl || ''}
+                        onChange={(e) => handleFormChange('jobUrl', e.target.value)}
+                        className="w-full px-4 py-3 bg-[#2C2C2C] border border-white/20 rounded-lg text-white placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
+                        placeholder="https://example.com/job"
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-white/80 text-sm font-medium mb-2">App Date</label>
+                        <div className="relative">
+                          <input
+                            type="date"
+                            value={formData.applicationDate || ''}
+                            onChange={(e) => handleFormChange('applicationDate', e.target.value)}
+                            className="w-full px-4 py-3 bg-[#2C2C2C] border border-white/20 rounded-lg text-white text-sm focus:border-lime-400/50 focus:outline-none"
+                            placeholder="mm/dd/yyyy"
+                          />
+                          <Calendar size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50" />
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-white/80 text-sm font-medium mb-2">Deadline</label>
+                        <div className="relative">
+                          <input
+                            type="date"
+                            value={formData.deadline || ''}
+                            onChange={(e) => handleFormChange('deadline', e.target.value)}
+                            className="w-full px-4 py-3 bg-[#2C2C2C] border border-white/20 rounded-lg text-white text-sm focus:border-lime-400/50 focus:outline-none"
+                            placeholder="mm/dd/yyyy"
+                          />
+                          <Calendar size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50" />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-white/80 text-sm font-medium mb-2">Priority</label>
+                      <div className="flex bg-[#2C2C2C] rounded-lg p-1 border border-white/20">
+                        {['low', 'medium', 'high'].map((priority) => (
+                          <button
+                            key={priority}
+                            onClick={() => handleFormChange('priority', priority)}
+                            className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-all ${
+                              formData.priority === priority
+                                ? 'bg-[#388E3C] text-white'
+                                : 'text-white/70 hover:text-white'
+                            }`}
+                          >
+                            {priority.charAt(0).toUpperCase() + priority.slice(1)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Salary Information */}
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-4">Salary Information</h3>
+                  
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-white/80 text-sm font-medium mb-2">Min Salary</label>
+                        <input
+                          type="number"
+                          value={formData.salary?.min || ''}
+                          onChange={(e) => handleFormChange('salary', { ...formData.salary, min: e.target.value ? parseInt(e.target.value) : undefined })}
+                          className="w-full px-4 py-3 bg-[#2C2C2C] border border-white/20 rounded-lg text-white placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
+                          placeholder="e.g. 80000"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-white/80 text-sm font-medium mb-2">Max Salary</label>
+                        <input
+                          type="number"
+                          value={formData.salary?.max || ''}
+                          onChange={(e) => handleFormChange('salary', { ...formData.salary, max: e.target.value ? parseInt(e.target.value) : undefined })}
+                          className="w-full px-4 py-3 bg-[#2C2C2C] border border-white/20 rounded-lg text-white placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
+                          placeholder="e.g. 120000"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-white/80 text-sm font-medium mb-2">Currency</label>
+                        <select
+                          value={formData.salary?.currency || 'USD'}
+                          onChange={(e) => handleFormChange('salary', { ...formData.salary, currency: e.target.value })}
+                          className="w-full px-4 py-3 bg-[#2C2C2C] border border-white/20 rounded-lg text-white text-sm focus:border-lime-400/50 focus:outline-none"
+                        >
+                          <option value="USD">USD</option>
+                          <option value="EUR">EUR</option>
+                          <option value="GBP">GBP</option>
+                          <option value="CAD">CAD</option>
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-white/80 text-sm font-medium mb-2">Period</label>
+                        <div className="flex bg-[#2C2C2C] rounded-lg p-1 border border-white/20">
+                          {['yearly', 'monthly', 'hourly'].map((period) => (
+                            <button
+                              key={period}
+                              onClick={() => handleFormChange('salary', { ...formData.salary, period })}
+                              className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-all ${
+                                formData.salary?.period === period
+                                  ? 'bg-[#388E3C] text-white'
+                                  : 'text-white/70 hover:text-white'
+                              }`}
+                            >
+                              {period.charAt(0).toUpperCase() + period.slice(1)}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Additional Information */}
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/20">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="p-1 bg-orange-500/20 rounded-lg">
-                    <Star size={14} className="text-orange-400" />
-                  </div>
-                  <h3 className="text-sm font-semibold text-white">Additional Information</h3>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-                  <div>
-                    <label className="block text-white/80 text-xs font-medium mb-1.5">Sponsorship</label>
-                    <select
-                      value={formData.sponsorship || 'unknown'}
-                      onChange={(e) => handleFormChange('sponsorship', e.target.value)}
-                      className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white text-sm focus:border-lime-400/50 focus:outline-none"
-                    >
-                      <option value="unknown">Unknown</option>
-                      <option value="yes">Yes</option>
-                      <option value="no">No</option>
-                    </select>
-                  </div>
+              {/* Right Column */}
+              <div className="space-y-6">
+                {/* Job Description */}
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-4">Job Description</h3>
                   
                   <div>
-                    <label className="block text-white/80 text-xs font-medium mb-1.5">Tags</label>
-                    <input
-                      type="text"
-                      value={formData.tags?.join(', ') || ''}
-                      onChange={(e) => handleFormChange('tags', e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag))}
-                      className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
-                      placeholder="remote, senior, javascript"
+                    <label className="block text-white/80 text-sm font-medium mb-2">Job Description</label>
+                    <textarea
+                      rows={8}
+                      value={formData.jobDescription || ''}
+                      onChange={(e) => handleFormChange('jobDescription', e.target.value)}
+                      className="w-full px-4 py-3 bg-[#2C2C2C] border border-white/20 rounded-lg text-white placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none resize-none"
+                      placeholder="Paste the job description here..."
+                      maxLength={2000}
                     />
-                    <div className="text-lime-300 text-xs mt-1">Separate tags with commas</div>
+                    <div className="text-white/50 text-xs mt-1">{jobDescriptionCount}/2000</div>
                   </div>
                 </div>
-                
+
+                {/* Additional Information */}
                 <div>
-                  <label className="block text-white/80 text-xs font-medium mb-1.5">Notes</label>
-                  <textarea
-                    rows={2}
-                    value={formData.notes || ''}
-                    onChange={(e) => handleFormChange('notes', e.target.value)}
-                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none resize-none"
-                    placeholder="Add any additional notes..."
-                  />
-                  <div className="text-lime-300 text-xs mt-1">{notesCount}/500</div>
+                  <h3 className="text-lg font-semibold text-white mb-4">Additional Information</h3>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-white/80 text-sm font-medium mb-2">Sponsorship</label>
+                      <div className="flex bg-[#2C2C2C] rounded-lg p-1 border border-white/20">
+                        {['unknown', 'yes', 'no'].map((sponsorship) => (
+                          <button
+                            key={sponsorship}
+                            onClick={() => handleFormChange('sponsorship', sponsorship)}
+                            className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-all ${
+                              formData.sponsorship === sponsorship
+                                ? 'bg-[#388E3C] text-white'
+                                : 'text-white/70 hover:text-white'
+                            }`}
+                          >
+                            {sponsorship.charAt(0).toUpperCase() + sponsorship.slice(1)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-white/80 text-sm font-medium mb-2">Tags</label>
+                      <input
+                        type="text"
+                        value={formData.tags?.join(', ') || ''}
+                        onChange={(e) => handleFormChange('tags', e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0))}
+                        className="w-full px-4 py-3 bg-[#2C2C2C] border border-white/20 rounded-lg text-white placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
+                        placeholder="Remote, Full-time, FinTech"
+                      />
+                      <div className="text-white/50 text-xs mt-1">Separate tags with commas</div>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-white/80 text-sm font-medium mb-2">Notes</label>
+                      <textarea
+                        rows={4}
+                        value={formData.notes || ''}
+                        onChange={(e) => handleFormChange('notes', e.target.value)}
+                        className="w-full px-4 py-3 bg-[#2C2C2C] border border-white/20 rounded-lg text-white placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none resize-none"
+                        placeholder="Add any personal notes here..."
+                        maxLength={500}
+                      />
+                      <div className="text-white/50 text-xs mt-1">{notesCount}/500</div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Action Buttons */}
-            <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-white/20">
+            <div className="flex items-center justify-between mt-8 pt-6 border-t border-white/20">
               <motion.button
                 onClick={handleClose}
-                className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm font-medium transition-all border border-white/20"
+                className="px-6 py-3 text-white/70 hover:text-white transition-colors"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
@@ -736,15 +743,15 @@ const AddEditJobModal: React.FC<AddEditJobModalProps> = ({
               <motion.button
                 onClick={() => handleSaveJob(false)}
                 disabled={isSaving}
-                className="px-6 py-2 bg-gradient-to-r from-lime-500 to-lime-600 text-black font-semibold rounded-lg text-sm hover:from-lime-400 hover:to-lime-500 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-8 py-3 bg-[#69F0AE] text-black font-semibold rounded-lg hover:bg-[#5AE09E] transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-2">
                   {isSaving ? (
-                    <Loader2 size={14} className="animate-spin" />
+                    <Loader2 size={16} className="animate-spin" />
                   ) : (
-                    <Save size={14} />
+                    <Save size={16} />
                   )}
                   {isSaving ? 'Saving...' : 'Save Job'}
                 </div>
@@ -790,6 +797,47 @@ const AddEditJobModal: React.FC<AddEditJobModalProps> = ({
                     whileTap={{ scale: 0.98 }}
                   >
                     Close Anyway
+                  </motion.button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Error Dialog */}
+      <AnimatePresence>
+        {showErrorDialog && (
+          <motion.div
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="bg-[#1A1A1A] border border-red-500/30 rounded-xl p-6 max-w-md w-full"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+            >
+              <div className="text-white text-center">
+                <div className="flex items-center justify-center mb-4">
+                  <div className="p-3 bg-red-500/20 rounded-full">
+                    <AlertCircle size={24} className="text-red-400" />
+                  </div>
+                </div>
+                <h3 className="text-lg font-semibold mb-2 text-white">Error Saving Job</h3>
+                <p className="text-white/70 text-sm mb-6">
+                  {errorMessage}
+                </p>
+                <div className="flex gap-3 justify-center">
+                  <motion.button
+                    onClick={() => setShowErrorDialog(false)}
+                    className="px-6 py-2 bg-[#69F0AE] text-black font-semibold rounded-lg hover:bg-[#5AE09E] transition-all"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    Try Again
                   </motion.button>
                 </div>
               </div>

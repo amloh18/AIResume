@@ -1,20 +1,49 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode } from 'react';
+import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { getSessionFromStorage, clearSessionFromStorage, SessionData } from '@/lib/session';
+
+/**
+ * AuthContext - Thin wrapper around NextAuth's session management
+ * 
+ * This context provides a simplified API for authentication that wraps NextAuth's useSession hook.
+ * All session management is handled by NextAuth with secure HTTP-only cookies.
+ * 
+ * Migration Notes:
+ * - Replaced custom JWT/session logic with NextAuth
+ * - Removed localStorage session storage (security vulnerability)
+ * - All authentication flows now use NextAuth providers
+ */
+
+interface User {
+  id: string;
+  email: string;
+  name: string;
+  image?: string;
+  role?: string;
+  planKey?: string;
+  subscriptionStatus?: string;
+}
 
 interface AuthContextType {
-  user: SessionData['user'] | null;
+  user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (user: SessionData['user'], token: string) => void;
-  logout: () => void;
+  login: (user: User, token?: string) => void; // Kept for backward compatibility, but not used
+  logout: () => Promise<void>;
   checkAuth: () => boolean;
+  status: 'loading' | 'authenticated' | 'unauthenticated';
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+/**
+ * useAuth Hook
+ * 
+ * Primary hook for accessing authentication state throughout the application.
+ * Use this instead of directly calling NextAuth's useSession in most components.
+ */
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
@@ -27,45 +56,62 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+/**
+ * AuthProvider Component
+ * 
+ * Wraps NextAuth's SessionProvider functionality with a simplified API.
+ * Must be nested inside NextAuth's SessionProvider in the app layout.
+ */
 export function AuthProvider({ children }: AuthProviderProps) {
-  const [user, setUser] = useState<SessionData['user'] | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: session, status } = useSession();
   const router = useRouter();
 
+  const user: User | null = session?.user ? {
+    id: (session.user as any).id || '',
+    email: session.user.email || '',
+    name: session.user.name || '',
+    image: session.user.image || undefined,
+    role: (session.user as any).role,
+    planKey: (session.user as any).planKey,
+    subscriptionStatus: (session.user as any).subscriptionStatus,
+  } : null;
+
   const checkAuth = (): boolean => {
-    const session = getSessionFromStorage();
-    if (session) {
-      setUser(session.user);
-      return true;
+    return status === 'authenticated';
+  };
+
+  // Deprecated - kept for backward compatibility
+  // New code should use NextAuth's signIn directly
+  const login = (userData: User, token?: string) => {
+    console.warn('⚠️ AuthContext.login is deprecated. Please use NextAuth signIn directly.');
+    // Do nothing - NextAuth handles login through signIn()
+  };
+
+  const logout = async () => {
+    try {
+      console.log('🚪 Logging out via NextAuth...');
+      
+      // Use NextAuth's signOut with redirect
+      await signOut({
+        callbackUrl: '/sign-in',
+        redirect: true,
+      });
+      
+    } catch (error) {
+      console.error('❌ Logout error:', error);
+      // Fallback: navigate manually
+      router.push('/sign-in');
     }
-    return false;
   };
-
-  const login = (userData: SessionData['user'], token: string) => {
-    setUser(userData);
-  };
-
-  const logout = () => {
-    setUser(null);
-    clearSessionFromStorage();
-    router.push('/auth');
-  };
-
-  useEffect(() => {
-    const session = getSessionFromStorage();
-    if (session) {
-      setUser(session.user);
-    }
-    setIsLoading(false);
-  }, []);
 
   const value: AuthContextType = {
     user,
-    isLoading,
-    isAuthenticated: !!user,
+    isLoading: status === 'loading',
+    isAuthenticated: status === 'authenticated',
     login,
     logout,
-    checkAuth
+    checkAuth,
+    status,
   };
 
   return (

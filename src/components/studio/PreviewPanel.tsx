@@ -252,7 +252,23 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
               CV
             </button>
             <button
-              onClick={() => !isMasterCV && onDocumentTypeChange('cover-letter')}
+              onClick={() => {
+                console.log('🖱️ Cover Letter button clicked!', { 
+                  isMasterCV, 
+                  onDocumentTypeChange: !!onDocumentTypeChange,
+                  documentType 
+                });
+                if (isMasterCV) {
+                  console.log('⚠️ Cannot create cover letter for Master CV');
+                  return;
+                }
+                if (onDocumentTypeChange) {
+                  console.log('✅ Calling onDocumentTypeChange with cover-letter');
+                  onDocumentTypeChange('cover-letter');
+                } else {
+                  console.error('❌ onDocumentTypeChange handler is not defined!');
+                }
+              }}
               disabled={isMasterCV}
               className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
                 documentType === 'cover-letter'

@@ -41,17 +41,9 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
       return true; // Default to visible if no visibility settings provided
     }
     const isVisible = sectionVisibility[sectionName] !== false;
-    console.log(`Section ${sectionName} visibility:`, isVisible, 'Settings:', sectionVisibility);
     return isVisible;
   };
   
-  // Debug contact information
-  console.log('CVPreviewContent - Contact Info:', {
-    email: cvData?.basics?.email,
-    phone: cvData?.basics?.phone,
-    location: cvData?.basics?.location,
-    name: cvData?.basics?.name
-  });
   
   // Detect template layout type
   const getTemplateLayout = () => {

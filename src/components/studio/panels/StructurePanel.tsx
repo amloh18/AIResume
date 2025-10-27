@@ -127,10 +127,10 @@ function JobContextSection({
                    selectedJobId ? availableJobs.find(j => j.id === selectedJobId) : undefined;
 
   return (
-    <div className="p-4 bg-gray-50 dark:bg-[#141810] rounded-lg">
+    <div className="p-4 bg-[#1A201A] rounded-lg">
       <div className="flex items-center space-x-2 mb-3">
-        <Briefcase className="w-4 h-4 text-blue-500" />
-        <h3 className="font-semibold text-gray-900 dark:text-white">Job Context</h3>
+        <Briefcase className="w-4 h-4 text-white" />
+        <h3 className="font-semibold text-white">Job Context</h3>
         {linkedJob && (
           <Badge variant="secondary" size="sm">
             {sessionContext.mode === 'journey' ? 'Linked' : 'Selected'}
@@ -147,14 +147,14 @@ function JobContextSection({
         >
           <div className="flex items-center space-x-2">
             <CheckCircle className="w-4 h-4 text-green-500" />
-            <span className="text-sm font-medium text-gray-900 dark:text-white">
+            <span className="text-sm font-medium text-white">
               Automatically linked to journey
             </span>
           </div>
           
-          <div className="p-3 bg-white dark:bg-[#141810] rounded border border-gray-200 dark:border-white/10">
-            <h4 className="font-medium text-gray-900 dark:text-white">{linkedJob.jobTitle}</h4>
-            <p className="text-sm text-gray-600 dark:text-gray-400">{linkedJob.company}</p>
+          <div className="p-3 bg-[#2D332D] rounded border border-[#2D332D]">
+            <h4 className="font-medium text-white">{linkedJob.jobTitle}</h4>
+            <p className="text-sm text-[#A0A0A0]">{linkedJob.company}</p>
             {linkedJob.priority && (
               <Badge variant="outline" size="sm" className="mt-2">
                 {linkedJob.priority} priority
@@ -162,7 +162,7 @@ function JobContextSection({
             )}
           </div>
 
-          <p className="text-xs text-gray-500 dark:text-gray-400">
+          <p className="text-xs text-[#A0A0A0]">
             ATS analysis will automatically use job requirements from this position.
           </p>
         </motion.div>
@@ -172,14 +172,14 @@ function JobContextSection({
       {showJobSelector && (
         <div className="space-y-3">
           {!selectedJobId && (
-            <div className="flex items-center space-x-2 text-amber-600 dark:text-amber-400">
+            <div className="flex items-center space-x-2 text-amber-400">
               <AlertCircle className="w-4 h-4" />
-              <span className="text-sm">No job selected - ATS features are disabled</span>
+              <span className="text-sm text-white">No job selected - ATS features are disabled</span>
             </div>
           )}
 
           <div>
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+            <label className="text-sm font-medium text-white mb-2 block">
               Link to Job (Optional)
             </label>
             <Select value={selectedJobId || ''} onValueChange={onSelectJob}>
@@ -203,15 +203,15 @@ function JobContextSection({
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
-              className="p-3 bg-green-50 dark:bg-[#141810] rounded border border-green-200 dark:border-white/10"
+              className="p-3 bg-[#2D332D] rounded border border-[#2D332D]"
             >
               <div className="flex items-center space-x-2 mb-2">
-                <Target className="w-4 h-4 text-green-600" />
-                <span className="text-sm font-medium text-green-900 dark:text-green-100">
+                <Target className="w-4 h-4 text-green-400" />
+                <span className="text-sm font-medium text-green-400">
                   ATS Analysis Enabled
                 </span>
               </div>
-              <p className="text-xs text-green-700 dark:text-green-300">
+              <p className="text-xs text-green-300">
                 Your {documentType} will be analyzed against requirements for {linkedJob.jobTitle} at {linkedJob.company}.
               </p>
             </motion.div>
@@ -270,13 +270,15 @@ function CVStructureSections({
     { id: 'languages', title: 'Languages', icon: '🌐' },
     { id: 'volunteer', title: 'Volunteer Experience', icon: '🤝' },
     { id: 'awards', title: 'Awards & Recognition', icon: '🏆' },
-    { id: 'publications', title: 'Publications', icon: '📚' }
+    { id: 'publications', title: 'Publications', icon: '📚' },
+    { id: 'interests', title: 'Interests', icon: '🎯' },
+    { id: 'references', title: 'References', icon: '👥' }
   ];
 
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="font-semibold text-gray-900 dark:text-white">CV Sections</h3>
+        <h3 className="font-semibold text-white">CV Sections</h3>
         <Button 
           variant="ghost" 
           size="sm"
@@ -295,16 +297,16 @@ function CVStructureSections({
           <CollapsibleTrigger asChild>
             <Button
               variant="ghost"
-              className="w-full justify-between p-3 h-auto hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="w-full justify-between p-3 h-auto hover:bg-[#2D332D] text-white"
             >
               <div className="flex items-center space-x-3">
                 <span className="text-lg">{section.icon}</span>
-                <span className="font-medium">{section.title}</span>
+                <span className="font-medium text-white">{section.title}</span>
                 {section.id === 'work_experience' && jobContext && (
                   <Badge variant="secondary" size="sm">ATS</Badge>
                 )}
               </div>
-              <ChevronDown className={`w-4 h-4 transition-transform ${openSections.has(section.id) ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`w-4 h-4 transition-transform text-white ${openSections.has(section.id) ? 'rotate-180' : ''}`} />
             </Button>
           </CollapsibleTrigger>
 
@@ -459,6 +461,26 @@ function renderSectionContent(
         />
       );
     
+    case 'interests':
+      return (
+        <InterestsSection
+          data={cvData.interests || []}
+          onUpdate={updateCVField}
+          onAdd={() => {}}
+          onRemove={() => {}}
+        />
+      );
+    
+    case 'references':
+      return (
+        <ReferencesSection
+          data={cvData.references || []}
+          onUpdate={updateCVField}
+          onAdd={() => {}}
+          onRemove={() => {}}
+        />
+      );
+    
     default:
       return (
         <div className="p-4 text-center text-gray-500 dark:text-gray-400">
@@ -535,28 +557,28 @@ Best regards,
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Cover Letter Structure</h3>
+        <h3 className="font-semibold text-white mb-3">Cover Letter Structure</h3>
         
         {jobContext && (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="p-3 bg-blue-50 dark:bg-[#141810] rounded border border-blue-200 dark:border-white/10 mb-4"
+            className="p-3 bg-[#2D332D] rounded border border-[#2D332D] mb-4"
           >
             <div className="flex items-center space-x-2 mb-2">
-              <Target className="w-4 h-4 text-blue-600" />
-              <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+              <Target className="w-4 h-4 text-green-400" />
+              <span className="text-sm font-medium text-green-400">
                 AI-Powered Suggestions Available
               </span>
             </div>
-            <p className="text-xs text-blue-700 dark:text-blue-300">
+            <p className="text-xs text-green-300">
               Templates will be customized for {jobContext.jobTitle} at {jobContext.company}
             </p>
           </motion.div>
         )}
 
         <div>
-          <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+          <label className="text-sm font-medium text-white mb-2 block">
             Quick Templates
           </label>
           <div className="grid gap-2">
@@ -579,18 +601,18 @@ Best regards,
       </div>
 
       <div>
-        <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+        <label className="text-sm font-medium text-white mb-2 block">
           Content Analysis
         </label>
-        <div className="p-3 bg-gray-50 dark:bg-[#141810] rounded">
+        <div className="p-3 bg-[#2D332D] rounded">
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <span className="text-gray-500">Word Count:</span>
-              <span className="font-medium ml-2">{content.split(' ').length}</span>
+              <span className="text-[#A0A0A0]">Word Count:</span>
+              <span className="font-medium ml-2 text-white">{content.split(' ').length}</span>
             </div>
             <div>
-              <span className="text-gray-500">Reading Time:</span>
-              <span className="font-medium ml-2">{Math.ceil(content.split(' ').length / 200)} min</span>
+              <span className="text-[#A0A0A0]">Reading Time:</span>
+              <span className="font-medium ml-2 text-white">{Math.ceil(content.split(' ').length / 200)} min</span>
             </div>
           </div>
         </div>

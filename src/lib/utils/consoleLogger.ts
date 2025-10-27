@@ -292,6 +292,19 @@ export const consoleLogger = new ConsoleLogger();
  * Hook to use console logger with notifications
  */
 export function useConsoleLogger() {
+  // Safety check for server-side rendering
+  if (typeof window === 'undefined') {
+    return {
+      showToastNotification: () => {},
+      logToConsole: () => {},
+      logError: () => {},
+      logWarning: () => {},
+      logInfo: () => {},
+      logSuccess: () => {},
+      logDebug: () => {}
+    };
+  }
+
   const { addNotification } = useNotifications();
 
   const showToastNotification = useCallback((entry: ConsoleLogEntry) => {

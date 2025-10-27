@@ -15,10 +15,10 @@ import {
   Calendar,
   Copy
 } from 'lucide-react';
-import { useSession } from 'next-auth/react';
+import { useUnifiedAuth } from '@/lib/hooks/useUnifiedAuth';
 import { useRouter } from 'next/navigation';
 import { useJobJourney } from '@/contexts/JobJourneyContext';
-import { useFirebaseAuth } from '@/lib/hooks/useFirebaseAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import { ApplicationPackageService } from '@/lib/services/applicationPackageService';
 
 interface Job {
@@ -56,8 +56,8 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
   className = ''
 }) => {
   console.log('🔍 NewJourneyCard - Component initialized');
-  const { data: session } = useSession();
-  const { user } = useFirebaseAuth();
+  const { user: unifiedUser } = useUnifiedAuth();
+  const { user } = useAuth();
   const router = useRouter();
   const { startJourney } = useJobJourney();
   
@@ -87,7 +87,7 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
   const fetchJobs = async () => {
     try {
       // Use same authentication logic as CV Journey page
-      const userId = session?.user?.id || user?.uid;
+      const userId = unifiedUser?.id || user?.id;
       if (!userId) return;
 
       const response = await fetch(`/api/jobs?userId=${userId}&status=all`);
@@ -104,7 +104,7 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
 
   const fetchCVs = async () => {
     try {
-      const userId = session?.user?.id || user?.uid;
+      const userId = unifiedUser?.id || user?.id;
       if (!userId) return;
 
       const response = await fetch(`/api/cvs?userId=${userId}`);
@@ -182,7 +182,7 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
       setIsCreatingDuplicate(true);
       setError(null);
       
-      const userId = session?.user?.id || user?.uid;
+      const userId = unifiedUser?.id || user?.id;
       if (!userId) {
         setError('User not authenticated');
         return;
@@ -246,7 +246,7 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
       const finalJourneyName = journeyName.trim() || `${selectedJob.jobTitle} at ${selectedJob.company}`;
       console.log('🔍 NewJourneyCard - Creating journey with name:', finalJourneyName);
       
-      const userId = session?.user?.id || user?.uid;
+      const userId = unifiedUser?.id || user?.id;
       if (!userId) {
         console.log('❌ NewJourneyCard - No user ID available');
         setError('User authentication required');

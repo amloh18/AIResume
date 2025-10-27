@@ -145,4 +145,4 @@ discountCodeSchema.methods.incrementUsage = function() {
 // Export the schema for use in admin models
 export { discountCodeSchema };
 
-export default mongoose.models.DiscountCode || mongoose.model<IDiscountCode>('DiscountCode', discountCodeSchema);
+export default mongoose.models.DiscountCode || mongoose.model<IDiscountCode>('DiscountCode', discountCodeSchema, 'discountcodes');

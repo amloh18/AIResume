@@ -64,11 +64,11 @@ const EducationSection: React.FC<EducationSectionProps> = ({
   };
 
   return (
-    <div className="space-y-4 p-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-end">
         <motion.button
           onClick={onAdd}
-          className={`flex items-center gap-2 px-3 py-1.5 text-sm ${themeClasses.button.primary} rounded-lg`}
+          className="flex items-center gap-2 px-4 py-2 text-sm bg-[#80FF00] text-black rounded-lg hover:bg-[#70e600] transition-colors"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
         >
@@ -77,70 +77,69 @@ const EducationSection: React.FC<EducationSectionProps> = ({
         </motion.button>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-6">
         {safeData.map((education, index) => (
-          <div key={index} className={`${themeClasses.card.base} border rounded-lg p-4`}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <input
-                type="text"
-                value={education.institution || ''}
-                onChange={(e) => onUpdate(`education.${index}.institution`, e.target.value)}
-                className={`w-full px-3 py-2 rounded-lg border ${themeClasses.input.base} ${themeClasses.input.focus}`}
-                placeholder="Institution"
-              />
-              <input
-                type="text"
-                value={education.area || ''}
-                onChange={(e) => onUpdate(`education.${index}.area`, e.target.value)}
-                className={`w-full px-3 py-2 rounded-lg border ${themeClasses.input.base} ${themeClasses.input.focus}`}
-                placeholder="Field of Study"
-              />
+          <div key={index} className="bg-white/5 rounded-2xl border border-white/10 p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div>
+                <label className="block text-white/80 text-sm font-medium mb-2">Institution</label>
+                <input
+                  type="text"
+                  value={education.institution || ''}
+                  onChange={(e) => onUpdate(`education.${index}.institution`, e.target.value)}
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                  placeholder="University of California"
+                />
+              </div>
+              <div>
+                <label className="block text-white/80 text-sm font-medium mb-2">Field of Study</label>
+                <input
+                  type="text"
+                  value={education.area || ''}
+                  onChange={(e) => onUpdate(`education.${index}.area`, e.target.value)}
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                  placeholder="Computer Science"
+                />
+              </div>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-              <input
-                type="text"
-                value={education.studyType || ''}
-                onChange={(e) => onUpdate(`education.${index}.studyType`, e.target.value)}
-                className={`w-full px-3 py-2 rounded-lg border ${themeClasses.input.base} ${themeClasses.input.focus}`}
-                placeholder="Degree Type"
-              />
-              <input
-                type="text"
-                value={education.startDate || ''}
-                onChange={(e) => onUpdate(`education.${index}.startDate`, e.target.value)}
-                className={`w-full px-3 py-2 rounded-lg border ${themeClasses.input.base} ${themeClasses.input.focus}`}
-                placeholder="Start Date"
-              />
-              <input
-                type="text"
-                value={education.endDate || ''}
-                onChange={(e) => onUpdate(`education.${index}.endDate`, e.target.value)}
-                className={`w-full px-3 py-2 rounded-lg border ${themeClasses.input.base} ${themeClasses.input.focus}`}
-                placeholder="End Date"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+              <div>
+                <label className="block text-white/80 text-sm font-medium mb-2">Degree Type</label>
+                <input
+                  type="text"
+                  value={education.studyType || ''}
+                  onChange={(e) => onUpdate(`education.${index}.studyType`, e.target.value)}
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                  placeholder="Bachelor's Degree"
+                />
+              </div>
+              <div>
+                <label className="block text-white/80 text-sm font-medium mb-2">Start Date</label>
+                <input
+                  type="text"
+                  value={education.startDate || ''}
+                  onChange={(e) => onUpdate(`education.${index}.startDate`, e.target.value)}
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                  placeholder="Sep 2016"
+                />
+              </div>
+              <div>
+                <label className="block text-white/80 text-sm font-medium mb-2">End Date</label>
+                <input
+                  type="text"
+                  value={education.endDate || ''}
+                  onChange={(e) => onUpdate(`education.${index}.endDate`, e.target.value)}
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                  placeholder="May 2020"
+                />
+              </div>
             </div>
 
             {/* Description Field */}
-            <div className="mb-4">
+            <div className="mb-6">
               <div className="flex items-center justify-between mb-2">
-                <label className={`text-sm font-medium ${themeClasses.text.secondary}`}>
-                  Education Description
-                </label>
-                <motion.button
-                  onClick={() => generateAIDescription(index, education)}
-                  disabled={generatingIndex === index || !education.institution || !education.area}
-                  className="flex items-center gap-2 px-3 py-1.5 text-xs bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  {generatingIndex === index ? (
-                    <RefreshCw className="w-3 h-3 animate-spin" />
-                  ) : (
-                    <Sparkles className="w-3 h-3" />
-                  )}
-                  <span>{generatingIndex === index ? 'Generating...' : 'AI Generate'}</span>
-                </motion.button>
+                <label className="block text-white/80 text-sm font-medium">Education Description</label>
               </div>
               <ProfessionalTextField
                 value={education.description || ''}
@@ -149,13 +148,16 @@ const EducationSection: React.FC<EducationSectionProps> = ({
                 rows={4}
                 fieldId={`education-${index}`}
                 showFullToolbar={true}
+                showAIGenerate={true}
+                onAIGenerate={() => generateAIDescription(index, education)}
+                isGenerating={generatingIndex === index}
               />
             </div>
 
             <div className="flex justify-end">
               <motion.button
                 onClick={() => onRemove(index)}
-                className="flex items-center gap-2 text-sm text-red-600 hover:text-red-700"
+                className="flex items-center gap-2 text-sm text-red-400 hover:text-red-300 transition-colors"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >

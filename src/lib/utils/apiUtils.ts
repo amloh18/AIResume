@@ -4,32 +4,7 @@ export const getAuthHeaders = async () => {
     'Content-Type': 'application/json',
   };
 
-  // Check if user is authenticated via Firebase
-  if (typeof window !== 'undefined') {
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      try {
-        const user = JSON.parse(userData);
-        if (user.firebaseUid) {
-          headers['x-firebase-user-id'] = user.firebaseUid;
-          
-          // Try to get Firebase ID token for authentication
-          try {
-            const { auth } = await import('@/lib/firebase');
-            const currentUser = auth.currentUser;
-            if (currentUser) {
-              const idToken = await currentUser.getIdToken();
-              headers['authorization'] = `Bearer ${idToken}`;
-            }
-          } catch (error) {
-            console.warn('Could not get Firebase ID token:', error);
-          }
-        }
-      } catch (error) {
-        console.error('Error parsing user data:', error);
-      }
-    }
-  }
+  // Firebase authentication removed - using NextAuth only
 
   return headers;
 };

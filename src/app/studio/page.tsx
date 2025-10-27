@@ -1,7 +1,10 @@
 'use client';
 
+// Force dynamic rendering to prevent SSR issues
+export const dynamic = 'force-dynamic';
+
 import React, { useState, useEffect, Suspense } from 'react';
-import { useSession } from 'next-auth/react';
+import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
 import { useRouter, useSearchParams } from 'next/navigation';
 import CVStudio from '@/components/studio/CVStudio';
 import RouteGuard from '@/components/auth/RouteGuard';
@@ -11,7 +14,7 @@ import JourneyStatusBanner from '@/components/JourneyStatusBanner';
 import { getPageBackground } from '@/lib/utils/themeUtils';
 
 function StudioPageContent() {
-  const { data: session, status } = useSession();
+  const { user, loading: authLoading, isAuthenticated } = useUnifiedAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [currentJourney, setCurrentJourney] = useState(null);
@@ -42,15 +45,15 @@ function StudioPageContent() {
   // Load current journey data for the banner - MUST be before any conditional returns
   useEffect(() => {
     const loadCurrentJourney = async () => {
-      if (!primaryJourneyId || !session?.user?.id) {
-        console.log('🔍 Studio Page - Missing journeyId or userId:', { primaryJourneyId, userId: session?.user?.id });
+      if (!primaryJourneyId || !user?.id) {
+        console.log('🔍 Studio Page - Missing journeyId or userId:', { primaryJourneyId, userId: user?.id });
         return;
       }
       
       console.log('🔍 Studio Page - Loading journey data for:', primaryJourneyId);
       
       try {
-        const response = await fetch(`/api/application-journey?userId=${session.user.id}&jobId=${primaryJourneyId}`);
+        const response = await fetch(`/api/application-journey?userId=${user.id}&jobId=${primaryJourneyId}`);
         console.log('🔍 Studio Page - API response status:', response.status);
         
         if (response.ok) {
@@ -87,15 +90,15 @@ function StudioPageContent() {
     };
     
     loadCurrentJourney();
-  }, [primaryJourneyId, session?.user?.id]);
+  }, [primaryJourneyId, user?.id]);
 
-  // Show loading state while session is loading
-  if (status === 'loading') {
+  // Show loading state while auth is loading
+  if (authLoading) {
     return <LoadingAnimation progress={0.5} showProgressBar={false} />;
   }
 
-  // Show error if no session
-  if (status === 'unauthenticated' || !session?.user?.id) {
+  // Show error if not authenticated
+  if (!isAuthenticated || !user?.id) {
     return (
       <div className={`min-h-screen ${getPageBackground('studio')} flex items-center justify-center`}>
         <div className="text-center">
@@ -128,7 +131,7 @@ function StudioPageContent() {
             cvId={cvId} // Pass cvId directly from URL parameter
             coverLetterId={coverLetterId} // Pass coverLetterId directly from URL parameter
             documentType={finalDocumentType}
-            userId={session.user.id}
+            userId={user.id}
             mode={mode}
           />
         </div>

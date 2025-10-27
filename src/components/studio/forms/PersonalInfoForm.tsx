@@ -7,7 +7,7 @@ import RichTextEditor from '@/components/ui/RichTextEditor';
 import { getThemeClasses } from '@/lib/utils/themeUtils';
 
 interface PersonalInfoFormProps {
-  personalInfo: {
+  data: {
     name: string;
     label: string;
     image: string;
@@ -35,7 +35,7 @@ interface PersonalInfoFormProps {
 }
 
 const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
-  personalInfo,
+  data,
   onUpdate,
   cvData,
   jobData,
@@ -44,36 +44,39 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   
   // Debug logging to understand data structure
-  console.log('🔍 PersonalInfoForm - personalInfo:', personalInfo);
+  console.log('🔍 PersonalInfoForm - data:', data);
   console.log('🔍 PersonalInfoForm - cvData:', cvData);
   
   // Ensure we have proper data structure
   const safePersonalInfo = {
-    name: personalInfo?.name || cvData?.basics?.name || '',
-    label: personalInfo?.label || cvData?.basics?.label || '',
-    image: personalInfo?.image || cvData?.basics?.image || '',
-    email: personalInfo?.email || cvData?.basics?.email || '',
-    phone: personalInfo?.phone || cvData?.basics?.phone || '',
-    url: personalInfo?.url || cvData?.basics?.url || '',
-    summary: personalInfo?.summary || cvData?.basics?.summary || '',
+    name: data?.name || cvData?.basics?.name || '',
+    label: data?.label || cvData?.basics?.label || '',
+    image: data?.image || cvData?.basics?.image || '',
+    email: data?.email || cvData?.basics?.email || '',
+    phone: data?.phone || cvData?.basics?.phone || '',
+    url: data?.url || cvData?.basics?.url || '',
+    summary: data?.summary || cvData?.basics?.summary || '',
     location: {
-      address: personalInfo?.location?.address || cvData?.basics?.location?.address || '',
-      postalCode: personalInfo?.location?.postalCode || cvData?.basics?.location?.postalCode || '',
-      city: personalInfo?.location?.city || cvData?.basics?.location?.city || '',
-      countryCode: personalInfo?.location?.countryCode || cvData?.basics?.location?.countryCode || '',
-      region: personalInfo?.location?.region || cvData?.basics?.location?.region || ''
+      address: data?.location?.address || cvData?.basics?.location?.address || '',
+      postalCode: data?.location?.postalCode || cvData?.basics?.location?.postalCode || '',
+      city: data?.location?.city || cvData?.basics?.location?.city || '',
+      countryCode: data?.location?.countryCode || cvData?.basics?.location?.countryCode || '',
+      region: data?.location?.region || cvData?.basics?.location?.region || ''
     },
-    profiles: personalInfo?.profiles || cvData?.basics?.profiles || []
+    profiles: data?.profiles || cvData?.basics?.profiles || []
   };
   
   const handleNameChange = (value: string) => {
-    onUpdate('name', value);
+    onUpdate({ ...safePersonalInfo, name: value });
   };
 
   const handleLocationChange = (field: string, value: string) => {
-    onUpdate('location', {
-      ...safePersonalInfo.location,
-      [field]: value
+    onUpdate({
+      ...safePersonalInfo,
+      location: {
+        ...safePersonalInfo.location,
+        [field]: value
+      }
     });
   };
 
@@ -83,7 +86,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
       ...updatedProfiles[index],
       [field]: value
     };
-    onUpdate('profiles', updatedProfiles);
+    onUpdate({ ...safePersonalInfo, profiles: updatedProfiles });
   };
 
   const addProfile = () => {
@@ -92,12 +95,12 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
       username: '',
       url: ''
     };
-    onUpdate('profiles', [...safePersonalInfo.profiles, newProfile]);
+    onUpdate({ ...safePersonalInfo, profiles: [...safePersonalInfo.profiles, newProfile] });
   };
 
   const removeProfile = (index: number) => {
     const updatedProfiles = safePersonalInfo.profiles.filter((_, i) => i !== index);
-    onUpdate('profiles', updatedProfiles);
+    onUpdate({ ...safePersonalInfo, profiles: updatedProfiles });
   };
 
   const themeClasses = getThemeClasses;
@@ -126,7 +129,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
       }
 
       const result = await response.json();
-      onUpdate('summary', result.summary);
+      onUpdate({ ...safePersonalInfo, summary: result.summary });
     } catch (error) {
       console.error('Error generating AI summary:', error);
     } finally {
@@ -135,199 +138,92 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
   };
 
   return (
-    <div className="space-y-4 p-4">
-      {/* Name and Title - Compact Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className={`block text-sm font-medium ${themeClasses.text.secondary} mb-2`}>
-            Full Name *
-          </label>
-          <input
-            type="text"
-            value={safePersonalInfo.name}
-            onChange={(e) => handleNameChange(e.target.value)}
-            className={`w-full px-3 py-2 rounded-lg border ${themeClasses.input.base} ${themeClasses.input.focus} transition-colors`}
-            placeholder="John Doe"
-          />
-        </div>
-
-        <div>
-          <label className={`block text-sm font-medium ${themeClasses.text.secondary} mb-2`}>
-            Professional Title
-          </label>
-          <input
-            type="text"
-            value={safePersonalInfo.label}
-            onChange={(e) => onUpdate('label', e.target.value)}
-            className={`w-full px-3 py-2 rounded-lg border ${themeClasses.input.base} ${themeClasses.input.focus} transition-colors`}
-            placeholder="Software Engineer"
-          />
-        </div>
-      </div>
-
-      {/* Contact Information - Compact Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className={`flex items-center gap-2 text-sm font-medium ${themeClasses.text.secondary} mb-2`}>
-            <Mail className="w-4 h-4" />
-            Email *
-          </label>
-          <input
-            type="email"
-            value={safePersonalInfo.email}
-            onChange={(e) => onUpdate('email', e.target.value)}
-            className={`w-full px-3 py-2 rounded-lg border ${themeClasses.input.base} ${themeClasses.input.focus} transition-colors`}
-            placeholder="john.doe@example.com"
-          />
-        </div>
-
-        <div>
-          <label className={`flex items-center gap-2 text-sm font-medium ${themeClasses.text.secondary} mb-2`}>
-            <Phone className="w-4 h-4" />
-            Phone
-          </label>
-          <input
-            type="tel"
-            value={safePersonalInfo.phone}
-            onChange={(e) => onUpdate('phone', e.target.value)}
-            className={`w-full px-3 py-2 rounded-lg border ${themeClasses.input.base} ${themeClasses.input.focus} transition-colors`}
-            placeholder="+1 (555) 123-4567"
-          />
-        </div>
-      </div>
-
-      {/* Website and Location - Compact Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className={`flex items-center gap-2 text-sm font-medium ${themeClasses.text.secondary} mb-2`}>
-            <Globe className="w-4 h-4" />
-            Website
-          </label>
-          <input
-            type="url"
-            value={safePersonalInfo.url}
-            onChange={(e) => onUpdate('url', e.target.value)}
-            className={`w-full px-3 py-2 rounded-lg border ${themeClasses.input.base} ${themeClasses.input.focus} transition-colors`}
-            placeholder="https://johndoe.com"
-          />
-        </div>
-
-        <div>
-          <label className={`flex items-center gap-2 text-sm font-medium ${themeClasses.text.secondary} mb-2`}>
-            <MapPin className="w-4 h-4" />
-            Location
-          </label>
-          <div className="grid grid-cols-2 gap-2">
-            <input
-              type="text"
-              value={safePersonalInfo.location.city}
-              onChange={(e) => handleLocationChange('city', e.target.value)}
-              className={`w-full px-3 py-2 rounded-lg border ${themeClasses.input.base} ${themeClasses.input.focus} transition-colors`}
-              placeholder="City"
-            />
-            <input
-              type="text"
-              value={safePersonalInfo.location.region}
-              onChange={(e) => handleLocationChange('region', e.target.value)}
-              className={`w-full px-3 py-2 rounded-lg border ${themeClasses.input.base} ${themeClasses.input.focus} transition-colors`}
-              placeholder="State/Region"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Professional Summary */}
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Name and Title */}
       <div>
-        <div className="flex items-center justify-between mb-2">
-          <label className={`block text-sm font-medium ${themeClasses.text.secondary}`}>
-            Professional Summary
-          </label>
-          <motion.button
-            onClick={generateAISummary}
-            disabled={isGeneratingSummary || !safePersonalInfo.name || !safePersonalInfo.label}
-            className="flex items-center gap-2 px-3 py-1.5 text-xs bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            {isGeneratingSummary ? (
-              <RefreshCw className="w-3 h-3 animate-spin" />
-            ) : (
-              <Sparkles className="w-3 h-3" />
-            )}
-            <span>{isGeneratingSummary ? 'Generating...' : 'AI Generate'}</span>
-          </motion.button>
-        </div>
-        <RichTextEditor
-          content={safePersonalInfo.summary}
-          onChange={(value) => onUpdate('summary', value)}
-          placeholder="Write a brief professional summary highlighting your key skills, experience, and career objectives..."
+        <label className="block text-white/80 text-sm font-medium mb-2">Full Name</label>
+        <input
+          type="text"
+          value={safePersonalInfo.name}
+          onChange={(e) => handleNameChange(e.target.value)}
+          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+          placeholder="John Doe"
         />
       </div>
 
-      {/* Social Profiles - Collapsible */}
-      <div className={`${themeClasses.card.base} rounded-lg p-4`}>
-        <div className="flex justify-between items-center mb-4">
-          <label className={`text-sm font-medium ${themeClasses.text.secondary}`}>
-            Social Profiles
-          </label>
-          <motion.button
-            type="button"
-            onClick={addProfile}
-            className={`flex items-center gap-2 px-3 py-1.5 text-sm ${themeClasses.button.primary} rounded-lg transition-colors`}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <Plus className="w-4 h-4" />
-            Add Profile
-          </motion.button>
-        </div>
-        
-        <div className="space-y-3">
-          {safePersonalInfo.profiles.map((profile, index) => (
-            <motion.div 
-              key={index} 
-              className={`${themeClasses.card.base} border rounded-lg p-3`}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-            >
-              <div className="grid grid-cols-3 gap-3 mb-3">
-                <input
-                  type="text"
-                  value={profile.network}
-                  onChange={(e) => handleProfileChange(index, 'network', e.target.value)}
-                  className={`w-full px-3 py-2 rounded-lg border ${themeClasses.input.base} ${themeClasses.input.focus} transition-colors text-sm`}
-                  placeholder="Network (e.g., LinkedIn)"
-                />
-                <input
-                  type="text"
-                  value={profile.username}
-                  onChange={(e) => handleProfileChange(index, 'username', e.target.value)}
-                  className={`w-full px-3 py-2 rounded-lg border ${themeClasses.input.base} ${themeClasses.input.focus} transition-colors text-sm`}
-                  placeholder="Username"
-                />
-                <input
-                  type="url"
-                  value={profile.url}
-                  onChange={(e) => handleProfileChange(index, 'url', e.target.value)}
-                  className={`w-full px-3 py-2 rounded-lg border ${themeClasses.input.base} ${themeClasses.input.focus} transition-colors text-sm`}
-                  placeholder="URL"
-                />
-              </div>
-              <motion.button
-                type="button"
-                onClick={() => removeProfile(index)}
-                className="flex items-center gap-2 text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Trash2 className="w-4 h-4" />
-                Remove
-              </motion.button>
-            </motion.div>
-          ))}
-        </div>
+      <div>
+        <label className="block text-white/80 text-sm font-medium mb-2">Professional Title</label>
+        <input
+          type="text"
+          value={safePersonalInfo.label}
+          onChange={(e) => onUpdate({ ...safePersonalInfo, label: e.target.value })}
+          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+          placeholder="Senior Product Manager"
+        />
       </div>
+
+      {/* Contact Information */}
+      <div>
+        <label className="block text-white/80 text-sm font-medium mb-2">Email</label>
+        <input
+          type="email"
+          value={safePersonalInfo.email}
+          onChange={(e) => onUpdate({ ...safePersonalInfo, email: e.target.value })}
+          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+          placeholder="john.doe@example.com"
+        />
+      </div>
+
+      <div>
+        <label className="block text-white/80 text-sm font-medium mb-2">Phone</label>
+        <input
+          type="tel"
+          value={safePersonalInfo.phone}
+          onChange={(e) => onUpdate({ ...safePersonalInfo, phone: e.target.value })}
+          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+          placeholder="+1 (555) 123-4567"
+        />
+      </div>
+
+      {/* Website and Location */}
+      <div>
+        <label className="block text-white/80 text-sm font-medium mb-2">Website / Portfolio URL</label>
+        <input
+          type="url"
+          value={safePersonalInfo.url}
+          onChange={(e) => onUpdate({ ...safePersonalInfo, url: e.target.value })}
+          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+          placeholder="https://yourportfolio.com"
+        />
+      </div>
+
+      <div>
+        <label className="block text-white/80 text-sm font-medium mb-2">Location</label>
+        <input
+          type="text"
+          value={`${safePersonalInfo.location.city}${safePersonalInfo.location.region ? ', ' + safePersonalInfo.location.region : ''}`}
+          onChange={(e) => {
+            const parts = e.target.value.split(', ');
+            handleLocationChange('city', parts[0] || '');
+            handleLocationChange('region', parts[1] || '');
+          }}
+          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+          placeholder="San Francisco, CA"
+        />
+      </div>
+
+      {/* Professional Summary */}
+      <div className="md:col-span-2">
+        <label className="block text-white/80 text-sm font-medium mb-2">Summary</label>
+        <textarea
+          value={safePersonalInfo.summary}
+          onChange={(e) => onUpdate({ ...safePersonalInfo, summary: e.target.value })}
+          rows={4}
+          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors resize-none"
+          placeholder="A brief summary about your professional background..."
+        />
+      </div>
+
     </div>
   );
 };

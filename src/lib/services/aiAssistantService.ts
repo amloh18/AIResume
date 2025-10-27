@@ -486,6 +486,11 @@ export class AIAssistantService {
     // Extract from skills section
     if (cvData.skills && Array.isArray(cvData.skills)) {
       cvData.skills.forEach(skill => {
+        if (skill.category) skills.push(skill.category);
+        if (skill.skills && Array.isArray(skill.skills)) {
+          skills.push(...skill.skills);
+        }
+        // Fallback for old structure
         if (skill.name) skills.push(skill.name);
         if (skill.keywords && Array.isArray(skill.keywords)) {
           skills.push(...skill.keywords);

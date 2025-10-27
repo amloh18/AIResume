@@ -65,34 +65,45 @@ export async function POST(request: NextRequest) {
 function cleanupCoverLetterContent(content: string, cvData: any): string {
   let cleaned = content.trim();
   
-  // Remove any contact information lines (name, phone, email, location patterns)
+  // STEP 1: Remove name if it appears at the start (all caps or Title Case)
+  if (cvData?.basics?.name) {
+    const nameUpper = cvData.basics.name.toUpperCase();
+    const nameTitle = cvData.basics.name;
+    // Remove name line (case insensitive, with optional newline)
+    cleaned = cleaned.replace(new RegExp(`^${nameUpper}\\s*\\n`, 'mi'), '');
+    cleaned = cleaned.replace(new RegExp(`^${nameTitle}\\s*\\n`, 'mi'), '');
+  }
+  
+  // STEP 2: Remove any contact information lines (name, phone, email, location patterns)
+  // This handles lines with pipes separating contact info (e.g., "location | phone | email")
   const contactPatterns = [
-    /^[A-Z\s]+\n.*\|.*\|.*/m, // "NAME\nlocation | phone | email" pattern
-    /^[A-Z][a-z]+ [A-Z][a-z]+\n.*\d{3}.*\d{3}.*\d{4}/m, // Name with phone number
-    /^.*\d{3}[-.\s]?\d{3}[-.\s]?\d{4}.*/m, // Phone number line
-    /^.*@.*\..*/m, // Email line at the start
+    /^.*\|.*\|.*@.*\n/m, // Line with pipes and email (most specific)
+    /^.*\|\s*[+\d].*\|\s*.*@.*\n/m, // Line with pipes, phone, and email
+    /^\[object Object\].*\n/m, // Remove "[object Object]" artifacts
+    /^.*[+\d]{10,}.*@.*\..+\n/m, // Phone and email on same line
+    /^.*@.*\.\w+.*\n/m, // Email line
   ];
   
   contactPatterns.forEach(pattern => {
     cleaned = cleaned.replace(pattern, '');
   });
   
-  // Remove name if it appears at the start (all caps or Title Case)
-  if (cvData?.basics?.name) {
-    const nameUpper = cvData.basics.name.toUpperCase();
-    const nameTitle = cvData.basics.name;
-    cleaned = cleaned.replace(new RegExp(`^${nameUpper}\\s*\\n`, 'm'), '');
-    cleaned = cleaned.replace(new RegExp(`^${nameTitle}\\s*\\n`, 'm'), '');
-  }
-  
-  // Remove date lines at the start
-  cleaned = cleaned.replace(/^(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4}\s*\n/m, '');
+  // STEP 3: Remove date lines at the start or after header
+  cleaned = cleaned.replace(/^(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4}\s*\n/mi, '');
   cleaned = cleaned.replace(/^\d{1,2}\/\d{1,2}\/\d{4}\s*\n/m, '');
   
-  // Remove "Dear..." greeting if present
-  cleaned = cleaned.replace(/^Dear\s+[^,]+,\s*\n*/m, '');
+  // STEP 4: Remove recipient info lines (Hiring Manager, Company Name, etc.)
+  cleaned = cleaned.replace(/^(Hiring Manager|Recruitment Team|Human Resources|Dear Hiring Manager)\s*\n/mi, '');
+  // Remove company name lines (typically after date)
+  cleaned = cleaned.replace(/^[A-Z][a-zA-Z\s&,]+(?:Inc|LLC|Ltd|Corp|Corporation|Company)\.?\s*\n/m, '');
+  cleaned = cleaned.replace(/^Company Address.*\n/mi, '');
+  // Remove location lines (city, state patterns)
+  cleaned = cleaned.replace(/^[A-Z][a-z]+,\s*[A-Z]{2}\s*\n/m, ''); // e.g., "Chicago, IL"
   
-  // Remove closing signatures
+  // STEP 5: Remove "Dear..." greeting if present (including any variation)
+  cleaned = cleaned.replace(/^Dear\s+[^,\n]+,?\s*\n*/mi, '');
+  
+  // STEP 6: Remove closing signatures
   const closingPatterns = [
     /\n*Sincerely,?\s*\n*.*/gi,
     /\n*Best regards,?\s*\n*.*/gi,
@@ -106,11 +117,38 @@ function cleanupCoverLetterContent(content: string, cvData: any): string {
     cleaned = cleaned.replace(pattern, '');
   });
   
-  // Remove recipient info lines (Hiring Manager, Company Name, etc.)
-  cleaned = cleaned.replace(/^(Hiring Manager|Recruitment Team|Human Resources)\s*\n/m, '');
-  cleaned = cleaned.replace(/^Company Address\s*\n/m, '');
+  // STEP 7: Remove any remaining header artifacts at the beginning
+  // Keep removing lines that look like headers until we hit actual content
+  const lines = cleaned.split('\n');
+  let startIndex = 0;
   
-  // Clean up excessive newlines (more than 2 consecutive)
+  for (let i = 0; i < Math.min(lines.length, 10); i++) {
+    const line = lines[i].trim();
+    
+    // Skip empty lines
+    if (!line) {
+      startIndex = i + 1;
+      continue;
+    }
+    
+    // Check if this line looks like content (starts with "I" or has multiple words and punctuation)
+    const isContent = /^I\s+/i.test(line) || 
+                     (/\w+.*\w+/.test(line) && line.length > 50) ||
+                     line.startsWith('With') ||
+                     line.startsWith('As') ||
+                     line.startsWith('Having');
+    
+    if (isContent) {
+      startIndex = i;
+      break;
+    } else {
+      startIndex = i + 1;
+    }
+  }
+  
+  cleaned = lines.slice(startIndex).join('\n');
+  
+  // STEP 8: Clean up excessive newlines (more than 2 consecutive)
   cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
   
   return cleaned.trim();

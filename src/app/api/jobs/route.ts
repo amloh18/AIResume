@@ -2,10 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/database';
-import { JobApplication } from '@/models';
+import { JobApplication, User } from '@/models';
 import jwt from 'jsonwebtoken';
-import { extractUserIdentifier } from '@/lib/firebase-uid-utils';
-import { getUnifiedAuth } from '@/lib/auth-helpers';
 
 export async function POST(request: NextRequest) {
   try {
@@ -53,18 +51,19 @@ export async function POST(request: NextRequest) {
         );
       }
       
-      // Extract user identifier from request and session
-      const userIdentifier = extractUserIdentifier(request, session);
+      // Get user from database by email
+      await connectDB();
+      const user = await User.findOne({ email: session.user.email });
       
-      if (!userIdentifier.id || !userIdentifier.type) {
-        console.log('❌ No valid user identifier found');
+      if (!user) {
+        console.log('❌ User not found in database');
         return NextResponse.json(
-          { success: false, error: 'User identification failed' },
-          { status: 401 }
+          { success: false, error: 'User not found' },
+          { status: 404 }
         );
       }
       
-      userId = userIdentifier.id;
+      userId = user._id.toString();
       console.log('✅ Web session verified for user:', userId);
     }
     
@@ -192,22 +191,23 @@ export async function GET(request: NextRequest) {
         );
       }
       
-      // Extract user identifier from request and session
-      const userIdentifier = extractUserIdentifier(request, session);
+      // Get user from database by email
+      await connectDB();
+      const user = await User.findOne({ email: session.user.email });
       
-      if (!userIdentifier.id || !userIdentifier.type) {
-        console.log('❌ No valid user identifier found');
+      if (!user) {
+        console.log('❌ User not found in database');
         return NextResponse.json(
-          { success: false, error: 'User identification failed' },
-          { status: 401 }
+          { success: false, error: 'User not found' },
+          { status: 404 }
         );
       }
       
-      userId = userIdentifier.id;
+      userId = user._id.toString();
       console.log('✅ Web session verified for user:', userId);
     }
     
-    await connectDB();
+    // Ensure connection is established (may already be connected from auth check)
     
     // Get query parameters
     const { searchParams } = new URL(request.url);

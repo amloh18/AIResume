@@ -55,7 +55,13 @@ export async function validateSession(sessionData: SessionData): Promise<boolean
   return payload.userId === sessionData.user.id;
 }
 
+/**
+ * @deprecated This function is deprecated. Use NextAuth's useSession hook instead.
+ * Kept for backward compatibility during migration period.
+ */
 export async function getSessionFromStorage(): Promise<SessionData | null> {
+  console.warn('⚠️ getSessionFromStorage is deprecated. Please use NextAuth useSession hook.');
+  
   if (typeof window === 'undefined') return null;
   
   try {
@@ -65,12 +71,10 @@ export async function getSessionFromStorage(): Promise<SessionData | null> {
       return cookieSession;
     }
     
-    // Fallback to localStorage (legacy)
-    const stored = localStorage.getItem('auth-session');
-    if (!stored) return null;
+    // DO NOT read from localStorage - security vulnerability
+    // const stored = localStorage.getItem('auth-session');
     
-    const sessionData = JSON.parse(stored);
-    return await validateSession(sessionData) ? sessionData : null;
+    return null;
   } catch (error) {
     console.error('Error parsing session from storage:', error);
     return null;
@@ -100,12 +104,18 @@ export function getSessionFromCookie(cookieHeader?: string): SessionData | null 
   }
 }
 
+/**
+ * @deprecated This function is deprecated. Use NextAuth's session management instead.
+ * Kept for backward compatibility during migration period.
+ */
 export function saveSessionToStorage(sessionData: SessionData): void {
+  console.warn('⚠️ saveSessionToStorage is deprecated. Please use NextAuth session management.');
+  
   if (typeof window === 'undefined') return;
   
   try {
-    // Save to localStorage for client-side access (legacy support)
-    localStorage.setItem('auth-session', JSON.stringify(sessionData));
+    // DO NOT save to localStorage - security vulnerability
+    // localStorage.setItem('auth-session', JSON.stringify(sessionData));
     
     // Save minimal data to secure HTTP-only cookie
     const secureCookieData = {

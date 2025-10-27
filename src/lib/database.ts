@@ -5,10 +5,6 @@ const MONGODB_URI = process.env.MONGODB_URI;
 
 console.log('🔍 MongoDB URI check:', MONGODB_URI ? 'URI found' : 'URI missing');
 
-if (!MONGODB_URI) {
-  throw new Error('Please define the MONGODB_URI environment variable inside .env.local');
-}
-
 /**
  * Global is used here to maintain a cached connection across hot reloads
  * in development. This prevents connections growing exponentially
@@ -62,6 +58,23 @@ async function connectDB() {
     throw new Error('Database connection cannot be established on client side');
   }
 
+  // Handle missing MONGODB_URI during build time
+  if (!MONGODB_URI) {
+    if (process.env.NODE_ENV === 'production' && !process.env.VERCEL) {
+      console.warn('⚠️ MongoDB URI not found during build - skipping connection');
+      // Return a mock connection for build time
+      return {
+        connection: {
+          readyState: 0,
+          db: null,
+          host: 'mock',
+          port: 0
+        }
+      } as any;
+    }
+    throw new Error('Please define the MONGODB_URI environment variable inside .env.local');
+  }
+
   if (cached.conn) {
     return cached.conn;
   }
@@ -70,7 +83,7 @@ async function connectDB() {
     // Setup connection event handlers
     setupConnectionHandlers();
 
-    cached.promise = mongoose.connect(MONGODB_URI!, connectionOptions).then((mongoose) => {
+    cached.promise = mongoose.connect(MONGODB_URI, connectionOptions).then((mongoose) => {
       console.log('✅ Connected to MongoDB successfully');
       console.log(`📊 Database: ${mongoose.connection.db?.databaseName || 'unknown'}`);
       console.log(`🌐 Host: ${mongoose.connection.host}:${mongoose.connection.port}`);

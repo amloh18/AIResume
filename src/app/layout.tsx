@@ -2,16 +2,13 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
-import SessionProvider from '@/components/providers/SessionProvider'
-import { ThemeProvider } from '@/lib/contexts/ThemeContext'
-import PerformanceMonitor from '@/components/ui/PerformanceMonitor'
-import { LoadingProvider } from '@/components/providers/LoadingProvider'
-import { PaymentModalProvider } from '@/contexts/PaymentModalContext'
-import CookieConsent from '@/components/CookieConsent'
-import { NotificationProvider } from '@/contexts/NotificationContext'
-import { ConsoleLoggerProvider } from '@/contexts/ConsoleLoggerProvider'
+import ClientProviders from '@/components/providers/ClientProviders'
 
 const inter = Inter({ subsets: ['latin'] })
+
+// Force dynamic rendering for all pages
+export const dynamic = 'force-dynamic'
+export const dynamicParams = true
 
 export const metadata: Metadata = {
   title: 'CVCircle.io - AI-Powered CV Builder',
@@ -31,22 +28,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <SessionProvider>
-          <ThemeProvider>
-            <LoadingProvider>
-              <PaymentModalProvider>
-                <NotificationProvider>
-                  <ConsoleLoggerProvider>
-                    {children}
-                  </ConsoleLoggerProvider>
-                </NotificationProvider>
-              </PaymentModalProvider>
-            </LoadingProvider>
-          </ThemeProvider>
-        </SessionProvider>
+        <ClientProviders>
+          {children}
+        </ClientProviders>
         <Analytics />
-        <PerformanceMonitor />
-        <CookieConsent />
       </body>
     </html>
   )

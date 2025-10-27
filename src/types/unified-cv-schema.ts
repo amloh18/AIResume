@@ -80,6 +80,7 @@ export interface UnifiedCVDataStructure {
     date: string;
     issuer: string;
     url: string;
+    description: string;
   }>;
 
   // Publications
@@ -93,9 +94,8 @@ export interface UnifiedCVDataStructure {
 
   // Skills
   skills: Array<{
-    name: string;
-    level: string;
-    keywords: string[];
+    category: string;
+    skills: string[];
   }>;
 
   // Languages
@@ -295,9 +295,8 @@ export const UNIFIED_CV_VALIDATION_SCHEMA = {
       items: {
         type: "object",
         properties: {
-          name: { type: "string" },
-          level: { type: "string" },
-          keywords: { type: "array", items: { type: "string" } }
+          category: { type: "string" },
+          skills: { type: "array", items: { type: "string" } }
         }
       }
     },
@@ -386,53 +385,3 @@ export const DEFAULT_UNIFIED_CV_DATA: UnifiedCVDataStructure = {
  */
 export const UNIFIED_CV_SCHEMA_VERSION = "1.0.0";
 
-/**
- * MIGRATION UTILITIES
- * 
- * Functions to help migrate from old formats to the unified schema.
- * These should be removed once all modules are updated.
- */
-export class UnifiedCVMigration {
-  /**
-   * Migrate from old CVDataStructure to UnifiedCVDataStructure
-   */
-  static fromLegacyCVDataStructure(legacyData: any): UnifiedCVDataStructure {
-    // Direct mapping since the structure is already compatible
-    return {
-      basics: legacyData.basics || DEFAULT_UNIFIED_CV_DATA.basics,
-      work: legacyData.work || [],
-      volunteer: legacyData.volunteer || [],
-      education: legacyData.education || [],
-      awards: legacyData.awards || [],
-      certificates: legacyData.certificates || [],
-      publications: legacyData.publications || [],
-      skills: legacyData.skills || [],
-      languages: legacyData.languages || [],
-      interests: legacyData.interests || [],
-      references: legacyData.references || [],
-      projects: legacyData.projects || []
-    };
-  }
-
-  /**
-   * Validate that data conforms to unified schema
-   */
-  static validate(data: any): boolean {
-    try {
-      // Basic structure validation
-      return (
-        data &&
-        typeof data === 'object' &&
-        data.basics &&
-        Array.isArray(data.work) &&
-        Array.isArray(data.education) &&
-        Array.isArray(data.skills) &&
-        Array.isArray(data.projects) &&
-        Array.isArray(data.certificates) &&
-        Array.isArray(data.languages)
-      );
-    } catch {
-      return false;
-    }
-  }
-}

@@ -33,15 +33,31 @@ const CoverLetterPreview: React.FC<CoverLetterPreviewProps> = ({
     let body = text;
     let closing = `Thank you for considering my application.\n\nSincerely,\n${cvData?.basics?.name || 'Your Name'}`;
     
-    // Remove greeting if present
-    if (text.startsWith('Dear ')) {
-      const greetingEnd = text.indexOf('\n');
-      if (greetingEnd > -1) {
-        body = text.substring(greetingEnd + 1).trim();
-      }
+    // STEP 1: Remove any header information that might have slipped through
+    // Remove name lines (case insensitive)
+    if (cvData?.basics?.name) {
+      const nameUpper = cvData.basics.name.toUpperCase();
+      const nameTitle = cvData.basics.name;
+      body = body.replace(new RegExp(`^${nameUpper}\\s*\\n`, 'mi'), '');
+      body = body.replace(new RegExp(`^${nameTitle}\\s*\\n`, 'mi'), '');
     }
     
-    // Extract closing if present
+    // Remove contact info lines with pipes
+    body = body.replace(/^.*\|.*\|.*@.*\n/m, '');
+    body = body.replace(/^\[object Object\].*\n/m, ''); // Remove [object Object] artifacts
+    
+    // Remove date lines
+    body = body.replace(/^(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4}\s*\n/mi, '');
+    
+    // Remove recipient info
+    body = body.replace(/^(Hiring Manager|Recruitment Team|Human Resources)\s*\n/mi, '');
+    body = body.replace(/^[A-Z][a-zA-Z\s&,]+(?:Inc|LLC|Ltd|Corp|Corporation|Company)\.?\s*\n/m, '');
+    body = body.replace(/^[A-Z][a-z]+,\s*[A-Z]{2}\s*\n/m, ''); // City, State
+    
+    // STEP 2: Remove greeting if present
+    body = body.replace(/^Dear\s+[^,\n]+,?\s*\n*/mi, '');
+    
+    // STEP 3: Extract closing if present
     const closingKeywords = ['Sincerely', 'Best regards', 'Thank you for considering'];
     for (const keyword of closingKeywords) {
       const closingIndex = body.lastIndexOf(keyword);
@@ -52,24 +68,40 @@ const CoverLetterPreview: React.FC<CoverLetterPreviewProps> = ({
       }
     }
     
-    // If no closing found, use the full text as body
-    if (body === text) {
-      body = text;
+    // STEP 4: Clean up any remaining header artifacts by scanning first few lines
+    const lines = body.split('\n');
+    let startIndex = 0;
+    
+    for (let i = 0; i < Math.min(lines.length, 8); i++) {
+      const line = lines[i].trim();
+      
+      // Skip empty lines
+      if (!line) {
+        continue;
+      }
+      
+      // Check if this line looks like actual content
+      const isContent = /^I\s+/i.test(line) || 
+                       line.length > 50 ||
+                       line.startsWith('With') ||
+                       line.startsWith('As') ||
+                       line.startsWith('Having') ||
+                       line.startsWith('My') ||
+                       /^\w+\s+\w+.*[.!?]$/.test(line); // Has multiple words and ends with punctuation
+      
+      if (isContent) {
+        startIndex = i;
+        break;
+      }
     }
+    
+    body = lines.slice(startIndex).join('\n').trim();
     
     return { body, closing };
   };
 
   const { body, closing } = parseContent(content);
   
-  // Debug logging
-  console.log('CoverLetterPreview Debug:', {
-    content,
-    body,
-    closing,
-    hasContent: !!content,
-    contentLength: content?.length || 0
-  });
   const senderName = cvData?.basics?.name?.toUpperCase() || 'YOUR NAME';
   
   // Handle location object properly

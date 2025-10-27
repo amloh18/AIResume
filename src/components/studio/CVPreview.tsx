@@ -146,15 +146,6 @@ const CVPreview: React.FC<CVPreviewProps> = ({
       }
     }
 
-    // Debug logging
-    console.log('Page Calculation Debug:', {
-      maxPageHeight,
-      sections,
-      originalPages: pages,
-      cleanedPages,
-      totalPages: actualPageCount,
-      sectionHeights: sections.map(s => ({ section: s, height: getSectionHeight(s) }))
-    });
 
     return { pages: cleanedPages, totalPages: actualPageCount };
   }, [cvData, sectionOrder, currentDimensions.height, pagePadding, getSectionHeight]);
@@ -249,8 +240,6 @@ const CVPreview: React.FC<CVPreviewProps> = ({
           const pageNumber = parseInt(pageKey);
           const pageSections = calculatePages.pages[pageNumber];
           
-          console.log(`Rendering page ${pageNumber} with sections:`, pageSections);
-          
           return (
             <div 
               key={pageNumber}
@@ -295,13 +284,6 @@ const CVPreview: React.FC<CVPreviewProps> = ({
         })}
       </div>
       
-      {/* Debug info - remove in production */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="fixed top-4 right-4 bg-black text-white p-2 text-xs z-50 max-w-xs">
-          <div>Total Pages: {totalPages}</div>
-          <div>All Pages: {JSON.stringify(calculatePages.pages)}</div>
-        </div>
-      )}
     </div>
   );
 };

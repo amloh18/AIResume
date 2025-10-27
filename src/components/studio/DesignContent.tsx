@@ -63,188 +63,201 @@ const DesignContent: React.FC<DesignContentProps> = ({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
-            <Palette className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-          </div>
-          <h3 className={`text-lg font-semibold ${themeClasses.text.primary}`}>
-            Design Settings
-          </h3>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-white mb-2">Design Settings</h1>
+          <p className="text-gray-300">Customize the visual appearance of your CV.</p>
         </div>
-        <motion.button
-          onClick={handleReset}
-          className={`flex items-center gap-2 px-3 py-1.5 text-sm ${themeClasses.button.secondary} rounded-lg`}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-        >
-          <RotateCcw className="w-4 h-4" />
-          Reset
-        </motion.button>
+        
+        <div className="flex items-center gap-3">
+          <motion.button
+            onClick={handleReset}
+            className="px-6 py-2 text-sm bg-green-600/20 text-green-400 rounded-full hover:bg-green-600/30 transition-colors"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <RotateCcw className="w-4 h-4 inline mr-2" />
+            Reset
+          </motion.button>
+        </div>
       </div>
 
       {/* Typography Section */}
-      <div className={`${themeClasses.card.base} rounded-lg border p-4`}>
-        <div className="flex items-center gap-2 mb-4">
-          <Type className="w-4 h-4 text-blue-600" />
-          <h4 className={`font-medium ${themeClasses.text.primary}`}>Typography</h4>
+      <div className="bg-white/5 rounded-2xl border border-white/10 transition-all duration-300">
+        <div className="flex items-center justify-between p-6">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                <Type className="w-5 h-5 text-white" />
+              </div>
+              <h3 className="text-xl font-semibold text-white">Typography</h3>
+            </div>
+          </div>
         </div>
         
-        <div className="space-y-4">
-          {/* Font Family */}
-          <div>
-            <label className={`block text-sm font-medium ${themeClasses.text.secondary} mb-2`}>
-              Font Family
-            </label>
-            <select
-              value={designSettings.fontFamily}
-              onChange={(e) => handleSettingChange('fontFamily', e.target.value)}
-              className={`w-full px-3 py-2 rounded-lg border ${themeClasses.input.base} ${themeClasses.input.focus}`}
-            >
-              <option value="Inter">Inter</option>
-              <option value="Roboto">Roboto</option>
-              <option value="Open Sans">Open Sans</option>
-              <option value="Lato">Lato</option>
-              <option value="Montserrat">Montserrat</option>
-              <option value="Source Sans Pro">Source Sans Pro</option>
-            </select>
-          </div>
+        <div className="px-6 pb-6">
+          <div className="pt-4 space-y-6">
+            {/* Font Family */}
+            <div>
+              <label className="block text-white/80 text-sm font-medium mb-2">Font Family</label>
+              <select
+                value={designSettings.fontFamily}
+                onChange={(e) => handleSettingChange('fontFamily', e.target.value)}
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+              >
+                <option value="Inter" className="bg-gray-800 text-white">Inter</option>
+                <option value="Roboto" className="bg-gray-800 text-white">Roboto</option>
+                <option value="Open Sans" className="bg-gray-800 text-white">Open Sans</option>
+                <option value="Lato" className="bg-gray-800 text-white">Lato</option>
+                <option value="Montserrat" className="bg-gray-800 text-white">Montserrat</option>
+                <option value="Source Sans Pro" className="bg-gray-800 text-white">Source Sans Pro</option>
+              </select>
+            </div>
 
-          {/* Font Sizes */}
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className={`block text-xs font-medium ${themeClasses.text.secondary} mb-1`}>
-                Header Size
-              </label>
-              <input
-                type="range"
-                min="18"
-                max="32"
-                value={designSettings.headerFontSize}
-                onChange={(e) => handleSettingChange('headerFontSize', parseInt(e.target.value))}
-                className="w-full accent-lime-500"
-              />
-              <span className="text-xs text-gray-500">{designSettings.headerFontSize}px</span>
-            </div>
-            <div>
-              <label className={`block text-xs font-medium ${themeClasses.text.secondary} mb-1`}>
-                Body Size
-              </label>
-              <input
-                type="range"
-                min="10"
-                max="18"
-                value={designSettings.bodyFontSize}
-                onChange={(e) => handleSettingChange('bodyFontSize', parseInt(e.target.value))}
-                className="w-full accent-lime-500"
-              />
-              <span className="text-xs text-gray-500">{designSettings.bodyFontSize}px</span>
-            </div>
-            <div>
-              <label className={`block text-xs font-medium ${themeClasses.text.secondary} mb-1`}>
-                Section Size
-              </label>
-              <input
-                type="range"
-                min="14"
-                max="24"
-                value={designSettings.sectionFontSize}
-                onChange={(e) => handleSettingChange('sectionFontSize', parseInt(e.target.value))}
-                className="w-full accent-lime-500"
-              />
-              <span className="text-xs text-gray-500">{designSettings.sectionFontSize}px</span>
+            {/* Font Sizes */}
+            <div className="grid grid-cols-3 gap-6">
+              <div>
+                <label className="block text-white/80 text-sm font-medium mb-2">Header Size</label>
+                <input
+                  type="range"
+                  min="18"
+                  max="32"
+                  value={designSettings.headerFontSize}
+                  onChange={(e) => handleSettingChange('headerFontSize', parseInt(e.target.value))}
+                  className="w-full accent-[#80FF00]"
+                />
+                <span className="text-xs text-white/60">{designSettings.headerFontSize}px</span>
+              </div>
+              <div>
+                <label className="block text-white/80 text-sm font-medium mb-2">Body Size</label>
+                <input
+                  type="range"
+                  min="10"
+                  max="18"
+                  value={designSettings.bodyFontSize}
+                  onChange={(e) => handleSettingChange('bodyFontSize', parseInt(e.target.value))}
+                  className="w-full accent-[#80FF00]"
+                />
+                <span className="text-xs text-white/60">{designSettings.bodyFontSize}px</span>
+              </div>
+              <div>
+                <label className="block text-white/80 text-sm font-medium mb-2">Section Size</label>
+                <input
+                  type="range"
+                  min="14"
+                  max="24"
+                  value={designSettings.sectionFontSize}
+                  onChange={(e) => handleSettingChange('sectionFontSize', parseInt(e.target.value))}
+                  className="w-full accent-[#80FF00]"
+                />
+                <span className="text-xs text-white/60">{designSettings.sectionFontSize}px</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Layout Section */}
-      <div className={`${themeClasses.card.base} rounded-lg border p-4`}>
-        <div className="flex items-center gap-2 mb-4">
-          <Layout className="w-4 h-4 text-green-600" />
-          <h4 className={`font-medium ${themeClasses.text.primary}`}>Layout</h4>
-        </div>
-        
-        <div className="space-y-4">
-          {/* Alignment */}
-          <div>
-            <label className={`block text-sm font-medium ${themeClasses.text.secondary} mb-2`}>
-              Text Alignment for CV Header
-            </label>
-            <p className="text-xs text-gray-500 mb-2">Affects basics section only (excluding professional summary)</p>
-            <div className="flex gap-2">
-              {['left', 'center', 'right'].map((align) => (
-                <button
-                  key={align}
-                  onClick={() => handleSettingChange('alignment', align)}
-                  className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
-                    designSettings.alignment === align
-                      ? 'bg-lime-100 border-lime-300 text-lime-700 dark:bg-lime-900/20 dark:border-lime-600 dark:text-lime-400'
-                      : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  {align.charAt(0).toUpperCase() + align.slice(1)}
-                </button>
-              ))}
+      <div className="bg-white/5 rounded-2xl border border-white/10 transition-all duration-300">
+        <div className="flex items-center justify-between p-6">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                <Layout className="w-5 h-5 text-white" />
+              </div>
+              <h3 className="text-xl font-semibold text-white">Layout</h3>
             </div>
           </div>
+        </div>
+        
+        <div className="px-6 pb-6">
+          <div className="pt-4 space-y-6">
+            {/* Alignment */}
+            <div>
+              <label className="block text-white/80 text-sm font-medium mb-2">Text Alignment for CV Header</label>
+              <p className="text-xs text-white/60 mb-4">Affects basics section only (excluding professional summary)</p>
+              <div className="flex gap-3">
+                {['left', 'center', 'right'].map((align) => (
+                  <button
+                    key={align}
+                    onClick={() => handleSettingChange('alignment', align)}
+                    className={`px-4 py-3 text-sm rounded-lg border transition-colors ${
+                      designSettings.alignment === align
+                        ? 'bg-[#80FF00]/20 border-[#80FF00] text-[#80FF00]'
+                        : 'border-white/20 text-white/80 hover:bg-white/10'
+                    }`}
+                  >
+                    {align.charAt(0).toUpperCase() + align.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-          {/* Spacing */}
-          <div>
-            <label className={`block text-sm font-medium ${themeClasses.text.secondary} mb-2`}>
-              Line Spacing
-            </label>
-            <input
-              type="range"
-              min="1"
-              max="2"
-              step="0.1"
-              value={designSettings.lineSpacing}
-              onChange={(e) => handleSettingChange('lineSpacing', parseFloat(e.target.value))}
-              className="w-full accent-lime-500"
-            />
-            <span className="text-xs text-gray-500">{designSettings.lineSpacing}x</span>
+            {/* Spacing */}
+            <div>
+              <label className="block text-white/80 text-sm font-medium mb-2">Line Spacing</label>
+              <input
+                type="range"
+                min="1"
+                max="2"
+                step="0.1"
+                value={designSettings.lineSpacing}
+                onChange={(e) => handleSettingChange('lineSpacing', parseFloat(e.target.value))}
+                className="w-full accent-[#80FF00]"
+              />
+              <span className="text-xs text-white/60">{designSettings.lineSpacing}x</span>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Color Scheme Section */}
-      <div className={`${themeClasses.card.base} rounded-lg border p-4`}>
-        <div className="flex items-center gap-2 mb-4">
-          <Palette className="w-4 h-4 text-purple-600" />
-          <h4 className={`font-medium ${themeClasses.text.primary}`}>Color Scheme</h4>
+      <div className="bg-white/5 rounded-2xl border border-white/10 transition-all duration-300">
+        <div className="flex items-center justify-between p-6">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                <Palette className="w-5 h-5 text-white" />
+              </div>
+              <h3 className="text-xl font-semibold text-white">Color Scheme</h3>
+            </div>
+          </div>
         </div>
         
-        <div className="grid grid-cols-2 gap-3">
-          {[
-            { id: 'black-black', name: 'Black/Black', colors: ['#000000', '#000000'] },
-            { id: 'black-grey', name: 'Black/Dark Grey', colors: ['#000000', '#374151'] },
-            { id: 'blue-black', name: 'Blue/Black', colors: ['#2563eb', '#000000'] },
-            { id: 'green-black', name: 'Green/Black', colors: ['#16a34a', '#000000'] }
-          ].map((scheme) => (
-            <button
-              key={scheme.id}
-              onClick={() => handleSettingChange('colorScheme', scheme.id)}
-              className={`p-3 rounded-lg border transition-colors ${
-                designSettings.colorScheme === scheme.id
-                  ? 'border-lime-300 bg-lime-50 dark:border-lime-600 dark:bg-lime-900/20'
-                  : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
-              }`}
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <div className="flex gap-1">
-                  {scheme.colors.map((color, i) => (
-                    <div
-                      key={i}
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: color }}
-                    />
-                  ))}
-                </div>
-                <span className="text-sm font-medium">{scheme.name}</span>
-              </div>
-            </button>
-          ))}
+        <div className="px-6 pb-6">
+          <div className="pt-4">
+            <div className="grid grid-cols-2 gap-4">
+              {[
+                { id: 'black-black', name: 'Black/Black', colors: ['#000000', '#000000'] },
+                { id: 'black-grey', name: 'Black/Dark Grey', colors: ['#000000', '#374151'] },
+                { id: 'blue-black', name: 'Blue/Black', colors: ['#2563eb', '#000000'] },
+                { id: 'green-black', name: 'Green/Black', colors: ['#16a34a', '#000000'] }
+              ].map((scheme) => (
+                <button
+                  key={scheme.id}
+                  onClick={() => handleSettingChange('colorScheme', scheme.id)}
+                  className={`p-4 rounded-lg border transition-colors ${
+                    designSettings.colorScheme === scheme.id
+                      ? 'border-[#80FF00] bg-[#80FF00]/10'
+                      : 'border-white/20 hover:bg-white/10'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="flex gap-1">
+                      {scheme.colors.map((color, i) => (
+                        <div
+                          key={i}
+                          className="w-4 h-4 rounded-full"
+                          style={{ backgroundColor: color }}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-sm font-medium text-white">{scheme.name}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>

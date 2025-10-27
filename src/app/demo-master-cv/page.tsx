@@ -1,6 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
+
+// Force dynamic rendering to prevent SSR issues
+export const dynamic = 'force-dynamic';
 import { motion } from 'framer-motion';
 import { Sparkles, ArrowRight, CheckCircle, User, Briefcase, Award, Eye } from 'lucide-react';
 import Link from 'next/link';
@@ -64,7 +67,7 @@ const DemoMasterCVPage: React.FC = () => {
             onHoverEnd={() => setIsHovered(false)}
           >
             <Link
-              href="/master-cv-onboarding"
+              href="/ai-career-report"
               className="inline-flex items-center gap-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-8 py-4 rounded-xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300"
             >
               <span>Try the New Onboarding</span>

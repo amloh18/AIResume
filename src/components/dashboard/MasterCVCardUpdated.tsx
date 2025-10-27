@@ -12,7 +12,7 @@ import {
   Plus,
   Star
 } from 'lucide-react';
-import { useSession } from 'next-auth/react';
+import { useUnifiedAuth } from '@/lib/hooks/useUnifiedAuth';
 
 interface MasterCV {
   id: string;
@@ -39,7 +39,7 @@ const MasterCVCardUpdated: React.FC<MasterCVCardProps> = ({
   onToggleStar,
   masterCVData
 }) => {
-  const { data: session } = useSession();
+  const { user } = useUnifiedAuth();
   const [masterCV, setMasterCV] = useState<MasterCV | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -66,11 +66,15 @@ const MasterCVCardUpdated: React.FC<MasterCVCardProps> = ({
         userId,
         userIdType: typeof userId,
         userIdLength: userId?.length,
-        sessionUserId: session?.user?.id
+        sessionUserId: user?.id
       });
       
       const response = await fetch(`/api/cvs/master?userId=${userId}`);
       console.log('🔍 MasterCVCardUpdated - API response status:', response.status);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       
       const result = await response.json();
       console.log('🔍 MasterCVCardUpdated - API response data:', result);
@@ -80,7 +84,7 @@ const MasterCVCardUpdated: React.FC<MasterCVCardProps> = ({
         setMasterCV(result.data.masterCV);
       } else {
         console.log('❌ MasterCVCardUpdated - No master CV found in response');
-        setError('No master CV found');
+        setError(result.message || 'No master CV found');
       }
     } catch (error) {
       console.error('❌ MasterCVCardUpdated - Error fetching master CV:', error);
@@ -167,7 +171,7 @@ const MasterCVCardUpdated: React.FC<MasterCVCardProps> = ({
           className="px-4 py-2 bg-gradient-to-r from-lime-400 to-lime-500 text-black font-semibold rounded-xl hover:from-lime-300 hover:to-lime-400 transition-all duration-300 flex items-center gap-2"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          onClick={() => window.location.href = '/master-cv-onboarding'}
+            onClick={() => window.location.href = '/ai-career-report'}
         >
           <Plus size={16} />
           Create Master CV
@@ -193,7 +197,7 @@ const MasterCVCardUpdated: React.FC<MasterCVCardProps> = ({
           className="px-4 py-2 bg-gradient-to-r from-lime-400 to-lime-500 text-black font-semibold rounded-xl hover:from-lime-300 hover:to-lime-400 transition-all duration-300 flex items-center gap-2"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          onClick={() => window.location.href = '/master-cv-onboarding'}
+            onClick={() => window.location.href = '/ai-career-report'}
         >
           <Plus size={16} />
           Create Master CV

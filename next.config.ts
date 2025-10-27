@@ -54,6 +54,16 @@ const nextConfig: NextConfig = {
       })
     );
 
+    // Fix jose library compatibility with Next.js 15
+    // Jose tries to read process.version which is undefined in webpack bundles
+    if (isServer) {
+      config.plugins.push(
+        new webpack.DefinePlugin({
+          'process.version': JSON.stringify(process.version),
+        })
+      );
+    }
+
     // Disable Fast Refresh notifications in development
     if (dev && !isServer) {
       config.optimization = {
@@ -62,6 +72,24 @@ const nextConfig: NextConfig = {
       };
     }
     
+    // Handle framer-motion and Node.js modules properly
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      'framer-motion': require.resolve('framer-motion'),
+      // Handle Node.js built-in modules
+      'node:process': 'process/browser',
+      'node:path': 'path-browserify',
+      'node:fs': 'fs',
+      'node:os': 'os-browserify/browser',
+      'node:crypto': 'crypto-browserify',
+      'node:util': 'util',
+      'node:stream': 'stream-browserify',
+      'node:buffer': 'buffer',
+      'node:url': 'url',
+      'node:querystring': 'querystring-es3',
+      'node:events': 'events',
+    };
+
     // Handle optional dependencies
     config.resolve.fallback = {
       ...config.resolve.fallback,
@@ -145,22 +173,7 @@ const nextConfig: NextConfig = {
       )
     );
 
-    // Module resolution aliases
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      // Handle Node.js built-in modules
-      'node:process': 'process/browser',
-      'node:path': 'path-browserify',
-      'node:fs': 'fs',
-      'node:os': 'os-browserify/browser',
-      'node:crypto': 'crypto-browserify',
-      'node:util': 'util',
-      'node:stream': 'stream-browserify',
-      'node:buffer': 'buffer',
-      'node:url': 'url',
-      'node:querystring': 'querystring-es3',
-      'node:events': 'events',
-    };
+    // Module resolution aliases (already configured above)
 
     // Optimize bundle size
     if (!dev && !isServer) {
@@ -189,6 +202,7 @@ const nextConfig: NextConfig = {
         'tesseract.js': 'commonjs tesseract.js',
         'canvas': 'commonjs canvas',
         'puppeteer': 'commonjs puppeteer',
+        'jose': 'commonjs jose',
       });
     }
 
@@ -200,10 +214,13 @@ const nextConfig: NextConfig = {
   // Performance optimizations
   experimental: {
     optimizeCss: true,
-    optimizePackageImports: ['framer-motion', 'lucide-react', 'lottie-react'],
+    optimizePackageImports: ['lucide-react', 'lottie-react'],
   },
-  // Vercel-specific optimizations
-  serverExternalPackages: ['mongoose', 'firebase-admin'],
+  
+  // Force dynamic rendering for all pages to prevent SSR issues
+  // Disable static optimization to prevent build errors with React hooks
+  staticPageGenerationTimeout: 1000,
+  
   // Handle API routes properly
   async headers() {
     return [
@@ -239,6 +256,14 @@ const nextConfig: NextConfig = {
   env: {
     CUSTOM_KEY: process.env.CUSTOM_KEY,
     MONGODB_URI: process.env.MONGODB_URI,
+    NEXTAUTH_URL: process.env.NEXTAUTH_URL,
+    NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
+    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
+    EMAIL_SERVER_HOST: process.env.EMAIL_SERVER_HOST,
+    EMAIL_SERVER_PORT: process.env.EMAIL_SERVER_PORT,
+    EMAIL_SERVER_USER: process.env.EMAIL_SERVER_USER,
+    EMAIL_SERVER_PASSWORD: process.env.EMAIL_SERVER_PASSWORD,
   },
   // Performance optimizations
   compiler: {
@@ -249,8 +274,10 @@ const nextConfig: NextConfig = {
   generateEtags: false,
   reactStrictMode: true,
   // Vercel deployment optimizations
-  output: 'standalone',
   trailingSlash: false,
+  
+  // External packages for server-side rendering
+  serverExternalPackages: ['mongoose', 'firebase-admin', 'jose', 'next-auth', 'openid-client'],
   // Handle dynamic imports
   async rewrites() {
     return [

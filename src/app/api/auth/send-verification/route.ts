@@ -8,21 +8,71 @@ export async function POST(request: NextRequest) {
   try {
     const { email, firstName, lastName } = await request.json();
 
-    if (!email || !firstName || !lastName) {
+    if (!email) {
       return NextResponse.json(
-        { success: false, message: 'Email, first name, and last name are required' },
+        { success: false, message: 'Email is required' },
         { status: 400 }
       );
     }
 
     await connectDB();
 
-    // Check if user already exists
+    // Check if user exists
     const existingUser = await User.findOne({ email });
-    if (existingUser) {
+    
+    // If user exists and is already verified, return success
+    if (existingUser && existingUser.isEmailVerified) {
       return NextResponse.json(
-        { success: false, message: 'User with this email already exists' },
-        { status: 409 }
+        { success: true, message: 'Account is already verified' }
+      );
+    }
+
+    // If user exists but not verified, resend verification
+    if (existingUser && !existingUser.isEmailVerified) {
+      // Create new verification token
+      const verificationToken = await VerificationToken.createToken(
+        existingUser._id,
+        email,
+        'email',
+        24 // 24 hours expiration
+      );
+
+      // Create verification link
+      const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+      const verificationLink = `${baseUrl}/auth/verify-email?token=${verificationToken.token}&email=${encodeURIComponent(email)}`;
+
+      // Try to send email
+      try {
+        const emailResult = await sendEmailVerification(
+          email,
+          verificationLink,
+          existingUser.firstName
+        );
+
+        if (emailResult.success) {
+          return NextResponse.json({
+            success: true,
+            message: 'Verification email sent successfully'
+          });
+        } else {
+          return NextResponse.json({
+            success: false,
+            message: 'Failed to send verification email. Please try again.'
+          });
+        }
+      } catch (emailError: any) {
+        return NextResponse.json({
+          success: false,
+          message: 'Email service temporarily unavailable. Please try again later.'
+        });
+      }
+    }
+
+    // If user doesn't exist, require firstName and lastName for new account
+    if (!firstName || !lastName) {
+      return NextResponse.json(
+        { success: false, message: 'First name and last name are required for new accounts' },
+        { status: 400 }
       );
     }
 

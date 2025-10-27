@@ -304,3 +304,232 @@ export function getEmailServiceStatus() {
     message: `Email service configured with ${provider}`
   };
 }
+
+// Send verification code email
+export async function sendVerificationCode(
+  email: string,
+  code: string,
+  type: 'email-verification' | 'passwordless-login' | 'password-reset'
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const config = getEmailConfig();
+    if (!config) {
+      console.warn('⚠️ No email service configured');
+      return { success: false, error: 'Email service not configured' };
+    }
+
+    const transporter = nodemailer.createTransport(config);
+
+    // Get subject and content based on type
+    let subject: string;
+    let title: string;
+    let description: string;
+
+    switch (type) {
+      case 'email-verification':
+        subject = 'Verify Your Email - CVCircle';
+        title = 'Verify Your Email Address';
+        description = 'Please enter the code below to verify your email address and complete your account setup.';
+        break;
+      case 'passwordless-login':
+        subject = 'Your Sign-In Code - CVCircle';
+        title = 'Sign In to Your Account';
+        description = 'Please enter the code below to sign in to your CVCircle account.';
+        break;
+      case 'password-reset':
+        subject = 'Reset Your Password - CVCircle';
+        title = 'Reset Your Password';
+        description = 'Please enter the code below to reset your password.';
+        break;
+      default:
+        subject = 'Your Verification Code - CVCircle';
+        title = 'Verification Code';
+        description = 'Please enter the code below to complete your request.';
+    }
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${subject}</title>
+        <style>
+          body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            margin: 0; 
+            padding: 0; 
+            background-color: #283020; 
+            min-height: 100vh;
+          }
+          .container { 
+            max-width: 600px; 
+            margin: 0 auto; 
+            background-color: #283020; 
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+          }
+          .card { 
+            background-color: #2a3a22; 
+            border-radius: 16px; 
+            padding: 40px; 
+            text-align: center; 
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            border: 1px solid #3a4a32;
+            max-width: 400px;
+            width: 100%;
+          }
+          .header { 
+            margin-bottom: 30px; 
+          }
+          .header h1 { 
+            color: #ffffff; 
+            margin: 0; 
+            font-size: 24px; 
+            font-weight: 700; 
+          }
+          .title { 
+            color: #ffffff; 
+            margin: 0 0 15px 0; 
+            font-size: 28px; 
+            font-weight: 700; 
+          }
+          .subtitle { 
+            color: #a0a0a0; 
+            font-size: 16px; 
+            margin: 0 0 30px 0; 
+            line-height: 1.5;
+          }
+          .code-container { 
+            display: flex; 
+            justify-content: center; 
+            gap: 12px; 
+            margin: 30px 0; 
+          }
+          .code-digit { 
+            width: 60px; 
+            height: 60px; 
+            background-color: #1a1a1a; 
+            border: 2px solid #3a4a32; 
+            border-radius: 8px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            font-size: 24px; 
+            font-weight: 700; 
+            color: #88E03F; 
+            font-family: 'Courier New', monospace;
+          }
+          .warning { 
+            background-color: #2a3a22; 
+            border: 1px solid #3a4a32; 
+            border-radius: 8px; 
+            padding: 16px; 
+            margin: 20px 0; 
+          }
+          .warning-text { 
+            color: #a0a0a0; 
+            font-size: 14px; 
+            margin: 0; 
+            line-height: 1.5;
+          }
+          .resend { 
+            margin: 30px 0 20px 0; 
+          }
+          .resend-text { 
+            color: #a0a0a0; 
+            font-size: 14px; 
+            margin: 0; 
+          }
+          .resend-link { 
+            color: #88E03F; 
+            text-decoration: none; 
+            font-weight: 600; 
+          }
+          .resend-link:hover { 
+            color: #88E03F; 
+            opacity: 0.8; 
+          }
+          .footer { 
+            margin-top: 40px; 
+            text-align: center; 
+            color: #a0a0a0; 
+            font-size: 12px; 
+            line-height: 1.4;
+          }
+          .expiry { 
+            color: #ff6b6b; 
+            font-weight: 600; 
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="card">
+            <div class="header">
+              <h1>Circle CV</h1>
+            </div>
+            
+            <h2 class="title">Your Verification Code</h2>
+            <p class="subtitle">Hello, enter the code below to complete your sign in.</p>
+            
+            <div class="code-container">
+              ${code.split('').map(digit => `<div class="code-digit">${digit}</div>`).join('')}
+            </div>
+            
+            <div class="warning">
+              <p class="warning-text">
+                This code will expire in <span class="expiry">10 minutes</span>. Do not share this code with anyone.
+              </p>
+            </div>
+            
+            <div class="resend">
+              <p class="resend-text">
+                Didn't receive a code? <a href="#" class="resend-link">Resend Code</a>
+              </p>
+            </div>
+          </div>
+          
+          <div class="footer">
+            <p>©2024 Circle CV. All rights reserved. 123 Job Lane, Success City, 54321</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const text = `
+Circle CV - Your Verification Code
+
+Hello, enter the code below to complete your sign in.
+
+Your verification code is: ${code}
+
+This code will expire in 10 minutes. Do not share this code with anyone.
+
+Didn't receive a code? You can request a new one from the app.
+
+©2024 Circle CV. All rights reserved. 123 Job Lane, Success City, 54321
+    `;
+
+    const senderEmail = getSenderEmail();
+    await transporter.sendMail({
+      from: `"Circle CV" <${senderEmail}>`,
+      to: email,
+      subject,
+      text,
+      html,
+    });
+
+    console.log(`✅ Verification code email sent to ${email}`);
+    return { success: true };
+
+  } catch (error: any) {
+    console.error('❌ Failed to send verification code email:', error);
+    return { success: false, error: error.message || 'Failed to send email' };
+  }
+}

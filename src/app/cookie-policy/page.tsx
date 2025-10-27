@@ -1,6 +1,9 @@
 'use client';
 
 import React from 'react';
+
+// Force dynamic rendering to prevent SSR issues
+export const dynamic = 'force-dynamic';
 import { motion } from 'framer-motion';
 import { Cookie, Settings, Shield, Eye, BarChart3, Users, Globe, Clock, AlertTriangle, Mail } from 'lucide-react';
 import Link from 'next/link';
@@ -9,6 +12,9 @@ import Logo from '@/components/ui/Logo';
 
 const CookiePolicy: React.FC = () => {
   const { data: session, status } = useSession();
+  
+  // Handle loading state gracefully
+  const isLoading = status === 'loading';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-white">
@@ -29,7 +35,7 @@ const CookiePolicy: React.FC = () => {
               
               {/* User Authentication Section */}
               <div className="flex items-center space-x-3 ml-4 pl-4 border-l border-white/20">
-                {status === 'loading' ? (
+                {isLoading ? (
                   <div className="w-8 h-8 bg-white/20 rounded-full animate-pulse"></div>
                 ) : (
                   <div className="flex items-center space-x-2">

@@ -14,7 +14,9 @@ import {
   Type,
   AlignLeft,
   AlignCenter,
-  AlignRight
+  AlignRight,
+  Sparkles,
+  RefreshCw
 } from 'lucide-react';
 import { getThemeClasses } from '@/lib/utils/themeUtils';
 
@@ -33,6 +35,9 @@ interface ProfessionalTextFieldProps {
   showStatistics?: boolean;
   showPreview?: boolean;
   fieldId?: string;
+  showAIGenerate?: boolean;
+  onAIGenerate?: () => void;
+  isGenerating?: boolean;
 }
 
 const ProfessionalTextField: React.FC<ProfessionalTextFieldProps> = ({
@@ -49,7 +54,10 @@ const ProfessionalTextField: React.FC<ProfessionalTextFieldProps> = ({
   showFullToolbar = true,
   showStatistics = true,
   showPreview = true,
-  fieldId = 'text-field'
+  fieldId = 'text-field',
+  showAIGenerate = false,
+  onAIGenerate,
+  isGenerating = false
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
@@ -118,14 +126,14 @@ const ProfessionalTextField: React.FC<ProfessionalTextFieldProps> = ({
       {/* Label and Controls */}
       {label && (
         <div className="flex items-center justify-between">
-          <label className={`${themeClasses.text.primary} font-semibold text-sm`}>
+          <label className="text-white/80 font-semibold text-sm">
             {label}
             {required && <span className="text-red-500 ml-1">*</span>}
           </label>
           <div className="flex items-center gap-2">
             {/* Text Statistics */}
             {showStatistics && (
-              <div className={`flex items-center gap-3 text-xs ${themeClasses.text.muted}`}>
+              <div className="flex items-center gap-3 text-xs text-white/60">
                 <span>{stats.words} words, {stats.characters} chars</span>
                 {maxLength && (
                   <span className={stats.characters > maxLength * 0.9 ? 'text-orange-500' : ''}>
@@ -139,23 +147,23 @@ const ProfessionalTextField: React.FC<ProfessionalTextFieldProps> = ({
               <div className="flex items-center gap-1">
                 <motion.button
                   onClick={togglePreview}
-                  className={`p-2 ${themeClasses.background.hover} rounded-lg transition-colors`}
+                  className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   title={isPreviewMode ? 'Hide Preview' : 'Show Preview'}
                   disabled={disabled}
                 >
-                  {isPreviewMode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {isPreviewMode ? <EyeOff className="w-4 h-4 text-white" /> : <Eye className="w-4 h-4 text-white" />}
                 </motion.button>
                 <motion.button
                   onClick={toggleExpansion}
-                  className={`p-2 ${themeClasses.background.hover} rounded-lg transition-colors`}
+                  className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   title={isExpanded ? 'Minimize' : 'Maximize'}
                   disabled={disabled}
                 >
-                  {isExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                  {isExpanded ? <Minimize2 className="w-4 h-4 text-white" /> : <Maximize2 className="w-4 h-4 text-white" />}
                 </motion.button>
               </div>
             )}
@@ -165,90 +173,109 @@ const ProfessionalTextField: React.FC<ProfessionalTextFieldProps> = ({
 
       {/* Formatting Toolbar */}
       {showFullToolbar && (
-        <div className={`flex items-center gap-2 p-2 ${themeClasses.background.secondary} rounded-lg border`}>
+        <div className="flex items-center gap-1 p-1">
           <div className="flex items-center gap-1">
             <motion.button
               onClick={() => applyFormatting('bold')}
-              className={`p-2 hover:bg-lime-100 dark:hover:bg-lime-900/30 rounded-lg transition-colors text-lime-600`}
+              className="p-1.5 rounded transition-colors text-green-600 hover:text-green-500"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               title="Bold"
               disabled={disabled}
             >
-              <Bold className="w-5 h-5" />
+              <Bold className="w-4 h-4" />
             </motion.button>
             <motion.button
               onClick={() => applyFormatting('italic')}
-              className={`p-2 hover:bg-lime-100 dark:hover:bg-lime-900/30 rounded-lg transition-colors text-lime-600`}
+              className="p-1.5 rounded transition-colors text-green-600 hover:text-green-500"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               title="Italic"
               disabled={disabled}
             >
-              <Italic className="w-5 h-5" />
+              <Italic className="w-4 h-4" />
             </motion.button>
             <motion.button
               onClick={() => applyFormatting('bullet')}
-              className={`p-2 hover:bg-lime-100 dark:hover:bg-lime-900/30 rounded-lg transition-colors text-lime-600`}
+              className="p-1.5 rounded transition-colors text-green-600 hover:text-green-500"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               title="Bullet List"
               disabled={disabled}
             >
-              <List className="w-5 h-5" />
+              <List className="w-4 h-4" />
             </motion.button>
             <motion.button
               onClick={() => applyFormatting('number')}
-              className={`p-2 hover:bg-lime-100 dark:hover:bg-lime-900/30 rounded-lg transition-colors text-lime-600`}
+              className="p-1.5 rounded transition-colors text-green-600 hover:text-green-500"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               title="Numbered List"
               disabled={disabled}
             >
-              <Hash className="w-5 h-5" />
+              <Hash className="w-4 h-4" />
             </motion.button>
           </div>
-          <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-2" />
+          <div className="w-px h-3 bg-white/20 mx-1" />
           <div className="flex items-center gap-1">
             <motion.button
               onClick={() => applyFormatting('align-left')}
-              className={`p-2 hover:bg-lime-100 dark:hover:bg-lime-900/30 rounded-lg transition-colors text-lime-600`}
+              className="p-1.5 rounded transition-colors text-green-600 hover:text-green-500"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               title="Align Left"
               disabled={disabled}
             >
-              <AlignLeft className="w-5 h-5" />
+              <AlignLeft className="w-4 h-4" />
             </motion.button>
             <motion.button
               onClick={() => applyFormatting('align-center')}
-              className={`p-2 hover:bg-lime-100 dark:hover:bg-lime-900/30 rounded-lg transition-colors text-lime-600`}
+              className="p-1.5 rounded transition-colors text-green-600 hover:text-green-500"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               title="Align Center"
               disabled={disabled}
             >
-              <AlignCenter className="w-5 h-5" />
+              <AlignCenter className="w-4 h-4" />
             </motion.button>
             <motion.button
               onClick={() => applyFormatting('align-right')}
-              className={`p-2 hover:bg-lime-100 dark:hover:bg-lime-900/30 rounded-lg transition-colors text-lime-600`}
+              className="p-1.5 rounded transition-colors text-green-600 hover:text-green-500"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               title="Align Right"
               disabled={disabled}
             >
-              <AlignRight className="w-5 h-5" />
+              <AlignRight className="w-4 h-4" />
             </motion.button>
           </div>
+          {showAIGenerate && onAIGenerate && (
+            <>
+              <div className="w-px h-3 bg-white/20 mx-1" />
+              <motion.button
+                onClick={onAIGenerate}
+                disabled={isGenerating || disabled}
+                className="p-1.5 rounded transition-colors text-green-600 hover:text-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                title="AI Generate"
+              >
+                {isGenerating ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Sparkles className="w-4 h-4" />
+                )}
+              </motion.button>
+            </>
+          )}
         </div>
       )}
 
       {/* Text Area Container */}
       <div className="relative">
         {isPreviewMode ? (
-          <div className={`w-full px-3 py-2 ${themeClasses.background.secondary} rounded-lg text-sm border min-h-24 max-h-64 overflow-y-auto`}>
-            <div className="prose prose-sm max-w-none formatted-preview">
+          <div className="w-full px-4 py-3 bg-white/10 rounded-lg text-sm border border-white/20 min-h-24 max-h-64 overflow-y-auto">
+            <div className="prose prose-sm max-w-none formatted-preview text-white">
               {value ? (
                 <div dangerouslySetInnerHTML={{ 
                   __html: value
@@ -258,7 +285,7 @@ const ProfessionalTextField: React.FC<ProfessionalTextFieldProps> = ({
                     .replace(/\n/g, '<br/>')
                 }} />
               ) : (
-                <span className="text-gray-400">No content to preview</span>
+                <span className="text-white/50">No content to preview</span>
               )}
             </div>
           </div>
@@ -272,18 +299,10 @@ const ProfessionalTextField: React.FC<ProfessionalTextFieldProps> = ({
             maxLength={maxLength}
             required={required}
             disabled={disabled}
-            className={`w-full px-3 py-2 ${themeClasses.input.base} ${themeClasses.input.focus} rounded-lg text-sm transition-all duration-200 resize-none ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors resize-none"
           />
         )}
       </div>
-
-      {/* Help Text */}
-      {showFormattingHelp && (
-        <div className={`text-xs ${themeClasses.text.muted} flex items-center gap-2`}>
-          <Type className="w-3 h-3" />
-          <span>Use formatting tools above to style your text. Supports markdown formatting.</span>
-        </div>
-      )}
     </div>
   );
 };

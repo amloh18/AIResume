@@ -1,5 +1,8 @@
 'use client';
 
+// Force dynamic rendering to prevent SSR issues
+export const dynamic = 'force-dynamic';
+
 import React, { useState, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
@@ -120,20 +123,7 @@ const AdminPage: React.FC<AdminPageProps> = () => {
       sessionStorage.clear();
       console.log('✅ Cleared sessionStorage');
       
-      // Check if user is from Firebase (has user data in localStorage)
-      const userData = localStorage.getItem('user');
-      if (userData) {
-        console.log('🔍 Firebase user detected, signing out from Firebase...');
-        // Firebase user - sign out from Firebase
-        try {
-          const { signOut: signOutFirebase } = await import('firebase/auth');
-          const { auth } = await import('@/lib/firebase');
-          await signOutFirebase(auth);
-          console.log('✅ Signed out from Firebase');
-        } catch (error) {
-          console.error('❌ Error signing out from Firebase:', error);
-        }
-      }
+      // Firebase logout removed - using NextAuth only
       
       // Sign out from NextAuth
       console.log('🔍 Signing out from NextAuth...');
