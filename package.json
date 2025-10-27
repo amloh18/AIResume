@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/disable-admin-routes.js disable && next build && node scripts/disable-admin-routes.js enable",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "build:analyze": "ANALYZE=true next build",
