@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/database';
 import { JobApplication } from '@/models';
 import jwt from 'jsonwebtoken';
-import { extractUserIdentifier } from '@/lib/firebase-uid-utils';
+import { getAuthenticatedUser } from '@/lib/auth-helpers';
 
 export async function GET(
   request: NextRequest,
@@ -53,18 +53,18 @@ export async function GET(
         );
       }
       
-      // Extract user identifier from request and session
-      const userIdentifier = extractUserIdentifier(request, session);
+      // Get authenticated user
+      const authResult = await getAuthenticatedUser(request);
       
-      if (!userIdentifier.id || !userIdentifier.type) {
-        console.log('❌ No valid user identifier found');
+      if (!authResult) {
+        console.log('❌ No valid user found');
         return NextResponse.json(
           { success: false, error: 'User identification failed' },
           { status: 401 }
         );
       }
       
-      userId = userIdentifier.id;
+      userId = authResult.userId;
       console.log('✅ Web session verified for user:', userId);
     }
     
@@ -168,18 +168,18 @@ export async function PUT(
         );
       }
       
-      // Extract user identifier from request and session
-      const userIdentifier = extractUserIdentifier(request, session);
+      // Get authenticated user
+      const authResult = await getAuthenticatedUser(request);
       
-      if (!userIdentifier.id || !userIdentifier.type) {
-        console.log('❌ No valid user identifier found');
+      if (!authResult) {
+        console.log('❌ No valid user found');
         return NextResponse.json(
           { success: false, error: 'User identification failed' },
           { status: 401 }
         );
       }
       
-      userId = userIdentifier.id;
+      userId = authResult.userId;
       console.log('✅ Web session verified for user:', userId);
     }
     
@@ -330,18 +330,18 @@ export async function DELETE(
         );
       }
       
-      // Extract user identifier from request and session
-      const userIdentifier = extractUserIdentifier(request, session);
+      // Get authenticated user
+      const authResult = await getAuthenticatedUser(request);
       
-      if (!userIdentifier.id || !userIdentifier.type) {
-        console.log('❌ No valid user identifier found');
+      if (!authResult) {
+        console.log('❌ No valid user found');
         return NextResponse.json(
           { success: false, error: 'User identification failed' },
           { status: 401 }
         );
       }
       
-      userId = userIdentifier.id;
+      userId = authResult.userId;
       console.log('✅ Web session verified for user:', userId);
     }
     

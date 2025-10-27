@@ -1,5 +1,8 @@
 'use client';
 
+// Force dynamic rendering to prevent SSR issues
+export const dynamic = 'force-dynamic';
+
 import React, { useState, Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
@@ -208,60 +211,109 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
   React.useEffect(() => {
     const fetchMasterCV = async () => {
       try {
-        const response = await fetch('/api/cvs?type=cv&master=true');
+        console.log('🔍 Settings - Fetching master CV data for profile population');
+        
+        // Use the correct API endpoint for master CV
+        const response = await fetch('/api/cvs/master');
         if (response.ok) {
           const data = await response.json();
-          if (data.success && data.cvs && data.cvs.length > 0) {
-            const masterCV = data.cvs[0];
+          console.log('🔍 Settings - Master CV API response:', data);
+          
+          if (data.success && data.data?.masterCV) {
+            const masterCV = data.data.masterCV;
             setMasterCVData(masterCV);
+            
+            console.log('🔍 Settings - Master CV data:', masterCV);
             
             // Only update fields that haven't been manually modified by user
             const updatedFormData = { ...formData };
             const updatedHasUserModified = { ...hasUserModified };
             
+            // Extract and populate name fields
             if (!hasUserModified.firstName && masterCV.cvData?.basics?.name) {
-              const fullName = masterCV.cvData.basics.name;
+              const fullName = masterCV.cvData.basics.name.trim();
               const nameParts = fullName.split(' ');
               updatedFormData.firstName = nameParts[0] || '';
               updatedFormData.lastName = nameParts.slice(1).join(' ') || '';
+              console.log('🔍 Settings - Populated name from master CV:', { firstName: updatedFormData.firstName, lastName: updatedFormData.lastName });
             }
             
+            // Populate phone
             if (!hasUserModified.phone && masterCV.cvData?.basics?.phone) {
-              updatedFormData.phone = masterCV.cvData.basics.phone;
+              updatedFormData.phone = masterCV.cvData.basics.phone.trim();
+              console.log('🔍 Settings - Populated phone from master CV:', updatedFormData.phone);
             }
             
+            // Populate location (combine city, address, region)
             if (!hasUserModified.location && masterCV.cvData?.basics?.location) {
               const location = masterCV.cvData.basics.location;
-              updatedFormData.location = location.city || location.address || '';
+              const locationParts = [];
+              if (location.city) locationParts.push(location.city);
+              if (location.region) locationParts.push(location.region);
+              if (location.address) locationParts.push(location.address);
+              updatedFormData.location = locationParts.join(', ');
+              console.log('🔍 Settings - Populated location from master CV:', updatedFormData.location);
             }
             
-            if (!hasUserModified.website && masterCV.cvData?.basics?.website) {
-              updatedFormData.website = masterCV.cvData.basics.website;
+            // Populate website
+            if (!hasUserModified.website && masterCV.cvData?.basics?.url) {
+              updatedFormData.website = masterCV.cvData.basics.url.trim();
+              console.log('🔍 Settings - Populated website from master CV:', updatedFormData.website);
             }
             
-            if (!hasUserModified.linkedin && masterCV.cvData?.basics?.profiles) {
-              const linkedinProfile = masterCV.cvData.basics.profiles.find((p: any) => p.network === 'LinkedIn');
-              if (linkedinProfile) {
-                updatedFormData.linkedin = linkedinProfile.url || '';
+            // Populate social profiles
+            if (masterCV.cvData?.basics?.profiles && Array.isArray(masterCV.cvData.basics.profiles)) {
+              // LinkedIn
+              if (!hasUserModified.linkedin) {
+                const linkedinProfile = masterCV.cvData.basics.profiles.find((p: any) => 
+                  p.network && p.network.toLowerCase() === 'linkedin'
+                );
+                if (linkedinProfile && linkedinProfile.url) {
+                  updatedFormData.linkedin = linkedinProfile.url.trim();
+                  console.log('🔍 Settings - Populated LinkedIn from master CV:', updatedFormData.linkedin);
+                }
+              }
+              
+              // GitHub
+              if (!hasUserModified.github) {
+                const githubProfile = masterCV.cvData.basics.profiles.find((p: any) => 
+                  p.network && p.network.toLowerCase() === 'github'
+                );
+                if (githubProfile && githubProfile.url) {
+                  updatedFormData.github = githubProfile.url.trim();
+                  console.log('🔍 Settings - Populated GitHub from master CV:', updatedFormData.github);
+                }
               }
             }
             
-            if (!hasUserModified.github && masterCV.cvData?.basics?.profiles) {
-              const githubProfile = masterCV.cvData.basics.profiles.find((p: any) => p.network === 'GitHub');
-              if (githubProfile) {
-                updatedFormData.github = githubProfile.url || '';
-              }
-            }
-            
+            // Populate summary
             if (!hasUserModified.summary && masterCV.cvData?.basics?.summary) {
-              updatedFormData.summary = masterCV.cvData.basics.summary;
+              updatedFormData.summary = masterCV.cvData.basics.summary.trim();
+              console.log('🔍 Settings - Populated summary from master CV');
+            }
+            
+            // Populate label as company (if not already set)
+            if (!hasUserModified.company && masterCV.cvData?.basics?.label && !updatedFormData.company) {
+              updatedFormData.company = masterCV.cvData.basics.label.trim();
+              console.log('🔍 Settings - Populated company from master CV label:', updatedFormData.company);
+            }
+            
+            // Populate avatar/profile photo
+            if (masterCV.cvData?.basics?.image && !avatar) {
+              setAvatar(masterCV.cvData.basics.image.trim());
+              console.log('🔍 Settings - Populated avatar from master CV');
             }
             
             setFormData(updatedFormData);
+            console.log('✅ Settings - Successfully populated profile from master CV');
+          } else {
+            console.log('⚠️ Settings - No master CV found or API returned no data');
           }
+        } else {
+          console.error('❌ Settings - Failed to fetch master CV:', response.status, response.statusText);
         }
       } catch (error) {
-        console.error('Error fetching Master CV:', error);
+        console.error('❌ Settings - Error fetching Master CV:', error);
       }
     };
 
@@ -272,48 +324,67 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
   const refreshFromMasterCV = async () => {
     if (!masterCVData) return;
     
+    console.log('🔄 Settings - Refreshing profile data from master CV');
+    
     const updatedFormData = { ...formData };
     
     // Only update fields that haven't been manually modified by user
     if (!hasUserModified.firstName && masterCVData.cvData?.basics?.name) {
-      const fullName = masterCVData.cvData.basics.name;
+      const fullName = masterCVData.cvData.basics.name.trim();
       const nameParts = fullName.split(' ');
       updatedFormData.firstName = nameParts[0] || '';
       updatedFormData.lastName = nameParts.slice(1).join(' ') || '';
     }
     
     if (!hasUserModified.phone && masterCVData.cvData?.basics?.phone) {
-      updatedFormData.phone = masterCVData.cvData.basics.phone;
+      updatedFormData.phone = masterCVData.cvData.basics.phone.trim();
     }
     
     if (!hasUserModified.location && masterCVData.cvData?.basics?.location) {
       const location = masterCVData.cvData.basics.location;
-      updatedFormData.location = location.city || location.address || '';
+      const locationParts = [];
+      if (location.city) locationParts.push(location.city);
+      if (location.region) locationParts.push(location.region);
+      if (location.address) locationParts.push(location.address);
+      updatedFormData.location = locationParts.join(', ');
     }
     
-    if (!hasUserModified.website && masterCVData.cvData?.basics?.website) {
-      updatedFormData.website = masterCVData.cvData.basics.website;
+    if (!hasUserModified.website && masterCVData.cvData?.basics?.url) {
+      updatedFormData.website = masterCVData.cvData.basics.url.trim();
     }
     
-    if (!hasUserModified.linkedin && masterCVData.cvData?.basics?.profiles) {
-      const linkedinProfile = masterCVData.cvData.basics.profiles.find((p: any) => p.network === 'LinkedIn');
-      if (linkedinProfile) {
-        updatedFormData.linkedin = linkedinProfile.url || '';
+    if (masterCVData.cvData?.basics?.profiles && Array.isArray(masterCVData.cvData.basics.profiles)) {
+      // LinkedIn
+      if (!hasUserModified.linkedin) {
+        const linkedinProfile = masterCVData.cvData.basics.profiles.find((p: any) => 
+          p.network && p.network.toLowerCase() === 'linkedin'
+        );
+        if (linkedinProfile && linkedinProfile.url) {
+          updatedFormData.linkedin = linkedinProfile.url.trim();
+        }
       }
-    }
-    
-    if (!hasUserModified.github && masterCVData.cvData?.basics?.profiles) {
-      const githubProfile = masterCVData.cvData.basics.profiles.find((p: any) => p.network === 'GitHub');
-      if (githubProfile) {
-        updatedFormData.github = githubProfile.url || '';
+      
+      // GitHub
+      if (!hasUserModified.github) {
+        const githubProfile = masterCVData.cvData.basics.profiles.find((p: any) => 
+          p.network && p.network.toLowerCase() === 'github'
+        );
+        if (githubProfile && githubProfile.url) {
+          updatedFormData.github = githubProfile.url.trim();
+        }
       }
     }
     
     if (!hasUserModified.summary && masterCVData.cvData?.basics?.summary) {
-      updatedFormData.summary = masterCVData.cvData.basics.summary;
+      updatedFormData.summary = masterCVData.cvData.basics.summary.trim();
+    }
+    
+    if (!hasUserModified.company && masterCVData.cvData?.basics?.label && !updatedFormData.company) {
+      updatedFormData.company = masterCVData.cvData.basics.label.trim();
     }
     
     setFormData(updatedFormData);
+    console.log('✅ Settings - Profile refreshed from master CV');
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -838,44 +909,62 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
       </div>
 
       {/* Action Buttons */}
-      <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
-        <button className="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-          Cancel
-        </button>
-        <button 
-          onClick={handleSave}
-          disabled={isSaving}
-          className={`px-6 py-2 rounded-lg transition-all duration-300 flex items-center gap-2 ${
-            saveStatus === 'success' 
-              ? 'bg-green-500 text-white' 
-              : saveStatus === 'error'
-              ? 'bg-red-500 text-white'
-              : 'bg-gradient-to-r from-lime-500 to-lime-600 hover:from-lime-600 hover:to-lime-700 text-white shadow-lg hover:shadow-xl'
-          } ${isSaving ? 'opacity-75 cursor-not-allowed' : ''}`}
-        >
-          {isSaving ? (
-            <>
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              Saving...
-            </>
-          ) : saveStatus === 'success' ? (
-            <>
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-              </svg>
-              Saved!
-            </>
-          ) : saveStatus === 'error' ? (
-            <>
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-              </svg>
-              Error
-            </>
-          ) : (
-            'Save Changes'
-          )}
-        </button>
+      <div className="flex justify-between items-center mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex gap-3">
+          <button 
+            onClick={refreshFromMasterCV}
+            disabled={!masterCVData}
+            className={`px-4 py-2 rounded-lg transition-all duration-300 flex items-center gap-2 ${
+              masterCVData 
+                ? 'bg-blue-500 text-white hover:bg-blue-600' 
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
+            title={masterCVData ? "Sync profile data from your Master CV" : "No Master CV found"}
+          >
+            <RefreshCw className="w-4 h-4" />
+            Sync from Master CV
+          </button>
+        </div>
+        
+        <div className="flex gap-3">
+          <button className="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+            Cancel
+          </button>
+          <button 
+            onClick={handleSave}
+            disabled={isSaving}
+            className={`px-6 py-2 rounded-lg transition-all duration-300 flex items-center gap-2 ${
+              saveStatus === 'success' 
+                ? 'bg-green-500 text-white' 
+                : saveStatus === 'error'
+                ? 'bg-red-500 text-white'
+                : 'bg-gradient-to-r from-lime-500 to-lime-600 hover:from-lime-600 hover:to-lime-700 text-white shadow-lg hover:shadow-xl'
+            } ${isSaving ? 'opacity-75 cursor-not-allowed' : ''}`}
+          >
+            {isSaving ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Saving...
+              </>
+            ) : saveStatus === 'success' ? (
+              <>
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+                Saved!
+              </>
+            ) : saveStatus === 'error' ? (
+              <>
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                Error
+              </>
+            ) : (
+              'Save Changes'
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );

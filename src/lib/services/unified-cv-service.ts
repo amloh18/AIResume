@@ -12,8 +12,7 @@ import {
   UnifiedCVDocument, 
   UnifiedCVAPIResponse, 
   UnifiedCVRequest,
-  DEFAULT_UNIFIED_CV_DATA,
-  UnifiedCVMigration
+  DEFAULT_UNIFIED_CV_DATA
 } from '@/types/unified-cv-schema';
 import { validateCVData } from '@/lib/data-adapters/cv-data-adapter';
 
@@ -288,7 +287,22 @@ export class UnifiedCVService {
    * Validate CV data against unified schema
    */
   static validateCVData(data: any): boolean {
-    return UnifiedCVMigration.validate(data);
+    try {
+      // Basic structure validation
+      return (
+        data &&
+        typeof data === 'object' &&
+        data.basics &&
+        Array.isArray(data.work) &&
+        Array.isArray(data.education) &&
+        Array.isArray(data.skills) &&
+        Array.isArray(data.projects) &&
+        Array.isArray(data.certificates) &&
+        Array.isArray(data.languages)
+      );
+    } catch {
+      return false;
+    }
   }
 
   /**
@@ -296,6 +310,20 @@ export class UnifiedCVService {
    * This is a temporary utility for migration
    */
   static migrateLegacyData(legacyData: any): UnifiedCVDataStructure {
-    return UnifiedCVMigration.fromLegacyCVDataStructure(legacyData);
+    // Direct mapping since the structure is already compatible
+    return {
+      basics: legacyData.basics || DEFAULT_UNIFIED_CV_DATA.basics,
+      work: legacyData.work || [],
+      volunteer: legacyData.volunteer || [],
+      education: legacyData.education || [],
+      awards: legacyData.awards || [],
+      certificates: legacyData.certificates || [],
+      publications: legacyData.publications || [],
+      skills: legacyData.skills || [],
+      languages: legacyData.languages || [],
+      interests: legacyData.interests || [],
+      references: legacyData.references || [],
+      projects: legacyData.projects || []
+    };
   }
 }

@@ -1,5 +1,8 @@
 'use client';
 
+// Force dynamic rendering to prevent SSR issues
+export const dynamic = 'force-dynamic';
+
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';

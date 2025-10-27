@@ -3,7 +3,7 @@ import { ChevronRight, Eye, Star, Crown, Check, Loader2, Palette } from 'lucide-
 import { ITemplate } from '@/models/Template';
 import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { generateTemplatePreview } from '@/lib/templates/template-renderer';
-import EnhancedCVPreview from './EnhancedCVPreview';
+import CVPreviewContent from './CVPreviewContent';
 import { useTemplateStore } from '@/lib/stores/templateStore';
 
 interface TemplateSelectorProps {
@@ -146,16 +146,6 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
 
   return (
     <div className={`template-selector ${className}`}>
-      <div className="selector-header">
-        <h3 className="selector-title">
-          <Palette size={18} />
-          Choose Template
-        </h3>
-        <p className="selector-description">
-          Select a template to customize your CV's appearance and layout
-        </p>
-      </div>
-
       <div className="templates-grid">
         {templates.map((template) => {
           const templateId = template.id || template._id;
@@ -237,10 +227,9 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
             </div>
             <div className="preview-body">
               <div className="preview-cv">
-                <EnhancedCVPreview
+                <CVPreviewContent
                   cvData={getPreviewData(previewTemplate)}
                   template={previewTemplate}
-                  showBadge={true}
                 />
               </div>
             </div>
@@ -262,26 +251,6 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
           height: 100%;
           overflow-y: auto;
           padding: 20px;
-        }
-        
-        .selector-header {
-          margin-bottom: 24px;
-        }
-        
-        .selector-title {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          font-size: 18px;
-          font-weight: 600;
-          color: #1f2937;
-          margin-bottom: 0;
-        }
-        
-        .selector-description {
-          color: #6b7280;
-          font-size: 14px;
-          margin: 0;
         }
         
         .templates-grid {

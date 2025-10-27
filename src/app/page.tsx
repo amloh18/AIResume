@@ -1,6 +1,9 @@
 'use client';
 
 import React, { useEffect, Suspense } from 'react';
+
+// Force dynamic rendering to prevent SSR issues
+export const dynamic = 'force-dynamic';
 import { useSearchParams } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import Hero from '@/components/landing/Hero';
@@ -15,38 +18,48 @@ import CardNav from '@/components/landing/CardNav';
 import { motion } from 'framer-motion';
 
 function LandingPageContent() {
-  const searchParams = useSearchParams();
+  // Safely get search params with fallback for build time
+  let searchParams;
+  try {
+    searchParams = useSearchParams();
+  } catch (error) {
+    // Fallback for build time when Next.js context is not available
+    searchParams = null;
+  }
   
-  // Handle logout cleanup
+  // Handle logout cleanup - client-side only
   useEffect(() => {
+    // Only run on client side and if searchParams is available
+    if (typeof window === 'undefined' || !searchParams) return;
+    
     const logoutParam = searchParams.get('logout');
     
     if (logoutParam === 'success' || logoutParam === 'fallback') {
       console.log('🔍 Landing page detected logout, ensuring session is cleared...');
       
-      // Force NextAuth signout (without redirect to avoid loop)
-      signOut({ redirect: false }).catch((error) => {
-        console.error('⚠️ Error during NextAuth signout on landing:', error);
-      });
-      
       // Clear any remaining localStorage/sessionStorage
-      if (typeof window !== 'undefined') {
-        try {
-          localStorage.removeItem('auth-session');
-          localStorage.removeItem('user');
-          sessionStorage.clear();
-          console.log('✅ Landing page cleared all session storage');
-        } catch (error) {
-          console.error('⚠️ Error clearing storage on landing:', error);
-        }
+      try {
+        localStorage.removeItem('auth-session');
+        localStorage.removeItem('user');
+        sessionStorage.clear();
+        console.log('✅ Landing page cleared all session storage');
+      } catch (error) {
+        console.error('⚠️ Error clearing storage on landing:', error);
       }
       
       // Clean up URL by removing logout parameter
-      if (typeof window !== 'undefined') {
-        const url = new URL(window.location.href);
-        url.searchParams.delete('logout');
-        url.searchParams.delete('_t');
-        window.history.replaceState({}, '', url.toString());
+      const url = new URL(window.location.href);
+      url.searchParams.delete('logout');
+      url.searchParams.delete('_t');
+      window.history.replaceState({}, '', url.toString());
+      
+      // Force NextAuth signout (without redirect to avoid loop)
+      try {
+        signOut({ redirect: false }).catch((error) => {
+          console.error('⚠️ Error during NextAuth signout on landing:', error);
+        });
+      } catch (error) {
+        console.error('⚠️ Error calling signOut on landing:', error);
       }
     }
   }, [searchParams]);

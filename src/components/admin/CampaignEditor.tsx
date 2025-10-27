@@ -197,7 +197,7 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
                   <input
                     type="text"
                     value={formData.tags?.join(', ')}
-                    onChange={(e) => handleInputChange('tags', e.target.value.split(',').map(t => t.trim()))}
+                    onChange={(e) => handleInputChange('tags', (e.target.value || '').split(',').map(t => t.trim()))}
                     className="w-full px-4 py-2.5 bg-white/5 border border-white/10 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-400/50"
                     placeholder="e.g., promotion, summer, premium"
                   />

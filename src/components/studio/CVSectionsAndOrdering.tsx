@@ -19,7 +19,8 @@ import {
   Heart,
   BookOpen,
   Users,
-  Star
+  Star,
+  X
 } from 'lucide-react';
 import { getThemeClasses } from '@/lib/utils/themeUtils';
 
@@ -116,185 +117,174 @@ const CVSectionsAndOrdering: React.FC<CVSectionsAndOrderingProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Header with Controls */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-lime-100 dark:bg-lime-900/20 rounded-lg">
-            <Settings className="w-5 h-5 text-lime-600 dark:text-lime-400" />
-          </div>
-          <div>
-            <h2 className={`text-lg font-semibold ${themeClasses.text.primary}`}>
-              CV Sections & Ordering
-            </h2>
-            <p className={`text-sm ${themeClasses.text.secondary}`}>
-              Manage your CV sections and their display order
-            </p>
-          </div>
+      {/* Header with Controls - Outside the main panel */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-white mb-2">Create & Edit Your CV</h1>
+          <p className="text-gray-300">Fill in the details below to generate your professional resume.</p>
         </div>
         
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <motion.button
             onClick={() => setIsOrderingMode(!isOrderingMode)}
-            className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+            className={`px-6 py-2 text-sm rounded-full transition-colors ${
               isOrderingMode 
-                ? 'bg-lime-100 dark:bg-lime-900/20 text-lime-700 dark:text-lime-300' 
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                ? 'bg-green-600 text-white' 
+                : 'bg-green-600/20 text-green-400 hover:bg-green-600/30'
             }`}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
-            {isOrderingMode ? 'Exit Ordering' : 'Reorder Sections'}
+            <GripVertical className="w-4 h-4 inline mr-2" />
+            {isOrderingMode ? 'Exit Ordering' : 'Rearrange Sections'}
           </motion.button>
           
           <motion.button
             onClick={onToggleAllSections}
-            className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            className="px-6 py-2 text-sm bg-green-600/20 text-green-400 rounded-full hover:bg-green-600/30 transition-colors"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
+            <X className="w-4 h-4 inline mr-2" />
             {allCollapsed ? 'Expand All' : 'Collapse All'}
           </motion.button>
         </div>
       </div>
 
-      {/* Ordering Mode */}
-      {isOrderingMode ? (
-        <div className={`${themeClasses.card.base} rounded-lg p-4`}>
-          <h3 className={`text-md font-semibold ${themeClasses.text.primary} mb-4`}>
-            Drag to Reorder Sections
-          </h3>
-          <div className="space-y-2">
+      {/* Main Panel Container */}
+      <div className="rounded-xl">
+
+        {/* Ordering Mode */}
+        {isOrderingMode ? (
+          <div className="p-6">
+            <h3 className="text-lg font-semibold text-white mb-4">
+              Drag to Reorder Sections
+            </h3>
+            <div className="space-y-3">
+              {sections.map((section, index) => (
+                <motion.div
+                  key={section.id}
+                  draggable
+                  onDragStart={() => handleDragStart(index)}
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, index)}
+                  className={`flex items-center gap-3 p-4 rounded-xl border border-white/10 bg-white/5 cursor-move hover:bg-white/10 transition-colors ${
+                    draggedIndex === index ? 'opacity-50' : ''
+                  }`}
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                >
+                  <GripVertical className="w-4 h-4 text-white/60" />
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                      {React.createElement(getSectionIcon(section.id), { className: "w-4 h-4 text-white" })}
+                    </div>
+                    <span className="text-sm font-medium text-white">
+                      {section.title}
+                    </span>
+                  </div>
+                  <div className="ml-auto flex items-center gap-2">
+                    <button
+                      onClick={() => onSectionVisibilityToggle(section.id)}
+                      className={`p-1 transition-colors ${
+                        section.visible 
+                          ? 'text-[#80FF00]' 
+                          : 'text-white/60'
+                      }`}
+                    >
+                      {section.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          /* Normal Sections View - AI Career Report Style */
+          <div className="space-y-6">
             {sections.map((section, index) => (
               <motion.div
                 key={section.id}
-                draggable
-                onDragStart={() => handleDragStart(index)}
-                onDragOver={handleDragOver}
-                onDrop={(e) => handleDrop(e, index)}
-                className={`flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-[#141810] cursor-move hover:bg-gray-50 dark:hover:bg-[#313a28] transition-colors ${
-                  draggedIndex === index ? 'opacity-50' : ''
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: index * 0.1 }}
+                className={`bg-white/5 rounded-2xl border border-white/10 transition-all duration-300 ${
+                  section.isDisabled ? 'opacity-60' : ''
                 }`}
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.99 }}
               >
-                <GripVertical className="w-4 h-4 text-gray-400" />
-                <div className="flex items-center gap-2">
-                  {React.createElement(getSectionIcon(section.id), { className: "w-4 h-4 text-gray-600 dark:text-gray-400" })}
-                  <span className={`text-sm font-medium ${themeClasses.text.primary}`}>
-                    {section.title}
-                  </span>
-                </div>
-                <div className="ml-auto flex items-center gap-2">
-                  <button
-                    onClick={() => onSectionVisibilityToggle(section.id)}
-                    className={`p-1 rounded transition-colors ${
-                      section.visible 
-                        ? 'text-green-600 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/20' 
-                        : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-                    }`}
-                  >
-                    {section.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                  </button>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      ) : (
-        /* Normal Sections View */
-        <div className="space-y-4">
-          {sections.map((section, index) => (
-            <motion.div
-              key={section.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.1 }}
-              className={`${themeClasses.card.base} rounded-lg overflow-hidden ${
-                section.isDisabled ? 'opacity-60' : ''
-              }`}
-            >
-              {/* Section Header */}
-              <div 
-                className={`flex items-center justify-between p-4 transition-colors ${
-                  section.isDisabled 
-                    ? 'cursor-not-allowed opacity-60' 
-                    : 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                }`}
-                onClick={() => !section.isDisabled && onSectionToggle(section.id)}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    {React.createElement(getSectionIcon(section.id), { 
-                      className: `w-5 h-5 ${
-                        section.isDisabled 
-                          ? 'text-gray-400 dark:text-gray-500' 
-                          : 'text-lime-600 dark:text-lime-400'
-                      }` 
-                    })}
-                    <span className={`font-semibold ${
-                      section.isDisabled 
-                        ? 'text-gray-400 dark:text-gray-500' 
-                        : themeClasses.text.primary
-                    }`}>
-                      {section.title}
-                    </span>
-                    {section.isDisabled && (
-                      <span className="text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">
-                        No data
-                      </span>
+                {/* Section Header */}
+                <div 
+                  className={`flex items-center justify-between p-6 transition-colors ${
+                    section.isDisabled 
+                      ? 'cursor-not-allowed opacity-60' 
+                      : 'cursor-pointer hover:bg-white/5'
+                  }`}
+                  onClick={() => !section.isDisabled && onSectionToggle(section.id)}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                        {React.createElement(getSectionIcon(section.id), { 
+                          className: `w-5 h-5 text-white` 
+                        })}
+                      </div>
+                      <h3 className="text-xl font-semibold text-white">{section.title}</h3>
+                      {section.isDisabled && (
+                        <span className="text-xs text-white/60 bg-white/10 px-2 py-1 rounded">
+                          No data
+                        </span>
+                      )}
+                    </div>
+                    
+                    {!section.isDisabled && (
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onSectionVisibilityToggle(section.id);
+                          }}
+                          className={`p-2 transition-colors ${
+                            section.visible 
+                              ? 'text-[#80FF00]' 
+                              : 'text-white/60'
+                          }`}
+                        >
+                          {section.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                        </button>
+                      </div>
                     )}
                   </div>
                   
                   {!section.isDisabled && (
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onSectionVisibilityToggle(section.id);
-                        }}
-                        className={`p-1.5 rounded-lg transition-colors ${
-                          section.visible 
-                            ? 'text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/20' 
-                            : 'text-gray-400 bg-gray-100 dark:bg-gray-700'
-                        }`}
-                      >
-                        {section.visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                      </button>
-                    </div>
+                    <button className="text-white/60 hover:text-white transition-colors">
+                      {section.expanded ? (
+                        <ChevronUp className="w-5 h-5" />
+                      ) : (
+                        <ChevronDown className="w-5 h-5" />
+                      )}
+                    </button>
                   )}
                 </div>
                 
-                {!section.isDisabled && (
-                  <motion.button
-                    className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
+                {/* Section Content */}
+                {section.expanded && !section.isDisabled && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="px-6 pb-6"
                   >
-                    {section.expanded ? (
-                      <ChevronUp className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                    ) : (
-                      <ChevronDown className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                    )}
-                  </motion.button>
+                    <div className="pt-4">
+                      {section.component}
+                    </div>
+                  </motion.div>
                 )}
-              </div>
-
-              {/* Section Content */}
-              {section.expanded && !section.isDisabled && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="border-t border-gray-200 dark:border-gray-700"
-                >
-                  {section.component}
-                </motion.div>
-              )}
-            </motion.div>
-          ))}
-        </div>
-      )}
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

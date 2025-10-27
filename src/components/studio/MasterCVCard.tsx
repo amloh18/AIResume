@@ -60,6 +60,10 @@ const MasterCVCard: React.FC<MasterCVCardProps> = ({
       const response = await fetch(`/api/cvs/master?userId=${userId}`);
       console.log('🔍 MasterCVCard - API response status:', response.status);
       
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const result = await response.json();
       console.log('🔍 MasterCVCard - API response data:', result);
       
@@ -68,7 +72,7 @@ const MasterCVCard: React.FC<MasterCVCardProps> = ({
         setMasterCV(result.data.masterCV);
       } else {
         console.log('❌ MasterCVCard - No master CV found in response');
-        setError('No master CV found');
+        setError(result.message || 'No master CV found');
       }
     } catch (error) {
       console.error('❌ MasterCVCard - Error fetching master CV:', error);

@@ -27,52 +27,58 @@ const SkillsSection: React.FC<SkillsSectionProps> = ({
   const safeData = Array.isArray(data) ? data : [];
 
   return (
-    <div className="space-y-4 p-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-end">
         <motion.button
           onClick={onAdd}
-          className={`flex items-center gap-2 px-3 py-1.5 text-sm ${themeClasses.button.primary} rounded-lg`}
+          className="flex items-center gap-2 px-4 py-2 text-sm bg-[#80FF00] text-black rounded-lg hover:bg-[#70e600] transition-colors"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
         >
           <Plus className="w-4 h-4" />
-          Add Skill
+          Add Skill Category
         </motion.button>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-6">
         {safeData.map((skill, index) => (
-          <div key={index} className={`${themeClasses.card.base} border rounded-lg p-4`}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <input
-                type="text"
-                value={skill.name || ''}
-                onChange={(e) => onUpdate(`skills.${index}.name`, e.target.value)}
-                className={`w-full px-3 py-2 rounded-lg border ${themeClasses.input.base} ${themeClasses.input.focus}`}
-                placeholder="Skill Name"
-              />
-              <select
-                value={skill.level || ''}
-                onChange={(e) => onUpdate(`skills.${index}.level`, e.target.value)}
-                className={`w-full px-3 py-2 rounded-lg border ${themeClasses.input.base} ${themeClasses.input.focus}`}
-              >
-                <option value="">Select Level</option>
-                <option value="Beginner">Beginner</option>
-                <option value="Intermediate">Intermediate</option>
-                <option value="Advanced">Advanced</option>
-                <option value="Expert">Expert</option>
-              </select>
+          <div key={index} className="bg-white/5 rounded-2xl border border-white/10 p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <div>
+                <label className="block text-white/80 text-sm font-medium mb-2">Skill Category</label>
+                <input
+                  type="text"
+                  value={skill.category || skill.name || ''}
+                  onChange={(e) => onUpdate(`skills.${index}.category`, e.target.value)}
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                  placeholder="Programming Languages"
+                />
+              </div>
+              <div>
+                <label className="block text-white/80 text-sm font-medium mb-2">Skills</label>
+                <input
+                  type="text"
+                  value={Array.isArray(skill.skills) ? skill.skills.join(', ') : (skill.keywords || []).join(', ')}
+                  onChange={(e) => {
+                    const skillsArray = e.target.value.split(',').map(s => s.trim()).filter(s => s.length > 0);
+                    onUpdate(`skills.${index}.skills`, skillsArray);
+                  }}
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                  placeholder="JavaScript, Python, Java, React"
+                />
+                <p className="text-white/50 text-xs mt-1">Separate multiple skills with commas</p>
+              </div>
             </div>
 
             <div className="flex justify-end">
               <motion.button
                 onClick={() => onRemove(index)}
-                className="flex items-center gap-2 text-sm text-red-600 hover:text-red-700"
+                className="flex items-center gap-2 text-sm text-red-400 hover:text-red-300 transition-colors"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
                 <Trash2 className="w-4 h-4" />
-                Remove
+                Remove Category
               </motion.button>
             </div>
           </div>

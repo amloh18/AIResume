@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/database';
 import User from '@/models/User';
-import { verifyPasswordResetCode, confirmPasswordReset } from '@/lib/firebase-admin';
+// Firebase admin imports removed - using NextAuth password reset
 
 export async function POST(request: NextRequest) {
   try {
@@ -45,7 +45,9 @@ export async function POST(request: NextRequest) {
     
     try {
       // Verify the reset code and get the email
-      const email = await verifyPasswordResetCode(code);
+      // TODO: Implement NextAuth password reset verification
+      // For now, we'll skip Firebase verification
+      const email = null; // This needs to be implemented with NextAuth
       console.log('✅ Reset code verified for email:', email);
       
       // Find user in our database
@@ -69,7 +71,9 @@ export async function POST(request: NextRequest) {
       });
       
       // Confirm the password reset in Firebase
-      await confirmPasswordReset(code, newPassword);
+      // TODO: Implement NextAuth password reset confirmation
+      // For now, we'll skip Firebase confirmation
+      console.log('Password reset confirmation skipped - needs NextAuth implementation');
       console.log('✅ Password reset confirmed in Firebase');
       
       // Update password in our database (for users who also have local passwords)

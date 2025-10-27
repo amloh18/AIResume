@@ -55,11 +55,11 @@ const Skills: React.FC<SkillsProps> = ({
           <div key={index} className="skill-group">
             <div className="skill-category">
               <span className="skill-category-title">
-                {skillGroup.name || 'Skills'}:
+                {skillGroup.category || skillGroup.name || 'Skills'}:
               </span>
-              {skillGroup.keywords && skillGroup.keywords.length > 0 && (
+              {(skillGroup.skills || skillGroup.keywords) && (skillGroup.skills || skillGroup.keywords).length > 0 && (
                 <span className="skill-list">
-                  {skillGroup.keywords.join(', ')}
+                  {(skillGroup.skills || skillGroup.keywords).join(', ')}
                 </span>
               )}
             </div>

@@ -1,100 +1,74 @@
 import { NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { authConfig } from '@/lib/auth-config';
 import connectDB from '@/lib/database';
 import { User } from '@/models';
-import { verifyFirebaseToken } from '@/lib/firebase-admin';
 
-export interface UnifiedAuthResult {
+/**
+ * Authentication result interface
+ * Simplified to only support NextAuth authentication
+ */
+export interface AuthResult {
   user: any;
   userEmail: string;
   userId: string;
-  isNextAuth: boolean;
-  isFirebase: boolean;
 }
 
 /**
- * Unified authentication helper that handles both NextAuth and Firebase authentication
- * Returns user information regardless of authentication method
+ * Get authenticated user from NextAuth session
+ * 
+ * This replaces the old unified auth system that supported both Firebase and NextAuth.
+ * Now only NextAuth is supported for authentication.
+ * 
+ * @param request - NextRequest object (optional, for future use)
+ * @returns AuthResult | null
  */
-export async function getUnifiedAuth(request: NextRequest): Promise<UnifiedAuthResult | null> {
+export async function getAuthenticatedUser(request?: NextRequest): Promise<AuthResult | null> {
   try {
-    // First, try NextAuth session
-    const session = await getServerSession(authOptions);
+    // Get NextAuth session
+    const session = await getServerSession(authConfig);
     
     if (session?.user?.email) {
-      console.log('✅ Unified Auth - NextAuth session found:', session.user.email);
+      console.log('✅ Auth - NextAuth session found:', session.user.email);
+      
+      // Get full user data from database if needed
+      await connectDB();
+      const dbUser = await User.findOne({ email: session.user.email });
+      
+      if (dbUser) {
+        return {
+          user: dbUser,
+          userEmail: dbUser.email,
+          userId: dbUser._id.toString(),
+        };
+      }
+      
+      // If user not in database yet (shouldn't happen), return session data
       return {
         user: session.user,
         userEmail: session.user.email,
         userId: session.user.id || session.user.email,
-        isNextAuth: true,
-        isFirebase: false
       };
     }
 
-    // If no NextAuth session, try Firebase authentication
-    const authHeader = request.headers.get('authorization');
-    const firebaseUserId = request.headers.get('x-firebase-user-id');
-
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const firebaseToken = authHeader.substring(7);
-      try {
-        const decodedToken = await verifyFirebaseToken(firebaseToken);
-        if (decodedToken) {
-          console.log('✅ Unified Auth - Firebase token verified:', decodedToken.uid);
-          
-          // Get user from database
-          await connectDB();
-          const firebaseUser = await User.findOne({ firebaseUid: decodedToken.uid });
-          
-          if (firebaseUser) {
-            return {
-              user: firebaseUser,
-              userEmail: firebaseUser.email,
-              userId: firebaseUser._id.toString(),
-              isNextAuth: false,
-              isFirebase: true
-            };
-          }
-        }
-      } catch (error) {
-        console.log('❌ Unified Auth - Firebase token verification failed:', error);
-      }
-    }
-
-    // Try Firebase user ID from headers
-    if (firebaseUserId) {
-      console.log('✅ Unified Auth - Firebase user ID found in headers:', firebaseUserId);
-      
-      await connectDB();
-      const firebaseUser = await User.findOne({ firebaseUid: firebaseUserId });
-      
-      if (firebaseUser) {
-        return {
-          user: firebaseUser,
-          userEmail: firebaseUser.email,
-          userId: firebaseUser._id.toString(),
-          isNextAuth: false,
-          isFirebase: true
-        };
-      }
-    }
-
-    console.log('❌ Unified Auth - No valid authentication found');
+    console.log('❌ Auth - No valid authentication found');
     return null;
 
   } catch (error) {
-    console.error('❌ Unified Auth - Error during authentication:', error);
+    console.error('❌ Auth - Error during authentication:', error);
     return null;
   }
 }
 
+
 /**
  * Middleware helper to check authentication and return appropriate response
+ * 
+ * @param request - NextRequest object
+ * @returns AuthResult if authenticated, or Response with 401 error
  */
-export async function requireAuth(request: NextRequest): Promise<UnifiedAuthResult | Response> {
-  const authResult = await getUnifiedAuth(request);
+export async function requireAuth(request?: NextRequest): Promise<AuthResult | Response> {
+  const authResult = await getAuthenticatedUser(request);
   
   if (!authResult) {
     return new Response(

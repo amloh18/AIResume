@@ -380,32 +380,55 @@ const Canvas: React.FC = () => {
   // Helper function to resolve MongoDB user ID using unified authentication
   const resolveMongoDBUserId = async (userId: string): Promise<string | null> => {
     try {
+      console.log('🔍 Canvas - Resolving MongoDB user ID for:', userId);
+      
       // Check if it's already a MongoDB ObjectId
       if (/^[0-9a-fA-F]{24}$/.test(userId)) {
+        console.log('✅ Canvas - User ID is already MongoDB ObjectId');
         return userId;
       } else {
+        console.log('🔍 Canvas - User ID is not MongoDB ObjectId, fetching from server...');
         // Try to get MongoDB user ID from server
         const userResponse = await fetch('/api/user/current');
+        console.log('🔍 Canvas - User API response status:', userResponse.status);
+        
         if (userResponse.ok) {
           const userData = await userResponse.json();
+          console.log('🔍 Canvas - User API response data:', userData);
+          
           if (userData.success && userData.user && userData.user.id) {
+            console.log('✅ Canvas - Found MongoDB user ID:', userData.user.id);
             return userData.user.id;
+          } else {
+            console.log('❌ Canvas - User API response missing required fields');
           }
+        } else {
+          console.log('❌ Canvas - User API request failed with status:', userResponse.status);
         }
       }
     } catch (error) {
-      // Silent fail - user ID resolution failed
+      console.error('❌ Canvas - Error resolving MongoDB user ID:', error);
     }
+    console.log('❌ Canvas - Failed to resolve MongoDB user ID');
     return null;
   };
   
   // Resolve MongoDB userId when session changes
   useEffect(() => {
     const initializeUserId = async () => {
+      console.log('🔍 Canvas - Initializing user ID...');
+      console.log('🔍 Canvas - User object:', user);
+      
       const userId = getUserIdForAPI(user);
+      console.log('🔍 Canvas - getUserIdForAPI result:', userId);
+      
       if (userId) {
         const resolvedUserId = await resolveMongoDBUserId(userId);
+        console.log('🔍 Canvas - Resolved user ID:', resolvedUserId);
         setMongoDBUserId(resolvedUserId);
+      } else {
+        console.log('❌ Canvas - No user ID available from getUserIdForAPI');
+        setMongoDBUserId(null);
       }
     };
     
@@ -684,7 +707,7 @@ const Canvas: React.FC = () => {
             description: cv.description || '',
             cvData: cv.cvData || null, // Include CV data for preview
             completionPercentage: calculateCompletionPercentage(cv),
-            isMaster: cv.metadata?.isMaster || false, // Include master flag
+            isMaster: cv.metadata?.isMaster || cv.isMaster || false, // Include master flag - handle both formats
             atsScore: cv.metadata?.atsScore, // Include ATS score
             metadata: cv.metadata // Include full metadata
           };
@@ -698,9 +721,19 @@ const Canvas: React.FC = () => {
           metadataIsMaster: cv.metadata?.isMaster 
         })));
         
-        // Filter CVs based on isMaster metadata
-        const masterCVs = enrichedCVs.filter(cv => cv.isMaster === true);
-        const regularCVs = enrichedCVs.filter(cv => cv.isMaster === false);
+        // Filter CVs based on isMaster - handle both old and new formats
+        const masterCVs = enrichedCVs.filter(cv => 
+          cv.isMaster === true || 
+          cv.isMaster === 'true' ||
+          cv.metadata?.isMaster === true ||
+          cv.metadata?.isMaster === 'true'
+        );
+        const regularCVs = enrichedCVs.filter(cv => 
+          !(cv.isMaster === true || 
+            cv.isMaster === 'true' ||
+            cv.metadata?.isMaster === true ||
+            cv.metadata?.isMaster === 'true')
+        );
         
         console.log('🔍 Canvas - Master CVs:', masterCVs.length);
         console.log('🔍 Canvas - Regular CVs:', regularCVs.length);

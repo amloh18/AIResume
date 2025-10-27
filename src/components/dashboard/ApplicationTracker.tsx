@@ -1102,7 +1102,7 @@ const ApplicationTracker: React.FC = () => {
                   const jobJourneys = getJobJourneys(job.id);
                   return jobJourneys.map((journey) => (
                     <JourneyTimelineCard
-                      key={journey.id}
+                      key={`${job.id}-${journey.id}`}
                       journey={journey}
                       onResume={(journeyId) => {
                         // Handle resume journey
@@ -1341,7 +1341,7 @@ const ApplicationTracker: React.FC = () => {
                               <div className="flex items-center gap-1">
                                 {jobJourneys.map((journey, index) => (
                                   <div
-                                    key={journey.id}
+                                    key={`${job.id}-${journey.id}-${index}`}
                                     className={`w-2 h-2 rounded-full ${
                                       journey.status === 'completed' ? 'bg-green-500' :
                                       journey.status === 'in-progress' ? 'bg-blue-500' :
