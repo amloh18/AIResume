@@ -177,7 +177,7 @@ try {
   EmailCampaign = mongoose.model<IEmailCampaign>('EmailCampaign');
 } catch {
   // Create new model if it doesn't exist
-  EmailCampaign = mongoose.model<IEmailCampaign>('EmailCampaign', EmailCampaignSchema);
+  EmailCampaign = mongoose.model<IEmailCampaign>('EmailCampaign', EmailCampaignSchema, 'emailcampaigns');
 }
 
 export default EmailCampaign;

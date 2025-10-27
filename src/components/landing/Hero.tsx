@@ -111,6 +111,25 @@ const Hero = () => {
           </motion.a>
           
           <motion.a
+            href="/ai-career-report"
+            className="group relative border-2 border-lime-400/50 text-lime-400 px-10 py-5 rounded-full font-semibold text-lg hover:bg-lime-400/10 transition-all backdrop-blur-sm overflow-hidden flex items-center gap-3"
+            whileHover={{ 
+              scale: 1.05,
+              borderColor: 'rgba(132, 204, 22, 0.8)',
+              backgroundColor: 'rgba(132, 204, 22, 0.1)'
+            }}
+            whileTap={{ scale: 0.95 }}
+            style={{
+              transformStyle: 'preserve-3d',
+              perspective: '1000px'
+            }}
+          >
+            <Sparkles size={20} />
+            <span>AI Career Guide</span>
+            <ArrowRight size={20} />
+          </motion.a>
+          
+          <motion.a
             href="#chrome-extension"
             className="group relative border-2 border-white/20 text-white px-10 py-5 rounded-full font-semibold text-lg hover:bg-white/10 transition-all backdrop-blur-sm overflow-hidden"
             whileHover={{ 

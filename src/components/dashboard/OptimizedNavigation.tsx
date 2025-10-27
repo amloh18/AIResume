@@ -30,6 +30,8 @@ const OptimizedNavigation: React.FC = () => {
   useEffect(() => {
     if (pathname === '/dashboard') {
       setActiveSection('analytics');
+    } else if (pathname.includes('/career-report')) {
+      setActiveSection('career-report');
     } else if (pathname.includes('/application-tracker')) {
       setActiveSection('application-tracker');
     } else if (pathname.includes('/canvas')) {
@@ -49,6 +51,7 @@ const OptimizedNavigation: React.FC = () => {
     // Navigate immediately
     const routes = {
       'analytics': '/dashboard',
+      'career-report': '/dashboard/career-report',
       'application-tracker': '/dashboard/application-tracker',
       'canvas': '/dashboard/canvas',
       'application-journey': '/dashboard/application-journey',
@@ -69,6 +72,13 @@ const OptimizedNavigation: React.FC = () => {
       icon: BarChart3, 
       description: 'Progress Tracking',
       route: '/dashboard'
+    },
+    { 
+      id: 'career-report', 
+      name: 'Career Report', 
+      icon: Sparkles, 
+      description: 'AI Career Insights',
+      route: '/dashboard/career-report'
     },
     { 
       id: 'application-tracker', 

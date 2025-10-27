@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useSession } from 'next-auth/react';
+import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
 import { authenticatedFetch, authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
 import { 
   X, Briefcase, MapPin, DollarSign, Calendar, ExternalLink,
@@ -84,7 +84,7 @@ const ApplicationJourneyModal: React.FC<ApplicationJourneyModalProps> = ({
   onClose,
   onRefresh
 }) => {
-  const { data: session } = useSession();
+  const { user } = useUnifiedAuth();
   const [isCreatingJourney, setIsCreatingJourney] = useState(false);
   const [journeys, setJourneys] = useState<CVJourney[]>(initialJourneys);
   const [loadingJourneys, setLoadingJourneys] = useState(false);
@@ -116,12 +116,12 @@ const ApplicationJourneyModal: React.FC<ApplicationJourneyModalProps> = ({
   // Load journeys for this specific job when modal opens
   useEffect(() => {
     const loadJourneysForJob = async () => {
-      if (!session?.user?.id || !job?.id) return;
+      if (!user?.id || !job?.id) return;
 
       setLoadingJourneys(true);
       try {
         console.log('🔍 Loading journeys for job:', job.id);
-        const response = await authenticatedFetchWithUserId(`/api/application-journey?jobId=${job.id}`, session.user.id);
+        const response = await authenticatedFetchWithUserId(`/api/application-journey?jobId=${job.id}`, user.id);
         const result = await response.json();
 
         if (result.success && result.data.journeys) {
@@ -140,7 +140,7 @@ const ApplicationJourneyModal: React.FC<ApplicationJourneyModalProps> = ({
     };
 
     loadJourneysForJob();
-  }, [session?.user?.id, job?.id]);
+  }, [user?.id, job?.id]);
 
 
 
@@ -263,8 +263,8 @@ Best regards,
     try {
       setIsCreatingJourney(true);
       
-      // Get userId from session
-      const userId = session?.user?.id;
+      // Get userId from user
+      const userId = user?.id;
       
       if (!userId) {
         toast.error('User session not found. Please log in again.');
@@ -368,7 +368,7 @@ Best regards,
     try {
       console.log('🔍 ApplicationJourneyModal - handleDeleteJourney called with journeyId:', journeyId);
       setIsDeleting(true);
-      const userId = session?.user?.id;
+      const userId = user?.id;
       if (!userId) {
         console.error('❌ ApplicationJourneyModal - No user ID available');
         return;
@@ -418,7 +418,7 @@ Best regards,
   const handleSaveJob = async () => {
     try {
       setIsSavingJob(true);
-      const userId = session?.user?.id;
+      const userId = user?.id;
       
       if (!userId) {
         toast.error('User session not found. Please log in again.');
@@ -505,7 +505,7 @@ Best regards,
 
   const handleDuplicateJob = async () => {
     try {
-      const userId = session?.user?.id;
+      const userId = user?.id;
       
       if (!userId) {
         toast.error('User session not found. Please log in again.');
@@ -547,7 +547,7 @@ Best regards,
 
   const handleDeleteJob = async () => {
     try {
-      const userId = session?.user?.id;
+      const userId = user?.id;
       
       if (!userId) {
         toast.error('User session not found. Please log in again.');
@@ -575,7 +575,7 @@ Best regards,
 
   const handleArchiveJob = async () => {
     try {
-      const userId = session?.user?.id;
+      const userId = user?.id;
       
       if (!userId) {
         toast.error('User session not found. Please log in again.');

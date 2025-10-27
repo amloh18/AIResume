@@ -19,6 +19,7 @@ export interface IJob extends Document {
   applicationDate?: Date;
   deadline?: Date;
   notes?: string;
+  tags?: string[];
   contacts: Array<{
     name: string;
     role?: string;
@@ -154,6 +155,11 @@ const jobSchema = new Schema<IJob>({
     trim: true,
     maxlength: [2000, 'Notes cannot exceed 2000 characters']
   },
+  tags: [{
+    type: String,
+    trim: true,
+    maxlength: [50, 'Tag cannot exceed 50 characters']
+  }],
   contacts: [{
     name: {
       type: String,

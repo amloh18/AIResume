@@ -7,10 +7,13 @@ declare module 'next-auth' {
       uid?: string;
       email: string;
       name: string;
-      firstName: string;
-      lastName: string;
+      firstName?: string;
+      lastName?: string;
       image?: string;
       role?: string;
+      type?: 'user' | 'admin';
+      planKey?: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly';
+      subscriptionStatus?: 'active' | 'inactive' | 'cancelled' | 'expired';
       emailVerified?: boolean;
     };
   }
@@ -20,10 +23,13 @@ declare module 'next-auth' {
     uid?: string;
     email: string;
     name: string;
-    firstName: string;
-    lastName: string;
+    firstName?: string;
+    lastName?: string;
     image?: string;
     role?: string;
+    type?: 'user' | 'admin';
+    planKey?: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly';
+    subscriptionStatus?: 'active' | 'inactive' | 'cancelled' | 'expired';
     emailVerified?: boolean;
   }
 }
@@ -32,9 +38,15 @@ declare module 'next-auth/jwt' {
   interface JWT {
     id: string;
     uid?: string;
-    firstName: string;
-    lastName: string;
+    email?: string;
+    name?: string;
+    image?: string;
+    firstName?: string;
+    lastName?: string;
     role?: string;
+    type?: 'user' | 'admin';
+    planKey?: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly';
+    subscriptionStatus?: 'active' | 'inactive' | 'cancelled' | 'expired';
     emailVerified?: boolean;
   }
 } 

@@ -639,9 +639,8 @@ function parseTextToStructuredData(text: string): UnifiedCVDataStructure {
     const skillsData = extractSkills(text);
     console.log('Extracted skills:', skillsData);
     result.skills = skillsData.map(skill => ({
-      name: skill.category,
-      level: '',
-      keywords: skill.skills
+      category: skill.category,
+      skills: skill.skills
     }));
   } catch (error) {
     console.error('Error extracting skills:', error);

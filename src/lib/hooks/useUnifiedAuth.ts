@@ -1,7 +1,6 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
-import { useFirebaseAuth } from './useFirebaseAuth';
+import { useSession, signOut } from 'next-auth/react';
 import { useMemo } from 'react';
 
 interface UnifiedUser {
@@ -26,19 +25,17 @@ interface UseUnifiedAuthReturn {
 }
 
 /**
- * Unified authentication hook that combines NextAuth and Firebase authentication
+ * Unified authentication hook that uses NextAuth for authentication
  * Provides a consistent interface across all dashboard pages
  */
 export const useUnifiedAuth = (): UseUnifiedAuthReturn => {
   const { data: session, status: nextAuthStatus } = useSession();
-  const { user: firebaseUser, loading: firebaseLoading, signInWithGoogle, signOut: firebaseSignOut, error: firebaseError } = useFirebaseAuth();
 
   // Determine loading state
-  const loading = nextAuthStatus === 'loading' || firebaseLoading;
+  const loading = nextAuthStatus === 'loading';
 
   // Create unified user object
   const user = useMemo((): UnifiedUser | null => {
-    // Priority: NextAuth session first, then Firebase user
     if (session?.user) {
       return {
         id: session.user.id || session.user.email || '',
@@ -51,49 +48,40 @@ export const useUnifiedAuth = (): UseUnifiedAuthReturn => {
       };
     }
 
-    if (firebaseUser) {
-      return {
-        id: firebaseUser.uid,
-        email: firebaseUser.email || '',
-        name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
-        image: firebaseUser.photoURL || undefined,
-        firebaseUid: firebaseUser.uid,
-        isFirebaseUser: true,
-        isNextAuthUser: false
-      };
-    }
-
     return null;
-  }, [session?.user, firebaseUser]);
+  }, [session]);
 
-  // Determine if user is authenticated
-  const isAuthenticated = !!user;
+  // Determine authentication status
+  const isAuthenticated = !!session?.user;
+  const userId = session?.user?.id || null;
 
-  // Get user ID for API calls
-  const userId = user?.id || null;
+  // Error handling
+  const error = null; // Add error handling if needed
 
-  // Unified sign out function
-  const signOut = async (): Promise<void> => {
+  // Sign out function
+  const handleSignOut = async () => {
     try {
-      // Sign out from both systems
-      if (user?.isFirebaseUser) {
-        await firebaseSignOut();
-      }
-      // NextAuth sign out is handled by the session provider
+      await signOut({ callbackUrl: '/' });
     } catch (error) {
-      console.error('Error during sign out:', error);
-      throw error;
+      console.error('Error signing out:', error);
     }
+  };
+
+  // Google sign-in function (placeholder - implement based on your needs)
+  const signInWithGoogle = async () => {
+    // This would typically redirect to Google OAuth
+    // Implementation depends on your specific needs
+    throw new Error('Google sign-in should be handled through NextAuth providers');
   };
 
   return {
     user,
     loading,
-    error: firebaseError,
+    error,
     isAuthenticated,
     userId,
     signInWithGoogle,
-    signOut
+    signOut: handleSignOut
   };
 };
 

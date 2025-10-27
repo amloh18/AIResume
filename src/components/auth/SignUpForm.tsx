@@ -1,8 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { createUserWithEmailAndPassword, sendEmailVerification, signInWithPopup } from 'firebase/auth';
-import { auth, googleProvider } from '@/lib/firebase';
 import { signIn } from 'next-auth/react';
 
 interface SignUpFormData {
@@ -54,6 +52,8 @@ export default function SignUpForm() {
     setSuccess('');
 
     try {
+      console.log('🔐 Starting registration...');
+      
       // Validate form
       if (formData.password !== formData.confirmPassword) {
         throw new Error('Passwords do not match');
@@ -76,45 +76,27 @@ export default function SignUpForm() {
         throw new Error('Password must contain at least one special character (!@#$%^&*()_+-=[]{}|;:,.<>?)');
       }
 
-      // Step 1: Create user in Firebase Auth first
-      const userCredential = await createUserWithEmailAndPassword(
-        auth, 
-        formData.email, 
-        formData.password
-      );
-      const user = userCredential.user;
-
-      // Step 2: Update the user's display name
-      await updateProfile(user, {
-        displayName: `${formData.firstName} ${formData.lastName}`,
-      });
-
-      // Step 3: Send verification email via Hostinger
-      const verificationResponse = await fetch('/api/auth/send-verification', {
+      // Call new registration endpoint
+      const response = await fetch('/api/auth/register-user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: formData.email,
+          password: formData.password,
           firstName: formData.firstName,
           lastName: formData.lastName,
         }),
       });
 
-      if (!verificationResponse.ok) {
-        const errorData = await verificationResponse.json();
-        throw new Error(errorData.message || 'Failed to send verification email');
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to create account');
       }
 
-      const verificationResult = await verificationResponse.json();
+      console.log('✅ Registration successful');
       
-      // Store password temporarily for automatic sign-in after verification
-      localStorage.setItem('temp_password', formData.password);
-      
-      if (verificationResult.fallback) {
-        setSuccess('Account created successfully! Please check your email to verify your account before signing in. (Email sent via Firebase)');
-      } else {
-        setSuccess('Account created successfully! Please check your email to verify your account before signing in.');
-      }
+      setSuccess('Account created successfully! Please check your email to verify your account before signing in.');
       
       // Reset form
       setFormData({
@@ -133,16 +115,8 @@ export default function SignUpForm() {
       });
 
     } catch (error: any) {
-      console.error('Sign up error:', error);
-      if (error.code === 'auth/email-already-in-use') {
-        setError('An account with this email already exists. Please sign in instead.');
-      } else if (error.code === 'auth/weak-password') {
-        setError('Password does not meet security requirements. Please ensure your password contains uppercase letters, lowercase letters, numbers, and special characters.');
-      } else if (error.code === 'auth/password-does-not-meet-requirements') {
-        setError('Password does not meet security requirements. Please ensure your password contains uppercase letters, lowercase letters, numbers, and special characters.');
-      } else {
-        setError(error.message || 'Failed to create account. Please check your information and try again.');
-      }
+      console.error('❌ Sign up error:', error);
+      setError(error.message || 'Failed to create account. Please check your information and try again.');
     } finally {
       setLoading(false);
     }
@@ -154,64 +128,23 @@ export default function SignUpForm() {
     setSuccess('');
 
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
-
-      // Check if this is a new user
-      const idToken = await user.getIdToken();
+      console.log('🔐 Attempting Google sign-up/sign-in...');
       
-      // Try to create profile (will fail if user already exists)
-      const profileData = {
-        idToken,
-        firstName: user.displayName?.split(' ')[0] || 'User',
-        lastName: user.displayName?.split(' ').slice(1).join(' ') || '',
-        username: user.email?.split('@')[0] || '',
-        email: user.email,
-        avatar: user.photoURL || '',
-      };
+      // Use NextAuth Google provider directly
+      // This will create a new user if they don't exist, or sign in if they do
+      const result = await signIn('google', {
+        callbackUrl: '/dashboard',
+        redirect: true, // Let NextAuth handle the redirect
+      });
 
-      try {
-        const response = await fetch('/api/user/create-profile', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(profileData),
-        });
-
-        if (response.ok) {
-          setSuccess('Account created successfully!');
-        } else if (response.status === 409) {
-          // User already exists, just sign them in
-          console.log('User already exists, signing in...');
-          const signInResult = await signIn('firebase', { idToken, redirect: false });
-          if (signInResult?.ok) {
-            window.location.href = '/dashboard';
-          }
-          return;
-        } else {
-          // Other error, try to sign in anyway
-          const signInResult = await signIn('firebase', { idToken, redirect: false });
-          if (signInResult?.ok) {
-            window.location.href = '/dashboard';
-          }
-          return;
-        }
-      } catch (profileError) {
-        // User might already exist, try to sign in
-        const signInResult = await signIn('firebase', { idToken, redirect: false });
-        if (signInResult?.ok) {
-          window.location.href = '/dashboard';
-        }
-        return;
-      }
-
-      // Sign in with NextAuth
-      const signInResult = await signIn('firebase', { idToken, redirect: false });
-      if (signInResult?.ok) {
-        window.location.href = '/dashboard';
+      // If redirect: false, handle result
+      if (result?.error) {
+        console.error('❌ Google sign-up/sign-in failed:', result.error);
+        setError('Failed to sign up with Google. Please try again.');
       }
 
     } catch (error: any) {
-      console.error('Google sign up error:', error);
+      console.error('❌ Google sign up error:', error);
       setError(error.message || 'Failed to sign up with Google');
     } finally {
       setLoading(false);

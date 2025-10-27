@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-// Removed - using Clerk now
+import { getAuthenticatedUser } from '@/lib/auth-helpers';
 import connectDB from '@/lib/database';
 import { User } from '@/models';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const authResult = await getAuthenticatedUser(request);
     
-    if (!session?.user?.email) {
+    if (!authResult) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -19,7 +17,7 @@ export async function GET(request: NextRequest) {
     await connectDB();
 
     // Find user
-    const user = await User.findOne({ email: session.user.email });
+    const user = await User.findOne({ email: authResult.userEmail });
     if (!user) {
       return NextResponse.json(
         { success: false, error: 'User not found' },

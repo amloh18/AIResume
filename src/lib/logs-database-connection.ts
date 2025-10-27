@@ -16,11 +16,11 @@ export async function getLogsConnection(): Promise<mongoose.Connection> {
   }
 
   // Create logs database URI
-  const logsUri = baseUri.includes('/cvcircle')
+  const logsUri = baseUri && typeof baseUri === 'string' && baseUri.includes('/cvcircle')
     ? baseUri.replace('/cvcircle', '/cvcircle_logs')
-    : baseUri.endsWith('/')
+    : baseUri && typeof baseUri === 'string' && baseUri.endsWith('/')
       ? baseUri + 'cvcircle_logs'
-      : baseUri + '/cvcircle_logs';
+      : baseUri && typeof baseUri === 'string' ? baseUri + '/cvcircle_logs' : baseUri;
 
   console.log('🔗 Connecting to logs database:', logsUri.replace(/\/\/[^:]+:[^@]+@/, '//***:***@'));
 

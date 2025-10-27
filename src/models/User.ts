@@ -21,7 +21,7 @@ export interface IUser extends Document {
   // Note: Authentication tokens are now stored in separate VerificationToken collection
   
   // Subscription and usage tracking
-  currentPlanKey: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly';
+  currentPlanKey: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly' | 'yearly pro' | 'monthly pro' | 'quarterly pro';
   monthlyGoal?: number;
   usage: {
     cvJourneyCount: number;
@@ -180,7 +180,7 @@ const userSchema = new Schema<IUser>({
   // Token fields removed - now handled by VerificationToken collection
   currentPlanKey: {
     type: String,
-    enum: ['free', 'day_pass', 'pro_monthly', 'pro_quarterly', 'pro_yearly'],
+    enum: ['free', 'day_pass', 'pro_monthly', 'pro_quarterly', 'pro_yearly', 'yearly pro', 'monthly pro', 'quarterly pro'],
     default: 'free'
   },
   monthlyGoal: {

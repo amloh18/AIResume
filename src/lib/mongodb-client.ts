@@ -9,7 +9,7 @@ if (!uri) {
 
 // Ensure the URI includes the cvcircle database
 let mongoUri = uri;
-if (!mongoUri.includes('/cvcircle') && !mongoUri.includes('/test')) {
+if (mongoUri && typeof mongoUri === 'string' && !mongoUri.includes('/cvcircle') && !mongoUri.includes('/test')) {
   if (mongoUri.endsWith('/') || mongoUri.includes('?')) {
     mongoUri = mongoUri.replace(/(\?.*)$/, '/cvcircle$1');
   } else {

@@ -30,6 +30,19 @@ interface NotificationContextType {
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
 export const useNotifications = () => {
+  // Safety check for server-side rendering
+  if (typeof window === 'undefined') {
+    return {
+      notifications: [],
+      addNotification: () => {},
+      markAsRead: () => {},
+      markAllAsRead: () => {},
+      removeNotification: () => {},
+      clearAllNotifications: () => {},
+      unreadCount: 0
+    };
+  }
+
   const context = useContext(NotificationContext);
   if (!context) {
     throw new Error('useNotifications must be used within a NotificationProvider');

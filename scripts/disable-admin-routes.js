@@ -8,7 +8,21 @@ const adminRoutes = [
   'src/app/api/admin/testimonials',
   'src/app/api/admin/promotional-offers',
   'src/app/api/admin/pricing-plans',
-  'src/app/api/admin/templates'
+  'src/app/api/admin/templates',
+  'src/app/api/admin/plans',
+  'src/app/api/admin/users',
+  'src/app/api/admin/ai-analytics',
+  'src/app/api/admin/charts',
+  'src/app/api/admin/kpis',
+  'src/app/api/admin/activity',
+  'src/app/api/admin/check-role',
+  'src/app/api/admin/check-user-role',
+  'src/app/api/admin/cv-journey-kpis',
+  'src/app/api/admin/email',
+  'src/app/api/admin/email-templates',
+  'src/app/api/admin/make-admin',
+  'src/app/api/admin/refresh-session',
+  'src/app/api/admin/system-health'
 ];
 
 function disableAdminRoutes() {

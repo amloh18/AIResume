@@ -1,13 +1,13 @@
 'use client';
 
 import React from 'react';
-import { useSession } from 'next-auth/react';
+import { useUnifiedAuth } from '@/lib/hooks/useUnifiedAuth';
 import { Archive } from 'lucide-react';
 import PageHeader from '@/components/dashboard/PageHeader';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
 
 const VaultPage: React.FC = () => {
-  const { data: session } = useSession();
+  const { user, loading: authLoading, isAuthenticated } = useUnifiedAuth();
   const { toggleSidebar, isMobileMenuOpen } = useMobileSidebar();
 
   return (
@@ -17,10 +17,10 @@ const VaultPage: React.FC = () => {
         title="Vault"
         description="Store and manage your saved forms and reusable data"
         user={{
-          name: session?.user?.name || session?.user?.firstName || 'User',
-          email: session?.user?.email || '',
-          username: session?.user?.username,
-          profilePhoto: session?.user?.image,
+          name: user?.name || 'User',
+          email: user?.email || '',
+          username: user?.username,
+          profilePhoto: user?.image,
           designation: 'Software Developer'
         }}
         showSettings={true}

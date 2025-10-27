@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/database';
 import { CV, User } from '@/models';
 import { createErrorResponse } from '@/lib/db-utils';
-import { extractUserIdentifier, findByFirebaseUid, createWithFirebaseUid } from '@/lib/firebase-uid-utils';
+import { getAuthenticatedUser } from '@/lib/auth-helpers';
 import mongoose from 'mongoose';
 
 // GET - Get user's master CV
@@ -12,46 +12,35 @@ export async function GET(request: NextRequest) {
   try {
     await connectDB();
     
-    // Check authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
     // Check for explicit userId parameter (backward compatibility)
     const { searchParams } = new URL(request.url);
     const explicitUserId = searchParams.get('userId');
     
-    let userIdentifier;
+    let userId: string;
     
     if (explicitUserId) {
       // Use explicit userId parameter (backward compatibility)
       console.log('🔍 Master CV API - Using explicit userId:', explicitUserId);
-      userIdentifier = {
-        type: /^[0-9a-fA-F]{24}$/.test(explicitUserId) ? 'objectid' : 'firebase',
-        id: explicitUserId
-      };
+      userId = explicitUserId;
     } else {
-      // Extract user identifier from session (new approach)
-      userIdentifier = extractUserIdentifier(request, session);
-      
-      if (!userIdentifier.id || !userIdentifier.type) {
-        console.log('❌ Master CV API - No valid user identifier found');
+      // Use new authentication system
+      const authResult = await getAuthenticatedUser(request);
+      if (!authResult) {
+        console.log('❌ Master CV API - No valid authentication found');
         return NextResponse.json(
-          { success: false, error: 'User identification failed' },
+          { success: false, error: 'Unauthorized' },
           { status: 401 }
         );
       }
+      userId = authResult.userId;
+      console.log('🔍 Master CV API - Using authenticated user:', authResult.userEmail);
     }
     
-    console.log('🔍 Master CV API - User identifier:', userIdentifier);
+    console.log('🔍 Master CV API - User ID:', userId);
 
-    // Build query condition based on user identifier type
-    // Handle both old format (isMaster at root) and new format (metadata.isMaster)
-    let queryCondition: Record<string, any> = {
+    // Build query condition - handle both old format (isMaster at root) and new format (metadata.isMaster)
+    const queryCondition: Record<string, any> = {
+      userId: new mongoose.Types.ObjectId(userId),
       $or: [
         { 'metadata.isMaster': true },
         { 'metadata.isMaster': 'true' },
@@ -59,22 +48,6 @@ export async function GET(request: NextRequest) {
         { isMaster: 'true' }
       ]
     };
-    
-    if (userIdentifier.type === 'firebase') {
-      // For Firebase users, we need to find the user first to get their MongoDB ObjectId
-      const user = await User.findOne({ firebaseUid: userIdentifier.id });
-      if (!user) {
-        console.log('❌ Master CV API - User not found for Firebase UID:', userIdentifier.id);
-        return NextResponse.json(
-          { success: false, error: 'User not found' },
-          { status: 404 }
-        );
-      }
-      queryCondition.userId = user._id;
-      console.log('🔍 Master CV API - Using Firebase UID, found user ObjectId:', user._id);
-    } else if (userIdentifier.type === 'objectid') {
-      queryCondition.userId = new mongoose.Types.ObjectId(userIdentifier.id);
-    }
 
     console.log('🔍 Master CV API - Query condition:', queryCondition);
 
@@ -83,29 +56,23 @@ export async function GET(request: NextRequest) {
       found: !!masterCV,
       masterCVId: masterCV?._id,
       masterCVUserId: masterCV?.userId,
-      masterCVFirebaseUid: masterCV?.firebaseUid,
-      masterCVTitle: masterCV?.title
+      masterCVTitle: masterCV?.title,
+      isMaster: masterCV?.isMaster,
+      metadataIsMaster: masterCV?.metadata?.isMaster
     });
 
     // Also check all CVs for this user to see what's in the database
-    let allCVsQuery: Record<string, any> = {};
-    if (userIdentifier.type === 'firebase') {
-      // Use the same user ObjectId we found above
-      allCVsQuery.userId = queryCondition.userId;
-    } else {
-      allCVsQuery.userId = new mongoose.Types.ObjectId(userIdentifier.id);
-    }
-
+    const allCVsQuery = { userId: new mongoose.Types.ObjectId(userId) };
     const allCVs = await CV.find(allCVsQuery).lean();
     console.log('🔍 Master CV API - All CVs for user:', allCVs.length);
     allCVs.forEach((cv, index) => {
       console.log(`🔍 Master CV API - CV ${index + 1}:`, {
         id: cv._id,
         title: cv.title,
-        isMaster: cv.metadata?.isMaster,
+        isMaster: cv.isMaster,
+        metadataIsMaster: cv.metadata?.isMaster,
         status: cv.status,
-        userId: cv.userId,
-        firebaseUid: cv.firebaseUid
+        userId: cv.userId
       });
     });
 
@@ -152,32 +119,25 @@ export async function POST(request: NextRequest) {
   try {
     await connectDB();
     
-    // Check authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
+    // Use new authentication system
+    const authResult = await getAuthenticatedUser(request);
+    if (!authResult) {
+      console.log('❌ Master CV POST API - No valid authentication found');
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
       );
     }
-
-    // Extract user identifier from request and session
-    const userIdentifier = extractUserIdentifier(request, session);
     
-    if (!userIdentifier.id || !userIdentifier.type) {
-      console.log('❌ Master CV POST API - No valid user identifier found');
-      return NextResponse.json(
-        { success: false, error: 'User identification failed' },
-        { status: 401 }
-      );
-    }
+    const userId = authResult.userId;
+    console.log('🔍 Master CV POST API - Using authenticated user:', authResult.userEmail);
     
     const body = await request.json();
     const { jobTitle, company, jobId } = body;
 
-    // Find the master CV based on user identifier type
-    // Handle both old format (isMaster at root) and new format (metadata.isMaster)
-    let masterCVQuery: Record<string, any> = {
+    // Find the master CV - handle both old format (isMaster at root) and new format (metadata.isMaster)
+    const masterCVQuery: Record<string, any> = {
+      userId: new mongoose.Types.ObjectId(userId),
       $or: [
         { 'metadata.isMaster': true },
         { 'metadata.isMaster': 'true' },
@@ -185,12 +145,6 @@ export async function POST(request: NextRequest) {
         { isMaster: 'true' }
       ]
     };
-    
-    if (userIdentifier.type === 'firebase') {
-      masterCVQuery.firebaseUid = userIdentifier.id;
-    } else if (userIdentifier.type === 'objectid') {
-      masterCVQuery.userId = new mongoose.Types.ObjectId(userIdentifier.id);
-    }
 
     const masterCV = await CV.findOne(masterCVQuery);
 
@@ -202,16 +156,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate unique title for the duplicated CV to avoid conflicts
-    const generateUniqueTitle = async (baseTitle: string, userId: string, isFirebaseUser: boolean) => {
+    const generateUniqueTitle = async (baseTitle: string, userId: string) => {
       let finalTitle = baseTitle;
       let counter = 1;
       
       // Check for existing CVs with the same title
       while (true) {
-        const query = isFirebaseUser 
-          ? { firebaseUid: userId, title: finalTitle }
-          : { userId: new mongoose.Types.ObjectId(userId), title: finalTitle };
-          
+        const query = { userId: new mongoose.Types.ObjectId(userId), title: finalTitle };
         const existingCV = await CV.findOne(query);
         if (!existingCV) {
           break;
@@ -228,11 +179,7 @@ export async function POST(request: NextRequest) {
       ? `${jobTitle}-${company}-CV`
       : `${masterCV.title} (Copy)`;
     
-    const duplicatedTitle = await generateUniqueTitle(
-      baseTitle,
-      userIdentifier.id,
-      userIdentifier.type === 'firebase'
-    );
+    const duplicatedTitle = await generateUniqueTitle(baseTitle, userId);
 
     // Prepare duplicated CV data
     const duplicatedCVData = {
@@ -253,24 +200,13 @@ export async function POST(request: NextRequest) {
       }
     };
 
-    // Create duplicated CV using the helper function
-    let userId: string | mongoose.Types.ObjectId;
-    let firebaseUid: string;
-    
-    if (userIdentifier.type === 'firebase') {
-      userId = masterCV.userId || new mongoose.Types.ObjectId().toString();
-      firebaseUid = userIdentifier.id;
-    } else {
-      userId = new mongoose.Types.ObjectId(userIdentifier.id);
-      firebaseUid = masterCV.firebaseUid || '';
-    }
+    // Create duplicated CV
+    const duplicatedCV = new CV({
+      ...duplicatedCVData,
+      userId: new mongoose.Types.ObjectId(userId)
+    });
 
-    const duplicatedCV = await createWithFirebaseUid(
-      CV,
-      duplicatedCVData,
-      userId,
-      firebaseUid
-    );
+    await duplicatedCV.save();
 
     return NextResponse.json({
       success: true,

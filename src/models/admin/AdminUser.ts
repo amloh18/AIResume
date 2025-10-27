@@ -186,7 +186,7 @@ let AdminUser: Model<IAdminUser>;
 try {
   AdminUser = mongoose.model<IAdminUser>('AdminUser');
 } catch {
-  AdminUser = mongoose.model<IAdminUser>('AdminUser', AdminUserSchema);
+  AdminUser = mongoose.model<IAdminUser>('AdminUser', AdminUserSchema, 'adminusers');
 }
 
 export default AdminUser;

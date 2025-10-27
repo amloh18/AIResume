@@ -1,118 +1,98 @@
 'use client';
 
+import React from 'react';
+
+// Force dynamic rendering to prevent SSR issues
+export const dynamic = 'force-dynamic';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Suspense } from 'react';
+import { AlertCircle, ArrowLeft } from 'lucide-react';
 
-function ErrorContent() {
+export default function AuthErrorPage() {
   const searchParams = useSearchParams();
   const error = searchParams.get('error');
 
   const getErrorMessage = (error: string | null) => {
     switch (error) {
       case 'Configuration':
-        return 'There is a problem with the server configuration.';
+        return 'There is a problem with the server configuration. Please contact support.';
       case 'AccessDenied':
-        return 'Access denied. You do not have permission to sign in.';
+        return 'Access was denied. You may have cancelled the sign-in process.';
       case 'Verification':
-        return 'The verification link is invalid or has expired.';
+        return 'The verification token has expired or has already been used.';
       case 'OAuthSignin':
-        return 'There was an error with the Google sign-in process. Please try again.';
+        return 'Error occurred while trying to sign in with the OAuth provider.';
       case 'OAuthCallback':
-        return 'There was an error processing the Google sign-in callback.';
+        return 'Error occurred while handling the OAuth callback.';
       case 'OAuthCreateAccount':
-        return 'Could not create account with Google. Please try again.';
+        return 'Could not create OAuth account. Please try again.';
       case 'EmailCreateAccount':
-        return 'Could not create account with this email.';
+        return 'Could not create account with this email. Please try again.';
       case 'Callback':
-        return 'There was an error with the authentication callback.';
+        return 'Error occurred during the authentication callback.';
       case 'OAuthAccountNotLinked':
-        return 'This email is already associated with a different account.';
+        return 'This email is already associated with another account. Please sign in with your original account.';
       case 'EmailSignin':
-        return 'Check your email for a sign-in link.';
+        return 'Error occurred while trying to send the verification email.';
       case 'CredentialsSignin':
-        return 'Sign in failed. Check your credentials and try again.';
+        return 'Invalid credentials. Please check your email and password.';
       case 'SessionRequired':
         return 'Please sign in to access this page.';
-      case 'Default':
-        return 'An unexpected error occurred.';
       default:
-        return 'An authentication error occurred.';
+        return 'An unexpected error occurred during authentication. Please try again.';
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div className="text-center">
-          <div className="mx-auto h-12 w-12 text-red-500">
-            <svg
-              className="h-12 w-12"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              aria-hidden="true"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
-              />
-            </svg>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 flex items-center justify-center px-4">
+      <div className="max-w-md w-full">
+        <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8 shadow-2xl">
+          {/* Error Icon */}
+          <div className="flex justify-center mb-6">
+            <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center">
+              <AlertCircle className="w-8 h-8 text-red-400" />
+            </div>
           </div>
-          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
+
+          {/* Error Title */}
+          <h1 className="text-2xl font-bold text-white text-center mb-4">
             Authentication Error
-          </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            {getErrorMessage(error)}
-          </p>
-          {(error === 'Configuration' || error === 'OAuthSignin' || error === 'OAuthCallback') && (
-            <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
-              <p className="text-sm text-yellow-800">
-                <strong>Possible solutions:</strong>
-              </p>
-              <ul className="mt-2 text-xs text-yellow-700 list-disc list-inside">
-                <li>Check your Google OAuth configuration</li>
-                <li>Verify your environment variables</li>
-                <li>Ensure your redirect URIs are correct</li>
-                <li>Try clearing your browser cache</li>
-                <li>Make sure JavaScript is enabled</li>
-                <li>Try using a different browser</li>
-              </ul>
+          </h1>
+
+          {/* Error Message */}
+          <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 mb-6">
+            <p className="text-red-400 text-sm text-center">
+              {getErrorMessage(error)}
+            </p>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="space-y-3">
+            <Link
+              href="/sign-in"
+              className="w-full bg-gradient-to-r from-lime-400 to-lime-500 hover:from-lime-300 hover:to-lime-400 text-black font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-lg hover:shadow-lime-400/50 flex items-center justify-center gap-2"
+            >
+              Try Again
+            </Link>
+            
+            <Link
+              href="/"
+              className="w-full flex items-center justify-center gap-2 text-gray-400 hover:text-white transition-colors duration-200 py-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Home
+            </Link>
+          </div>
+
+          {/* Debug Info (only in development) */}
+          {process.env.NODE_ENV === 'development' && error && (
+            <div className="mt-6 p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-400 mb-2">Debug Info:</p>
+              <p className="text-xs text-gray-500 font-mono">Error: {error}</p>
             </div>
           )}
         </div>
-        <div className="mt-8 space-y-4">
-          <Link
-            href="/sign-in"
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            Try Again
-          </Link>
-          <Link
-            href="/"
-            className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            Go Home
-          </Link>
-        </div>
       </div>
     </div>
-  );
-}
-
-export default function AuthError() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
-      </div>
-    }>
-      <ErrorContent />
-    </Suspense>
   );
 }
