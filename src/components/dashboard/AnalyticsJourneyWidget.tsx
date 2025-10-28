@@ -45,6 +45,7 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showNewJourneyCard, setShowNewJourneyCard] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
 
   useEffect(() => {
     const userId = getUserIdForAPI(user);

@@ -5,9 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import FloatingStudioLayout from './FloatingStudioLayout';
 import TabbedStudioPanel from './TabbedStudioPanel';
-import JobATSSection from './JobATSSection';
 import ComprehensiveATSAnalyzer from './ComprehensiveATSAnalyzer';
-import CVHealthScore from './CVHealthScore';
 import DraggableSections from './DraggableSections';
 import CVSectionsAndOrdering from './CVSectionsAndOrdering';
 import DesignContent from './DesignContent';
@@ -51,6 +49,7 @@ import ActionBlockerDialog from '@/components/modals/ActionBlockerDialog';
 import { CVJourneyLookupService, CVJourneyInfo } from '@/lib/services/cvJourneyLookupService';
 import { ApplicationPackageService } from '@/lib/services/applicationPackageService';
 import { useNotifications } from '@/contexts/NotificationContext';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface CVStudioProps {
   journeyId?: string | null; // PRIMARY: Journey ID for proper Application Package context
@@ -97,6 +96,10 @@ const CVStudio: React.FC<CVStudioProps> = ({
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isMasterCV, setIsMasterCV] = useState(false);
   const [currentMasterCV, setCurrentMasterCV] = useState<any>(null);
+  
+  // Debounced CV data for preview - prevents excessive re-renders during typing
+  // This is the key optimization from Reactive Resume: separate edit state from preview state
+  const debouncedCvData = useDebounce(cvData, 300);
 
   // Cover Letter Data state
   const [coverLetterData, setCoverLetterData] = useState<any>(null);
@@ -678,8 +681,22 @@ const CVStudio: React.FC<CVStudioProps> = ({
       const newData = { ...prev };
       let current: any = newData;
 
+      // Safely navigate and create intermediate objects/arrays if they don't exist
       for (let i = 0; i < pathArray.length - 1; i++) {
-        current = current[pathArray[i]];
+        const key = pathArray[i];
+        const nextKey = pathArray[i + 1];
+        
+        // If current[key] doesn't exist or is not an object/array, create it
+        if (!current[key] || typeof current[key] !== 'object') {
+          // Check if next key is a number (array index)
+          const isArrayIndex = !isNaN(parseInt(nextKey));
+          current[key] = isArrayIndex ? [] : {};
+        } else {
+          // Make a shallow copy to avoid mutating nested objects
+          current[key] = Array.isArray(current[key]) ? [...current[key]] : { ...current[key] };
+        }
+        
+        current = current[key];
       }
 
       current[pathArray[pathArray.length - 1]] = value;
@@ -2776,7 +2793,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
               documentType === 'cover-letter' ? (
                 <div className="space-y-6">
                   {/* AI Cover Letter Generator */}
-                  <div className={`bg-white dark:bg-[#141810] rounded-lg border border-gray-200 dark:border-white/10 p-6`}>
+                  <div className={`bg-white dark:bg-[#1a230f] rounded-lg border border-gray-200 dark:border-white/10 p-6`}>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">AI Assistant</h3>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                       Generate a personalized cover letter based on your CV and the selected job position.
@@ -2901,7 +2918,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
                                 jobInfo: {
                                   title: finalJobData?.title || finalJobData?.jobTitle || '',
                                   company: finalJobData?.company || '',
-                                  description: finalJobData?.description || finalJobData?.jobDescription || '',
+                                  description: finalJobData?.jobDescription || '',
                                   requirements: finalJobData?.requirements || []
                                 }
                               }),
@@ -2954,7 +2971,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
                   </div>
 
                   {/* Cover Letter Content */}
-                  <div className={`bg-white dark:bg-[#141810] rounded-lg border border-gray-200 dark:border-white/10 p-6`}>
+                  <div className={`bg-white dark:bg-[#1a230f] rounded-lg border border-gray-200 dark:border-white/10 p-6`}>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Cover Letter Content</h3>
                     
                     {/* Formatting Options */}
@@ -3071,7 +3088,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
                 <div className="space-y-4">
                   {/* Skeleton for sections while loading */}
                   {[1, 2, 3, 4, 5].map((i) => (
-                    <div key={i} className="bg-white dark:bg-[#141810] rounded-lg border border-gray-200 dark:border-white/10 p-4 animate-pulse">
+                    <div key={i} className="bg-white dark:bg-[#1a230f] rounded-lg border border-gray-200 dark:border-white/10 p-4 animate-pulse">
                       <div className="h-5 bg-gray-200 dark:bg-gray-700 rounded w-32 mb-3"></div>
                       <div className="space-y-2">
                         <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full"></div>
@@ -3154,28 +3171,21 @@ const CVStudio: React.FC<CVStudioProps> = ({
             }
             jobATSContent={
               documentType === 'cv' && cvData ? (
-                isMasterCV ? (
-                  <CVHealthScore
-                    cvData={cvData}
-                    cvTitle={cvTitle}
-                  />
-                ) : (
-                  <ComprehensiveATSAnalyzer
-                    selectedJobId={selectedJobId}
-                    onJobSelection={handleJobSelection}
-                    userId={userId}
-                    cvData={cvData}
-                    jobData={currentJob}
-                    cvId={cvId}
-                    onUpdateField={updateCVField}
-                    onScoreUpdate={(score) => {
-                      updateAtsScore(score);
-                      if (score >= 60) {
-                        updateJourneyStatus('ats-checked');
-                      }
-                    }}
-                  />
-                )
+                <ComprehensiveATSAnalyzer
+                  selectedJobId={selectedJobId}
+                  onJobSelection={handleJobSelection}
+                  userId={userId}
+                  cvData={cvData}
+                  jobData={currentJob}
+                  cvId={cvId}
+                  onUpdateField={updateCVField}
+                  onScoreUpdate={(score) => {
+                    updateAtsScore(score);
+                    if (score >= 60) {
+                      updateJourneyStatus('ats-checked');
+                    }
+                  }}
+                />
               ) : null
             }
             documentType={documentType}
@@ -3183,7 +3193,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
         }
         rightPanel={
           isLoading ? (
-            <div className="bg-white dark:bg-[#141810] rounded-lg border border-gray-200 dark:border-white/10 p-6 animate-pulse">
+            <div className="bg-white dark:bg-[#1a230f] rounded-lg border border-gray-200 dark:border-white/10 p-6 animate-pulse">
               <div className="space-y-4">
                 <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-48 mb-6"></div>
                 <div className="aspect-[8.5/11] bg-gray-200 dark:bg-gray-700 rounded"></div>
@@ -3191,7 +3201,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
             </div>
           ) : (
             <PreviewPanel
-              cvData={cvData}
+              cvData={debouncedCvData}
               template={selectedTemplate}
               jobData={currentJob}
               zoom={zoom}

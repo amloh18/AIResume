@@ -383,7 +383,7 @@ const CareerReportPage: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="bg-white dark:glass-widget-premium rounded-xl p-6 border border-gray-200 dark:border-transparent shadow-sm"
+          className="glass-widget-premium rounded-xl p-6 border border-gray-200 dark:border-transparent shadow-sm"
         >
           <div className="flex items-center gap-3 mb-6">
             <div className="w-8 h-8 bg-lime-500 rounded-lg flex items-center justify-center">
@@ -396,7 +396,7 @@ const CareerReportPage: React.FC = () => {
             We've determined your current career standing based on your work history.
           </p>
           
-          <div className="bg-gray-50 dark:bg-white/5 rounded-lg p-6 border border-gray-200 dark:border-white/10">
+          <div className="glass-card-premium rounded-lg p-6 border border-gray-200 dark:border-white/10">
             <h4 className="text-3xl font-bold text-lime-500 mb-4">{careerAnalysis.experienceLevel.level}</h4>
             <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{careerAnalysis.experienceLevel.rationale}</p>
           </div>
@@ -407,7 +407,7 @@ const CareerReportPage: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="bg-white dark:glass-widget-premium rounded-xl p-6 border border-gray-200 dark:border-transparent shadow-sm"
+          className="glass-widget-premium rounded-xl p-6 border border-gray-200 dark:border-transparent shadow-sm"
         >
           <div className="flex items-center gap-3 mb-6">
             <div className="w-8 h-8 bg-lime-500 rounded-lg flex items-center justify-center">
@@ -422,7 +422,7 @@ const CareerReportPage: React.FC = () => {
           
           <div className="space-y-6">
             {/* Impact Metrics Table */}
-            <div className="bg-gray-50 dark:bg-white/5 rounded-lg p-6 border border-gray-200 dark:border-white/10">
+            <div className="glass-card-premium rounded-lg p-6 border border-gray-200 dark:border-white/10">
               <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Your CV Impact Metrics</h4>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -477,7 +477,7 @@ const CareerReportPage: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.4 }}
-          className="bg-white dark:glass-widget-premium rounded-xl p-6 border border-gray-200 dark:border-transparent shadow-sm"
+          className="glass-widget-premium rounded-xl p-6 border border-gray-200 dark:border-transparent shadow-sm"
         >
           <div className="flex items-center gap-3 mb-6">
             <div className="w-8 h-8 bg-lime-500 rounded-lg flex items-center justify-center">
@@ -492,7 +492,7 @@ const CareerReportPage: React.FC = () => {
           
           <div className="space-y-6">
             {/* Coherence Score */}
-            <div className="bg-gray-50 dark:bg-white/5 rounded-lg p-6 border border-gray-200 dark:border-white/10">
+            <div className="glass-card-premium rounded-lg p-6 border border-gray-200 dark:border-white/10">
               <div className="flex items-center justify-between mb-4">
                 <h4 className="text-lg font-bold text-gray-900 dark:text-white">Career Coherence Score</h4>
                 <div className="text-3xl font-bold text-lime-500">{careerAnalysis.careerCoherence?.score || 92}%</div>
@@ -510,7 +510,7 @@ const CareerReportPage: React.FC = () => {
                 { title: careerAnalysis.careerPath.step2.title, description: careerAnalysis.careerPath.step2.reasoning },
                 { title: careerAnalysis.careerPath.step3.title, description: careerAnalysis.careerPath.step3.reasoning }
               ].map(({ title, description }, index) => (
-                <div key={index} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                <div key={index} className="glass-card-premium rounded-lg p-4 border border-gray-200 dark:border-white/10">
                   <h4 className="text-gray-900 dark:text-white font-semibold mb-2">{title}</h4>
                   <p className="text-gray-600 dark:text-white/60 text-sm">{description}</p>
                 </div>
@@ -524,7 +524,7 @@ const CareerReportPage: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.6 }}
-          className="bg-white dark:glass-widget-premium rounded-xl p-6 border border-gray-200 dark:border-transparent shadow-sm"
+          className="glass-widget-premium rounded-xl p-6 border border-gray-200 dark:border-transparent shadow-sm"
         >
           <div className="flex items-center gap-3 mb-6">
             <div className="w-8 h-8 bg-lime-500 rounded-lg flex items-center justify-center">
@@ -539,7 +539,7 @@ const CareerReportPage: React.FC = () => {
           
           <div className="space-y-6">
             {/* Skill Depth Analysis */}
-            <div className="bg-gray-50 dark:bg-white/5 rounded-lg p-6 border border-gray-200 dark:border-white/10">
+            <div className="glass-card-premium rounded-lg p-6 border border-gray-200 dark:border-white/10">
               <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Skill Depth vs. Frequency</h4>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -566,7 +566,7 @@ const CareerReportPage: React.FC = () => {
             </div>
 
             {/* Focus Areas */}
-            <div className="bg-gray-50 dark:bg-white/5 rounded-lg p-6 border border-gray-200 dark:border-white/10">
+            <div className="glass-card-premium rounded-lg p-6 border border-gray-200 dark:border-white/10">
               <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-4">CV Focus Distribution</h4>
               <div className="space-y-3">
                 {careerAnalysis.skillsGap?.focusDistribution.map((item, index) => (
@@ -593,7 +593,7 @@ const CareerReportPage: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.8 }}
-          className="bg-white dark:glass-widget-premium rounded-xl p-6 border border-gray-200 dark:border-transparent shadow-sm"
+          className="glass-widget-premium rounded-xl p-6 border border-gray-200 dark:border-transparent shadow-sm"
         >
           <div className="flex items-center gap-3 mb-6">
             <div className="w-8 h-8 bg-lime-500 rounded-lg flex items-center justify-center">

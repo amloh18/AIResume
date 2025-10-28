@@ -19,6 +19,7 @@ import { CVJourneyLookupService } from '@/lib/services/cvJourneyLookupService';
 import { CVProgressService } from '@/lib/services/cvProgressService';
 import { useSession } from 'next-auth/react';
 import { formatDetailedTime } from '@/lib/utils/timeUtils';
+import CVPreviewThumbnail from './CVPreviewThumbnail';
 
 interface CV {
   id: string;
@@ -30,6 +31,12 @@ interface CV {
   thumbnail?: string; // URL to PNG snapshot
   description?: string;
   cvData?: any;
+  template?: {
+    _id: string;
+    name: string;
+    globalStyles: any;
+    availableSections: any[];
+  };
   completionPercentage?: number;
   isMaster?: boolean;
   journeyId?: string; // For linked journey functionality
@@ -45,7 +52,7 @@ interface CVCardOverlayProps {
   onToggleStar: (cvId: string) => void;
   onRename: (cvId: string, newTitle: string) => void;
   onLinkedJourney?: (cv: CV) => void; // Navigate to application tracker
-  onEditJourney?: (cv: CV, journey: any) => void; // Open ApplicationJourneyModal
+  onEditJourney?: (cv: CV, journey: any) => void; // Open JobModal
   onTitleEdit?: (cvId: string, newTitle: string) => void;
   editingCVId?: string | null;
   editingTitle?: string;
@@ -77,6 +84,30 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
   const [checkingJourney, setCheckingJourney] = useState(false);
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(cv.thumbnail || null);
   const [thumbnailLoading, setThumbnailLoading] = useState(false);
+
+  // Generate random background color based on CV ID for consistency
+  const getRandomColor = (id: string) => {
+    const colors = [
+      '#F0FDF4', // Light green
+      '#FEF3C7', // Light yellow
+      '#FEE2E2', // Light red
+      '#E0E7FF', // Light blue
+      '#F3E8FF', // Light purple
+      '#F0F9FF', // Light cyan
+      '#FDF2F8', // Light pink
+      '#ECFDF5', // Light emerald
+      '#FFFBEB', // Light amber
+      '#F1F5F9', // Light slate
+    ];
+    
+    // Use CV ID to generate consistent color
+    const hash = id.split('').reduce((a, b) => {
+      a = ((a << 5) - a) + b.charCodeAt(0);
+      return a & a;
+    }, 0);
+    
+    return colors[Math.abs(hash) % colors.length];
+  };
 
   // Check if CV is linked to any journey
   useEffect(() => {
@@ -146,7 +177,7 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
 
   return (
     <motion.div
-      className="relative group cursor-pointer"
+      className="flex flex-col gap-3 pb-3 group cursor-pointer"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: "spring", stiffness: 100 }}
@@ -154,54 +185,63 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* CV Preview Container - Vibrant colored card */}
-      <div className="relative aspect-[3/4] overflow-hidden rounded-xl shadow-lg hover:shadow-xl transition-all duration-300" 
+      {/* CV Preview Container - Outer colored background */}
+      <div className="w-full aspect-[3/4] rounded-xl border border-gray-200 dark:border-gray-700 group-hover:shadow-lg dark:group-hover:shadow-lime-500/20 transition-shadow p-6"
            style={{
-             background: cv.metadata?.cardColor || 
-               (cv.title.includes('Software') ? '#2D3748' : 
-                cv.title.includes('Product') ? '#F7FAFC' :
-                cv.title.includes('UX') ? '#FED7D7' : '#F7FAFC')
+             backgroundColor: getRandomColor(cv.id)
            }}>
-        {/* CV Thumbnail Image */}
-        {thumbnailUrl ? (
-          <img
-            src={thumbnailUrl}
-            alt={`CV Preview: ${cv.title}`}
-            className="w-full h-full object-cover"
-            loading="lazy"
-          />
-        ) : thumbnailLoading ? (
-          /* Loading state */
-          <div className="w-full h-full flex items-center justify-center">
-            <div className="text-center text-gray-500">
-              <Loader2 size={32} className="mx-auto mb-2 animate-spin opacity-50" />
-              <p className="text-sm font-medium">Generating preview...</p>
-              <p className="text-xs opacity-75">Please wait</p>
+        {/* CV Preview - Inner smaller preview */}
+        <div className="w-full h-full bg-center bg-no-repeat bg-cover rounded-xl relative shadow-lg"
+             style={{
+               backgroundImage: thumbnailUrl ? `url(${thumbnailUrl})` : 'none'
+             }}>
+          {/* CV Preview */}
+          {cv.cvData && cv.template ? (
+            <CVPreviewThumbnail 
+              cvData={cv.cvData}
+              template={cv.template}
+              className="rounded-xl"
+            />
+          ) : thumbnailUrl ? (
+            <img
+              src={thumbnailUrl}
+              alt={`CV Preview: ${cv.title}`}
+              className="w-full h-full object-cover rounded-xl"
+              loading="lazy"
+            />
+          ) : thumbnailLoading ? (
+            /* Loading state */
+            <div className="w-full h-full flex items-center justify-center rounded-xl">
+              <div className="text-center text-gray-500">
+                <Loader2 size={32} className="mx-auto mb-2 animate-spin opacity-50" />
+                <p className="text-sm font-medium">Generating preview...</p>
+                <p className="text-xs opacity-75">Please wait</p>
+              </div>
             </div>
-          </div>
-        ) : (
-          /* Fallback when no thumbnail available */
-          <div className="w-full h-full flex items-center justify-center">
-            <div className="text-center text-gray-500">
-              <FileText size={48} className="mx-auto mb-2 opacity-50" />
-              <p className="text-sm font-medium">{cv.title}</p>
-              <p className="text-xs opacity-75">No preview available</p>
+          ) : (
+            /* Fallback when no preview available */
+            <div className="w-full h-full flex items-center justify-center rounded-xl">
+              <div className="text-center text-gray-500">
+                <FileText size={48} className="mx-auto mb-2 opacity-50" />
+                <p className="text-sm font-medium">{cv.title}</p>
+                <p className="text-xs opacity-75">No preview available</p>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Master Badge - Top right corner as shown in image */}
-        {(cv.isMaster || cv.metadata?.isMaster) && (
-          <div className="absolute top-3 right-3">
-            <span className="px-2 py-1 rounded text-xs font-medium bg-lime-400 text-black border border-lime-400">
-              Master
-            </span>
-          </div>
-        )}
+          {/* Master Badge - Top right corner */}
+          {(cv.isMaster || cv.metadata?.isMaster) && (
+            <div className="absolute top-3 right-3">
+              <span className="px-2 py-1 rounded text-xs font-medium bg-lime-400 text-black border border-lime-400">
+                Master
+              </span>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Card Footer - Title, Last Modified, and Action Icons - No background */}
-      <div className="mt-3 h-24 flex flex-col justify-between">
+      {/* Card Info Section */}
+      <div>
         {/* CV Title */}
         <div className="mb-2">
           {editingCVId === cv.id ? (
@@ -210,7 +250,7 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
                 type="text"
                 value={editingTitle || ''}
                 onChange={(e) => onTitleEdit?.(cv.id, e.target.value)}
-                className="flex-1 bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-white text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="flex-1 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-gray-900 dark:text-white text-base font-medium focus:outline-none focus:ring-2 focus:ring-lime-400"
                 autoFocus
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
@@ -244,39 +284,25 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
               </motion.button>
             </div>
           ) : (
-            <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-white text-sm flex-1">
-                {cv.title}
-              </h3>
-              <motion.button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onStartEditing?.(cv);
-                }}
-                className="p-1 text-gray-400 hover:text-white transition-all duration-200 opacity-0 group-hover:opacity-100"
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-              >
-                <Pencil size={12} />
-              </motion.button>
-            </div>
+            <p className="text-gray-800 dark:text-white text-base font-medium leading-normal">
+              {cv.title}
+            </p>
           )}
         </div>
 
         {/* Last Modified */}
-        <div className="text-xs text-gray-400 mb-3">
+        <p className="text-gray-500 dark:text-[#aebb9b] text-sm font-normal leading-normal">
           Last modified: {formatDate(cv.lastModified)}
-        </div>
+        </p>
 
-        {/* Action Icons Row - Plain icons without boxes */}
-        <div className="flex items-center justify-center gap-4">
-          {/* Edit Icon */}
+        {/* Action Icons Row */}
+        <div className="flex gap-2 mt-2 text-gray-500 dark:text-[#aebb9b]">
           <motion.button
             onClick={(e) => {
               e.stopPropagation();
               onEdit(cv);
             }}
-            className="p-2 text-gray-400 hover:text-white transition-all duration-200"
+            className="hover:text-lime-500 dark:hover:text-lime-400 transition-all duration-200"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             title="Edit CV"
@@ -284,13 +310,12 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
             <Pencil size={16} />
           </motion.button>
 
-          {/* Download Icon */}
           <motion.button
             onClick={(e) => {
               e.stopPropagation();
               onDownload(cv);
             }}
-            className="p-2 text-gray-400 hover:text-white transition-all duration-200"
+            className="hover:text-lime-500 dark:hover:text-lime-400 transition-all duration-200"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             title="Download CV"
@@ -298,13 +323,12 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
             <Download size={16} />
           </motion.button>
 
-          {/* Delete Icon */}
           <motion.button
             onClick={(e) => {
               e.stopPropagation();
               handleDelete();
             }}
-            className="p-2 text-gray-400 hover:text-white transition-all duration-200"
+            className="hover:text-lime-500 dark:hover:text-lime-400 transition-all duration-200"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             title="Delete CV"
@@ -312,13 +336,12 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
             <Trash2 size={16} />
           </motion.button>
 
-          {/* Share Icon */}
           <motion.button
             onClick={(e) => {
               e.stopPropagation();
               // Add share functionality here
             }}
-            className="p-2 text-gray-400 hover:text-white transition-all duration-200"
+            className="hover:text-lime-500 dark:hover:text-lime-400 transition-all duration-200"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             title="Share CV"

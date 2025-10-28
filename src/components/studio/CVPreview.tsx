@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react';
 import { 
   ZoomIn, 
   ZoomOut,
@@ -44,7 +44,7 @@ const PAGE_DIMENSIONS = {
   Letter: { width: 816, height: 1056 } // Letter: 8.5" x 11"
 };
 
-const CVPreview: React.FC<CVPreviewProps> = ({
+const CVPreviewComponent: React.FC<CVPreviewProps> = ({
   cvData,
   template,
   jobData,
@@ -73,82 +73,116 @@ const CVPreview: React.FC<CVPreviewProps> = ({
   // Get current page dimensions
   const currentDimensions = PAGE_DIMENSIONS[paperSize];
 
-  // Estimate section height based on content
-  const getSectionHeight = useCallback((section: string): number => {
-    if (!cvData) return 0;
-    
-    const baseHeights: { [key: string]: number } = {
-      personal_header: 150,
-      work_experience: Math.max(300, (cvData.workExperience?.length || 0) * 150),
-      education: Math.max(200, (cvData.education?.length || 0) * 100),
-      skills: Math.max(150, (cvData.skills?.length || 0) * 50),
-      projects: Math.max(200, (cvData.projects?.length || 0) * 120),
-      certificates: Math.max(150, (cvData.certificates?.length || 0) * 80),
-      languages: Math.max(120, (cvData.languages?.length || 0) * 60),
-      volunteer: Math.max(150, (cvData.volunteer?.length || 0) * 100),
-      awards: Math.max(120, (cvData.awards?.length || 0) * 80),
-      publications: Math.max(120, (cvData.publications?.length || 0) * 80)
+  // Check if section has data - memoized to prevent recalculation
+  const hasSectionData = useMemo(() => {
+    return (section: string): boolean => {
+      if (!cvData) return false;
+      
+      switch (section) {
+        case 'personal_header':
+          return !!(cvData.basics?.name || cvData.basics?.email || cvData.basics?.phone);
+        case 'work_experience':
+          return Array.isArray(cvData.work) && cvData.work.length > 0;
+        case 'education':
+          return Array.isArray(cvData.education) && cvData.education.length > 0;
+        case 'skills':
+          return Array.isArray(cvData.skills) && cvData.skills.length > 0;
+        case 'projects':
+          return Array.isArray(cvData.projects) && cvData.projects.length > 0;
+        case 'certificates':
+          return Array.isArray(cvData.certificates) && cvData.certificates.length > 0;
+        case 'languages':
+          return Array.isArray(cvData.languages) && cvData.languages.length > 0;
+        case 'volunteer':
+          return Array.isArray(cvData.volunteer) && cvData.volunteer.length > 0;
+        case 'awards':
+          return Array.isArray(cvData.awards) && cvData.awards.length > 0;
+        case 'publications':
+          return Array.isArray(cvData.publications) && cvData.publications.length > 0;
+        default:
+          return false;
+      }
     };
-    
-    return baseHeights[section] || 100;
   }, [cvData]);
+
+  // Estimate section height based on content - memoized for performance
+  const getSectionHeight = useMemo(() => {
+    return (section: string): number => {
+      if (!cvData || !hasSectionData(section)) return 0;
+      
+      const baseHeights: { [key: string]: number } = {
+        personal_header: 150,
+        work_experience: Math.max(300, (cvData.work?.length || 0) * 150),
+        education: Math.max(200, (cvData.education?.length || 0) * 100),
+        skills: Math.max(150, (cvData.skills?.length || 0) * 50),
+        projects: Math.max(200, (cvData.projects?.length || 0) * 120),
+        certificates: Math.max(150, (cvData.certificates?.length || 0) * 80),
+        languages: Math.max(120, (cvData.languages?.length || 0) * 60),
+        volunteer: Math.max(150, (cvData.volunteer?.length || 0) * 100),
+        awards: Math.max(120, (cvData.awards?.length || 0) * 80),
+        publications: Math.max(120, (cvData.publications?.length || 0) * 80),
+        interests: Math.max(80, (cvData.interests?.length || 0) * 30),
+        references: Math.max(120, (cvData.references?.length || 0) * 80)
+      };
+      
+      return baseHeights[section] || 100;
+    };
+  }, [cvData, hasSectionData]);
 
   // Calculate pages based on content height
   const calculatePages = useMemo(() => {
     if (!cvData) return { pages: { 1: [] }, totalPages: 1 };
 
-    // Make page splitting more aggressive by reducing available height
-    const maxPageHeight = (currentDimensions.height - pagePadding.top - pagePadding.bottom) * 0.7;
+    // Use full available height with minimal buffer for more efficient page usage
+    const maxPageHeight = (currentDimensions.height - pagePadding.top - pagePadding.bottom) * 0.95;
     
-    // Get all sections in order
-    const sections = sectionOrder || ['personal_header', 'work_experience', 'education', 'skills', 'projects', 'certificates', 'languages'];
+    // Get all sections in order, but filter out sections without data
+    const allSections = sectionOrder || ['personal_header', 'work_experience', 'education', 'skills', 'projects', 'certificates', 'languages'];
+    const sectionsWithData = allSections.filter(section => hasSectionData(section));
     
+    // If no sections have data, return empty first page
+    if (sectionsWithData.length === 0) {
+      return { pages: { 1: [] }, totalPages: 1 };
+    }
+    
+    // Calculate pages based on section heights
     const pages: { [key: number]: string[] } = {};
     let currentPage = 1;
     let currentPageHeight = 0;
     
-    // Add header to first page
-    if (sections.includes('personal_header')) {
-      pages[currentPage] = ['personal_header'];
-      currentPageHeight = getSectionHeight('personal_header');
-    }
-
-    // Distribute other sections
-    sections.forEach(section => {
-      if (section === 'personal_header') return; // Already handled
+    pages[currentPage] = [];
+    
+    for (const section of sectionsWithData) {
+      const sectionHeight = getSectionHeight(section);
       
-      const estimatedHeight = getSectionHeight(section);
-      
-      // Add some buffer to prevent sections from being cut off
-      const bufferHeight = 50;
-      
-      if (currentPageHeight + estimatedHeight + bufferHeight > maxPageHeight) {
+      // Check if adding this section would exceed page height
+      if (currentPageHeight + sectionHeight > maxPageHeight && pages[currentPage].length > 0) {
+        // Start a new page
         currentPage++;
+        pages[currentPage] = [];
         currentPageHeight = 0;
       }
       
-      if (!pages[currentPage]) {
-        pages[currentPage] = [];
-      }
-      
+      // Add section to current page
       pages[currentPage].push(section);
-      currentPageHeight += estimatedHeight;
-    });
-
-    // Clean up empty pages
-    const cleanedPages: { [key: number]: string[] } = {};
-    let actualPageCount = 0;
-    
-    for (let i = 1; i <= currentPage; i++) {
-      if (pages[i] && pages[i].length > 0) {
-        actualPageCount++;
-        cleanedPages[actualPageCount] = pages[i];
-      }
+      currentPageHeight += sectionHeight;
     }
 
+    // Debug logging
+    console.log('📄 CVPreview - Page calculation:', {
+      maxPageHeight,
+      sectionsWithData,
+      pages,
+      totalPages: currentPage,
+      pageHeights: Object.keys(pages).map(pageNum => ({
+        page: pageNum,
+        sections: pages[parseInt(pageNum)],
+        height: pages[parseInt(pageNum)].reduce((sum, section) => sum + getSectionHeight(section), 0)
+      }))
+    });
 
-    return { pages: cleanedPages, totalPages: actualPageCount };
-  }, [cvData, sectionOrder, currentDimensions.height, pagePadding, getSectionHeight]);
+    return { pages, totalPages: currentPage };
+  }, [cvData, sectionOrder, currentDimensions.height, pagePadding, hasSectionData, getSectionHeight]);
 
   // Update total pages when content changes
   useEffect(() => {
@@ -198,13 +232,13 @@ const CVPreview: React.FC<CVPreviewProps> = ({
   // Zoom handlers
   const handleZoomIn = () => {
     if (setZoom) {
-      setZoom(Math.min(2, zoom + 0.25));
+      setZoom(Math.min(2, zoom + 0.1));
     }
   };
 
   const handleZoomOut = () => {
     if (setZoom) {
-      setZoom(Math.max(0.25, zoom - 0.25));
+      setZoom(Math.max(0.5, zoom - 0.1));
     }
   };
 
@@ -223,7 +257,7 @@ const CVPreview: React.FC<CVPreviewProps> = ({
 
   if (!cvData) {
     return (
-      <div className="flex items-center justify-center h-full bg-gray-100 dark:bg-[#141810]">
+      <div className="flex items-center justify-center h-full bg-gray-100 dark:bg-[#1a230f]">
         <div className="text-center">
           <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <p className="text-gray-500 dark:text-gray-400">No CV data available</p>
@@ -233,9 +267,12 @@ const CVPreview: React.FC<CVPreviewProps> = ({
   }
 
   return (
-    <div className="relative">
+    <div className="relative bg-white/95 dark:bg-[#1a230f]" style={{ 
+      transform: `scale(${zoom})`,
+      transformOrigin: 'top center'
+    }}>
       {/* Vertical scrollable container for all pages */}
-      <div>
+      <div className="space-y-4">
         {Object.keys(calculatePages.pages).map((pageKey, index) => {
           const pageNumber = parseInt(pageKey);
           const pageSections = calculatePages.pages[pageNumber];
@@ -243,22 +280,18 @@ const CVPreview: React.FC<CVPreviewProps> = ({
           return (
             <div 
               key={pageNumber}
-              className="bg-white shadow-xl mx-auto relative"
+              className="bg-white mx-auto relative"
               style={{
                 width: currentDimensions.width,
                 minHeight: currentDimensions.height,
-                transform: `scale(${zoom})`,
-                transformOrigin: 'top center',
                 padding: `${pagePadding.top}px ${pagePadding.bottom}px`,
-                marginTop: '0',
-                marginBottom: '15px',
-                boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)'
+                boxShadow: 'none'
               }}
             >
               {/* Page number indicator */}
               {totalPages > 1 && (
                 <div 
-                  className="absolute top-2 right-2 text-xs text-gray-500 bg-white px-2 py-1 rounded shadow-sm"
+                  className="absolute top-2 right-2 text-xs text-gray-500 bg-white px-2 py-1 rounded"
                   style={{ fontSize: '10px' }}
                 >
                   Page {pageNumber} of {totalPages}
@@ -273,12 +306,59 @@ const CVPreview: React.FC<CVPreviewProps> = ({
                 sectionVisibility={sectionVisibility}
                 enabledSections={pageSections}
                 className="template-rendered-content"
+                customStyles={{
+                  height: '100%',
+                  overflow: 'hidden',
+                  pageBreakInside: 'avoid',
+                  breakInside: 'avoid'
+                }}
               />
 
               {/* Custom CSS */}
               {customCSS && (
                 <style dangerouslySetInnerHTML={{ __html: customCSS }} />
               )}
+              
+              {/* Page break CSS - optimized for both screen and print */}
+              <style dangerouslySetInnerHTML={{ __html: `
+                .template-rendered-content {
+                  height: 100%;
+                  overflow: hidden;
+                  page-break-inside: avoid;
+                  break-inside: avoid;
+                }
+                
+                .template-rendered-content .section-content {
+                  page-break-inside: avoid;
+                  break-inside: avoid;
+                }
+                
+                .template-rendered-content .experience-item,
+                .template-rendered-content .education-item,
+                .template-rendered-content .project-item {
+                  page-break-inside: avoid;
+                  break-inside: avoid;
+                }
+                
+                .template-rendered-content .section-header {
+                  page-break-after: avoid;
+                  break-after: avoid;
+                }
+                
+                /* Print-specific optimizations for better PDF output */
+                @media print {
+                  .template-rendered-content {
+                    -webkit-print-color-adjust: exact;
+                    print-color-adjust: exact;
+                    color-adjust: exact;
+                  }
+                  
+                  * {
+                    -webkit-print-color-adjust: exact;
+                    print-color-adjust: exact;
+                  }
+                }
+              ` }} />
             </div>
           );
         })}
@@ -287,5 +367,25 @@ const CVPreview: React.FC<CVPreviewProps> = ({
     </div>
   );
 };
+
+// Memoize the component to prevent unnecessary re-renders
+// Only re-render when props actually change (deep comparison for objects)
+const CVPreview = memo(CVPreviewComponent, (prevProps, nextProps) => {
+  // Custom comparison for performance
+  // Re-render only if critical props change
+  return (
+    prevProps.cvData === nextProps.cvData &&
+    prevProps.template === nextProps.template &&
+    prevProps.jobData === nextProps.jobData &&
+    prevProps.zoom === nextProps.zoom &&
+    prevProps.paperSize === nextProps.paperSize &&
+    prevProps.documentType === nextProps.documentType &&
+    JSON.stringify(prevProps.sectionOrder) === JSON.stringify(nextProps.sectionOrder) &&
+    JSON.stringify(prevProps.sectionVisibility) === JSON.stringify(nextProps.sectionVisibility) &&
+    JSON.stringify(prevProps.pagePadding) === JSON.stringify(nextProps.pagePadding)
+  );
+});
+
+CVPreview.displayName = 'CVPreview';
 
 export default CVPreview;

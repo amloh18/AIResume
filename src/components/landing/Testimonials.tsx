@@ -148,7 +148,7 @@ const Testimonials = () => {
   };
 
   return (
-    <section id="testimonials" className="relative h-screen flex items-center bg-gradient-to-b from-gray-900 to-black overflow-hidden pt-20">
+    <section id="testimonials" className="relative py-20 flex items-center bg-gradient-to-b from-gray-900 to-black overflow-hidden">
       {/* Grid Pattern Background */}
       <div className="absolute inset-0">
         {/* Grid Lines */}
@@ -190,9 +190,9 @@ const Testimonials = () => {
           viewport={{ once: true }}
         >
           <h2 className="text-3xl sm:text-5xl font-bold text-white mb-6 text-center">
-            Trusted by job seekers,{' '}
+            The new way to{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-lime-500">
-              loved by professionals
+              build Tailored CV
             </span>
           </h2>
           <p className="text-lg text-white/70 max-w-3xl mx-auto leading-relaxed">

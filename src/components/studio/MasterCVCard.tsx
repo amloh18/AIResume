@@ -191,7 +191,7 @@ const MasterCVCard: React.FC<MasterCVCardProps> = ({
       </div>
 
       {/* Master CV Info */}
-      <div className="bg-white/80 dark:bg-[#141810] rounded-lg p-4 mb-4 border border-gray-200/60 dark:border-white/10">
+      <div className="bg-white/80 dark:bg-[#1a230f] rounded-lg p-4 mb-4 border border-gray-200/60 dark:border-white/10">
         <div className="flex items-center gap-3 mb-2">
           <FileText className="w-4 h-4 text-lime-600" />
           <h5 className="font-semibold text-gray-900 dark:text-white">{masterCV.title}</h5>
@@ -223,7 +223,7 @@ const MasterCVCard: React.FC<MasterCVCardProps> = ({
           <motion.button
             onClick={handleDuplicate}
             disabled={actionLoading === 'duplicate'}
-            className="flex items-center justify-center gap-2 px-4 py-3 bg-white/80 dark:bg-[#141810] hover:bg-white dark:hover:bg-[#313a28] text-gray-700 dark:text-white text-sm font-medium rounded-lg transition-all duration-200 border border-gray-200 dark:border-white/10 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center justify-center gap-2 px-4 py-3 bg-white/80 dark:bg-[#1a230f] hover:bg-white dark:hover:bg-[#313a28] text-gray-700 dark:text-white text-sm font-medium rounded-lg transition-all duration-200 border border-gray-200 dark:border-white/10 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             whileHover={{ scale: actionLoading === 'duplicate' ? 1 : 1.02 }}
             whileTap={{ scale: actionLoading === 'duplicate' ? 1 : 0.98 }}
           >

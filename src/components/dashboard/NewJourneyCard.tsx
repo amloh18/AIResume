@@ -451,7 +451,7 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
                     placeholder="Search jobs..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-gray-200 dark:bg-white/10 border border-gray-300 dark:border-white/20 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/40 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-400/50 focus:border-transparent"
                   />
                 </div>
 
@@ -525,7 +525,7 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
                     placeholder="Search CVs..."
                     value={cvSearchQuery}
                     onChange={(e) => setCvSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 bg-gray-200 dark:bg-white/10 border border-gray-300 dark:border-white/20 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/40 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-400/50 focus:border-transparent"
                   />
                 </div>
 
@@ -607,7 +607,7 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
                 <div className="flex gap-2 mt-4">
                   <motion.button
                     onClick={() => setCurrentStep(1)}
-                    className="flex-1 px-4 py-2 bg-gray-200 dark:bg-white/10 hover:bg-gray-300 dark:hover:bg-white/20 text-gray-700 dark:text-white font-medium rounded-lg transition-colors"
+                    className="flex-1 px-4 py-2 bg-gray-100 dark:bg-[#232f1c] hover:bg-gray-200 dark:hover:bg-[#2a3a1f] text-gray-700 dark:text-white font-medium rounded-lg transition-colors"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
@@ -669,14 +669,14 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
                     value={journeyName}
                     onChange={(e) => setJourneyName(e.target.value)}
                     placeholder={`${selectedJob?.jobTitle} at ${selectedJob?.company}`}
-                    className="w-full px-4 py-2 bg-gray-200 dark:bg-white/10 border border-gray-300 dark:border-white/20 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/40 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-400/50 focus:border-transparent"
                   />
                 </div>
 
                 <div className="flex gap-2 mt-6">
                   <motion.button
                     onClick={() => setCurrentStep(2)}
-                    className="flex-1 px-4 py-2 bg-gray-200 dark:bg-white/10 hover:bg-gray-300 dark:hover:bg-white/20 text-gray-700 dark:text-white font-medium rounded-lg transition-colors"
+                    className="flex-1 px-4 py-2 bg-gray-100 dark:bg-[#232f1c] hover:bg-gray-200 dark:hover:bg-[#2a3a1f] text-gray-700 dark:text-white font-medium rounded-lg transition-colors"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >

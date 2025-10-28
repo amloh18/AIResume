@@ -26,13 +26,15 @@ import {
   Copy,
   AlertCircle
 } from 'lucide-react';
-import { useSession } from 'next-auth/react';
+import { useUnifiedAuth } from '@/lib/hooks/useUnifiedAuth';
+import { authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
 import { v4 as uuidv4 } from 'uuid';
 import { ApplicationPackageService } from '@/lib/services/applicationPackageService';
 import { useNotifications } from '@/contexts/NotificationContext';
 
 interface Job {
   id?: string;
+  userId?: string;
   jobTitle?: string;
   company?: string;
   location?: string;
@@ -49,16 +51,55 @@ interface Job {
     min?: number;
     max?: number;
     currency?: string;
-    period?: string;
+    period?: 'hourly' | 'monthly' | 'yearly';
   };
-  contacts?: Array<{
-    name: string;
-    role: string;
-    email: string;
+  contactDetails?: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    role?: string;
+  };
+  interviews?: Array<{
+    type: 'phone' | 'video' | 'onsite' | 'technical' | 'behavioral';
+    date: Date;
+    duration?: number;
+    interviewer?: string;
+    notes?: string;
+    outcome?: 'scheduled' | 'completed' | 'cancelled' | 'no-show';
+    feedback?: string;
   }>;
+  followUps?: Array<{
+    date: Date;
+    type: 'email' | 'phone' | 'linkedin' | 'other';
+    description: string;
+    outcome?: string;
+  }>;
+  attachments?: Array<{
+    name: string;
+    type: 'cv' | 'cover-letter' | 'certificate' | 'portfolio' | 'other';
+    url: string;
+    size: number;
+    uploadedAt: Date;
+  }>;
+  source?: 'linkedin' | 'indeed' | 'company-website' | 'referral' | 'other';
+  sourceUrl?: string;
+  atsScore?: number;
+  atsAnalysis?: {
+    matchedKeywords: string[];
+    missingKeywords: string[];
+    suggestions: string[];
+    analyzedAt: Date;
+  };
+  statusHistory?: Array<{
+    status: string;
+    changedAt: Date;
+    previousStatus?: string;
+  }>;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
-interface AddEditJobModalProps {
+interface EditJobModalProps {
   isOpen: boolean;
   onClose: () => void;
   onJobSaved: (job: Job) => void;
@@ -66,14 +107,14 @@ interface AddEditJobModalProps {
   userId?: string;
 }
 
-const AddEditJobModal: React.FC<AddEditJobModalProps> = ({
+const EditJobModal: React.FC<EditJobModalProps> = ({
   isOpen,
   onClose,
   onJobSaved,
   editingJob,
   userId
 }) => {
-  const { data: session } = useSession();
+  const { user } = useUnifiedAuth();
   const { addNotification } = useNotifications();
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -103,9 +144,24 @@ const AddEditJobModal: React.FC<AddEditJobModalProps> = ({
       min: undefined,
       max: undefined,
       currency: 'USD',
-      period: 'yearly'
+      period: 'yearly' as 'hourly' | 'monthly' | 'yearly'
     },
-    contacts: []
+    contactDetails: {
+      name: '',
+      email: '',
+      phone: '',
+      role: ''
+    },
+    interviews: [],
+    followUps: [],
+    attachments: [],
+    source: 'other',
+    sourceUrl: '',
+    atsScore: undefined,
+    atsAnalysis: undefined,
+    statusHistory: [],
+    createdAt: undefined,
+    updatedAt: undefined
   });
 
   // Character counters
@@ -121,8 +177,16 @@ const AddEditJobModal: React.FC<AddEditJobModalProps> = ({
       const data = {
         ...editingJob,
         tags: editingJob.tags || [],
-        salary: editingJob.salary || { min: undefined, max: undefined, currency: 'USD', period: 'yearly' },
-        contacts: editingJob.contacts || []
+        salary: editingJob.salary || { min: undefined, max: undefined, currency: 'USD', period: 'yearly' as 'hourly' | 'monthly' | 'yearly' },
+        contactDetails: editingJob.contactDetails || { name: '', email: '', phone: '', role: '' },
+        interviews: editingJob.interviews || [],
+        followUps: editingJob.followUps || [],
+        attachments: editingJob.attachments || [],
+        source: editingJob.source || 'other',
+        sourceUrl: editingJob.sourceUrl || '',
+        atsScore: editingJob.atsScore || undefined,
+        atsAnalysis: editingJob.atsAnalysis || undefined,
+        statusHistory: editingJob.statusHistory || []
       };
       setFormData(data);
       lastSavedDataRef.current = data;
@@ -146,9 +210,17 @@ const AddEditJobModal: React.FC<AddEditJobModalProps> = ({
           min: undefined,
           max: undefined,
           currency: 'USD',
-          period: 'yearly'
+          period: 'yearly' as 'hourly' | 'monthly' | 'yearly'
         },
-        contacts: []
+        contactDetails: { name: '', email: '', phone: '', role: '' },
+        interviews: [],
+        followUps: [],
+        attachments: [],
+        source: 'other' as 'linkedin' | 'indeed' | 'company-website' | 'referral' | 'other',
+        sourceUrl: '',
+        atsScore: undefined,
+        atsAnalysis: undefined,
+        statusHistory: []
       };
       setFormData(newJobData);
       lastSavedDataRef.current = newJobData;
@@ -195,7 +267,7 @@ const AddEditJobModal: React.FC<AddEditJobModalProps> = ({
   const getFormData = () => {
     return {
       ...formData,
-      userId: userId || session?.user?.id,
+      userId: userId || user?.id,
       updatedAt: new Date().toISOString()
     };
   };
@@ -218,10 +290,18 @@ const AddEditJobModal: React.FC<AddEditJobModalProps> = ({
       const url = editingJob?.id ? `/api/jobs/${editingJob.id}` : '/api/jobs';
       const method = editingJob?.id ? 'PUT' : 'POST';
 
-      console.log('🔍 AddEditJobModal - Saving job:', { method, url, jobData, isNewJob });
+      console.log('🔍 EditJobModal - Saving job:', { method, url, jobData, isNewJob });
+
+      // Validate required fields for new jobs
+      if (isNewJob && (!jobData.jobTitle || !jobData.company)) {
+        console.error('❌ Missing required fields:', { jobTitle: jobData.jobTitle, company: jobData.company });
+        setErrorMessage('Job title and company are required');
+        setShowErrorDialog(true);
+        return;
+      }
 
       // Step 1: Save the job
-      const response = await fetch(url, {
+      const response = await authenticatedFetchWithUserId(url, user?.id, {
         method,
         headers: {
           'Content-Type': 'application/json',
@@ -229,14 +309,17 @@ const AddEditJobModal: React.FC<AddEditJobModalProps> = ({
         body: JSON.stringify(jobData),
       });
 
+      console.log('🔍 EditJobModal - Response status:', response.status);
+
       if (response.ok) {
         const result = await response.json();
-        console.log('🔍 AddEditJobModal - Save response:', result);
+        console.log('🔍 EditJobModal - Save response:', result);
 
-        if (result.success) {
-          const savedJob = {
+        // Check if the API returned a job object directly (for updates) or success/data structure (for creates)
+        if (result.job || result.success !== false) {
+          const savedJob = result.job || {
             ...jobData,
-            id: result.data.id || result.data._id || editingJob?.id
+            id: result.data?.id || result.data?._id || editingJob?.id
           };
 
           lastSavedDataRef.current = savedJob;
@@ -244,18 +327,18 @@ const AddEditJobModal: React.FC<AddEditJobModalProps> = ({
 
           // Step 2: If this is a new job, implement the "Job First" workflow
           // Create an Application Package automatically
-          if (isNewJob && !isAutoSave && session?.user?.id) {
+          if (isNewJob && !isAutoSave && user?.id) {
             try {
-              console.log('🎯 AddEditJobModal - Creating Application Package for new job:', savedJob.id);
+              console.log('🎯 EditJobModal - Creating Application Package for new job:', savedJob.id);
               
               const packageResult = await ApplicationPackageService.createNewPackage({
-                userId: session.user.id,
+                userId: user.id,
                 jobId: savedJob.id,
                 journeyName: `Application for ${savedJob.jobTitle} at ${savedJob.company}`
               });
 
               if (packageResult.success) {
-                console.log('✅ AddEditJobModal - Application Package created:', packageResult.data?.journeyId);
+                console.log('✅ EditJobModal - Application Package created:', packageResult.data?.journeyId);
                 
                 // Show interactive toast notification instead of browser confirm
                 addNotification({
@@ -270,11 +353,11 @@ const AddEditJobModal: React.FC<AddEditJobModalProps> = ({
                   }
                 });
               } else {
-                console.warn('⚠️ AddEditJobModal - Failed to create Application Package:', packageResult.message);
+                console.warn('⚠️ EditJobModal - Failed to create Application Package:', packageResult.message);
                 // Don't fail the job creation if package creation fails
               }
             } catch (packageError) {
-              console.error('❌ AddEditJobModal - Error creating Application Package:', packageError);
+              console.error('❌ EditJobModal - Error creating Application Package:', packageError);
               // Don't fail the job creation if package creation fails
             }
           }
@@ -299,9 +382,17 @@ const AddEditJobModal: React.FC<AddEditJobModalProps> = ({
                 min: undefined,
                 max: undefined,
                 currency: 'USD',
-                period: 'yearly'
+                period: 'yearly' as 'hourly' | 'monthly' | 'yearly'
               },
-              contacts: []
+              contactDetails: { name: '', email: '', phone: '', role: '' },
+              interviews: [],
+              followUps: [],
+              attachments: [],
+              source: 'other' as 'linkedin' | 'indeed' | 'company-website' | 'referral' | 'other',
+              sourceUrl: '',
+              atsScore: undefined,
+              atsAnalysis: undefined,
+              statusHistory: []
             });
             setHasUnsavedChanges(false);
             onClose();
@@ -309,30 +400,39 @@ const AddEditJobModal: React.FC<AddEditJobModalProps> = ({
             console.log('✅ Auto-save completed successfully');
           }
         } else {
-          console.error('API returned success: false:', result);
+          console.error('❌ API returned success: false:', result);
           if (!isAutoSave) {
-            setErrorMessage(result.message || 'Unknown error');
+            setErrorMessage(result.message || result.error || 'Unknown error');
             setShowErrorDialog(true);
           }
         }
       } else {
         const errorText = await response.text();
-        console.error('❌ AddEditJobModal - Save failed with status:', response.status);
+        console.error('❌ EditJobModal - Save failed with status:', response.status, 'Error:', errorText);
         if (!isAutoSave) {
           try {
             const errorJson = JSON.parse(errorText);
-            setErrorMessage(errorJson.message || 'Unknown error');
+            setErrorMessage(errorJson.message || errorJson.error || `Server error (${response.status})`);
             setShowErrorDialog(true);
           } catch {
-            setErrorMessage(`Failed to save job. Status: ${response.status}`);
+            setErrorMessage(`Failed to save job. Server returned status: ${response.status}`);
             setShowErrorDialog(true);
           }
         }
       }
     } catch (error) {
-      console.error('Error saving job:', error);
+      console.error('❌ EditJobModal - Error saving job:', error);
       if (!isAutoSave) {
-        setErrorMessage('Error saving job. Please try again.');
+        // Provide more specific error messages based on the error type
+        let errorMsg = 'Error saving job. Please try again.';
+        
+        if (error instanceof TypeError && error.message.includes('fetch')) {
+          errorMsg = 'Network error. Please check your connection and try again.';
+        } else if (error instanceof Error) {
+          errorMsg = `Error: ${error.message}`;
+        }
+        
+        setErrorMessage(errorMsg);
         setShowErrorDialog(true);
       }
     } finally {
@@ -364,9 +464,9 @@ const AddEditJobModal: React.FC<AddEditJobModalProps> = ({
           min: undefined,
           max: undefined,
           currency: 'USD',
-          period: 'yearly'
+          period: 'yearly' as 'hourly' | 'monthly' | 'yearly'
         },
-        contacts: []
+        contactDetails: { name: '', email: '', phone: '', role: '' }
       });
       setHasUnsavedChanges(false);
       onClose();
@@ -395,7 +495,7 @@ const AddEditJobModal: React.FC<AddEditJobModalProps> = ({
         currency: 'USD',
         period: 'yearly'
       },
-      contacts: []
+      contactDetails: { name: '', email: '', phone: '', role: '' }
     });
     setHasUnsavedChanges(false);
     onClose();
@@ -453,27 +553,27 @@ const AddEditJobModal: React.FC<AddEditJobModalProps> = ({
   return (
     <AnimatePresence>
       <motion.div
-        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+        className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
       >
         <motion.div
-          className="bg-[#1A1A1A] border border-white/10 rounded-2xl p-6 w-full max-w-4xl max-h-[85vh] overflow-y-auto shadow-2xl"
+          className="bg-white dark:bg-[#1a230f] border border-gray-200 dark:border-lime-500/20 rounded-2xl p-6 pb-0 w-full max-w-7xl max-h-[95vh] overflow-hidden shadow-2xl"
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
         >
-          <div className="text-white">
+          <div className="text-gray-900 dark:text-gray-900 dark:text-white">
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-white">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">
                 Add New Job Application
               </h2>
               
               <motion.button
                 onClick={handleClose}
-                className="p-2 text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+                className="p-2 text-gray-600 dark:text-gray-900 dark:text-white/60 hover:text-gray-900 dark:hover:text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-white/10 rounded-xl transition-colors"
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
               >
@@ -482,103 +582,104 @@ const AddEditJobModal: React.FC<AddEditJobModalProps> = ({
             </div>
 
             {/* Two Column Layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-2 gap-6 h-full">
               {/* Left Column */}
-              <div className="space-y-6">
+              <div className="space-y-3">
                 {/* Basic Information */}
                 <div>
-                  <h3 className="text-lg font-semibold text-white mb-4">Basic Information</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-900 dark:text-white mb-2">Basic Information</h3>
                   
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-white/80 text-sm font-medium mb-2">Job Title</label>
+                      <label className="block text-gray-700 dark:text-gray-900 dark:text-white/80 text-sm font-medium mb-1">Job Title</label>
                       <input
                         type="text"
                         value={formData.jobTitle || ''}
                         onChange={(e) => handleFormChange('jobTitle', e.target.value)}
-                        className="w-full px-4 py-3 bg-[#2C2C2C] border border-white/20 rounded-lg text-white placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
-                        placeholder="e.g. Senior Product Designer"
+                        className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
+                        placeholder="Enter job title"
                         maxLength={100}
                       />
-                      <div className="text-white/50 text-xs mt-1">{jobTitleCount}/100</div>
+                      <div className="text-gray-500 dark:text-gray-900 dark:text-white/50 text-xs mt-1">{jobTitleCount}/100</div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-gray-700 dark:text-gray-900 dark:text-white/80 text-sm font-medium mb-1">Company</label>
+                        <input
+                          type="text"
+                          value={formData.company || ''}
+                          onChange={(e) => handleFormChange('company', e.target.value)}
+                          className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
+                          placeholder="Enter company name"
+                          maxLength={100}
+                        />
+                        <div className="text-gray-500 dark:text-gray-900 dark:text-white/50 text-xs mt-1">{companyCount}/100</div>
+                      </div>
+                      <div>
+                        <label className="block text-gray-700 dark:text-gray-900 dark:text-white/80 text-sm font-medium mb-1">Location</label>
+                        <input
+                          type="text"
+                          value={formData.location || ''}
+                          onChange={(e) => handleFormChange('location', e.target.value)}
+                          className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
+                          placeholder="Enter location"
+                        />
+                      </div>
                     </div>
                     
                     <div>
-                      <label className="block text-white/80 text-sm font-medium mb-2">Company</label>
-                      <input
-                        type="text"
-                        value={formData.company || ''}
-                        onChange={(e) => handleFormChange('company', e.target.value)}
-                        className="w-full px-4 py-3 bg-[#2C2C2C] border border-white/20 rounded-lg text-white placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
-                        placeholder="e.g. Acme Corporation"
-                        maxLength={100}
-                      />
-                      <div className="text-white/50 text-xs mt-1">{companyCount}/100</div>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-white/80 text-sm font-medium mb-2">Location</label>
-                      <input
-                        type="text"
-                        value={formData.location || ''}
-                        onChange={(e) => handleFormChange('location', e.target.value)}
-                        className="w-full px-4 py-3 bg-[#2C2C2C] border border-white/20 rounded-lg text-white placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
-                        placeholder="e.g. San Francisco, CA"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-white/80 text-sm font-medium mb-2">Job URL</label>
+                      <label className="block text-gray-700 dark:text-gray-900 dark:text-white/80 text-sm font-medium mb-1">Job URL</label>
                       <input
                         type="url"
                         value={formData.jobUrl || ''}
                         onChange={(e) => handleFormChange('jobUrl', e.target.value)}
-                        className="w-full px-4 py-3 bg-[#2C2C2C] border border-white/20 rounded-lg text-white placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
-                        placeholder="https://example.com/job"
+                        className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
+                        placeholder="https://company.com/job-posting"
                       />
                     </div>
                     
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-white/80 text-sm font-medium mb-2">App Date</label>
+                        <label className="block text-gray-700 dark:text-gray-900 dark:text-white/80 text-sm font-medium mb-1">App Date</label>
                         <div className="relative">
                           <input
                             type="date"
                             value={formData.applicationDate || ''}
                             onChange={(e) => handleFormChange('applicationDate', e.target.value)}
-                            className="w-full px-4 py-3 bg-[#2C2C2C] border border-white/20 rounded-lg text-white text-sm focus:border-lime-400/50 focus:outline-none"
+                            className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border-gray-300 dark:border-lime-500/20 rounded-xl text-gray-900 dark:text-white text-sm focus:border-lime-400/50 focus:outline-none"
                             placeholder="mm/dd/yyyy"
                           />
-                          <Calendar size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50" />
+                          <Calendar size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-900 dark:text-white/50" />
                         </div>
                       </div>
                       
                       <div>
-                        <label className="block text-white/80 text-sm font-medium mb-2">Deadline</label>
+                        <label className="block text-gray-700 dark:text-gray-900 dark:text-white/80 text-sm font-medium mb-1">Deadline</label>
                         <div className="relative">
                           <input
                             type="date"
                             value={formData.deadline || ''}
                             onChange={(e) => handleFormChange('deadline', e.target.value)}
-                            className="w-full px-4 py-3 bg-[#2C2C2C] border border-white/20 rounded-lg text-white text-sm focus:border-lime-400/50 focus:outline-none"
+                            className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border-gray-300 dark:border-lime-500/20 rounded-xl text-gray-900 dark:text-white text-sm focus:border-lime-400/50 focus:outline-none"
                             placeholder="mm/dd/yyyy"
                           />
-                          <Calendar size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50" />
+                          <Calendar size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-900 dark:text-white/50" />
                         </div>
                       </div>
                     </div>
                     
                     <div>
-                      <label className="block text-white/80 text-sm font-medium mb-2">Priority</label>
-                      <div className="flex bg-[#2C2C2C] rounded-lg p-1 border border-white/20">
+                      <label className="block text-gray-700 dark:text-gray-900 dark:text-white/80 text-sm font-medium mb-1">Priority</label>
+                      <div className="flex bg-[#232f1c] rounded-xl p-1 border border-lime-500/20">
                         {['low', 'medium', 'high'].map((priority) => (
                           <button
                             key={priority}
                             onClick={() => handleFormChange('priority', priority)}
-                            className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-all ${
+                            className={`flex-1 px-3 py-2 text-sm font-medium transition-all ${
                               formData.priority === priority
-                                ? 'bg-[#388E3C] text-white'
-                                : 'text-white/70 hover:text-white'
+                                ? 'bg-lime-500 text-gray-900 dark:text-white rounded-xl'
+                                : 'text-gray-900 dark:text-white/70 hover:text-gray-900 dark:text-white rounded-lg'
                             }`}
                           >
                             {priority.charAt(0).toUpperCase() + priority.slice(1)}
@@ -591,28 +692,28 @@ const AddEditJobModal: React.FC<AddEditJobModalProps> = ({
 
                 {/* Salary Information */}
                 <div>
-                  <h3 className="text-lg font-semibold text-white mb-4">Salary Information</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Salary Information</h3>
                   
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-white/80 text-sm font-medium mb-2">Min Salary</label>
+                        <label className="block text-gray-700 dark:text-gray-900 dark:text-white/80 text-sm font-medium mb-1">Min Salary</label>
                         <input
                           type="number"
                           value={formData.salary?.min || ''}
                           onChange={(e) => handleFormChange('salary', { ...formData.salary, min: e.target.value ? parseInt(e.target.value) : undefined })}
-                          className="w-full px-4 py-3 bg-[#2C2C2C] border border-white/20 rounded-lg text-white placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
+                          className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
                           placeholder="e.g. 80000"
                         />
                       </div>
                       
                       <div>
-                        <label className="block text-white/80 text-sm font-medium mb-2">Max Salary</label>
+                        <label className="block text-gray-700 dark:text-gray-900 dark:text-white/80 text-sm font-medium mb-1">Max Salary</label>
                         <input
                           type="number"
                           value={formData.salary?.max || ''}
                           onChange={(e) => handleFormChange('salary', { ...formData.salary, max: e.target.value ? parseInt(e.target.value) : undefined })}
-                          className="w-full px-4 py-3 bg-[#2C2C2C] border border-white/20 rounded-lg text-white placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
+                          className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
                           placeholder="e.g. 120000"
                         />
                       </div>
@@ -620,11 +721,11 @@ const AddEditJobModal: React.FC<AddEditJobModalProps> = ({
                     
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-white/80 text-sm font-medium mb-2">Currency</label>
+                        <label className="block text-gray-700 dark:text-gray-900 dark:text-white/80 text-sm font-medium mb-1">Currency</label>
                         <select
                           value={formData.salary?.currency || 'USD'}
                           onChange={(e) => handleFormChange('salary', { ...formData.salary, currency: e.target.value })}
-                          className="w-full px-4 py-3 bg-[#2C2C2C] border border-white/20 rounded-lg text-white text-sm focus:border-lime-400/50 focus:outline-none"
+                          className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border-gray-300 dark:border-lime-500/20 rounded-xl text-gray-900 dark:text-white text-sm focus:border-lime-400/50 focus:outline-none"
                         >
                           <option value="USD">USD</option>
                           <option value="EUR">EUR</option>
@@ -634,16 +735,16 @@ const AddEditJobModal: React.FC<AddEditJobModalProps> = ({
                       </div>
                       
                       <div>
-                        <label className="block text-white/80 text-sm font-medium mb-2">Period</label>
-                        <div className="flex bg-[#2C2C2C] rounded-lg p-1 border border-white/20">
+                        <label className="block text-gray-700 dark:text-gray-900 dark:text-white/80 text-sm font-medium mb-1">Period</label>
+                        <div className="flex bg-[#232f1c] rounded-xl p-1 border border-lime-500/20">
                           {['yearly', 'monthly', 'hourly'].map((period) => (
                             <button
                               key={period}
                               onClick={() => handleFormChange('salary', { ...formData.salary, period })}
-                              className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-all ${
+                              className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-all ${
                                 formData.salary?.period === period
-                                  ? 'bg-[#388E3C] text-white'
-                                  : 'text-white/70 hover:text-white'
+                                  ? 'bg-lime-500 text-gray-900 dark:text-white rounded-xl'
+                                  : 'text-gray-900 dark:text-white/70 hover:text-gray-900 dark:text-white'
                               }`}
                             >
                               {period.charAt(0).toUpperCase() + period.slice(1)}
@@ -654,44 +755,59 @@ const AddEditJobModal: React.FC<AddEditJobModalProps> = ({
                     </div>
                   </div>
                 </div>
+
+                {/* Tags */}
+                <div>
+                  <label className="block text-gray-700 dark:text-gray-900 dark:text-white/80 text-sm font-medium mb-1">Tags</label>
+                  <input
+                    type="text"
+                    value={formData.tags?.join(', ') || ''}
+                    onChange={(e) => handleFormChange('tags', e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0))}
+                    className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
+                    placeholder="Remote, Full-time, FinTech"
+                  />
+                  <div className="text-gray-500 dark:text-gray-900 dark:text-white/50 text-xs mt-1">Separate tags with commas</div>
+                </div>
               </div>
 
               {/* Right Column */}
-              <div className="space-y-6">
+              <div className="space-y-3">
                 {/* Job Description */}
                 <div>
-                  <h3 className="text-lg font-semibold text-white mb-4">Job Description</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Job Description</h3>
                   
                   <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">Job Description</label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-gray-700 dark:text-gray-900 dark:text-white/80 text-sm font-medium">Job Description</label>
+                      <div className="text-gray-500 dark:text-gray-900 dark:text-white/50 text-xs">{jobDescriptionCount}/2000</div>
+                    </div>
                     <textarea
-                      rows={8}
+                      rows={10}
                       value={formData.jobDescription || ''}
                       onChange={(e) => handleFormChange('jobDescription', e.target.value)}
-                      className="w-full px-4 py-3 bg-[#2C2C2C] border border-white/20 rounded-lg text-white placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none resize-none"
+                      className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none resize-none"
                       placeholder="Paste the job description here..."
                       maxLength={2000}
                     />
-                    <div className="text-white/50 text-xs mt-1">{jobDescriptionCount}/2000</div>
                   </div>
                 </div>
 
                 {/* Additional Information */}
                 <div>
-                  <h3 className="text-lg font-semibold text-white mb-4">Additional Information</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Additional Information</h3>
                   
-                  <div className="space-y-4">
+                  <div className="space-y-2">
                     <div>
-                      <label className="block text-white/80 text-sm font-medium mb-2">Sponsorship</label>
-                      <div className="flex bg-[#2C2C2C] rounded-lg p-1 border border-white/20">
+                      <label className="block text-gray-700 dark:text-gray-900 dark:text-white/80 text-sm font-medium mb-1">Sponsorship</label>
+                      <div className="flex bg-[#232f1c] rounded-xl p-1 border border-lime-500/20">
                         {['unknown', 'yes', 'no'].map((sponsorship) => (
                           <button
                             key={sponsorship}
                             onClick={() => handleFormChange('sponsorship', sponsorship)}
-                            className={`flex-1 px-3 py-2 text-sm font-medium rounded-md transition-all ${
+                            className={`flex-1 px-3 py-2 text-sm font-medium transition-all ${
                               formData.sponsorship === sponsorship
-                                ? 'bg-[#388E3C] text-white'
-                                : 'text-white/70 hover:text-white'
+                                ? 'bg-lime-500 text-gray-900 dark:text-white rounded-xl'
+                                : 'text-gray-900 dark:text-white/70 hover:text-gray-900 dark:text-white rounded-lg'
                             }`}
                           >
                             {sponsorship.charAt(0).toUpperCase() + sponsorship.slice(1)}
@@ -701,49 +817,85 @@ const AddEditJobModal: React.FC<AddEditJobModalProps> = ({
                     </div>
                     
                     <div>
-                      <label className="block text-white/80 text-sm font-medium mb-2">Tags</label>
-                      <input
-                        type="text"
-                        value={formData.tags?.join(', ') || ''}
-                        onChange={(e) => handleFormChange('tags', e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0))}
-                        className="w-full px-4 py-3 bg-[#2C2C2C] border border-white/20 rounded-lg text-white placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
-                        placeholder="Remote, Full-time, FinTech"
-                      />
-                      <div className="text-white/50 text-xs mt-1">Separate tags with commas</div>
+                      <label className="block text-gray-700 dark:text-gray-900 dark:text-white/80 text-sm font-medium mb-1">Contact Details</label>
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-gray-900 dark:text-white/60 text-xs mb-1">Name</label>
+                            <input
+                              type="text"
+                              value={formData.contactDetails?.name || ''}
+                              onChange={(e) => handleFormChange('contactDetails', { ...formData.contactDetails, name: e.target.value })}
+                              className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
+                              placeholder="HR Manager"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-gray-900 dark:text-white/60 text-xs mb-1">Role</label>
+                            <input
+                              type="text"
+                              value={formData.contactDetails?.role || ''}
+                              onChange={(e) => handleFormChange('contactDetails', { ...formData.contactDetails, role: e.target.value })}
+                              className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
+                              placeholder="HR Manager"
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-gray-900 dark:text-white/60 text-xs mb-1">Email</label>
+                            <input
+                              type="email"
+                              value={formData.contactDetails?.email || ''}
+                              onChange={(e) => handleFormChange('contactDetails', { ...formData.contactDetails, email: e.target.value })}
+                              className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
+                              placeholder="hr@company.com"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-gray-900 dark:text-white/60 text-xs mb-1">Phone</label>
+                            <input
+                              type="tel"
+                              value={formData.contactDetails?.phone || ''}
+                              onChange={(e) => handleFormChange('contactDetails', { ...formData.contactDetails, phone: e.target.value })}
+                              className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
+                              placeholder="+1 (555) 123-4567"
+                            />
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    
-                    <div>
-                      <label className="block text-white/80 text-sm font-medium mb-2">Notes</label>
-                      <textarea
-                        rows={4}
-                        value={formData.notes || ''}
-                        onChange={(e) => handleFormChange('notes', e.target.value)}
-                        className="w-full px-4 py-3 bg-[#2C2C2C] border border-white/20 rounded-lg text-white placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none resize-none"
-                        placeholder="Add any personal notes here..."
-                        maxLength={500}
-                      />
-                      <div className="text-white/50 text-xs mt-1">{notesCount}/500</div>
+                  </div>
+                </div>
+
+                {/* Notes */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Notes</h3>
+                  
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-gray-700 dark:text-gray-900 dark:text-white/80 text-sm font-medium">Notes</label>
+                      <div className="text-gray-500 dark:text-gray-900 dark:text-white/50 text-xs">{notesCount}/500</div>
                     </div>
+                    <textarea
+                      rows={6}
+                      value={formData.notes || ''}
+                      onChange={(e) => handleFormChange('notes', e.target.value)}
+                      className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none resize-none"
+                      placeholder="Add any personal notes here..."
+                      maxLength={500}
+                    />
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Action Buttons */}
-            <div className="flex items-center justify-between mt-8 pt-6 border-t border-white/20">
-              <motion.button
-                onClick={handleClose}
-                className="px-6 py-3 text-white/70 hover:text-white transition-colors"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                Cancel
-              </motion.button>
-              
+            <div className="flex items-center justify-end mt-2 pt-2 pb-2 border-t border-lime-500/20">
               <motion.button
                 onClick={() => handleSaveJob(false)}
                 disabled={isSaving}
-                className="px-8 py-3 bg-[#69F0AE] text-black font-semibold rounded-lg hover:bg-[#5AE09E] transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-2.5 bg-lime-600 text-gray-900 dark:text-white font-semibold rounded-xl hover:bg-lime-700 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
@@ -776,15 +928,15 @@ const AddEditJobModal: React.FC<AddEditJobModalProps> = ({
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
             >
-              <div className="text-white text-center">
-                <h3 className="text-lg font-semibold mb-2">Unsaved Changes</h3>
-                <p className="text-white/70 text-sm mb-4">
+              <div className="text-gray-900 dark:text-white text-center">
+                <h3 className="text-lg font-semibold mb-1">Unsaved Changes</h3>
+                <p className="text-gray-900 dark:text-white/70 text-sm mb-2">
                   You have unsaved changes. Are you sure you want to close without saving?
                 </p>
                 <div className="flex gap-3 justify-center">
                   <motion.button
                     onClick={() => setShowUnsavedWarning(false)}
-                    className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm font-medium transition-all"
+                    className="px-4 py-2 bg-white/10 hover:bg-white/20 text-gray-900 dark:text-white rounded-xl text-sm font-medium transition-all"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
@@ -792,7 +944,7 @@ const AddEditJobModal: React.FC<AddEditJobModalProps> = ({
                   </motion.button>
                   <motion.button
                     onClick={handleConfirmClose}
-                    className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-all"
+                    className="px-4 py-2 bg-red-500 hover:bg-red-600 text-gray-900 dark:text-white rounded-xl text-sm font-medium transition-all"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
@@ -820,20 +972,20 @@ const AddEditJobModal: React.FC<AddEditJobModalProps> = ({
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
             >
-              <div className="text-white text-center">
-                <div className="flex items-center justify-center mb-4">
+              <div className="text-gray-900 dark:text-white text-center">
+                <div className="flex items-center justify-center mb-2">
                   <div className="p-3 bg-red-500/20 rounded-full">
                     <AlertCircle size={24} className="text-red-400" />
                   </div>
                 </div>
-                <h3 className="text-lg font-semibold mb-2 text-white">Error Saving Job</h3>
-                <p className="text-white/70 text-sm mb-6">
+                <h3 className="text-lg font-semibold mb-1 text-gray-900 dark:text-white">Error Saving Job</h3>
+                <p className="text-gray-900 dark:text-white/70 text-sm mb-6">
                   {errorMessage}
                 </p>
                 <div className="flex gap-3 justify-center">
                   <motion.button
                     onClick={() => setShowErrorDialog(false)}
-                    className="px-6 py-2 bg-[#69F0AE] text-black font-semibold rounded-lg hover:bg-[#5AE09E] transition-all"
+                    className="px-6 py-2 bg-[#69F0AE] text-black font-semibold rounded-xl hover:bg-[#5AE09E] transition-all"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
@@ -849,4 +1001,4 @@ const AddEditJobModal: React.FC<AddEditJobModalProps> = ({
   );
 };
 
-export default AddEditJobModal;
+export default EditJobModal;

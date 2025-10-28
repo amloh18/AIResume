@@ -127,7 +127,7 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
         {isMobile ? (
           /* Mobile Header */
           <motion.div
-            className="bg-white/95 dark:bg-[#141810] border-b border-gray-200/50 dark:border-white/10 shadow-lg p-4"
+            className="bg-white/95 dark:bg-[#1a230f] border-b border-gray-200/50 dark:border-white/10 shadow-lg p-4"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
@@ -253,7 +253,7 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
         ) : (
           /* Desktop Floating Header Panel */
           <motion.div
-            className="mx-4 mt-4 bg-white/95 dark:bg-[#141810] border border-gray-200/50 dark:border-white/10 shadow-lg rounded-2xl p-4"
+            className="mx-4 mt-4 bg-white/95 dark:bg-[#1a230f] border border-gray-200/50 dark:border-white/10 shadow-lg rounded-2xl p-4"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
@@ -541,7 +541,7 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
           >
             <div className="absolute inset-0 bg-black/50" onClick={() => setMobileMenuOpen(false)} />
             <motion.div
-              className="absolute top-16 left-4 right-4 bg-white/95 dark:bg-[#141810] border border-gray-200/50 dark:border-white/10 rounded-2xl shadow-xl p-6"
+              className="absolute top-16 left-4 right-4 bg-white/95 dark:bg-[#1a230f] border border-gray-200/50 dark:border-white/10 rounded-2xl shadow-xl p-6"
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}

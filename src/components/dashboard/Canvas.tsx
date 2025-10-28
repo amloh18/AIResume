@@ -42,7 +42,9 @@ import {
   Lightbulb,
   Activity,
   AlertTriangle,
-  AlertCircle
+  AlertCircle,
+  Search,
+  SortAsc
 } from 'lucide-react';
 import { useCreateCV } from '@/lib/utils/cvCreationUtils';
 import CVPreviewContent from '@/components/studio/CVPreviewContent';
@@ -55,7 +57,7 @@ import { useNotifications } from '@/contexts/NotificationContext';
 import MasterCVCardOverlay from './MasterCVCardOverlay';
 import CVCardOverlay from './CVCardOverlay';
 import CoverLetterCardOverlay from './CoverLetterCardOverlay';
-import ApplicationJourneyModal from './ApplicationJourneyModal';
+import JobModal from './JobModal';
 import { useOptimizedDataFetching } from '@/lib/hooks/useOptimizedDataFetching';
 import { CanvasSkeleton } from '@/components/ui/OptimizedSkeletons';
 import { formatCardTime } from '@/lib/utils/timeUtils';
@@ -372,7 +374,7 @@ const Canvas: React.FC = () => {
   const [mongoDBUserId, setMongoDBUserId] = useState<string | null>(null);
   const [journeys, setJourneys] = useState<any[]>([]);
   
-  // ApplicationJourneyModal state
+  // JobModal state
   const [showJourneyModal, setShowJourneyModal] = useState(false);
   const [selectedJobForJourney, setSelectedJobForJourney] = useState<any>(null);
   const [journeysForSelectedJob, setJourneysForSelectedJob] = useState<any[]>([]);
@@ -413,6 +415,11 @@ const Canvas: React.FC = () => {
     return null;
   };
   
+  // Search and sort state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'lastModified' | 'title' | 'status'>('lastModified');
+  const [showSortDropdown, setShowSortDropdown] = useState(false);
+  
   // Resolve MongoDB userId when session changes
   useEffect(() => {
     const initializeUserId = async () => {
@@ -439,6 +446,23 @@ const Canvas: React.FC = () => {
   useEffect(() => {
     // CVs loaded successfully
   }, [cvs]);
+
+  // Close sort dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showSortDropdown) {
+        const target = event.target as Element;
+        if (!target.closest('[data-sort-dropdown]')) {
+          setShowSortDropdown(false);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showSortDropdown]);
 
   // Handle CV creation
   const handleCreateCV = async () => {
@@ -606,7 +630,6 @@ const Canvas: React.FC = () => {
   const [linkingJobCVId, setLinkingJobCVId] = useState<string | null>(null);
   const { notifications, addNotification, markAsRead, markAllAsRead, removeNotification } = useNotifications();
   const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
-  // userProfile is now handled by the useUserData hook
   
   // Modal state
   const [modalConfig, setModalConfig] = useState<{
@@ -706,6 +729,7 @@ const Canvas: React.FC = () => {
             thumbnail: cv.metadata?.thumbnailUrl,
             description: cv.description || '',
             cvData: cv.cvData || null, // Include CV data for preview
+            template: cv.templateId || null, // Include template data for preview
             completionPercentage: calculateCompletionPercentage(cv),
             isMaster: cv.metadata?.isMaster || cv.isMaster || false, // Include master flag - handle both formats
             atsScore: cv.metadata?.atsScore, // Include ATS score
@@ -1541,6 +1565,54 @@ const Canvas: React.FC = () => {
     return sections;
   };
 
+  // Filter and sort CVs
+  const filteredAndSortedCVs = React.useMemo(() => {
+    let filtered = cvs.filter(cv => {
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        return cv.title.toLowerCase().includes(query) || 
+               (cv.description && cv.description.toLowerCase().includes(query));
+      }
+      return true;
+    });
+
+    return filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'title':
+          return a.title.localeCompare(b.title);
+        case 'status':
+          return a.status.localeCompare(b.status);
+        case 'lastModified':
+        default:
+          return new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime();
+      }
+    });
+  }, [cvs, searchQuery, sortBy]);
+
+  // Filter and sort Cover Letters
+  const filteredAndSortedCoverLetters = React.useMemo(() => {
+    let filtered = coverLetters.filter(cl => {
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        return cl.title.toLowerCase().includes(query) || 
+               (cl.description && cl.description.toLowerCase().includes(query));
+      }
+      return true;
+    });
+
+    return filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'title':
+          return a.title.localeCompare(b.title);
+        case 'status':
+          return a.status.localeCompare(b.status);
+        case 'lastModified':
+        default:
+          return new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime();
+      }
+    });
+  }, [coverLetters, searchQuery, sortBy]);
+
   return (
     <div className="space-y-6">
       {/* Page Header - Always show immediately */}
@@ -1565,12 +1637,92 @@ const Canvas: React.FC = () => {
         isMobileMenuOpen={isMobileMenuOpen}
       />
 
+      {/* Search and Sort Controls */}
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6">
+        {/* Search and Sort */}
+        <div className="flex flex-col sm:flex-row gap-3 flex-1">
+          {/* Search */}
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
+            <input
+              type="text"
+              placeholder={`Search ${activeTab === 'cv' ? 'CVs' : 'Cover Letters'}...`}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 rounded-full bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
+              aria-label={`Search ${activeTab === 'cv' ? 'CVs' : 'Cover Letters'}`}
+              role="searchbox"
+            />
+          </div>
+
+          {/* Sort By Button */}
+          <div className="relative" data-sort-dropdown>
+            <button
+              onClick={() => setShowSortDropdown(!showSortDropdown)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-full font-medium transition-all duration-200 bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 text-gray-700 dark:text-gray-300 hover:bg-[#141810] dark:hover:bg-[#141810]"
+            >
+              <SortAsc className="h-4 w-4" />
+              <span className="hidden sm:inline">
+                {sortBy === 'lastModified' ? 'Last Modified' : 
+                 sortBy === 'title' ? 'Title' : 
+                 sortBy === 'status' ? 'Status' : 'Sort By'}
+              </span>
+            </button>
+            
+            {/* Sort Dropdown */}
+            <AnimatePresence>
+              {showSortDropdown && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="absolute top-full right-0 mt-1 bg-white/95 dark:bg-[#141810] border border-gray-200/50 dark:border-white/10 rounded-xl shadow-xl overflow-hidden z-50 min-w-[160px] backdrop-blur-sm"
+                >
+                  {[
+                    { value: 'lastModified', label: 'Last Modified' },
+                    { value: 'title', label: 'Title' },
+                    { value: 'status', label: 'Status' }
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => {
+                        setSortBy(option.value as any);
+                        setShowSortDropdown(false);
+                      }}
+                      className={`w-full px-4 py-2 text-left text-sm transition-colors ${
+                        sortBy === option.value
+                          ? 'bg-lime-500/10 text-lime-700 dark:text-lime-300'
+                          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+
+        {/* Clean Unlinked Button - Only show for CV tab */}
+        {activeTab === 'cv' && (
+          <CleanUnlinkedButton
+            type="cv"
+            items={cvs}
+            journeys={journeys}
+            onClean={handleCleanUnlinkedCVs}
+            className="bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30"
+          />
+        )}
+      </div>
+
       {/* Tab Navigation */}
       <div className="flex items-center gap-2 mb-6">
         <motion.button
           onClick={() => setActiveTab('cv')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
-            activeTab === 'cv' ? 'bg-lime-400/20 text-lime-400 border border-lime-400/30' : 'bg-gray-700 dark:bg-white/5 text-white dark:text-white/60 border border-gray-600 dark:border-white/10 hover:bg-gray-600 dark:hover:bg-white/10'
+          className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
+            activeTab === 'cv' ? 'bg-gradient-to-r from-lime-500 to-lime-600 text-white shadow-md' : 'bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 text-gray-700 dark:text-gray-300 hover:bg-[#141810] dark:hover:bg-[#141810]'
           }`}
           whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
         >
@@ -1579,8 +1731,8 @@ const Canvas: React.FC = () => {
         </motion.button>
         <motion.button
           onClick={() => setActiveTab('coverLetter')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
-            activeTab === 'coverLetter' ? 'bg-blue-400/20 text-blue-400 border border-blue-400/30' : 'bg-gray-700 dark:bg-white/5 text-white dark:text-white/60 border border-gray-600 dark:border-white/10 hover:bg-gray-600 dark:hover:bg-white/10'
+          className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
+            activeTab === 'coverLetter' ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md' : 'bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 text-gray-700 dark:text-gray-300 hover:bg-[#141810] dark:hover:bg-[#141810]'
           }`}
           whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
         >
@@ -1596,20 +1748,6 @@ const Canvas: React.FC = () => {
           {/* Left Column - Main Content */}
           <div className="xl:col-span-3 space-y-6">
 
-      {/* CV Section Header with Clean Button */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <h2 className="text-xl font-semibold text-white">CVs</h2>
-          <span className="text-sm text-gray-400">({cvs.length + masterCVs.length} total)</span>
-        </div>
-        <CleanUnlinkedButton
-          type="cv"
-          items={cvs}
-          journeys={journeys}
-          onClean={handleCleanUnlinkedCVs}
-          className="bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30"
-        />
-      </div>
 
       {/* CV Grid */}
       <div className="space-y-6">
@@ -1628,6 +1766,7 @@ const Canvas: React.FC = () => {
               status: masterCVs[0].status,
               isMaster: true,
               cvData: masterCVs[0].cvData,
+              template: masterCVs[0].template,
               isStarred: masterCVs[0].isStarred,
               thumbnail: masterCVs[0].thumbnail || '',
               metadata: masterCVs[0].metadata
@@ -1645,7 +1784,7 @@ const Canvas: React.FC = () => {
             ))
           ) : (
             // CV Cards with Overlay Design
-            cvs.map((cv, index) => (
+            filteredAndSortedCVs.map((cv, index) => (
               <CVCardOverlay
                 key={cv.id}
                 cv={{
@@ -1785,26 +1924,12 @@ const Canvas: React.FC = () => {
           {/* Left Column - Main Content */}
           <div className="xl:col-span-3 space-y-6">
 
-            {/* Cover Letter Section Header with Clean Button */}
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <h2 className="text-xl font-semibold text-white">Cover Letters</h2>
-                <span className="text-sm text-gray-400">({coverLetters.length} total)</span>
-              </div>
-              <CleanUnlinkedButton
-                type="cover-letter"
-                items={coverLetters}
-                journeys={journeys}
-                onClean={handleCleanUnlinkedCoverLetters}
-                className="bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30"
-              />
-            </div>
 
             {/* Cover Letter Grid */}
             <div className="space-y-6">
 
               <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
-                {coverLetters.map((coverLetter) => (
+                {filteredAndSortedCoverLetters.map((coverLetter) => (
                   <CoverLetterCardOverlay
                     key={coverLetter.id}
                     coverLetter={{
@@ -1935,11 +2060,19 @@ const Canvas: React.FC = () => {
               </div>
             </div>
 
+            {/* Clean Unlinked Button - Only show for Cover Letter tab */}
+            {activeTab === 'coverLetter' && (
+              <CleanUnlinkedButton
+                type="cover-letter"
+                items={coverLetters}
+                journeys={journeys}
+                onClean={handleCleanUnlinkedCoverLetters}
+                className="bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30"
+              />
+            )}
           </div>
         </div>
       )}
-
-
 
       {/* Main Modal for Errors and Success Messages */}
       <Modal
@@ -1954,9 +2087,9 @@ const Canvas: React.FC = () => {
       />
 
 
-      {/* ApplicationJourneyModal */}
+      {/* JobModal */}
       {showJourneyModal && selectedJobForJourney && (
-        <ApplicationJourneyModal
+        <JobModal
           job={selectedJobForJourney}
           journeys={journeysForSelectedJob}
           onClose={() => {

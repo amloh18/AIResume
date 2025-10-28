@@ -181,9 +181,9 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
   const filteredPlans = useMemo(() => {
     const filtered = pricingPlans.filter(plan => {
       if (selectedCategory === 'essential') {
-        return plan.category === 'essential';
+        return plan.category === 'essential' || plan.key === 'free' || plan.key === 'day_pass';
       } else {
-        return plan.category === 'professional';
+        return plan.category === 'professional' || plan.key === 'pro_monthly' || plan.key === 'pro_quarterly' || plan.key === 'pro_yearly';
       }
     });
     return filtered;
@@ -209,7 +209,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
   }
 
   return (
-    <section id="pricing" className="relative h-screen flex items-center bg-gradient-to-b from-gray-900 to-black overflow-hidden pt-20">
+    <section id="pricing" className="relative py-20 flex items-center bg-gradient-to-b from-gray-900 to-black overflow-hidden">
       {/* Grid Pattern Background */}
       <div className="absolute inset-0">
         {/* Grid Lines */}
@@ -281,9 +281,9 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
               Essential
             </button>
             <button
-              onClick={() => setSelectedCategory('pro')}
+              onClick={() => setSelectedCategory('professional')}
               className={`px-8 py-4 rounded-lg font-medium transition-all duration-300 ${
-                selectedCategory === 'pro'
+                selectedCategory === 'professional'
                   ? 'bg-lime-400 text-black shadow-lg'
                   : 'text-white/70 hover:text-white hover:bg-white/5'
               }`}

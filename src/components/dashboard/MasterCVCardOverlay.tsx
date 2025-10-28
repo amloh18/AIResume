@@ -16,6 +16,7 @@ import {
 import { useSession } from 'next-auth/react';
 import { CVProgressService } from '@/lib/services/cvProgressService';
 import { UnifiedCVService } from '@/lib/services/unified-cv-service';
+import CVPreviewThumbnail from './CVPreviewThumbnail';
 
 interface MasterCV {
   id: string;
@@ -24,6 +25,12 @@ interface MasterCV {
   status: string;
   isMaster: boolean;
   cvData?: any;
+  template?: {
+    _id: string;
+    name: string;
+    globalStyles: any;
+    availableSections: any[];
+  };
   isStarred?: boolean;
   thumbnail?: string; // URL to PNG snapshot
   metadata?: any; // Full metadata object
@@ -52,6 +59,30 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
   const [isHovered, setIsHovered] = useState(false);
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   const [thumbnailLoading, setThumbnailLoading] = useState(false);
+
+  // Generate random background color based on Master CV ID for consistency
+  const getRandomColor = (id: string) => {
+    const colors = [
+      '#F0FDF4', // Light green
+      '#FEF3C7', // Light yellow
+      '#FEE2E2', // Light red
+      '#E0E7FF', // Light blue
+      '#F3E8FF', // Light purple
+      '#F0F9FF', // Light cyan
+      '#FDF2F8', // Light pink
+      '#ECFDF5', // Light emerald
+      '#FFFBEB', // Light amber
+      '#F1F5F9', // Light slate
+    ];
+    
+    // Use Master CV ID to generate consistent color
+    const hash = id.split('').reduce((a, b) => {
+      a = ((a << 5) - a) + b.charCodeAt(0);
+      return a & a;
+    }, 0);
+    
+    return colors[Math.abs(hash) % colors.length];
+  };
 
   useEffect(() => {
     console.log('🔍 MasterCVCardOverlay - useEffect triggered');
@@ -88,6 +119,14 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
     const fetchThumbnail = async () => {
       if (!masterCV || thumbnailUrl || thumbnailLoading) return;
       
+      console.log('🔍 MasterCVCardOverlay - Fetching thumbnail for Master CV:', {
+        masterCVId: masterCV.id,
+        masterCVTitle: masterCV.title,
+        hasCvData: !!masterCV.cvData,
+        hasTemplateId: !!masterCV.templateId,
+        cvDataKeys: masterCV.cvData ? Object.keys(masterCV.cvData) : 'No cvData'
+      });
+      
       try {
         setThumbnailLoading(true);
         const response = await fetch(`/api/cv/${masterCV.id}/generate-thumbnail`, {
@@ -97,11 +136,20 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
           },
         });
         
+        console.log('🔍 MasterCVCardOverlay - Thumbnail API response status:', response.status);
+        
         if (response.ok) {
           const result = await response.json();
+          console.log('🔍 MasterCVCardOverlay - Thumbnail API result:', result);
           if (result.success && result.thumbnailUrl) {
             setThumbnailUrl(result.thumbnailUrl);
+            console.log('🔍 MasterCVCardOverlay - Thumbnail URL set:', result.thumbnailUrl);
+          } else {
+            console.log('🔍 MasterCVCardOverlay - Thumbnail generation failed:', result.error);
           }
+        } else {
+          const errorResult = await response.json();
+          console.log('🔍 MasterCVCardOverlay - Thumbnail API error:', errorResult);
         }
       } catch (error) {
         console.error('Error fetching thumbnail:', error);
@@ -302,7 +350,7 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
 
   return (
     <motion.div
-      className="relative bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 group cursor-pointer"
+      className="flex flex-col gap-3 pb-3 group cursor-pointer"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: "spring", stiffness: 100 }}
@@ -310,65 +358,83 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Main CV Thumbnail Container */}
-      <div className="relative aspect-[3/4] bg-gradient-to-br from-lime-50 to-emerald-50 dark:from-gray-700 dark:to-gray-600 overflow-hidden">
-        {/* CV Thumbnail Image */}
-        {thumbnailUrl ? (
-          <img
-            src={thumbnailUrl}
-            alt={`Master CV Preview: ${masterCV.title}`}
-            className="w-full h-full object-cover"
-            loading="lazy"
-          />
-        ) : thumbnailLoading ? (
-          /* Loading state */
-          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-lime-50 to-emerald-50 dark:from-gray-700 dark:to-gray-600">
-            <div className="text-center text-gray-500 dark:text-gray-400">
-              <Loader2 size={32} className="mx-auto mb-2 animate-spin opacity-50" />
-              <p className="text-sm font-medium">Generating preview...</p>
-              <p className="text-xs opacity-75">Please wait</p>
+      {/* Master CV Preview Container - Outer colored background */}
+      <div className="w-full aspect-[3/4] rounded-xl border border-gray-200 dark:border-gray-700 group-hover:shadow-lg dark:group-hover:shadow-lime-500/20 transition-shadow p-6"
+           style={{
+             backgroundColor: masterCV ? getRandomColor(masterCV.id) : '#F0FDF4'
+           }}>
+        {/* Master CV Preview - Inner smaller preview */}
+        <div className="w-full h-full bg-center bg-no-repeat bg-cover rounded-xl relative shadow-lg"
+             style={{
+               backgroundImage: thumbnailUrl ? `url(${thumbnailUrl})` : 'none'
+             }}>
+          {/* Master CV Preview */}
+          {masterCV?.cvData && masterCV?.template ? (
+            <CVPreviewThumbnail 
+              cvData={masterCV.cvData}
+              template={masterCV.template}
+              className="rounded-xl"
+            />
+          ) : thumbnailUrl ? (
+            <img
+              src={thumbnailUrl}
+              alt={`Master CV Preview: ${masterCV.title}`}
+              className="w-full h-full object-cover rounded-xl"
+              loading="lazy"
+            />
+          ) : thumbnailLoading ? (
+            /* Loading state */
+            <div className="w-full h-full flex items-center justify-center rounded-xl">
+              <div className="text-center text-gray-500">
+                <Loader2 size={32} className="mx-auto mb-2 animate-spin opacity-50" />
+                <p className="text-sm font-medium">Generating preview...</p>
+                <p className="text-xs opacity-75">Please wait</p>
+              </div>
             </div>
-          </div>
-        ) : (
-          /* Fallback when no thumbnail available */
-          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-lime-50 to-emerald-50 dark:from-gray-700 dark:to-gray-600">
-            <div className="text-center text-gray-500 dark:text-gray-400">
-              <Crown size={48} className="mx-auto mb-2 opacity-50" />
-              <p className="text-sm font-medium">{masterCV.title}</p>
-              <p className="text-xs opacity-75">Master CV Template</p>
+          ) : (
+            /* Fallback when no thumbnail available */
+            <div className="w-full h-full flex items-center justify-center rounded-xl">
+              <div className="text-center text-gray-500">
+                <Crown size={48} className="mx-auto mb-2 opacity-50" />
+                <p className="text-sm font-medium">{masterCV.title}</p>
+                <p className="text-xs opacity-75">Master CV Template</p>
+              </div>
             </div>
+          )}
+
+          {/* Master Badge - Top right corner */}
+          <div className="absolute top-3 right-3">
+            <span className="px-2 py-1 rounded text-xs font-medium bg-lime-400 text-black border border-lime-400">
+              Master
+            </span>
           </div>
-        )}
-
-
-
-
+        </div>
       </div>
 
-      {/* Card Footer - Title, Last Modified, and Action Icons - Outside preview */}
-      <div className="mt-3 h-24 flex flex-col justify-between">
-        {/* CV Title */}
+      {/* Card Info Section */}
+      <div>
+        {/* Master CV Title */}
         <div className="mb-2">
           <div className="flex items-center gap-2">
             <Crown size={14} className="text-lime-400" />
-            <h3 className="font-semibold text-white text-sm flex-1">
+            <p className="text-gray-800 dark:text-white text-base font-medium leading-normal flex-1">
               {masterCV.title}
-            </h3>
+            </p>
           </div>
         </div>
 
         {/* Last Modified */}
-        <div className="text-xs text-gray-400 mb-3">
+        <p className="text-gray-500 dark:text-[#aebb9b] text-sm font-normal leading-normal">
           Last modified: {formatDate(masterCV.lastModified)}
-        </div>
+        </p>
 
-        {/* Action Icons Row - Plain icons without boxes */}
-        <div className="flex items-center justify-center gap-4">
+        {/* Action Icons Row */}
+        <div className="flex gap-2 mt-2 text-gray-500 dark:text-[#aebb9b]">
           {/* Edit Icon */}
           <motion.button
             onClick={handleEdit}
             disabled={actionLoading === 'edit'}
-            className="p-2 text-gray-400 hover:text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="hover:text-lime-500 dark:hover:text-lime-400 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             whileHover={{ scale: actionLoading === 'edit' ? 1 : 1.1 }}
             whileTap={{ scale: actionLoading === 'edit' ? 1 : 0.9 }}
             title="Edit Master CV"
@@ -384,7 +450,7 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
           <motion.button
             onClick={handleDuplicate}
             disabled={actionLoading === 'duplicate'}
-            className="p-2 text-gray-400 hover:text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="hover:text-lime-500 dark:hover:text-lime-400 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             whileHover={{ scale: actionLoading === 'duplicate' ? 1 : 1.1 }}
             whileTap={{ scale: actionLoading === 'duplicate' ? 1 : 0.9 }}
             title="Duplicate Master CV"
