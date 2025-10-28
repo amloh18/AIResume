@@ -34,26 +34,59 @@ export const downloadAsPDF = async (elementRef: HTMLElement, filename: string = 
     // Use html2pdf library which is more reliable
     const html2pdf = (await import('html2pdf.js')).default;
     
+    // Enhanced configuration for better PDF quality matching preview
     const opt = {
       margin: [10, 10, 10, 10],
       filename: filename,
-      image: { type: 'jpeg', quality: 0.98 },
+      image: { 
+        type: 'jpeg', 
+        quality: 0.98 
+      },
       html2canvas: { 
-        scale: 2,
+        scale: 3, // Increased from 2 to 3 for better quality
         useCORS: true,
         allowTaint: true,
         backgroundColor: '#ffffff',
         width: 794, // A4 width in pixels
         height: 1123, // A4 height in pixels
-        logging: false
+        logging: false,
+        // Additional optimization for better rendering
+        letterRendering: true,
+        removeContainer: true,
+        imageTimeout: 0,
+        // Preserve colors and styling
+        onclone: (clonedDoc: Document) => {
+          // Force all elements to use exact colors (no browser optimization)
+          const elements = clonedDoc.querySelectorAll('*');
+          elements.forEach((el: any) => {
+            if (el.style) {
+              el.style.webkitPrintColorAdjust = 'exact';
+              el.style.printColorAdjust = 'exact';
+              el.style.colorAdjust = 'exact';
+            }
+          });
+        }
       },
       jsPDF: { 
         unit: 'mm', 
         format: 'a4', 
         orientation: 'portrait',
-        compress: true
+        compress: true,
+        // Optimize for high quality output
+        precision: 16,
+        userUnit: 1.0
+      },
+      // Enable page breaks
+      pagebreak: { 
+        mode: ['avoid-all', 'css', 'legacy'],
+        before: '.page-break-before',
+        after: '.page-break-after',
+        avoid: ['.no-page-break', '.section-content', '.experience-item', '.education-item', '.project-item']
       }
     };
+    
+    // Small delay to ensure all fonts and images are loaded
+    await new Promise(resolve => setTimeout(resolve, 100));
     
     await html2pdf().set(opt).from(elementRef).save();
   } catch (error) {

@@ -18,6 +18,7 @@ function AICareerReportContent() {
   const searchParams = useSearchParams();
   const stepParam = searchParams.get('step');
   const modeParam = searchParams.get('mode');
+  const jobIdParam = searchParams.get('jobId');
   const [showSavedIndicator, setShowSavedIndicator] = useState(false);
 
   // Handle URL parameters and authentication
@@ -36,7 +37,12 @@ function AICareerReportContent() {
       // Otherwise, start from Step 1
       dispatch({ type: 'SET_CURRENT_STEP', payload: 1 });
     }
-  }, [stepParam, modeParam, dispatch]);
+
+    // Handle job ID parameter
+    if (jobIdParam) {
+      dispatch({ type: 'SET_JOB_ID', payload: jobIdParam });
+    }
+  }, [stepParam, modeParam, jobIdParam, dispatch]);
 
   // Log authentication status for debugging
   useEffect(() => {
@@ -47,6 +53,38 @@ function AICareerReportContent() {
       sessionUser: session?.user
     });
   }, [session, status, state.currentStep]);
+
+  // Load job data when jobId is available
+  useEffect(() => {
+    const loadJobData = async () => {
+      if (!state.jobId || !session?.user?.id) return;
+
+      dispatch({ type: 'SET_LOADING_JOB', payload: true });
+      dispatch({ type: 'SET_JOB_ERROR', payload: null });
+
+      try {
+        console.log('🔍 Loading job data for ID:', state.jobId);
+        
+        const response = await fetch(`/api/jobs/${state.jobId}?userId=${session.user.id}`);
+        const result = await response.json();
+
+        if (result.success && result.data) {
+          console.log('✅ Job data loaded successfully:', result.data);
+          dispatch({ type: 'SET_JOB_DATA', payload: result.data });
+        } else {
+          console.warn('⚠️ Job data not found or error:', result.error);
+          dispatch({ type: 'SET_JOB_ERROR', payload: result.error || 'Job not found' });
+        }
+      } catch (error) {
+        console.error('❌ Error loading job data:', error);
+        dispatch({ type: 'SET_JOB_ERROR', payload: 'Failed to load job data' });
+      } finally {
+        dispatch({ type: 'SET_LOADING_JOB', payload: false });
+      }
+    };
+
+    loadJobData();
+  }, [state.jobId, session?.user?.id, dispatch]);
 
   // Show saved indicator when data is saved (only for steps 1 and 2)
   useEffect(() => {
@@ -74,7 +112,7 @@ function AICareerReportContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#1A261A]">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#1A261A]">
       {/* Background Effects */}
       <div className="absolute inset-0">
         <motion.div 
@@ -118,7 +156,7 @@ function AICareerReportContent() {
               {state.currentStep > 1 && (
                 <motion.button
                   onClick={prevStep}
-                  className="flex items-center gap-2 text-white/60 hover:text-white transition-colors"
+                  className="flex items-center gap-2 text-gray-600 dark:text-white/60 hover:text-gray-900 dark:hover:text-white transition-colors"
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   whileHover={{ x: -5 }}
@@ -130,17 +168,17 @@ function AICareerReportContent() {
               {/* Logo */}
               <div className="flex items-center gap-3">
                 <div className="text-2xl font-bold">
-                  <span className="text-lime-400">CV</span>
-                  <span className="text-white">CIRCLE</span>
+                  <span className="text-lime-500">CV</span>
+                  <span className="text-gray-900 dark:text-white">CIRCLE</span>
                 </div>
-                <div className="text-sm text-white/60 bg-lime-400/20 px-2 py-1 rounded-full">
+                <div className="text-sm text-gray-600 dark:text-white/60 bg-lime-400/20 px-2 py-1 rounded-full">
                   AI Career Guide
                 </div>
               </div>
 
               {/* Step Information - Inline after logo */}
               <div className="flex items-center gap-4 ml-8">
-                <div className="h-8 w-px bg-white/20"></div>
+                <div className="h-8 w-px bg-gray-300 dark:bg-white/20"></div>
                 <div className="flex flex-col">
                   {state.currentStep === 1 && (
                     <div className="grid grid-cols-2 gap-4">
@@ -148,23 +186,23 @@ function AICareerReportContent() {
                         <div className="text-[#80FF00] font-bold text-sm">Step 1 of 3</div>
                       </div>
                       <div className="flex flex-col">
-                        <div className="text-lg font-bold text-white">Create Your CV</div>
-                        <div className="text-white/70 text-xs">Choose how you'd like to start.</div>
+                        <div className="text-lg font-bold text-gray-900 dark:text-white">Create Your CV</div>
+                        <div className="text-gray-600 dark:text-white/70 text-xs">Choose how you'd like to start.</div>
                       </div>
                     </div>
                   )}
                   {state.currentStep === 2 && (
                     <>
                       <div className="text-[#80FF00] font-bold text-sm">Step 2 of 3</div>
-                      <div className="text-lg font-bold text-white">Details Sections</div>
-                      <div className="text-white/70 text-xs">Review and edit your CV sections.</div>
+                      <div className="text-lg font-bold text-gray-900 dark:text-white">Details Sections</div>
+                      <div className="text-gray-600 dark:text-white/70 text-xs">Review and edit your CV sections.</div>
                     </>
                   )}
                   {state.currentStep === 3 && (
                     <>
                       <div className="text-[#80FF00] font-bold text-sm">Step 3 of 3</div>
-                      <div className="text-lg font-bold text-white">Your Career Report</div>
-                      <div className="text-white/70 text-xs">AI-powered analysis and career insights.</div>
+                      <div className="text-lg font-bold text-gray-900 dark:text-white">Your Career Report</div>
+                      <div className="text-gray-600 dark:text-white/70 text-xs">AI-powered analysis and career insights.</div>
                     </>
                   )}
                 </div>
@@ -190,7 +228,7 @@ function AICareerReportContent() {
               {session?.user ? (
                 <button
                   onClick={() => signOut({ callbackUrl: '/' })}
-                  className="flex items-center gap-2 px-4 py-2 text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 text-gray-600 dark:text-white/70 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors"
                 >
                   <LogOut size={16} />
                   Logout

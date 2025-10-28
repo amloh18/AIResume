@@ -100,7 +100,7 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
   if (!cvData) {
     return (
       <div className="space-y-8 relative">
-        <div className={`${isDark ? 'bg-[#141810]' : 'bg-white'} border rounded-xl shadow-2xl p-8`} style={{ 
+        <div className={`${isDark ? 'bg-[#1a230f]' : 'bg-white'} p-8`} style={{ 
           width: '210mm', 
           height: '297mm',
           overflow: 'hidden',
@@ -122,7 +122,7 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
   }
 
   const themeClasses = {
-    page: isDark ? 'bg-[#141810]' : 'bg-white',
+    page: isDark ? 'bg-[#1a230f]' : 'bg-white',
     text: {
       primary: isDark ? 'text-white' : 'text-gray-900',
       secondary: isDark ? 'text-gray-300' : 'text-gray-600',
@@ -169,7 +169,7 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
       {/* CV Preview Badge */}
       {showBadge && (
         <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-10">
-          <div className={`${isDark ? 'bg-gradient-to-r from-blue-500 to-blue-600' : 'bg-gradient-to-r from-blue-600 to-blue-700'} text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2`}>
+          <div className={`${isDark ? 'bg-gradient-to-r from-blue-500 to-blue-600' : 'bg-gradient-to-r from-blue-600 to-blue-700'} text-white px-4 py-2 rounded-full flex items-center gap-2`}>
             <Eye size={16} />
             <span className="text-sm font-medium">CV Preview • A4 Format • {totalPages} Page{totalPages > 1 ? 's' : ''}</span>
           </div>
@@ -180,7 +180,7 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
       {Array.from({ length: totalPages }, (_, pageIndex) => (
         <div 
           key={pageIndex}
-          className={`${themeClasses.page} cv-page border rounded-xl shadow-2xl mb-8`} 
+          className={`${themeClasses.page} cv-page mb-8`} 
           style={{ 
             width: '210mm', 
             height: '297mm',

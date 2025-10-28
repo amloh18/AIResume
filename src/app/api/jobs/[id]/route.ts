@@ -45,27 +45,37 @@ export async function GET(
     } else {
       // Web interface request with session
       const session = await getServerSession(authOptions);
-      if (!session?.user?.email) {
-        console.log('❌ No valid session for web request');
+      
+      // Check if userId is provided as query parameter (from authenticatedFetchWithUserId)
+      const { searchParams } = new URL(request.url);
+      const queryUserId = searchParams.get('userId');
+      
+      if (queryUserId) {
+        // Use the userId from query parameter
+        userId = queryUserId;
+        console.log('✅ Web request with userId parameter:', userId);
+      } else if (session?.user?.email) {
+        // Fallback to session-based authentication
+        await connectDB();
+        const user = await User.findOne({ email: session.user.email });
+        
+        if (!user) {
+          console.log('❌ User not found in database');
+          return NextResponse.json(
+            { success: false, error: 'User not found' },
+            { status: 404 }
+          );
+        }
+        
+        userId = user._id.toString();
+        console.log('✅ Web session verified for user:', userId);
+      } else {
+        console.log('❌ No valid session or userId parameter for web request');
         return NextResponse.json(
           { success: false, error: 'No authorization token provided' },
           { status: 401 }
         );
       }
-      
-      // Get authenticated user
-      const authResult = await getAuthenticatedUser(request);
-      
-      if (!authResult) {
-        console.log('❌ No valid user found');
-        return NextResponse.json(
-          { success: false, error: 'User identification failed' },
-          { status: 401 }
-        );
-      }
-      
-      userId = authResult.userId;
-      console.log('✅ Web session verified for user:', userId);
     }
     
     const resolvedParams = await params;
@@ -91,8 +101,7 @@ export async function GET(
       jobTitle: job.jobTitle, // Include both title and jobTitle for compatibility
       company: job.company,
       location: job.location,
-      description: job.jobDescription,
-      jobDescription: job.jobDescription, // Include both description and jobDescription for compatibility
+      jobDescription: job.jobDescription,
       requirements: job.requirements || [],
       responsibilities: job.responsibilities || [],
       salary: job.salary,
@@ -126,6 +135,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    console.log('🔍 Job Update API - Starting PUT request');
     await connectDB();
     
     let userId: string;
@@ -160,35 +170,48 @@ export async function PUT(
     } else {
       // Web interface request with session
       const session = await getServerSession(authOptions);
-      if (!session?.user?.email) {
-        console.log('❌ No valid session for web request');
+      
+      // Check if userId is provided as query parameter (from authenticatedFetchWithUserId)
+      const { searchParams } = new URL(request.url);
+      const queryUserId = searchParams.get('userId');
+      
+      if (queryUserId) {
+        // Use the userId from query parameter
+        userId = queryUserId;
+        console.log('✅ Web request with userId parameter:', userId);
+      } else if (session?.user?.email) {
+        // Fallback to session-based authentication
+        await connectDB();
+        const user = await User.findOne({ email: session.user.email });
+        
+        if (!user) {
+          console.log('❌ User not found in database');
+          return NextResponse.json(
+            { success: false, error: 'User not found' },
+            { status: 404 }
+          );
+        }
+        
+        userId = user._id.toString();
+        console.log('✅ Web session verified for user:', userId);
+      } else {
+        console.log('❌ No valid session or userId parameter for web request');
         return NextResponse.json(
           { success: false, error: 'No authorization token provided' },
           { status: 401 }
         );
       }
-      
-      // Get authenticated user
-      const authResult = await getAuthenticatedUser(request);
-      
-      if (!authResult) {
-        console.log('❌ No valid user found');
-        return NextResponse.json(
-          { success: false, error: 'User identification failed' },
-          { status: 401 }
-        );
-      }
-      
-      userId = authResult.userId;
-      console.log('✅ Web session verified for user:', userId);
     }
     
     const resolvedParams = await params;
+    console.log('🔍 Job Update API - Job ID:', resolvedParams.id);
 
     const body = await request.json();
+    console.log('🔍 Job Update API - Request body keys:', Object.keys(body));
 
     // Get the current job to check for status changes
     const currentJob = await JobApplication.findById(resolvedParams.id);
+    console.log('🔍 Job Update API - Current job found:', !!currentJob);
     
     // Track status changes
     if (body.status && body.status !== currentJob?.status) {
@@ -202,19 +225,35 @@ export async function PUT(
       });
     }
 
+    // Prepare update data with proper date conversion
+    const updateData = {
+      ...body,
+      updatedAt: new Date()
+    };
+
+    // Convert date strings to Date objects if provided
+    if (body.deadline) {
+      updateData.deadline = new Date(body.deadline);
+    }
+    if (body.applicationDate) {
+      updateData.applicationDate = new Date(body.applicationDate);
+    }
+
+    console.log('🔍 Job Update API - Updating job with data:', Object.keys(updateData));
+    
     const job = await JobApplication.findOneAndUpdate(
       {
         _id: resolvedParams.id,
         userId: userId
       },
-      {
-        ...body,
-        updatedAt: new Date()
-      },
+      updateData,
       { new: true }
     );
 
+    console.log('🔍 Job Update API - Job update result:', !!job);
+    
     if (!job) {
+      console.log('❌ Job Update API - Job not found for user:', userId);
       return NextResponse.json({ error: 'Job not found' }, { status: 404 });
     }
 
@@ -273,11 +312,18 @@ export async function PUT(
       }
     }
 
+    console.log('✅ Job Update API - Job updated successfully:', job._id);
     return NextResponse.json({ job });
   } catch (error) {
-    console.error('Error updating job:', error);
+    console.error('❌ Job Update API - Error updating job:', error);
+    console.error('❌ Job Update API - Error message:', error instanceof Error ? error.message : 'Unknown error');
+    console.error('❌ Job Update API - Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    
     return NextResponse.json(
-      { error: 'Failed to update job' },
+      { 
+        error: 'Failed to update job',
+        message: error instanceof Error ? error.message : 'Unknown error occurred'
+      },
       { status: 500 }
     );
   }
@@ -322,27 +368,37 @@ export async function DELETE(
     } else {
       // Web interface request with session
       const session = await getServerSession(authOptions);
-      if (!session?.user?.email) {
-        console.log('❌ No valid session for web request');
+      
+      // Check if userId is provided as query parameter (from authenticatedFetchWithUserId)
+      const { searchParams } = new URL(request.url);
+      const queryUserId = searchParams.get('userId');
+      
+      if (queryUserId) {
+        // Use the userId from query parameter
+        userId = queryUserId;
+        console.log('✅ Web request with userId parameter:', userId);
+      } else if (session?.user?.email) {
+        // Fallback to session-based authentication
+        await connectDB();
+        const user = await User.findOne({ email: session.user.email });
+        
+        if (!user) {
+          console.log('❌ User not found in database');
+          return NextResponse.json(
+            { success: false, error: 'User not found' },
+            { status: 404 }
+          );
+        }
+        
+        userId = user._id.toString();
+        console.log('✅ Web session verified for user:', userId);
+      } else {
+        console.log('❌ No valid session or userId parameter for web request');
         return NextResponse.json(
           { success: false, error: 'No authorization token provided' },
           { status: 401 }
         );
       }
-      
-      // Get authenticated user
-      const authResult = await getAuthenticatedUser(request);
-      
-      if (!authResult) {
-        console.log('❌ No valid user found');
-        return NextResponse.json(
-          { success: false, error: 'User identification failed' },
-          { status: 401 }
-        );
-      }
-      
-      userId = authResult.userId;
-      console.log('✅ Web session verified for user:', userId);
     }
     
     const resolvedParams = await params;

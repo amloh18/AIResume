@@ -43,28 +43,37 @@ export async function POST(request: NextRequest) {
     } else {
       // Web interface request with session
       const session = await getServerSession(authOptions);
-      if (!session?.user?.email) {
-        console.log('❌ No valid session for web request');
+      
+      // Check if userId is provided as query parameter (from authenticatedFetchWithUserId)
+      const { searchParams } = new URL(request.url);
+      const queryUserId = searchParams.get('userId');
+      
+      if (queryUserId) {
+        // Use the userId from query parameter
+        userId = queryUserId;
+        console.log('✅ Web request with userId parameter:', userId);
+      } else if (session?.user?.email) {
+        // Fallback to session-based authentication
+        await connectDB();
+        const user = await User.findOne({ email: session.user.email });
+        
+        if (!user) {
+          console.log('❌ User not found in database');
+          return NextResponse.json(
+            { success: false, error: 'User not found' },
+            { status: 404 }
+          );
+        }
+        
+        userId = user._id.toString();
+        console.log('✅ Web session verified for user:', userId);
+      } else {
+        console.log('❌ No valid session or userId parameter for web request');
         return NextResponse.json(
           { success: false, error: 'No authorization token provided' },
           { status: 401 }
         );
       }
-      
-      // Get user from database by email
-      await connectDB();
-      const user = await User.findOne({ email: session.user.email });
-      
-      if (!user) {
-        console.log('❌ User not found in database');
-        return NextResponse.json(
-          { success: false, error: 'User not found' },
-          { status: 404 }
-        );
-      }
-      
-      userId = user._id.toString();
-      console.log('✅ Web session verified for user:', userId);
     }
     
     // Parse the request body
@@ -183,28 +192,37 @@ export async function GET(request: NextRequest) {
     } else {
       // Web interface request with session
       const session = await getServerSession(authOptions);
-      if (!session?.user?.email) {
-        console.log('❌ No valid session for web request');
+      
+      // Check if userId is provided as query parameter (from authenticatedFetchWithUserId)
+      const { searchParams } = new URL(request.url);
+      const queryUserId = searchParams.get('userId');
+      
+      if (queryUserId) {
+        // Use the userId from query parameter
+        userId = queryUserId;
+        console.log('✅ Web request with userId parameter:', userId);
+      } else if (session?.user?.email) {
+        // Fallback to session-based authentication
+        await connectDB();
+        const user = await User.findOne({ email: session.user.email });
+        
+        if (!user) {
+          console.log('❌ User not found in database');
+          return NextResponse.json(
+            { success: false, error: 'User not found' },
+            { status: 404 }
+          );
+        }
+        
+        userId = user._id.toString();
+        console.log('✅ Web session verified for user:', userId);
+      } else {
+        console.log('❌ No valid session or userId parameter for web request');
         return NextResponse.json(
           { success: false, error: 'No authorization token provided' },
           { status: 401 }
         );
       }
-      
-      // Get user from database by email
-      await connectDB();
-      const user = await User.findOne({ email: session.user.email });
-      
-      if (!user) {
-        console.log('❌ User not found in database');
-        return NextResponse.json(
-          { success: false, error: 'User not found' },
-          { status: 404 }
-        );
-      }
-      
-      userId = user._id.toString();
-      console.log('✅ Web session verified for user:', userId);
     }
     
     // Ensure connection is established (may already be connected from auth check)

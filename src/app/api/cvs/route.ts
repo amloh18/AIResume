@@ -104,6 +104,9 @@ export async function GET(request: NextRequest) {
     // Apply projection for list view (minimal fields)
     if (projection === 'list') {
       query = query.select('id title status metadata.starred metadata.lastModified metadata.viewCount metadata.downloadCount createdAt updatedAt');
+    } else if (projection === 'summary') {
+      // For summary projection, include template data for preview generation
+      query = query.populate('templateId', 'name globalStyles availableSections');
     }
 
     // Execute query

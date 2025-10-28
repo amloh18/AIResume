@@ -153,7 +153,7 @@ const CVCard: React.FC<CVCardProps> = ({
 
         {/* CV Preview Content - Scaled Down */}
         <motion.div 
-          className="h-full p-2 text-white/90 rounded-lg overflow-hidden"
+          className="h-full p-2 text-white/90 rounded-xl overflow-hidden"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5, duration: 0.5 }}

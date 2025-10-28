@@ -16,6 +16,7 @@ import {
 import { CVJourneyLookupService } from '@/lib/services/cvJourneyLookupService';
 import { useSession } from 'next-auth/react';
 import { formatDetailedTime } from '@/lib/utils/timeUtils';
+import CoverLetterPreviewThumbnail from './CoverLetterPreviewThumbnail';
 
 interface CoverLetter {
   id: string;
@@ -67,6 +68,30 @@ const CoverLetterCardOverlay: React.FC<CoverLetterCardOverlayProps> = ({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [linkedJourney, setLinkedJourney] = useState<any>(null);
   const [checkingJourney, setCheckingJourney] = useState(false);
+
+  // Generate random background color based on Cover Letter ID for consistency
+  const getRandomColor = (id: string) => {
+    const colors = [
+      '#F0FDF4', // Light green
+      '#FEF3C7', // Light yellow
+      '#FEE2E2', // Light red
+      '#E0E7FF', // Light blue
+      '#F3E8FF', // Light purple
+      '#F0F9FF', // Light cyan
+      '#FDF2F8', // Light pink
+      '#ECFDF5', // Light emerald
+      '#FFFBEB', // Light amber
+      '#F1F5F9', // Light slate
+    ];
+    
+    // Use Cover Letter ID to generate consistent color
+    const hash = id.split('').reduce((a, b) => {
+      a = ((a << 5) - a) + b.charCodeAt(0);
+      return a & a;
+    }, 0);
+    
+    return colors[Math.abs(hash) % colors.length];
+  };
 
   // Check if Cover Letter is linked to any journey
   useEffect(() => {
@@ -170,7 +195,7 @@ const CoverLetterCardOverlay: React.FC<CoverLetterCardOverlayProps> = ({
 
   return (
     <motion.div
-      className="relative group cursor-pointer"
+      className="flex flex-col gap-3 pb-3 group cursor-pointer"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: "spring", stiffness: 100 }}
@@ -178,56 +203,63 @@ const CoverLetterCardOverlay: React.FC<CoverLetterCardOverlayProps> = ({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Cover Letter Preview Container - Vibrant colored card */}
-      <div className="relative aspect-[3/4] overflow-hidden rounded-xl shadow-lg hover:shadow-xl transition-all duration-300" 
+      {/* Cover Letter Preview Container - Outer colored background */}
+      <div className="w-full aspect-[3/4] rounded-xl border border-gray-200 dark:border-gray-700 group-hover:shadow-lg dark:group-hover:shadow-lime-500/20 transition-shadow p-6"
            style={{
-             background: coverLetter.metadata?.cardColor || 
-               (coverLetter.title.includes('Product') ? '#F7FAFC' :
-                coverLetter.title.includes('UX') ? '#FED7D7' : '#F7FAFC')
+             backgroundColor: getRandomColor(coverLetter.id)
            }}>
-        {/* Cover Letter Thumbnail Preview */}
-        <div className="h-full p-4 bg-gradient-to-br from-purple-400/10 to-purple-500/10">
-          <div className="h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-purple-200 dark:border-purple-400/20 p-3 overflow-hidden">
-            {/* Cover Letter Content Preview */}
-            <div className="h-full flex flex-col">
-              {/* Header */}
-              <div className="mb-3">
-                <div className="h-2 bg-purple-300 dark:bg-purple-400/30 rounded w-1/3 mb-2"></div>
-                <div className="h-1 bg-gray-300 dark:bg-gray-600 rounded w-1/2"></div>
-              </div>
-              
-              {/* Date */}
-              <div className="mb-3">
-                <div className="h-1 bg-gray-300 dark:bg-gray-600 rounded w-1/4"></div>
-              </div>
-              
-              {/* Greeting */}
-              <div className="mb-3">
-                <div className="h-1 bg-gray-300 dark:bg-gray-600 rounded w-1/3 mb-1"></div>
-                <div className="h-1 bg-gray-300 dark:bg-gray-600 rounded w-1/4"></div>
-              </div>
-              
-              {/* Body paragraphs */}
-              <div className="space-y-2 flex-1">
-                <div className="h-1 bg-gray-300 dark:bg-gray-600 rounded w-full"></div>
-                <div className="h-1 bg-gray-300 dark:bg-gray-600 rounded w-5/6"></div>
-                <div className="h-1 bg-gray-300 dark:bg-gray-600 rounded w-4/5"></div>
-                <div className="h-1 bg-gray-300 dark:bg-gray-600 rounded w-full"></div>
-                <div className="h-1 bg-gray-300 dark:bg-gray-600 rounded w-3/4"></div>
-              </div>
-              
-              {/* Closing */}
-              <div className="mt-3">
-                <div className="h-1 bg-gray-300 dark:bg-gray-600 rounded w-1/3"></div>
+        {/* Cover Letter Preview - Inner smaller preview */}
+        <div className="w-full h-full bg-center bg-no-repeat bg-cover rounded-lg relative shadow-lg">
+          {/* Cover Letter Preview */}
+          {coverLetter.content ? (
+            <CoverLetterPreviewThumbnail 
+              content={coverLetter.content}
+              className="rounded-lg"
+            />
+          ) : (
+            <div className="h-full p-4 bg-gradient-to-br from-purple-400/10 to-purple-500/10">
+              <div className="h-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-purple-200 dark:border-purple-400/20 p-3 overflow-hidden">
+                {/* Cover Letter Content Preview */}
+                <div className="h-full flex flex-col">
+                  {/* Header */}
+                  <div className="mb-3">
+                    <div className="h-2 bg-purple-300 dark:bg-purple-400/30 rounded w-1/3 mb-2"></div>
+                    <div className="h-1 bg-gray-300 dark:bg-gray-600 rounded w-1/2"></div>
+                  </div>
+                  
+                  {/* Date */}
+                  <div className="mb-3">
+                    <div className="h-1 bg-gray-300 dark:bg-gray-600 rounded w-1/4"></div>
+                  </div>
+                  
+                  {/* Greeting */}
+                  <div className="mb-3">
+                    <div className="h-1 bg-gray-300 dark:bg-gray-600 rounded w-1/3 mb-1"></div>
+                    <div className="h-1 bg-gray-300 dark:bg-gray-600 rounded w-1/4"></div>
+                  </div>
+                  
+                  {/* Body paragraphs */}
+                  <div className="space-y-2 flex-1">
+                    <div className="h-1 bg-gray-300 dark:bg-gray-600 rounded w-full"></div>
+                    <div className="h-1 bg-gray-300 dark:bg-gray-600 rounded w-5/6"></div>
+                    <div className="h-1 bg-gray-300 dark:bg-gray-600 rounded w-4/5"></div>
+                    <div className="h-1 bg-gray-300 dark:bg-gray-600 rounded w-full"></div>
+                    <div className="h-1 bg-gray-300 dark:bg-gray-600 rounded w-3/4"></div>
+                  </div>
+                  
+                  {/* Closing */}
+                  <div className="mt-3">
+                    <div className="h-1 bg-gray-300 dark:bg-gray-600 rounded w-1/3"></div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
-
       </div>
 
-      {/* Card Footer - Title, Last Modified, and Action Icons - No background */}
-      <div className="mt-3 h-24 flex flex-col justify-between">
+      {/* Card Info Section */}
+      <div>
         {/* Cover Letter Title */}
         <div className="mb-2">
           {editingCoverLetterId === coverLetter.id ? (
@@ -236,7 +268,7 @@ const CoverLetterCardOverlay: React.FC<CoverLetterCardOverlayProps> = ({
                 type="text"
                 value={editingTitle || ''}
                 onChange={(e) => onTitleEdit?.(coverLetter.id, e.target.value)}
-                className="flex-1 bg-transparent border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-white text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-purple-400"
+                className="flex-1 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-gray-900 dark:text-white text-base font-semibold focus:outline-none focus:ring-2 focus:ring-purple-400"
                 autoFocus
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
@@ -270,39 +302,25 @@ const CoverLetterCardOverlay: React.FC<CoverLetterCardOverlayProps> = ({
               </motion.button>
             </div>
           ) : (
-            <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-white text-sm flex-1">
-                {coverLetter.title}
-              </h3>
-              <motion.button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onStartEditing?.(coverLetter);
-                }}
-                className="p-1 text-gray-400 hover:text-white transition-all duration-200 opacity-0 group-hover:opacity-100"
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-              >
-                <Pencil size={12} />
-              </motion.button>
-            </div>
+            <p className="text-gray-800 dark:text-white text-base font-medium leading-normal">
+              {coverLetter.title}
+            </p>
           )}
         </div>
 
         {/* Last Modified */}
-        <div className="text-xs text-gray-400 mb-3">
+        <p className="text-gray-500 dark:text-[#aebb9b] text-sm font-normal leading-normal">
           Last modified: {formatDate(coverLetter.lastModified)}
-        </div>
+        </p>
 
-        {/* Action Icons Row - Plain icons without boxes */}
-        <div className="flex items-center justify-center gap-4">
-          {/* Edit Icon */}
+        {/* Action Icons Row */}
+        <div className="flex gap-2 mt-2 text-gray-500 dark:text-[#aebb9b]">
           <motion.button
             onClick={(e) => {
               e.stopPropagation();
               onEdit(coverLetter);
             }}
-            className="p-2 text-gray-400 hover:text-white transition-all duration-200"
+            className="hover:text-lime-500 dark:hover:text-lime-400 transition-all duration-200"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             title="Edit Cover Letter"
@@ -310,13 +328,12 @@ const CoverLetterCardOverlay: React.FC<CoverLetterCardOverlayProps> = ({
             <Pencil size={16} />
           </motion.button>
 
-          {/* Download Icon */}
           <motion.button
             onClick={(e) => {
               e.stopPropagation();
               onDownload(coverLetter);
             }}
-            className="p-2 text-gray-400 hover:text-white transition-all duration-200"
+            className="hover:text-lime-500 dark:hover:text-lime-400 transition-all duration-200"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             title="Download Cover Letter"
@@ -324,13 +341,12 @@ const CoverLetterCardOverlay: React.FC<CoverLetterCardOverlayProps> = ({
             <Download size={16} />
           </motion.button>
 
-          {/* Delete Icon */}
           <motion.button
             onClick={(e) => {
               e.stopPropagation();
               handleDelete();
             }}
-            className="p-2 text-gray-400 hover:text-white transition-all duration-200"
+            className="hover:text-lime-500 dark:hover:text-lime-400 transition-all duration-200"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             title="Delete Cover Letter"
@@ -338,13 +354,12 @@ const CoverLetterCardOverlay: React.FC<CoverLetterCardOverlayProps> = ({
             <Trash2 size={16} />
           </motion.button>
 
-          {/* Share Icon */}
           <motion.button
             onClick={(e) => {
               e.stopPropagation();
               // Add share functionality here
             }}
-            className="p-2 text-gray-400 hover:text-white transition-all duration-200"
+            className="hover:text-lime-500 dark:hover:text-lime-400 transition-all duration-200"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             title="Share Cover Letter"

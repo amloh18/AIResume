@@ -18,7 +18,11 @@ export async function POST(request: NextRequest) {
     headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
     headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     
-    const { cvData }: { cvData: UnifiedCVDataStructure } = await request.json();
+    const { cvData, jobData, jobId }: { 
+      cvData: UnifiedCVDataStructure; 
+      jobData?: any; 
+      jobId?: string; 
+    } = await request.json();
 
     if (!cvData) {
       console.log('❌ No CV data provided');
@@ -27,6 +31,13 @@ export async function POST(request: NextRequest) {
         { status: 400, headers }
       );
     }
+
+    console.log('📊 Job data provided:', {
+      hasJobData: !!jobData,
+      jobId: jobId,
+      jobTitle: jobData?.title || jobData?.jobTitle,
+      hasDescription: !!jobData?.jobDescription
+    });
 
     // Check if API key is available
     const apiKey = process.env.GEMINI_API_KEY;
@@ -59,9 +70,9 @@ export async function POST(request: NextRequest) {
     // Run all three analyses in parallel for better performance
     console.log('🤖 Running AI analysis...');
     const [experienceLevelResult, careerPathResult, strategicSuggestionsResult] = await Promise.all([
-      analyzeExperienceLevel(model, cvText),
-      analyzeCareerPath(model, cvText),
-      analyzeStrategicSuggestions(model, cvText)
+      analyzeExperienceLevel(model, cvText, jobData),
+      analyzeCareerPath(model, cvText, jobData),
+      analyzeStrategicSuggestions(model, cvText, jobData)
     ]);
 
     const analysis = {
@@ -169,7 +180,14 @@ function extractCVText(cvData: UnifiedCVDataStructure): string {
   return sections.join('\n');
 }
 
-async function analyzeExperienceLevel(model: any, cvText: string) {
+async function analyzeExperienceLevel(model: any, cvText: string, jobData?: any) {
+  const jobContext = jobData ? `
+Target Job: ${jobData.title || jobData.jobTitle || 'Position'}
+Company: ${jobData.company || jobData.companyName || 'Company'}
+Job Description: ${jobData.jobDescription || 'No description available'}
+
+` : '';
+
   const prompt = `Analyze this CV and determine the candidate's current career level.
 Choose from: Junior, Mid-Level, Senior, Director, VP, C-Level
 
@@ -178,8 +196,9 @@ Consider:
 - Leadership responsibilities
 - Scope of impact
 - Technical depth vs breadth
+${jobData ? '- How their experience aligns with the target job requirements' : ''}
 
-CV Data: ${cvText}
+${jobContext}CV Data: ${cvText}
 
 Respond in JSON format:
 {
@@ -212,14 +231,23 @@ Respond in JSON format:
   }
 }
 
-async function analyzeCareerPath(model: any, cvText: string) {
-  const prompt = `Based on this candidate's background, project the next 3 logical career steps.
+async function analyzeCareerPath(model: any, cvText: string, jobData?: any) {
+  const jobContext = jobData ? `
+Target Job: ${jobData.title || jobData.jobTitle || 'Position'}
+Company: ${jobData.company || jobData.companyName || 'Company'}
+Job Description: ${jobData.jobDescription || 'No description available'}
 
-CV Data: ${cvText}
+` : '';
+
+  const prompt = `Based on this candidate's background, project the next 3 logical career steps.
+${jobData ? 'Consider how their current experience positions them for the target role and beyond.' : ''}
+
+${jobContext}CV Data: ${cvText}
 
 For each step, provide:
 1. Job title
 2. Why this is a logical next step
+${jobData ? '3. How it relates to the target job requirements' : ''}
 
 Respond in JSON format:
 {
@@ -255,14 +283,22 @@ Respond in JSON format:
   }
 }
 
-async function analyzeStrategicSuggestions(model: any, cvText: string) {
+async function analyzeStrategicSuggestions(model: any, cvText: string, jobData?: any) {
+  const jobContext = jobData ? `
+Target Job: ${jobData.title || jobData.jobTitle || 'Position'}
+Company: ${jobData.company || jobData.companyName || 'Company'}
+Job Description: ${jobData.jobDescription || 'No description available'}
+
+` : '';
+
   const prompt = `Given this CV, identify:
 
 1. One critical HARD SKILL they lack (e.g., specific technology, certification)
 2. One critical SOFT SKILL they need to develop (e.g., leadership, communication)
 3. Rewrite their most recent work experience for greater impact (quantifiable, leadership-focused)
+${jobData ? '4. Focus on skills and experience that align with the target job requirements' : ''}
 
-CV Data: ${cvText}
+${jobContext}CV Data: ${cvText}
 
 Respond in JSON format:
 {

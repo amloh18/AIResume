@@ -97,7 +97,7 @@ const TabbedStudioPanel: React.FC<TabbedStudioPanelProps> = ({
   return (
     <div className="h-full flex flex-col">
       {/* Tab Navigation */}
-      <div className="bg-white/90 dark:bg-[#141810] border border-gray-200/60 dark:border-white/10 rounded-xl shadow-lg shadow-gray-200/50 dark:shadow-gray-900/50 mb-6 flex-shrink-0 overflow-hidden">
+      <div className="bg-white/90 dark:bg-[#1a230f] border border-gray-200/60 dark:border-white/10 rounded-xl shadow-lg shadow-gray-200/50 dark:shadow-gray-900/50 mb-6 flex-shrink-0 overflow-hidden">
         <div className="flex">
           {tabs.map((tab) => (
             <motion.button
@@ -140,7 +140,7 @@ const TabbedStudioPanel: React.FC<TabbedStudioPanelProps> = ({
       </div>
 
       {/* Tab Content - Scrollable */}
-      <div className="flex-1 overflow-y-auto min-h-0">
+      <div className="flex-1 overflow-y-auto scrollbar-hide min-h-0">
         <motion.div
           key={activeTab}
           initial={{ opacity: 0, y: 20 }}

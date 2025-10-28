@@ -412,7 +412,7 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
   if (isCollapsed) {
     return (
       <div className={`h-full flex flex-col relative transition-colors ${
-        theme === 'dark' ? 'bg-[#141810]' : 'bg-gray-800'
+        theme === 'dark' ? 'bg-[#1a230f]' : 'bg-gray-800'
       }`}>
         {/* Floating Toggle Button */}
         <button
@@ -438,7 +438,7 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
 
   return (
     <div className={`h-full flex flex-col backdrop-blur-sm relative transition-colors ${
-      theme === 'dark' ? 'bg-[#141810]' : 'bg-white/95'
+      theme === 'dark' ? 'bg-[#1a230f]' : 'bg-white/95'
     }`}>
       {/* Floating Toggle Button */}
       <button
@@ -450,9 +450,9 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
       </button>
 
       {/* Fixed Job Reference Bar */}
-      <div className={`p-4 border-b transition-colors ${
+        <div className={`p-4 border-b transition-colors ${
         theme === 'dark' 
-          ? 'border-white/10 bg-[#141810]' 
+          ? 'border-white/10 bg-[#1a230f]' 
           : 'border-lime-200/50 bg-lime-50/50'
       }`}>
         <div className="space-y-3">
@@ -496,7 +496,7 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
       )}
 
       {/* AI Sections */}
-      <div className="flex-1 overflow-y-auto ai-panel-scrollbar">
+      <div className="flex-1 overflow-y-auto scrollbar-hide ai-panel-scrollbar">
         <div className={`p-4 space-y-6 transition-colors ${
           theme === 'dark' ? 'bg-gray-900/80' : 'bg-white/80'
         }`}>

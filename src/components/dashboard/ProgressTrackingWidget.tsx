@@ -243,7 +243,7 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors h-8 flex items-center justify-center whitespace-nowrap ${
                   filter === item.key
                     ? `${item.color} text-white shadow-lg`
-                    : 'bg-white/10 backdrop-blur-md border border-white/20 text-white/60 hover:text-white/80 hover:bg-white/20'
+                    : 'bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 text-gray-600 dark:text-white/60 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-[#2a3a1f]'
                 }`}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}

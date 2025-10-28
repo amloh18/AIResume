@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { memo, useMemo } from 'react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ITemplate, ISectionBlueprint } from '@/models/Template';
 import { generateTemplateCSS } from './default-template';
 import { convertToTemplateSectionOrder } from '@/lib/section-mapping';
+import * as CustomTemplates from './custom-renderers';
 
 // Component registry for dynamic section rendering
 import PersonalHeader from '@/components/cv-sections/PersonalHeader';
@@ -16,6 +17,9 @@ import Languages from '@/components/cv-sections/Languages';
 import Volunteer from '@/components/cv-sections/Volunteer';
 import Awards from '@/components/cv-sections/Awards';
 import Publications from '@/components/cv-sections/Publications';
+
+// Import hardcoded template system
+import { CustomTemplates as HardcodedTemplates } from './hardcoded-templates';
 
 // Component registry mapping
 const COMPONENT_REGISTRY: Record<string, React.ComponentType<any>> = {
@@ -94,7 +98,7 @@ export interface TemplateRendererProps {
   customStyles?: React.CSSProperties;
 }
 
-export const TemplateRenderer: React.FC<TemplateRendererProps> = ({
+const TemplateRendererComponent: React.FC<TemplateRendererProps> = ({
   cvData,
   template,
   className = '',
@@ -103,8 +107,21 @@ export const TemplateRenderer: React.FC<TemplateRendererProps> = ({
   enabledSections,
   customStyles = {}
 }) => {
-  // Generate CSS variables from template styles
-  const templateCSS = generateTemplateCSS(template.globalStyles);
+  // Check if this is a custom template with a hardcoded renderer
+  const customRenderer = template.customRenderer;
+  if (customRenderer && HardcodedTemplates[customRenderer as keyof typeof HardcodedTemplates]) {
+    const CustomTemplateComponent = HardcodedTemplates[customRenderer as keyof typeof HardcodedTemplates] as React.ComponentType<{
+      cvData: UnifiedCVDataStructure;
+      className?: string;
+    }>;
+    
+    return <CustomTemplateComponent cvData={cvData} className={className} />;
+  }
+
+  // Memoize CSS generation to avoid regenerating on every render
+  const templateCSS = useMemo(() => {
+    return generateTemplateCSS(template.globalStyles);
+  }, [template.globalStyles]);
   
   // Convert frontend section order to template section order
   const templateSectionOrder = sectionOrder ? convertToTemplateSectionOrder(sectionOrder) : undefined;
@@ -156,10 +173,15 @@ export const TemplateRenderer: React.FC<TemplateRendererProps> = ({
     return false;
   };
 
+  // Memoize combined CSS to prevent recalculation
+  const combinedCSS = useMemo(() => {
+    return templateCSS + (template.globalStyles.customCSS || '');
+  }, [templateCSS, template.globalStyles.customCSS]);
+
   return (
     <>
       {/* Inject template CSS */}
-      <style dangerouslySetInnerHTML={{ __html: templateCSS + (template.globalStyles.customCSS || '') }} />
+      <style dangerouslySetInnerHTML={{ __html: combinedCSS }} />
       
       <div 
         className={`cv-container ${className}`}
@@ -173,9 +195,6 @@ export const TemplateRenderer: React.FC<TemplateRendererProps> = ({
         }}
       >
         {sectionsToRender.map((section) => {
-          // Always render sections that are in the template, regardless of data
-          // The section components themselves will handle empty data gracefully
-
           const Component = COMPONENT_REGISTRY[section.componentName];
           if (!Component) {
             console.warn(`Component ${section.componentName} not found in registry`);
@@ -184,6 +203,14 @@ export const TemplateRenderer: React.FC<TemplateRendererProps> = ({
 
           const dataKey = SECTION_DATA_MAP[section.key as keyof SectionDataMapping];
           const sectionData = dataKey ? cvData[dataKey] : null;
+
+          // Check if section has data before rendering
+          const hasData = hasDataForSection(section.key);
+          
+          // Skip rendering if section has no data
+          if (!hasData) {
+            return null;
+          }
 
           return (
             <div key={section.key} className="section-content">
@@ -200,6 +227,21 @@ export const TemplateRenderer: React.FC<TemplateRendererProps> = ({
     </>
   );
 };
+
+// Memoize TemplateRenderer to prevent unnecessary re-renders
+export const TemplateRenderer = memo(TemplateRendererComponent, (prevProps, nextProps) => {
+  // Custom comparison for better performance
+  return (
+    prevProps.cvData === nextProps.cvData &&
+    prevProps.template === nextProps.template &&
+    JSON.stringify(prevProps.sectionOrder) === JSON.stringify(nextProps.sectionOrder) &&
+    JSON.stringify(prevProps.sectionVisibility) === JSON.stringify(nextProps.sectionVisibility) &&
+    JSON.stringify(prevProps.enabledSections) === JSON.stringify(nextProps.enabledSections) &&
+    JSON.stringify(prevProps.customStyles) === JSON.stringify(nextProps.customStyles)
+  );
+});
+
+TemplateRenderer.displayName = 'TemplateRenderer';
 
 // Helper function to determine which sections to render
 function getSectionsToRender(

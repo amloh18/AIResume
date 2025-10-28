@@ -22,6 +22,7 @@ import { useParallelDataFetching } from '@/lib/hooks/useOptimizedDataFetching';
 import { AnalyticsSkeleton } from '@/components/ui/OptimizedSkeletons';
 import { usePerformanceMonitor } from '@/lib/utils/performanceMonitor';
 import UniversalPaymentModal from '@/components/payment/UniversalPaymentModal';
+import ComprehensiveATSAnalyzer from '@/components/studio/ComprehensiveATSAnalyzer';
 
 // Helper functions for CV scoring
 const calculatePersonalInfoScore = (basics: any): number => {
@@ -155,7 +156,11 @@ const CVManagementSection: React.FC<{
   onSetMasterCV: (cvId: string) => void;
   predictions?: any;
   onUpdateGoal?: (goal: number) => void;
-}> = ({ cvHealthScore, cvs, drafts, onImproveScore, onCreateCV, onAddJob, onWriteCoverLetter, onCreateCoverLetter, onCreateJob, onSetMasterCV, predictions, onUpdateGoal }) => {
+  userId?: string;
+  jobs?: any[];
+}> = ({ cvHealthScore, cvs, drafts, onImproveScore, onCreateCV, onAddJob, onWriteCoverLetter, onCreateCoverLetter, onCreateJob, onSetMasterCV, predictions, onUpdateGoal, userId, jobs = [] }) => {
+  const [showATSWidget, setShowATSWidget] = useState(false);
+  
   const getStatus = (score: number) => {
     if (score >= 80) return { label: 'Excellent', color: 'text-green-400' };
     if (score >= 60) return { label: 'Good', color: 'text-yellow-400' };
@@ -215,8 +220,41 @@ const CVManagementSection: React.FC<{
               </div>
               <p className="text-gray-600 dark:text-white/60 text-xs mb-1">{masterCV?.title || 'Master CV Health'}</p>
               <p className={`text-xs font-medium ${status.color}`}>{status.label}</p>
+              
+              {/* ATS Analysis Toggle */}
+              <motion.button
+                onClick={() => setShowATSWidget(!showATSWidget)}
+                className="mt-3 px-3 py-1 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 text-xs rounded-lg transition-colors flex items-center gap-1 justify-center"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Target className="h-3 w-3" />
+                {showATSWidget ? 'Hide ATS Analysis' : 'Show ATS Analysis'}
+              </motion.button>
             </div>
           </div>
+          
+          {/* ATS Analysis Widget */}
+          {showATSWidget && masterCV && (
+            <div className="row-span-2">
+              <div className="h-full max-h-96 overflow-y-auto">
+                <ComprehensiveATSAnalyzer
+                  selectedJobId={jobs.length > 0 ? jobs[0].id : undefined}
+                  onJobSelection={() => {}}
+                  userId={userId}
+                  cvData={masterCV.cvData}
+                  jobData={jobs.length > 0 ? jobs[0] : undefined}
+                  cvId={masterCV.id}
+                  onUpdateField={(path, value) => {
+                    console.log('CV field update:', path, value);
+                  }}
+                  onScoreUpdate={(score) => {
+                    console.log('ATS Score updated:', score);
+                  }}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Right Column */}
           <div className="space-y-6">
@@ -411,11 +449,11 @@ const ApplicationHub: React.FC<{
                       key={i} 
                       className={`
                         aspect-square flex flex-col items-center justify-center text-xs rounded transition-all duration-200
-                        ${isToday ? 'bg-blue-400/20 text-blue-400 font-medium' : 
+                        ${isToday ? 'bg-blue-400/20 dark:bg-blue-400/20 text-blue-400 font-medium' : 
                           isPast ? 'text-gray-600 dark:text-white/60' : 
                           'text-gray-400 dark:text-white/40'}
-                        ${dayApplications > 0 ? 'bg-green-400/20 text-green-400' : ''}
-                        ${isDeadlineDay ? 'bg-red-400/20 text-red-400' : ''}
+                        ${dayApplications > 0 ? 'bg-green-400/20 dark:bg-green-400/20 text-green-400' : ''}
+                        ${isDeadlineDay ? 'bg-red-400/20 dark:bg-red-400/20 text-red-400' : ''}
                         hover:bg-gray-100 dark:hover:bg-white/5 cursor-pointer
                       `}
                     >
@@ -1015,10 +1053,10 @@ const RecentJobsWidget: React.FC<{
                 <div className="flex items-center justify-between mb-1">
                   <h3 className="font-medium text-sm text-white truncate">{job.jobTitle || job.title}</h3>
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    job.status === 'applied' ? 'bg-green-600 text-green-300' :
-                    job.status === 'interview' ? 'bg-yellow-600 text-yellow-300' :
-                    job.status === 'offer' ? 'bg-green-600 text-green-300' :
-                    'bg-gray-600 text-gray-300'
+                    job.status === 'applied' ? 'bg-green-600 dark:bg-green-600 text-green-300' :
+                    job.status === 'interview' ? 'bg-yellow-600 dark:bg-yellow-600 text-yellow-300' :
+                    job.status === 'offer' ? 'bg-green-600 dark:bg-green-600 text-green-300' :
+                    'bg-gray-600 dark:bg-gray-600 text-gray-300'
                   }`}>
                     {job.status === 'applied' ? 'Applied' :
                      job.status === 'interview' ? 'Interviewing' :
@@ -1327,6 +1365,8 @@ const Analytics: React.FC = () => {
             onSetMasterCV={handleSetMasterCV}
             predictions={analyticsData?.predictions}
             onUpdateGoal={handleUpdateMonthlyGoal}
+            userId={userId}
+            jobs={jobs}
           />
         </div>
         <div className="flex w-full">

@@ -179,6 +179,7 @@ export async function PUT(
     updateData.metadata.lastModified = new Date();
 
     console.log('🔍 CV UPDATE API - Updating CV with data:', Object.keys(updateData));
+    console.log('🔍 CV UPDATE API - Update data values:', updateData);
     
     // Update CV
     Object.assign(cv, updateData);
@@ -187,7 +188,18 @@ export async function PUT(
     console.log('✅ CV UPDATE API - CV saved successfully');
 
     // Get updated CV with template data
+    console.log('🔍 CV UPDATE API - Fetching updated CV with template...');
     const updatedCV = await getCVWithTemplate(id);
+    
+    if (!updatedCV) {
+      console.log('❌ CV UPDATE API - Failed to fetch updated CV with template');
+      return NextResponse.json(
+        { success: false, error: 'Failed to fetch updated CV' },
+        { status: 500 }
+      );
+    }
+    
+    console.log('✅ CV UPDATE API - Successfully fetched updated CV with template');
 
     return NextResponse.json({
       success: true,
@@ -198,6 +210,8 @@ export async function PUT(
 
   } catch (error: any) {
     console.error('❌ CV UPDATE API - Error:', error);
+    console.error('❌ CV UPDATE API - Error message:', error.message);
+    console.error('❌ CV UPDATE API - Error stack:', error.stack);
     const errorResponse = createErrorResponse(error);
     
     return NextResponse.json(

@@ -18,13 +18,25 @@ export async function POST(
     const { id: cvId } = await params;
     const userId = session.user.id;
 
+    console.log('🔍 Thumbnail API - Generating thumbnail for CV:', { cvId, userId });
+
     await connectDB();
 
     // Find the CV
     const cv = await CV.findOne({ _id: cvId, userId });
     if (!cv) {
+      console.log('🔍 Thumbnail API - CV not found:', { cvId, userId });
       return NextResponse.json({ success: false, error: 'CV not found' }, { status: 404 });
     }
+
+    console.log('🔍 Thumbnail API - CV found:', {
+      id: cv._id,
+      title: cv.title,
+      hasCvData: !!cv.cvData,
+      hasTemplateId: !!cv.templateId,
+      isMaster: cv.metadata?.isMaster || cv.isMaster,
+      cvDataKeys: cv.cvData ? Object.keys(cv.cvData) : 'No cvData'
+    });
 
     // Check if thumbnail is recent (less than 7 days old)
     const now = new Date();
@@ -46,11 +58,20 @@ export async function POST(
     // Get the template
     const template = await Template.findById(cv.templateId);
     if (!template) {
+      console.log('🔍 Thumbnail API - Template not found:', { templateId: cv.templateId });
       return NextResponse.json({ success: false, error: 'Template not found' }, { status: 404 });
     }
 
+    console.log('🔍 Thumbnail API - Template found:', {
+      id: template._id,
+      name: template.name,
+      hasGlobalStyles: !!template.globalStyles
+    });
+
     // Generate new thumbnail
+    console.log('🔍 Thumbnail API - Generating thumbnail...');
     const thumbnailUrl = await generateCVThumbnail(cv, template);
+    console.log('🔍 Thumbnail API - Thumbnail generated:', thumbnailUrl ? 'Success' : 'Failed');
 
     // Update CV with new thumbnail
     await CV.findByIdAndUpdate(cvId, {

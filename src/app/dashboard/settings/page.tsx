@@ -639,7 +639,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                 type="text"
                 value={formData.firstName}
                 onChange={(e) => handleInputChange('firstName', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-lime-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-500 focus:border-transparent"
               />
             </div>
             
@@ -651,7 +651,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                 type="text"
                 value={formData.lastName}
                 onChange={(e) => handleInputChange('lastName', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-lime-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-500 focus:border-transparent"
               />
             </div>
             
@@ -665,7 +665,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                   value={formData.email}
                   readOnly
                   disabled
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-lime-500/20 rounded-lg bg-gray-100 dark:bg-[#232f1c]/50 text-gray-500 dark:text-gray-400 cursor-not-allowed"
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400">
                   Email cannot be changed. Contact support if you need to update your email address.
@@ -745,10 +745,10 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                     
                     setUsernameTimeout(timeoutId);
                   }}
-                  className={`w-full px-3 py-2 pr-10 border rounded-lg bg-white/80 dark:bg-gray-800/80 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent ${
+                  className={`w-full px-3 py-2 pr-10 border rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-500 focus:border-transparent ${
                     usernameError ? 'border-red-500 dark:border-red-400' : 
                     usernameStatus === 'available' ? 'border-green-500 dark:border-green-400' :
-                    'border-gray-300 dark:border-gray-600'
+                    'border-gray-300 dark:border-lime-500/20'
                   }`}
                   placeholder="Choose a unique username"
                 />
@@ -783,7 +783,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                 type="tel"
                 value={formData.phone}
                 onChange={(e) => handleInputChange('phone', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-lime-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-500 focus:border-transparent"
               />
             </div>
             
@@ -795,7 +795,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                 type="text"
                 value={formData.location}
                 onChange={(e) => handleInputChange('location', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-lime-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-500 focus:border-transparent"
                 placeholder="City, Country"
               />
             </div>
@@ -808,7 +808,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                 type="url"
                 value={formData.website}
                 onChange={(e) => handleInputChange('website', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-lime-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-500 focus:border-transparent"
                 placeholder="https://yourwebsite.com"
               />
             </div>
@@ -821,7 +821,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                 type="url"
                 value={formData.linkedin}
                 onChange={(e) => handleInputChange('linkedin', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-lime-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-500 focus:border-transparent"
                 placeholder="https://linkedin.com/in/yourprofile"
               />
             </div>
@@ -834,7 +834,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                 type="url"
                 value={formData.github}
                 onChange={(e) => handleInputChange('github', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-lime-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-500 focus:border-transparent"
                 placeholder="https://github.com/yourusername"
               />
             </div>
@@ -847,7 +847,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                 type="text"
                 value={formData.company}
                 onChange={(e) => handleInputChange('company', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-lime-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-500 focus:border-transparent"
               />
             </div>
           </div>
@@ -879,7 +879,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
               <select
                 value={formData.languagePreference}
                 onChange={(e) => handleInputChange('languagePreference', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-lime-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-500 focus:border-transparent"
               >
                 <option value="English">English</option>
                 <option value="Spanish">Spanish</option>
@@ -895,7 +895,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
               <select
                 value={formData.timezone}
                 onChange={(e) => handleInputChange('timezone', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-lime-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-500 focus:border-transparent"
               >
                 <option value="UTC +07:00 - Asia / Jakarta">UTC +07:00 - Asia / Jakarta</option>
                 <option value="UTC -05:00 - America / New York">UTC -05:00 - America / New York</option>

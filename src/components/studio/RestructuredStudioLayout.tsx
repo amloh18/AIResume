@@ -9,8 +9,7 @@ import {
   ChevronUp,
   Settings,
   Eye,
-  Palette,
-  Target
+  Palette
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -28,7 +27,6 @@ import AwardsSection from './forms/AwardsSection';
 import PublicationsSection from './forms/PublicationsSection';
 import InterestsSection from './forms/InterestsSection';
 import ReferencesSection from './forms/ReferencesSection';
-import ComprehensiveATSAnalyzer from './ComprehensiveATSAnalyzer';
 
 interface RestructuredStudioLayoutProps {
   // Job Section Props
@@ -62,7 +60,7 @@ export default function RestructuredStudioLayout({
   onUpdateCV,
   jobContext
 }: RestructuredStudioLayoutProps) {
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['cv', 'ats']));
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['cv']));
   const [expandedCVSections, setExpandedCVSections] = useState<Set<string>>(new Set(['personal_header', 'work_experience', 'education']));
 
   const toggleSection = (sectionId: string) => {
@@ -141,7 +139,17 @@ export default function RestructuredStudioLayout({
               <CollapsibleContent className="px-4 pb-4">
                 <PersonalInfoForm
                   data={cvData?.basics || {}}
-                  onUpdate={(data) => onUpdateCV?.({ ...cvData, basics: data })}
+                  onUpdate={(field, value) => {
+                    // Use onUpdateField for proper nested updates
+                    if (onUpdateField) {
+                      onUpdateField(`basics.${field}`, value);
+                    } else {
+                      onUpdateCV?.({ ...cvData, basics: { ...cvData?.basics, [field]: value } });
+                    }
+                  }}
+                  cvData={cvData}
+                  jobData={jobContext}
+                  userId={userId}
                 />
               </CollapsibleContent>
             </div>
@@ -172,7 +180,14 @@ export default function RestructuredStudioLayout({
               <CollapsibleContent className="px-4 pb-4">
                 <WorkExperienceSection
                   data={cvData?.work || []}
-                  onUpdate={(data) => onUpdateCV?.({ ...cvData, work: data })}
+                  onUpdate={(data) => {
+                    // Use onUpdateField for proper nested updates
+                    if (onUpdateField) {
+                      onUpdateField('work', data);
+                    } else {
+                      onUpdateCV?.({ ...cvData, work: data });
+                    }
+                  }}
                 />
               </CollapsibleContent>
             </div>
@@ -203,7 +218,42 @@ export default function RestructuredStudioLayout({
               <CollapsibleContent className="px-4 pb-4">
                 <EducationSection
                   data={cvData?.education || []}
-                  onUpdate={(data) => onUpdateCV?.({ ...cvData, education: data })}
+                  onUpdate={(path, value) => {
+                    // Use onUpdateField for proper nested updates
+                    if (onUpdateField) {
+                      onUpdateField(path, value);
+                    } else {
+                      onUpdateCV?.({ ...cvData, education: data });
+                    }
+                  }}
+                  onAdd={() => {
+                    // Add new education item
+                    const newEducation = [...(cvData?.education || []), {
+                      institution: '',
+                      area: '',
+                      studyType: '',
+                      startDate: '',
+                      endDate: '',
+                      score: '',
+                      courses: []
+                    }];
+                    if (onUpdateField) {
+                      onUpdateField('education', newEducation);
+                    } else {
+                      onUpdateCV?.({ ...cvData, education: newEducation });
+                    }
+                  }}
+                  onRemove={(index) => {
+                    // Remove education item
+                    const newEducation = (cvData?.education || []).filter((_, i) => i !== index);
+                    if (onUpdateField) {
+                      onUpdateField('education', newEducation);
+                    } else {
+                      onUpdateCV?.({ ...cvData, education: newEducation });
+                    }
+                  }}
+                  jobData={jobContext}
+                  userId={userId}
                 />
               </CollapsibleContent>
             </div>
@@ -234,7 +284,36 @@ export default function RestructuredStudioLayout({
               <CollapsibleContent className="px-4 pb-4">
                 <SkillsSection
                   data={cvData?.skills || []}
-                  onUpdate={(data) => onUpdateCV?.({ ...cvData, skills: data })}
+                  onUpdate={(path, value) => {
+                    // Use onUpdateField for proper nested updates
+                    if (onUpdateField) {
+                      onUpdateField(path, value);
+                    } else {
+                      onUpdateCV?.({ ...cvData, skills: data });
+                    }
+                  }}
+                  onAdd={() => {
+                    // Add new skill item
+                    const newSkills = [...(cvData?.skills || []), {
+                      name: '',
+                      level: '',
+                      keywords: []
+                    }];
+                    if (onUpdateField) {
+                      onUpdateField('skills', newSkills);
+                    } else {
+                      onUpdateCV?.({ ...cvData, skills: newSkills });
+                    }
+                  }}
+                  onRemove={(index) => {
+                    // Remove skill item
+                    const newSkills = (cvData?.skills || []).filter((_, i) => i !== index);
+                    if (onUpdateField) {
+                      onUpdateField('skills', newSkills);
+                    } else {
+                      onUpdateCV?.({ ...cvData, skills: newSkills });
+                    }
+                  }}
                 />
               </CollapsibleContent>
             </div>
@@ -265,7 +344,40 @@ export default function RestructuredStudioLayout({
               <CollapsibleContent className="px-4 pb-4">
                 <ProjectsSection
                   data={cvData?.projects || []}
-                  onUpdate={(data) => onUpdateCV?.({ ...cvData, projects: data })}
+                  onUpdate={(path, value) => {
+                    // Use onUpdateField for proper nested updates
+                    if (onUpdateField) {
+                      onUpdateField(path, value);
+                    } else {
+                      onUpdateCV?.({ ...cvData, projects: data });
+                    }
+                  }}
+                  onAdd={() => {
+                    // Add new project item
+                    const newProjects = [...(cvData?.projects || []), {
+                      name: '',
+                      description: '',
+                      startDate: '',
+                      endDate: '',
+                      highlights: [],
+                      url: ''
+                    }];
+                    if (onUpdateField) {
+                      onUpdateField('projects', newProjects);
+                    } else {
+                      onUpdateCV?.({ ...cvData, projects: newProjects });
+                    }
+                  }}
+                  onRemove={(index) => {
+                    // Remove project item
+                    const newProjects = (cvData?.projects || []).filter((_, i) => i !== index);
+                    if (onUpdateField) {
+                      onUpdateField('projects', newProjects);
+                    } else {
+                      onUpdateCV?.({ ...cvData, projects: newProjects });
+                    }
+                  }}
+                  jobData={jobContext}
                 />
               </CollapsibleContent>
             </div>
@@ -296,7 +408,38 @@ export default function RestructuredStudioLayout({
               <CollapsibleContent className="px-4 pb-4">
                 <CertificatesSection
                   data={cvData?.certificates || []}
-                  onUpdate={(data) => onUpdateCV?.({ ...cvData, certificates: data })}
+                  onUpdate={(path, value) => {
+                    // Use onUpdateField for proper nested updates
+                    if (onUpdateField) {
+                      onUpdateField(path, value);
+                    } else {
+                      onUpdateCV?.({ ...cvData, certificates: data });
+                    }
+                  }}
+                  onAdd={() => {
+                    // Add new certificate item
+                    const newCertificates = [...(cvData?.certificates || []), {
+                      name: '',
+                      issuer: '',
+                      date: '',
+                      url: ''
+                    }];
+                    if (onUpdateField) {
+                      onUpdateField('certificates', newCertificates);
+                    } else {
+                      onUpdateCV?.({ ...cvData, certificates: newCertificates });
+                    }
+                  }}
+                  onRemove={(index) => {
+                    // Remove certificate item
+                    const newCertificates = (cvData?.certificates || []).filter((_, i) => i !== index);
+                    if (onUpdateField) {
+                      onUpdateField('certificates', newCertificates);
+                    } else {
+                      onUpdateCV?.({ ...cvData, certificates: newCertificates });
+                    }
+                  }}
+                  jobData={jobContext}
                 />
               </CollapsibleContent>
             </div>
@@ -327,7 +470,35 @@ export default function RestructuredStudioLayout({
               <CollapsibleContent className="px-4 pb-4">
                 <LanguagesSection
                   data={cvData?.languages || []}
-                  onUpdate={(data) => onUpdateCV?.({ ...cvData, languages: data })}
+                  onUpdate={(path, value) => {
+                    // Use onUpdateField for proper nested updates
+                    if (onUpdateField) {
+                      onUpdateField(path, value);
+                    } else {
+                      onUpdateCV?.({ ...cvData, languages: data });
+                    }
+                  }}
+                  onAdd={() => {
+                    // Add new language item
+                    const newLanguages = [...(cvData?.languages || []), {
+                      language: '',
+                      fluency: 'intermediate'
+                    }];
+                    if (onUpdateField) {
+                      onUpdateField('languages', newLanguages);
+                    } else {
+                      onUpdateCV?.({ ...cvData, languages: newLanguages });
+                    }
+                  }}
+                  onRemove={(index) => {
+                    // Remove language item
+                    const newLanguages = (cvData?.languages || []).filter((_, i) => i !== index);
+                    if (onUpdateField) {
+                      onUpdateField('languages', newLanguages);
+                    } else {
+                      onUpdateCV?.({ ...cvData, languages: newLanguages });
+                    }
+                  }}
                 />
               </CollapsibleContent>
             </div>
@@ -358,7 +529,39 @@ export default function RestructuredStudioLayout({
               <CollapsibleContent className="px-4 pb-4">
                 <VolunteerSection
                   data={cvData?.volunteer || []}
-                  onUpdate={(data) => onUpdateCV?.({ ...cvData, volunteer: data })}
+                  onUpdate={(path, value) => {
+                    // Use onUpdateField for proper nested updates
+                    if (onUpdateField) {
+                      onUpdateField(path, value);
+                    } else {
+                      onUpdateCV?.({ ...cvData, volunteer: data });
+                    }
+                  }}
+                  onAdd={() => {
+                    // Add new volunteer item
+                    const newVolunteer = [...(cvData?.volunteer || []), {
+                      organization: '',
+                      position: '',
+                      startDate: '',
+                      endDate: '',
+                      summary: '',
+                      highlights: []
+                    }];
+                    if (onUpdateField) {
+                      onUpdateField('volunteer', newVolunteer);
+                    } else {
+                      onUpdateCV?.({ ...cvData, volunteer: newVolunteer });
+                    }
+                  }}
+                  onRemove={(index) => {
+                    // Remove volunteer item
+                    const newVolunteer = (cvData?.volunteer || []).filter((_, i) => i !== index);
+                    if (onUpdateField) {
+                      onUpdateField('volunteer', newVolunteer);
+                    } else {
+                      onUpdateCV?.({ ...cvData, volunteer: newVolunteer });
+                    }
+                  }}
                 />
               </CollapsibleContent>
             </div>
@@ -389,7 +592,37 @@ export default function RestructuredStudioLayout({
               <CollapsibleContent className="px-4 pb-4">
                 <AwardsSection
                   data={cvData?.awards || []}
-                  onUpdate={(data) => onUpdateCV?.({ ...cvData, awards: data })}
+                  onUpdate={(path, value) => {
+                    // Use onUpdateField for proper nested updates
+                    if (onUpdateField) {
+                      onUpdateField(path, value);
+                    } else {
+                      onUpdateCV?.({ ...cvData, awards: data });
+                    }
+                  }}
+                  onAdd={() => {
+                    // Add new award item
+                    const newAwards = [...(cvData?.awards || []), {
+                      title: '',
+                      date: '',
+                      awarder: '',
+                      summary: ''
+                    }];
+                    if (onUpdateField) {
+                      onUpdateField('awards', newAwards);
+                    } else {
+                      onUpdateCV?.({ ...cvData, awards: newAwards });
+                    }
+                  }}
+                  onRemove={(index) => {
+                    // Remove award item
+                    const newAwards = (cvData?.awards || []).filter((_, i) => i !== index);
+                    if (onUpdateField) {
+                      onUpdateField('awards', newAwards);
+                    } else {
+                      onUpdateCV?.({ ...cvData, awards: newAwards });
+                    }
+                  }}
                 />
               </CollapsibleContent>
             </div>
@@ -420,7 +653,38 @@ export default function RestructuredStudioLayout({
               <CollapsibleContent className="px-4 pb-4">
                 <PublicationsSection
                   data={cvData?.publications || []}
-                  onUpdate={(data) => onUpdateCV?.({ ...cvData, publications: data })}
+                  onUpdate={(path, value) => {
+                    // Use onUpdateField for proper nested updates
+                    if (onUpdateField) {
+                      onUpdateField(path, value);
+                    } else {
+                      onUpdateCV?.({ ...cvData, publications: data });
+                    }
+                  }}
+                  onAdd={() => {
+                    // Add new publication item
+                    const newPublications = [...(cvData?.publications || []), {
+                      name: '',
+                      publisher: '',
+                      releaseDate: '',
+                      url: '',
+                      summary: ''
+                    }];
+                    if (onUpdateField) {
+                      onUpdateField('publications', newPublications);
+                    } else {
+                      onUpdateCV?.({ ...cvData, publications: newPublications });
+                    }
+                  }}
+                  onRemove={(index) => {
+                    // Remove publication item
+                    const newPublications = (cvData?.publications || []).filter((_, i) => i !== index);
+                    if (onUpdateField) {
+                      onUpdateField('publications', newPublications);
+                    } else {
+                      onUpdateCV?.({ ...cvData, publications: newPublications });
+                    }
+                  }}
                 />
               </CollapsibleContent>
             </div>
@@ -451,7 +715,32 @@ export default function RestructuredStudioLayout({
               <CollapsibleContent className="px-4 pb-4">
                 <InterestsSection
                   data={cvData?.interests || []}
-                  onUpdate={(data) => onUpdateCV?.({ ...cvData, interests: data })}
+                  onUpdate={(path, value) => {
+                    // Use onUpdateField for proper nested updates
+                    if (onUpdateField) {
+                      onUpdateField(path, value);
+                    } else {
+                      onUpdateCV?.({ ...cvData, interests: data });
+                    }
+                  }}
+                  onAdd={() => {
+                    // Add new interest item
+                    const newInterests = [...(cvData?.interests || []), ''];
+                    if (onUpdateField) {
+                      onUpdateField('interests', newInterests);
+                    } else {
+                      onUpdateCV?.({ ...cvData, interests: newInterests });
+                    }
+                  }}
+                  onRemove={(index) => {
+                    // Remove interest item
+                    const newInterests = (cvData?.interests || []).filter((_, i) => i !== index);
+                    if (onUpdateField) {
+                      onUpdateField('interests', newInterests);
+                    } else {
+                      onUpdateCV?.({ ...cvData, interests: newInterests });
+                    }
+                  }}
                 />
               </CollapsibleContent>
             </div>
@@ -482,61 +771,47 @@ export default function RestructuredStudioLayout({
               <CollapsibleContent className="px-4 pb-4">
                 <ReferencesSection
                   data={cvData?.references || []}
-                  onUpdate={(data) => onUpdateCV?.({ ...cvData, references: data })}
+                  onUpdate={(path, value) => {
+                    // Use onUpdateField for proper nested updates
+                    if (onUpdateField) {
+                      onUpdateField(path, value);
+                    } else {
+                      onUpdateCV?.({ ...cvData, references: data });
+                    }
+                  }}
+                  onAdd={() => {
+                    // Add new reference item
+                    const newReferences = [...(cvData?.references || []), {
+                      name: '',
+                      reference: ''
+                    }];
+                    if (onUpdateField) {
+                      onUpdateField('references', newReferences);
+                    } else {
+                      onUpdateCV?.({ ...cvData, references: newReferences });
+                    }
+                  }}
+                  onRemove={(index) => {
+                    // Remove reference item
+                    const newReferences = (cvData?.references || []).filter((_, i) => i !== index);
+                    if (onUpdateField) {
+                      onUpdateField('references', newReferences);
+                    } else {
+                      onUpdateCV?.({ ...cvData, references: newReferences });
+                    }
+                  }}
                 />
               </CollapsibleContent>
             </div>
           </Collapsible>
         </div>
       )
-    },
-    {
-      id: 'ats',
-      title: 'ATS Analysis & Optimization',
-      icon: Target,
-      content: (
-        <div className="p-6">
-          <div className="bg-blue-500 text-white p-4 rounded-lg">
-            <h3 className="text-lg font-bold mb-2">🎯 ATS Analysis & Optimization</h3>
-            <p>This is a test ATS section to verify it's rendering correctly.</p>
-            <p>Selected Job ID: {selectedJobId || 'None'}</p>
-            <p>User ID: {userId}</p>
-            <p>CV Data Available: {cvData ? 'Yes' : 'No'}</p>
-          </div>
-          <ComprehensiveATSAnalyzer
-            selectedJobId={selectedJobId}
-            onJobSelection={onJobSelection}
-            userId={userId}
-            cvData={cvData}
-            jobData={jobData}
-            cvId={cvId}
-            onUpdateField={onUpdateField}
-            onScoreUpdate={onScoreUpdate}
-          />
-        </div>
-      )
     }
   ];
 
-  // Debug logging
-  console.log('🔍 RestructuredStudioLayout - Sections debug:', {
-    sectionsCount: sections.length,
-    sectionIds: sections.map(s => s.id),
-    expandedSections: Array.from(expandedSections),
-    hasAtsSection: sections.some(s => s.id === 'ats')
-  });
-
   return (
     <div className="space-y-4">
-      {sections.map((section, index) => {
-        console.log('🔍 RestructuredStudioLayout - Rendering section:', {
-          index,
-          id: section.id,
-          title: section.title,
-          isExpanded: expandedSections.has(section.id)
-        });
-        
-        return (
+      {sections.map((section, index) => (
         <div key={section.id}>
           <Card className="bg-transparent border-transparent">
             <Collapsible
@@ -582,9 +857,7 @@ export default function RestructuredStudioLayout({
             </Collapsible>
           </Card>
         </div>
-        );
-      })}
-
+      ))}
     </div>
   );
 }

@@ -76,9 +76,8 @@ const ApplicationJourneyPageContent: React.FC = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [sortBy, setSortBy] = useState<'lastUpdated' | 'creationDate' | 'jobTitle'>('lastUpdated');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'in-progress' | 'completed' | 'recently-completed'>('in-progress');
   const [searchQuery, setSearchQuery] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
+  const [showSortDropdown, setShowSortDropdown] = useState(false);
 
   // Cache for API responses
   const [cache, setCache] = useState<Record<string, {
@@ -158,6 +157,23 @@ const ApplicationJourneyPageContent: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [userId, authLoading, fetchAllData]);
+
+  // Close sort dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showSortDropdown) {
+        const target = event.target as Element;
+        if (!target.closest('[data-sort-dropdown]')) {
+          setShowSortDropdown(false);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showSortDropdown]);
 
   // Refresh journeys data (for after creating/deleting journeys)
   const refreshJourneys = useCallback(async () => {
@@ -318,18 +334,6 @@ const ApplicationJourneyPageContent: React.FC = () => {
     if (journeys.length === 0) return [];
 
     const filtered = journeys.filter(journey => {
-      // Filter by status
-      if (filterStatus === 'recently-completed') {
-        // Show journeys completed in the last 7 days
-        if (journey.status !== 'completed') return false;
-        const completedAt = journey.completedAt ? new Date(journey.completedAt) : new Date(journey.updatedAt);
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-        return completedAt >= sevenDaysAgo;
-      } else if (filterStatus !== 'all' && journey.status !== filterStatus) {
-        return false;
-      }
-
       // Filter by search query (optimized search)
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
@@ -355,7 +359,7 @@ const ApplicationJourneyPageContent: React.FC = () => {
           return new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime();
       }
     });
-  }, [journeys, filterStatus, searchQuery, sortBy]);
+  }, [journeys, searchQuery, sortBy]);
 
 
 
@@ -381,29 +385,67 @@ const ApplicationJourneyPageContent: React.FC = () => {
         {/* Search and Filters */}
         <div className="flex flex-col sm:flex-row gap-3 flex-1">
           {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
             <input
               type="text"
               placeholder="Search journeys..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 pr-4 py-2 w-full sm:w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-lime-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-3 rounded-full bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
+              aria-label="Search journeys"
+              role="searchbox"
             />
           </div>
 
-          {/* Filter Toggle */}
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
-              showFilters
-                ? 'bg-lime-50 dark:bg-lime-900/20 border-lime-200 dark:border-lime-800 text-lime-700 dark:text-lime-300'
-                : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-            }`}
-          >
-            <Filter className="h-4 w-4" />
-            <span className="hidden sm:inline">Filter</span>
-          </button>
+          {/* Sort By Button */}
+          <div className="relative" data-sort-dropdown>
+            <button
+              onClick={() => setShowSortDropdown(!showSortDropdown)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-full font-medium transition-all duration-200 bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 text-gray-700 dark:text-gray-300 hover:bg-[#141810] dark:hover:bg-[#141810]"
+            >
+              <SortAsc className="h-4 w-4" />
+              <span className="hidden sm:inline">
+                {sortBy === 'lastUpdated' ? 'Last Updated' : 
+                 sortBy === 'creationDate' ? 'Creation Date' : 
+                 sortBy === 'jobTitle' ? 'Job Title' : 'Sort By'}
+              </span>
+            </button>
+            
+            {/* Sort Dropdown */}
+            <AnimatePresence>
+              {showSortDropdown && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="absolute top-full right-0 mt-1 bg-white/95 dark:bg-[#141810] border border-gray-200/50 dark:border-white/10 rounded-xl shadow-xl overflow-hidden z-50 min-w-[160px] backdrop-blur-sm"
+                >
+                  {[
+                    { value: 'lastUpdated', label: 'Last Updated' },
+                    { value: 'creationDate', label: 'Creation Date' },
+                    { value: 'jobTitle', label: 'Job Title' }
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => {
+                        setSortBy(option.value as any);
+                        setShowSortDropdown(false);
+                      }}
+                      className={`w-full px-4 py-2 text-left text-sm transition-colors ${
+                        sortBy === option.value
+                          ? 'bg-lime-500/10 text-lime-700 dark:text-lime-300'
+                          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
 
         {/* Action Buttons - Only show when there are journeys */}
@@ -411,7 +453,7 @@ const ApplicationJourneyPageContent: React.FC = () => {
           <div className="flex gap-3">
             <motion.button
               onClick={handleStartNewJourney}
-              className="flex items-center gap-2 px-6 py-2 bg-lime-500 hover:bg-lime-600 text-black font-medium rounded-lg transition-colors shadow-sm"
+              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-lime-500 to-lime-600 hover:from-lime-600 hover:to-lime-700 text-black font-medium rounded-full transition-all duration-200 shadow-md hover:shadow-lg"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -422,87 +464,7 @@ const ApplicationJourneyPageContent: React.FC = () => {
         )}
       </div>
 
-      {/* Filters Panel */}
-      <AnimatePresence>
-        {showFilters && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4"
-          >
-            <div className="flex flex-col sm:flex-row gap-4">
-              {/* Sort By */}
-              <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Sort by
-                </label>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as any)}
-                  className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-lime-500 focus:border-transparent"
-                >
-                  <option value="lastUpdated">Last Updated</option>
-                  <option value="creationDate">Creation Date</option>
-                  <option value="jobTitle">Job Title</option>
-                </select>
-              </div>
 
-              {/* Filter by Status */}
-              <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Status
-                </label>
-                <select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value as any)}
-                  className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-lime-500 focus:border-transparent"
-                >
-                  <option value="all">All Journeys</option>
-                  <option value="in-progress">In Progress</option>
-                  <option value="completed">Completed</option>
-                  <option value="recently-completed">Recently Completed</option>
-                </select>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Quick Filter Chips */}
-      <div className="flex flex-wrap gap-2 mb-4">
-        {(() => {
-          const ongoingCount = journeys.filter(j => j.status === 'in-progress').length;
-          const completedCount = journeys.filter(j => j.status === 'completed').length;
-          const recentlyCompletedCount = journeys.filter(j => {
-            if (j.status !== 'completed') return false;
-            const completedAt = j.completedAt ? new Date(j.completedAt) : new Date(j.updatedAt);
-            const sevenDaysAgo = new Date();
-            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-            return completedAt >= sevenDaysAgo;
-          }).length;
-
-          return [
-            { key: 'in-progress', label: 'Ongoing', count: ongoingCount, color: 'lime' },
-            { key: 'completed', label: 'Completed', count: completedCount, color: 'blue' },
-            { key: 'recently-completed', label: 'Recently Completed', count: recentlyCompletedCount, color: 'green' }
-          ];
-        })().map(({ key, label, count, color }) => (
-          <motion.button
-            key={key}
-            onClick={() => setFilterStatus(key as any)}
-            className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-              filterStatus === key
-                ? `bg-${color}-500 text-white`
-                : `bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-${color}-100 dark:hover:bg-${color}-900/30`
-            }`}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            {label} ({count})
-          </motion.button>
-        ))}
-      </div>
 
       {/* Journeys Grid */}
       <div className="space-y-4">
@@ -548,7 +510,7 @@ const ApplicationJourneyPageContent: React.FC = () => {
                 </p>
                 <motion.button
                   onClick={handleStartNewJourney}
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-lime-500 hover:bg-lime-600 text-black font-medium rounded-lg transition-colors"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-lime-500 to-lime-600 hover:from-lime-600 hover:to-lime-700 text-black font-medium rounded-full transition-all duration-200 shadow-md hover:shadow-lg"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
@@ -566,17 +528,15 @@ const ApplicationJourneyPageContent: React.FC = () => {
                   No journeys found
                 </h3>
                 <p className="text-gray-600 dark:text-gray-300 mb-4">
-                  Try adjusting your search or filter criteria
+                  Try adjusting your search criteria
                 </p>
                 <button
                   onClick={() => {
                     setSearchQuery('');
-                    setFilterStatus('all');
-                    setShowFilters(false);
                   }}
                   className="text-lime-600 dark:text-lime-400 hover:text-lime-700 dark:hover:text-lime-300 font-medium"
                 >
-                  Clear filters
+                  Clear search
                 </button>
               </div>
             )}

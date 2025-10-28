@@ -74,7 +74,7 @@ export const EnhancedFormSection: React.FC<EnhancedFormSectionProps> = ({
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`bg-white/95 dark:bg-[#141810] border border-lime-200/50 dark:border-white/10 rounded-lg overflow-hidden shadow-sm ${className}`}
+      className={`bg-white/95 dark:bg-[#1a230f] border border-lime-200/50 dark:border-white/10 rounded-lg overflow-hidden shadow-sm ${className}`}
     >
       <button
         onClick={onToggle}

@@ -98,7 +98,9 @@ export async function GET(request: NextRequest) {
           status: cv.status,
           isMaster: cv.metadata?.isMaster || cv.isMaster || true, // Handle both formats
           createdAt: cv.createdAt,
-          updatedAt: cv.updatedAt
+          updatedAt: cv.updatedAt,
+          templateId: cv.templateId,
+          metadata: cv.metadata
         }
       }
     });

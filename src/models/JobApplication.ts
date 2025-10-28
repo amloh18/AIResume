@@ -21,6 +21,12 @@ export interface IJobApplication extends Document {
   applicationDate?: Date;
   deadline?: Date;
   notes?: string;
+  contactDetails?: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    role?: string;
+  };
   contacts: Array<{
     name: string;
     role?: string;
@@ -144,6 +150,12 @@ const jobApplicationSchema = new Schema<IJobApplication>({
     type: String,
     trim: true,
     maxlength: [2000, 'Notes cannot exceed 2000 characters']
+  },
+  contactDetails: {
+    name: { type: String, trim: true },
+    email: { type: String, trim: true },
+    phone: { type: String, trim: true },
+    role: { type: String, trim: true }
   },
   contacts: [{
     name: { type: String, required: true, trim: true },

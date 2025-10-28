@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { User, Mail, Phone, Globe, MapPin, Plus, Trash2, Sparkles, RefreshCw } from 'lucide-react';
 import RichTextEditor from '@/components/ui/RichTextEditor';
 import { getThemeClasses } from '@/lib/utils/themeUtils';
+import { validateStringValue } from '@/lib/utils/eventHandlers';
 
 interface PersonalInfoFormProps {
   data: {
@@ -67,24 +68,27 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
   };
   
   const handleNameChange = (value: string) => {
-    onUpdate({ ...safePersonalInfo, name: value });
+    const safeValue = validateStringValue(value, 'name');
+    onUpdate({ ...safePersonalInfo, name: safeValue });
   };
 
   const handleLocationChange = (field: string, value: string) => {
+    const safeValue = validateStringValue(value, field);
     onUpdate({
       ...safePersonalInfo,
       location: {
         ...safePersonalInfo.location,
-        [field]: value
+        [field]: safeValue
       }
     });
   };
 
   const handleProfileChange = (index: number, field: string, value: string) => {
+    const safeValue = validateStringValue(value, field);
     const updatedProfiles = [...safePersonalInfo.profiles];
     updatedProfiles[index] = {
       ...updatedProfiles[index],
-      [field]: value
+      [field]: safeValue
     };
     onUpdate({ ...safePersonalInfo, profiles: updatedProfiles });
   };
@@ -156,7 +160,10 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
         <input
           type="text"
           value={safePersonalInfo.label}
-          onChange={(e) => onUpdate({ ...safePersonalInfo, label: e.target.value })}
+          onChange={(e) => {
+            const value = e.target.value;
+            onUpdate({ ...safePersonalInfo, label: value });
+          }}
           className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
           placeholder="Senior Product Manager"
         />
@@ -168,7 +175,10 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
         <input
           type="email"
           value={safePersonalInfo.email}
-          onChange={(e) => onUpdate({ ...safePersonalInfo, email: e.target.value })}
+          onChange={(e) => {
+            const value = e.target.value;
+            onUpdate({ ...safePersonalInfo, email: value });
+          }}
           className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
           placeholder="john.doe@example.com"
         />
@@ -179,7 +189,10 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
         <input
           type="tel"
           value={safePersonalInfo.phone}
-          onChange={(e) => onUpdate({ ...safePersonalInfo, phone: e.target.value })}
+          onChange={(e) => {
+            const value = e.target.value;
+            onUpdate({ ...safePersonalInfo, phone: value });
+          }}
           className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
           placeholder="+1 (555) 123-4567"
         />
@@ -191,7 +204,10 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
         <input
           type="url"
           value={safePersonalInfo.url}
-          onChange={(e) => onUpdate({ ...safePersonalInfo, url: e.target.value })}
+          onChange={(e) => {
+            const value = e.target.value;
+            onUpdate({ ...safePersonalInfo, url: value });
+          }}
           className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
           placeholder="https://yourportfolio.com"
         />

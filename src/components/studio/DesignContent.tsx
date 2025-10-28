@@ -7,7 +7,8 @@ import {
   Type, 
   Layout, 
   Spacing,
-  RotateCcw
+  RotateCcw,
+  Code
 } from 'lucide-react';
 import { getThemeClasses } from '@/lib/utils/themeUtils';
 
@@ -30,7 +31,8 @@ const DesignContent: React.FC<DesignContentProps> = ({
     sectionSpacing: 16,
     colorScheme: 'professional',
     alignment: 'left' as 'left' | 'center' | 'right',
-    pagePadding: { top: 32, bottom: 32, left: 32, right: 32 }
+    pagePadding: { top: 32, bottom: 32, left: 32, right: 32 },
+    skillsDisplayType: 'category' as 'category' | 'chips' | 'comma'
   });
 
   const handleSettingChange = (key: string, value: any) => {
@@ -52,7 +54,8 @@ const DesignContent: React.FC<DesignContentProps> = ({
       sectionSpacing: 16,
       colorScheme: 'professional',
       alignment: 'left' as 'left' | 'center' | 'right',
-      pagePadding: { top: 32, bottom: 32, left: 32, right: 32 }
+      pagePadding: { top: 32, bottom: 32, left: 32, right: 32 },
+      skillsDisplayType: 'category' as 'category' | 'chips' | 'comma'
     };
     setDesignSettings(defaultSettings);
     if (onSettingsChange) {
@@ -206,6 +209,62 @@ const DesignContent: React.FC<DesignContentProps> = ({
                 className="w-full accent-[#80FF00]"
               />
               <span className="text-xs text-white/60">{designSettings.lineSpacing}x</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Skills Display Type Section */}
+      <div className="bg-white/5 rounded-2xl border border-white/10 transition-all duration-300">
+        <div className="flex items-center justify-between p-6">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <Code className="w-5 h-5 text-white" />
+              </div>
+              <h3 className="text-xl font-semibold text-white">Skills Display</h3>
+            </div>
+          </div>
+        </div>
+        
+        <div className="px-6 pb-6">
+          <div className="pt-4">
+            <div className="grid grid-cols-1 gap-4">
+              {[
+                { 
+                  id: 'category', 
+                  name: 'Category with Comma List', 
+                  description: 'Programming Languages: JavaScript, Python, Java',
+                  preview: 'Category based grouping'
+                },
+                { 
+                  id: 'chips', 
+                  name: 'Skill Chips', 
+                  description: '[JavaScript] [Python] [Java] [React]',
+                  preview: 'Individual skill badges'
+                },
+                { 
+                  id: 'comma', 
+                  name: 'Simple Comma Separated', 
+                  description: 'JavaScript, Python, Java, React, Node.js',
+                  preview: 'Clean comma list'
+                }
+              ].map((displayType) => (
+                <button
+                  key={displayType.id}
+                  onClick={() => handleSettingChange('skillsDisplayType', displayType.id)}
+                  className={`p-4 rounded-lg border transition-colors text-left ${
+                    designSettings.skillsDisplayType === displayType.id
+                      ? 'border-[#80FF00] bg-[#80FF00]/10'
+                      : 'border-white/20 hover:bg-white/10'
+                  }`}
+                >
+                  <div className="flex flex-col gap-2">
+                    <span className="text-sm font-medium text-white">{displayType.name}</span>
+                    <span className="text-xs text-white/60">{displayType.description}</span>
+                  </div>
+                </button>
+              ))}
             </div>
           </div>
         </div>
