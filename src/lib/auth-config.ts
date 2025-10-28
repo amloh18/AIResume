@@ -2,6 +2,8 @@ import { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import User from '@/models/User';
+import VerificationToken from '@/models/VerificationToken';
+import { isCodeExpired } from '@/lib/verification-code';
 import mongoose from 'mongoose';
 import { env } from './env';
 
@@ -160,6 +162,97 @@ export const authConfig: NextAuthOptions = {
         } catch (error: any) {
           console.error('❌ Authentication error:', error.message);
           throw new Error(error.message || 'Authentication failed');
+        }
+      },
+    }),
+
+    // Passwordless Login Provider (for code-based authentication)
+    CredentialsProvider({
+      id: 'passwordless',
+      name: 'Passwordless Login',
+      credentials: {
+        email: { label: 'Email', type: 'email' },
+        verificationCode: { label: 'Verification Code', type: 'text' },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.verificationCode) {
+          console.log('❌ Missing passwordless credentials');
+          return null;
+        }
+
+        try {
+          await connectDB();
+
+          // Find user by email
+          const user = await User.findOne({ email: credentials.email.toLowerCase() }).lean();
+
+          if (!user) {
+            console.log('❌ User not found for passwordless login:', credentials.email);
+            return null;
+          }
+
+          // Check if user is email verified
+          if (!user.isEmailVerified) {
+            console.log('❌ Email not verified for passwordless login:', credentials.email);
+            return null;
+          }
+
+          // Verify the code using the existing verification system
+          const verificationToken = await VerificationToken.findOne({
+            email: credentials.email.toLowerCase(),
+            type: 'passwordless-login',
+            isUsed: false
+          });
+
+          if (!verificationToken) {
+            console.log('❌ No verification token found for passwordless login:', credentials.email);
+            return null;
+          }
+
+          // Check if code is expired
+          if (isCodeExpired(verificationToken.createdAt)) {
+            await VerificationToken.deleteOne({ _id: verificationToken._id });
+            console.log('❌ Verification code expired for passwordless login:', credentials.email);
+            return null;
+          }
+
+          // Verify the code
+          const verificationResult = await VerificationToken.verifyCode(
+            credentials.verificationCode, 
+            credentials.email.toLowerCase(), 
+            'passwordless-login'
+          );
+
+          if (!verificationResult.valid) {
+            console.log('❌ Invalid verification code for passwordless login:', credentials.email);
+            return null;
+          }
+
+          // Mark token as used
+          await VerificationToken.findByIdAndUpdate(verificationToken._id, { isUsed: true });
+
+          // Update last login
+          await User.findByIdAndUpdate(user._id, { lastLogin: new Date() });
+
+          console.log('✅ Passwordless login successful:', {
+            id: user._id.toString(),
+            email: user.email,
+            name: `${user.firstName} ${user.lastName}`,
+          });
+
+          return {
+            id: user._id.toString(),
+            email: user.email,
+            name: `${user.firstName} ${user.lastName}`,
+            image: user.avatar || null,
+            role: user.role || 'user',
+            type: 'user',
+            planKey: user.currentPlanKey || 'free',
+            subscriptionStatus: user.subscription?.status || 'inactive',
+          };
+        } catch (error: any) {
+          console.error('❌ Passwordless login error:', error);
+          return null;
         }
       },
     }),

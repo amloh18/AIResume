@@ -21,12 +21,16 @@ import {
 interface EmailTemplate {
   id: string;
   name: string;
-  type: 'verification' | 'welcome' | 'password_reset' | 'membership_reminder' | 'custom';
+  type: 'verification' | 'welcome' | 'password_reset' | 'membership_reminder' | 'limit_exhausted' | 'special_offers' | 'account_deletion' | 'custom';
   subject: string;
-  lastUsed: string;
+  description: string;
+  category: 'system' | 'marketing' | 'transactional';
+  lastUsed?: string;
   sentCount: number;
   openRate: number;
   clickRate: number;
+  previewHtml: string;
+  variables: string[];
 }
 
 interface EmailCampaign {
@@ -50,16 +54,25 @@ export default function EmailManagementPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
   const [showCreateTemplate, setShowCreateTemplate] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewTemplate, setPreviewTemplate] = useState<EmailTemplate | null>(null);
 
   useEffect(() => {
     fetchTemplates();
     fetchCampaigns();
-  }, []);
+  }, [categoryFilter, typeFilter, searchTerm]);
 
   const fetchTemplates = async () => {
     try {
       setError(null);
-      const response = await fetch('/api/admin/email-templates');
+      const params = new URLSearchParams();
+      if (categoryFilter !== 'all') params.append('category', categoryFilter);
+      if (typeFilter !== 'all') params.append('type', typeFilter);
+      if (searchTerm) params.append('search', searchTerm);
+      
+      const response = await fetch(`/api/admin/email-templates?${params.toString()}`);
       if (response.ok) {
         const data = await response.json();
         setTemplates(data.templates || []);
@@ -92,10 +105,39 @@ export default function EmailManagementPage() {
     }
   };
 
-  const filteredTemplates = templates.filter(template =>
-    template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    template.subject.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handlePreviewTemplate = async (template: EmailTemplate) => {
+    try {
+      const response = await fetch('/api/admin/email-templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          templateId: template.id,
+          variables: {
+            firstName: 'John',
+            lastName: 'Doe',
+            email: 'john@example.com',
+            code: '1234',
+            link: 'https://cvcircle.com/example',
+            couponCode: 'SAVE30',
+            expirationDate: 'December 31, 2024',
+            usageLimit: 5,
+            currentUsage: 5,
+            planName: 'Free Plan'
+          }
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setPreviewTemplate(data.template);
+        setShowPreview(true);
+      }
+    } catch (error) {
+      console.error('Error previewing template:', error);
+    }
+  };
+
+  const filteredTemplates = templates;
 
   if (loading) {
     return (
@@ -197,27 +239,56 @@ export default function EmailManagementPage() {
         {/* Email Templates Section */}
         <div className="bg-white rounded-lg shadow-sm border mb-8">
           <div className="p-6 border-b">
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold text-gray-900">Email Templates</h2>
-              <div className="flex gap-4">
-                <div className="relative">
-                  <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search templates..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  />
-                </div>
-                <button
-                  onClick={() => setShowCreateTemplate(true)}
-                  className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                  Create Template
-                </button>
+              <button
+                onClick={() => setShowCreateTemplate(true)}
+                className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                Create Template
+              </button>
+            </div>
+            
+            {/* Filters */}
+            <div className="flex flex-wrap gap-4">
+              <div className="relative">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search templates..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                />
               </div>
+              
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              >
+                <option value="all">All Categories</option>
+                <option value="system">System</option>
+                <option value="marketing">Marketing</option>
+                <option value="transactional">Transactional</option>
+              </select>
+              
+              <select
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              >
+                <option value="all">All Types</option>
+                <option value="verification">Verification</option>
+                <option value="welcome">Welcome</option>
+                <option value="password_reset">Password Reset</option>
+                <option value="limit_exhausted">Limit Exhausted</option>
+                <option value="special_offers">Special Offers</option>
+                <option value="account_deletion">Account Deletion</option>
+                <option value="membership_reminder">Membership Reminder</option>
+                <option value="custom">Custom</option>
+              </select>
             </div>
           </div>
 
@@ -226,18 +297,31 @@ export default function EmailManagementPage() {
               {filteredTemplates.map((template) => (
                 <div key={template.id} className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
                   <div className="flex items-start justify-between mb-4">
-                    <div>
+                    <div className="flex-1">
                       <h3 className="font-semibold text-gray-900">{template.name}</h3>
                       <p className="text-sm text-gray-600 mt-1">{template.subject}</p>
+                      <p className="text-xs text-gray-500 mt-1">{template.description}</p>
                     </div>
-                    <span className={`px-2 py-1 text-xs rounded-full ${
-                      template.type === 'verification' ? 'bg-blue-100 text-blue-800' :
-                      template.type === 'welcome' ? 'bg-green-100 text-green-800' :
-                      template.type === 'password_reset' ? 'bg-red-100 text-red-800' :
-                      'bg-purple-100 text-purple-800'
-                    }`}>
-                      {template.type.replace('_', ' ')}
-                    </span>
+                    <div className="flex flex-col gap-2">
+                      <span className={`px-2 py-1 text-xs rounded-full ${
+                        template.type === 'verification' ? 'bg-blue-100 text-blue-800' :
+                        template.type === 'welcome' ? 'bg-green-100 text-green-800' :
+                        template.type === 'password_reset' ? 'bg-red-100 text-red-800' :
+                        template.type === 'limit_exhausted' ? 'bg-orange-100 text-orange-800' :
+                        template.type === 'special_offers' ? 'bg-purple-100 text-purple-800' :
+                        template.type === 'account_deletion' ? 'bg-gray-100 text-gray-800' :
+                        'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {template.type.replace('_', ' ')}
+                      </span>
+                      <span className={`px-2 py-1 text-xs rounded-full ${
+                        template.category === 'system' ? 'bg-gray-100 text-gray-800' :
+                        template.category === 'marketing' ? 'bg-pink-100 text-pink-800' :
+                        'bg-blue-100 text-blue-800'
+                      }`}>
+                        {template.category}
+                      </span>
+                    </div>
                   </div>
 
                   <div className="space-y-2 mb-4">
@@ -253,17 +337,35 @@ export default function EmailManagementPage() {
                       <span className="text-gray-600">Click Rate:</span>
                       <span className="font-medium text-blue-600">{template.clickRate}%</span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Last Used:</span>
-                      <span className="font-medium">{template.lastUsed}</span>
-                    </div>
+                    {template.lastUsed && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Last Used:</span>
+                        <span className="font-medium">{template.lastUsed}</span>
+                      </div>
+                    )}
                   </div>
+
+                  {template.variables && template.variables.length > 0 && (
+                    <div className="mb-4">
+                      <p className="text-xs text-gray-500 mb-2">Variables:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {template.variables.map((variable) => (
+                          <span key={variable} className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">
+                            {variable}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="flex gap-2">
                     <button className="flex-1 bg-gray-100 text-gray-700 px-3 py-2 rounded text-sm hover:bg-gray-200 transition-colors">
                       Edit
                     </button>
-                    <button className="flex-1 bg-green-600 text-white px-3 py-2 rounded text-sm hover:bg-green-700 transition-colors">
+                    <button 
+                      onClick={() => handlePreviewTemplate(template)}
+                      className="flex-1 bg-green-600 text-white px-3 py-2 rounded text-sm hover:bg-green-700 transition-colors"
+                    >
                       Preview
                     </button>
                   </div>
@@ -368,6 +470,62 @@ export default function EmailManagementPage() {
           </div>
         </div>
       </div>
+
+      {/* Template Preview Modal */}
+      {showPreview && previewTemplate && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h3 className="text-xl font-semibold text-gray-900">
+                Preview: {previewTemplate.name}
+              </h3>
+              <button
+                onClick={() => setShowPreview(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              <div className="mb-4">
+                <p className="text-sm text-gray-600 mb-2">
+                  <strong>Subject:</strong> {previewTemplate.subject}
+                </p>
+                <p className="text-sm text-gray-600">
+                  <strong>Category:</strong> {previewTemplate.category} | 
+                  <strong> Type:</strong> {previewTemplate.type.replace('_', ' ')}
+                </p>
+              </div>
+              
+              <div className="border rounded-lg overflow-hidden">
+                <div 
+                  className="w-full"
+                  dangerouslySetInnerHTML={{ __html: previewTemplate.previewHtml }}
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 p-6 border-t bg-gray-50">
+              <button
+                onClick={() => setShowPreview(false)}
+                className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => {
+                  // TODO: Implement use in campaign
+                  setShowPreview(false);
+                }}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              >
+                Use in Campaign
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,266 +1,472 @@
-// CVCircle.io Email Templates
-// Professional email templates with lime green branding
+// Email Templates with Custom Color Scheme
+// Accent: #78c708, Background: #141810, Card: #1a230f
 
-export interface EmailTemplate {
-  subject: string;
-  html: string;
+export interface EmailTemplateData {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  code?: string;
+  link?: string;
+  couponCode?: string;
+  planName?: string;
+  usageLimit?: number;
+  currentUsage?: number;
+  expirationDate?: string;
 }
 
-// Base template with CVCircle.io branding
-const getBaseTemplate = (content: string, footerText?: string) => `
-  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #f8fafc;">
-    <div style="background: white; border-radius: 12px; padding: 30px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-      
-      <!-- Header -->
-      <div style="text-align: center; margin-bottom: 30px; border-bottom: 2px solid #32CD32; padding-bottom: 20px;">
-        <h1 style="color: #32CD32; margin: 0; font-size: 28px; font-weight: bold;">CVCircle.io</h1>
-        <p style="color: #6B7280; margin: 5px 0 0 0; font-size: 16px;">Professional CV Builder</p>
+// Base email template with consistent styling
+const getBaseTemplate = (title: string, content: string, footerText?: string) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title}</title>
+  <style>
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+      margin: 0; 
+      padding: 0; 
+      background-color: #141810; 
+      min-height: 100vh;
+    }
+    .container { 
+      max-width: 600px; 
+      margin: 0 auto; 
+      background-color: #141810; 
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    .card { 
+      background-color: #1a230f; 
+      border-radius: 16px; 
+      padding: 40px; 
+      text-align: center; 
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+      border: 1px solid #2a3a22;
+      max-width: 500px;
+      width: 100%;
+    }
+    .header { 
+      margin-bottom: 30px; 
+    }
+    .header h1 { 
+      color: #78c708; 
+      margin: 0; 
+      font-size: 28px; 
+      font-weight: 700; 
+    }
+    .header p { 
+      color: #a0a0a0; 
+      margin: 5px 0 0 0; 
+      font-size: 14px;
+    }
+    .title { 
+      color: #ffffff; 
+      margin: 0 0 15px 0; 
+      font-size: 24px; 
+      font-weight: 700; 
+    }
+    .subtitle { 
+      color: #a0a0a0; 
+      font-size: 16px; 
+      margin: 0 0 30px 0; 
+      line-height: 1.5;
+    }
+    .content { 
+      color: #e0e0e0; 
+      font-size: 16px; 
+      line-height: 1.6; 
+      margin: 0 0 30px 0;
+    }
+    .button { 
+      background: linear-gradient(135deg, #78c708, #6bb806); 
+      color: #141810; 
+      padding: 14px 32px; 
+      text-decoration: none; 
+      border-radius: 8px; 
+      display: inline-block; 
+      font-weight: 700; 
+      font-size: 16px;
+      margin: 20px 0;
+      transition: all 0.3s ease;
+    }
+    .button:hover { 
+      background: linear-gradient(135deg, #6bb806, #5aa005); 
+      transform: translateY(-2px);
+    }
+    .code-container { 
+      display: flex; 
+      justify-content: center; 
+      gap: 12px; 
+      margin: 30px 0; 
+    }
+    .code-digit { 
+      width: 60px; 
+      height: 60px; 
+      background-color: #141810; 
+      border: 2px solid #78c708; 
+      border-radius: 8px; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      font-size: 24px; 
+      font-weight: 700; 
+      color: #78c708; 
+      font-family: 'Courier New', monospace;
+    }
+    .highlight { 
+      background-color: #2a3a22; 
+      border: 1px solid #78c708; 
+      border-radius: 8px; 
+      padding: 20px; 
+      margin: 20px 0; 
+    }
+    .highlight-text { 
+      color: #78c708; 
+      font-weight: 700; 
+      font-size: 18px;
+    }
+    .warning { 
+      background-color: #2a3a22; 
+      border: 1px solid #ff6b6b; 
+      border-radius: 8px; 
+      padding: 16px; 
+      margin: 20px 0; 
+    }
+    .warning-text { 
+      color: #ff6b6b; 
+      font-size: 14px; 
+      margin: 0; 
+      line-height: 1.5;
+    }
+    .info { 
+      background-color: #2a3a22; 
+      border: 1px solid #4a90e2; 
+      border-radius: 8px; 
+      padding: 16px; 
+      margin: 20px 0; 
+    }
+    .info-text { 
+      color: #4a90e2; 
+      font-size: 14px; 
+      margin: 0; 
+      line-height: 1.5;
+    }
+    .footer { 
+      margin-top: 40px; 
+      text-align: center; 
+      color: #a0a0a0; 
+      font-size: 12px; 
+      line-height: 1.4;
+    }
+    .coupon-code { 
+      background-color: #141810; 
+      border: 2px dashed #78c708; 
+      border-radius: 8px; 
+      padding: 20px; 
+      margin: 20px 0; 
+    }
+    .coupon-text { 
+      color: #78c708; 
+      font-size: 24px; 
+      font-weight: 700; 
+      font-family: 'Courier New', monospace;
+      letter-spacing: 2px;
+    }
+    .stats { 
+      display: flex; 
+      justify-content: space-around; 
+      margin: 20px 0; 
+    }
+    .stat { 
+      text-align: center; 
+    }
+    .stat-number { 
+      color: #78c708; 
+      font-size: 24px; 
+      font-weight: 700; 
+    }
+    .stat-label { 
+      color: #a0a0a0; 
+      font-size: 12px; 
+      margin-top: 5px; 
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="header">
+        <h1>CVCircle</h1>
+        <p>Professional CV Builder</p>
       </div>
       
-      <!-- Content -->
       ${content}
       
-      <!-- Footer -->
-      <div style="text-align: center; color: #6B7280; font-size: 12px; border-top: 1px solid #E5E7EB; padding-top: 20px; margin-top: 30px;">
-        <p style="margin: 0;">This email was sent from your CVCircle.io platform</p>
-        <p style="margin: 5px 0 0 0;">&copy; 2025 CVCircle. All rights reserved.</p>
+      <div class="footer">
+        <p>©2024 CVCircle. All rights reserved.</p>
+        <p>www.cvcircle.io</p>
+        ${footerText ? `<p>${footerText}</p>` : ''}
       </div>
     </div>
   </div>
+</body>
+</html>
 `;
 
-// Email Verification Template
-export function getEmailVerificationTemplate(firstName: string, verificationLink: string): EmailTemplate {
+// 1. New User Welcome Email
+export function getNewUserTemplate(data: EmailTemplateData) {
   const content = `
-    <div style="background: #F9FAFB; padding: 30px; border-radius: 8px; margin-bottom: 20px;">
-      <h2 style="color: #111827; margin: 0 0 15px 0; font-size: 24px;">Welcome to CVCircle.io, ${firstName}! 👋</h2>
-      <p style="color: #4B5563; margin: 0 0 20px 0; line-height: 1.6; font-size: 16px;">
-        Thank you for creating your account. To complete your registration and start building your professional CV, 
-        please verify your email address by clicking the button below.
-      </p>
+    <h2 class="title">Welcome to CVCircle, ${data.firstName}!</h2>
+    <p class="subtitle">Your journey to creating the perfect CV starts here.</p>
+    
+    <div class="content">
+      <p>We're thrilled to have you join our community of professionals who are building their dream careers. CVCircle is designed to help you create stunning, ATS-friendly CVs that get you noticed by employers.</p>
       
-      <div style="text-align: center; margin: 30px 0;">
-        <a href="${verificationLink}" 
-           style="background: #32CD32; color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px;">
-          Verify Email Address
-        </a>
+      <div class="highlight">
+        <p class="highlight-text">🎉 Your account is ready to use!</p>
+        <p style="color: #e0e0e0; margin: 10px 0 0 0;">Start building your professional CV in just a few minutes.</p>
       </div>
       
-      <p style="color: #6B7280; font-size: 14px; margin: 20px 0 0 0; line-height: 1.5;">
-        If the button doesn't work, you can also copy and paste this link into your browser:<br>
-        <a href="${verificationLink}" style="color: #32CD32; word-break: break-all;">${verificationLink}</a>
-      </p>
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-number">5</div>
+          <div class="stat-label">Professional Templates</div>
+        </div>
+        <div class="stat">
+          <div class="stat-number">∞</div>
+          <div class="stat-label">Unlimited Edits</div>
+        </div>
+        <div class="stat">
+          <div class="stat-number">ATS</div>
+          <div class="stat-label">Optimized</div>
+        </div>
+      </div>
       
-      <div style="background: #FEF3C7; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #F59E0B;">
-        <p style="color: #F59E0B; margin: 0; font-size: 14px;">
-          <strong>Security Note:</strong> This verification link will expire in 24 hours for your security. 
-          If you didn't create an account with CVCircle.io, you can safely ignore this email.
+      <a href="https://www.cvcircle.io/dashboard" class="button">Start Building Your CV</a>
+      
+      <div class="info">
+        <p class="info-text">
+          <strong>Quick Start Guide:</strong><br>
+          1. Choose from our professional templates<br>
+          2. Fill in your information<br>
+          3. Customize the design to match your style<br>
+          4. Download and start applying!
         </p>
       </div>
     </div>
   `;
-
-  return {
-    subject: 'Verify Your CVCircle.io Account',
-    html: getBaseTemplate(content)
-  };
+  
+  return getBaseTemplate('Welcome to CVCircle', content);
 }
 
-// Password Reset Template
-export function getPasswordResetTemplate(firstName: string, resetLink: string): EmailTemplate {
+// 2. Limit Exhausted (Upgrade) Email
+export function getLimitExhaustedTemplate(data: EmailTemplateData) {
   const content = `
-    <div style="background: #F9FAFB; padding: 30px; border-radius: 8px; margin-bottom: 20px;">
-      <h2 style="color: #111827; margin: 0 0 15px 0; font-size: 24px;">Reset Your Password 🔐</h2>
-      <p style="color: #4B5563; margin: 0 0 20px 0; line-height: 1.6; font-size: 16px;">
-        Hi ${firstName},<br><br>
-        We received a request to reset your password for your CVCircle.io account. 
-        Click the button below to create a new password.
-      </p>
+    <h2 class="title">You've Reached Your Limit</h2>
+    <p class="subtitle">Don't let limits hold back your career success.</p>
+    
+    <div class="content">
+      <p>You've used all ${data.usageLimit} CVs in your current plan. It's time to upgrade and unlock unlimited possibilities!</p>
       
-      <div style="text-align: center; margin: 30px 0;">
-        <a href="${resetLink}" 
-           style="background: #32CD32; color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px;">
-          Reset Password
-        </a>
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-number">${data.currentUsage}</div>
+          <div class="stat-label">CVs Created</div>
+        </div>
+        <div class="stat">
+          <div class="stat-number">${data.usageLimit}</div>
+          <div class="stat-label">Your Limit</div>
+        </div>
+        <div class="stat">
+          <div class="stat-number">∞</div>
+          <div class="stat-label">With Pro</div>
+        </div>
       </div>
       
-      <p style="color: #6B7280; font-size: 14px; margin: 20px 0 0 0; line-height: 1.5;">
-        If the button doesn't work, you can also copy and paste this link into your browser:<br>
-        <a href="${resetLink}" style="color: #32CD32; word-break: break-all;">${resetLink}</a>
-      </p>
-      
-      <div style="background: #FEE2E2; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #EF4444;">
-        <p style="color: #EF4444; margin: 0; font-size: 14px;">
-          <strong>Security Note:</strong> This link will expire in 1 hour for your security. 
-          If you didn't request a password reset, you can safely ignore this email.
-        </p>
-      </div>
-    </div>
-  `;
-
-  return {
-    subject: 'Reset Your CVCircle.io Password',
-    html: getBaseTemplate(content)
-  };
-}
-
-// Welcome Email with Membership Promotion
-export function getWelcomeEmailTemplate(firstName: string): EmailTemplate {
-  const content = `
-    <div style="background: #F9FAFB; padding: 30px; border-radius: 8px; margin-bottom: 20px;">
-      <h2 style="color: #111827; margin: 0 0 15px 0; font-size: 24px;">Welcome to CVCircle.io, ${firstName}! 🎉</h2>
-      <p style="color: #4B5563; margin: 0 0 20px 0; line-height: 1.6; font-size: 16px;">
-        Congratulations! Your account has been successfully verified. You're now ready to create professional CVs that stand out to employers.
-      </p>
-      
-      <!-- Features Showcase -->
-      <div style="background: #E0F2FE; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #32CD32;">
-        <h3 style="color: #32CD32; margin: 0 0 15px 0; font-size: 18px;">✨ What You Can Do Now:</h3>
-        <ul style="color: #0369A1; margin: 0; padding-left: 20px; font-size: 14px;">
-          <li>Create professional CVs with our AI-powered builder</li>
-          <li>Choose from 50+ professional templates</li>
-          <li>Get ATS optimization suggestions</li>
-          <li>Export to PDF, Word, or share online</li>
-          <li>Track your application progress</li>
-        </ul>
-      </div>
-      
-      <!-- Membership Promotion -->
-      <div style="background: linear-gradient(135deg, #32CD32 0%, #228B22 100%); padding: 25px; border-radius: 8px; margin: 20px 0; text-align: center; color: white;">
-        <h3 style="margin: 0 0 10px 0; font-size: 20px;">🚀 Upgrade to Pro Membership</h3>
-        <p style="margin: 0 0 15px 0; font-size: 16px;">Unlock unlimited CVs, premium templates, and advanced features</p>
-        <a href="https://cvcircle.io/pricing" 
-           style="background: white; color: #32CD32; padding: 12px 25px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600; font-size: 16px;">
-          View Pricing Plans
-        </a>
-      </div>
-      
-      <!-- Get Started Button -->
-      <div style="text-align: center; margin: 30px 0;">
-        <a href="https://cvcircle.io/dashboard" 
-           style="background: #32CD32; color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px;">
-          Start Building Your CV
-        </a>
-      </div>
-      
-      <!-- Pro Features -->
-      <div style="background: #F0FDF4; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #16A34A;">
-        <h3 style="color: #16A34A; margin: 0 0 10px 0; font-size: 18px;">💎 Pro Membership Benefits:</h3>
-        <ul style="color: #16A34A; margin: 0; padding-left: 20px; font-size: 14px;">
-          <li>Unlimited CV creation and downloads</li>
-          <li>Premium templates and designs</li>
-          <li>Advanced ATS optimization</li>
-          <li>Priority customer support</li>
-          <li>Cover letter generator</li>
-          <li>Job application tracking</li>
-        </ul>
-      </div>
-    </div>
-  `;
-
-  return {
-    subject: 'Welcome to CVCircle.io - Start Building Your Professional CV!',
-    html: getBaseTemplate(content)
-  };
-}
-
-// Membership Reminder Template
-export function getMembershipReminderTemplate(firstName: string, daysLeft: number): EmailTemplate {
-  const content = `
-    <div style="background: #F9FAFB; padding: 30px; border-radius: 8px; margin-bottom: 20px;">
-      <h2 style="color: #111827; margin: 0 0 15px 0; font-size: 24px;">Your Pro Membership Expires Soon ⏰</h2>
-      <p style="color: #4B5563; margin: 0 0 20px 0; line-height: 1.6; font-size: 16px;">
-        Hi ${firstName},<br><br>
-        Your CVCircle.io Pro membership will expire in <strong>${daysLeft} days</strong>. 
-        Don't lose access to your premium features!
-      </p>
-      
-      <!-- Urgency Message -->
-      <div style="background: #FEF3C7; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #F59E0B;">
-        <h3 style="color: #F59E0B; margin: 0 0 10px 0; font-size: 18px;">⚠️ What You'll Lose:</h3>
-        <ul style="color: #F59E0B; margin: 0; padding-left: 20px; font-size: 14px;">
-          <li>Access to premium templates</li>
-          <li>Unlimited CV downloads</li>
+      <div class="highlight">
+        <p class="highlight-text">🚀 Upgrade to Pro and get:</p>
+        <ul style="color: #e0e0e0; text-align: left; margin: 15px 0;">
+          <li>Unlimited CV creation</li>
+          <li>Premium templates</li>
           <li>Advanced ATS optimization</li>
           <li>Priority support</li>
+          <li>Cover letter generator</li>
         </ul>
       </div>
       
-      <!-- Renewal Button -->
-      <div style="text-align: center; margin: 30px 0;">
-        <a href="https://cvcircle.io/renew" 
-           style="background: #32CD32; color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px;">
-          Renew Membership Now
-        </a>
-      </div>
+      <a href="https://www.cvcircle.io/dashboard?upgrade=true" class="button">Upgrade to Pro Now</a>
       
-      <!-- Special Offer -->
-      <div style="background: linear-gradient(135deg, #32CD32 0%, #228B22 100%); padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center; color: white;">
-        <h3 style="margin: 0 0 10px 0; font-size: 18px;">🎁 Special Renewal Offer</h3>
-        <p style="margin: 0 0 15px 0; font-size: 16px;">Get 20% off your renewal when you upgrade today!</p>
-        <a href="https://cvcircle.io/renew?discount=20" 
-           style="background: white; color: #32CD32; padding: 10px 20px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600; font-size: 14px;">
-          Claim 20% Discount
-        </a>
+      <div class="warning">
+        <p class="warning-text">
+          <strong>Limited Time:</strong> Upgrade in the next 24 hours and save 20% on your first year!
+        </p>
       </div>
-      
-      <p style="color: #6B7280; font-size: 14px; margin: 20px 0 0 0; line-height: 1.5;">
-        Questions about your membership? Contact our support team at 
-        <a href="mailto:support@cvcircle.io" style="color: #32CD32;">support@cvcircle.io</a>
-      </p>
     </div>
   `;
-
-  return {
-    subject: `Your CVCircle.io Pro Membership Expires in ${daysLeft} Days`,
-    html: getBaseTemplate(content)
-  };
+  
+  return getBaseTemplate('Upgrade Your CVCircle Plan', content);
 }
 
-// Test Email Template (for testing)
-export function getTestEmailTemplate(): EmailTemplate {
+// 3. Special Offers (Coupon Code) Email
+export function getSpecialOffersTemplate(data: EmailTemplateData) {
   const content = `
-    <div style="background: #F9FAFB; padding: 30px; border-radius: 8px; margin-bottom: 20px;">
-      <h2 style="color: #111827; margin: 0 0 15px 0; font-size: 24px;">CVCircle.io Email Test 🚀</h2>
-      <p style="color: #4B5563; margin: 0 0 20px 0; line-height: 1.6; font-size: 16px;">
-        This is a test email to verify that your CVCircle.io email system is working perfectly with the new branding and lime green theme.
+    <h2 class="title">🎉 Special Offer Just for You!</h2>
+    <p class="subtitle">Exclusive discount on your CVCircle Pro subscription.</p>
+    
+    <div class="content">
+      <p>We've prepared something special for you, ${data.firstName}! As a valued member of our community, you deserve the best deal on professional CV building tools.</p>
+      
+      <div class="coupon-code">
+        <p style="color: #a0a0a0; margin: 0 0 10px 0; font-size: 14px;">Use this code at checkout:</p>
+        <div class="coupon-text">${data.couponCode}</div>
+        <p style="color: #a0a0a0; margin: 10px 0 0 0; font-size: 12px;">Valid until ${data.expirationDate}</p>
+      </div>
+      
+      <div class="highlight">
+        <p class="highlight-text">💰 Save 30% on Pro Plan</p>
+        <p style="color: #e0e0e0; margin: 10px 0 0 0;">Get unlimited CVs, premium templates, and advanced features.</p>
+      </div>
+      
+      <a href="https://www.cvcircle.io/dashboard?coupon=${data.couponCode}" class="button">Claim Your Discount</a>
+      
+      <div class="info">
+        <p class="info-text">
+          <strong>What's included in Pro:</strong><br>
+          • Unlimited CV creation and downloads<br>
+          • 15+ premium templates<br>
+          • Advanced ATS optimization<br>
+          • Cover letter generator<br>
+          • Priority customer support
+        </p>
+      </div>
+      
+      <p style="color: #a0a0a0; font-size: 14px; margin: 30px 0 0 0;">
+        This offer is exclusively for you and expires soon. Don't miss out on building your dream career!
       </p>
-      
-      <!-- Configuration Details -->
-      <div style="background: #E0F2FE; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #32CD32;">
-        <h3 style="color: #32CD32; margin: 0 0 10px 0; font-size: 18px;">📊 Email System Status:</h3>
-        <ul style="color: #0369A1; margin: 0; padding-left: 20px; font-size: 14px;">
-          <li><strong>Brand:</strong> CVCircle.io</li>
-          <li><strong>Theme Color:</strong> Lime Green (#32CD32)</li>
-          <li><strong>Status:</strong> ✅ Active & Working</li>
-          <li><strong>Year:</strong> 2025</li>
-        </ul>
-      </div>
-      
-      <!-- Features -->
-      <div style="background: #F0FDF4; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #16A34A;">
-        <h3 style="color: #16A34A; margin: 0 0 10px 0; font-size: 18px;">✨ Email Templates Available:</h3>
-        <ul style="color: #16A34A; margin: 0; padding-left: 20px; font-size: 14px;">
-          <li>Email verification</li>
-          <li>Password reset</li>
-          <li>Welcome with membership promotion</li>
-          <li>Membership reminders</li>
-          <li>System notifications</li>
-        </ul>
-      </div>
-      
-      <!-- Call to Action -->
-      <div style="text-align: center; margin: 30px 0;">
-        <a href="https://cvcircle.io" 
-           style="background: #32CD32; color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: 600; font-size: 16px;">
-          🚀 Visit CVCircle.io
-        </a>
-      </div>
     </div>
   `;
+  
+  return getBaseTemplate('Special Offer - CVCircle', content);
+}
 
-  return {
-    subject: 'CVCircle.io Email Test - New Branding & Templates',
-    html: getBaseTemplate(content)
-  };
+// 4. 4-Digit Verification Code Email
+export function getVerificationCodeTemplate(data: EmailTemplateData) {
+  const content = `
+    <h2 class="title">Your Verification Code</h2>
+    <p class="subtitle">Enter this code to complete your sign-in.</p>
+    
+    <div class="code-container">
+      ${data.code?.split('').map(digit => `<div class="code-digit">${digit}</div>`).join('')}
+    </div>
+    
+    <div class="warning">
+      <p class="warning-text">
+        This code will expire in <strong>10 minutes</strong>. Do not share this code with anyone.
+      </p>
+    </div>
+    
+    <div class="info">
+      <p class="info-text">
+        <strong>Security Note:</strong> If you didn't request this code, please ignore this email or contact our support team.
+      </p>
+    </div>
+  `;
+  
+  return getBaseTemplate('Verification Code - CVCircle', content);
+}
+
+// 5. Account Deletion Email
+export function getAccountDeletionTemplate(data: EmailTemplateData) {
+  const content = `
+    <h2 class="title">Account Deletion Confirmation</h2>
+    <p class="subtitle">Your CVCircle account has been successfully deleted.</p>
+    
+    <div class="content">
+      <p>We're sorry to see you go, ${data.firstName}. Your account and all associated data have been permanently removed from our systems.</p>
+      
+      <div class="highlight">
+        <p class="highlight-text">✅ Account Deleted Successfully</p>
+        <p style="color: #e0e0e0; margin: 10px 0 0 0;">All your personal data has been permanently removed.</p>
+      </div>
+      
+      <div class="info">
+        <p class="info-text">
+          <strong>What was deleted:</strong><br>
+          • Your account profile and settings<br>
+          • All created CVs and templates<br>
+          • Personal information and preferences<br>
+          • Usage history and analytics
+        </p>
+      </div>
+      
+      <p style="color: #a0a0a0; font-size: 14px; margin: 30px 0 0 0;">
+        If you change your mind, you can always create a new account at any time. We'd love to have you back!
+      </p>
+      
+      <a href="https://www.cvcircle.io/sign-up" class="button">Create New Account</a>
+    </div>
+  `;
+  
+  return getBaseTemplate('Account Deleted - CVCircle', content, 'If you have any questions, please contact our support team.');
+}
+
+// 6. Email Verification Template
+export function getEmailVerificationTemplate(data: EmailTemplateData) {
+  const content = `
+    <h2 class="title">Verify Your Email Address</h2>
+    <p class="subtitle">Click the button below to complete your account setup.</p>
+    
+    <div class="content">
+      <p>Welcome to CVCircle, ${data.firstName}! To get started with creating your professional CV, please verify your email address.</p>
+      
+      <a href="${data.link}" class="button">Verify Email Address</a>
+      
+      <div class="info">
+        <p class="info-text">
+          <strong>What happens next?</strong><br>
+          Once verified, you'll have full access to create unlimited professional CVs with our premium templates.
+        </p>
+      </div>
+      
+      <p style="color: #a0a0a0; font-size: 14px; margin: 30px 0 0 0;">
+        If the button doesn't work, copy and paste this link into your browser:<br>
+        <a href="${data.link}" style="color: #78c708; word-break: break-all;">${data.link}</a>
+      </p>
+    </div>
+  `;
+  
+  return getBaseTemplate('Verify Your Email - CVCircle', content);
+}
+
+// 7. Password Reset Template
+export function getPasswordResetTemplate(data: EmailTemplateData) {
+  const content = `
+    <h2 class="title">Reset Your Password</h2>
+    <p class="subtitle">Click the button below to set a new password for your account.</p>
+    
+    <div class="content">
+      <p>We received a request to reset your password for your CVCircle account. If you made this request, click the button below to set a new password.</p>
+      
+      <a href="${data.link}" class="button">Reset Password</a>
+      
+      <div class="warning">
+        <p class="warning-text">
+          <strong>Security Alert:</strong> This link will expire in 1 hour. If you didn't request this password reset, please ignore this email.
+        </p>
+      </div>
+      
+      <p style="color: #a0a0a0; font-size: 14px; margin: 30px 0 0 0;">
+        If the button doesn't work, copy and paste this link into your browser:<br>
+        <a href="${data.link}" style="color: #78c708; word-break: break-all;">${data.link}</a>
+      </p>
+    </div>
+  `;
+  
+  return getBaseTemplate('Reset Your Password - CVCircle', content);
 }

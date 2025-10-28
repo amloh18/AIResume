@@ -174,8 +174,8 @@ export async function POST(request: NextRequest) {
         responseData.email = user.email;
         responseData.name = `${user.firstName} ${user.lastName}`;
         responseData.image = user.avatar;
-        responseData.requiresSignIn = true;
-        responseData.message = 'Code verified successfully! You can now sign in.';
+        responseData.requiresSignIn = false;
+        responseData.message = 'Code verified successfully! Signing you in...';
         break;
 
       case 'password-reset':

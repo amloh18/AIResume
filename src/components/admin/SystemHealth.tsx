@@ -98,16 +98,14 @@ const SystemHealth: React.FC = () => {
       
       const data = await response.json();
       
-      // Ensure all required properties exist
-      const safeData = {
-        database: data.database || { status: 'error', responseTime: 0, connections: 0, uptime: 'Unknown' },
-        api: data.api || { status: 'error', responseTime: 0, requestsPerMinute: 0, errorRate: 100 },
-        storage: data.storage || { status: 'error', used: 0, total: 0, percentage: 0 },
-        memory: data.memory || { status: 'error', used: 0, total: 0, percentage: 0 },
-        lastCheck: data.lastCheck || new Date().toISOString()
-      };
-      
-      setSystemStatus(safeData);
+      if (data.success && data.systemStatus) {
+        setSystemStatus(data.systemStatus);
+        if (data.performanceData) {
+          setPerformanceData(data.performanceData);
+        }
+      } else {
+        throw new Error(data.error || 'Invalid response format');
+      }
     } catch (error) {
       console.error('Error fetching system status:', error);
       setError(`Network error: ${error instanceof Error ? error.message : 'Unknown error'}`);

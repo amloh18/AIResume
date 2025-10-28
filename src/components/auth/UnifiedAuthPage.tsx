@@ -190,13 +190,50 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
             setEmail('');
           }, 2000);
         } else if (verificationType === 'passwordless-login') {
-          // Passwordless login - redirect to sign in
-          setTimeout(() => {
-            setMode('signin');
-            setSuccess('');
-            setError('');
-            setEmail('');
-          }, 2000);
+          // Passwordless login - sign in automatically
+          if (!result.requiresSignIn) {
+            // Sign in the user automatically using NextAuth passwordless provider
+            try {
+              const { signIn } = await import('next-auth/react');
+              const signInResult = await signIn('passwordless', {
+                email: result.email,
+                verificationCode: code, // Use the code that was just verified
+                redirect: false
+              });
+              
+              if (signInResult?.ok) {
+                // Redirect to dashboard after successful sign-in
+                setTimeout(() => {
+                  router.push('/dashboard');
+                }, 1000);
+              } else {
+                // Fallback to sign-in mode if automatic sign-in fails
+                setTimeout(() => {
+                  setMode('signin');
+                  setSuccess('');
+                  setError('');
+                  setEmail('');
+                }, 2000);
+              }
+            } catch (error) {
+              console.error('Auto sign-in failed:', error);
+              // Fallback to sign-in mode
+              setTimeout(() => {
+                setMode('signin');
+                setSuccess('');
+                setError('');
+                setEmail('');
+              }, 2000);
+            }
+          } else {
+            // Fallback to sign-in mode
+            setTimeout(() => {
+              setMode('signin');
+              setSuccess('');
+              setError('');
+              setEmail('');
+            }, 2000);
+          }
         } else if (verificationType === 'password-reset') {
           // Password reset - show success message
           setSuccess('Code verified! You can now set a new password.');

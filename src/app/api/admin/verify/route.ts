@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 
 export async function GET() {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const adminToken = cookieStore.get('admin-token');
 
     if (!adminToken) {
