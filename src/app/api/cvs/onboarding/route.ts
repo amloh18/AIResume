@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
         }
       }
     } catch (error) {
-      console.log('⚠️ Could not get auth context from session, will try request body');
+      console.log('⚠️ Could not get auth context from session, will try request body:', error);
     }
 
     let body;
@@ -65,6 +65,7 @@ export async function POST(request: NextRequest) {
     // If no auth context from session, try to resolve from request body
     if (!authContext) {
       if (!authProviderId) {
+        console.error('❌ No authentication provided - neither session nor authProviderId');
         return NextResponse.json(
           { success: false, error: 'Authentication required - no session or authProviderId provided' },
           { status: 401, headers }
@@ -78,6 +79,7 @@ export async function POST(request: NextRequest) {
       });
 
       if (!user) {
+        console.error('❌ User not found in database:', { authProviderId, authProvider });
         return NextResponse.json(
           { success: false, error: 'User not found in database' },
           { status: 404, headers }
@@ -96,6 +98,7 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!title || !cvData) {
+      console.error('❌ Missing required fields:', { hasTitle: !!title, hasCvData: !!cvData });
       return NextResponse.json(
         { success: false, error: 'Title and CV data are required' },
         { status: 400, headers }
@@ -105,33 +108,51 @@ export async function POST(request: NextRequest) {
     // Get template (use provided or default) from admin database
     let finalTemplateId = templateId;
     if (!finalTemplateId) {
-      const defaultTemplate = await AdminTemplateService.getDefaultTemplate('cv');
-      
-      if (!defaultTemplate) {
-        // Get any available template from admin database
-        const availableTemplates = await AdminTemplateService.getFreeTemplates('cv');
+      try {
+        const defaultTemplate = await AdminTemplateService.getDefaultTemplate('cv');
         
-        if (availableTemplates.length === 0) {
-          return NextResponse.json(
-            { success: false, error: 'No templates available in admin database' },
-            { status: 500 }
-          );
+        if (!defaultTemplate) {
+          // Get any available template from admin database
+          const availableTemplates = await AdminTemplateService.getFreeTemplates('cv');
+          
+          if (availableTemplates.length === 0) {
+            console.error('❌ No templates available in admin database');
+            return NextResponse.json(
+              { success: false, error: 'No templates available in admin database' },
+              { status: 500, headers }
+            );
+          }
+          
+          finalTemplateId = availableTemplates[0].id || availableTemplates[0]._id;
+          console.log('🔍 Using first available admin template:', availableTemplates[0].name);
+        } else {
+          finalTemplateId = defaultTemplate.id || defaultTemplate._id;
+          console.log('🔍 Using default admin template:', defaultTemplate.name);
         }
-        
-        finalTemplateId = availableTemplates[0].id || availableTemplates[0]._id;
-        console.log('🔍 Using first available admin template:', availableTemplates[0].name);
-      } else {
-        finalTemplateId = defaultTemplate.id || defaultTemplate._id;
-        console.log('🔍 Using default admin template:', defaultTemplate.name);
+      } catch (templateError) {
+        console.error('❌ Error fetching template:', templateError);
+        return NextResponse.json(
+          { success: false, error: 'Failed to fetch template' },
+          { status: 500, headers }
+        );
       }
     }
 
     // Validate template exists in admin database
-    const template = await AdminTemplateService.getTemplateById(finalTemplateId);
-    if (!template) {
+    try {
+      const template = await AdminTemplateService.getTemplateById(finalTemplateId);
+      if (!template) {
+        console.error('❌ Template not found:', finalTemplateId);
+        return NextResponse.json(
+          { success: false, error: 'Template not found in admin database' },
+          { status: 400, headers }
+        );
+      }
+    } catch (templateError) {
+      console.error('❌ Error validating template:', templateError);
       return NextResponse.json(
-        { success: false, error: 'Template not found in admin database' },
-        { status: 400 }
+        { success: false, error: 'Failed to validate template' },
+        { status: 500, headers }
       );
     }
 
@@ -160,31 +181,40 @@ export async function POST(request: NextRequest) {
       tags: cvDoc.metadata.tags
     });
 
-    const newCV = new CV(cvDoc);
-    await newCV.save();
+    try {
+      const newCV = new CV(cvDoc);
+      await newCV.save();
 
-    console.log('✅ Master CV created successfully:', newCV._id);
+      console.log('✅ Master CV created successfully:', newCV._id);
 
-    // Populate template data for response
-    await newCV.populate('templateId');
+      // Populate template data for response
+      await newCV.populate('templateId');
 
-    return NextResponse.json({
-      success: true,
-      message: 'Master CV created successfully',
-      data: {
-        cv: {
-          id: newCV._id,
-          title: newCV.title,
-          templateId: newCV.templateId,
-          metadata: newCV.metadata,
-          createdAt: newCV.createdAt,
-          updatedAt: newCV.updatedAt
+      return NextResponse.json({
+        success: true,
+        message: 'Master CV created successfully',
+        data: {
+          cv: {
+            id: newCV._id,
+            title: newCV.title,
+            templateId: newCV.templateId,
+            metadata: newCV.metadata,
+            createdAt: newCV.createdAt,
+            updatedAt: newCV.updatedAt
+          }
         }
-      }
-    }, { headers });
+      }, { headers });
+    } catch (saveError) {
+      console.error('❌ Error saving CV to database:', saveError);
+      return NextResponse.json(
+        { success: false, error: 'Failed to save CV to database' },
+        { status: 500, headers }
+      );
+    }
 
   } catch (error: any) {
-    console.error('Onboarding CV creation error:', error);
+    console.error('❌ Onboarding CV creation error:', error);
+    console.error('❌ Error stack:', error.stack);
     
     return NextResponse.json(
       { 
@@ -192,7 +222,7 @@ export async function POST(request: NextRequest) {
         error: error.message || 'Failed to create master CV',
         details: process.env.NODE_ENV === 'development' ? error.stack : undefined
       },
-      { status: 500, headers }
+      { status: 500, headers: new Headers({ 'Content-Type': 'application/json' }) }
     );
   }
 }

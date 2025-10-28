@@ -87,7 +87,7 @@ const DraggableSections: React.FC<DraggableSectionsProps> = ({
   return (
     <div className="space-y-6">
       {/* Global Controls */}
-      <div className="bg-white/90 dark:bg-[#141810] border border-gray-200/60 dark:border-white/10 rounded-lg p-3 shadow-sm">
+      <div className="bg-white/90 dark:bg-[#1a230f] border border-gray-200/60 dark:border-white/10 rounded-lg p-3 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="p-1.5 bg-gradient-to-br from-lime-500 to-lime-600 rounded-md">
@@ -149,7 +149,7 @@ const DraggableSections: React.FC<DraggableSectionsProps> = ({
         {sections.map((section, index) => (
           <motion.div
             key={section.id}
-            className={`group relative bg-white/90 dark:bg-[#141810] border-2 transition-all duration-300 rounded-xl shadow-lg hover:shadow-xl ${
+            className={`group relative bg-white/90 dark:bg-[#1a230f] border-2 transition-all duration-300 rounded-xl shadow-lg hover:shadow-xl ${
               draggedSection === section.id 
                 ? 'border-lime-400 shadow-2xl scale-105 bg-lime-50/50 dark:bg-lime-900/20' 
                 : section.isExpanded
@@ -295,7 +295,7 @@ const DraggableSections: React.FC<DraggableSectionsProps> = ({
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium shadow-md transition-all duration-200 ${
                   index === 0 
                     ? 'bg-gradient-to-r from-lime-500 to-lime-600 text-white shadow-lime-200 dark:shadow-lime-900/50'
-                    : 'bg-white/80 dark:bg-[#141810] text-gray-700 dark:text-white border border-gray-200 dark:border-white/10'
+                    : 'bg-white/80 dark:bg-[#1a230f] text-gray-700 dark:text-white border border-gray-200 dark:border-white/10'
                 }`}
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}

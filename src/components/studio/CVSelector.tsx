@@ -72,7 +72,7 @@ const CVSelector: React.FC<CVSelectorProps> = ({ selectedCVId, onCVSelect, userI
         </label>
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="w-full flex items-center justify-between p-3 border border-gray-300 dark:border-white/10 rounded-lg bg-white dark:bg-[#141810] text-left hover:border-gray-400 dark:hover:border-white/20 transition-colors"
+          className="w-full flex items-center justify-between p-3 border border-gray-300 dark:border-white/10 rounded-lg bg-white dark:bg-[#1a230f] text-left hover:border-gray-400 dark:hover:border-white/20 transition-colors"
         >
           <div className="flex items-center space-x-3">
             <FileText className="h-5 w-5 text-gray-400" />
@@ -102,7 +102,7 @@ const CVSelector: React.FC<CVSelectorProps> = ({ selectedCVId, onCVSelect, userI
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
-          className="absolute z-10 w-full mt-1 bg-white dark:bg-[#141810] border border-gray-300 dark:border-white/10 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+          className="absolute z-10 w-full mt-1 bg-white dark:bg-[#1a230f] border border-gray-300 dark:border-white/10 rounded-lg shadow-lg max-h-60 overflow-y-auto scrollbar-hide"
         >
           {loading ? (
             <div className="p-4 text-center text-gray-500 dark:text-gray-400">

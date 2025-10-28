@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronRight, Eye, Star, Crown, Check, Loader2, Palette } from 'lucide-react';
 import { ITemplate } from '@/models/Template';
-import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { generateTemplatePreview } from '@/lib/templates/template-renderer';
+import { HARDCODED_TEMPLATES, generateHardcodedTemplatePreview } from '@/lib/templates/hardcoded-templates';
 import CVPreviewContent from './CVPreviewContent';
+import TemplateRenderer from '@/lib/templates/template-renderer';
 import { useTemplateStore } from '@/lib/stores/templateStore';
 
 interface TemplateSelectorProps {
@@ -30,18 +32,14 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
     const fetchTemplates = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/api/templates?category=cv&isActive=true');
         
-        if (!response.ok) {
-          throw new Error('Failed to fetch templates');
-        }
-        
-        const data = await response.json();
-        setTemplates(data.templates || []);
+        // Only use hardcoded templates - skip database fetch
+        setTemplates(HARDCODED_TEMPLATES);
+        setLoading(false);
       } catch (err) {
-        console.error('Error fetching templates:', err);
+        console.error('Error loading templates:', err);
+        setTemplates(HARDCODED_TEMPLATES);
         setError(err instanceof Error ? err.message : 'Failed to load templates');
-      } finally {
         setLoading(false);
       }
     };
@@ -66,7 +64,17 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
 
   const getPreviewData = (template: ITemplate): UnifiedCVDataStructure => {
     // Use actual CV data if available, otherwise use template preview data
-    return cvData || generateTemplatePreview(template);
+    if (cvData) {
+      return cvData;
+    }
+    
+    // Check if this is a hardcoded template
+    if (template.customRenderer) {
+      return generateHardcodedTemplatePreview(template.id);
+    }
+    
+    // Use database template preview data
+    return generateTemplatePreview(template);
   };
 
   const getTierIcon = (tier: string) => {
@@ -227,10 +235,23 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
             </div>
             <div className="preview-body">
               <div className="preview-cv">
-                <CVPreviewContent
-                  cvData={getPreviewData(previewTemplate)}
-                  template={previewTemplate}
-                />
+                {previewTemplate.customRenderer ? (
+                  <TemplateRenderer
+                    cvData={getPreviewData(previewTemplate)}
+                    template={previewTemplate}
+                    className="template-preview-content"
+                    customStyles={{
+                      transform: 'scale(0.8)',
+                      transformOrigin: 'top center',
+                      fontSize: '12px'
+                    }}
+                  />
+                ) : (
+                  <CVPreviewContent
+                    cvData={getPreviewData(previewTemplate)}
+                    template={previewTemplate}
+                  />
+                )}
               </div>
             </div>
             <div className="preview-footer">

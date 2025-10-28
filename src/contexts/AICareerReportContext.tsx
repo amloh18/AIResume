@@ -35,6 +35,10 @@ export interface AICareerReportState {
   activeSection: string;
   isUploading: boolean;
   uploadError: string | null;
+  jobData: any | null;
+  jobId: string | null;
+  isLoadingJob: boolean;
+  jobError: string | null;
 }
 
 // Action Types
@@ -49,6 +53,10 @@ type AICareerReportAction =
   | { type: 'SET_ACTIVE_SECTION'; payload: string }
   | { type: 'SET_UPLOADING'; payload: boolean }
   | { type: 'SET_UPLOAD_ERROR'; payload: string | null }
+  | { type: 'SET_JOB_DATA'; payload: any | null }
+  | { type: 'SET_JOB_ID'; payload: string | null }
+  | { type: 'SET_LOADING_JOB'; payload: boolean }
+  | { type: 'SET_JOB_ERROR'; payload: string | null }
   | { type: 'RESET_STATE' };
 
 // LocalStorage utilities
@@ -147,7 +155,11 @@ const getInitialState = (): AICareerReportState => {
     completedSteps: savedData?.completedSteps || [],
     activeSection: savedData?.activeSection || 'personal',
     isUploading: false,
-    uploadError: null
+    uploadError: null,
+    jobData: null,
+    jobId: null,
+    isLoadingJob: false,
+    jobError: null
   };
 };
 
@@ -223,6 +235,30 @@ function aiCareerReportReducer(
       return {
         ...state,
         uploadError: action.payload
+      };
+
+    case 'SET_JOB_DATA':
+      return {
+        ...state,
+        jobData: action.payload
+      };
+
+    case 'SET_JOB_ID':
+      return {
+        ...state,
+        jobId: action.payload
+      };
+
+    case 'SET_LOADING_JOB':
+      return {
+        ...state,
+        isLoadingJob: action.payload
+      };
+
+    case 'SET_JOB_ERROR':
+      return {
+        ...state,
+        jobError: action.payload
       };
 
     case 'RESET_STATE':

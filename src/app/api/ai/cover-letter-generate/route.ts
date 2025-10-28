@@ -165,7 +165,7 @@ function createCoverLetterPrompt({
   recipientName?: string;
   companyName?: string;
 }) {
-  const jobDescription = jobData?.description || jobData?.jobDescription || '';
+  const jobDescription = jobData?.jobDescription || '';
   const jobTitle = jobData?.title || jobData?.jobTitle || 'Position';
   const userName = cvData?.basics?.name || 'Applicant';
   

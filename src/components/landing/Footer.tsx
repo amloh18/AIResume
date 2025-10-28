@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import Logo from '../ui/Logo';
-import { Twitter, Linkedin, Github, MessageCircle, Mail, ArrowRight, Heart, CheckCircle, AlertCircle } from 'lucide-react';
+import { Twitter, Linkedin, Github, MessageCircle, Mail, ArrowRight, Heart, CheckCircle, AlertCircle, Phone, MapPin } from 'lucide-react';
 
 const Footer = () => {
   const [email, setEmail] = useState('');
@@ -86,7 +86,13 @@ const Footer = () => {
       </div>
       
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+        <motion.div 
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+          initial={{ opacity: 0, y: 50 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+          viewport={{ once: true }}
+        >
           {/* Column 1: Logo + Mission */}
           <motion.div 
             className="space-y-8"
@@ -150,7 +156,7 @@ const Footer = () => {
             viewport={{ once: true }}
           >
             <h3 className="text-2xl font-bold text-white">Quick Links</h3>
-            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <ul className="space-y-3">
               {quickLinks.map((link, index) => (
                 <motion.li 
                   key={index}
@@ -191,69 +197,61 @@ const Footer = () => {
             <p className="text-white/70 text-lg">
               Get the latest updates on new features and job search tips.
             </p>
-            <form onSubmit={handleNewsletterSubscription} className="space-y-6">
-              <motion.div 
-                className="flex group"
-                whileHover={{ scale: 1.02 }}
+            <form onSubmit={handleNewsletterSubscription} className="space-y-3">
+              <motion.input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your email"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors duration-300 backdrop-blur-sm text-sm"
+                whileFocus={{ scale: 1.02 }}
+                disabled={isSubscribing}
+              />
+              
+              <motion.button 
+                type="submit"
+                disabled={isSubscribing}
+                className="w-full group relative bg-gradient-to-r from-lime-400 to-lime-500 text-black px-3 py-2 rounded-xl font-semibold hover:shadow-2xl hover:shadow-lime-400/25 transition-all duration-300 overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
+                whileHover={{ 
+                  scale: isSubscribing ? 1 : 1.05,
+                  rotateY: isSubscribing ? 0 : 5,
+                  boxShadow: isSubscribing ? "none" : "0 20px 40px -12px rgba(132, 204, 22, 0.4)"
+                }}
+                whileTap={{ scale: isSubscribing ? 1 : 0.95 }}
                 style={{
                   transformStyle: 'preserve-3d',
                   perspective: '1000px'
                 }}
               >
-                <motion.input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email"
-                  className="flex-1 bg-white/5 border border-white/10 rounded-l-2xl px-6 py-4 text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors duration-300 backdrop-blur-sm"
-                  whileFocus={{ scale: 1.02 }}
-                  disabled={isSubscribing}
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-r from-lime-300 to-lime-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                  style={{ filter: 'blur(20px)' }}
                 />
-                <motion.button 
-                  type="submit"
-                  disabled={isSubscribing}
-                  className="group relative bg-gradient-to-r from-lime-400 to-lime-500 text-black px-4 sm:px-6 lg:px-8 py-4 rounded-r-2xl font-semibold hover:shadow-2xl hover:shadow-lime-400/25 transition-all duration-300 overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed min-w-fit whitespace-nowrap"
-                  whileHover={{ 
-                    scale: isSubscribing ? 1 : 1.05,
-                    rotateY: isSubscribing ? 0 : 5,
-                    boxShadow: isSubscribing ? "none" : "0 20px 40px -12px rgba(132, 204, 22, 0.4)"
-                  }}
-                  whileTap={{ scale: isSubscribing ? 1 : 0.95 }}
-                  style={{
-                    transformStyle: 'preserve-3d',
-                    perspective: '1000px'
-                  }}
+                <motion.div
+                  className="relative flex items-center justify-center gap-2"
+                  whileHover={{ x: isSubscribing ? 0 : 5 }}
                 >
-                  <motion.div
-                    className="absolute inset-0 bg-gradient-to-r from-lime-300 to-lime-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                    style={{ filter: 'blur(20px)' }}
-                  />
-                  <motion.div
-                    className="relative flex items-center justify-center gap-2"
-                    whileHover={{ x: isSubscribing ? 0 : 5 }}
-                  >
-                    {isSubscribing ? (
-                      <motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                      >
-                        <Mail size={16} className="sm:w-[18px] sm:h-[18px]" />
-                      </motion.div>
-                    ) : (
-                      <Mail size={16} className="sm:w-[18px] sm:h-[18px]" />
-                    )}
-                    <span className="text-sm sm:text-base">{isSubscribing ? 'Subscribing...' : 'Subscribe'}</span>
-                    {!isSubscribing && (
-                      <motion.div
-                        whileHover={{ rotate: 45 }}
-                        transition={{ duration: 0.3 }}
-                      >
-                        <ArrowRight size={14} className="sm:w-4 sm:h-4" />
-                      </motion.div>
-                    )}
-                  </motion.div>
-                </motion.button>
-              </motion.div>
+                  {isSubscribing ? (
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    >
+                      <Mail size={12} />
+                    </motion.div>
+                  ) : (
+                    <Mail size={12} />
+                  )}
+                  <span className="text-xs">{isSubscribing ? 'Subscribing...' : 'Subscribe'}</span>
+                  {!isSubscribing && (
+                    <motion.div
+                      whileHover={{ rotate: 45 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <ArrowRight size={10} />
+                    </motion.div>
+                  )}
+                </motion.div>
+              </motion.button>
               
               {/* Status Message */}
               {statusMessage && (
@@ -279,11 +277,114 @@ const Footer = () => {
               </p>
             </form>
           </motion.div>
-        </div>
+
+          {/* Column 4: Contact Details */}
+          <motion.div 
+            className="space-y-8"
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.6 }}
+            viewport={{ once: true }}
+          >
+            <h3 className="text-xl font-bold text-white mb-6">Contact Us</h3>
+            
+            <div className="space-y-6">
+              {/* Email */}
+              <motion.div 
+                className="flex items-center space-x-4 group"
+                whileHover={{ x: 5 }}
+                transition={{ duration: 0.3 }}
+              >
+                <motion.div 
+                  className="w-10 h-10 bg-gradient-to-r from-lime-400 to-lime-500 rounded-xl flex items-center justify-center shadow-lg"
+                  whileHover={{ 
+                    scale: 1.1,
+                    rotateY: 15,
+                    boxShadow: "0 20px 40px -12px rgba(132, 204, 22, 0.5)"
+                  }}
+                  style={{
+                    transformStyle: 'preserve-3d',
+                    perspective: '1000px'
+                  }}
+                >
+                  <Mail size={18} className="text-black" />
+                </motion.div>
+                <div>
+                  <p className="text-white/60 text-sm">Email</p>
+                  <a 
+                    href="mailto:support@cvcircle.io" 
+                    className="text-white hover:text-lime-400 transition-colors duration-300 font-medium"
+                  >
+                    support@cvcircle.io
+                  </a>
+                </div>
+              </motion.div>
+
+              {/* Phone */}
+              <motion.div 
+                className="flex items-center space-x-4 group"
+                whileHover={{ x: 5 }}
+                transition={{ duration: 0.3 }}
+              >
+                <motion.div 
+                  className="w-10 h-10 bg-gradient-to-r from-blue-400 to-blue-500 rounded-xl flex items-center justify-center shadow-lg"
+                  whileHover={{ 
+                    scale: 1.1,
+                    rotateY: 15,
+                    boxShadow: "0 20px 40px -12px rgba(59, 130, 246, 0.5)"
+                  }}
+                  style={{
+                    transformStyle: 'preserve-3d',
+                    perspective: '1000px'
+                  }}
+                >
+                  <Phone size={18} className="text-white" />
+                </motion.div>
+                <div>
+                  <p className="text-white/60 text-sm">Phone</p>
+                  <a 
+                    href="tel:+447879768984" 
+                    className="text-white hover:text-lime-400 transition-colors duration-300 font-medium"
+                  >
+                    +44 7879768984
+                  </a>
+                </div>
+              </motion.div>
+
+              {/* Address */}
+              <motion.div 
+                className="flex items-center space-x-4 group"
+                whileHover={{ x: 5 }}
+                transition={{ duration: 0.3 }}
+              >
+                <motion.div 
+                  className="w-10 h-10 bg-gradient-to-r from-purple-400 to-purple-500 rounded-xl flex items-center justify-center shadow-lg"
+                  whileHover={{ 
+                    scale: 1.1,
+                    rotateY: 15,
+                    boxShadow: "0 20px 40px -12px rgba(168, 85, 247, 0.5)"
+                  }}
+                  style={{
+                    transformStyle: 'preserve-3d',
+                    perspective: '1000px'
+                  }}
+                >
+                  <MapPin size={18} className="text-white" />
+                </motion.div>
+                <div>
+                  <p className="text-white/60 text-sm">Address</p>
+                  <p className="text-white font-medium">
+                    London, England
+                  </p>
+                </div>
+              </motion.div>
+            </div>
+          </motion.div>
+        </motion.div>
 
         {/* Enhanced Bottom Bar */}
         <motion.div 
-          className="border-t border-white/10 mt-16 pt-12 flex flex-col md:flex-row justify-between items-center"
+          className="border-t border-white/10 mt-16 pt-12 flex flex-col md:flex-row justify-between items-center gap-4"
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.6 }}
@@ -301,7 +402,8 @@ const Footer = () => {
               <Heart size={14} className="text-red-400 fill-current" />
             </motion.div>
           </motion.div>
-          <div className="flex space-x-8 mt-6 md:mt-0">
+          
+          <div className="flex space-x-8">
             <motion.a 
               href="/privacy-policy"
               className="text-white/60 hover:text-lime-400 text-sm transition-colors duration-300 font-medium"

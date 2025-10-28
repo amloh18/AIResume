@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode } from 'react';
+import { ReactNode, useEffect } from 'react';
 import SessionProvider from './SessionProvider';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/lib/contexts/ThemeContext';
@@ -10,12 +10,21 @@ import { PaymentModalProvider } from '@/contexts/PaymentModalContext';
 import CookieConsent from '@/components/CookieConsent';
 import { NotificationProvider } from '@/contexts/NotificationContext';
 import { ConsoleLoggerProvider } from '@/contexts/ConsoleLoggerProvider';
+import { setupEventErrorHandling } from '@/lib/utils/errorHandler';
 
 interface ClientProvidersProps {
   children: ReactNode;
 }
 
 export default function ClientProviders({ children }: ClientProvidersProps) {
+  useEffect(() => {
+    // Setup global error handling for Event object errors
+    const cleanup = setupEventErrorHandling();
+    
+    // Cleanup on unmount
+    return cleanup;
+  }, []);
+
   return (
     <SessionProvider>
       <AuthProvider>

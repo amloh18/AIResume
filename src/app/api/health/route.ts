@@ -1,73 +1,103 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB, { healthCheck, isConnected, getConnectionStatus } from '../../../lib/database';
-import { userService, cvService, jobApplicationService } from '../../../lib/services';
+import connectDB from '@/lib/database';
+import { CV, Template, User } from '@/models';
+import AdminTemplateService from '@/lib/services/adminTemplateService';
 
+/**
+ * Health check endpoint for debugging Master CV creation issues
+ * GET /api/health
+ */
 export async function GET(request: NextRequest) {
+  const healthCheck = {
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    checks: {
+      database: { status: 'unknown', message: '' },
+      templates: { status: 'unknown', message: '', count: 0 },
+      users: { status: 'unknown', message: '', count: 0 },
+      cvs: { status: 'unknown', message: '', count: 0 }
+    }
+  };
+
   try {
-    // Connect to database
-    await connectDB();
+    // Test database connection
+    try {
+      await connectDB();
+      healthCheck.checks.database = { 
+        status: 'healthy', 
+        message: 'Database connection successful' 
+      };
+    } catch (dbError) {
+      healthCheck.checks.database = { 
+        status: 'unhealthy', 
+        message: `Database connection failed: ${dbError.message}` 
+      };
+      healthCheck.status = 'unhealthy';
+    }
 
-    // Get basic health status
-    const healthStatus = await healthCheck();
-    
-    // Get connection status
-    const connectionStatus = getConnectionStatus();
-    const connected = isConnected();
+    // Test template service
+    try {
+      const templates = await AdminTemplateService.getAllTemplates();
+      healthCheck.checks.templates = { 
+        status: 'healthy', 
+        message: 'Template service working', 
+        count: templates.length 
+      };
+    } catch (templateError) {
+      healthCheck.checks.templates = { 
+        status: 'unhealthy', 
+        message: `Template service failed: ${templateError.message}`,
+        count: 0
+      };
+      healthCheck.status = 'unhealthy';
+    }
 
-    // Get collection counts
-    const counts = {
-      users: await userService.count(),
-      cvs: await cvService.count(),
-      jobApplications: await jobApplicationService.count()
-    };
+    // Test user model
+    try {
+      const userCount = await User.countDocuments();
+      healthCheck.checks.users = { 
+        status: 'healthy', 
+        message: 'User model accessible', 
+        count: userCount 
+      };
+    } catch (userError) {
+      healthCheck.checks.users = { 
+        status: 'unhealthy', 
+        message: `User model failed: ${userError.message}`,
+        count: 0
+      };
+      healthCheck.status = 'unhealthy';
+    }
 
-    // Get system info
-    const systemInfo = {
-      nodeVersion: process.version,
-      environment: process.env.NODE_ENV || 'development',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      memoryUsage: process.memoryUsage(),
-      platform: process.platform
-    };
+    // Test CV model
+    try {
+      const cvCount = await CV.countDocuments();
+      healthCheck.checks.cvs = { 
+        status: 'healthy', 
+        message: 'CV model accessible', 
+        count: cvCount 
+      };
+    } catch (cvError) {
+      healthCheck.checks.cvs = { 
+        status: 'unhealthy', 
+        message: `CV model failed: ${cvError.message}`,
+        count: 0
+      };
+      healthCheck.status = 'unhealthy';
+    }
 
-    // Check if we're on Vercel
-    const isVercel = process.env.VERCEL === '1';
-    const vercelInfo = isVercel ? {
-      region: process.env.VERCEL_REGION,
-      deploymentId: process.env.VERCEL_DEPLOYMENT_ID,
-      environment: process.env.VERCEL_ENV
-    } : null;
-
-    const response = {
-      status: 'healthy',
-      timestamp: new Date().toISOString(),
-      database: {
-        ...healthStatus,
-        connectionStatus,
-        connected,
-        collections: counts
-      },
-      system: systemInfo,
-      vercel: vercelInfo
-    };
-
-    return NextResponse.json(response, { status: 200 });
+    return NextResponse.json(healthCheck, { 
+      status: healthCheck.status === 'healthy' ? 200 : 503 
+    });
 
   } catch (error) {
-    console.error('Health check failed:', error);
+    console.error('Health check error:', error);
     
-    const errorResponse = {
+    return NextResponse.json({
       status: 'unhealthy',
       timestamp: new Date().toISOString(),
-      error: error instanceof Error ? error.message : 'Unknown error',
-      database: {
-        status: 'error',
-        connectionStatus: getConnectionStatus(),
-        connected: isConnected()
-      }
-    };
-
-    return NextResponse.json(errorResponse, { status: 503 });
+      error: error.message,
+      checks: healthCheck.checks
+    }, { status: 503 });
   }
-} 
+}

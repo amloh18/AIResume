@@ -86,6 +86,7 @@ export interface ITemplate extends Document {
   };
   
   templateData?: any; // Sample data for preview
+  customRenderer?: string; // Name of custom hardcoded template component
   isActive: boolean;
   isDefault: boolean;
   isPublished: boolean;
@@ -272,6 +273,10 @@ const templateSchema = new Schema<ITemplate>({
   templateData: {
     type: Schema.Types.Mixed,
     default: {}
+  },
+  customRenderer: {
+    type: String,
+    trim: true
   },
   isActive: { 
     type: Boolean, 

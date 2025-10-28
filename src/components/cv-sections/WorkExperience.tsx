@@ -170,7 +170,8 @@ const WorkExperience: React.FC<WorkExperienceProps> = ({
         .highlight-list {
           margin: 4px 0 0 20px;
           padding: 0;
-          list-style-type: none;
+          list-style-type: disc;
+          list-style-position: outside;
         }
         
         .highlight-list li {
@@ -178,15 +179,7 @@ const WorkExperience: React.FC<WorkExperienceProps> = ({
           line-height: ${template.globalStyles.lineHeight};
           color: ${template.globalStyles.primaryColor};
           font-size: ${template.globalStyles.fontSize};
-          position: relative;
-          padding-left: 15px;
-        }
-        
-        .highlight-list li::before {
-          content: '•';
-          position: absolute;
-          left: 0;
-          color: ${template.globalStyles.primaryColor};
+          padding-left: 0;
         }
         
         @media print {

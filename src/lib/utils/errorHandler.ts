@@ -108,56 +108,6 @@ export const setupDevelopmentErrorDetection = () => {
 };
 
 /**
- * React error boundary for Event object errors
- */
-export const createEventErrorBoundary = () => {
-  return class EventErrorBoundary extends React.Component<
-    { children: React.ReactNode },
-    { hasError: boolean; error?: Error }
-  > {
-    constructor(props: { children: React.ReactNode }) {
-      super(props);
-      this.state = { hasError: false };
-    }
-
-    static getDerivedStateFromError(error: Error) {
-      if (error.message.includes('[object Event]') || 
-          error.message.includes('Event') ||
-          String(error).includes('[object Event]')) {
-        return { hasError: true, error };
-      }
-      return { hasError: false };
-    }
-
-    componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-      console.error('EventErrorBoundary caught an error:', error, errorInfo);
-    }
-
-    render() {
-      if (this.state.hasError) {
-        return (
-          <div className="p-4 bg-red-50 border border-red-200 rounded-md">
-            <h2 className="text-lg font-medium text-red-800">Event Handling Error</h2>
-            <p className="text-red-600">
-              An error occurred with event handling. This usually happens when an Event object 
-              is passed where a string value is expected.
-            </p>
-            <button
-              onClick={() => this.setState({ hasError: false })}
-              className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-            >
-              Try Again
-            </button>
-          </div>
-        );
-      }
-
-      return this.props.children;
-    }
-  };
-};
-
-/**
  * Initialize error handling
  */
 export const initializeErrorHandling = () => {

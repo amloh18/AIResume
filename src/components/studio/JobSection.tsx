@@ -65,7 +65,7 @@ export default function JobSection({ jobData, onJobChange }: JobSectionProps) {
               </div>
 
               <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">
-                {jobData.description || jobData.jobDescription || 
+                {jobData.jobDescription || 
                   'We are looking for a Learning & Development Coordinator to join our team and help drive employee growth and development initiatives.'}
               </p>
             </div>

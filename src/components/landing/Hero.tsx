@@ -26,7 +26,7 @@ const Hero = () => {
   }, []);
 
   return (
-    <section id="hero" className="relative h-screen flex items-center justify-center overflow-hidden pt-20 bg-gradient-to-br from-gray-900 via-black to-gray-900">
+    <section id="hero" className="relative py-20 flex items-center justify-center overflow-hidden bg-gradient-to-br from-gray-900 via-black to-gray-900">
       {/* Background Effects */}
       <div className="absolute inset-0">
         <div className="absolute inset-0 bg-gradient-to-br from-lime-400/5 to-blue-400/5"></div>
@@ -129,29 +129,6 @@ const Hero = () => {
             <ArrowRight size={20} />
           </motion.a>
           
-          <motion.a
-            href="#chrome-extension"
-            className="group relative border-2 border-white/20 text-white px-10 py-5 rounded-full font-semibold text-lg hover:bg-white/10 transition-all backdrop-blur-sm overflow-hidden"
-            whileHover={{ 
-              scale: 1.05,
-              rotateY: -5,
-              borderColor: 'rgba(132, 204, 22, 0.5)'
-            }}
-            whileTap={{ scale: 0.95 }}
-            style={{
-              transformStyle: 'preserve-3d',
-              perspective: '1000px'
-            }}
-          >
-            <motion.div
-              className="absolute inset-0 bg-gradient-to-r from-lime-400/10 to-blue-400/10 opacity-0 group-hover:opacity-100 transition-opacity"
-              style={{ filter: 'blur(20px)' }}
-            />
-            <div className="relative flex items-center gap-3">
-              <Play size={20} />
-              <span>Download Extension</span>
-            </div>
-          </motion.a>
         </motion.div>
 
         {/* Hero Banner with Parallax Effect */}

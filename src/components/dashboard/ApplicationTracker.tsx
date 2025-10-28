@@ -11,12 +11,12 @@ import {
   Archive, Copy, Share2, Download, Upload, X
 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
-import { authenticatedFetch } from '@/lib/utils/apiUtils';
+import { authenticatedFetch, authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
 import { useUserData, getUserDisplayName, getUserEmail, getUserAvatar } from '@/lib/hooks/useUserData';
 import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
 import PageHeader from './PageHeader';
-import ApplicationJourneyModal from './ApplicationJourneyModal';
-import AddEditJobModal from '@/components/modals/AddEditJobModal';
+import JobModal from './JobModal';
+import EditJobModal from '@/components/modals/EditJobModal';
 import JourneyTimelineCard from './JourneyTimelineCard';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
 import toast from 'react-hot-toast';
@@ -33,7 +33,6 @@ interface JobApplication {
   company: string;
   status: 'created' | 'applied' | 'screening' | 'interview' | 'offer' | 'rejected' | 'accepted' | 'withdrawn';
   jobDescription?: string;
-  description?: string; // For compatibility
   location?: string;
   salary?: {
     min?: number;
@@ -182,7 +181,7 @@ const ApplicationTracker: React.FC = () => {
       setLoading(true);
       
       // Load jobs
-      const jobsResponse = await authenticatedFetch(`/api/jobs?userId=${userId}`);
+      const jobsResponse = await authenticatedFetchWithUserId('/api/jobs', userId);
       const jobsResult = await jobsResponse.json();
       if (jobsResult.success) {
         // Transform jobs to match our interface
@@ -195,7 +194,6 @@ const ApplicationTracker: React.FC = () => {
           company: job.company,
           status: job.status,
           jobDescription: job.jobDescription,
-          description: job.jobDescription, // For compatibility
           location: job.location,
           salary: job.salary,
           jobType: job.type,
@@ -213,7 +211,10 @@ const ApplicationTracker: React.FC = () => {
       }
 
       // Load CV journeys using cv-journey API with cleanup
-      const journeysResponse = await authenticatedFetch(`/api/application-journey?userId=${userId}&cleanup=true`);
+      const journeysResponse = await authenticatedFetchWithUserId('/api/application-journey', userId, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
       const journeysResult = await journeysResponse.json();
       if (journeysResult.success) {
         const loadedJourneys = journeysResult.data.journeys || [];
@@ -502,7 +503,7 @@ const ApplicationTracker: React.FC = () => {
       jobTitle: job.jobTitle || job.title,
       company: job.company,
       location: job.location,
-      jobDescription: job.jobDescription || job.description,
+      jobDescription: job.jobDescription,
       notes: job.notes,
       priority: job.priority,
       status: job.status,
@@ -591,8 +592,11 @@ const ApplicationTracker: React.FC = () => {
 
     try {
       // Update job status
-      const response = await authenticatedFetch(`/api/jobs/${draggedJob}`, {
+      const response = await authenticatedFetchWithUserId(`/api/jobs/${draggedJob}`, userId, {
         method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({ status: newStatus }),
       });
 
@@ -637,8 +641,11 @@ const ApplicationTracker: React.FC = () => {
   const handleBulkStatusUpdate = async (newStatus: string) => {
     try {
       const promises = Array.from(selectedJobs).map(jobId =>
-        authenticatedFetch(`/api/jobs/${jobId}`, {
+        authenticatedFetchWithUserId(`/api/jobs/${jobId}`, userId, {
           method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
           body: JSON.stringify({ status: newStatus }),
         })
       );
@@ -664,7 +671,7 @@ const ApplicationTracker: React.FC = () => {
 
     try {
       const promises = Array.from(selectedJobs).map(jobId =>
-        authenticatedFetch(`/api/jobs/${jobId}`, {
+        authenticatedFetchWithUserId(`/api/jobs/${jobId}`, userId, {
           method: 'DELETE',
         })
       );
@@ -706,7 +713,7 @@ const ApplicationTracker: React.FC = () => {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6"
+          className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-full p-4 mb-6"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -742,7 +749,7 @@ const ApplicationTracker: React.FC = () => {
           <div className="flex flex-col sm:flex-row gap-3 flex-1">
             <motion.button
               onClick={handleAddJob}
-              className="px-4 py-2 bg-gradient-to-r from-lime-500 to-lime-600 hover:from-lime-600 hover:to-lime-700 text-white rounded-lg font-medium transition-all duration-200 flex items-center gap-2 shadow-md hover:shadow-lg"
+              className="px-4 py-2 bg-gradient-to-r from-lime-500 to-lime-600 hover:from-lime-600 hover:to-lime-700 text-white rounded-full font-medium transition-all duration-200 flex items-center gap-2 shadow-md hover:shadow-lg"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -757,7 +764,7 @@ const ApplicationTracker: React.FC = () => {
                 placeholder="Search by company, role..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 rounded-lg bg-[#141810] border border-white/10 text-white placeholder-white focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 focus:bg-[#141810] transition-all duration-200"
+                className="w-full pl-10 pr-4 py-3 rounded-full bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
                 aria-label="Search jobs"
                 role="searchbox"
               />
@@ -766,14 +773,14 @@ const ApplicationTracker: React.FC = () => {
 
           <div className="flex items-center gap-2">
             {/* View Mode Toggle */}
-            <div className="flex items-center bg-gray-800 dark:bg-white/10 backdrop-blur-md border border-gray-700 dark:border-white/20 rounded-lg p-1">
+            <div className="flex items-center bg-gray-100 dark:bg-[#232f1c] rounded-lg p-1">
               <motion.button
                 onClick={() => handleViewModeChange('kanban')}
                 disabled={isLoadingViewMode}
                 className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
                   viewMode === 'kanban' 
-                    ? 'bg-gray-700 dark:bg-white/20 text-white shadow-sm' 
-                    : 'text-white/60 hover:text-white/80'
+                    ? 'bg-gray-200 dark:bg-[#2a3a1f] text-gray-900 dark:text-white shadow-sm' 
+                    : 'text-gray-600 dark:text-white/60 hover:text-gray-900 dark:text-white/80'
                 } ${isLoadingViewMode ? 'opacity-50 cursor-not-allowed' : ''}`}
                 whileHover={isLoadingViewMode ? {} : { scale: 1.02 }}
                 whileTap={isLoadingViewMode ? {} : { scale: 0.98 }}
@@ -785,8 +792,8 @@ const ApplicationTracker: React.FC = () => {
                 disabled={isLoadingViewMode}
                 className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
                   viewMode === 'list' 
-                    ? 'bg-gray-700 dark:bg-white/20 text-white shadow-sm' 
-                    : 'text-white/60 hover:text-white/80'
+                    ? 'bg-gray-200 dark:bg-[#2a3a1f] text-gray-900 dark:text-white shadow-sm' 
+                    : 'text-gray-600 dark:text-white/60 hover:text-gray-900 dark:text-white/80'
                 } ${isLoadingViewMode ? 'opacity-50 cursor-not-allowed' : ''}`}
                 whileHover={isLoadingViewMode ? {} : { scale: 1.02 }}
                 whileTap={isLoadingViewMode ? {} : { scale: 0.98 }}
@@ -795,34 +802,15 @@ const ApplicationTracker: React.FC = () => {
               </motion.button>
             </div>
 
-            {/* Filter Buttons */}
+            {/* Consolidated Sort Button */}
             <motion.button
               onClick={() => setShowFilters(!showFilters)}
-              className="px-4 py-2 rounded-lg bg-[#141810] border border-white/10 text-white hover:bg-[#313a28] transition-all duration-200 flex items-center gap-2"
+              className="px-4 py-2 rounded-full bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-[#2a3a1f] transition-all duration-200 flex items-center gap-2"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              Status
-              <ChevronDown size={16} />
-            </motion.button>
-            
-            <motion.button
-              onClick={() => setShowFilters(!showFilters)}
-              className="px-4 py-2 rounded-lg bg-[#141810] border border-white/10 text-white hover:bg-[#313a28] transition-all duration-200 flex items-center gap-2"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              Priority
-              <ChevronDown size={16} />
-            </motion.button>
-            
-            <motion.button
-              onClick={() => setShowFilters(!showFilters)}
-              className="px-4 py-2 rounded-lg bg-[#141810] border border-white/10 text-white hover:bg-[#313a28] transition-all duration-200 flex items-center gap-2"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              Date Range
+              <Filter size={16} />
+              Sort & Filter
               <ChevronDown size={16} />
             </motion.button>
           </div>
@@ -835,7 +823,7 @@ const ApplicationTracker: React.FC = () => {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="bg-blue-600 dark:bg-blue-500/10 backdrop-blur-md border border-blue-700 dark:border-blue-500/20 rounded-lg p-4 text-white"
+              className="bg-blue-600 dark:bg-blue-500/10 backdrop-blur-md border border-blue-700 dark:border-blue-500/20 rounded-full p-4 text-white"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -855,7 +843,7 @@ const ApplicationTracker: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <select
                     onChange={(e) => handleBulkStatusUpdate(e.target.value)}
-                    className="px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-sm"
+                    className="px-3 py-1 border border-gray-300 dark:border-lime-500/20 rounded-full bg-gray-100 dark:bg-[#232f1c] text-gray-900 dark:text-white text-sm"
                     defaultValue=""
                   >
                     <option value="" disabled>Update Status</option>
@@ -867,7 +855,7 @@ const ApplicationTracker: React.FC = () => {
                   </select>
                   <motion.button
                     onClick={handleBulkDelete}
-                    className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded-md text-sm font-medium transition-colors flex items-center gap-1"
+                    className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded-full text-sm font-medium transition-colors flex items-center gap-1"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
@@ -887,109 +875,109 @@ const ApplicationTracker: React.FC = () => {
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: 'auto' }}
           exit={{ opacity: 0, height: 0 }}
-          className="bg-gray-700 dark:bg-white/10 backdrop-blur-md border border-gray-600 dark:border-white/20 rounded-lg p-4 space-y-4 text-white"
+          className="glass-widget-premium rounded-xl p-4 space-y-4"
         >
           {/* Application-Specific Metrics Filters */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             {/* Last Updated Filter */}
             <div>
-              <label className="block text-sm font-medium text-white/80 mb-2">Last Updated</label>
+              <label className="block text-sm font-medium text-gray-600 dark:text-white/80 mb-2">Last Updated</label>
               <select
                 value={lastUpdatedFilter}
                 onChange={(e) => setLastUpdatedFilter(e.target.value as any)}
-                className="w-full px-3 py-2 bg-gray-600 dark:bg-white/10 backdrop-blur-md border border-gray-500 dark:border-white/20 rounded-lg text-white text-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 focus:bg-gray-500 dark:focus:bg-white/20 transition-all duration-200"
+                className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 rounded-full text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
               >
-                <option value="all" className="bg-gray-800 text-white">All Time</option>
-                <option value="today" className="bg-gray-800 text-white">Today</option>
-                <option value="last7days" className="bg-gray-800 text-white">Last 7 Days</option>
-                <option value="last30days" className="bg-gray-800 text-white">Last 30 Days</option>
+                <option value="all" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">All Time</option>
+                <option value="today" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">Today</option>
+                <option value="last7days" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">Last 7 Days</option>
+                <option value="last30days" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">Last 30 Days</option>
               </select>
             </div>
 
             {/* Follow-Up Date Filter */}
             <div>
-              <label className="block text-sm font-medium text-white/80 mb-2">Follow-Up Status</label>
+              <label className="block text-sm font-medium text-gray-600 dark:text-white/80 mb-2">Follow-Up Status</label>
               <select
                 value={followUpFilter}
                 onChange={(e) => setFollowUpFilter(e.target.value as any)}
-                className="w-full px-3 py-2 bg-white/90 dark:bg-white/10 backdrop-blur-md border border-gray-300 dark:border-white/20 rounded-lg text-white text-sm focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 focus:bg-white/95 dark:focus:bg-white/20 transition-all duration-200"
+                className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 rounded-full text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
               >
-                <option value="all" className="bg-gray-800 text-white">All</option>
-                <option value="upcoming" className="bg-gray-800 text-white">Upcoming (Next 7 Days)</option>
-                <option value="overdue" className="bg-gray-800 text-white">Overdue</option>
+                <option value="all" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">All</option>
+                <option value="upcoming" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">Upcoming (Next 7 Days)</option>
+                <option value="overdue" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">Overdue</option>
               </select>
             </div>
 
             {/* Salary Range Filter */}
             <div>
-              <label className="block text-sm font-medium text-white/80 mb-2">Salary Range</label>
+              <label className="block text-sm font-medium text-gray-600 dark:text-white/80 mb-2">Salary Range</label>
               <select
                 value={salaryRangeFilter}
                 onChange={(e) => setSalaryRangeFilter(e.target.value as any)}
-                className="w-full px-3 py-2 bg-white/90 dark:bg-white/10 backdrop-blur-md border border-gray-300 dark:border-white/20 rounded-lg text-white text-sm focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 focus:bg-white/95 dark:focus:bg-white/20 transition-all duration-200"
+                className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 rounded-full text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
               >
-                <option value="all" className="bg-gray-800 text-white">All Salaries</option>
-                <option value="under50k" className="bg-gray-800 text-white">Under $50k</option>
-                <option value="50k-75k" className="bg-gray-800 text-white">$50k - $75k</option>
-                <option value="75k-100k" className="bg-gray-800 text-white">$75k - $100k</option>
-                <option value="100k-150k" className="bg-gray-800 text-white">$100k - $150k</option>
-                <option value="150k-200k" className="bg-gray-800 text-white">$150k - $200k</option>
-                <option value="over200k" className="bg-gray-800 text-white">Over $200k</option>
+                <option value="all" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">All Salaries</option>
+                <option value="under50k" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">Under $50k</option>
+                <option value="50k-75k" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">$50k - $75k</option>
+                <option value="75k-100k" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">$75k - $100k</option>
+                <option value="100k-150k" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">$100k - $150k</option>
+                <option value="150k-200k" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">$150k - $200k</option>
+                <option value="over200k" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">Over $200k</option>
               </select>
             </div>
 
             {/* Priority Level Filter */}
             <div>
-              <label className="block text-sm font-medium text-white/80 mb-2">Priority Level</label>
+              <label className="block text-sm font-medium text-gray-600 dark:text-white/80 mb-2">Priority Level</label>
               <select
                 value={priorityFilter}
                 onChange={(e) => setPriorityFilter(e.target.value as any)}
-                className="w-full px-3 py-2 bg-white/90 dark:bg-white/10 backdrop-blur-md border border-gray-300 dark:border-white/20 rounded-lg text-white text-sm focus:ring-2 focus:ring-red-500/50 focus:border-red-500/50 focus:bg-white/95 dark:focus:bg-white/20 transition-all duration-200"
+                className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 rounded-full text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
               >
-                <option value="all" className="bg-gray-800 text-white">All Priorities</option>
-                <option value="high" className="bg-gray-800 text-white">High Priority</option>
-                <option value="medium" className="bg-gray-800 text-white">Medium Priority</option>
-                <option value="low" className="bg-gray-800 text-white">Low Priority</option>
+                <option value="all" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">All Priorities</option>
+                <option value="high" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">High Priority</option>
+                <option value="medium" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">Medium Priority</option>
+                <option value="low" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">Low Priority</option>
               </select>
             </div>
 
             {/* Sort Options */}
             <div>
-              <label className="block text-sm font-medium text-white/80 mb-2">Sort By</label>
+              <label className="block text-sm font-medium text-gray-600 dark:text-white/80 mb-2">Sort By</label>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
-                className="w-full px-3 py-2 bg-white/90 dark:bg-white/10 backdrop-blur-md border border-gray-300 dark:border-white/20 rounded-lg text-white text-sm focus:ring-2 focus:ring-green-500/50 focus:border-green-500/50 focus:bg-white/95 dark:focus:bg-white/20 transition-all duration-200"
+                className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 rounded-full text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
               >
-                <option value="lastUpdated" className="bg-gray-800 text-white">Last Updated</option>
-                <option value="followUpDate" className="bg-gray-800 text-white">Follow-Up Date</option>
-                <option value="salaryRange" className="bg-gray-800 text-white">Salary Range</option>
-                <option value="priority" className="bg-gray-800 text-white">Priority Level</option>
+                <option value="lastUpdated" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">Last Updated</option>
+                <option value="followUpDate" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">Follow-Up Date</option>
+                <option value="salaryRange" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">Salary Range</option>
+                <option value="priority" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">Priority Level</option>
               </select>
             </div>
           </div>
 
           {/* Quick Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 pt-2 border-t border-white/20">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 pt-2 border-t border-gray-200 dark:border-white/20">
             <div className="text-center">
               <div className="text-lg font-bold text-purple-400">{jobsByStatus.created.length}</div>
-              <div className="text-xs text-white/60">Created</div>
+              <div className="text-xs text-gray-600 dark:text-white/60">Created</div>
             </div>
             <div className="text-center">
               <div className="text-lg font-bold text-blue-400">{jobsByStatus.applied.length}</div>
-              <div className="text-xs text-white/60">Applied</div>
+              <div className="text-xs text-gray-600 dark:text-white/60">Applied</div>
             </div>
             <div className="text-center">
               <div className="text-lg font-bold text-orange-400">{jobsByStatus.interview.length}</div>
-              <div className="text-xs text-white/60">Interview</div>
+              <div className="text-xs text-gray-600 dark:text-white/60">Interview</div>
             </div>
             <div className="text-center">
               <div className="text-lg font-bold text-green-400">{jobsByStatus.offer.length}</div>
-              <div className="text-xs text-white/60">Offer</div>
+              <div className="text-xs text-gray-600 dark:text-white/60">Offer</div>
             </div>
             <div className="text-center">
               <div className="text-lg font-bold text-red-400">{jobsByStatus.rejected.length}</div>
-              <div className="text-xs text-white/60">Rejected</div>
+              <div className="text-xs text-gray-600 dark:text-white/60">Rejected</div>
             </div>
           </div>
         </motion.div>
@@ -1100,9 +1088,11 @@ const ApplicationTracker: React.FC = () => {
                 // Show journey cards for created stage when zoomed
                 jobsByStatus[stage.status as keyof typeof jobsByStatus].map((job) => {
                   const jobJourneys = getJobJourneys(job.id);
-                  return jobJourneys.map((journey) => (
+                  return jobJourneys
+                    .filter(journey => journey.id) // Filter out journeys without valid IDs
+                    .map((journey, index) => (
                     <JourneyTimelineCard
-                      key={`${job.id}-${journey.id}`}
+                      key={`${job.id}-${journey.id || `journey-${index}`}`}
                       journey={journey}
                       onResume={(journeyId) => {
                         // Handle resume journey
@@ -1170,7 +1160,7 @@ const ApplicationTracker: React.FC = () => {
                     }}
                   >
                     {/* Card Background */}
-                    <div className="absolute inset-0 bg-white/80 dark:bg-[#141810] border border-white/20 dark:border-white/10 rounded-xl shadow-lg group-hover:shadow-xl transition-all duration-300" />
+                    <div className="absolute inset-0 bg-white/80 dark:bg-[#141810] border border-gray-200 dark:border-white/20 dark:border-white/10 rounded-xl shadow-lg group-hover:shadow-xl transition-all duration-300" />
                     
                     {/* Card Content */}
                     <div className="relative z-10 p-4">
@@ -1277,7 +1267,7 @@ const ApplicationTracker: React.FC = () => {
 
                         {/* Follow-up notification */}
                         {['applied', 'interview', 'offer', 'rejected'].includes(stage.status) && isFollowUpNeeded(job) && (
-                          <div className="mb-3 p-2 bg-orange-100 dark:bg-orange-900/30 border border-orange-300 dark:border-orange-700 rounded-lg">
+                          <div className="mb-3 p-2 bg-orange-100 dark:bg-orange-900/30 border border-orange-300 dark:border-orange-700 rounded-full">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
                                 <AlertCircle size={14} className="text-orange-600" />
@@ -1328,7 +1318,7 @@ const ApplicationTracker: React.FC = () => {
                         </div>
 
                         {/* Divider */}
-                        <div className="border-t border-white/20 dark:border-gray-600/50"></div>
+                        <div className="border-t border-gray-200 dark:border-white/20 dark:border-gray-600/50"></div>
 
                         {/* Journey Status */}
                         <div className="space-y-2">
@@ -1339,9 +1329,11 @@ const ApplicationTracker: React.FC = () => {
                             </div>
                             {jobJourneys.length > 0 && (
                               <div className="flex items-center gap-1">
-                                {jobJourneys.map((journey, index) => (
+                                {jobJourneys
+                                  .filter(journey => journey.id) // Filter out journeys without valid IDs
+                                  .map((journey, index) => (
                                   <div
-                                    key={`${job.id}-${journey.id}-${index}`}
+                                    key={`${job.id}-${journey.id || `journey-${index}`}`}
                                     className={`w-2 h-2 rounded-full ${
                                       journey.status === 'completed' ? 'bg-green-500' :
                                       journey.status === 'in-progress' ? 'bg-blue-500' :
@@ -1414,7 +1406,7 @@ const ApplicationTracker: React.FC = () => {
 
                           {/* Action Button */}
                           <motion.button
-                            className="w-full mt-3 px-3 py-2 bg-gradient-to-r from-blue-500/80 to-blue-600/80 hover:from-blue-500 hover:to-blue-600 text-white text-xs font-medium rounded-lg transition-all duration-200 flex items-center justify-center gap-2 backdrop-blur-sm"
+                            className="w-full mt-3 px-3 py-2 bg-gradient-to-r from-blue-500/80 to-blue-600/80 hover:from-blue-500 hover:to-blue-600 text-white text-xs font-medium rounded-full transition-all duration-200 flex items-center justify-center gap-2 backdrop-blur-sm"
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                           >
@@ -1560,7 +1552,7 @@ const ApplicationTracker: React.FC = () => {
 
       {/* Application Journey Modal */}
       {showModal && selectedJob && (
-        <ApplicationJourneyModal
+        <JobModal
           job={selectedJob}
           journeys={getJobJourneys(selectedJob.id)}
           onClose={handleCloseModal}
@@ -1569,7 +1561,7 @@ const ApplicationTracker: React.FC = () => {
       )}
 
       {/* Add/Edit Job Modal */}
-      <AddEditJobModal
+      <EditJobModal
         isOpen={showAddJobModal}
         onClose={() => {
           setShowAddJobModal(false);

@@ -250,14 +250,129 @@ function CVStructureSections({
   const updateCVField = (field: string, value: any) => {
     const fieldPath = field.split('.');
     const updatedData = { ...cvData };
-    
-    let current = updatedData;
+    let current: any = updatedData;
+
+    // Safely navigate and create intermediate objects/arrays if they don't exist
     for (let i = 0; i < fieldPath.length - 1; i++) {
-      current = current[fieldPath[i]];
+      const key = fieldPath[i];
+      const nextKey = fieldPath[i + 1];
+      
+      // If current[key] doesn't exist or is not an object/array, create it
+      if (!current[key] || typeof current[key] !== 'object') {
+        // Check if next key is a number (array index)
+        const isArrayIndex = !isNaN(parseInt(nextKey));
+        current[key] = isArrayIndex ? [] : {};
+      } else {
+        // Make a shallow copy to avoid mutating nested objects
+        current[key] = Array.isArray(current[key]) ? [...current[key]] : { ...current[key] };
+      }
+      
+      current = current[key];
     }
+
     current[fieldPath[fieldPath.length - 1]] = value;
-    
     onUpdateCV(updatedData);
+  };
+
+  const addSection = (sectionType: string) => {
+    const updatedData = { ...cvData };
+    const section = updatedData[sectionType as keyof UnifiedCVDataStructure];
+
+    if (Array.isArray(section)) {
+      // Get default item for the section type
+      const defaultItem = getDefaultItemForSection(sectionType);
+      updatedData[sectionType as keyof UnifiedCVDataStructure] = [...section, defaultItem] as any;
+    }
+
+    onUpdateCV(updatedData);
+  };
+
+  const removeSection = (sectionType: string, index: number) => {
+    const updatedData = { ...cvData };
+    const section = updatedData[sectionType as keyof UnifiedCVDataStructure];
+
+    if (Array.isArray(section)) {
+      updatedData[sectionType as keyof UnifiedCVDataStructure] = section.filter((_, i) => i !== index) as any;
+    }
+
+    onUpdateCV(updatedData);
+  };
+
+  const getDefaultItemForSection = (sectionType: string) => {
+    switch (sectionType) {
+      case 'work':
+        return {
+          name: '',
+          position: '',
+          startDate: '',
+          endDate: '',
+          summary: '',
+          highlights: []
+        };
+      case 'education':
+        return {
+          institution: '',
+          area: '',
+          studyType: '',
+          startDate: '',
+          endDate: '',
+          score: '',
+          courses: []
+        };
+      case 'skills':
+        return {
+          name: '',
+          level: '',
+          keywords: []
+        };
+      case 'projects':
+        return {
+          name: '',
+          description: '',
+          startDate: '',
+          endDate: '',
+          highlights: [],
+          url: ''
+        };
+      case 'certificates':
+        return {
+          name: '',
+          issuer: '',
+          date: '',
+          url: ''
+        };
+      case 'languages':
+        return {
+          language: '',
+          fluency: 'intermediate'
+        };
+      case 'volunteer':
+        return {
+          organization: '',
+          position: '',
+          startDate: '',
+          endDate: '',
+          summary: '',
+          highlights: []
+        };
+      case 'awards':
+        return {
+          title: '',
+          date: '',
+          awarder: '',
+          summary: ''
+        };
+      case 'publications':
+        return {
+          name: '',
+          publisher: '',
+          releaseDate: '',
+          url: '',
+          summary: ''
+        };
+      default:
+        return {};
+    }
   };
 
   const sections = [
@@ -317,7 +432,7 @@ function CVStructureSections({
               exit={{ opacity: 0, height: 0 }}
               className="border-l-2 border-gray-200 dark:border-gray-700 pl-4 ml-6"
             >
-              {renderSectionContent(section.id, cvData, updateCVField, jobContext)}
+              {renderSectionContent(section.id, cvData, updateCVField, addSection, removeSection, jobContext)}
             </motion.div>
           </CollapsibleContent>
         </Collapsible>
@@ -333,6 +448,8 @@ function renderSectionContent(
   sectionId: string, 
   cvData: UnifiedCVDataStructure, 
   updateCVField: (field: string, value: any) => void,
+  addSection: (sectionType: string) => void,
+  removeSection: (sectionType: string, index: number) => void,
   jobContext?: JobData
 ) {
   switch (sectionId) {
@@ -352,8 +469,8 @@ function renderSectionContent(
         <WorkExperienceSection
           data={cvData.work || []}
           onUpdate={updateCVField}
-          onAdd={() => {}} // Implement add logic
-          onRemove={() => {}} // Implement remove logic
+          onAdd={() => addSection('work')}
+          onRemove={(index) => removeSection('work', index)}
           jobData={jobContext}
           userId=""
         />
@@ -364,8 +481,8 @@ function renderSectionContent(
         <VolunteerSection
           data={cvData.volunteer || []}
           onUpdate={updateCVField}
-          onAdd={() => {}}
-          onRemove={() => {}}
+          onAdd={() => addSection('volunteer')}
+          onRemove={(index) => removeSection('volunteer', index)}
         />
       );
     
@@ -374,8 +491,8 @@ function renderSectionContent(
         <EducationSection
           data={cvData.education || []}
           onUpdate={updateCVField}
-          onAdd={() => {}}
-          onRemove={() => {}}
+          onAdd={() => addSection('education')}
+          onRemove={(index) => removeSection('education', index)}
           jobData={jobContext}
           userId=""
         />
@@ -386,8 +503,8 @@ function renderSectionContent(
         <AwardsSection
           data={cvData.awards || []}
           onUpdate={updateCVField}
-          onAdd={() => {}}
-          onRemove={() => {}}
+          onAdd={() => addSection('awards')}
+          onRemove={(index) => removeSection('awards', index)}
         />
       );
     
@@ -396,8 +513,8 @@ function renderSectionContent(
         <CertificatesSection
           data={cvData.certificates || []}
           onUpdate={updateCVField}
-          onAdd={() => {}}
-          onRemove={() => {}}
+          onAdd={() => addSection('certificates')}
+          onRemove={(index) => removeSection('certificates', index)}
         />
       );
     
@@ -406,8 +523,8 @@ function renderSectionContent(
         <PublicationsSection
           data={cvData.publications || []}
           onUpdate={updateCVField}
-          onAdd={() => {}}
-          onRemove={() => {}}
+          onAdd={() => addSection('publications')}
+          onRemove={(index) => removeSection('publications', index)}
         />
       );
     
@@ -416,8 +533,8 @@ function renderSectionContent(
         <SkillsSection
           data={cvData.skills || []}
           onUpdate={updateCVField}
-          onAdd={() => {}}
-          onRemove={() => {}}
+          onAdd={() => addSection('skills')}
+          onRemove={(index) => removeSection('skills', index)}
         />
       );
     
@@ -426,8 +543,8 @@ function renderSectionContent(
         <LanguagesSection
           data={cvData.languages || []}
           onUpdate={updateCVField}
-          onAdd={() => {}}
-          onRemove={() => {}}
+          onAdd={() => addSection('languages')}
+          onRemove={(index) => removeSection('languages', index)}
         />
       );
     
@@ -436,8 +553,8 @@ function renderSectionContent(
         <InterestsSection
           data={cvData.interests || []}
           onUpdate={updateCVField}
-          onAdd={() => {}}
-          onRemove={() => {}}
+          onAdd={() => addSection('interests')}
+          onRemove={(index) => removeSection('interests', index)}
         />
       );
     
@@ -446,8 +563,8 @@ function renderSectionContent(
         <ReferencesSection
           data={cvData.references || []}
           onUpdate={updateCVField}
-          onAdd={() => {}}
-          onRemove={() => {}}
+          onAdd={() => addSection('references')}
+          onRemove={(index) => removeSection('references', index)}
         />
       );
     
@@ -456,30 +573,11 @@ function renderSectionContent(
         <ProjectsSection
           data={cvData.projects || []}
           onUpdate={updateCVField}
-          onAdd={() => {}}
-          onRemove={() => {}}
+          onAdd={() => addSection('projects')}
+          onRemove={(index) => removeSection('projects', index)}
         />
       );
     
-    case 'interests':
-      return (
-        <InterestsSection
-          data={cvData.interests || []}
-          onUpdate={updateCVField}
-          onAdd={() => {}}
-          onRemove={() => {}}
-        />
-      );
-    
-    case 'references':
-      return (
-        <ReferencesSection
-          data={cvData.references || []}
-          onUpdate={updateCVField}
-          onAdd={() => {}}
-          onRemove={() => {}}
-        />
-      );
     
     default:
       return (

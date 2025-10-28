@@ -1167,16 +1167,16 @@ nav {
 
 /* Dashboard widget cards - matching image design */
 .glass-card-premium {
-  background: #222327;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #f8fafc;
+  border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 12px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   position: relative;
 }
 
 .glass-widget-premium {
-  background: #222327;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #f8fafc;
+  border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 12px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   position: relative;
