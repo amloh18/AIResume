@@ -8,6 +8,7 @@ import { useSearchParams } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import Hero from '@/components/landing/Hero';
 import Features from '@/components/landing/Features';
+import ProductVideo from '@/components/landing/ProductVideo';
 import ChromeExtension from '@/components/landing/ChromeExtension';
 import Testimonials from '@/components/landing/Testimonials';
 import HowItWorks from '@/components/landing/HowItWorks';
@@ -92,6 +93,9 @@ function LandingPageContent() {
       
       {/* Features Section */}
       <Features />
+      
+      {/* Product Video Section */}
+      <ProductVideo />
       
       {/* Chrome Extension Section */}
       <ChromeExtension />
