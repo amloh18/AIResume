@@ -1,0 +1,93 @@
+import { NextRequest, NextResponse } from 'next/server';
+import connectDB from '@/lib/database';
+import { User } from '@/models';
+
+export async function GET(request: NextRequest) {
+  try {
+    await connectDB();
+
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '50');
+    const search = searchParams.get('search') || '';
+    const role = searchParams.get('role') || '';
+    const plan = searchParams.get('plan') || '';
+
+    // Build query
+    const query: any = {};
+    
+    if (search) {
+      query.$or = [
+        { email: { $regex: search, $options: 'i' } },
+        { firstName: { $regex: search, $options: 'i' } },
+        { lastName: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    if (role && role !== 'all') {
+      query.role = role;
+    }
+    
+    if (plan && plan !== 'all') {
+      query.currentPlanKey = plan;
+    }
+
+    // Get users with pagination
+    const skip = (page - 1) * limit;
+    
+    const [users, totalCount] = await Promise.all([
+      User.find(query)
+        .select('-password -firebaseUid')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      User.countDocuments(query)
+    ]);
+
+    // Transform users to match expected format
+    const transformedUsers = users.map(user => ({
+      _id: user._id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role || 'user',
+      currentPlanKey: user.currentPlanKey || 'free',
+      subscription: {
+        status: user.subscription?.status || 'inactive',
+        provider: user.subscription?.provider || 'none',
+        currentPeriodEnd: user.subscription?.currentPeriodEnd,
+        interval: user.subscription?.interval || 'monthly'
+      },
+      createdAt: user.createdAt,
+      phone: user.phone,
+      location: user.location,
+      website: user.website,
+      linkedin: user.linkedin,
+      github: user.github,
+      summary: user.summary,
+      company: user.company,
+      timezone: user.timezone,
+      languagePreference: user.languagePreference,
+      region: user.region
+    }));
+
+    return NextResponse.json({
+      success: true,
+      users: transformedUsers,
+      pagination: {
+        page,
+        limit,
+        total: totalCount,
+        pages: Math.ceil(totalCount / limit)
+      }
+    });
+
+  } catch (error: any) {
+    console.error('Error fetching users:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch users', details: error.message },
+      { status: 500 }
+    );
+  }
+}

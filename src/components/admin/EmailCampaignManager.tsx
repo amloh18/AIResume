@@ -197,20 +197,20 @@ export default function EmailCampaignManager() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 p-6">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-6">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Email Campaigns</h1>
-            <p className="text-gray-400">Create and manage marketing campaigns</p>
+            <h1 className="text-2xl font-bold text-white mb-2">Email Campaigns</h1>
+            <p className="text-gray-300">Create and manage marketing campaigns</p>
           </div>
           <div className="flex items-center gap-3">
             {/* Sync Status */}
             {syncStatus && (
-              <div className="bg-white/5 border border-white/10 rounded-lg px-4 py-2">
+              <div className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
                 <div className="text-xs text-gray-400 mb-1">Total Users</div>
-                <div className="text-lg font-bold text-lime-400">{syncStatus.totalUsers}</div>
+                <div className="text-lg font-bold text-white">{syncStatus.totalUsers}</div>
               </div>
             )}
             
