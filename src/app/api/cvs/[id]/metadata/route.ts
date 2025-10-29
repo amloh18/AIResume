@@ -11,9 +11,9 @@ export async function PUT(
     await connectDB();
     
     const { id: cvId } = await params;
-    const { userId, title, description } = await request.json();
+    const { userId, title, description, aiAnalysis, lastModified } = await request.json();
     
-    console.log('🔍 CV Metadata Update - Request:', { cvId, userId, title, description });
+    console.log('🔍 CV Metadata Update - Request:', { cvId, userId, title, description, hasAiAnalysis: !!aiAnalysis });
     
     if (!userId) {
       return NextResponse.json(
@@ -44,9 +44,12 @@ export async function PUT(
     if (description !== undefined) {
       updateData.description = description.trim();
     }
+    if (aiAnalysis !== undefined) {
+      updateData['metadata.aiAnalysis'] = aiAnalysis;
+    }
     
     // Update last modified timestamp
-    updateData['metadata.lastModified'] = new Date();
+    updateData['metadata.lastModified'] = lastModified ? new Date(lastModified) : new Date();
     
     console.log('🔍 CV Metadata Update - Update data:', updateData);
     

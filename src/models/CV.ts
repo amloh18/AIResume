@@ -23,6 +23,8 @@ export interface ICV extends Document {
     thumbnailUrl?: string; // URL to PNG snapshot for card preview
     thumbnailGeneratedAt?: Date; // When the thumbnail was last generated
     starred: boolean;
+    aiAnalysis?: any; // AI career analysis data
+    createdVia?: string; // How the CV was created (e.g., 'ai-career-report', 'manual')
   };
 }
 
@@ -159,7 +161,9 @@ const cvSchema = new Schema<ICV>({
     atsScoreDate: { type: Date },
     thumbnailUrl: { type: String, trim: true },
     thumbnailGeneratedAt: { type: Date },
-    starred: { type: Boolean, default: false }
+    starred: { type: Boolean, default: false },
+    aiAnalysis: { type: Schema.Types.Mixed },
+    createdVia: { type: String, trim: true }
   }
 }, {
   timestamps: true,

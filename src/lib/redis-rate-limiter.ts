@@ -1,0 +1,275 @@
+/**
+ * Redis-backed rate limiting service for production scalability
+ * Falls back to in-memory rate limiting if Redis is not available
+ */
+
+interface RateLimitConfig {
+  windowMs: number; // Time window in milliseconds
+  maxRequests: number; // Maximum requests per window
+  keyGenerator?: (req: any) => string; // Custom key generator
+  skipSuccessfulRequests?: boolean; // Don't count successful requests
+  skipFailedRequests?: boolean; // Don't count failed requests
+}
+
+interface RateLimitResult {
+  allowed: boolean;
+  remaining: number;
+  resetTime: number;
+  totalHits: number;
+}
+
+class RedisRateLimiter {
+  private redis: any = null;
+  private fallbackStore: Map<string, { count: number; resetTime: number }> = new Map();
+  private isRedisAvailable: boolean = false;
+
+  constructor() {
+    this.initializeRedis();
+  }
+
+  private async initializeRedis(): Promise<void> {
+    try {
+      // Try to import Redis (optional dependency)
+      const Redis = require('redis');
+      
+      if (process.env.REDIS_URL) {
+        this.redis = Redis.createClient({
+          url: process.env.REDIS_URL
+        });
+        
+        this.redis.on('error', (err: Error) => {
+          console.warn('Redis connection error:', err.message);
+          this.isRedisAvailable = false;
+        });
+        
+        this.redis.on('connect', () => {
+          console.log('✅ Redis connected successfully');
+          this.isRedisAvailable = true;
+        });
+        
+        await this.redis.connect();
+      } else {
+        console.warn('⚠️ REDIS_URL not set, using in-memory rate limiting');
+        this.isRedisAvailable = false;
+      }
+    } catch (error) {
+      console.warn('⚠️ Redis not available, using in-memory rate limiting:', error);
+      this.isRedisAvailable = false;
+    }
+  }
+
+  private generateKey(identifier: string, config: RateLimitConfig): string {
+    const window = Math.floor(Date.now() / config.windowMs);
+    return `rate_limit:${identifier}:${window}`;
+  }
+
+  private async getRedisValue(key: string): Promise<number> {
+    if (!this.isRedisAvailable || !this.redis) {
+      return 0;
+    }
+    
+    try {
+      const value = await this.redis.get(key);
+      return value ? parseInt(value, 10) : 0;
+    } catch (error) {
+      console.warn('Redis get error:', error);
+      return 0;
+    }
+  }
+
+  private async setRedisValue(key: string, value: number, ttlMs: number): Promise<void> {
+    if (!this.isRedisAvailable || !this.redis) {
+      return;
+    }
+    
+    try {
+      await this.redis.setEx(key, Math.ceil(ttlMs / 1000), value.toString());
+    } catch (error) {
+      console.warn('Redis set error:', error);
+    }
+  }
+
+  private async incrementRedisValue(key: string, ttlMs: number): Promise<number> {
+    if (!this.isRedisAvailable || !this.redis) {
+      return 0;
+    }
+    
+    try {
+      const result = await this.redis.multi()
+        .incr(key)
+        .expire(key, Math.ceil(ttlMs / 1000))
+        .exec();
+      
+      return result[0][1] || 0;
+    } catch (error) {
+      console.warn('Redis increment error:', error);
+      return 0;
+    }
+  }
+
+  private getFallbackValue(key: string): { count: number; resetTime: number } {
+    const now = Date.now();
+    const stored = this.fallbackStore.get(key);
+    
+    if (!stored || stored.resetTime < now) {
+      // Reset or create new entry
+      const resetTime = now + 60000; // 1 minute window
+      const newEntry = { count: 0, resetTime };
+      this.fallbackStore.set(key, newEntry);
+      return newEntry;
+    }
+    
+    return stored;
+  }
+
+  private setFallbackValue(key: string, count: number, resetTime: number): void {
+    this.fallbackStore.set(key, { count, resetTime });
+  }
+
+  private cleanupFallbackStore(): void {
+    const now = Date.now();
+    for (const [key, value] of this.fallbackStore.entries()) {
+      if (value.resetTime < now) {
+        this.fallbackStore.delete(key);
+      }
+    }
+  }
+
+  async checkLimit(identifier: string, config: RateLimitConfig): Promise<RateLimitResult> {
+    const key = this.generateKey(identifier, config);
+    const now = Date.now();
+    const windowStart = Math.floor(now / config.windowMs) * config.windowMs;
+    const resetTime = windowStart + config.windowMs;
+    const ttlMs = resetTime - now;
+
+    let currentCount: number;
+
+    if (this.isRedisAvailable) {
+      // Use Redis for distributed rate limiting
+      currentCount = await this.incrementRedisValue(key, ttlMs);
+    } else {
+      // Use in-memory fallback
+      this.cleanupFallbackStore();
+      const stored = this.getFallbackValue(key);
+      stored.count++;
+      this.setFallbackValue(key, stored.count, stored.resetTime);
+      currentCount = stored.count;
+    }
+
+    const allowed = currentCount <= config.maxRequests;
+    const remaining = Math.max(0, config.maxRequests - currentCount);
+
+    return {
+      allowed,
+      remaining,
+      resetTime,
+      totalHits: currentCount
+    };
+  }
+
+  async resetLimit(identifier: string, config: RateLimitConfig): Promise<void> {
+    const key = this.generateKey(identifier, config);
+    
+    if (this.isRedisAvailable) {
+      try {
+        await this.redis.del(key);
+      } catch (error) {
+        console.warn('Redis delete error:', error);
+      }
+    } else {
+      this.fallbackStore.delete(key);
+    }
+  }
+
+  async getLimitInfo(identifier: string, config: RateLimitConfig): Promise<RateLimitResult> {
+    const key = this.generateKey(identifier, config);
+    const now = Date.now();
+    const windowStart = Math.floor(now / config.windowMs) * config.windowMs;
+    const resetTime = windowStart + config.windowMs;
+
+    let currentCount: number;
+
+    if (this.isRedisAvailable) {
+      currentCount = await this.getRedisValue(key);
+    } else {
+      const stored = this.getFallbackValue(key);
+      currentCount = stored.count;
+    }
+
+    const allowed = currentCount <= config.maxRequests;
+    const remaining = Math.max(0, config.maxRequests - currentCount);
+
+    return {
+      allowed,
+      remaining,
+      resetTime,
+      totalHits: currentCount
+    };
+  }
+
+  // Predefined rate limit configurations
+  static readonly CONFIGS = {
+    // API rate limits
+    API_GENERAL: { windowMs: 15 * 60 * 1000, maxRequests: 1000 }, // 1000 requests per 15 minutes
+    API_STRICT: { windowMs: 5 * 60 * 1000, maxRequests: 100 }, // 100 requests per 5 minutes
+    API_AI: { windowMs: 60 * 1000, maxRequests: 10 }, // 10 AI requests per minute
+    
+    // Authentication limits
+    AUTH_LOGIN: { windowMs: 15 * 60 * 1000, maxRequests: 5 }, // 5 login attempts per 15 minutes
+    AUTH_PASSWORD_RESET: { windowMs: 60 * 60 * 1000, maxRequests: 3 }, // 3 password resets per hour
+    
+    // File upload limits
+    UPLOAD: { windowMs: 60 * 1000, maxRequests: 5 }, // 5 uploads per minute
+    
+    // Email limits
+    EMAIL: { windowMs: 60 * 1000, maxRequests: 3 }, // 3 emails per minute
+    
+    // Admin limits
+    ADMIN: { windowMs: 60 * 1000, maxRequests: 50 }, // 50 admin requests per minute
+  };
+
+  // Convenience methods for common rate limiting scenarios
+  async checkAPILimit(identifier: string, strict: boolean = false): Promise<RateLimitResult> {
+    const config = strict ? RedisRateLimiter.CONFIGS.API_STRICT : RedisRateLimiter.CONFIGS.API_GENERAL;
+    return this.checkLimit(identifier, config);
+  }
+
+  async checkAILimit(identifier: string): Promise<RateLimitResult> {
+    return this.checkLimit(identifier, RedisRateLimiter.CONFIGS.API_AI);
+  }
+
+  async checkAuthLimit(identifier: string, action: 'login' | 'password_reset'): Promise<RateLimitResult> {
+    const config = action === 'login' ? RedisRateLimiter.CONFIGS.AUTH_LOGIN : RedisRateLimiter.CONFIGS.AUTH_PASSWORD_RESET;
+    return this.checkLimit(identifier, config);
+  }
+
+  async checkUploadLimit(identifier: string): Promise<RateLimitResult> {
+    return this.checkLimit(identifier, RedisRateLimiter.CONFIGS.UPLOAD);
+  }
+
+  async checkEmailLimit(identifier: string): Promise<RateLimitResult> {
+    return this.checkLimit(identifier, RedisRateLimiter.CONFIGS.EMAIL);
+  }
+
+  async checkAdminLimit(identifier: string): Promise<RateLimitResult> {
+    return this.checkLimit(identifier, RedisRateLimiter.CONFIGS.ADMIN);
+  }
+}
+
+// Create singleton instance
+export const redisRateLimiter = new RedisRateLimiter();
+
+// Export convenience functions
+export const rateLimit = {
+  check: (identifier: string, config: RateLimitConfig) => redisRateLimiter.checkLimit(identifier, config),
+  checkAPI: (identifier: string, strict?: boolean) => redisRateLimiter.checkAPILimit(identifier, strict),
+  checkAI: (identifier: string) => redisRateLimiter.checkAILimit(identifier),
+  checkAuth: (identifier: string, action: 'login' | 'password_reset') => redisRateLimiter.checkAuthLimit(identifier, action),
+  checkUpload: (identifier: string) => redisRateLimiter.checkUploadLimit(identifier),
+  checkEmail: (identifier: string) => redisRateLimiter.checkEmailLimit(identifier),
+  checkAdmin: (identifier: string) => redisRateLimiter.checkAdminLimit(identifier),
+  reset: (identifier: string, config: RateLimitConfig) => redisRateLimiter.resetLimit(identifier, config),
+  getInfo: (identifier: string, config: RateLimitConfig) => redisRateLimiter.getLimitInfo(identifier, config)
+};
+
+export default redisRateLimiter;

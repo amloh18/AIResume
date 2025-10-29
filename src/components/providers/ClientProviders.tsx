@@ -46,21 +46,19 @@ function ConditionalProviders({ children }: ClientProvidersProps) {
   // For regular routes, use SessionProvider
   return (
     <SessionProvider>
-      <AuthProvider>
-        <ThemeProvider>
-          <LoadingProvider>
-            <PaymentModalProvider>
-              <NotificationProvider>
-                <ConsoleLoggerProvider>
-                  <PerformanceMonitor />
-                  <CookieConsent />
-                  {children}
-                </ConsoleLoggerProvider>
-              </NotificationProvider>
-            </PaymentModalProvider>
-          </LoadingProvider>
-        </ThemeProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <LoadingProvider>
+          <PaymentModalProvider>
+            <NotificationProvider>
+              <ConsoleLoggerProvider>
+                <PerformanceMonitor />
+                <CookieConsent />
+                {children}
+              </ConsoleLoggerProvider>
+            </NotificationProvider>
+          </PaymentModalProvider>
+        </LoadingProvider>
+      </ThemeProvider>
     </SessionProvider>
   );
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 
 interface FormFillRequest {
   cvData: UnifiedCVDataStructure;

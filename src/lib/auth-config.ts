@@ -5,7 +5,12 @@ import User from '@/models/User';
 import VerificationToken from '@/models/VerificationToken';
 import { isCodeExpired } from '@/lib/verification-code';
 import mongoose from 'mongoose';
-import { env } from './env';
+// Import environment variables directly
+const NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET || 'fallback-secret-key-for-development';
+const NEXTAUTH_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
+const MONGODB_URI = process.env.MONGODB_URI || '';
 
 // Ensure MongoDB connection
 async function connectDB() {
@@ -13,11 +18,11 @@ async function connectDB() {
     return;
   }
 
-  if (!process.env.MONGODB_URI) {
+  if (!MONGODB_URI) {
     throw new Error('MONGODB_URI is not defined');
   }
 
-  await mongoose.connect(process.env.MONGODB_URI);
+  await mongoose.connect(MONGODB_URI);
 }
 
 /**
@@ -54,7 +59,7 @@ export const authConfig: NextAuthOptions = {
   },
 
   // Secret for signing JWT tokens
-  secret: env.NEXTAUTH_SECRET,
+  secret: NEXTAUTH_SECRET,
 
   // Custom pages
   pages: {
@@ -66,8 +71,8 @@ export const authConfig: NextAuthOptions = {
   providers: [
     // Google OAuth Provider
     GoogleProvider({
-      clientId: env.GOOGLE_CLIENT_ID,
-      clientSecret: env.GOOGLE_CLIENT_SECRET,
+      clientId: GOOGLE_CLIENT_ID,
+      clientSecret: GOOGLE_CLIENT_SECRET,
       authorization: {
         params: {
           prompt: 'select_account',
@@ -116,28 +121,33 @@ export const authConfig: NextAuthOptions = {
 
           if (!user) {
             console.log('❌ User not found:', credentials.email);
-            throw new Error('Invalid email or password');
+            return null; // Return null instead of throwing error for better NextAuth handling
           }
 
           // Check if user has a password (OAuth users don't have passwords)
           if (!user.password) {
             console.log('❌ User has no password (OAuth user):', credentials.email);
-            throw new Error('Please sign in with Google');
+            return null; // Return null instead of throwing error
           }
 
           // Verify password
           const userDoc = await User.findOne({ email: credentials.email.toLowerCase() }).select('+password');
+          if (!userDoc) {
+            console.log('❌ User document not found for password verification:', credentials.email);
+            return null;
+          }
+
           const isPasswordValid = await userDoc.comparePassword(credentials.password);
 
           if (!isPasswordValid) {
             console.log('❌ Invalid password for:', credentials.email);
-            throw new Error('Invalid email or password');
+            return null; // Return null instead of throwing error
           }
 
           // Check if email is verified
           if (!user.isEmailVerified) {
             console.log('❌ Email not verified:', credentials.email);
-            throw new Error('Please verify your email before signing in');
+            return null; // Return null instead of throwing error
           }
 
           // Update last login
@@ -161,7 +171,7 @@ export const authConfig: NextAuthOptions = {
           };
         } catch (error: any) {
           console.error('❌ Authentication error:', error.message);
-          throw new Error(error.message || 'Authentication failed');
+          return null; // Return null instead of throwing error
         }
       },
     }),
@@ -284,22 +294,27 @@ export const authConfig: NextAuthOptions = {
 
           if (!user) {
             console.log('❌ Admin user not found:', credentials.email);
-            throw new Error('Invalid admin credentials');
+            return null; // Return null instead of throwing error
           }
 
           // Check if user has a password
           if (!user.password) {
             console.log('❌ Admin user has no password:', credentials.email);
-            throw new Error('Invalid admin credentials');
+            return null; // Return null instead of throwing error
           }
 
           // Verify password
           const userDoc = await User.findOne({ email: credentials.email.toLowerCase() }).select('+password');
+          if (!userDoc) {
+            console.log('❌ Admin user document not found for password verification:', credentials.email);
+            return null;
+          }
+
           const isPasswordValid = await userDoc.comparePassword(credentials.password);
 
           if (!isPasswordValid) {
             console.log('❌ Invalid admin password for:', credentials.email);
-            throw new Error('Invalid admin credentials');
+            return null; // Return null instead of throwing error
           }
 
           // Update last login
@@ -321,7 +336,7 @@ export const authConfig: NextAuthOptions = {
           };
         } catch (error: any) {
           console.error('❌ Admin authentication error:', error.message);
-          throw new Error(error.message || 'Admin authentication failed');
+          return null; // Return null instead of throwing error
         }
       },
     }),
@@ -407,37 +422,36 @@ export const authConfig: NextAuthOptions = {
       }
     },
 
-    // JWT callback - add custom fields to the token
-    async jwt({ token, user, account, trigger, session }) {
-      // Initial sign-in
-      if (user) {
-        console.log('🔐 JWT callback - user sign-in:', {
-          id: user.id,
-          email: user.email,
-          type: (user as any).type,
-        });
+  // JWT callback - add custom fields to the token
+  async jwt({ token, user, account, trigger, session }) {
+    // Initial sign-in
+    if (user) {
+      console.log('🔐 JWT callback - user sign-in:', {
+        id: user.id,
+        email: user.email,
+        type: (user as any).type,
+      });
 
-        // Store only essential data to keep token size small
-        token.id = user.id || '';
-        token.email = user.email || '';
-        token.name = user.name || '';
-        token.image = user.image || null;
-        token.role = (user as any).role || 'user';
-        token.type = (user as any).type || 'user';
-        // Remove large fields that can be fetched from database when needed
-        // token.planKey = (user as any).planKey || 'free';
-        // token.subscriptionStatus = (user as any).subscriptionStatus || 'inactive';
-      }
+      // Store only essential data to keep token size small
+      token.id = user.id || '';
+      token.email = user.email || '';
+      token.name = user.name || '';
+      token.image = user.image || null;
+      token.role = (user as any).role || 'user';
+      token.type = (user as any).type || 'user';
+      token.planKey = (user as any).planKey || 'free';
+      token.subscriptionStatus = (user as any).subscriptionStatus || 'inactive';
+    }
 
-      // Handle session updates
-      if (trigger === 'update' && session) {
-        console.log('🔄 JWT callback - session update');
-        // Update token with new session data
-        token = { ...token, ...session };
-      }
+    // Handle session updates
+    if (trigger === 'update' && session) {
+      console.log('🔄 JWT callback - session update');
+      // Update token with new session data
+      token = { ...token, ...session };
+    }
 
-      return token;
-    },
+    return token;
+  },
 
     // Session callback - add custom fields to the session
     async session({ session, token }) {
@@ -449,9 +463,8 @@ export const authConfig: NextAuthOptions = {
         session.user.image = (token.image as string) || null;
         (session.user as any).role = token.role || 'user';
         (session.user as any).type = token.type || 'user';
-        // Remove large fields - these can be fetched from database when needed
-        // (session.user as any).planKey = token.planKey;
-        // (session.user as any).subscriptionStatus = token.subscriptionStatus;
+        (session.user as any).planKey = token.planKey || 'free';
+        (session.user as any).subscriptionStatus = token.subscriptionStatus || 'inactive';
       }
 
       return session;

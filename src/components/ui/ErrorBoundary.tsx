@@ -52,8 +52,17 @@ class ErrorBoundary extends Component<Props, State> {
 
     // Log to external service in production
     if (process.env.NODE_ENV === 'production') {
-      // You can integrate with services like Sentry, LogRocket, etc.
-      console.error('Production error:', error.message);
+      // Import error tracking service
+      import('@/lib/error-tracking').then(({ captureException }) => {
+        captureException(error, {
+          component: 'ErrorBoundary',
+          errorInfo: errorInfo?.componentStack,
+          userId: this.props.userId,
+        });
+      }).catch(() => {
+        // Fallback to console if error tracking fails
+        console.error('Production error:', error.message);
+      });
     }
   }
 

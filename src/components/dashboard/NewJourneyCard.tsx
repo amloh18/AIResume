@@ -18,7 +18,7 @@ import {
 import { useUnifiedAuth } from '@/lib/hooks/useUnifiedAuth';
 import { useRouter } from 'next/navigation';
 import { useJobJourney } from '@/contexts/JobJourneyContext';
-import { useAuth } from '@/contexts/AuthContext';
+import { useSession } from 'next-auth/react';
 import { ApplicationPackageService } from '@/lib/services/applicationPackageService';
 
 interface Job {
@@ -57,7 +57,8 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
 }) => {
   console.log('🔍 NewJourneyCard - Component initialized');
   const { user: unifiedUser } = useUnifiedAuth();
-  const { user } = useAuth();
+  const { data: session } = useSession();
+  const user = session?.user;
   const router = useRouter();
   const { startJourney } = useJobJourney();
   
