@@ -284,7 +284,17 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
     );
   }
 
-  const { experienceLevel, careerPath, strategicSuggestions } = state.aiAnalysis;
+  const { 
+    experienceLevel, 
+    careerPath, 
+    strategicSuggestions,
+    impactScore,
+    careerCoherence,
+    cvOptimization,
+    skillsGap,
+    seniorTranslation,
+    industrySpecialization
+  } = state.aiAnalysis;
 
   // If not authenticated, show blurred content with sign-in modal
   if (!currentSession?.user) {
@@ -534,21 +544,27 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
                   <tbody className="text-gray-900 dark:text-white/70">
                     <tr className="border-b border-white/5">
                       <td className="py-3">Quantifiable Statements</td>
-                      <td className="py-3">3/15</td>
+                      <td className="py-3">{impactScore?.quantifiableStatements || 0}/15</td>
                       <td className="py-3">10+</td>
-                      <td className="py-3 text-red-400">Needs Work</td>
+                      <td className={`py-3 ${(impactScore?.quantifiableStatements || 0) < 5 ? 'text-red-400' : (impactScore?.quantifiableStatements || 0) < 10 ? 'text-yellow-400' : 'text-green-400'}`}>
+                        {(impactScore?.quantifiableStatements || 0) < 5 ? 'Needs Work' : (impactScore?.quantifiableStatements || 0) < 10 ? 'Moderate' : 'Good'}
+                      </td>
                     </tr>
                     <tr className="border-b border-white/5">
                       <td className="py-3">High-Impact Verbs</td>
-                      <td className="py-3">8/30</td>
+                      <td className="py-3">{impactScore?.highImpactVerbs || 0}/30</td>
                       <td className="py-3">25+</td>
-                      <td className="py-3 text-yellow-400">Moderate</td>
+                      <td className={`py-3 ${(impactScore?.highImpactVerbs || 0) < 10 ? 'text-red-400' : (impactScore?.highImpactVerbs || 0) < 25 ? 'text-yellow-400' : 'text-green-400'}`}>
+                        {(impactScore?.highImpactVerbs || 0) < 10 ? 'Needs Work' : (impactScore?.highImpactVerbs || 0) < 25 ? 'Moderate' : 'Good'}
+                      </td>
                     </tr>
                     <tr>
                       <td className="py-3">Industry Keywords</td>
-                      <td className="py-3">75%</td>
+                      <td className="py-3">{impactScore?.industryKeywords || 0}%</td>
                       <td className="py-3">90%+</td>
-                      <td className="py-3 text-yellow-400">Good</td>
+                      <td className={`py-3 ${(impactScore?.industryKeywords || 0) < 60 ? 'text-red-400' : (impactScore?.industryKeywords || 0) < 90 ? 'text-yellow-400' : 'text-green-400'}`}>
+                        {(impactScore?.industryKeywords || 0) < 60 ? 'Needs Work' : (impactScore?.industryKeywords || 0) < 90 ? 'Good' : 'Excellent'}
+                      </td>
                     </tr>
                   </tbody>
                 </table>
@@ -557,14 +573,35 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
 
             {/* Key Insights */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-[#1A201A] rounded-lg p-4 border border-red-500/20">
-                <h4 className="text-red-400 font-semibold mb-2">🚨 Critical Gap</h4>
-                <p className="text-gray-600 dark:text-gray-900 dark:text-white/80 text-sm">Only 3 out of 15 bullet points contain numbers or percentages. Hiring managers look for measurable impact.</p>
-              </div>
-              <div className="bg-[#1A201A] rounded-lg p-4 border border-yellow-500/20">
-                <h4 className="text-yellow-400 font-semibold mb-2">⚠️ Improvement Needed</h4>
-                <p className="text-gray-600 dark:text-gray-900 dark:text-white/80 text-sm">Shift from passive verbs like "Responsible for" to action verbs like "Spearheaded" and "Drove".</p>
-              </div>
+              {impactScore?.insights?.map((insight: any, index: number) => (
+                <div key={index} className={`bg-[#1A201A] rounded-lg p-4 border ${
+                  insight.type === 'Critical Gap' ? 'border-red-500/20' : 
+                  insight.type === 'Improvement Needed' ? 'border-yellow-500/20' : 
+                  'border-green-500/20'
+                }`}>
+                  <h4 className={`font-semibold mb-2 ${
+                    insight.type === 'Critical Gap' ? 'text-red-400' : 
+                    insight.type === 'Improvement Needed' ? 'text-yellow-400' : 
+                    'text-green-400'
+                  }`}>
+                    {insight.type === 'Critical Gap' ? '🚨 Critical Gap' : 
+                     insight.type === 'Improvement Needed' ? '⚠️ Improvement Needed' : 
+                     '✅ Strength'}
+                  </h4>
+                  <p className="text-gray-600 dark:text-gray-900 dark:text-white/80 text-sm">{insight.message}</p>
+                </div>
+              )) || (
+                <>
+                  <div className="bg-[#1A201A] rounded-lg p-4 border border-red-500/20">
+                    <h4 className="text-red-400 font-semibold mb-2">🚨 Critical Gap</h4>
+                    <p className="text-gray-600 dark:text-gray-900 dark:text-white/80 text-sm">Limited quantifiable achievements found in your CV.</p>
+                  </div>
+                  <div className="bg-[#1A201A] rounded-lg p-4 border border-yellow-500/20">
+                    <h4 className="text-yellow-400 font-semibold mb-2">⚠️ Improvement Needed</h4>
+                    <p className="text-gray-600 dark:text-gray-900 dark:text-white/80 text-sm">Need more action-oriented language and quantifiable results.</p>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </motion.div>
@@ -592,43 +629,69 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
             <div className="glass-card-premium rounded-lg p-6 border border-white/10">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white">Career Coherence Score</h3>
-                <div className="text-3xl font-bold text-[#80FF00]">92%</div>
+                <div className="text-3xl font-bold text-[#80FF00]">{careerCoherence?.score || 85}%</div>
               </div>
-              <p className="text-gray-600 dark:text-gray-900 dark:text-white/80 mb-4">Your career path shows strong alignment with consistent progression through similar Product Management roles.</p>
-              <div className="bg-green-500/20 border border-green-500/30 rounded-lg p-3">
-                <p className="text-green-400 text-sm">✅ <strong>Strength:</strong> Focus and stability signal to recruiters</p>
-              </div>
+              <p className="text-gray-600 dark:text-gray-900 dark:text-white/80 mb-4">
+                {careerCoherence?.score >= 80 ? 
+                  "Your career path shows strong alignment with consistent progression." :
+                  careerCoherence?.score >= 60 ?
+                  "Your career path shows moderate alignment with some areas for improvement." :
+                  "Your career path could benefit from more focused progression and consistency."
+                }
+              </p>
+              {careerCoherence?.strengths && careerCoherence.strengths.length > 0 && (
+                <div className="bg-green-500/20 border border-green-500/30 rounded-lg p-3">
+                  <p className="text-green-400 text-sm">✅ <strong>Strengths:</strong> {careerCoherence.strengths.join(', ')}</p>
+                </div>
+              )}
             </div>
 
             {/* Red Flags */}
-            <div className="bg-[#1A201A] rounded-lg p-6 border border-red-500/20">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">⚠️ Potential Red Flags Detected</h3>
-              <div className="space-y-3">
-                <div className="flex items-start gap-3">
-                  <div className="w-2 h-2 bg-red-400 rounded-full mt-2 flex-shrink-0"></div>
-                  <div>
-                    <p className="text-gray-600 dark:text-gray-900 dark:text-white/80 text-sm"><strong>Short Job Duration:</strong> Role at 'TechCo Solutions' lasted only 9 months</p>
-                    <p className="text-gray-900 dark:text-gray-600 dark:text-white/60 text-xs mt-1">Multiple short stints can signal "job hopper" risk to recruiters</p>
-                  </div>
-                </div>
-                <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 mt-3">
-                  <p className="text-red-400 text-sm"><strong>Action Required:</strong> If this was a contract or layoff, clarify it on your CV (e.g., "9-month contract to launch new API")</p>
+            {careerCoherence?.redFlags && careerCoherence.redFlags.length > 0 ? (
+              <div className="bg-[#1A201A] rounded-lg p-6 border border-red-500/20">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">⚠️ Potential Red Flags Detected</h3>
+                <div className="space-y-3">
+                  {careerCoherence.redFlags.map((redFlag: any, index: number) => (
+                    <div key={index} className="flex items-start gap-3">
+                      <div className="w-2 h-2 bg-red-400 rounded-full mt-2 flex-shrink-0"></div>
+                      <div>
+                        <p className="text-gray-600 dark:text-gray-900 dark:text-white/80 text-sm">
+                          <strong>{redFlag.issue}</strong>
+                        </p>
+                        <p className="text-gray-900 dark:text-gray-600 dark:text-white/60 text-xs mt-1">{redFlag.impact}</p>
+                        {redFlag.action && (
+                          <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 mt-3">
+                            <p className="text-red-400 text-sm"><strong>Action Required:</strong> {redFlag.action}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-6">
+                <h3 className="text-lg font-bold text-green-400 mb-2">✅ No Red Flags Detected</h3>
+                <p className="text-gray-600 dark:text-gray-900 dark:text-white/80 text-sm">Your career progression looks consistent and well-structured.</p>
+              </div>
+            )}
 
             {/* Next Steps */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {[
-                { title: 'Senior Product Manager', description: 'Natural progression leveraging existing experience for strategic responsibilities' },
-                { title: 'Product Lead', description: 'Mentoring junior PMs and leading specific product areas' },
-                { title: 'Technical Product Manager', description: 'Specializing in complex, engineering-focused products' }
+              {careerPath ? [
+                { title: careerPath.step1?.title || 'Next Role', description: careerPath.step1?.reasoning || 'Natural progression in your career' },
+                { title: careerPath.step2?.title || 'Future Role', description: careerPath.step2?.reasoning || 'Building on your current experience' },
+                { title: careerPath.step3?.title || 'Long-term Goal', description: careerPath.step3?.reasoning || 'Strategic career advancement' }
               ].map(({ title, description }, index) => (
                 <div key={index} className="bg-[#1A201A] rounded-lg p-4 border border-white/10">
                   <h4 className="text-gray-900 dark:text-white font-semibold mb-2">{title}</h4>
                   <p className="text-gray-900 dark:text-white/70 text-sm">{description}</p>
                 </div>
-              ))}
+              )) : (
+                <div className="col-span-3 text-center py-8">
+                  <p className="text-gray-600 dark:text-gray-900 dark:text-white/60">Career path analysis not available</p>
+                </div>
+              )}
             </div>
           </div>
         </motion.div>
@@ -667,21 +730,27 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
                   <tbody className="text-gray-900 dark:text-white/70">
                     <tr className="border-b border-white/5">
                       <td className="py-3">Total Length</td>
-                      <td className="py-3">2 Pages</td>
+                      <td className="py-3">{cvOptimization?.totalLength || '2 Pages'}</td>
                       <td className="py-3">1 Page (Mid-Level)</td>
-                      <td className="py-3 text-red-400">Review</td>
+                      <td className={`py-3 ${cvOptimization?.totalLength === '1 Page' ? 'text-green-400' : 'text-red-400'}`}>
+                        {cvOptimization?.totalLength === '1 Page' ? 'Good' : 'Review'}
+                      </td>
                     </tr>
                     <tr className="border-b border-white/5">
                       <td className="py-3">Bullet Point Length</td>
-                      <td className="py-3">Avg. 3.2 Lines</td>
+                      <td className="py-3">{cvOptimization?.bulletPointLength || 'Avg. 3.2 Lines'}</td>
                       <td className="py-3">Max 2 Lines</td>
-                      <td className="py-3 text-red-400">Needs Trimming</td>
+                      <td className={`py-3 ${cvOptimization?.bulletPointLength?.includes('2.') ? 'text-green-400' : 'text-red-400'}`}>
+                        {cvOptimization?.bulletPointLength?.includes('2.') ? 'Good' : 'Needs Trimming'}
+                      </td>
                     </tr>
                     <tr>
                       <td className="py-3">Education/Skills Placement</td>
-                      <td className="py-3">At bottom</td>
+                      <td className="py-3">{cvOptimization?.educationPlacement || 'At bottom'}</td>
                       <td className="py-3">Top-Right or After Experience</td>
-                      <td className="py-3 text-yellow-400">Adjust</td>
+                      <td className={`py-3 ${cvOptimization?.educationPlacement === 'Top' ? 'text-green-400' : 'text-yellow-400'}`}>
+                        {cvOptimization?.educationPlacement === 'Top' ? 'Good' : 'Adjust'}
+                      </td>
                     </tr>
                   </tbody>
                 </table>
@@ -727,24 +796,27 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
                     </tr>
                   </thead>
                   <tbody className="text-gray-900 dark:text-white/70">
-                    <tr className="border-b border-white/5">
-                      <td className="py-3">SQL/Data Analysis</td>
-                      <td className="py-3">4 times</td>
-                      <td className="py-3">1 time</td>
-                      <td className="py-3 text-red-400">Major Gap</td>
-                    </tr>
-                    <tr className="border-b border-white/5">
-                      <td className="py-3">Stakeholder Mgt.</td>
-                      <td className="py-3">7 times</td>
-                      <td className="py-3">5 times</td>
-                      <td className="py-3 text-yellow-400">Minor Gap</td>
-                    </tr>
-                    <tr>
-                      <td className="py-3">Go-to-Market</td>
-                      <td className="py-3">1 time</td>
-                      <td className="py-3">1 time</td>
-                      <td className="py-3 text-green-400">Targeted Gap</td>
-                    </tr>
+                    {skillsGap?.skills && skillsGap.skills.length > 0 ? (
+                      skillsGap.skills.map((skill: any, index: number) => (
+                        <tr key={index} className="border-b border-white/5">
+                          <td className="py-3">{skill.name}</td>
+                          <td className="py-3">{skill.mentions} times</td>
+                          <td className="py-3">{skill.quantifiedUse} times</td>
+                          <td className={`py-3 ${
+                            skill.gapInsight === 'Major Gap' ? 'text-red-400' :
+                            skill.gapInsight === 'Minor Gap' ? 'text-yellow-400' :
+                            skill.gapInsight === 'Targeted Gap' ? 'text-green-400' :
+                            'text-blue-400'
+                          }`}>
+                            {skill.gapInsight}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td className="py-3 col-span-4 text-center text-gray-500">No skills analysis available</td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -754,42 +826,25 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
             <div className="glass-card-premium rounded-lg p-6 border border-white/10">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">CV Focus Distribution</h3>
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600 dark:text-gray-900 dark:text-white/80">Feature Execution/Delivery</span>
-                  <div className="flex items-center gap-2">
-                    <div className="w-32 bg-gray-700 rounded-full h-2">
-                      <div className="bg-[#80FF00] h-2 rounded-full" style={{width: '50%'}}></div>
-                    </div>
-                    <span className="text-gray-900 dark:text-gray-600 dark:text-white/60 text-sm">50%</span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600 dark:text-gray-900 dark:text-white/80">Long-term Strategy/Vision</span>
-                  <div className="flex items-center gap-2">
-                    <div className="w-32 bg-gray-700 rounded-full h-2">
-                      <div className="bg-yellow-400 h-2 rounded-full" style={{width: '25%'}}></div>
-                    </div>
-                    <span className="text-gray-900 dark:text-gray-600 dark:text-white/60 text-sm">25%</span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600 dark:text-gray-900 dark:text-white/80">People/Stakeholder Management</span>
-                  <div className="flex items-center gap-2">
-                    <div className="w-32 bg-gray-700 rounded-full h-2">
-                      <div className="bg-blue-400 h-2 rounded-full" style={{width: '15%'}}></div>
-                    </div>
-                    <span className="text-gray-900 dark:text-gray-600 dark:text-white/60 text-sm">15%</span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600 dark:text-gray-900 dark:text-white/80">Data/Technical Details</span>
-                  <div className="flex items-center gap-2">
-                    <div className="w-32 bg-gray-700 rounded-full h-2">
-                      <div className="bg-purple-400 h-2 rounded-full" style={{width: '10%'}}></div>
-                    </div>
-                    <span className="text-gray-900 dark:text-gray-600 dark:text-white/60 text-sm">10%</span>
-                  </div>
-                </div>
+                {skillsGap?.focusDistribution && skillsGap.focusDistribution.length > 0 ? (
+                  skillsGap.focusDistribution.map((area: any, index: number) => {
+                    const colors = ['bg-[#80FF00]', 'bg-yellow-400', 'bg-blue-400', 'bg-purple-400', 'bg-red-400', 'bg-green-400'];
+                    const color = colors[index % colors.length];
+                    return (
+                      <div key={index} className="flex items-center justify-between">
+                        <span className="text-gray-600 dark:text-gray-900 dark:text-white/80">{area.area}</span>
+                        <div className="flex items-center gap-2">
+                          <div className="w-32 bg-gray-700 rounded-full h-2">
+                            <div className={`${color} h-2 rounded-full`} style={{width: `${area.percentage}%`}}></div>
+                          </div>
+                          <span className="text-gray-900 dark:text-gray-600 dark:text-white/60 text-sm">{area.percentage}%</span>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-center py-4 text-gray-500">No focus distribution data available</div>
+                )}
               </div>
               <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3 mt-4">
                 <p className="text-yellow-400 text-sm"><strong>Career Advancement Tip:</strong> To advance to Senior PM/Lead, refactor 15-20% of delivery bullets to focus on Strategy and People Management.</p>
@@ -817,23 +872,8 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
           </p>
           
           <div className="space-y-4">
-            {[
-              {
-                current: "Managed the product backlog and defined user stories.",
-                improved: "Owned the 12-month product roadmap, aligning it with executive-level OKRs.",
-                shift: "Execution → Strategy"
-              },
-              {
-                current: "Tested new features with users and gathered feedback.",
-                improved: "Established a continuous discovery framework, resulting in a 20% faster iteration cycle.",
-                shift: "Task → System"
-              },
-              {
-                current: "Worked with the engineering team to ship features.",
-                improved: "Mentored junior PMs and coached the Engineering Manager on agile best practices.",
-                shift: "Contributor → Leader"
-              }
-            ].map((item, index) => (
+            {seniorTranslation?.translations && seniorTranslation.translations.length > 0 ? (
+              seniorTranslation.translations.map((item: any, index: number) => (
               <div key={index} className="glass-card-premium rounded-lg p-6 border border-white/10">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -849,7 +889,12 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
                   <p className="text-blue-400 text-xs"><strong>Shift:</strong> {item.shift}</p>
                 </div>
               </div>
-            ))}
+            ))
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-600 dark:text-gray-900 dark:text-white/60">No senior translation examples available</p>
+              </div>
+            )}
           </div>
         </motion.div>
 
@@ -871,37 +916,62 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
             <div className="glass-card-premium rounded-lg p-6 border border-white/10">
               <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Identified Specialization</h3>
               <div className="bg-green-500/20 border border-green-500/30 rounded-lg p-4">
-                <h4 className="text-green-400 font-semibold mb-2">🎯 FinTech Specialist</h4>
-                <p className="text-gray-600 dark:text-gray-900 dark:text-white/80 text-sm mb-3">4 out of 5 roles in financial services/payments</p>
-                <p className="text-gray-900 dark:text-white/70 text-sm">Your specialization is a major asset! Recruiters in FinTech often screen for specific compliance and security keywords before general product skills.</p>
+                <h4 className="text-green-400 font-semibold mb-2">🎯 {industrySpecialization?.specialization || 'General'} Specialist</h4>
+                <p className="text-gray-600 dark:text-gray-900 dark:text-white/80 text-sm mb-3">
+                  {industrySpecialization?.specialization ? 
+                    `Your specialization in ${industrySpecialization.specialization} is a major asset!` :
+                    'Consider developing a specialization to stand out to recruiters.'
+                  }
+                </p>
+                <p className="text-gray-900 dark:text-white/70 text-sm">
+                  {industrySpecialization?.specialization ? 
+                    'Recruiters often screen for specific industry keywords before general skills.' :
+                    'Focus on building expertise in a specific industry or technology stack.'
+                  }
+                </p>
               </div>
             </div>
 
             <div className="glass-card-premium rounded-lg p-6 border border-white/10">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Critical FinTech Keywords to Emphasize</h3>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+                Critical {industrySpecialization?.specialization || 'Industry'} Keywords to Emphasize
+              </h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {['Compliance', 'Security Protocols', 'Regulatory Frameworks', 'GDPR', 'PSD2', 'Fraud Detection', 'Risk Management', 'PCI DSS'].map((keyword, index) => (
-                  <div key={index} className="bg-[#80FF00]/10 border border-[#80FF00]/20 rounded-lg p-2 text-center">
-                    <span className="text-[#80FF00] text-sm font-medium">{keyword}</span>
-                  </div>
-                ))}
+                {industrySpecialization?.keywords && industrySpecialization.keywords.length > 0 ? (
+                  industrySpecialization.keywords.map((keyword: string, index: number) => (
+                    <div key={index} className="bg-[#80FF00]/10 border border-[#80FF00]/20 rounded-lg p-2 text-center">
+                      <span className="text-[#80FF00] text-sm font-medium">{keyword}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="col-span-4 text-center py-4 text-gray-500">No specific keywords identified</div>
+                )}
               </div>
             </div>
 
-            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
-              <h4 className="text-red-400 font-semibold mb-2">🚨 Contact Details Check</h4>
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-red-400 rounded-full"></div>
-                  <span className="text-gray-600 dark:text-gray-900 dark:text-white/80"><strong>Email Domain:</strong> Using personal nickname@yahoo.com</span>
+            {industrySpecialization?.contactIssues && industrySpecialization.contactIssues.length > 0 ? (
+              <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+                <h4 className="text-red-400 font-semibold mb-2">🚨 Contact Details Check</h4>
+                <div className="space-y-2 text-sm">
+                  {industrySpecialization.contactIssues.map((issue: any, index: number) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-red-400 rounded-full"></div>
+                      <span className="text-gray-600 dark:text-gray-900 dark:text-white/80">
+                        <strong>{issue.issue}</strong>
+                      </span>
+                    </div>
+                  ))}
+                  <p className="text-red-400 text-xs mt-2">
+                    <strong>Action Required:</strong> {industrySpecialization.contactIssues.map((issue: any) => issue.action).join(' and ')} for professional presentation.
+                  </p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-red-400 rounded-full"></div>
-                  <span className="text-gray-600 dark:text-gray-900 dark:text-white/80"><strong>LinkedIn URL:</strong> Using default, unedited URL</span>
-                </div>
-                <p className="text-red-400 text-xs mt-2"><strong>Action Required:</strong> Update to professional email domain and create custom LinkedIn URL for senior roles.</p>
               </div>
-            </div>
+            ) : (
+              <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+                <h4 className="text-green-400 font-semibold mb-2">✅ Contact Details Look Professional</h4>
+                <p className="text-gray-600 dark:text-gray-900 dark:text-white/80 text-sm">Your contact information appears professional and appropriate for senior roles.</p>
+              </div>
+            )}
           </div>
         </motion.div>
 

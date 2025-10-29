@@ -5,8 +5,13 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 export async function POST(request: NextRequest) {
+  let cvData: any;
+  let jobData: any;
+  
   try {
-    const { cvData, jobData } = await request.json();
+    const requestData = await request.json();
+    cvData = requestData.cvData;
+    jobData = requestData.jobData;
 
     if (!cvData) {
       return NextResponse.json(

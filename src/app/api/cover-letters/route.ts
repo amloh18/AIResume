@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/database';
 import CoverLetter from '@/models/CoverLetter';
-import { createErrorResponse } from '@/lib/db-utils';
 
 export async function GET(request: NextRequest) {
   try {
@@ -95,7 +94,10 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error fetching cover letters:', error);
-    return createErrorResponse('Failed to fetch cover letters', 500);
+    return NextResponse.json(
+      { success: false, message: 'Failed to fetch cover letters' },
+      { status: 500 }
+    );
   }
 }
 
@@ -158,7 +160,10 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error creating cover letter:', error);
-    return createErrorResponse('Failed to create cover letter', 500);
+    return NextResponse.json(
+      { success: false, message: 'Failed to create cover letter' },
+      { status: 500 }
+    );
   }
 }
 
@@ -212,7 +217,10 @@ export async function PUT(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error updating cover letter:', error);
-    return createErrorResponse('Failed to update cover letter', 500);
+    return NextResponse.json(
+      { success: false, message: 'Failed to update cover letter' },
+      { status: 500 }
+    );
   }
 }
 
@@ -245,7 +253,10 @@ export async function DELETE(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error deleting cover letter:', error);
-    return createErrorResponse('Failed to delete cover letter', 500);
+    return NextResponse.json(
+      { success: false, message: 'Failed to delete cover letter' },
+      { status: 500 }
+    );
   }
 }
 

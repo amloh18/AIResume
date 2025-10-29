@@ -38,9 +38,10 @@ interface CareerAnalysis {
     step3: { title: string; reasoning: string };
   };
   strategicSuggestions: {
-    hardSkill: string;
-    softSkill: string;
-    improvedExperience: string;
+    hardSkill?: { skill: string; rationale: string } | string;
+    softSkill?: { skill: string; rationale: string } | string;
+    experienceReframe?: { original: string; improved: string; rationale: string };
+    improvedExperience?: string;
   };
   // Additional analysis sections
   impactScore?: {
@@ -149,8 +150,62 @@ const CareerReportPage: React.FC = () => {
           }
         }
         
-        // If no AI analysis found, show default analysis
-        console.log('⚠️ Career Report - No AI analysis found, using default analysis');
+        // If no AI analysis found, try to generate one from the master CV
+        console.log('⚠️ Career Report - No AI analysis found, attempting to generate from master CV');
+        setLoadingMessage('Generating AI career analysis...');
+        
+        try {
+          // Try to get the master CV data to generate analysis
+          const masterCVResponse = await fetch(`/api/cvs/master?userId=${user.id}`);
+          const masterCVResult = await masterCVResponse.json();
+          
+          if (masterCVResult.success && masterCVResult.data?.masterCV?.cvData) {
+            console.log('🔍 Career Report - Found master CV data, generating AI analysis');
+            const masterCV = masterCVResult.data.masterCV;
+            
+            // Generate AI analysis using the master CV data
+            const analysisResponse = await fetch('/api/ai/career-analysis', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ 
+                cvData: masterCV.cvData,
+                jobData: null, // No specific job context for general career report
+                jobId: null
+              })
+            });
+            
+            if (analysisResponse.ok) {
+              const analysisResult = await analysisResponse.json();
+              if (analysisResult.success) {
+                console.log('✅ Career Report - Generated AI analysis successfully');
+                setCareerAnalysis(analysisResult.analysis);
+                
+                // Update the master CV with the new analysis
+                try {
+                  await fetch(`/api/cvs/${masterCV.id}/metadata`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      userId: user.id,
+                      aiAnalysis: analysisResult.analysis,
+                      lastModified: new Date().toISOString()
+                    })
+                  });
+                  console.log('✅ Career Report - Updated master CV with AI analysis');
+                } catch (updateError) {
+                  console.warn('⚠️ Career Report - Failed to update master CV with analysis:', updateError);
+                }
+                
+                return;
+              }
+            }
+          }
+        } catch (generateError) {
+          console.warn('⚠️ Career Report - Failed to generate AI analysis:', generateError);
+        }
+        
+        // If all else fails, show default analysis
+        console.log('⚠️ Career Report - Using fallback analysis');
         setLoadingMessage('Preparing your career insights...');
         setCareerAnalysis({
           experienceLevel: {
@@ -163,9 +218,13 @@ const CareerReportPage: React.FC = () => {
             step3: { title: 'Engineering Manager', reasoning: 'Management and strategic growth opportunities' }
           },
           strategicSuggestions: {
-            hardSkill: 'Cloud Architecture (AWS/Azure)',
-            softSkill: 'Leadership and Communication',
-            improvedExperience: 'Led cross-functional team of 5 developers to deliver critical system upgrade, resulting in 40% performance improvement'
+            hardSkill: { skill: 'Cloud Architecture (AWS/Azure)', rationale: 'Essential for modern software development and deployment' },
+            softSkill: { skill: 'Leadership and Communication', rationale: 'Critical for senior roles and career advancement' },
+            experienceReframe: {
+              original: 'Led cross-functional team of 5 developers',
+              improved: 'Led cross-functional team of 5 developers to deliver critical system upgrade, resulting in 40% performance improvement',
+              rationale: 'More specific, quantifiable, and impactful presentation'
+            }
           },
           impactScore: {
             quantifiableStatements: 3,
@@ -605,15 +664,36 @@ const CareerReportPage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
               <h4 className="text-blue-600 dark:text-blue-400 font-semibold mb-2">🔧 Critical Hard Skill</h4>
-              <p className="text-gray-700 dark:text-white/70 text-sm">{careerAnalysis.strategicSuggestions.hardSkill}</p>
+              <p className="text-gray-700 dark:text-white/70 text-sm">
+                {typeof careerAnalysis.strategicSuggestions.hardSkill === 'string' 
+                  ? careerAnalysis.strategicSuggestions.hardSkill 
+                  : careerAnalysis.strategicSuggestions.hardSkill?.skill || 'Not specified'}
+              </p>
+              {typeof careerAnalysis.strategicSuggestions.hardSkill === 'object' && careerAnalysis.strategicSuggestions.hardSkill?.rationale && (
+                <p className="text-gray-600 dark:text-white/60 text-xs mt-2">{careerAnalysis.strategicSuggestions.hardSkill.rationale}</p>
+              )}
             </div>
             <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
               <h4 className="text-green-600 dark:text-green-400 font-semibold mb-2">🤝 Critical Soft Skill</h4>
-              <p className="text-gray-700 dark:text-white/70 text-sm">{careerAnalysis.strategicSuggestions.softSkill}</p>
+              <p className="text-gray-700 dark:text-white/70 text-sm">
+                {typeof careerAnalysis.strategicSuggestions.softSkill === 'string' 
+                  ? careerAnalysis.strategicSuggestions.softSkill 
+                  : careerAnalysis.strategicSuggestions.softSkill?.skill || 'Not specified'}
+              </p>
+              {typeof careerAnalysis.strategicSuggestions.softSkill === 'object' && careerAnalysis.strategicSuggestions.softSkill?.rationale && (
+                <p className="text-gray-600 dark:text-white/60 text-xs mt-2">{careerAnalysis.strategicSuggestions.softSkill.rationale}</p>
+              )}
             </div>
             <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
               <h4 className="text-purple-600 dark:text-purple-400 font-semibold mb-2">📈 Improved Experience</h4>
-              <p className="text-gray-700 dark:text-white/70 text-sm">{careerAnalysis.strategicSuggestions.improvedExperience}</p>
+              <p className="text-gray-700 dark:text-white/70 text-sm">
+                {careerAnalysis.strategicSuggestions.experienceReframe?.improved || 
+                 careerAnalysis.strategicSuggestions.improvedExperience || 
+                 'Not specified'}
+              </p>
+              {careerAnalysis.strategicSuggestions.experienceReframe?.rationale && (
+                <p className="text-gray-600 dark:text-white/60 text-xs mt-2">{careerAnalysis.strategicSuggestions.experienceReframe.rationale}</p>
+              )}
             </div>
           </div>
         </motion.div>

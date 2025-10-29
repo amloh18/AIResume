@@ -1,0 +1,11 @@
+# Cursor ignore file - overrides .gitignore for Cursor
+# Allow .env.local to be accessible in Cursor
+
+# Keep these ignored for security
+firebase-key.json
+*.pem
+*.key
+cookies.txt
+
+# But allow .env.local for development
+!.env.local

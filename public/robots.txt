@@ -1,0 +1,22 @@
+User-agent: *
+Allow: /
+
+# Disallow admin and API routes
+Disallow: /admin/
+Disallow: /api/
+Disallow: /_next/
+Disallow: /studio/
+Disallow: /dashboard/
+Disallow: /profile/
+
+# Allow important pages
+Allow: /
+Allow: /sign-in
+Allow: /sign-up
+Allow: /privacy-policy
+Allow: /terms
+Allow: /cookie-policy
+Allow: /ai-career-report
+
+# Sitemap location
+Sitemap: https://cvcircle.io/sitemap.xml
