@@ -1,5 +1,7 @@
 import jwt from 'jsonwebtoken'
 import { NextRequest, NextResponse } from 'next/server'
+import User from '@/models/User'
+import connectDB from '@/lib/database'
 
 const JWT_SECRET = process.env.JWT_SECRET || '12626db0bdab7694da7152d2c76b07c1c9acc71571f1134ca832085d3dce5b11'
 
@@ -18,30 +20,15 @@ export interface AuthResult {
   error?: string
 }
 
-// Simple user database (in production, this would be in MongoDB)
-const users = [
-  {
-    id: 'user-1',
-    email: 'user@cvcircle.io',
-    password: 'user123', // In production, this would be hashed
-    name: 'Test User',
-    type: 'user' as const,
-    role: 'user'
-  },
-  {
-    id: 'admin-1',
-    email: 'admin@cvcircle.io',
-    password: 'admin123', // In production, this would be hashed
-    name: 'Admin User',
-    type: 'admin' as const,
-    role: 'superadmin'
-  }
-]
-
 export async function authenticateUser(email: string, password: string): Promise<AuthResult> {
   try {
-    const user = users.find(u => u.email === email && u.password === password)
-    
+    await connectDB()
+
+    // Find user by email
+    const user = await User.findOne({ email: email.toLowerCase() })
+      .select('+password')
+      .lean()
+
     if (!user) {
       return {
         success: false,
@@ -49,25 +36,63 @@ export async function authenticateUser(email: string, password: string): Promise
       }
     }
 
+    // Check if user has a password
+    if (!user.password) {
+      return {
+        success: false,
+        error: 'Please sign in with Google'
+      }
+    }
+
+    // Verify password
+    const userDoc = await User.findOne({ email: email.toLowerCase() }).select('+password')
+    if (!userDoc) {
+      return {
+        success: false,
+        error: 'Invalid credentials'
+      }
+    }
+
+    const isPasswordValid = await userDoc.comparePassword(password)
+
+    if (!isPasswordValid) {
+      return {
+        success: false,
+        error: 'Invalid credentials'
+      }
+    }
+
+    // Check if email is verified
+    if (!user.isEmailVerified) {
+      return {
+        success: false,
+        error: 'Please verify your email before signing in'
+      }
+    }
+
     const token = jwt.sign(
       { 
-        id: user.id, 
+        id: user._id.toString(), 
         email: user.email, 
-        type: user.type, 
-        role: user.role 
+        name: `${user.firstName} ${user.lastName}`,
+        type: user.role === 'admin' || user.role === 'superadmin' ? 'admin' : 'user', 
+        role: user.role || 'user'
       },
       JWT_SECRET,
       { expiresIn: '7d' }
     )
 
+    // Update last login
+    await User.findByIdAndUpdate(user._id, { lastLogin: new Date() })
+
     return {
       success: true,
       user: {
-        id: user.id,
+        id: user._id.toString(),
         email: user.email,
-        name: user.name,
-        type: user.type,
-        role: user.role
+        name: `${user.firstName} ${user.lastName}`,
+        type: user.role === 'admin' || user.role === 'superadmin' ? 'admin' : 'user',
+        role: user.role || 'user'
       },
       token
     }
@@ -84,7 +109,9 @@ export async function verifyToken(token: string): Promise<AuthResult> {
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as any
     
-    const user = users.find(u => u.id === decoded.id)
+    await connectDB()
+    
+    const user = await User.findById(decoded.id).lean()
     if (!user) {
       return {
         success: false,
@@ -95,11 +122,11 @@ export async function verifyToken(token: string): Promise<AuthResult> {
     return {
       success: true,
       user: {
-        id: user.id,
+        id: user._id.toString(),
         email: user.email,
-        name: user.name,
-        type: user.type,
-        role: user.role
+        name: `${user.firstName} ${user.lastName}`,
+        type: user.role === 'admin' || user.role === 'superadmin' ? 'admin' : 'user',
+        role: user.role || 'user'
       }
     }
   } catch (error) {

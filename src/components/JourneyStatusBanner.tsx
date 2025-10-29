@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Briefcase, FileText, CheckCircle, Download, X, Settings, Mail, ChevronDown, ChevronUp } from 'lucide-react';
 import { useJobJourney } from '@/contexts/JobJourneyContext';
-import { useAuth } from '@/contexts/AuthContext';
+import { useSession } from 'next-auth/react';
 
 interface JourneyStatusBannerProps {
   journey?: {
@@ -46,7 +46,8 @@ const JourneyStatusBanner: React.FC<JourneyStatusBannerProps> = ({ journey }) =>
   
   // If we have a journey prop, use it exclusively (don't fall back to context)
   const displayJourney = journey ? journey : activeJourney;
-  const { user } = useAuth();
+  const { data: session } = useSession();
+  const user = session?.user;
   const [isExpanded, setIsExpanded] = useState(false);
   const [jobData, setJobData] = useState<any>(null);
   const [cvData, setCvData] = useState<any>(null);

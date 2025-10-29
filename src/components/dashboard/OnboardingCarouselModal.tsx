@@ -115,10 +115,21 @@ const OnboardingCarouselModal: React.FC<OnboardingCarouselModalProps> = ({ userI
     }
   };
 
+  const handleDismiss = () => {
+    // Set flag to indicate user dismissed welcome modal
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('welcomeDismissed', 'true');
+      sessionStorage.setItem('showPersistentMasterCVModal', 'true');
+    }
+    // Trigger a custom event to notify parent component
+    window.dispatchEvent(new CustomEvent('welcomeDismissed'));
+  };
+
   const handleCreateMasterCV = () => {
     // Set flag to indicate user is coming from onboarding
     if (typeof window !== 'undefined') {
       sessionStorage.setItem('fromOnboarding', 'true');
+      sessionStorage.setItem('welcomeDismissed', 'true');
     }
     router.push('/ai-career-report');
   };
@@ -146,20 +157,31 @@ const OnboardingCarouselModal: React.FC<OnboardingCarouselModalProps> = ({ userI
             </div>
           </div>
           
-          {/* Progress Indicator */}
-          <div className="flex items-center gap-2">
-            {cards.map((_, index) => (
-              <div
-                key={index}
-                className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                  index === currentCard 
-                    ? 'bg-lime-400 w-8' 
-                    : visitedCards[index] 
-                      ? 'bg-lime-400/50' 
-                      : 'bg-white/20'
-                }`}
-              />
-            ))}
+          <div className="flex items-center gap-4">
+            {/* Progress Indicator */}
+            <div className="flex items-center gap-2">
+              {cards.map((_, index) => (
+                <div
+                  key={index}
+                  className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                    index === currentCard 
+                      ? 'bg-lime-400 w-8' 
+                      : visitedCards[index] 
+                        ? 'bg-lime-400/50' 
+                        : 'bg-white/20'
+                  }`}
+                />
+              ))}
+            </div>
+            
+            {/* Dismiss Button */}
+            <button
+              onClick={handleDismiss}
+              className="text-white/60 hover:text-white transition-colors p-2 rounded-lg hover:bg-white/10"
+              title="Dismiss welcome (you can create Master CV anytime)"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
         </div>
 
@@ -274,14 +296,9 @@ const OnboardingCarouselModal: React.FC<OnboardingCarouselModalProps> = ({ userI
           {currentCard === cards.length - 1 ? (
             <motion.button
               onClick={handleCreateMasterCV}
-              disabled={!allCardsVisited}
-              className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all duration-200 ${
-                allCardsVisited
-                  ? 'bg-gradient-to-r from-lime-400 to-lime-500 text-black hover:from-lime-300 hover:to-lime-400'
-                  : 'bg-gray-600 text-gray-400 cursor-not-allowed'
-              }`}
-              whileHover={allCardsVisited ? { scale: 1.05 } : {}}
-              whileTap={allCardsVisited ? { scale: 0.95 } : {}}
+              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-lime-400 to-lime-500 text-black rounded-lg font-semibold hover:from-lime-300 hover:to-lime-400 transition-all duration-200"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
             >
               Create Master CV
               <ArrowRight className="w-5 h-5" />

@@ -78,16 +78,53 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
   };
 
   const handleSignIn = async (formData: Record<string, string>) => {
-    const result = await signIn('credentials', {
-      email: formData.email,
-      password: formData.password,
-      redirect: false,
-    });
+    try {
+      console.log('🔐 Attempting sign in with credentials...');
+      
+      // Add timeout to prevent hanging
+      const signInPromise = signIn('credentials', {
+        email: formData.email,
+        password: formData.password,
+        redirect: false,
+      });
 
-    if (result?.ok) {
-      setSuccess('Sign in successful! Redirecting...');
-    } else {
-      setError(result?.error || 'Invalid email or password.');
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Sign in request timed out')), 10000)
+      );
+
+      const result = await Promise.race([signInPromise, timeoutPromise]) as any;
+
+      console.log('🔐 Sign in result:', result);
+
+      if (result?.ok) {
+        setSuccess('Sign in successful! Redirecting...');
+        // Redirect immediately after showing success message
+        setTimeout(() => {
+          router.push('/dashboard');
+        }, 500);
+      } else {
+        // Handle specific error cases
+        let errorMessage = 'Invalid email or password.';
+        
+        if (result?.error === 'CredentialsSignin') {
+          errorMessage = 'Invalid email or password. Please check your credentials.';
+        } else if (result?.error === 'Configuration') {
+          errorMessage = 'Authentication service is temporarily unavailable. Please try again later.';
+        } else if (result?.error === 'AccessDenied') {
+          errorMessage = 'Access denied. Please contact support if this persists.';
+        } else if (result?.error) {
+          errorMessage = result.error;
+        }
+        
+        setError(errorMessage);
+      }
+    } catch (error: any) {
+      console.error('❌ Sign in error:', error);
+      if (error.message === 'Sign in request timed out') {
+        setError('Sign in request timed out. Please try again.');
+      } else {
+        setError('Sign in failed. Please try again.');
+      }
     }
   };
 

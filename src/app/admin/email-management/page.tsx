@@ -15,7 +15,8 @@ import {
   XCircle,
   Plus,
   Filter,
-  Search
+  Search,
+  X
 } from 'lucide-react';
 
 interface EmailTemplate {

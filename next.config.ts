@@ -2,51 +2,24 @@ import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
   },
   // Disable Fast Refresh notifications
   devIndicators: {
     position: 'bottom-right',
   },
-  // Additional configuration to disable dev notifications
+  // Simplified webpack configuration to fix React hooks error
   webpack: (config, { dev, isServer }) => {
-    // Enable WebAssembly support
-    config.experiments = {
-      ...config.experiments,
-      asyncWebAssembly: true,
-    };
-
-    // Handle WebAssembly modules
-    config.module.rules.push({
-      test: /\.wasm$/,
-      type: 'webassembly/async',
-    });
-
-    // Handle Node.js built-in modules with node: scheme
-    config.module.rules.push({
-      test: /\.js$/,
-      resolve: {
-        alias: {
-          'node:process': 'process/browser',
-          'node:path': 'path-browserify',
-          'node:fs': 'fs',
-          'node:os': 'os-browserify/browser',
-          'node:crypto': 'crypto-browserify',
-          'node:util': 'util',
-          'node:stream': 'stream-browserify',
-          'node:buffer': 'buffer',
-          'node:url': 'url',
-          'node:querystring': 'querystring-es3',
-          'node:events': 'events',
-        },
-      },
-    });
-
-    // Add webpack plugins for Node.js polyfills
+    // Import webpack once
     const webpack = require('webpack');
+    
+    // Load environment variables at build time
+    require('dotenv').config({ path: '.env.local' });
+    
+    // Add webpack plugins for Node.js polyfills
     config.plugins.push(
       new webpack.ProvidePlugin({
         process: 'process/browser',
@@ -54,8 +27,19 @@ const nextConfig: NextConfig = {
       })
     );
 
+    // Define environment variables for webpack
+    config.plugins.push(
+      new webpack.DefinePlugin({
+        'process.env.NEXTAUTH_URL': JSON.stringify(process.env.NEXTAUTH_URL || 'http://localhost:3000'),
+        'process.env.NEXTAUTH_SECRET': JSON.stringify(process.env.NEXTAUTH_SECRET || 'fallback-secret-key-for-development'),
+        'process.env.MONGODB_URI': JSON.stringify(process.env.MONGODB_URI || ''),
+        'process.env.GOOGLE_CLIENT_ID': JSON.stringify(process.env.GOOGLE_CLIENT_ID || ''),
+        'process.env.GOOGLE_CLIENT_SECRET': JSON.stringify(process.env.GOOGLE_CLIENT_SECRET || ''),
+        'process.env.JWT_SECRET': JSON.stringify(process.env.JWT_SECRET || ''),
+      })
+    );
+
     // Fix jose library compatibility with Next.js 15
-    // Jose tries to read process.version which is undefined in webpack bundles
     if (isServer) {
       config.plugins.push(
         new webpack.DefinePlugin({
@@ -64,136 +48,47 @@ const nextConfig: NextConfig = {
       );
     }
 
-    // Disable Fast Refresh notifications in development
-    if (dev && !isServer) {
-      config.optimization = {
-        ...config.optimization,
-        splitChunks: false,
-      };
-    }
-    
-    // Handle framer-motion and Node.js modules properly
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      'framer-motion': require.resolve('framer-motion'),
-      // Handle Node.js built-in modules
-      'node:process': 'process/browser',
-      'node:path': 'path-browserify',
-      'node:fs': 'fs',
-      'node:os': 'os-browserify/browser',
-      'node:crypto': 'crypto-browserify',
-      'node:util': 'util',
-      'node:stream': 'stream-browserify',
-      'node:buffer': 'buffer',
-      'node:url': 'url',
-      'node:querystring': 'querystring-es3',
-      'node:events': 'events',
-    };
-
     // Handle optional dependencies
     config.resolve.fallback = {
       ...config.resolve.fallback,
       fs: false,
       net: false,
       tls: false,
-      // Handle farmhash-modern WASM fallback
       'farmhash-modern': false,
-      // Handle Node.js built-in modules with polyfills
-      'node:process': 'process/browser',
-      'node:path': 'path-browserify',
-      'node:fs': 'fs',
-      'node:os': 'os-browserify/browser',
-      'node:crypto': 'crypto-browserify',
-      'node:util': 'util',
-      'node:stream': 'stream-browserify',
-      'node:buffer': 'buffer',
-      'node:url': 'url',
-      'node:querystring': 'querystring-es3',
-      'node:events': 'events',
-      'node:child_process': false,
-      'node:cluster': false,
-      'node:worker_threads': false,
-      'node:perf_hooks': false,
-      'node:async_hooks': false,
-      'node:timers': false,
-      'node:tty': false,
-      'node:readline': false,
-      'node:repl': false,
-      'node:vm': false,
-      'node:zlib': false,
-      'node:http': false,
-      'node:https': false,
-      'node:http2': false,
-      'node:net': false,
-      'node:dgram': false,
-      'node:dns': false,
-      'node:tls': false,
-      'node:assert': false,
-      'node:constants': false,
-      'node:domain': false,
-      'node:punycode': false,
-      'node:string_decoder': false,
-      'node:sys': false,
-      'node:timers/promises': false,
-      'node:util/types': false,
-      'node:worker_threads': false,
     };
 
-    // Add webpack plugin to handle Node.js built-in modules
-    const webpack = require('webpack');
-    config.plugins.push(
-      new webpack.NormalModuleReplacementPlugin(
-        /^node:/,
-        (resource) => {
-          const moduleName = resource.request.replace(/^node:/, '');
-          if (moduleName === 'process') {
-            resource.request = 'process/browser';
-          } else if (moduleName === 'stream') {
-            resource.request = 'stream-browserify';
-          } else if (moduleName === 'buffer') {
-            resource.request = 'buffer';
-          } else if (moduleName === 'util') {
-            resource.request = 'util';
-          } else if (moduleName === 'url') {
-            resource.request = 'url';
-          } else if (moduleName === 'querystring') {
-            resource.request = 'querystring-es3';
-          } else if (moduleName === 'events') {
-            resource.request = 'events';
-          } else if (moduleName === 'path') {
-            resource.request = 'path-browserify';
-          } else if (moduleName === 'os') {
-            resource.request = 'os-browserify/browser';
-          } else if (moduleName === 'crypto') {
-            resource.request = 'crypto-browserify';
-          } else {
-            resource.request = false;
-          }
-        }
-      )
-    );
-
-    // Module resolution aliases (already configured above)
-
-    // Optimize bundle size
-    if (!dev && !isServer) {
-      config.optimization.splitChunks = {
-        chunks: 'all',
-        cacheGroups: {
-          vendor: {
-            test: /[\\/]node_modules[\\/]/,
-            name: 'vendors',
-            chunks: 'all',
-          },
-          clerk: {
-            test: /[\\/]node_modules[\\/]@clerk[\\/]/,
-            name: 'clerk',
-            chunks: 'all',
-            priority: 10,
-          },
-        },
-      };
-    }
+    // Fix OpenTelemetry module resolution for Edge Runtime
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      // Disable OpenTelemetry modules in Edge Runtime
+      '@opentelemetry/api': false,
+      '@opentelemetry/core': false,
+      '@opentelemetry/instrumentation': false,
+      '@opentelemetry/semantic-conventions': false,
+      '@opentelemetry/api-logs': false,
+      '@opentelemetry/context-async-hooks': false,
+      '@opentelemetry/instrumentation-http': false,
+      '@opentelemetry/instrumentation-mongodb': false,
+      '@opentelemetry/instrumentation-mongoose': false,
+      '@opentelemetry/instrumentation-express': false,
+      '@opentelemetry/instrumentation-fastify': false,
+      '@opentelemetry/instrumentation-koa': false,
+      '@opentelemetry/instrumentation-hapi': false,
+      '@opentelemetry/instrumentation-connect': false,
+      '@opentelemetry/instrumentation-graphql': false,
+      '@opentelemetry/instrumentation-nestjs-core': false,
+      '@opentelemetry/instrumentation-ioredis': false,
+      '@opentelemetry/instrumentation-knex': false,
+      '@opentelemetry/instrumentation-mysql': false,
+      '@opentelemetry/instrumentation-mysql2': false,
+      '@opentelemetry/instrumentation-kafkajs': false,
+      '@opentelemetry/instrumentation-dataloader': false,
+      '@opentelemetry/instrumentation-generic-pool': false,
+      '@opentelemetry/instrumentation-lru-memoizer': false,
+      '@opentelemetry/instrumentation-fs': false,
+      '@opentelemetry/redis-common': false,
+      '@opentelemetry/sql-common': false,
+    };
 
     // Handle optional dependencies for Vercel
     config.externals = config.externals || [];
@@ -203,6 +98,34 @@ const nextConfig: NextConfig = {
         'canvas': 'commonjs canvas',
         'puppeteer': 'commonjs puppeteer',
         'jose': 'commonjs jose',
+        // OpenTelemetry modules should only be available in Node.js runtime
+        '@opentelemetry/api': 'commonjs @opentelemetry/api',
+        '@opentelemetry/core': 'commonjs @opentelemetry/core',
+        '@opentelemetry/instrumentation': 'commonjs @opentelemetry/instrumentation',
+        '@opentelemetry/semantic-conventions': 'commonjs @opentelemetry/semantic-conventions',
+        '@opentelemetry/api-logs': 'commonjs @opentelemetry/api-logs',
+        '@opentelemetry/context-async-hooks': 'commonjs @opentelemetry/context-async-hooks',
+        '@opentelemetry/instrumentation-http': 'commonjs @opentelemetry/instrumentation-http',
+        '@opentelemetry/instrumentation-mongodb': 'commonjs @opentelemetry/instrumentation-mongodb',
+        '@opentelemetry/instrumentation-mongoose': 'commonjs @opentelemetry/instrumentation-mongoose',
+        '@opentelemetry/instrumentation-express': 'commonjs @opentelemetry/instrumentation-express',
+        '@opentelemetry/instrumentation-fastify': 'commonjs @opentelemetry/instrumentation-fastify',
+        '@opentelemetry/instrumentation-koa': 'commonjs @opentelemetry/instrumentation-koa',
+        '@opentelemetry/instrumentation-hapi': 'commonjs @opentelemetry/instrumentation-hapi',
+        '@opentelemetry/instrumentation-connect': 'commonjs @opentelemetry/instrumentation-connect',
+        '@opentelemetry/instrumentation-graphql': 'commonjs @opentelemetry/instrumentation-graphql',
+        '@opentelemetry/instrumentation-nestjs-core': 'commonjs @opentelemetry/instrumentation-nestjs-core',
+        '@opentelemetry/instrumentation-ioredis': 'commonjs @opentelemetry/instrumentation-ioredis',
+        '@opentelemetry/instrumentation-knex': 'commonjs @opentelemetry/instrumentation-knex',
+        '@opentelemetry/instrumentation-mysql': 'commonjs @opentelemetry/instrumentation-mysql',
+        '@opentelemetry/instrumentation-mysql2': 'commonjs @opentelemetry/instrumentation-mysql2',
+        '@opentelemetry/instrumentation-kafkajs': 'commonjs @opentelemetry/instrumentation-kafkajs',
+        '@opentelemetry/instrumentation-dataloader': 'commonjs @opentelemetry/instrumentation-dataloader',
+        '@opentelemetry/instrumentation-generic-pool': 'commonjs @opentelemetry/instrumentation-generic-pool',
+        '@opentelemetry/instrumentation-lru-memoizer': 'commonjs @opentelemetry/instrumentation-lru-memoizer',
+        '@opentelemetry/instrumentation-fs': 'commonjs @opentelemetry/instrumentation-fs',
+        '@opentelemetry/redis-common': 'commonjs @opentelemetry/redis-common',
+        '@opentelemetry/sql-common': 'commonjs @opentelemetry/sql-common',
       });
     }
 
@@ -223,23 +146,36 @@ const nextConfig: NextConfig = {
   
   // Handle API routes properly
   async headers() {
+    const allowedOrigins = process.env.NODE_ENV === 'production' 
+      ? [
+          'https://cvcircle.io',
+          'https://www.cvcircle.io',
+          'https://app.cvcircle.io',
+        ]
+      : [
+          'http://localhost:3000',
+          'http://127.0.0.1:3000',
+        ];
+
     return [
       {
         source: '/api/auth/:path*',
         headers: [
-          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Access-Control-Allow-Origin', value: allowedOrigins.join(', ') },
           { key: 'Access-Control-Allow-Methods', value: 'GET, POST, PUT, DELETE, OPTIONS' },
           { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization, Cookie' },
           { key: 'Access-Control-Allow-Credentials', value: 'true' },
+          { key: 'Vary', value: 'Origin' },
         ],
       },
       {
         source: '/api/:path*',
         headers: [
-          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Access-Control-Allow-Origin', value: allowedOrigins.join(', ') },
           { key: 'Access-Control-Allow-Methods', value: 'GET, POST, PUT, DELETE, OPTIONS' },
           { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization, Cookie' },
           { key: 'Access-Control-Allow-Credentials', value: 'true' },
+          { key: 'Vary', value: 'Origin' },
         ],
       },
       {
@@ -248,22 +184,26 @@ const nextConfig: NextConfig = {
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'X-Frame-Options', value: 'DENY' },
           { key: 'X-XSS-Protection', value: '1; mode=block' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
         ],
       },
     ]
   },
-  // Environment variables for Vercel
+  // Environment variables for Next.js
   env: {
-    CUSTOM_KEY: process.env.CUSTOM_KEY,
-    MONGODB_URI: process.env.MONGODB_URI,
-    NEXTAUTH_URL: process.env.NEXTAUTH_URL,
-    NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
-    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
-    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
-    EMAIL_SERVER_HOST: process.env.EMAIL_SERVER_HOST,
-    EMAIL_SERVER_PORT: process.env.EMAIL_SERVER_PORT,
-    EMAIL_SERVER_USER: process.env.EMAIL_SERVER_USER,
-    EMAIL_SERVER_PASSWORD: process.env.EMAIL_SERVER_PASSWORD,
+    NEXTAUTH_URL: process.env.NEXTAUTH_URL || 'http://localhost:3000',
+    NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET || 'fallback-secret-key-for-development',
+    MONGODB_URI: process.env.MONGODB_URI || '',
+    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
+    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || '',
+    EMAIL_SERVER_HOST: process.env.EMAIL_SERVER_HOST || '',
+    EMAIL_SERVER_PORT: process.env.EMAIL_SERVER_PORT || '',
+    EMAIL_SERVER_USER: process.env.EMAIL_SERVER_USER || '',
+    EMAIL_SERVER_PASSWORD: process.env.EMAIL_SERVER_PASSWORD || '',
+    JWT_SECRET: process.env.JWT_SECRET || '',
+    GEMINI_API_KEY: process.env.GEMINI_API_KEY || '',
+    PERPLEXITY_API_KEY: process.env.PERPLEXITY_API_KEY || '',
   },
   // Performance optimizations
   compiler: {
@@ -277,7 +217,7 @@ const nextConfig: NextConfig = {
   trailingSlash: false,
   
   // External packages for server-side rendering
-  serverExternalPackages: ['mongoose', 'firebase-admin', 'jose', 'next-auth', 'openid-client'],
+  serverExternalPackages: ['mongoose', 'firebase-admin', 'next-auth', 'openid-client'],
   // Handle dynamic imports
   async rewrites() {
     return [

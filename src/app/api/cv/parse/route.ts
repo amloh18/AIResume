@@ -792,7 +792,7 @@ function getEmptyStructure(): UnifiedCVDataStructure {
   };
 }
 
-export function extractPersonalInfo(text: string): Partial<PersonalInfo> {
+function extractPersonalInfo(text: string): Partial<PersonalInfo> {
   const personalInfo: Partial<PersonalInfo> = {};
   
   console.log('Extracting personal info from text:', text.substring(0, 200) + '...');
@@ -957,7 +957,7 @@ export function extractPersonalInfo(text: string): Partial<PersonalInfo> {
   return personalInfo;
 }
 
-export function extractEducation(text: string): Education[] {
+function extractEducation(text: string): Education[] {
   const education: Education[] = [];
   const educationKeywords = ['education', 'academic', 'university', 'college', 'school', 'degree', 'bachelor', 'master', 'phd'];
   const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
@@ -1218,7 +1218,7 @@ export function extractEducation(text: string): Education[] {
   return education;
 }
 
-export function extractExperience(text: string): Experience[] {
+function extractExperience(text: string): Experience[] {
   const experience: Experience[] = [];
   const experienceKeywords = ['experience', 'work', 'employment', 'career', 'professional', 'relevant work', 'work history', 'employment history'];
   const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
@@ -1460,7 +1460,7 @@ export function extractExperience(text: string): Experience[] {
   return experience;
 }
 
-export function extractSkills(text: string): Skills[] {
+function extractSkills(text: string): Skills[] {
   const skills: Skills[] = [];
   const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
   

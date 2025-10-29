@@ -56,17 +56,8 @@ export async function POST(request: NextRequest) {
       { expiresIn: '24h' }
     );
 
-    // Set cookie
-    const cookieStore = cookies();
-    cookieStore.set('admin-token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 24 * 60 * 60, // 24 hours
-      path: '/',
-    });
-
-    return NextResponse.json({
+    // Create response with cookie
+    const response = NextResponse.json({
       success: true,
       user: {
         id: adminUser._id.toString(),
@@ -76,6 +67,17 @@ export async function POST(request: NextRequest) {
         type: 'admin',
       },
     });
+
+    // Set cookie
+    response.cookies.set('admin-token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 24 * 60 * 60, // 24 hours
+      path: '/',
+    });
+
+    return response;
 
   } catch (error) {
     console.error('Admin login error:', error);

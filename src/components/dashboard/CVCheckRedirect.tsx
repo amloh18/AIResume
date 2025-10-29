@@ -29,6 +29,15 @@ export default function CVCheckRedirect({ children }: CVCheckRedirectProps) {
       hasCheckedRef.current = false;
     };
 
+    const handleWelcomeDismissed = () => {
+      console.log('🔄 Welcome modal dismissed, clearing check to allow CV check');
+      // Reset the check flag so we can check for CVs after welcome dismissal
+      hasCheckedRef.current = false;
+      // Force a re-check by resetting state
+      setHasMasterCV(false);
+      setIsChecking(false);
+    };
+
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'masterCVCreated' && e.newValue === 'true') {
         console.log('🔄 Master CV created detected via storage event, updating state');
@@ -41,18 +50,24 @@ export default function CVCheckRedirect({ children }: CVCheckRedirectProps) {
           sessionStorage.removeItem('masterCVCreated');
         }
       }
+      if (e.key === 'welcomeDismissed' && e.newValue === 'true') {
+        console.log('🔄 Welcome dismissed detected via storage event');
+        handleWelcomeDismissed();
+      }
     };
 
     // Listen for custom events (same tab)
     window.addEventListener('masterCVCreated', handleMasterCVCreated);
+    window.addEventListener('welcomeDismissed', handleWelcomeDismissed);
     // Listen for storage events (cross tab)
     window.addEventListener('storage', handleStorageChange);
     
     return () => {
       window.removeEventListener('masterCVCreated', handleMasterCVCreated);
+      window.removeEventListener('welcomeDismissed', handleWelcomeDismissed);
       window.removeEventListener('storage', handleStorageChange);
     };
-  }, []);
+  }, [user?.id, authLoading, isAuthenticated]);
 
   // Reset check flag when user changes (for new sessions)
   useEffect(() => {
