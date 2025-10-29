@@ -17,26 +17,36 @@ export const TechProBlueTemplate: React.FC<TechProBlueTemplateProps> = ({
       <style jsx>{`
         .tech-pro-blue-template {
           font-family: 'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-          max-width: 8.5in;
-          margin: 0 auto;
-          padding: 0.75in;
+          width: 100% !important;
+          height: 100% !important;
+          margin: 0 !important;
+          padding: 2rem 0 !important;
           background: white;
           color: #000;
           line-height: 1.4;
           display: grid;
           grid-template-columns: 1fr 2fr;
-          gap: 2rem;
+          gap: 0;
+          box-sizing: border-box;
+          min-height: 100vh;
+          position: relative;
         }
 
         .sidebar {
           background: #2C3E50;
           color: white;
           padding: 1.5rem;
-          border-radius: 8px;
+          border-radius: 0;
+          min-height: 100vh;
+          overflow-y: auto;
+          box-sizing: border-box;
         }
 
         .main-content {
-          padding-left: 1rem;
+          padding: 1.5rem;
+          min-height: 100vh;
+          overflow-y: auto;
+          box-sizing: border-box;
         }
 
         .header {
@@ -45,24 +55,26 @@ export const TechProBlueTemplate: React.FC<TechProBlueTemplateProps> = ({
         }
 
         .name {
-          font-size: 2rem;
+          font-size: 1.8rem;
           font-weight: 700;
           text-transform: uppercase;
           margin: 0 0 0.5rem 0;
-          color: #000;
+          color: white;
+          text-align: center;
         }
 
         .title {
-          font-size: 1rem;
-          font-weight: 700;
+          font-size: 0.9rem;
+          font-weight: 600;
           text-transform: uppercase;
-          color: #000;
-          margin: 0 0 1rem 0;
+          color: rgba(255, 255, 255, 0.9);
+          margin: 0 0 1.5rem 0;
+          text-align: center;
         }
 
         .divider {
           height: 1px;
-          background: #D1D5DB;
+          background: rgba(255, 255, 255, 0.3);
           margin: 1rem 0;
         }
 
@@ -198,17 +210,58 @@ export const TechProBlueTemplate: React.FC<TechProBlueTemplateProps> = ({
           margin-top: 0.5rem;
         }
 
+        /* Override parent container padding and spacing */
+        .tech-pro-blue-template {
+          margin-top: -32px !important;
+          margin-right: -32px !important;
+          margin-bottom: -32px !important;
+          margin-left: -32px !important;
+          padding: 2rem 0 !important;
+          width: calc(100% + 64px) !important;
+          height: calc(100% + 64px) !important;
+          position: absolute !important;
+          top: 0 !important;
+          left: 0 !important;
+          z-index: 10 !important;
+        }
+
         @media print {
           .tech-pro-blue-template {
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
             color-adjust: exact;
+            width: 100% !important;
+            height: 100% !important;
+            margin: 0 !important;
+            padding: 2rem 0 !important;
+            min-height: 100vh;
+            position: static !important;
+            top: auto !important;
+            left: auto !important;
+            z-index: auto !important;
+          }
+          
+          .sidebar {
+            min-height: 100vh;
+            border-radius: 0;
+          }
+          
+          .main-content {
+            min-height: 100vh;
           }
         }
       `}</style>
 
       {/* Sidebar */}
       <div className="sidebar">
+        {/* Header */}
+        <div className="header">
+          <h1 className="name">{basics?.name || 'Your Name'}</h1>
+          <p className="title">{basics?.label || 'Your Title'}</p>
+        </div>
+
+        <div className="divider"></div>
+
         {/* Profile Picture */}
         <div className="profile-picture">
           Profile Photo
@@ -255,43 +308,29 @@ export const TechProBlueTemplate: React.FC<TechProBlueTemplateProps> = ({
         <div>
           <h3 className="section-title">Skills</h3>
           
-          <div className="skills-category">
-            <div className="skills-category-title">Programming Languages</div>
-            <div className="skills-list">Python, Java, JavaScript, C++</div>
-          </div>
-
-          <div className="skills-category">
-            <div className="skills-category-title">Frameworks</div>
-            <div className="skills-list">React, Node.js, Spring Boot, Django</div>
-          </div>
-
-          <div className="skills-category">
-            <div className="skills-category-title">Databases</div>
-            <div className="skills-list">PostgreSQL, MongoDB, MySQL</div>
-          </div>
-
-          <div className="skills-category">
-            <div className="skills-category-title">Tools</div>
-            <div className="skills-list">Git, Docker, AWS, Jira</div>
-          </div>
-
-          <div className="skills-category">
-            <div className="skills-category-title">Concepts</div>
-            <div className="skills-list">Data Structures, Algorithms, OOP, RESTful APIs</div>
-          </div>
+          {skills && skills.length > 0 ? (
+            skills.map((skill, index) => (
+              <div key={index} className="skills-category">
+                <div className="skills-category-title">{skill.name}</div>
+                <div className="skills-list">
+                  {Array.isArray(skill.keywords) 
+                    ? skill.keywords.join(', ') 
+                    : skill.level || 'Proficient'
+                  }
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="skills-category">
+              <div className="skills-category-title">Technical Skills</div>
+              <div className="skills-list">Add your skills to see them here</div>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Main Content */}
       <div className="main-content">
-        {/* Header */}
-        <div className="header">
-          <h1 className="name">{basics?.name || 'JOHN DOE'}</h1>
-          <p className="title">{basics?.label || 'SOFTWARE ENGINEER'}</p>
-        </div>
-
-        <div className="divider"></div>
-
         {/* Summary */}
         <div>
           <h2 className="main-section-title">Summary</h2>

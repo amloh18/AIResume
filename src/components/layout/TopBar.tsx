@@ -62,7 +62,7 @@ const TopBar: React.FC<TopBarProps> = ({
               <span className="text-black font-bold text-sm">CV</span>
             </div>
             <span className="text-white font-semibold text-lg hidden sm:block">
-              <span className="text-lime-400">CV</span><span className="text-gray-300">Circle.io</span>
+              <span className="text-lime-400">CV</span><span className="text-gray-300">Circle</span>
             </span>
           </div>
         </div>

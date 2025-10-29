@@ -124,8 +124,8 @@ const ApplicationStatsWidget: React.FC<ApplicationStatsWidgetProps> = ({ userId 
         {/* Center text */}
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-center">
-            <div className="text-xl font-bold text-white">{appliedPercentage}%</div>
-            <div className="text-xs text-white/60">Applied</div>
+            <div className="text-xl font-bold text-gray-900 dark:text-white">{appliedPercentage}%</div>
+            <div className="text-xs text-gray-600 dark:text-white/60">Applied</div>
           </div>
         </div>
       </div>
@@ -150,7 +150,7 @@ const ApplicationStatsWidget: React.FC<ApplicationStatsWidgetProps> = ({ userId 
           <select
             value={timeRange}
             onChange={(e) => setTimeRange(e.target.value as '7d' | '30d' | '90d')}
-            className="px-3 py-1.5 bg-white/10 backdrop-blur-md border border-white/20 text-white rounded-lg text-sm focus:ring-2 focus:ring-purple-500/50"
+            className="px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white rounded-lg text-sm focus:ring-2 focus:ring-purple-500/50"
           >
             <option value="7d">Last 7 days</option>
             <option value="30d">Last 30 days</option>
@@ -161,7 +161,7 @@ const ApplicationStatsWidget: React.FC<ApplicationStatsWidgetProps> = ({ userId 
 
       {/* Pie Chart */}
       <div className="bg-white/5 rounded-lg">
-        <h3 className="text-sm font-semibold text-white mb-4 text-center p-4 pb-0">Created vs Applied</h3>
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4 text-center p-4 pb-0">Created vs Applied</h3>
         <div className="h-60" style={{ height: '240px', minHeight: '240px', maxHeight: '240px' }}>
           {loading ? (
             <div className="flex items-center justify-center h-full">

@@ -65,6 +65,10 @@ const Testimonials = () => {
   ];
 
   useEffect(() => {
+    // Set default testimonials immediately
+    setTestimonials(defaultTestimonials);
+    
+    // Try to fetch from API, but don't block rendering
     fetchTestimonials();
     fetchMetrics();
     
@@ -148,7 +152,7 @@ const Testimonials = () => {
   };
 
   return (
-    <section id="testimonials" className="relative py-20 flex items-center bg-gradient-to-b from-gray-900 to-black overflow-hidden">
+    <section id="testimonials" className="relative pt-32 pb-20 flex items-center bg-gradient-to-b from-gray-900 to-black overflow-hidden">
       {/* Grid Pattern Background */}
       <div className="absolute inset-0">
         {/* Grid Lines */}
@@ -196,7 +200,7 @@ const Testimonials = () => {
             </span>
           </h2>
           <p className="text-lg text-white/70 max-w-3xl mx-auto leading-relaxed">
-            Join thousands of successful job seekers who have landed their dream positions using <span className="text-lime-400">CV</span><span className="text-white/70">Circle.io</span>.
+            Join thousands of successful job seekers who have landed their dream positions using <span className="text-lime-400">CV</span><span className="text-white/70">Circle</span>.
           </p>
         </motion.div>
 
@@ -221,7 +225,7 @@ const Testimonials = () => {
                 <motion.div
                   key={testimonial._id}
                   className="group relative flex-shrink-0 px-4"
-                  style={{ width: `${100 / testimonials.length}%` }}
+                  style={{ width: `${100 / cardsPerView}%` }}
                   variants={cardVariants}
                 >
                   <motion.div

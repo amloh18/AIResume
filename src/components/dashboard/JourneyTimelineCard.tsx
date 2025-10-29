@@ -1413,7 +1413,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
     <motion.div
       className={`journey-card ${
         liveProgress.status === 'completed' 
-          ? 'bg-blue-900/20 border border-blue-500/50' 
+          ? 'bg-blue-100 dark:bg-blue-900/20 border border-blue-300 dark:border-blue-500/50' 
           : 'bg-[#24320f] border border-lime-500/30'
       } rounded-xl overflow-hidden hover:shadow-lg dark:hover:shadow-gray-900/20 transition-all duration-300 group`}
       whileHover={{ y: -2 }}
@@ -1429,11 +1429,19 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
                 <Building className={`h-4 w-4 ${liveProgress.status === 'completed' ? 'text-blue-400' : 'text-lime-400'}`} />
-                <h3 className="text-sm font-medium text-white truncate">
+                <h3 className={`text-sm font-medium truncate ${
+                  liveProgress.status === 'completed' 
+                    ? 'text-gray-900 dark:text-white' 
+                    : 'text-white'
+                }`}>
                   {journey.jobTitle}
                 </h3>
               </div>
-              <div className="flex items-center gap-2 text-xs text-white/60">
+              <div className={`flex items-center gap-2 text-xs ${
+                liveProgress.status === 'completed' 
+                  ? 'text-gray-600 dark:text-white/60' 
+                  : 'text-white/60'
+              }`}>
                 <span>{journey.company}</span>
                 {liveProgress.status !== 'completed' && (() => {
                   const estimatedTime = JourneyAnalyticsService.calculateEstimatedTimeToCompletion(
@@ -1518,9 +1526,21 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
             <div className="flex items-center gap-3">
               {/* ATS Score */}
               {atsScore !== null && atsScore !== -1 && (
-                <div className="flex items-center gap-1 px-2 py-1 bg-white/10 rounded-full">
-                  <Target className="h-3 w-3 text-white/60" />
-                  <span className="text-xs text-white/80 font-medium">
+                <div className={`flex items-center gap-1 px-2 py-1 rounded-full ${
+                  liveProgress.status === 'completed' 
+                    ? 'bg-blue-200 dark:bg-white/10' 
+                    : 'bg-white/10'
+                }`}>
+                  <Target className={`h-3 w-3 ${
+                    liveProgress.status === 'completed' 
+                      ? 'text-blue-700 dark:text-white/60' 
+                      : 'text-white/60'
+                  }`} />
+                  <span className={`text-xs font-medium ${
+                    liveProgress.status === 'completed' 
+                      ? 'text-blue-900 dark:text-white/80' 
+                      : 'text-white/80'
+                  }`}>
                     {atsScore}%
                   </span>
                 </div>
@@ -1529,7 +1549,11 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
               {/* Details Dropdown */}
               <motion.button
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="p-1 text-white/60 hover:text-white hover:bg-white/10 rounded transition-colors"
+                className={`p-1 rounded transition-colors ${
+                  liveProgress.status === 'completed' 
+                    ? 'text-gray-600 dark:text-white/60 hover:text-gray-900 dark:hover:text-white hover:bg-blue-200 dark:hover:bg-white/10' 
+                    : 'text-white/60 hover:text-white hover:bg-white/10'
+                }`}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -1546,12 +1570,24 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
             <div className="flex items-center gap-2">
               <Building className={`h-5 w-5 ${liveProgress.status === 'completed' ? 'text-blue-400' : 'text-lime-400'}`} />
               <div>
-                <h3 className="text-sm font-medium text-white">
+                <h3 className={`text-sm font-medium ${
+                  liveProgress.status === 'completed' 
+                    ? 'text-gray-900 dark:text-white' 
+                    : 'text-white'
+                }`}>
                   {journey.jobTitle}
                 </h3>
-                <p className="text-xs text-white/60">{journey.company}</p>
+                <p className={`text-xs ${
+                  liveProgress.status === 'completed' 
+                    ? 'text-gray-600 dark:text-white/60' 
+                    : 'text-white/60'
+                }`}>{journey.company}</p>
                 {journey.lastWorkedOn && (
-                  <p className="text-xs text-white/40">
+                  <p className={`text-xs ${
+                    liveProgress.status === 'completed' 
+                      ? 'text-gray-500 dark:text-white/40' 
+                      : 'text-white/40'
+                  }`}>
                     Last worked {formatRelativeTime(journey.lastWorkedOn)}
                   </p>
                 )}
@@ -1689,7 +1725,11 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
             {/* Delete Button */}
             <motion.button
               onClick={() => onShowDeleteConfirm(journey.id)}
-              className="p-2 text-white/60 hover:text-red-400 hover:bg-red-500/20 rounded transition-colors"
+              className={`p-2 rounded transition-colors ${
+                liveProgress.status === 'completed' 
+                  ? 'text-gray-600 dark:text-white/60 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20' 
+                  : 'text-white/60 hover:text-red-400 hover:bg-red-500/20'
+              }`}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               title="Delete Journey"
@@ -1711,7 +1751,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
             transition={{ duration: 0.3 }}
             className={`border-t ${
               liveProgress.status === 'completed' 
-                ? 'border-blue-500/30 bg-blue-900/10' 
+                ? 'border-blue-300 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-900/10' 
                 : 'border-lime-500/20 bg-[#24320f]'
             } overflow-hidden`}
           >
@@ -1720,12 +1760,16 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 {/* Step 1: Job */}
                 <div className={`p-3 rounded-lg border ${
                   liveProgress.status === 'completed' 
-                    ? 'bg-blue-800/20 border-blue-500/30' 
-                    : 'bg-[#24320f] border-white/20'
-                } text-white`}>
+                    ? 'bg-blue-100 dark:bg-blue-800/20 border-blue-300 dark:border-blue-500/30 text-gray-900 dark:text-white' 
+                    : 'bg-[#24320f] border-white/20 text-white'
+                }`}>
                   <div className="flex items-center gap-2 mb-2">
                     <Briefcase className="h-4 w-4 text-blue-400" />
-                    <span className="text-xs font-medium text-white">Job</span>
+                    <span className={`text-xs font-medium ${
+                      liveProgress.status === 'completed' 
+                        ? 'text-gray-900 dark:text-white' 
+                        : 'text-white'
+                    }`}>Job</span>
                     {getStepStatus(1) === 'completed' && (
                       <CheckCircle className={`h-3 w-3 ${liveProgress.status === 'completed' ? 'text-blue-400' : 'text-lime-400'}`} />
                     )}
@@ -1753,12 +1797,16 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 {/* Step 2: CV */}
                 <div className={`p-3 rounded-lg border ${
                   liveProgress.status === 'completed' 
-                    ? 'bg-blue-800/20 border-blue-500/30' 
-                    : 'bg-[#24320f] border-white/20'
-                } text-white`}>
+                    ? 'bg-blue-100 dark:bg-blue-800/20 border-blue-300 dark:border-blue-500/30 text-gray-900 dark:text-white' 
+                    : 'bg-[#24320f] border-white/20 text-white'
+                }`}>
                   <div className="flex items-center gap-2 mb-2">
                     <FileText className="h-4 w-4 text-green-400" />
-                    <span className="text-xs font-medium text-white">CV</span>
+                    <span className={`text-xs font-medium ${
+                      liveProgress.status === 'completed' 
+                        ? 'text-gray-900 dark:text-white' 
+                        : 'text-white'
+                    }`}>CV</span>
                     {getStepStatus(2) === 'completed' && (
                       <CheckCircle className={`h-3 w-3 ${liveProgress.status === 'completed' ? 'text-blue-400' : 'text-lime-400'}`} />
                     )}
@@ -1878,9 +1926,9 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 {/* Step 3: ATS Analysis */}
                 <div className={`p-3 rounded-lg border ${
                   liveProgress.status === 'completed' 
-                    ? 'bg-blue-800/20 border-blue-500/30' 
-                    : 'bg-[#24320f] border-white/20'
-                } text-white`}>
+                    ? 'bg-blue-100 dark:bg-blue-800/20 border-blue-300 dark:border-blue-500/30 text-gray-900 dark:text-white' 
+                    : 'bg-[#24320f] border-white/20 text-white'
+                }`}>
                   <div className="flex items-center gap-2 mb-2">
                     <Settings className="h-4 w-4 text-purple-400" />
                     <span className="text-xs font-medium text-white">ATS Analysis</span>
@@ -1971,9 +2019,9 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 {/* Step 4: Cover Letter */}
                 <div className={`p-3 rounded-lg border ${
                   liveProgress.status === 'completed' 
-                    ? 'bg-blue-800/20 border-blue-500/30' 
-                    : 'bg-[#24320f] border-white/20'
-                } text-white`}>
+                    ? 'bg-blue-100 dark:bg-blue-800/20 border-blue-300 dark:border-blue-500/30 text-gray-900 dark:text-white' 
+                    : 'bg-[#24320f] border-white/20 text-white'
+                }`}>
                   <div className="flex items-center gap-2 mb-2">
                     <Mail className="h-4 w-4 text-orange-400" />
                     <span className="text-xs font-medium text-white">Cover Letter</span>
@@ -2051,9 +2099,9 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 {/* Step 5: Ready to Apply */}
                 <div className={`p-3 rounded-lg border ${
                   liveProgress.status === 'completed' 
-                    ? 'bg-blue-800/20 border-blue-500/30' 
-                    : 'bg-[#24320f] border-white/20'
-                } text-white`}>
+                    ? 'bg-blue-100 dark:bg-blue-800/20 border-blue-300 dark:border-blue-500/30 text-gray-900 dark:text-white' 
+                    : 'bg-[#24320f] border-white/20 text-white'
+                }`}>
                   <div className="flex items-center gap-2 mb-2">
                     <Download className={`h-4 w-4 ${getStepStatus(5) === 'completed' ? 'text-blue-400' : 'text-lime-400'}`} />
                     <span className="text-xs font-medium text-white">Ready</span>

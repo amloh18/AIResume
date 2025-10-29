@@ -159,7 +159,16 @@ const CVManagementSection: React.FC<{
   userId?: string;
   jobs?: any[];
 }> = ({ cvHealthScore, cvs, drafts, onImproveScore, onCreateCV, onAddJob, onWriteCoverLetter, onCreateCoverLetter, onCreateJob, onSetMasterCV, predictions, onUpdateGoal, userId, jobs = [] }) => {
-  const [showATSWidget, setShowATSWidget] = useState(false);
+  
+  // Function to navigate to studio with master CV and ATS mode
+  const handleShowATSAnalysis = () => {
+    if (masterCV) {
+      window.location.href = `/studio?cvId=${masterCV.id}&type=cv&mode=ats`;
+    } else {
+      // If no master CV, create one first
+      window.location.href = '/studio?type=cv&mode=ats';
+    }
+  };
   
   const getStatus = (score: number) => {
     if (score >= 80) return { label: 'Excellent', color: 'text-green-400' };
@@ -221,40 +230,9 @@ const CVManagementSection: React.FC<{
               <p className="text-gray-600 dark:text-white/60 text-xs mb-1">{masterCV?.title || 'Master CV Health'}</p>
               <p className={`text-xs font-medium ${status.color}`}>{status.label}</p>
               
-              {/* ATS Analysis Toggle */}
-              <motion.button
-                onClick={() => setShowATSWidget(!showATSWidget)}
-                className="mt-3 px-3 py-1 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 text-xs rounded-lg transition-colors flex items-center gap-1 justify-center"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Target className="h-3 w-3" />
-                {showATSWidget ? 'Hide ATS Analysis' : 'Show ATS Analysis'}
-              </motion.button>
             </div>
           </div>
           
-          {/* ATS Analysis Widget */}
-          {showATSWidget && masterCV && (
-            <div className="row-span-2">
-              <div className="h-full max-h-96 overflow-y-auto">
-                <ComprehensiveATSAnalyzer
-                  selectedJobId={jobs.length > 0 ? jobs[0].id : undefined}
-                  onJobSelection={() => {}}
-                  userId={userId}
-                  cvData={masterCV.cvData}
-                  jobData={jobs.length > 0 ? jobs[0] : undefined}
-                  cvId={masterCV.id}
-                  onUpdateField={(path, value) => {
-                    console.log('CV field update:', path, value);
-                  }}
-                  onScoreUpdate={(score) => {
-                    console.log('ATS Score updated:', score);
-                  }}
-                />
-              </div>
-            </div>
-          )}
 
           {/* Right Column */}
           <div className="space-y-6">
@@ -287,10 +265,10 @@ const CVManagementSection: React.FC<{
                   <Plus size={16} /> Create New CV
                 </motion.button>
                 <motion.button 
-                  onClick={onCreateCoverLetter}
+                  onClick={handleShowATSAnalysis}
                   className="w-full p-3 bg-purple-400/20 text-purple-400 rounded-lg text-sm font-medium hover:bg-purple-400/30 transition-all duration-300 flex items-center gap-2"
                   whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                  <MessageSquare size={16} /> Create Cover Letter
+                  <Target size={16} /> Show ATS Analysis
                 </motion.button>
                 <motion.button 
                   onClick={onCreateJob}
@@ -1029,7 +1007,7 @@ const RecentJobsWidget: React.FC<{
     <div className="glass-widget-premium rounded-xl p-6 h-full flex flex-col w-full">
       {/* Header */}
       <div className="mb-6">
-        <h2 className="text-lg font-bold text-white">Recent Jobs</h2>
+        <h2 className="text-lg font-bold text-gray-900 dark:text-white">Recent Jobs</h2>
       </div>
       
       {/* Job Applications List */}
@@ -1051,7 +1029,7 @@ const RecentJobsWidget: React.FC<{
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-1">
-                  <h3 className="font-medium text-sm text-white truncate">{job.jobTitle || job.title}</h3>
+                  <h3 className="font-medium text-sm text-gray-900 dark:text-white truncate">{job.jobTitle || job.title}</h3>
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                     job.status === 'applied' ? 'bg-green-600 dark:bg-green-600 text-green-300' :
                     job.status === 'interview' ? 'bg-yellow-600 dark:bg-yellow-600 text-yellow-300' :
@@ -1064,7 +1042,7 @@ const RecentJobsWidget: React.FC<{
                      job.status.charAt(0).toUpperCase() + job.status.slice(1)}
                   </span>
                 </div>
-                <p className="text-xs text-gray-400">{job.companyName || job.company}</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">{job.companyName || job.company}</p>
               </div>
             </motion.div>
           ))

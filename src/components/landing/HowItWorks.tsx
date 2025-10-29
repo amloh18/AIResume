@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, useInView, useScroll, useTransform } from 'framer-motion';
 import { User, Target, BarChart3, Edit3, Download, ArrowRight, Sparkles } from 'lucide-react';
+import Image from 'next/image';
 
 const HowItWorks = () => {
   const [activeStep, setActiveStep] = useState<number>(0); // Start with first step active
@@ -31,7 +32,9 @@ const HowItWorks = () => {
       visualization: 'A sleek animation showing a user effortlessly filling in profile sections. As they type, suggestions appear. The final view shows a complete, polished profile card with a "Profile Complete: 100%" indicator.',
       icon: User,
       color: 'from-lime-400 to-lime-500',
-      bgColor: 'from-lime-400/10 to-lime-500/10'
+      bgColor: 'from-lime-400/10 to-lime-500/10',
+      image: '/images/step1.gif',
+      isGif: true
     },
     {
       number: '2',
@@ -41,7 +44,9 @@ const HowItWorks = () => {
       visualization: 'A smooth, scrolling view of a Kanban-style board with columns like "Interested," "Applied," "Interviewing." A card representing a job animates, moving seamlessly from one column to the next with a simple drag-and-drop.',
       icon: Target,
       color: 'from-blue-400 to-blue-500',
-      bgColor: 'from-blue-400/10 to-blue-500/10'
+      bgColor: 'from-blue-400/10 to-blue-500/10',
+      image: '/images/STEP 2 ADD JOB APPLICATIONS IN TRACKER.png',
+      isGif: false
     },
     {
       number: '3',
@@ -51,7 +56,9 @@ const HowItWorks = () => {
       visualization: 'An animation showing a user pasting a job link. The system then displays the Master CV on the left and a new, tailored CV on the right, with keywords from the job description highlighting and appearing in the new document.',
       icon: BarChart3,
       color: 'from-purple-400 to-purple-500',
-      bgColor: 'from-purple-400/10 to-purple-500/10'
+      bgColor: 'from-purple-400/10 to-purple-500/10',
+      image: '/images/STEP 3 START TAILORING CV AND COVER LETTER.png',
+      isGif: false
     },
     {
       number: '4',
@@ -61,7 +68,9 @@ const HowItWorks = () => {
       visualization: 'A split-screen view. On the left is a CV. On the right, an AI assistant panel provides contextual suggestions (e.g., "Strengthen this verb," "Add a quantifiable metric here"). The user clicks a suggestion, and the text on the CV instantly updates with a subtle shimmer effect.',
       icon: Edit3,
       color: 'from-pink-400 to-pink-500',
-      bgColor: 'from-pink-400/10 to-pink-500/10'
+      bgColor: 'from-pink-400/10 to-pink-500/10',
+      image: '/images/STEP 4 EDIT IN STUDIO.png',
+      isGif: false
     },
     {
       number: '5',
@@ -71,7 +80,9 @@ const HowItWorks = () => {
       visualization: 'An animation showing the three document icons (JD, CV, Cover Letter) elegantly merging into a single folder icon. The folder then animates towards the bottom of the screen as a download progress bar quickly completes.',
       icon: Download,
       color: 'from-emerald-400 to-emerald-500',
-      bgColor: 'from-emerald-400/10 to-emerald-500/10'
+      bgColor: 'from-emerald-400/10 to-emerald-500/10',
+      image: '/images/ste5.jpg',
+      isGif: false
     }
   ];
 
@@ -143,7 +154,7 @@ const HowItWorks = () => {
     <section 
       ref={sectionRef}
       id="how-it-works" 
-      className="relative py-20 bg-gradient-to-b from-gray-900 to-black overflow-hidden"
+      className="relative pt-32 pb-20 bg-gradient-to-b from-gray-900 to-black overflow-hidden"
     >
       {/* Background Effects */}
       <div className="absolute inset-0">
@@ -307,7 +318,7 @@ const HowItWorks = () => {
               </motion.div>
             </motion.div>
 
-            {/* Right Column - Illustration */}
+            {/* Right Column - Step Image */}
             <motion.div
               className="flex justify-center"
               initial={{ opacity: 0, x: 40 }}
@@ -315,68 +326,48 @@ const HowItWorks = () => {
               transition={{ duration: 0.6, ease: "easeOut", delay: 0.4 }}
               viewport={{ once: true }}
             >
-              {activeStep === 2 ? (
-                // Step 3 - Show Video
-                <motion.div
-                  className="relative w-full max-w-lg"
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.5 }}
-                >
-                  <video
-                    className="w-full h-auto rounded-2xl shadow-2xl"
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                  >
-                    <source src="/step3.mp4" type="video/mp4" />
-                    Your browser does not support the video tag.
-                  </video>
-                  {/* Video overlay with subtle glow */}
-                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-purple-400/10 to-purple-500/10 pointer-events-none"></div>
-                </motion.div>
-              ) : (
-                // Other Steps - Show Static Illustration
-                <motion.div
-                  className="relative bg-gradient-to-br from-orange-200 to-orange-300 rounded-2xl p-8 w-full max-w-md"
-                  animate={{
-                    scale: [1, 1.02, 1],
-                  }}
-                  transition={{
-                    duration: 3,
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                  }}
-                >
-                  {/* Document Icon */}
-                  <div className="flex flex-col items-center space-y-4">
-                    {/* Person Icon */}
-                    <motion.div
-                      className="w-8 h-8 bg-blue-400 rounded-full flex items-center justify-center"
-                      animate={{
-                        scale: [1, 1.1, 1],
-                      }}
-                      transition={{
-                        duration: 2,
-                        repeat: Infinity,
-                        ease: "easeInOut"
-                      }}
-                    >
-                      <User size={16} className="text-white" />
-                    </motion.div>
-                    
-                    {/* Document Form */}
-                    <div className="bg-white rounded-lg p-6 w-full space-y-3">
-                      <div className="h-3 bg-gray-200 rounded w-3/4"></div>
-                      <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                      <div className="h-3 bg-gray-200 rounded w-2/3"></div>
-                      <div className="h-3 bg-gray-200 rounded w-3/5"></div>
-                      <div className="h-3 bg-gray-200 rounded w-4/5"></div>
-                    </div>
+              <motion.div
+                className="relative w-full max-w-lg"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5 }}
+              >
+                {/* White background container for consistent sizing */}
+                <div className="bg-white rounded-2xl p-4 shadow-2xl">
+                  <div className="relative w-full h-80 overflow-hidden rounded-xl">
+                    {steps[activeStep].isGif ? (
+                      <img
+                        src={steps[activeStep].image}
+                        alt={`Step ${steps[activeStep].number}: ${steps[activeStep].title}`}
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      <motion.div
+                        className="relative w-full h-full"
+                        animate={{
+                          scale: [1, 1.05, 1],
+                        }}
+                        transition={{
+                          duration: 8,
+                          repeat: Infinity,
+                          ease: "easeInOut"
+                        }}
+                      >
+                        <Image
+                          src={steps[activeStep].image}
+                          alt={`Step ${steps[activeStep].number}: ${steps[activeStep].title}`}
+                          fill
+                          className="object-contain"
+                          priority={activeStep === 0}
+                        />
+                      </motion.div>
+                    )}
                   </div>
-                </motion.div>
-              )}
+                </div>
+                
+                {/* Subtle gradient overlay for visual enhancement */}
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-lime-400/5 to-blue-400/5 pointer-events-none"></div>
+              </motion.div>
             </motion.div>
           </div>
         </motion.div>

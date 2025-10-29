@@ -420,7 +420,7 @@ const ApplicationJourneyPageContent: React.FC = () => {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
                   transition={{ duration: 0.2 }}
-                  className="absolute top-full right-0 mt-1 bg-white/95 dark:bg-[#141810] border border-gray-200/50 dark:border-white/10 rounded-xl shadow-xl overflow-hidden z-50 min-w-[160px] backdrop-blur-sm"
+                  className="absolute top-full right-0 mt-1 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl shadow-xl overflow-hidden z-50 min-w-[160px]"
                 >
                   {[
                     { value: 'lastUpdated', label: 'Last Updated' },
@@ -581,7 +581,7 @@ const ApplicationJourneyPageContent: React.FC = () => {
       <AnimatePresence>
         {showDeleteConfirm && (
           <motion.div
-            className="fixed inset-0 bg-black/50 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            className="fixed inset-0 bg-black/50 dark:bg-black/80 flex items-center justify-center z-50 p-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}

@@ -209,7 +209,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
   }
 
   return (
-    <section id="pricing" className="relative py-20 flex items-center bg-gradient-to-b from-gray-900 to-black overflow-hidden">
+    <section id="pricing" className="relative pt-32 pb-20 flex items-center bg-gradient-to-b from-gray-900 to-black overflow-hidden">
       {/* Grid Pattern Background */}
       <div className="absolute inset-0">
         {/* Grid Lines */}

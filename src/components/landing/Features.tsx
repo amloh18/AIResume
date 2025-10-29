@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
+import Image from 'next/image';
 import { ArrowRight, Target, BarChart3, Download, Zap, CheckCircle, Eye, FileText } from 'lucide-react';
 
 const Features = () => {
@@ -14,7 +15,8 @@ const Features = () => {
       color: 'from-lime-400 to-lime-500',
       bgColor: 'from-lime-400/10 to-lime-500/10',
       cta: 'Download Extension',
-      ctaLink: '/chrome-extension'
+      ctaLink: '/chrome-extension',
+      image: '/images/onboarding/extension-tracker.svg'
     },
     {
       id: 'gain-your-edge',
@@ -24,7 +26,8 @@ const Features = () => {
       color: 'from-blue-400 to-blue-500',
       bgColor: 'from-blue-400/10 to-blue-500/10',
       cta: 'Check My CV For Free',
-      ctaLink: '/ai-career-report'
+      ctaLink: '/ai-career-report',
+      image: '/images/gain_your_edge.png'
     },
     {
       id: 'one-click-career-kit',
@@ -34,7 +37,8 @@ const Features = () => {
       color: 'from-purple-400 to-purple-500',
       bgColor: 'from-purple-400/10 to-purple-500/10',
       cta: 'Start Now',
-      ctaLink: '/sign-up'
+      ctaLink: '/sign-up',
+      image: '/images/one_click_career_kit.png'
     }
   ];
 
@@ -63,7 +67,7 @@ const Features = () => {
   };
 
   return (
-    <section id="features" className="relative py-20 flex items-center bg-gradient-to-b from-gray-900 to-black overflow-hidden">
+    <section id="features" className="relative pt-32 pb-20 flex items-center bg-gradient-to-b from-gray-900 to-black overflow-hidden">
       {/* Enhanced Background Effects */}
       <div className="absolute inset-0">
         <div className="absolute inset-0 bg-gradient-to-br from-lime-400/5 to-blue-400/5"></div>
@@ -121,27 +125,29 @@ const Features = () => {
                   style={{ filter: 'blur(20px)' }}
                 />
                 
-                {/* Image Placeholder */}
+                {/* Image Section with White Background */}
                 <motion.div
-                  className={`w-full h-48 bg-gradient-to-br ${feature.color} relative overflow-hidden`}
+                  className="w-full h-48 bg-white relative overflow-hidden"
                   whileHover={{
                     scale: 1.05,
                     transition: { duration: 0.3 }
                   }}
                 >
-                  {/* Placeholder Content */}
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-white/20 text-6xl font-bold">
-                      {feature.title.split(' ').map(word => word[0]).join('')}
-                    </div>
-                  </div>
-                  
-                  {/* Overlay Pattern */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-black/20 to-transparent"></div>
-                  
-                  {/* Video/Image Icon */}
-                  <div className="absolute top-4 right-4 w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
-                    <div className="w-3 h-3 bg-white rounded-full"></div>
+                  <div className="relative w-full h-full">
+                    {feature.image.endsWith('.svg') ? (
+                      <img
+                        src={feature.image}
+                        alt={feature.title}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <Image
+                        src={feature.image}
+                        alt={feature.title}
+                        fill
+                        className="object-cover"
+                      />
+                    )}
                   </div>
                 </motion.div>
 

@@ -133,6 +133,11 @@ const CVPreviewComponent: React.FC<CVPreviewProps> = ({
   const calculatePages = useMemo(() => {
     if (!cvData) return { pages: { 1: [] }, totalPages: 1 };
 
+    // Check if this is a single-page template (like Tech Pro Blue)
+    const isSinglePageTemplate = template?.customRenderer === 'TechProBlueTemplate' || 
+                                 template?.name?.toLowerCase().includes('tech pro blue') ||
+                                 template?.layoutType === 'one-column' && template?.customRenderer;
+    
     // Use full available height with minimal buffer for more efficient page usage
     const maxPageHeight = (currentDimensions.height - pagePadding.top - pagePadding.bottom) * 0.95;
     
@@ -143,6 +148,11 @@ const CVPreviewComponent: React.FC<CVPreviewProps> = ({
     // If no sections have data, return empty first page
     if (sectionsWithData.length === 0) {
       return { pages: { 1: [] }, totalPages: 1 };
+    }
+    
+    // For single-page templates, force all content to one page
+    if (isSinglePageTemplate) {
+      return { pages: { 1: sectionsWithData }, totalPages: 1 };
     }
     
     // Calculate pages based on section heights
@@ -174,6 +184,7 @@ const CVPreviewComponent: React.FC<CVPreviewProps> = ({
       sectionsWithData,
       pages,
       totalPages: currentPage,
+      isSinglePageTemplate,
       pageHeights: Object.keys(pages).map(pageNum => ({
         page: pageNum,
         sections: pages[parseInt(pageNum)],
@@ -182,7 +193,7 @@ const CVPreviewComponent: React.FC<CVPreviewProps> = ({
     });
 
     return { pages, totalPages: currentPage };
-  }, [cvData, sectionOrder, currentDimensions.height, pagePadding, hasSectionData, getSectionHeight]);
+  }, [cvData, sectionOrder, currentDimensions.height, pagePadding, hasSectionData, getSectionHeight, template]);
 
   // Update total pages when content changes
   useEffect(() => {

@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 
 const ChromeExtension = () => {
   return (
-    <section id="chrome-extension" className="relative py-20 bg-gradient-to-b from-gray-900 to-black overflow-hidden">
+    <section id="chrome-extension" className="relative pt-32 pb-20 bg-gradient-to-b from-gray-900 to-black overflow-hidden">
       {/* Background Effects */}
       <div className="absolute inset-0">
         <div className="absolute inset-0 bg-gradient-to-br from-lime-400/5 to-blue-400/5"></div>

@@ -88,10 +88,10 @@ const PrivacyPolicy: React.FC = () => {
               Introduction
             </h2>
             <p className="text-white/80 leading-relaxed mb-4">
-              At CVCircle.io ("we," "our," or "us"), we are committed to protecting your privacy and ensuring the security of your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our CV creation and management platform.
+              At CVCircle ("we," "our," or "us"), we are committed to protecting your privacy and ensuring the security of your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our CV creation and management platform.
             </p>
             <p className="text-white/80 leading-relaxed">
-              By using CVCircle.io, you agree to the collection and use of information in accordance with this policy. If you do not agree with our policies and practices, please do not use our service.
+              By using CVCircle, you agree to the collection and use of information in accordance with this policy. If you do not agree with our policies and practices, please do not use our service.
             </p>
           </div>
 
@@ -339,7 +339,7 @@ const PrivacyPolicy: React.FC = () => {
 
             <div className="space-y-2 text-white/80">
               <p><strong>Email:</strong> privacy@cvcircle.io</p>
-              <p><strong>Address:</strong> CVCircle.io, Privacy Team</p>
+              <p><strong>Address:</strong> CVCircle, Privacy Team</p>
               <p><strong>Response Time:</strong> We aim to respond to all privacy-related inquiries within 48 hours.</p>
             </div>
           </div>

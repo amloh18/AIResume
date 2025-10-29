@@ -140,7 +140,7 @@ const MasterCVCardUpdated: React.FC<MasterCVCardProps> = ({
   if (loading) {
     return (
       <motion.div
-        className="frosted-glass-card rounded-2xl p-6 flex flex-col items-center justify-center text-center min-h-[300px]"
+        className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-6 flex flex-col items-center justify-center text-center min-h-[300px]"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
@@ -157,7 +157,7 @@ const MasterCVCardUpdated: React.FC<MasterCVCardProps> = ({
   if (error) {
     return (
       <motion.div
-        className="frosted-glass-card rounded-2xl p-6 flex flex-col items-center justify-center text-center min-h-[300px]"
+        className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-6 flex flex-col items-center justify-center text-center min-h-[300px]"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
@@ -183,7 +183,7 @@ const MasterCVCardUpdated: React.FC<MasterCVCardProps> = ({
   if (!masterCV) {
     return (
       <motion.div
-        className="frosted-glass-card rounded-2xl p-6 flex flex-col items-center justify-center text-center min-h-[300px]"
+        className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-6 flex flex-col items-center justify-center text-center min-h-[300px]"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
