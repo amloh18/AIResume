@@ -233,40 +233,24 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
         <div>
           <h3 className="section-title">Skills</h3>
           
-          <div className="skills-category">
-            <div className="skills-category-title">Programming Languages</div>
-            <div className="skills-list">Python, R, SQL, Java, C++</div>
-          </div>
-
-          <div className="skills-category">
-            <div className="skills-category-title">Libraries & Frameworks</div>
-            <div className="skills-list">Pandas, NumPy, Scikit-learn, TensorFlow, Keras, PyTorch, Spark</div>
-          </div>
-
-          <div className="skills-category">
-            <div className="skills-category-title">Tools & Platforms</div>
-            <div className="skills-list">Jupyter, VS Code, Git, Docker, AWS, GCP, Azure</div>
-          </div>
-
-          <div className="skills-category">
-            <div className="skills-category-title">Data Visualization</div>
-            <div className="skills-list">Matplotlib, Seaborn, Plotly, Tableau, Power BI</div>
-          </div>
-
-          <div className="skills-category">
-            <div className="skills-category-title">Machine Learning</div>
-            <div className="skills-list">Regression, Classification, Clustering, NLP, Deep Learning</div>
-          </div>
-
-          <div className="skills-category">
-            <div className="skills-category-title">Statistical Analysis</div>
-            <div className="skills-list">Hypothesis Testing, A/B Testing, Time Series</div>
-          </div>
-
-          <div className="skills-category">
-            <div className="skills-category-title">Other</div>
-            <div className="skills-list">Data Cleaning, Feature Engineering, Model Deployment</div>
-          </div>
+          {skills && skills.length > 0 ? (
+            skills.map((skill, index) => (
+              <div key={index} className="skills-category">
+                <div className="skills-category-title">{skill.name}</div>
+                <div className="skills-list">
+                  {Array.isArray(skill.keywords) 
+                    ? skill.keywords.join(', ') 
+                    : skill.level || 'Proficient'
+                  }
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="skills-category">
+              <div className="skills-category-title">Technical Skills</div>
+              <div className="skills-list">Add your skills to see them here</div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -274,8 +258,8 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
       <div className="main-content">
         {/* Header */}
         <div className="header">
-          <h1 className="name">{basics?.name || 'Le Hoang Nhi'}</h1>
-          <p className="title">{basics?.label || 'Data Scientist'}</p>
+          <h1 className="name">{basics?.name || 'Your Name'}</h1>
+          <p className="title">{basics?.label || 'Your Title'}</p>
         </div>
 
         <div className="divider"></div>

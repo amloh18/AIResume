@@ -113,8 +113,8 @@ export const getSidebarClasses = (isOpen: boolean = true, isMobile: boolean = fa
   container: `
     fixed lg:sticky top-0 z-50 h-screen
     ${isMobile ? 'inset-y-0 left-0' : 'top-2 left-2 bottom-2 h-[calc(100vh-1rem)]'}
-    ${!isMobile ? 'bg-white/90 dark:bg-gray-800/95' : 'bg-white/95 dark:bg-gray-900/95'} 
-    backdrop-blur-xl border border-white/20 dark:border-gray-700/50
+    ${!isMobile ? 'bg-white dark:bg-gray-800' : 'bg-white dark:bg-gray-900'} 
+    border border-gray-200 dark:border-gray-700
     transition-all duration-300 ease-in-out
     ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
     ${isMobile ? 'w-80' : 'w-72 lg:w-16 xl:w-72'}
@@ -130,7 +130,7 @@ export const getSidebarClasses = (isOpen: boolean = true, isMobile: boolean = fa
  * Get theme-aware top bar classes (always dark)
  */
 export const getTopBarClasses = () => ({
-  container: 'fixed top-0 left-0 right-0 z-[60] bg-gray-900/95 backdrop-blur-xl border-b border-gray-700/50 shadow-lg',
+  container: 'fixed top-0 left-0 right-0 z-[60] bg-gray-900 border-b border-gray-700 shadow-lg',
   content: 'flex items-center justify-between px-6 py-3',
   button: 'text-gray-300 hover:text-white hover:bg-gray-800/50 transition-colors duration-200 px-3 py-2 rounded-lg',
   buttonActive: 'text-lime-400 bg-lime-900/20'

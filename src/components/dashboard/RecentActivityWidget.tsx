@@ -49,9 +49,9 @@ const RecentActivityWidget: React.FC<RecentActivityWidgetProps> = ({
 
   if (loading) {
     return (
-      <div className={`frosted-glass-widget rounded-xl p-6 ${className}`}>
+      <div className={`bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 ${className}`}>
         {showHeader && (
-          <h3 className="text-white font-medium text-sm mb-4 flex items-center gap-2">
+          <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-4 flex items-center gap-2">
             <Activity size={14} className="text-blue-400" />
             Recent Activity
           </h3>
@@ -70,14 +70,14 @@ const RecentActivityWidget: React.FC<RecentActivityWidgetProps> = ({
 
   if (error) {
     return (
-      <div className={`frosted-glass-widget rounded-xl p-6 ${className}`}>
+      <div className={`bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 ${className}`}>
         {showHeader && (
-          <h3 className="text-white font-medium text-sm mb-4 flex items-center gap-2">
+          <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-4 flex items-center gap-2">
             <Activity size={14} className="text-blue-400" />
             Recent Activity
           </h3>
         )}
-        <div className="text-white/60 text-xs text-center py-4">
+        <div className="text-gray-900 dark:text-gray-600 dark:text-white/60 text-xs text-center py-4">
           Failed to load activities
           <button
             onClick={refetch}
@@ -91,16 +91,16 @@ const RecentActivityWidget: React.FC<RecentActivityWidgetProps> = ({
   }
 
   return (
-    <div className={`frosted-glass-widget rounded-xl p-6 ${className}`}>
+    <div className={`bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 ${className}`}>
       {showHeader && (
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-white font-medium text-sm flex items-center gap-2">
+          <h3 className="text-gray-900 dark:text-white font-medium text-sm flex items-center gap-2">
             <Activity size={14} className="text-blue-400" />
             Recent Activity
           </h3>
           <button
             onClick={refetch}
-            className="p-1 text-white/60 hover:text-white transition-colors"
+            className="p-1 text-gray-900 dark:text-gray-600 dark:text-white/60 hover:text-gray-900 dark:text-white transition-colors"
             title="Refresh activities"
           >
             <RefreshCw size={12} />
@@ -109,17 +109,17 @@ const RecentActivityWidget: React.FC<RecentActivityWidgetProps> = ({
       )}
       
       {activities.length === 0 ? (
-        <div className="text-white/60 text-xs text-center py-4">
+        <div className="text-gray-900 dark:text-gray-600 dark:text-white/60 text-xs text-center py-4">
           No recent activity
         </div>
       ) : (
         <div className="space-y-3">
           {activities.map((activity) => (
-            <div key={activity.id} className="flex items-center gap-3 text-white/60 text-xs">
+            <div key={activity.id} className="flex items-center gap-3 text-gray-900 dark:text-gray-600 dark:text-white/60 text-xs">
               <div className={`w-2 h-2 ${getActivityIcon(activity.type)} rounded-full`}></div>
               <div className="flex-1">
                 <span>{activity.description}</span>
-                <span className="text-white/40 ml-2">
+                <span className="text-gray-900 dark:text-white/40 ml-2">
                   {formatTimestamp(activity.timestamp)}
                 </span>
               </div>

@@ -91,7 +91,7 @@ const CookiePolicy: React.FC = () => {
               Cookies are small text files that are placed on your device when you visit our website. They help us provide you with a better experience by remembering your preferences, analyzing how you use our site, and personalizing content.
             </p>
             <p className="text-white/80 leading-relaxed">
-              This Cookie Policy explains how CVCircle.io uses cookies and similar technologies when you visit our website and how you can control them.
+              This Cookie Policy explains how CVCircle uses cookies and similar technologies when you visit our website and how you can control them.
             </p>
           </div>
 

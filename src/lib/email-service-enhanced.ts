@@ -81,7 +81,7 @@ export async function sendEmailVerification(email: string, verificationLink: str
     const senderEmail = getSenderEmail();
     
     const mailOptions = {
-      from: `"CVCircle.io" <${senderEmail}>`,
+      from: `"CVCircle" <${senderEmail}>`,
       to: email,
       subject: template.subject,
       html: template.html,
@@ -110,7 +110,7 @@ export async function sendPasswordResetEmail(email: string, resetLink: string, f
     const senderEmail = getSenderEmail();
     
     const mailOptions = {
-      from: `"CVCircle.io" <${senderEmail}>`,
+      from: `"CVCircle" <${senderEmail}>`,
       to: email,
       subject: template.subject,
       html: template.html,
@@ -139,7 +139,7 @@ export async function sendWelcomeEmail(email: string, firstName: string) {
     const senderEmail = getSenderEmail();
     
     const mailOptions = {
-      from: `"CVCircle.io" <${senderEmail}>`,
+      from: `"CVCircle" <${senderEmail}>`,
       to: email,
       subject: template.subject,
       html: template.html,
@@ -168,7 +168,7 @@ export async function sendMembershipReminderEmail(email: string, firstName: stri
     const senderEmail = getSenderEmail();
     
     const mailOptions = {
-      from: `"CVCircle.io" <${senderEmail}>`,
+      from: `"CVCircle" <${senderEmail}>`,
       to: email,
       subject: template.subject,
       html: template.html,
@@ -197,7 +197,7 @@ export async function sendTestEmail(email: string) {
     const senderEmail = getSenderEmail();
     
     const mailOptions = {
-      from: `"CVCircle.io" <${senderEmail}>`,
+      from: `"CVCircle" <${senderEmail}>`,
       to: email,
       subject: template.subject,
       html: template.html,
@@ -225,7 +225,7 @@ export async function sendCustomEmail(email: string, subject: string, html: stri
     const senderEmail = getSenderEmail();
     
     const mailOptions = {
-      from: `"CVCircle.io" <${senderEmail}>`,
+      from: `"CVCircle" <${senderEmail}>`,
       to: email,
       subject: subject,
       html: html,

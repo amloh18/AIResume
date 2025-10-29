@@ -94,7 +94,7 @@ const FAQ = () => {
   };
 
   return (
-    <section className="relative py-32 bg-gradient-to-b from-black to-gray-900 overflow-hidden">
+    <section id="faq" className="relative pt-32 pb-32 bg-gradient-to-b from-black to-gray-900 overflow-hidden">
       {/* Enhanced Background Effects */}
       <div className="absolute inset-0">
         <div className="absolute inset-0 bg-gradient-to-br from-lime-400/5 to-blue-400/5"></div>

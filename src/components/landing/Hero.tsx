@@ -26,7 +26,7 @@ const Hero = () => {
   }, []);
 
   return (
-    <section id="hero" className="relative py-20 flex items-center justify-center overflow-hidden bg-gradient-to-br from-gray-900 via-black to-gray-900">
+    <section id="hero" className="relative pt-32 pb-20 flex items-center justify-center overflow-hidden bg-gradient-to-br from-gray-900 via-black to-gray-900 min-h-screen">
       {/* Background Effects */}
       <div className="absolute inset-0">
         <div className="absolute inset-0 bg-gradient-to-br from-lime-400/5 to-blue-400/5"></div>
@@ -46,7 +46,7 @@ const Hero = () => {
             willChange: 'transform, opacity'
           }}
         >
-          Create{' '}
+          Track{' '}
           <motion.span
             className="inline-block"
             whileHover={{ 
@@ -153,204 +153,20 @@ const Hero = () => {
               willChange: 'transform'
             }}
           >
-            <div className="relative w-full aspect-[16/10] sm:aspect-[16/10] rounded-2xl overflow-hidden">
+            <div className="relative w-full h-[600px] rounded-2xl overflow-hidden">
               <Image
-                src="/images/Herobanner.png"
+                src="/images/herobanner.png"
                 alt="CV Circle Dashboard"
                 fill
-                className="object-contain drop-shadow-2xl scale-110 sm:scale-100"
+                className="object-cover object-top"
                 priority
                 style={{
+                  transform: `translateY(${Math.min(scrollY * 0.3, 200)}px)`,
                   filter: 'drop-shadow(0 10px 20px rgba(132, 204, 22, 0.2))',
                 }}
               />
             </div>
 
-            {/* Animated Annotations */}
-            <div className="absolute inset-0 pointer-events-none">
-              
-              {/* Annotation 1: CV Health Score - Top Left */}
-              <motion.div
-                className="absolute top-[15%] left-[8%] z-50"
-                style={{ transform: 'translate(100px, 100px)' }}
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.6, delay: 1.5 }}
-              >
-                <div className="relative">
-                  {/* Curved Arrow Path - From center to top-left */}
-                  <svg className="absolute w-32 h-16" viewBox="0 0 128 64">
-                    <motion.path
-                      d="M 128 32 Q 96 64 64 32 Q 32 0 0 32"
-                      stroke="#84cc16"
-                      strokeWidth="2"
-                      fill="none"
-                      strokeDasharray="4 4"
-                      initial={{ pathLength: 0 }}
-                      animate={{ pathLength: 1 }}
-                      transition={{ duration: 1, delay: 2 }}
-                    />
-                    {/* Arrow Head pointing to CV Health Score */}
-                    <motion.polygon
-                      points="8,28 0,32 8,36"
-                      fill="#84cc16"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ duration: 0.3, delay: 2.8 }}
-                    />
-                  </svg>
-                  {/* Text */}
-                  <motion.div
-                    className="absolute bg-lime-400/90 backdrop-blur-sm text-black px-3 py-1 rounded-full text-sm font-semibold whitespace-nowrap"
-                    style={{ left: '140px', top: '20px' }}
-                    animate={{
-                      opacity: [0, 1],
-                      y: [10, 0],
-                    }}
-                    transition={{ duration: 0.5, delay: 2.2 }}
-                  >
-                    CV Health Score
-                  </motion.div>
-                </div>
-              </motion.div>
-
-              {/* Annotation 2: AI Job Whisperer - Left Side */}
-              <motion.div
-                className="absolute top-[35%] left-[2%] z-50"
-                style={{ transform: 'translate(100px, 100px)' }}
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.6, delay: 1.8 }}
-              >
-                <div className="relative">
-                  {/* Curved Arrow Path - From center to left */}
-                  <svg className="absolute w-40 h-20" viewBox="0 0 160 80">
-                    <motion.path
-                      d="M 160 40 Q 120 80 80 40 Q 40 0 0 40"
-                      stroke="#84cc16"
-                      strokeWidth="2"
-                      fill="none"
-                      strokeDasharray="4 4"
-                      initial={{ pathLength: 0 }}
-                      animate={{ pathLength: 1 }}
-                      transition={{ duration: 1, delay: 2.3 }}
-                    />
-                    {/* Arrow Head pointing to AI Job Whisperer */}
-                    <motion.polygon
-                      points="8,36 0,40 8,44"
-                      fill="#84cc16"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ duration: 0.3, delay: 3.1 }}
-                    />
-                  </svg>
-                  {/* Text */}
-                  <motion.div
-                    className="absolute bg-lime-400/90 backdrop-blur-sm text-black px-3 py-1 rounded-full text-sm font-semibold whitespace-nowrap"
-                    style={{ left: '170px', top: '30px' }}
-                    animate={{
-                      opacity: [0, 1],
-                      y: [10, 0],
-                    }}
-                    transition={{ duration: 0.5, delay: 2.5 }}
-                  >
-                    AI Job Whisperer
-                  </motion.div>
-                </div>
-              </motion.div>
-
-              {/* Annotation 3: CV Tips - Right Side */}
-              <motion.div
-                className="absolute top-[35%] right-[2%] z-50"
-                style={{ transform: 'translate(-100px, 0px)' }}
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.6, delay: 2.1 }}
-              >
-               
-                <div className="relative">
-                  {/* Curved Arrow Path - From center to right */}
-                  <svg className="absolute w-40 h-20" viewBox="0 0 160 80">
-                    <motion.path
-                      d="M 0 40 Q 40 80 80 40 Q 120 0 160 40"
-                      stroke="#84cc16"
-                      strokeWidth="2"
-                      fill="none"
-                      strokeDasharray="4 4"
-                      initial={{ pathLength: 0 }}
-                      animate={{ pathLength: 1 }}
-                      transition={{ duration: 1, delay: 2.6 }}
-                    />
-                    {/* Arrow Head pointing to CV Tips */}
-                    <motion.polygon
-                      points="152,36 160,40 152,44"
-                      fill="#84cc16"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ duration: 0.3, delay: 3.4 }}
-                    />
-                  </svg>
-                  {/* Text */}
-                  <motion.div
-                    className="absolute bg-lime-400/90 backdrop-blur-sm text-black px-3 py-1 rounded-full text-sm font-semibold whitespace-nowrap"
-                    style={{ right: '170px', top: '30px' }}
-                    animate={{
-                      opacity: [0, 1],
-                      y: [10, 0],
-                    }}
-                    transition={{ duration: 0.5, delay: 2.8 }}
-                  >
-                    CV Tips & Actions
-                  </motion.div>
-                </div>
-              </motion.div>
-
-              {/* Annotation 4: Status Cards - Top Center */}
-              <motion.div
-                className="absolute top-[5%] left-1/2 transform -translate-x-1/2 z-50"
-                style={{ transform: 'translate(-50%, 100px)' }}
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.6, delay: 2.4 }}
-              >
-                <div className="relative">
-                  {/* Curved Arrow Path - From center to top */}
-                  <svg className="absolute w-20 h-24" viewBox="0 0 80 96">
-                    <motion.path
-                      d="M 40 96 Q 40 76 40 56 Q 40 36 40 16 Q 40 0 40 0"
-                      stroke="#84cc16"
-                      strokeWidth="2"
-                      fill="none"
-                      strokeDasharray="4 4"
-                      initial={{ pathLength: 0 }}
-                      animate={{ pathLength: 1 }}
-                      transition={{ duration: 1, delay: 2.9 }}
-                    />
-                    {/* Arrow Head pointing to Status Cards */}
-                    <motion.polygon
-                      points="36,8 40,0 44,8"
-                      fill="#84cc16"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ duration: 0.3, delay: 3.7 }}
-                    />
-                  </svg>
-                  {/* Text */}
-                  <motion.div
-                    className="absolute bg-lime-400/90 backdrop-blur-sm text-black px-3 py-1 rounded-full text-sm font-semibold whitespace-nowrap"
-                    style={{ left: '50%', top: '100px', transform: 'translateX(-50%)' }}
-                    animate={{
-                      opacity: [0, 1],
-                      y: [10, 0],
-                    }}
-                    transition={{ duration: 0.5, delay: 3.1 }}
-                  >
-                    Job Application Status
-                  </motion.div>
-                </div>
-              </motion.div>
-
-            </div>
           </motion.div>
         </motion.div>
       </div>

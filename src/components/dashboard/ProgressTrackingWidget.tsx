@@ -257,7 +257,7 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
           <select
             value={timeRange}
             onChange={(e) => setTimeRange(e.target.value as '7d' | '30d' | '90d')}
-            className="px-3 py-1.5 bg-white/10 backdrop-blur-md border border-white/20 text-white rounded-lg text-sm focus:ring-2 focus:ring-blue-500/50"
+            className="px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white rounded-lg text-sm focus:ring-2 focus:ring-blue-500/50"
           >
             <option value="7d">Last 7 days</option>
             <option value="30d">Last 30 days</option>

@@ -4,7 +4,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
 import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
-import RecentActivityWidget from './RecentActivityWidget';
 import { 
   FileText, 
   Plus,
@@ -1776,7 +1775,7 @@ const Canvas: React.FC = () => {
           {loading ? (
             // Loading skeleton
             Array.from({ length: 4 }).map((_, index) => (
-              <div key={index} className="frosted-glass-card rounded-2xl p-6 animate-pulse">
+              <div key={index} className="bg-white dark:bg-gray-800 rounded-2xl p-6 animate-pulse border border-gray-200 dark:border-gray-700">
                 <div className="h-48 bg-gray-200 dark:bg-white/10 rounded-lg mb-4"></div>
                 <div className="h-4 bg-gray-200 dark:bg-white/10 rounded mb-2"></div>
                 <div className="h-3 bg-gray-200 dark:bg-white/10 rounded w-2/3"></div>
@@ -1816,14 +1815,14 @@ const Canvas: React.FC = () => {
         {/* Right Column - Sidebar */}
         <div className="space-y-6">
           {/* KPI Metrics - 2x2 Grid */}
-          <div className="frosted-glass-widget rounded-xl p-6">
+          <div className="bg-white dark:bg-[#040402] border border-gray-200 dark:border-gray-700 rounded-xl p-6">
             <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-4 flex items-center gap-2">
               <TrendingUp size={14} className="text-blue-400" />
               CV Metrics
             </h3>
             <div className="grid grid-cols-2 gap-3">
               <motion.div
-                className="frosted-glass-card rounded-lg p-3"
+                className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
@@ -1833,14 +1832,14 @@ const Canvas: React.FC = () => {
                     <FileText size={12} className="text-lime-400" />
                   </div>
                   <div>
-                    <p className="text-white/60 text-xs">Total CVs</p>
-                    <p className="text-sm font-bold text-white">{cvs.length}</p>
+                    <p className="text-gray-600 dark:text-white/60 text-xs">Total CVs</p>
+                    <p className="text-sm font-bold text-gray-900 dark:text-white">{cvs.length}</p>
                   </div>
                 </div>
               </motion.div>
 
               <motion.div
-                className="frosted-glass-card rounded-lg p-3"
+                className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
@@ -1850,14 +1849,14 @@ const Canvas: React.FC = () => {
                     <Eye size={12} className="text-blue-400" />
                   </div>
                   <div>
-                    <p className="text-white/60 text-xs">Views</p>
-                    <p className="text-sm font-bold text-white">{cvs.reduce((sum, cv) => sum + cv.views, 0)}</p>
+                    <p className="text-gray-600 dark:text-white/60 text-xs">Views</p>
+                    <p className="text-sm font-bold text-gray-900 dark:text-white">{cvs.reduce((sum, cv) => sum + cv.views, 0)}</p>
                   </div>
                 </div>
               </motion.div>
 
               <motion.div
-                className="frosted-glass-card rounded-lg p-3"
+                className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
@@ -1867,14 +1866,14 @@ const Canvas: React.FC = () => {
                     <Star size={12} className="text-purple-400" />
                   </div>
                   <div>
-                    <p className="text-white/60 text-xs">Starred</p>
-                    <p className="text-sm font-bold text-white">{cvs.filter(cv => cv.isStarred).length}</p>
+                    <p className="text-gray-600 dark:text-white/60 text-xs">Starred</p>
+                    <p className="text-sm font-bold text-gray-900 dark:text-white">{cvs.filter(cv => cv.isStarred).length}</p>
                   </div>
                 </div>
               </motion.div>
 
               <motion.div
-                className="frosted-glass-card rounded-lg p-3"
+                className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
@@ -1884,8 +1883,8 @@ const Canvas: React.FC = () => {
                     <CheckCircle size={12} className="text-green-400" />
                   </div>
                   <div>
-                    <p className="text-white/60 text-xs">Published</p>
-                    <p className="text-sm font-bold text-white">{cvs.filter(cv => cv.status === 'published').length}</p>
+                    <p className="text-gray-600 dark:text-white/60 text-xs">Published</p>
+                    <p className="text-sm font-bold text-gray-900 dark:text-white">{cvs.filter(cv => cv.status === 'published').length}</p>
                   </div>
                 </div>
               </motion.div>
@@ -1893,7 +1892,7 @@ const Canvas: React.FC = () => {
           </div>
 
           {/* CV Tips */}
-          <div className="frosted-glass-widget rounded-xl p-6">
+          <div className="bg-white dark:bg-[#040402] border border-gray-200 dark:border-gray-700 rounded-xl p-6">
             <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-4 flex items-center gap-2">
               <Lightbulb size={14} className="text-yellow-400" />
               CV Tips
@@ -1901,21 +1900,19 @@ const Canvas: React.FC = () => {
             <div className="space-y-3">
               <div className="p-3 bg-yellow-400/10 border border-yellow-400/20 rounded-lg">
                 <p className="text-yellow-400 text-xs font-medium mb-1">Keep it concise</p>
-                <p className="text-white/60 text-xs">Limit your CV to 1-2 pages for better readability</p>
+                <p className="text-gray-600 dark:text-white/60 text-xs">Limit your CV to 1-2 pages for better readability</p>
               </div>
               <div className="p-3 bg-blue-400/10 border border-blue-400/20 rounded-lg">
                 <p className="text-blue-400 text-xs font-medium mb-1">Use action verbs</p>
-                <p className="text-white/60 text-xs">Start bullet points with strong action verbs</p>
+                <p className="text-gray-600 dark:text-white/60 text-xs">Start bullet points with strong action verbs</p>
               </div>
               <div className="p-3 bg-green-400/10 border border-green-400/20 rounded-lg">
                 <p className="text-green-400 text-xs font-medium mb-1">Quantify achievements</p>
-                <p className="text-white/60 text-xs">Include specific numbers and metrics when possible</p>
+                <p className="text-gray-600 dark:text-white/60 text-xs">Include specific numbers and metrics when possible</p>
               </div>
             </div>
           </div>
 
-          {/* Recent Activity */}
-          <RecentActivityWidget limit={5} />
         </div>
       </div>
       ) : (
@@ -1962,14 +1959,14 @@ const Canvas: React.FC = () => {
           {/* Right Column - Sidebar */}
           <div className="space-y-6">
             {/* KPI Metrics - 2x2 Grid */}
-            <div className="frosted-glass-widget rounded-xl p-6">
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
               <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-4 flex items-center gap-2">
                 <TrendingUp size={14} className="text-blue-400" />
                 Cover Letter Metrics
               </h3>
               <div className="grid grid-cols-2 gap-3">
                 <motion.div
-                  className="frosted-glass-card rounded-lg p-3"
+                  className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 }}
@@ -1986,7 +1983,7 @@ const Canvas: React.FC = () => {
                 </motion.div>
 
                 <motion.div
-                  className="frosted-glass-card rounded-lg p-3"
+                  className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 }}
@@ -2003,7 +2000,7 @@ const Canvas: React.FC = () => {
                 </motion.div>
 
                 <motion.div
-                  className="frosted-glass-card rounded-lg p-3"
+                  className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3 }}
@@ -2020,7 +2017,7 @@ const Canvas: React.FC = () => {
                 </motion.div>
 
                 <motion.div
-                  className="frosted-glass-card rounded-lg p-3"
+                  className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4 }}
@@ -2039,7 +2036,7 @@ const Canvas: React.FC = () => {
             </div>
 
             {/* Cover Letter Tips */}
-            <div className="frosted-glass-widget rounded-xl p-6">
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
               <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-4 flex items-center gap-2">
                 <Lightbulb size={14} className="text-blue-400" />
                 Cover Letter Tips

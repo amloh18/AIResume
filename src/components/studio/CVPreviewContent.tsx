@@ -89,12 +89,21 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
     if (contentRef.current) {
       const height = contentRef.current.scrollHeight;
       setContentHeight(height);
-      // A4 page height: 297mm = 1123px (at 96 DPI)
-      const pageHeight = 1123 - pagePadding.top - pagePadding.bottom; // Account for padding
-      const pages = Math.ceil(height / pageHeight);
-      setTotalPages(Math.max(1, pages));
+      
+      // Check if this is a single-page template
+      const isSinglePageTemplate = templateName?.toLowerCase().includes('tech pro blue') ||
+                                   templateName?.toLowerCase().includes('executive professional');
+      
+      if (isSinglePageTemplate) {
+        setTotalPages(1);
+      } else {
+        // A4 page height: 297mm = 1123px (at 96 DPI)
+        const pageHeight = 1123 - pagePadding.top - pagePadding.bottom; // Account for padding
+        const pages = Math.ceil(height / pageHeight);
+        setTotalPages(Math.max(1, pages));
+      }
     }
-  }, [cvData, sectionOrder, sectionVisibility, pagePadding]);
+  }, [cvData, sectionOrder, sectionVisibility, pagePadding, templateName]);
 
   // Early return if no CV data
   if (!cvData) {

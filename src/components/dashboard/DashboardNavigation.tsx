@@ -146,16 +146,16 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
     switch (screenSize) {
       case 'mobile':
         return `${baseClasses} inset-y-0 left-0 w-80 ${isOpen ? 'translate-x-0' : '-translate-x-full'} 
-                bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-r border-gray-200/50 dark:border-gray-700/50`;
+                bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700`;
       
       case 'tablet':
         return `${baseClasses} ${topOffset} left-2 bottom-2 w-20 ${isOpen ? 'translate-x-0' : '-translate-x-full xl:translate-x-0'} 
-                bg-gray-50/95 dark:bg-[#141810]/95 backdrop-blur-xl                 rounded-2xl shadow-xl shadow-gray-900/10 dark:shadow-black/20`;
+                bg-gray-50 dark:bg-[#141810] rounded-2xl shadow-xl shadow-gray-900/10 dark:shadow-black/20`;
       
       case 'desktop':
       default:
         return `${baseClasses} ${topOffset} left-2 bottom-2 w-72 ${isOpen ? 'translate-x-0' : '-translate-x-full xl:translate-x-0'} 
-                bg-gray-50/95 dark:bg-[#141810]/95 backdrop-blur-xl                 rounded-2xl shadow-xl shadow-gray-900/10 dark:shadow-black/20`;
+                bg-gray-50 dark:bg-[#141810] rounded-2xl shadow-xl shadow-gray-900/10 dark:shadow-black/20`;
     }
   };
 
@@ -176,7 +176,7 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
               </div>
             ) : (
               <span className="drop-shadow-lg">
-                <span className="text-lime-400">CV</span><span className="text-gray-600 dark:text-gray-300">Circle.io</span>
+                <span className="text-lime-400">CV</span><span className="text-gray-600 dark:text-gray-300">Circle</span>
               </span>
             )}
           </button>
@@ -194,7 +194,7 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
               data-tour={section.tourId}
               className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-300 group ${
                 activeSection === section.id
-                  ? 'bg-gradient-to-r from-lime-100 to-lime-200 dark:from-lime-400/20 dark:to-lime-500/20 border border-lime-300 dark:border-lime-400/30 text-lime-700 dark:text-lime-400 shadow-lg'
+                  ? 'bg-lime-100 dark:bg-lime-900/30 text-lime-700 dark:text-lime-400'
                   : 'text-gray-700 dark:text-gray-200 hover:text-white dark:hover:text-white hover:bg-gray-600 dark:hover:bg-gray-700/60'
               }`}
               whileHover={{ x: screenSize === 'tablet' ? 0 : 5, scale: 1.02 }}

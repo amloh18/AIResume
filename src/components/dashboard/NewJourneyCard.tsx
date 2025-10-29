@@ -334,7 +334,7 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
 
   return (
     <motion.div
-      className={`frosted-glass-card bg-gradient-to-r from-blue-500/10 to-blue-600/10 border border-blue-500/20 rounded-xl overflow-hidden hover:shadow-lg dark:hover:shadow-gray-900/20 transition-all duration-300 group ${className}`}
+      className={`bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700/50 rounded-xl overflow-hidden hover:shadow-lg dark:hover:shadow-gray-900/20 transition-all duration-300 group ${className}`}
       whileHover={{ y: -2 }}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}

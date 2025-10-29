@@ -12,8 +12,8 @@ export const dynamicParams = true
 
 export const metadata: Metadata = {
   title: {
-    default: 'CVCircle.io - AI-Powered CV Builder',
-    template: '%s | CVCircle.io'
+    default: 'CVCircle - AI-Powered CV Builder',
+    template: '%s | CVCircle'
   },
   description: 'Create stunning CVs with AI assistance. Professional templates, ATS optimization, and real-time analytics. Build your perfect resume in minutes.',
   keywords: [
@@ -28,9 +28,9 @@ export const metadata: Metadata = {
     'job application',
     'CV maker'
   ],
-  authors: [{ name: 'CVCircle.io Team' }],
-  creator: 'CVCircle.io',
-  publisher: 'CVCircle.io',
+  authors: [{ name: 'CVCircle Team' }],
+  creator: 'CVCircle',
+  publisher: 'CVCircle',
   formatDetection: {
     email: false,
     address: false,
@@ -44,21 +44,21 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'en_US',
     url: '/',
-    title: 'CVCircle.io - AI-Powered CV Builder',
+    title: 'CVCircle - AI-Powered CV Builder',
     description: 'Create stunning CVs with AI assistance. Professional templates, ATS optimization, and real-time analytics.',
-    siteName: 'CVCircle.io',
+    siteName: 'CVCircle',
     images: [
       {
         url: '/images/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'CVCircle.io - AI-Powered CV Builder',
+        alt: 'CVCircle - AI-Powered CV Builder',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'CVCircle.io - AI-Powered CV Builder',
+    title: 'CVCircle - AI-Powered CV Builder',
     description: 'Create stunning CVs with AI assistance. Professional templates, ATS optimization, and real-time analytics.',
     images: ['/images/twitter-image.png'],
     creator: '@cvcircle',
