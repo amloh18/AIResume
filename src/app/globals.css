@@ -128,48 +128,48 @@ body.dark {
   background-attachment: fixed;
 }
 
-/* Main dashboard background */
+/* Main dashboard background - theme aware */
 .dashboard-page {
-  background: #1a230f;
+  background: var(--bg-primary);
   min-height: 100vh;
 }
 
-/* Dashboard text colors to match design */
-.dashboard-page h1,
-.dashboard-page h2,
-.dashboard-page h3,
-.dashboard-page h4,
-.dashboard-page h5,
-.dashboard-page h6 {
+/* Dashboard text colors to match design - Dark theme only */
+.dark .dashboard-page h1,
+.dark .dashboard-page h2,
+.dark .dashboard-page h3,
+.dark .dashboard-page h4,
+.dark .dashboard-page h5,
+.dark .dashboard-page h6 {
   color: #ffffff;
 }
 
-.dashboard-page .text-gray-900 {
+.dark .dashboard-page .text-gray-900 {
   color: #ffffff !important;
 }
 
-.dashboard-page .text-gray-600 {
+.dark .dashboard-page .text-gray-600 {
   color: #757575 !important;
 }
 
-.dashboard-page .text-gray-500 {
+.dark .dashboard-page .text-gray-500 {
   color: #757575 !important;
 }
 
-.dashboard-page .text-gray-400 {
+.dark .dashboard-page .text-gray-400 {
   color: #757575 !important;
 }
 
-/* Dashboard accent colors */
-.dashboard-page .text-lime-400 {
+/* Dashboard accent colors - Dark theme only */
+.dark .dashboard-page .text-lime-400 {
   color: #99FF00 !important;
 }
 
-.dashboard-page .bg-lime-400 {
+.dark .dashboard-page .bg-lime-400 {
   background-color: #99FF00 !important;
 }
 
-.dashboard-page .border-lime-400 {
+.dark .dashboard-page .border-lime-400 {
   border-color: #99FF00 !important;
 }
 
@@ -1749,5 +1749,3 @@ h3 {
 .scrollbar-hide::-webkit-scrollbar { 
   display: none;  /* Safari and Chrome */
 }
-
- 

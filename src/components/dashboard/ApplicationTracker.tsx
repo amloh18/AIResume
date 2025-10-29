@@ -1011,11 +1011,11 @@ const ApplicationTracker: React.FC = () => {
                 }
               ]
             : [
-                { status: 'created', title: 'Created', color: 'bg-purple-600 dark:bg-purple-500/20 border-purple-700 dark:border-purple-500/30 text-white' },
-                { status: 'applied', title: 'Applied', color: 'bg-blue-600 dark:bg-blue-500/20 border-blue-700 dark:border-blue-500/30 text-white' },
-                { status: 'interview', title: 'Interview', color: 'bg-orange-600 dark:bg-orange-500/20 border-orange-700 dark:border-orange-500/30 text-white' },
-                { status: 'offer', title: 'Offer', color: 'bg-green-600 dark:bg-green-500/20 border-green-700 dark:border-green-500/30 text-white' },
-                { status: 'rejected', title: 'Rejected', color: 'bg-red-600 dark:bg-red-500/20 border-red-700 dark:border-red-500/30 text-white' }
+                { status: 'created', title: 'Created', color: 'bg-purple-100 dark:bg-purple-500/20 border-purple-300 dark:border-purple-500/30 text-purple-800 dark:text-white' },
+                { status: 'applied', title: 'Applied', color: 'bg-blue-100 dark:bg-blue-500/20 border-blue-300 dark:border-blue-500/30 text-blue-800 dark:text-white' },
+                { status: 'interview', title: 'Interview', color: 'bg-orange-100 dark:bg-orange-500/20 border-orange-300 dark:border-orange-500/30 text-orange-800 dark:text-white' },
+                { status: 'offer', title: 'Offer', color: 'bg-green-100 dark:bg-green-500/20 border-green-300 dark:border-green-500/30 text-green-800 dark:text-white' },
+                { status: 'rejected', title: 'Rejected', color: 'bg-red-100 dark:bg-red-500/20 border-red-300 dark:border-red-500/30 text-red-800 dark:text-white' }
               ]
           ).map((stage) => (
           <div key={stage.status} className="space-y-4">
@@ -1038,19 +1038,19 @@ const ApplicationTracker: React.FC = () => {
                     </button>
                   )}
                   <h3 className={`text-base font-bold ${
-                    stage.status === 'created' ? 'text-purple-400' :
-                    stage.status === 'applied' ? 'text-blue-400' :
-                    stage.status === 'interview' ? 'text-orange-400' :
-                    stage.status === 'offer' ? 'text-green-400' :
-                    'text-red-400'
+                    stage.status === 'created' ? 'text-purple-800 dark:text-purple-400' :
+                    stage.status === 'applied' ? 'text-blue-800 dark:text-blue-400' :
+                    stage.status === 'interview' ? 'text-orange-800 dark:text-orange-400' :
+                    stage.status === 'offer' ? 'text-green-800 dark:text-green-400' :
+                    'text-red-800 dark:text-red-400'
                   }`}>{stage.title}</h3>
                 </div>
                 <span className={`text-sm ${
-                  stage.status === 'created' ? 'text-purple-400' :
-                  stage.status === 'applied' ? 'text-blue-400' :
-                  stage.status === 'interview' ? 'text-orange-400' :
-                  stage.status === 'offer' ? 'text-green-400' :
-                  'text-red-400'
+                  stage.status === 'created' ? 'text-purple-800 dark:text-purple-400' :
+                  stage.status === 'applied' ? 'text-blue-800 dark:text-blue-400' :
+                  stage.status === 'interview' ? 'text-orange-800 dark:text-orange-400' :
+                  stage.status === 'offer' ? 'text-green-800 dark:text-green-400' :
+                  'text-red-800 dark:text-red-400'
                 }`}>
                   {jobsByStatus[stage.status as keyof typeof jobsByStatus].length}
                 </span>

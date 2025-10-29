@@ -67,9 +67,9 @@ function LandingPageContent() {
   
   const navLinks = [
     { label: 'Features', href: '#features', ariaLabel: 'View features section' },
-    { label: 'Extension', href: '#chrome-extension', ariaLabel: 'View Chrome extension section' },
-    { label: 'How It Works', href: '#how-it-works', ariaLabel: 'View how it works section' },
-    { label: 'Pricing', href: '#pricing', ariaLabel: 'View pricing section' }
+    { label: 'Testimonials', href: '#testimonials', ariaLabel: 'View testimonials section' },
+    { label: 'Pricing', href: '#pricing', ariaLabel: 'View pricing section' },
+    { label: 'FAQ', href: '#faq', ariaLabel: 'View FAQ section' }
   ];
 
   const handleCtaClick = () => {
@@ -94,8 +94,8 @@ function LandingPageContent() {
       {/* Features Section */}
       <Features />
       
-      {/* Product Video Section */}
-      <ProductVideo />
+      {/* Product Video Section - Hidden */}
+      {/* <ProductVideo /> */}
       
       {/* Chrome Extension Section */}
       <ChromeExtension />

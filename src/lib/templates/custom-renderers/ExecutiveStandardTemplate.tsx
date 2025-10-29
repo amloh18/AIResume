@@ -180,16 +180,16 @@ export const ExecutiveStandardTemplate: React.FC<ExecutiveStandardTemplateProps>
 
       {/* Header */}
       <div className="header">
-        <h1 className="name">{basics?.name || 'MICHAEL BROWN'}</h1>
-        <p className="title">{basics?.label || 'PROJECT MANAGER'}</p>
+        <h1 className="name">{basics?.name || 'Your Name'}</h1>
+        <p className="title">{basics?.label || 'Your Title'}</p>
         <div className="contact-info">
-          {basics?.location?.address || '456 Business Ave, Cityville, USA'}
+          {basics?.location?.address || 'Your Address'}
           <span className="contact-separator">|</span>
-          {basics?.phone || '(555) 789-0123'}
+          {basics?.phone || 'Your Phone'}
           <span className="contact-separator">|</span>
-          {basics?.email || 'michael.brown@email.com'}
+          {basics?.email || 'your.email@example.com'}
           <span className="contact-separator">|</span>
-          {basics?.profiles?.[0]?.url || 'linkedin.com/in/michaelbrown'}
+          {basics?.profiles?.[0]?.url || 'linkedin.com/in/yourprofile'}
         </div>
       </div>
 
@@ -247,22 +247,24 @@ export const ExecutiveStandardTemplate: React.FC<ExecutiveStandardTemplateProps>
       <div className="section">
         <h2 className="section-title">Skills</h2>
         <div className="skills-grid">
-          <div className="skills-category">
-            <div className="skills-category-title">Project Management</div>
-            <div className="skills-list">Agile, Scrum, Waterfall, Risk Management, Budgeting, Stakeholder Management</div>
-          </div>
-          <div className="skills-category">
-            <div className="skills-category-title">Software</div>
-            <div className="skills-list">Jira, Asana, Microsoft Project, Trello, Slack</div>
-          </div>
-          <div className="skills-category">
-            <div className="skills-category-title">Leadership</div>
-            <div className="skills-list">Team Leadership, Mentoring, Conflict Resolution, Communication, Negotiation</div>
-          </div>
-          <div className="skills-category">
-            <div className="skills-category-title">Other</div>
-            <div className="skills-list">Strategic Planning, Process Improvement, Data Analysis, Problem Solving</div>
-          </div>
+          {skills && skills.length > 0 ? (
+            skills.map((skill, index) => (
+              <div key={index} className="skills-category">
+                <div className="skills-category-title">{skill.name}</div>
+                <div className="skills-list">
+                  {Array.isArray(skill.keywords) 
+                    ? skill.keywords.join(', ') 
+                    : skill.level || 'Proficient'
+                  }
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="skills-category">
+              <div className="skills-category-title">Professional Skills</div>
+              <div className="skills-list">Add your skills to see them here</div>
+            </div>
+          )}
         </div>
       </div>
 

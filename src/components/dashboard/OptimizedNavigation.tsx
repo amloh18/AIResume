@@ -124,7 +124,7 @@ const OptimizedNavigation: React.FC = () => {
           </div>
           {/* Logo Text */}
           <div className="flex items-center">
-            <span className="text-2xl font-bold text-lime-500">CV</span><span className="text-2xl font-bold text-gray-400">Circle.io</span>
+            <span className="text-2xl font-bold text-lime-500">CV</span><span className="text-2xl font-bold text-gray-400">Circle</span>
           </div>
         </motion.button>
       </div>
@@ -142,7 +142,7 @@ const OptimizedNavigation: React.FC = () => {
               onMouseEnter={() => preloadOnHover(section.id)}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-left ${
                 isActive
-                  ? 'bg-gradient-to-r from-lime-100 to-lime-200 dark:from-lime-400/20 dark:to-lime-500/20 border border-lime-300 dark:border-lime-400/30 text-lime-700 dark:text-lime-400 shadow-lg'
+                  ? 'bg-lime-100 dark:bg-lime-900/30 text-lime-700 dark:text-lime-400'
                   : 'text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50'
               }`}
               whileHover={{ scale: 1.02 }}
@@ -165,7 +165,7 @@ const OptimizedNavigation: React.FC = () => {
         <div className="px-4 pb-4">
           <motion.button
             onClick={() => router.push('/admin')}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-left bg-gradient-to-r from-purple-100 to-purple-200 dark:from-purple-400/20 dark:to-purple-500/20 border border-purple-300 dark:border-purple-400/30 text-purple-700 dark:text-purple-400 shadow-lg hover:shadow-xl"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-left bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 hover:bg-purple-200 dark:hover:bg-purple-900/50"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >

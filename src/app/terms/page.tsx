@@ -88,10 +88,10 @@ const TermsOfService: React.FC = () => {
               Agreement to Terms
             </h2>
             <p className="text-white/80 leading-relaxed mb-4">
-              By accessing and using CVCircle.io ("Service"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.
+              By accessing and using CVCircle ("Service"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to abide by the above, please do not use this service.
             </p>
             <p className="text-white/80 leading-relaxed">
-              These Terms of Service ("Terms") govern your use of our AI-powered CV creation and job application management platform operated by CVCircle.io ("Company," "we," "us," or "our").
+              These Terms of Service ("Terms") govern your use of our AI-powered CV creation and job application management platform operated by CVCircle ("Company," "we," "us," or "our").
             </p>
           </div>
 
@@ -102,7 +102,7 @@ const TermsOfService: React.FC = () => {
               Service Description
             </h2>
             <p className="text-white/80 leading-relaxed mb-4">
-              CVCircle.io provides a comprehensive CV creation and management platform that includes:
+              CVCircle provides a comprehensive CV creation and management platform that includes:
             </p>
             <ul className="list-disc list-inside space-y-2 text-white/80">
               <li>AI-powered CV creation and optimization using OpenAI technology</li>
@@ -275,7 +275,7 @@ const TermsOfService: React.FC = () => {
               <div>
                 <h3 className="text-xl font-medium mb-3 text-lime-400">Our Rights</h3>
                 <p className="text-white/80 leading-relaxed">
-                  The Service and its original content, features, and functionality are and will remain the exclusive property of CVCircle.io and its licensors. The Service is protected by copyright, trademark, and other laws.
+                  The Service and its original content, features, and functionality are and will remain the exclusive property of CVCircle and its licensors. The Service is protected by copyright, trademark, and other laws.
                 </p>
               </div>
 
@@ -332,7 +332,7 @@ const TermsOfService: React.FC = () => {
               <div>
                 <h3 className="text-xl font-medium mb-3 text-lime-400">Limitation of Liability</h3>
                 <p className="text-white/80 leading-relaxed">
-                  In no event shall CVCircle.io be liable for any indirect, incidental, special, consequential, or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses.
+                  In no event shall CVCircle be liable for any indirect, incidental, special, consequential, or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses.
                 </p>
               </div>
             </div>
@@ -369,7 +369,7 @@ const TermsOfService: React.FC = () => {
             <div className="space-y-2 text-white/80">
               <p><strong>Email:</strong> legal@cvcircle.io</p>
               <p><strong>Support:</strong> support@cvcircle.io</p>
-              <p><strong>Address:</strong> CVCircle.io, Legal Department</p>
+              <p><strong>Address:</strong> CVCircle, Legal Department</p>
             </div>
           </div>
         </motion.div>
