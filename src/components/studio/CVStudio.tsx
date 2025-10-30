@@ -33,11 +33,12 @@ import {
   BookOpen,
   Users
 } from 'lucide-react';
-import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { UnifiedCVDataStructure, CVDataStructure } from '@/types/unified-cv-schema';
 import { useTemplateStore } from '@/lib/stores/templateStore';
 import { useJobStore } from '@/lib/stores/jobStore';
 import { UnifiedCVService as CVService } from '@/lib/services/unified-cv-service';
 import { TemplateService } from '@/lib/services/templateService';
+import { UnifiedCVService } from '@/lib/services/unified-cv-service';
 import { safeSessionStorageParse, safeSessionStorageSet } from '@/lib/utils/safeJsonParse';
 import { JobService } from '@/lib/services/jobService';
 import { debounce } from 'lodash';
@@ -51,6 +52,90 @@ import { CVJourneyLookupService, CVJourneyInfo } from '@/lib/services/cvJourneyL
 import { ApplicationPackageService } from '@/lib/services/applicationPackageService';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { useDebounce } from '@/hooks/useDebounce';
+// Define fallback templates directly to avoid import issues
+const getFallbackTemplates = () => [
+  {
+    _id: 'fallback-1',
+    id: 'fallback-1',
+    name: 'Professional CV',
+    description: 'Clean and professional CV template',
+    category: 'cv',
+    tier: 'free',
+    layoutType: 'one-column',
+    globalStyles: {
+      fontFamily: 'Inter, sans-serif',
+      primaryColor: '#1f2937',
+      secondaryColor: '#6b7280',
+      backgroundColor: '#ffffff',
+      fontSize: '14px',
+      lineHeight: '1.6',
+      spacing: '24px',
+      customCSS: ''
+    },
+    columnLayout: {
+      main: {
+        width: '100%',
+        sections: ['header', 'summary', 'experience', 'education', 'skills']
+      }
+    },
+    sectionStyling: {},
+    availableSections: [
+      {
+        key: 'header',
+        displayName: 'Header',
+        componentName: 'HeaderSection',
+        isList: false,
+        defaultItemContent: {}
+      },
+      {
+        key: 'summary',
+        displayName: 'Professional Summary',
+        componentName: 'SummarySection',
+        isList: false,
+        defaultItemContent: {}
+      },
+      {
+        key: 'experience',
+        displayName: 'Work Experience',
+        componentName: 'ExperienceSection',
+        isList: true,
+        defaultItemContent: {}
+      },
+      {
+        key: 'education',
+        displayName: 'Education',
+        componentName: 'EducationSection',
+        isList: true,
+        defaultItemContent: {}
+      },
+      {
+        key: 'skills',
+        displayName: 'Skills',
+        componentName: 'SkillsSection',
+        isList: true,
+        defaultItemContent: {}
+      }
+    ],
+    pageSettings: {
+      format: 'A4',
+      orientation: 'portrait',
+      margins: {
+        top: '20mm',
+        bottom: '20mm',
+        left: '20mm',
+        right: '20mm'
+      },
+      maxHeight: '297mm'
+    },
+    isActive: true,
+    isDefault: true,
+    isPublished: true,
+    globalAccess: true,
+    version: 1,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  }
+];
 
 interface CVStudioProps {
   journeyId?: string | null; // PRIMARY: Journey ID for proper Application Package context
@@ -1804,30 +1889,42 @@ const CVStudio: React.FC<CVStudioProps> = ({
           if (cvResult && cvResult.templateId && templatesResult.length > 0) {
             // Handle both id and _id fields for template matching
             const templateIdToMatch = cvResult.templateId.toString();
-            const template = templatesResult.find((t: any) => 
-              t.id === templateIdToMatch || 
-              t._id === templateIdToMatch || 
+            let template = templatesResult.find((t: any) =>
+              t.id === templateIdToMatch ||
+              t._id === templateIdToMatch ||
               t.id?.toString() === templateIdToMatch ||
               t._id?.toString() === templateIdToMatch
             );
-            if (template) {
+
+            // If not found in database templates, check hardcoded/fallback templates
+            if (!template) {
+              console.log('⚠️ Studio - Template not found in database, checking hardcoded templates');
+              const fallbackTemplates = getFallbackTemplates();
+
+              // Check if templateId matches any hardcoded template names or IDs
+              template = fallbackTemplates.find((t: any) =>
+                t.id === templateIdToMatch ||
+                t._id === templateIdToMatch ||
+                t.name.toLowerCase().replace(/\s+/g, '-').includes(templateIdToMatch.toLowerCase()) ||
+                templateIdToMatch.toLowerCase().includes(t.name.toLowerCase().replace(/\s+/g, '-'))
+              );
+
+              if (template) {
+                console.log('✅ Studio - Found hardcoded template:', template.name);
+                setSelectedTemplate(template);
+              } else {
+                console.log('⚠️ Studio - Template not found in hardcoded templates either, using fallback');
+                // Fallback to first available template
+                setSelectedTemplate(templatesResult[0] || fallbackTemplates[0]);
+              }
+            } else {
               console.log('✅ Studio - Loaded template from CV:', template.name);
               setSelectedTemplate(template);
-            } else {
-              console.log('⚠️ Studio - Template not found, using Executive Professional as fallback');
-              // Fallback to Executive Professional if template not found
-              const executiveProfessional = templatesResult.find((t: any) => 
-                t.name === 'Executive Professional' || t.name.toLowerCase().includes('executive professional')
-              );
-              setSelectedTemplate(executiveProfessional || templatesResult[0]);
             }
           } else if (templatesResult.length > 0) {
-            console.log('✅ Studio - No template specified, using Executive Professional as default');
-            // No template specified, use Executive Professional as default
-            const executiveProfessional = templatesResult.find((t: any) => 
-              t.name === 'Executive Professional' || t.name.toLowerCase().includes('executive professional')
-            );
-            setSelectedTemplate(executiveProfessional || templatesResult[0]);
+            console.log('✅ Studio - No template specified, using first available template as default');
+            // No template specified, use first available template
+            setSelectedTemplate(templatesResult[0]);
           }
         } else {
             // Create default CV data structure

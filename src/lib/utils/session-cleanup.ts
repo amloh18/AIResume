@@ -94,14 +94,14 @@ export function clearOversizedSessionCookies() {
             localStorage.removeItem(key);
           }
         }
-      } catch (e) {
+      } catch {
         // Silently handle localStorage errors
       }
     });
     
     // Clear sessionStorage data
     sessionStorage.clear();
-  } catch (error) {
+  } catch {
     // Silently handle cleanup errors
   }
 }
@@ -144,7 +144,7 @@ export function monitorAndPreventCookieBloat() {
       }
     });
     
-  } catch (error) {
+  } catch {
     // Silently handle monitoring errors
   }
 }
@@ -188,7 +188,7 @@ export function nuclearCleanupAllNonEssentialCookies() {
       }
     });
     
-  } catch (error) {
+  } catch {
     // Silently handle nuclear cleanup errors
   }
 }

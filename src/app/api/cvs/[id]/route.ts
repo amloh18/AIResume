@@ -163,12 +163,22 @@ export async function PUT(
 
     // Validate templateId if provided
     if (updateData.templateId) {
-      const template = await Template.findById(updateData.templateId);
-      if (!template || !template.isActive || !template.globalAccess) {
-        return NextResponse.json(
-          { success: false, error: 'Invalid template specified' },
-          { status: 400 }
-        );
+      // Check if it's a hardcoded template first
+      const { HARDCODED_TEMPLATES } = await import('@/lib/templates/hardcoded-templates');
+      const hardcodedTemplate = HARDCODED_TEMPLATES.find(t => t.id === updateData.templateId || t._id === updateData.templateId);
+
+      if (hardcodedTemplate) {
+        // Allow hardcoded templates
+        console.log('✅ CV UPDATE API - Using hardcoded template:', hardcodedTemplate.name);
+      } else {
+        // Check database templates
+        const template = await Template.findById(updateData.templateId);
+        if (!template || !template.isActive || !template.globalAccess) {
+          return NextResponse.json(
+            { success: false, error: 'Invalid template specified' },
+            { status: 400 }
+          );
+        }
       }
     }
 

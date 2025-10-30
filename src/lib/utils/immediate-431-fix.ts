@@ -44,8 +44,10 @@ export function immediate431Fix() {
     
     if (afterCookies.length <= 2) {
       // Success - 431 error should be fixed
+      console.log('✅ 431 error fixed successfully');
     } else {
       // Still have multiple cookies, may need to reload
+      console.log('⚠️ Multiple cookies still present, reloading...');
       window.location.reload();
     }
   }, 100);
