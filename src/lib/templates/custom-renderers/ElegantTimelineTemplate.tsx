@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { addPageBreakCSS } from '../template-utils';

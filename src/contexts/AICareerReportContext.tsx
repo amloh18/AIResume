@@ -39,6 +39,7 @@ export interface AICareerReportState {
   jobId: string | null;
   isLoadingJob: boolean;
   jobError: string | null;
+  availableSections: any[];
 }
 
 // Action Types
@@ -57,6 +58,8 @@ type AICareerReportAction =
   | { type: 'SET_JOB_ID'; payload: string | null }
   | { type: 'SET_LOADING_JOB'; payload: boolean }
   | { type: 'SET_JOB_ERROR'; payload: string | null }
+  | { type: 'SET_AVAILABLE_SECTIONS'; payload: any[] }
+  | { type: 'ADD_SECTION'; payload: any }
   | { type: 'RESET_STATE' };
 
 // LocalStorage utilities
@@ -79,6 +82,7 @@ const saveToStorage = (state: AICareerReportState) => {
         activeSection: state.activeSection,
         isUploading: state.isUploading,
         uploadError: state.uploadError,
+        availableSections: state.availableSections,
         lastSaved: Date.now()
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
@@ -147,7 +151,11 @@ const getInitialState = (): AICareerReportState => {
       skills: [],
       projects: [],
       certificates: [],
-      languages: []
+      languages: [],
+      volunteer: [],
+      publications: [],
+      interests: [],
+      references: []
     },
     uploadedFile: null, // File objects can't be serialized, will be handled separately
     aiAnalysis: null,
@@ -159,7 +167,8 @@ const getInitialState = (): AICareerReportState => {
     jobData: null,
     jobId: null,
     isLoadingJob: false,
-    jobError: null
+    jobError: null,
+    availableSections: savedData?.availableSections || []
   };
 };
 
@@ -259,6 +268,18 @@ function aiCareerReportReducer(
       return {
         ...state,
         jobError: action.payload
+      };
+
+    case 'SET_AVAILABLE_SECTIONS':
+      return {
+        ...state,
+        availableSections: action.payload
+      };
+
+    case 'ADD_SECTION':
+      return {
+        ...state,
+        availableSections: [...state.availableSections, action.payload]
       };
 
     case 'RESET_STATE':

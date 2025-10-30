@@ -38,6 +38,7 @@ import { useTemplateStore } from '@/lib/stores/templateStore';
 import { useJobStore } from '@/lib/stores/jobStore';
 import { UnifiedCVService as CVService } from '@/lib/services/unified-cv-service';
 import { TemplateService } from '@/lib/services/templateService';
+import { safeSessionStorageParse, safeSessionStorageSet } from '@/lib/utils/safeJsonParse';
 import { JobService } from '@/lib/services/jobService';
 import { debounce } from 'lodash';
 import { Skeleton } from '@/components/ui/SkeletonLoader';
@@ -1548,22 +1549,21 @@ const CVStudio: React.FC<CVStudioProps> = ({
             let convertedData: any = null;
 
             // Check if CV data is in sessionStorage (for new CVs or master CVs)
-            const sessionCVData = sessionStorage.getItem('newCVData');
-            const masterCVData = sessionStorage.getItem('editingMasterCV');
-            const editingCVData = sessionStorage.getItem('editingCVData');
+            const sessionCVData = safeSessionStorageParse('newCVData');
+            const masterCVData = safeSessionStorageParse('editingMasterCV');
+            const editingCVData = safeSessionStorageParse('editingCVData');
             
             if (sessionCVData) {
               try {
-                const parsedCVData = JSON.parse(sessionCVData);
-                console.log('Found CV data in sessionStorage:', parsedCVData);
+                console.log('Found CV data in sessionStorage:', sessionCVData);
 
                 // Set CV data from sessionStorage
-                if (parsedCVData.cvData) {
+                if (sessionCVData.cvData) {
                   // Data is already in unified format
-                  convertedData = parsedCVData.cvData;
+                  convertedData = sessionCVData.cvData;
                   console.log('Session CV data:', convertedData);
                   setCvData(convertedData);
-                  cvResult = parsedCVData;
+                  cvResult = sessionCVData;
                 } else {
                   // Fallback to API call using unified service
                   const unifiedCV = await UnifiedCVService.getCV(cvId, userId);
@@ -1572,8 +1572,8 @@ const CVStudio: React.FC<CVStudioProps> = ({
                 }
 
                 // Set template if available
-                if (parsedCVData.templateId && templatesResult.length > 0) {
-                  const template = templatesResult.find((t: any) => t.id === parsedCVData.templateId);
+                if (sessionCVData.templateId && templatesResult.length > 0) {
+                  const template = templatesResult.find((t: any) => t.id === sessionCVData.templateId);
                   if (template) {
                     setSelectedTemplate(template);
                   }
@@ -1605,11 +1605,11 @@ const CVStudio: React.FC<CVStudioProps> = ({
                 let cvDataFromStorage: any = null;
                 
                 if (masterCVData) {
-                  masterCV = JSON.parse(masterCVData);
+                  masterCV = masterCVData;
                   cvDataFromStorage = masterCV.cvData;
                   console.log('🔍 Found master CV data in sessionStorage:', masterCV);
                 } else if (editingCVData) {
-                  cvDataFromStorage = JSON.parse(editingCVData);
+                  cvDataFromStorage = editingCVData;
                   console.log('🔍 Found editing CV data in sessionStorage:', cvDataFromStorage);
                 }
                 
@@ -1800,7 +1800,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
             }
           }
 
-          // Set template if available, otherwise use Modern Professional as default
+          // Set template if available, otherwise use Executive Professional as default
           if (cvResult && cvResult.templateId && templatesResult.length > 0) {
             // Handle both id and _id fields for template matching
             const templateIdToMatch = cvResult.templateId.toString();
@@ -1814,20 +1814,20 @@ const CVStudio: React.FC<CVStudioProps> = ({
               console.log('✅ Studio - Loaded template from CV:', template.name);
               setSelectedTemplate(template);
             } else {
-              console.log('⚠️ Studio - Template not found, using Modern Professional as fallback');
-              // Fallback to Modern Professional if template not found
-              const modernProfessional = templatesResult.find((t: any) => 
-                t.name === 'Modern Professional' || t.name.toLowerCase().includes('modern professional')
+              console.log('⚠️ Studio - Template not found, using Executive Professional as fallback');
+              // Fallback to Executive Professional if template not found
+              const executiveProfessional = templatesResult.find((t: any) => 
+                t.name === 'Executive Professional' || t.name.toLowerCase().includes('executive professional')
               );
-              setSelectedTemplate(modernProfessional || templatesResult[0]);
+              setSelectedTemplate(executiveProfessional || templatesResult[0]);
             }
           } else if (templatesResult.length > 0) {
-            console.log('✅ Studio - No template specified, using Modern Professional as default');
-            // No template specified, use Modern Professional as default
-            const modernProfessional = templatesResult.find((t: any) => 
-              t.name === 'Modern Professional' || t.name.toLowerCase().includes('modern professional')
+            console.log('✅ Studio - No template specified, using Executive Professional as default');
+            // No template specified, use Executive Professional as default
+            const executiveProfessional = templatesResult.find((t: any) => 
+              t.name === 'Executive Professional' || t.name.toLowerCase().includes('executive professional')
             );
-            setSelectedTemplate(modernProfessional || templatesResult[0]);
+            setSelectedTemplate(executiveProfessional || templatesResult[0]);
           }
         } else {
             // Create default CV data structure
@@ -1868,12 +1868,12 @@ const CVStudio: React.FC<CVStudioProps> = ({
             setCvTitle('Untitled CV');
 
             // If no cvId is provided, we're creating a new CV
-            // Set Modern Professional as default template if available, otherwise use first template
+            // Set Executive Professional as default template if available, otherwise use first template
             if (templatesResult.length > 0) {
-              const modernProfessional = templatesResult.find((t: any) => 
-                t.name === 'Modern Professional' || t.name.toLowerCase().includes('modern professional')
+              const executiveProfessional = templatesResult.find((t: any) => 
+                t.name === 'Executive Professional' || t.name.toLowerCase().includes('executive professional')
               );
-              setSelectedTemplate(modernProfessional || templatesResult[0]);
+              setSelectedTemplate(executiveProfessional || templatesResult[0]);
             }
           }
         }
@@ -3160,9 +3160,31 @@ const CVStudio: React.FC<CVStudioProps> = ({
             templateContent={
               <TemplateContent
                 selectedTemplate={selectedTemplate}
-                onTemplateSelect={(template) => {
+                onTemplateSelect={async (template) => {
                   setSelectedTemplate(template);
                   console.log('Template selected:', template);
+                  
+                  // Auto-save the template selection if we have a CV ID
+                  if (cvId && cvData) {
+                    try {
+                      setSaveStatus('saving');
+                      const updateData = {
+                        title: cvTitle,
+                        cvData: cvData,
+                        templateId: template?.id || template?._id || '',
+                        metadata: {
+                          isMaster: isMasterCV
+                        }
+                      };
+                      
+                      await CVService.updateCV(cvId, updateData, userId || undefined);
+                      setSaveStatus('saved');
+                      console.log('✅ Template selection auto-saved');
+                    } catch (error) {
+                      console.error('❌ Failed to auto-save template selection:', error);
+                      setSaveStatus('error');
+                    }
+                  }
                 }}
                 onTemplatePreview={(template) => {
                   console.log('Template preview:', template);

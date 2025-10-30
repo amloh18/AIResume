@@ -202,6 +202,32 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
     setError('');
 
     try {
+      // For passwordless login, sign in directly via NextAuth so the code is verified there
+      if (verificationType === 'passwordless-login') {
+        try {
+          const signInResult = await signIn('passwordless', {
+            email,
+            verificationCode: code,
+            redirect: false
+          } as any);
+
+          if ((signInResult as any)?.ok) {
+            setSuccess('Authentication successful, redirecting...');
+            setTimeout(() => {
+              router.push('/dashboard');
+            }, 800);
+          } else {
+            setError('Invalid or expired code. Please request a new one.');
+          }
+        } catch (err) {
+          console.error('Passwordless NextAuth sign-in failed:', err);
+          setError('Failed to sign you in with the code. Please try again.');
+        } finally {
+          setIsLoading(false);
+        }
+        return;
+      }
+
       const response = await fetch('/api/auth/verify-and-signin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -548,33 +574,21 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
   const getIcon = () => {
     switch (mode) {
       case 'signin':
-        return (
-          <div className="w-12 h-12 rounded-full border-2 border-[#88E03F] flex items-center justify-center mb-6 mx-auto">
-            <svg className="w-6 h-6 text-[#88E03F]" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M8,5.14V19.14L19,12.14L8,5.14Z" />
-            </svg>
-          </div>
-        );
+        return null;
       case 'signup':
-        return (
-          <div className="w-12 h-12 rounded-full border-2 border-[#88E03F] flex items-center justify-center mb-6 mx-auto">
-            <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12,4A4,4 0 0,1 16,8A4,4 0 0,1 12,12A4,4 0 0,1 8,8A4,4 0 0,1 12,4M12,14C16.42,14 20,15.79 20,18V20H4V18C4,15.79 7.58,14 12,14Z" />
-            </svg>
-          </div>
-        );
+        return null;
       case 'reset':
         return (
-          <div className="w-12 h-12 rounded-full border-2 border-[#88E03F] flex items-center justify-center mb-6 mx-auto">
-            <svg className="w-6 h-6 text-[#88E03F]" fill="currentColor" viewBox="0 0 24 24">
+          <div className="w-12 h-12 rounded-full border-2 border-[#80FF00] flex items-center justify-center mb-6 mx-auto">
+            <svg className="w-6 h-6 text-[#80FF00]" fill="currentColor" viewBox="0 0 24 24">
               <path d="M12,4A4,4 0 0,1 16,8A4,4 0 0,1 12,12A4,4 0 0,1 8,8A4,4 0 0,1 12,4M12,14C16.42,14 20,15.79 20,18V20H4V18C4,15.79 7.58,14 12,14Z" />
             </svg>
           </div>
         );
       case 'verify-code':
         return (
-          <div className="w-12 h-12 rounded-full border-2 border-[#88E03F] flex items-center justify-center mb-6 mx-auto">
-            <svg className="w-6 h-6 text-[#88E03F]" fill="currentColor" viewBox="0 0 24 24">
+          <div className="w-12 h-12 rounded-full border-2 border-[#80FF00] flex items-center justify-center mb-6 mx-auto">
+            <svg className="w-6 h-6 text-[#80FF00]" fill="currentColor" viewBox="0 0 24 24">
               <path d="M20,8L12,13L4,8V6L12,11L20,6M20,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V6C22,4.89 21.1,4 20,4Z" />
             </svg>
           </div>
@@ -589,20 +603,20 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
       case 'signin':
         return (
           <div className="space-y-3">
-            <p className="text-gray-300 text-sm text-center">
+            <p className="text-white/70 text-sm text-center">
               Forgot Password?{' '}
               <button
                 onClick={() => switchMode('reset')}
-                className="text-[#88E03F] hover:text-[#88E03F]/80 transition-colors duration-200 font-medium"
+                className="text-[#80FF00] hover:text-[#80FF00]/80 transition-colors duration-200 font-medium"
               >
                 Forgot Password?
               </button>
             </p>
-            <p className="text-gray-300 text-sm text-center">
+            <p className="text-white/70 text-sm text-center">
               Don't have an account?{' '}
               <button
                 onClick={() => switchMode('signup')}
-                className="text-[#88E03F] hover:text-[#88E03F]/80 transition-colors duration-200 font-medium"
+                className="text-[#80FF00] hover:text-[#80FF00]/80 transition-colors duration-200 font-medium"
               >
                 Create Account
               </button>
@@ -613,11 +627,11 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
       case 'signup':
         return (
           <div className="space-y-3">
-            <p className="text-gray-300 text-sm text-center">
+            <p className="text-white/70 text-sm text-center">
               Already have an account?{' '}
               <button
                 onClick={() => switchMode('signin')}
-                className="text-[#88E03F] hover:text-[#88E03F]/80 transition-colors duration-200 font-medium"
+                className="text-[#80FF00] hover:text-[#80FF00]/80 transition-colors duration-200 font-medium"
               >
                 Sign In
               </button>
@@ -628,11 +642,11 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
       case 'reset':
         return (
           <div className="space-y-3">
-            <p className="text-gray-300 text-sm text-center">
+            <p className="text-white/70 text-sm text-center">
               Remember your password?{' '}
               <button
                 onClick={() => switchMode('signin')}
-                className="text-[#88E03F] hover:text-[#88E03F]/80 transition-colors duration-200 font-medium"
+                className="text-[#80FF00] hover:text-[#80FF00]/80 transition-colors duration-200 font-medium"
               >
                 Sign In
               </button>
@@ -641,7 +655,7 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
               Don't have an account?{' '}
               <button
                 onClick={() => switchMode('signup')}
-                className="text-[#88E03F] hover:text-[#88E03F]/80 transition-colors duration-200 font-medium"
+                className="text-[#80FF00] hover:text-[#80FF00]/80 transition-colors duration-200 font-medium"
               >
                 Sign up here
               </button>
@@ -656,7 +670,7 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
               Prefer password?{' '}
               <button
                 onClick={() => switchMode('signin')}
-                className="text-[#88E03F] hover:text-[#88E03F]/80 transition-colors duration-200 font-medium"
+                className="text-[#80FF00] hover:text-[#80FF00]/80 transition-colors duration-200 font-medium"
               >
                 Sign in with password
               </button>
@@ -665,7 +679,7 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
               Don't have an account?{' '}
               <button
                 onClick={() => switchMode('signup')}
-                className="text-[#88E03F] hover:text-[#88E03F]/80 transition-colors duration-200 font-medium"
+                className="text-[#80FF00] hover:text-[#80FF00]/80 transition-colors duration-200 font-medium"
               >
                 Sign up here
               </button>
@@ -728,23 +742,16 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
       backHref="/"
       backText="Back to Home"
     >
-      {/* Logo */}
-      <div className="mb-8">
-        <div className="text-4xl font-black font-sans" style={{ fontWeight: 900 }}>
-          <span className="text-[#88E03F]">CV</span><span className="text-gray-300">Circle.io</span>
-        </div>
-      </div>
-      
       {/* Icon */}
       {getIcon()}
       
       {/* Title */}
-      <h2 className="text-3xl font-bold text-white mb-2">
+      <h2 className="text-2xl font-bold text-white mb-2">
         {getTitle()}
       </h2>
       
       {/* Subtitle */}
-      <p className="text-gray-300 text-lg mb-8">
+      <p className="text-white/70 text-base mb-6">
         {getSubtitle()}
       </p>
 
@@ -778,9 +785,10 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
               className="mt-4"
             >
               <button
+                type="button"
                 onClick={() => handleSendCode(email, 'passwordless-login')}
                 disabled={isLoading || checkingEmail}
-                className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-[#88E03F] to-[#88E03F]/80 hover:from-[#88E03F]/90 hover:to-[#88E03F]/70 text-black font-semibold py-3 px-6 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-[#80FF00] to-[#80FF00]/80 hover:from-[#80FF00]/90 hover:to-[#80FF00]/70 text-black font-semibold py-3 px-6 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading || checkingEmail ? (
                   <Loader2 className="w-4 h-4 animate-spin" />

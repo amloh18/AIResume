@@ -45,7 +45,7 @@ const OnboardingCarouselModal: React.FC<OnboardingCarouselModalProps> = ({ userI
         'Track application status with visual cards',
         'Never lose track of your applications again'
       ],
-      image: '/images/onboarding/journey-cards-demo.svg',
+      image: '/images/STEP 3 START TAILORING CV AND COVER LETTER.png',
       color: 'from-blue-500 to-purple-600'
     },
     {
@@ -60,7 +60,7 @@ const OnboardingCarouselModal: React.FC<OnboardingCarouselModalProps> = ({ userI
         'Automatic job details extraction',
         'Real-time application status updates'
       ],
-      image: '/images/onboarding/extension-tracker.svg',
+      image: '/images/STEP 2 ADD JOB APPLICATIONS IN TRACKER.png',
       color: 'from-green-500 to-teal-600'
     },
     {
@@ -75,7 +75,7 @@ const OnboardingCarouselModal: React.FC<OnboardingCarouselModalProps> = ({ userI
         'Skills gap identification',
         'Strategic career advice'
       ],
-      image: '/images/onboarding/career-report-preview.svg',
+      image: '/images/gain_your_edge.png',
       color: 'from-purple-500 to-pink-600'
     },
     {
@@ -90,7 +90,7 @@ const OnboardingCarouselModal: React.FC<OnboardingCarouselModalProps> = ({ userI
         'Multiple template options',
         'ATS-friendly formatting'
       ],
-      image: '/images/onboarding/master-cv-benefits.svg',
+      image: '/images/step1.gif',
       color: 'from-lime-500 to-green-600'
     }
   ];
@@ -148,8 +148,12 @@ const OnboardingCarouselModal: React.FC<OnboardingCarouselModalProps> = ({ userI
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-white/10">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-r from-lime-400 to-lime-500 rounded-lg flex items-center justify-center">
-              <span className="text-black font-bold text-sm">CV</span>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center">
+              <img 
+                src="/images/Logo.png" 
+                alt="CVCircle Logo" 
+                className="w-8 h-8 object-contain"
+              />
             </div>
             <div>
               <h2 className="text-xl font-bold text-white">Welcome to CVCircle</h2>
@@ -233,19 +237,39 @@ const OnboardingCarouselModal: React.FC<OnboardingCarouselModalProps> = ({ userI
                   {/* Right Side - Image */}
                   <div className="flex items-center justify-center">
                     <motion.div
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: 0.2 }}
-                      className="relative"
+                      key={currentCard}
+                      initial={{ opacity: 0, scale: 0.8, rotateY: -15 }}
+                      animate={{ opacity: 1, scale: 1, rotateY: 0 }}
+                      exit={{ opacity: 0, scale: 0.8, rotateY: 15 }}
+                      transition={{ 
+                        delay: 0.2, 
+                        duration: 0.6, 
+                        ease: "easeInOut",
+                        type: "spring",
+                        stiffness: 100
+                      }}
+                      className="relative group"
                     >
-                      <div className="w-full h-80 bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl border border-white/10 flex items-center justify-center overflow-hidden">
-                        <img
+                      <motion.div 
+                        className="w-full h-80 bg-white rounded-xl border border-gray-200 shadow-lg flex items-center justify-center overflow-hidden p-4"
+                        animate={{
+                          y: [0, -5, 0],
+                        }}
+                        transition={{
+                          duration: 4,
+                          repeat: Infinity,
+                          ease: "easeInOut"
+                        }}
+                      >
+                        <motion.img
                           src={cards[currentCard].image}
                           alt={`${cards[currentCard].title} preview`}
-                          className="w-full h-full object-contain"
+                          className="max-w-full max-h-full object-contain transition-transform duration-500 ease-in-out group-hover:scale-105"
                           loading="lazy"
+                          whileHover={{ scale: 1.05 }}
+                          transition={{ duration: 0.3, ease: "easeInOut" }}
                         />
-                      </div>
+                      </motion.div>
                     </motion.div>
                   </div>
                 </div>
