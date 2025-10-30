@@ -52,7 +52,7 @@ export interface SessionData {
  * @deprecated This function is no longer used
  * NextAuth handles session creation automatically
  */
-export function createSession(user: any, tokens: any): SessionData {
+export function createSession(_user: any, _tokens: any): SessionData {
   console.warn('⚠️ createSession is deprecated. Use NextAuth for session management.');
   throw new Error('createSession is deprecated. Use NextAuth session management instead.');
 }
@@ -61,7 +61,7 @@ export function createSession(user: any, tokens: any): SessionData {
  * @deprecated This function is no longer used
  * NextAuth handles session validation automatically
  */
-export async function validateSession(sessionData: SessionData): Promise<boolean> {
+export async function validateSession(_sessionData: SessionData): Promise<boolean> {
   console.warn('⚠️ validateSession is deprecated. Use NextAuth session validation.');
   throw new Error('validateSession is deprecated. Use NextAuth session management.');
 }
@@ -89,7 +89,7 @@ export async function getSessionFromStorage(): Promise<SessionData | null> {
  * @deprecated This function is no longer used
  * NextAuth handles cookies automatically
  */
-export function getSessionFromCookie(cookieHeader?: string): SessionData | null {
+export function getSessionFromCookie(_cookieHeader?: string): SessionData | null {
   console.warn('⚠️ getSessionFromCookie is deprecated. Use NextAuth useSession hook.');
   return null;
 }
@@ -98,7 +98,7 @@ export function getSessionFromCookie(cookieHeader?: string): SessionData | null 
  * @deprecated This function is deprecated. Use NextAuth's session management instead.
  * Kept for backward compatibility during migration period.
  */
-export function saveSessionToStorage(sessionData: SessionData): void {
+export function saveSessionToStorage(_sessionData: SessionData): void {
   console.warn('⚠️ saveSessionToStorage is deprecated. Please use NextAuth session management.');
   throw new Error('saveSessionToStorage is deprecated. Use NextAuth session management instead.');
 }
@@ -107,7 +107,7 @@ export function saveSessionToStorage(sessionData: SessionData): void {
  * @deprecated This function is no longer used
  * NextAuth manages all cookies automatically
  */
-export function saveSessionToResponse(response: NextResponse, sessionData: SessionData): void {
+export function saveSessionToResponse(_response: NextResponse, _sessionData: SessionData): void {
   console.warn('⚠️ saveSessionToResponse is deprecated. NextAuth manages cookies automatically.');
   // Do nothing - NextAuth handles this
 }
@@ -139,7 +139,7 @@ export function clearSessionFromStorage(): void {
  * @deprecated This function is no longer used
  * NextAuth manages all cookie cleanup automatically
  */
-export function clearSessionFromResponse(response: NextResponse): void {
+export function clearSessionFromResponse(_response: NextResponse): void {
   console.warn('⚠️ clearSessionFromResponse is deprecated. NextAuth manages cookies automatically.');
   // Do nothing - NextAuth handles cookie cleanup
 }
@@ -148,7 +148,7 @@ export function clearSessionFromResponse(response: NextResponse): void {
  * @deprecated This function is no longer used
  * NextAuth handles CSRF tokens internally
  */
-export function validateCSRFFromRequest(request: NextRequest): boolean {
+export function validateCSRFFromRequest(_request: NextRequest): boolean {
   console.warn('⚠️ validateCSRFFromRequest is deprecated. NextAuth handles CSRF internally.');
   return false;
 }

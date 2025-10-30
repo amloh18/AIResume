@@ -331,14 +331,21 @@ export async function POST(request: NextRequest) {
       console.log('🔍 CV POST API - Using default template:', defaultTemplate.name);
     }
 
-    // Validate template exists
-    const template = await Template.findById(finalTemplateId);
-    if (!template) {
-      console.log('❌ CV POST API - Template not found:', finalTemplateId);
-      return NextResponse.json(
-        { success: false, error: 'Template not found' },
-        { status: 400 }
-      );
+    // Validate template exists (check hardcoded templates first)
+    const { HARDCODED_TEMPLATES } = await import('@/lib/templates/hardcoded-templates');
+    const hardcodedTemplate = HARDCODED_TEMPLATES.find(t => t.id === finalTemplateId || t._id === finalTemplateId);
+
+    if (!hardcodedTemplate) {
+      const template = await Template.findById(finalTemplateId);
+      if (!template) {
+        console.log('❌ CV POST API - Template not found:', finalTemplateId);
+        return NextResponse.json(
+          { success: false, error: 'Template not found' },
+          { status: 400 }
+        );
+      }
+    } else {
+      console.log('✅ CV POST API - Using hardcoded template:', hardcodedTemplate.name);
     }
 
     // Prepare CV data for creation (clean schema - no styling data)
