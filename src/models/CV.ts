@@ -41,7 +41,7 @@ const cvSchema = new Schema<ICV>({
     maxlength: [100, 'Title cannot exceed 100 characters']
   },
   templateId: {
-    type: Schema.Types.ObjectId,
+    type: Schema.Types.Mixed, // Allow both ObjectId and String for hardcoded templates
     ref: 'Template',
     required: true
   },

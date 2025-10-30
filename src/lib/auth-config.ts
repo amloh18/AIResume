@@ -37,7 +37,7 @@ async function connectDB() {
  */
 export const authConfig: NextAuthOptions = {
   // Use JWT sessions (stateless, stored in HTTP-only cookies)
-  // OAuth account management is handled manually in the signIn callback
+  // Reduced JWT payload to prevent 431 errors
   session: {
     strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60, // 30 days
@@ -400,44 +400,48 @@ export const authConfig: NextAuthOptions = {
       }
     },
 
-  // JWT callback - add custom fields to the token
+  // JWT callback - minimize token size to prevent 431 errors
   async jwt({ token, user, account, trigger, session }) {
-    // Initial sign-in
+    // Initial sign-in - store minimal data only
     if (user) {
-      console.log('🔐 JWT callback - user sign-in:', {
-        id: user.id,
-        email: user.email,
-        type: (user as any).type,
-      });
-
-      // Store only essential data to keep token size small
+      // Store only essential data to keep JWT small
       token.id = user.id || '';
       token.email = user.email || '';
-      token.name = user.name || '';
-      token.image = user.image || null;
-      token.role = (user as any).role || 'user';
-      token.type = (user as any).type || 'user';
-      token.planKey = (user as any).planKey || 'free';
-      token.subscriptionStatus = (user as any).subscriptionStatus || 'inactive';
+      // Remove large fields that bloat the cookie
+      // token.name, token.image, token.role, etc. will be fetched from DB when needed
     }
-
-    // Avoid merging entire session into JWT; keeps cookie small to prevent 431
 
     return token;
   },
 
-    // Session callback - add custom fields to the session
+    // Session callback - fetch user data from DB to keep JWT small
     async session({ session, token }) {
-      if (token && session?.user) {
-        // Add only essential fields to session.user to keep session size small
-        session.user.id = (token.id as string) || '';
-        session.user.email = (token.email as string) || '';
-        session.user.name = (token.name as string) || '';
-        session.user.image = (token.image as string) || null;
-        (session.user as any).role = token.role || 'user';
-        (session.user as any).type = token.type || 'user';
-        (session.user as any).planKey = token.planKey || 'free';
-        (session.user as any).subscriptionStatus = token.subscriptionStatus || 'inactive';
+      if (token && session?.user && token.id) {
+        try {
+          await connectDB();
+          const user = await User.findById(token.id).lean();
+
+          if (user) {
+            // Populate session with user data from database
+            session.user.id = user._id.toString();
+            session.user.email = user.email;
+            session.user.name = `${user.firstName} ${user.lastName}`;
+            session.user.image = user.avatar || null;
+            (session.user as any).role = user.role || 'user';
+            (session.user as any).type = 'user'; // Default for now
+            (session.user as any).planKey = user.currentPlanKey || 'free';
+            (session.user as any).subscriptionStatus = user.subscription?.status || 'inactive';
+          } else {
+            // Fallback if user not found
+            session.user.id = (token.id as string) || '';
+            session.user.email = (token.email as string) || '';
+          }
+        } catch (error) {
+          console.error('❌ Error fetching user data for session:', error);
+          // Fallback to token data
+          session.user.id = (token.id as string) || '';
+          session.user.email = (token.email as string) || '';
+        }
       }
 
       return session;
@@ -474,4 +478,3 @@ export const authConfig: NextAuthOptions = {
 };
 
 export default authConfig;
-
