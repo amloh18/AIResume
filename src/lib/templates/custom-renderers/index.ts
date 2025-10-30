@@ -8,6 +8,7 @@ export { TechProBlueTemplate } from './TechProBlueTemplate';
 export { MinimalistCreativeTemplate } from './MinimalistCreativeTemplate';
 export { ExecutiveStandardTemplate } from './ExecutiveStandardTemplate';
 export { ATSClassicTemplate } from './ATSClassicTemplate';
+export { TheModernCVTemplate } from './TheModernCVTemplate';
 
 // Template mapping for easy reference
 export const CUSTOM_TEMPLATES = {
@@ -17,7 +18,8 @@ export const CUSTOM_TEMPLATES = {
   'tech-pro-blue': 'TechProBlueTemplate',
   'minimalist-creative': 'MinimalistCreativeTemplate',
   'executive-standard': 'ExecutiveStandardTemplate',
-  'ats-classic': 'ATSClassicTemplate'
+  'ats-classic': 'ATSClassicTemplate',
+  'the-modern-cv': 'TheModernCVTemplate'
 } as const;
 
 export type CustomTemplateKey = keyof typeof CUSTOM_TEMPLATES;

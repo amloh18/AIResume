@@ -68,13 +68,14 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Set cookie
+    // Set cookie (use base domain in production to avoid duplicates across subdomains)
     response.cookies.set('admin-token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 24 * 60 * 60, // 24 hours
       path: '/',
+      ...(process.env.NODE_ENV === 'production' ? { domain: '.cvcircle.io' } : {}),
     });
 
     return response;

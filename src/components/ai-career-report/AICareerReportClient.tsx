@@ -112,42 +112,10 @@ function AICareerReportContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#1A261A]">
-      {/* Background Effects */}
-      <div className="absolute inset-0">
-        <motion.div 
-          className="absolute top-1/4 left-1/4 w-96 h-96 bg-lime-400/10 rounded-full blur-3xl"
-          animate={{
-            scale: [1, 1.2, 1],
-            opacity: [0.3, 0.6, 0.3],
-            x: [0, 50, 0],
-            y: [0, -30, 0],
-          }}
-          transition={{
-            duration: 8,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-        />
-        <motion.div 
-          className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl"
-          animate={{
-            scale: [1.2, 1, 1.2],
-            opacity: [0.4, 0.7, 0.4],
-            x: [0, -40, 0],
-            y: [0, 40, 0],
-          }}
-          transition={{
-            duration: 8,
-            repeat: Infinity,
-            ease: "easeInOut",
-            delay: 2
-          }}
-        />
-      </div>
+    <div className="min-h-screen bg-[#1A201A]">
 
       {/* Header */}
-      <div className="relative z-10">
+      <div className="relative z-10 bg-[#1A261A]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
             {/* Left side - Back button, Logo, and Step Information */}
@@ -168,41 +136,19 @@ function AICareerReportContent() {
               {/* Logo */}
               <div className="flex items-center gap-3">
                 <div className="text-2xl font-bold">
-                  <span className="text-lime-500">CV</span>
-                  <span className="text-gray-900 dark:text-white">CIRCLE</span>
+                  <span className="text-white">CV</span>
+                  <span className="text-white">CIRCLE</span>
                 </div>
-                <div className="text-sm text-gray-600 dark:text-white/60 bg-lime-400/20 px-2 py-1 rounded-full">
+                <div className="text-sm text-white bg-lime-400/20 px-2 py-1 rounded-full">
                   AI Career Guide
                 </div>
               </div>
 
               {/* Step Information - Inline after logo */}
               <div className="flex items-center gap-4 ml-8">
-                <div className="h-8 w-px bg-gray-300 dark:bg-white/20"></div>
                 <div className="flex flex-col">
-                  {state.currentStep === 1 && (
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="flex items-center">
-                        <div className="text-[#80FF00] font-bold text-sm">Step 1 of 3</div>
-                      </div>
-                      <div className="flex flex-col">
-                        <div className="text-lg font-bold text-gray-900 dark:text-white">Create Your CV</div>
-                        <div className="text-gray-600 dark:text-white/70 text-xs">Choose how you'd like to start.</div>
-                      </div>
-                    </div>
-                  )}
-                  {state.currentStep === 2 && (
-                    <>
-                      <div className="text-[#80FF00] font-bold text-sm">Step 2 of 3</div>
-                      <div className="text-lg font-bold text-gray-900 dark:text-white">Details Sections</div>
-                      <div className="text-gray-600 dark:text-white/70 text-xs">Review and edit your CV sections.</div>
-                    </>
-                  )}
                   {state.currentStep === 3 && (
                     <>
-                      <div className="text-[#80FF00] font-bold text-sm">Step 3 of 3</div>
-                      <div className="text-lg font-bold text-gray-900 dark:text-white">Your Career Report</div>
-                      <div className="text-gray-600 dark:text-white/70 text-xs">AI-powered analysis and career insights.</div>
                     </>
                   )}
                 </div>
@@ -224,15 +170,26 @@ function AICareerReportContent() {
                 </motion.div>
               )}
               
-              {/* Authentication buttons */}
+              {/* CV Preview and Authentication buttons */}
               {session?.user ? (
-                <button
-                  onClick={() => signOut({ callbackUrl: '/' })}
-                  className="flex items-center gap-2 px-4 py-2 text-gray-600 dark:text-white/70 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors"
-                >
-                  <LogOut size={16} />
-                  Logout
-                </button>
+                <>
+                  {(state.currentStep === 2 || state.currentStep === 3) && (
+                    <button
+                      onClick={() => setShowPreview(true)}
+                      className="flex items-center gap-2 px-4 py-2 bg-[#80FF00] text-black rounded-lg font-medium transition-colors hover:bg-[#70e600]"
+                    >
+                      <Eye size={16} />
+                      CV Preview
+                    </button>
+                  )}
+                  <button
+                    onClick={() => signOut({ callbackUrl: '/' })}
+                    className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-[5px] transition-colors"
+                  >
+                    <LogOut size={16} />
+                    Logout
+                  </button>
+                </>
               ) : state.currentStep === 3 && (
                 <button
                   onClick={() => router.push(`/sign-in?callbackUrl=${encodeURIComponent('/ai-career-report?step=3')}`)}
@@ -297,10 +254,10 @@ export default function AICareerReportClient() {
   return (
     <AICareerReportProvider>
       <Suspense fallback={
-        <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black flex items-center justify-center">
+        <div className="min-h-screen bg-[#1A201A] flex items-center justify-center">
           <div className="text-center">
             <div className="w-8 h-8 border-2 border-lime-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-white/60">Loading AI Career Guide...</p>
+            <p className="text-white">Loading AI Career Guide...</p>
           </div>
         </div>
       }>

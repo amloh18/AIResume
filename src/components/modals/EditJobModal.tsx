@@ -559,21 +559,21 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
         exit={{ opacity: 0 }}
       >
         <motion.div
-          className="bg-white dark:bg-[#1a230f] border border-gray-200 dark:border-lime-500/20 rounded-2xl p-6 pb-0 w-full max-w-7xl max-h-[95vh] overflow-hidden shadow-2xl"
+          className="bg-[#1A201A] border border-white/10 rounded-2xl p-6 pb-0 w-full max-w-7xl max-h-[95vh] overflow-hidden shadow-2xl"
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
         >
-          <div className="text-gray-900 dark:text-gray-900 dark:text-white">
+          <div className="text-white">
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">
+              <h2 className="text-2xl font-bold text-white">
                 Add New Job Application
               </h2>
               
               <motion.button
                 onClick={handleClose}
-                className="p-2 text-gray-600 dark:text-gray-900 dark:text-white/60 hover:text-gray-900 dark:hover:text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-white/10 rounded-xl transition-colors"
+                className="p-2 text-white/60 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
               >
@@ -587,99 +587,99 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
               <div className="space-y-3">
                 {/* Basic Information */}
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-900 dark:text-white mb-2">Basic Information</h3>
+                  <h3 className="text-lg font-semibold text-white mb-2">Basic Information</h3>
                   
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-gray-700 dark:text-gray-900 dark:text-white/80 text-sm font-medium mb-1">Job Title</label>
+                      <label className="block text-white/80 text-sm font-medium mb-1">Job Title</label>
                       <input
                         type="text"
                         value={formData.jobTitle || ''}
                         onChange={(e) => handleFormChange('jobTitle', e.target.value)}
-                        className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
+                        className="w-full px-3 py-2 bg-[#232f1c] border border-white/20 text-white placeholder-white/50 text-sm focus:border-[#80FF00]/50 focus:outline-none rounded-lg"
                         placeholder="Enter job title"
                         maxLength={100}
                       />
-                      <div className="text-gray-500 dark:text-gray-900 dark:text-white/50 text-xs mt-1">{jobTitleCount}/100</div>
+                      <div className="text-white/50 text-xs mt-1">{jobTitleCount}/100</div>
                     </div>
                     
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-gray-700 dark:text-gray-900 dark:text-white/80 text-sm font-medium mb-1">Company</label>
+                        <label className="block text-white/80 text-sm font-medium mb-1">Company</label>
                         <input
                           type="text"
                           value={formData.company || ''}
                           onChange={(e) => handleFormChange('company', e.target.value)}
-                          className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
+                          className="w-full px-3 py-2 bg-[#232f1c] border border-white/20 text-white placeholder-white/50 text-sm focus:border-[#80FF00]/50 focus:outline-none rounded-lg"
                           placeholder="Enter company name"
                           maxLength={100}
                         />
-                        <div className="text-gray-500 dark:text-gray-900 dark:text-white/50 text-xs mt-1">{companyCount}/100</div>
+                        <div className="text-white/50 text-xs mt-1">{companyCount}/100</div>
                       </div>
                       <div>
-                        <label className="block text-gray-700 dark:text-gray-900 dark:text-white/80 text-sm font-medium mb-1">Location</label>
+                        <label className="block text-white/80 text-sm font-medium mb-1">Location</label>
                         <input
                           type="text"
                           value={formData.location || ''}
                           onChange={(e) => handleFormChange('location', e.target.value)}
-                          className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
+                          className="w-full px-3 py-2 bg-[#232f1c] border border-white/20 text-white placeholder-white/50 text-sm focus:border-[#80FF00]/50 focus:outline-none rounded-lg"
                           placeholder="Enter location"
                         />
                       </div>
                     </div>
                     
                     <div>
-                      <label className="block text-gray-700 dark:text-gray-900 dark:text-white/80 text-sm font-medium mb-1">Job URL</label>
+                      <label className="block text-white/80 text-sm font-medium mb-1">Job URL</label>
                       <input
                         type="url"
                         value={formData.jobUrl || ''}
                         onChange={(e) => handleFormChange('jobUrl', e.target.value)}
-                        className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
+                        className="w-full px-3 py-2 bg-[#232f1c] border border-white/20 text-white placeholder-white/50 text-sm focus:border-[#80FF00]/50 focus:outline-none rounded-lg"
                         placeholder="https://company.com/job-posting"
                       />
                     </div>
                     
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-gray-700 dark:text-gray-900 dark:text-white/80 text-sm font-medium mb-1">App Date</label>
+                        <label className="block text-white/80 text-sm font-medium mb-1">App Date</label>
                         <div className="relative">
                           <input
                             type="date"
                             value={formData.applicationDate || ''}
                             onChange={(e) => handleFormChange('applicationDate', e.target.value)}
-                            className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border-gray-300 dark:border-lime-500/20 rounded-xl text-gray-900 dark:text-white text-sm focus:border-lime-400/50 focus:outline-none"
+                            className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border-gray-300 dark:border-white/20 rounded-xl text-white text-sm focus:border-lime-400/50 focus:outline-none"
                             placeholder="mm/dd/yyyy"
                           />
-                          <Calendar size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-900 dark:text-white/50" />
+                          <Calendar size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50" />
                         </div>
                       </div>
                       
                       <div>
-                        <label className="block text-gray-700 dark:text-gray-900 dark:text-white/80 text-sm font-medium mb-1">Deadline</label>
+                        <label className="block text-white/80 text-sm font-medium mb-1">Deadline</label>
                         <div className="relative">
                           <input
                             type="date"
                             value={formData.deadline || ''}
                             onChange={(e) => handleFormChange('deadline', e.target.value)}
-                            className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border-gray-300 dark:border-lime-500/20 rounded-xl text-gray-900 dark:text-white text-sm focus:border-lime-400/50 focus:outline-none"
+                            className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border-gray-300 dark:border-white/20 rounded-xl text-white text-sm focus:border-lime-400/50 focus:outline-none"
                             placeholder="mm/dd/yyyy"
                           />
-                          <Calendar size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-900 dark:text-white/50" />
+                          <Calendar size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50" />
                         </div>
                       </div>
                     </div>
                     
                     <div>
-                      <label className="block text-gray-700 dark:text-gray-900 dark:text-white/80 text-sm font-medium mb-1">Priority</label>
-                      <div className="flex bg-[#232f1c] rounded-xl p-1 border border-lime-500/20">
+                      <label className="block text-white/80 text-sm font-medium mb-1">Priority</label>
+                      <div className="flex bg-[#232f1c] rounded-xl p-1 border border-white/20">
                         {['low', 'medium', 'high'].map((priority) => (
                           <button
                             key={priority}
                             onClick={() => handleFormChange('priority', priority)}
                             className={`flex-1 px-3 py-2 text-sm font-medium transition-all ${
                               formData.priority === priority
-                                ? 'bg-lime-500 text-gray-900 dark:text-white rounded-xl'
-                                : 'text-gray-900 dark:text-white/70 hover:text-gray-900 dark:text-white rounded-lg'
+                                ? 'bg-[#80FF00] text-black rounded-xl'
+                                : 'text-white/70 hover:text-white rounded-lg'
                             }`}
                           >
                             {priority.charAt(0).toUpperCase() + priority.slice(1)}
@@ -692,28 +692,28 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
 
                 {/* Salary Information */}
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Salary Information</h3>
+                  <h3 className="text-lg font-semibold text-white mb-2">Salary Information</h3>
                   
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-gray-700 dark:text-gray-900 dark:text-white/80 text-sm font-medium mb-1">Min Salary</label>
+                        <label className="block text-white/80 text-sm font-medium mb-1">Min Salary</label>
                         <input
                           type="number"
                           value={formData.salary?.min || ''}
                           onChange={(e) => handleFormChange('salary', { ...formData.salary, min: e.target.value ? parseInt(e.target.value) : undefined })}
-                          className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
+                          className="w-full px-3 py-2 bg-[#232f1c] border border-white/20 text-white placeholder-white/50 text-sm focus:border-[#80FF00]/50 focus:outline-none rounded-lg"
                           placeholder="e.g. 80000"
                         />
                       </div>
                       
                       <div>
-                        <label className="block text-gray-700 dark:text-gray-900 dark:text-white/80 text-sm font-medium mb-1">Max Salary</label>
+                        <label className="block text-white/80 text-sm font-medium mb-1">Max Salary</label>
                         <input
                           type="number"
                           value={formData.salary?.max || ''}
                           onChange={(e) => handleFormChange('salary', { ...formData.salary, max: e.target.value ? parseInt(e.target.value) : undefined })}
-                          className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
+                          className="w-full px-3 py-2 bg-[#232f1c] border border-white/20 text-white placeholder-white/50 text-sm focus:border-[#80FF00]/50 focus:outline-none rounded-lg"
                           placeholder="e.g. 120000"
                         />
                       </div>
@@ -721,11 +721,11 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
                     
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-gray-700 dark:text-gray-900 dark:text-white/80 text-sm font-medium mb-1">Currency</label>
+                        <label className="block text-white/80 text-sm font-medium mb-1">Currency</label>
                         <select
                           value={formData.salary?.currency || 'USD'}
                           onChange={(e) => handleFormChange('salary', { ...formData.salary, currency: e.target.value })}
-                          className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border-gray-300 dark:border-lime-500/20 rounded-xl text-gray-900 dark:text-white text-sm focus:border-lime-400/50 focus:outline-none"
+                          className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border-gray-300 dark:border-white/20 rounded-xl text-white text-sm focus:border-lime-400/50 focus:outline-none"
                         >
                           <option value="USD">USD</option>
                           <option value="EUR">EUR</option>
@@ -735,16 +735,16 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
                       </div>
                       
                       <div>
-                        <label className="block text-gray-700 dark:text-gray-900 dark:text-white/80 text-sm font-medium mb-1">Period</label>
-                        <div className="flex bg-[#232f1c] rounded-xl p-1 border border-lime-500/20">
+                        <label className="block text-white/80 text-sm font-medium mb-1">Period</label>
+                        <div className="flex bg-[#232f1c] rounded-xl p-1 border border-white/20">
                           {['yearly', 'monthly', 'hourly'].map((period) => (
                             <button
                               key={period}
                               onClick={() => handleFormChange('salary', { ...formData.salary, period })}
                               className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-all ${
                                 formData.salary?.period === period
-                                  ? 'bg-lime-500 text-gray-900 dark:text-white rounded-xl'
-                                  : 'text-gray-900 dark:text-white/70 hover:text-gray-900 dark:text-white'
+                                  ? 'bg-[#80FF00] text-black rounded-xl'
+                                  : 'text-white/70 hover:text-white'
                               }`}
                             >
                               {period.charAt(0).toUpperCase() + period.slice(1)}
@@ -758,15 +758,15 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
 
                 {/* Tags */}
                 <div>
-                  <label className="block text-gray-700 dark:text-gray-900 dark:text-white/80 text-sm font-medium mb-1">Tags</label>
+                  <label className="block text-white/80 text-sm font-medium mb-1">Tags</label>
                   <input
                     type="text"
                     value={formData.tags?.join(', ') || ''}
                     onChange={(e) => handleFormChange('tags', e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0))}
-                    className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
+                    className="w-full px-3 py-2 bg-[#232f1c] border border-white/20 text-white placeholder-white/50 text-sm focus:border-[#80FF00]/50 focus:outline-none rounded-lg"
                     placeholder="Remote, Full-time, FinTech"
                   />
-                  <div className="text-gray-500 dark:text-gray-900 dark:text-white/50 text-xs mt-1">Separate tags with commas</div>
+                  <div className="text-white/50 text-xs mt-1">Separate tags with commas</div>
                 </div>
               </div>
 
@@ -774,18 +774,18 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
               <div className="space-y-3">
                 {/* Job Description */}
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Job Description</h3>
+                  <h3 className="text-lg font-semibold text-white mb-2">Job Description</h3>
                   
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <label className="block text-gray-700 dark:text-gray-900 dark:text-white/80 text-sm font-medium">Job Description</label>
-                      <div className="text-gray-500 dark:text-gray-900 dark:text-white/50 text-xs">{jobDescriptionCount}/2000</div>
+                      <label className="block text-white/80 text-sm font-medium">Job Description</label>
+                      <div className="text-white/50 text-xs">{jobDescriptionCount}/2000</div>
                     </div>
                     <textarea
                       rows={10}
                       value={formData.jobDescription || ''}
                       onChange={(e) => handleFormChange('jobDescription', e.target.value)}
-                      className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none resize-none"
+                      className="w-full px-3 py-2 bg-[#232f1c] border border-white/20 text-white placeholder-white/50 text-sm focus:border-[#80FF00]/50 focus:outline-none rounded-lg resize-none"
                       placeholder="Paste the job description here..."
                       maxLength={2000}
                     />
@@ -794,20 +794,20 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
 
                 {/* Additional Information */}
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Additional Information</h3>
+                  <h3 className="text-lg font-semibold text-white mb-2">Additional Information</h3>
                   
                   <div className="space-y-2">
                     <div>
-                      <label className="block text-gray-700 dark:text-gray-900 dark:text-white/80 text-sm font-medium mb-1">Sponsorship</label>
-                      <div className="flex bg-[#232f1c] rounded-xl p-1 border border-lime-500/20">
+                      <label className="block text-white/80 text-sm font-medium mb-1">Sponsorship</label>
+                      <div className="flex bg-[#232f1c] rounded-xl p-1 border border-white/20">
                         {['unknown', 'yes', 'no'].map((sponsorship) => (
                           <button
                             key={sponsorship}
                             onClick={() => handleFormChange('sponsorship', sponsorship)}
                             className={`flex-1 px-3 py-2 text-sm font-medium transition-all ${
                               formData.sponsorship === sponsorship
-                                ? 'bg-lime-500 text-gray-900 dark:text-white rounded-xl'
-                                : 'text-gray-900 dark:text-white/70 hover:text-gray-900 dark:text-white rounded-lg'
+                                ? 'bg-[#80FF00] text-black rounded-xl'
+                                : 'text-white/70 hover:text-white rounded-lg'
                             }`}
                           >
                             {sponsorship.charAt(0).toUpperCase() + sponsorship.slice(1)}
@@ -817,48 +817,48 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
                     </div>
                     
                     <div>
-                      <label className="block text-gray-700 dark:text-gray-900 dark:text-white/80 text-sm font-medium mb-1">Contact Details</label>
+                      <label className="block text-white/80 text-sm font-medium mb-1">Contact Details</label>
                       <div className="space-y-2">
                         <div className="grid grid-cols-2 gap-2">
                           <div>
-                            <label className="block text-gray-900 dark:text-white/60 text-xs mb-1">Name</label>
+                            <label className="block text-white/60 text-xs mb-1">Name</label>
                             <input
                               type="text"
                               value={formData.contactDetails?.name || ''}
                               onChange={(e) => handleFormChange('contactDetails', { ...formData.contactDetails, name: e.target.value })}
-                              className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
+                              className="w-full px-3 py-2 bg-[#232f1c] border border-white/20 text-white placeholder-white/50 text-sm focus:border-[#80FF00]/50 focus:outline-none rounded-lg"
                               placeholder="HR Manager"
                             />
                           </div>
                           <div>
-                            <label className="block text-gray-900 dark:text-white/60 text-xs mb-1">Role</label>
+                            <label className="block text-white/60 text-xs mb-1">Role</label>
                             <input
                               type="text"
                               value={formData.contactDetails?.role || ''}
                               onChange={(e) => handleFormChange('contactDetails', { ...formData.contactDetails, role: e.target.value })}
-                              className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
+                              className="w-full px-3 py-2 bg-[#232f1c] border border-white/20 text-white placeholder-white/50 text-sm focus:border-[#80FF00]/50 focus:outline-none rounded-lg"
                               placeholder="HR Manager"
                             />
                           </div>
                         </div>
                         <div className="grid grid-cols-2 gap-2">
                           <div>
-                            <label className="block text-gray-900 dark:text-white/60 text-xs mb-1">Email</label>
+                            <label className="block text-white/60 text-xs mb-1">Email</label>
                             <input
                               type="email"
                               value={formData.contactDetails?.email || ''}
                               onChange={(e) => handleFormChange('contactDetails', { ...formData.contactDetails, email: e.target.value })}
-                              className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
+                              className="w-full px-3 py-2 bg-[#232f1c] border border-white/20 text-white placeholder-white/50 text-sm focus:border-[#80FF00]/50 focus:outline-none rounded-lg"
                               placeholder="hr@company.com"
                             />
                           </div>
                           <div>
-                            <label className="block text-gray-900 dark:text-white/60 text-xs mb-1">Phone</label>
+                            <label className="block text-white/60 text-xs mb-1">Phone</label>
                             <input
                               type="tel"
                               value={formData.contactDetails?.phone || ''}
                               onChange={(e) => handleFormChange('contactDetails', { ...formData.contactDetails, phone: e.target.value })}
-                              className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none"
+                              className="w-full px-3 py-2 bg-[#232f1c] border border-white/20 text-white placeholder-white/50 text-sm focus:border-[#80FF00]/50 focus:outline-none rounded-lg"
                               placeholder="+1 (555) 123-4567"
                             />
                           </div>
@@ -870,18 +870,18 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
 
                 {/* Notes */}
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Notes</h3>
+                  <h3 className="text-lg font-semibold text-white mb-2">Notes</h3>
                   
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <label className="block text-gray-700 dark:text-gray-900 dark:text-white/80 text-sm font-medium">Notes</label>
-                      <div className="text-gray-500 dark:text-gray-900 dark:text-white/50 text-xs">{notesCount}/500</div>
+                      <label className="block text-white/80 text-sm font-medium">Notes</label>
+                      <div className="text-white/50 text-xs">{notesCount}/500</div>
                     </div>
                     <textarea
                       rows={6}
                       value={formData.notes || ''}
                       onChange={(e) => handleFormChange('notes', e.target.value)}
-                      className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 text-sm focus:border-lime-400/50 focus:outline-none resize-none"
+                      className="w-full px-3 py-2 bg-[#232f1c] border border-white/20 text-white placeholder-white/50 text-sm focus:border-[#80FF00]/50 focus:outline-none rounded-lg resize-none"
                       placeholder="Add any personal notes here..."
                       maxLength={500}
                     />
@@ -891,11 +891,11 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
             </div>
 
             {/* Action Buttons */}
-            <div className="flex items-center justify-end mt-2 pt-2 pb-2 border-t border-lime-500/20">
+            <div className="flex items-center justify-end mt-2 pt-2 pb-2 border-t border-white/20">
               <motion.button
                 onClick={() => handleSaveJob(false)}
                 disabled={isSaving}
-                className="px-6 py-2.5 bg-lime-600 text-gray-900 dark:text-white font-semibold rounded-xl hover:bg-lime-700 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-2.5 bg-[#80FF00] text-black font-semibold rounded-xl hover:bg-[#70e600] transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
@@ -928,15 +928,15 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
             >
-              <div className="text-gray-900 dark:text-white text-center">
+              <div className="text-white text-center">
                 <h3 className="text-lg font-semibold mb-1">Unsaved Changes</h3>
-                <p className="text-gray-900 dark:text-white/70 text-sm mb-2">
+                <p className="text-white/70 text-sm mb-2">
                   You have unsaved changes. Are you sure you want to close without saving?
                 </p>
                 <div className="flex gap-3 justify-center">
                   <motion.button
                     onClick={() => setShowUnsavedWarning(false)}
-                    className="px-4 py-2 bg-white/10 hover:bg-white/20 text-gray-900 dark:text-white rounded-xl text-sm font-medium transition-all"
+                    className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm font-medium transition-all"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
@@ -944,7 +944,7 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
                   </motion.button>
                   <motion.button
                     onClick={handleConfirmClose}
-                    className="px-4 py-2 bg-red-500 hover:bg-red-600 text-gray-900 dark:text-white rounded-xl text-sm font-medium transition-all"
+                    className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl text-sm font-medium transition-all"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
@@ -972,14 +972,14 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
             >
-              <div className="text-gray-900 dark:text-white text-center">
+              <div className="text-white text-center">
                 <div className="flex items-center justify-center mb-2">
                   <div className="p-3 bg-red-500/20 rounded-full">
                     <AlertCircle size={24} className="text-red-400" />
                   </div>
                 </div>
-                <h3 className="text-lg font-semibold mb-1 text-gray-900 dark:text-white">Error Saving Job</h3>
-                <p className="text-gray-900 dark:text-white/70 text-sm mb-6">
+                <h3 className="text-lg font-semibold mb-1 text-white">Error Saving Job</h3>
+                <p className="text-white/70 text-sm mb-6">
                   {errorMessage}
                 </p>
                 <div className="flex gap-3 justify-center">

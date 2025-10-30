@@ -1294,12 +1294,20 @@ const Analytics: React.FC = () => {
     };
   }, [startPageLoad, endPageLoad]);
 
-  // Show page with partial data - always render structure immediately
+  // Show skeleton until either data resolves or we have any critical data to fill the layout
   const hasCriticalData = userProfile && (cvs.length > 0 || jobs.length > 0);
   const showPartialData = !loading || hasCriticalData;
 
+  if (!showPartialData) {
+    return (
+      <div className="dashboard-page space-y-4 pb-0">
+        <AnalyticsSkeleton />
+      </div>
+    );
+  }
+
   return (
-    <div className="dashboard-page space-y-4">
+    <div className="dashboard-page space-y-4 pb-0">
       {/* Page Header */}
       <PageHeader
         title={`Hello, ${getUserDisplayName(userProfile)}`}
@@ -1320,7 +1328,7 @@ const Analytics: React.FC = () => {
 
       {/* First Row: CV Management and Recent Applications */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="flex w-full">
+        <div className="flex w-full min-h-[320px]">
           <CVManagementSection
             cvHealthScore={cvHealthScore}
             cvs={cvs}
@@ -1347,7 +1355,7 @@ const Analytics: React.FC = () => {
             jobs={jobs}
           />
         </div>
-        <div className="flex w-full">
+        <div className="flex w-full min-h-[320px]">
           <RecentJobsWidget
             jobs={jobs}
             onViewJob={(jobId) => window.location.href = `/dashboard/application-tracker?job=${jobId}`}
@@ -1358,14 +1366,9 @@ const Analytics: React.FC = () => {
 
       {/* Second Row: Progress Tracking and Intelligence Dashboard */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2">
-          {userId ? (
-            <ProgressTrackingWidget userId={userId} />
-          ) : (
-            <div className="glass-widget-premium rounded-xl p-6 text-center">
-              <div className="text-white/60">Loading progress data...</div>
-            </div>
-          )}
+        <div className="lg:col-span-2 min-h-[360px]">
+          {/* Always render widget; it will use mock data until userId is ready */}
+          <ProgressTrackingWidget userId={userId || ''} />
         </div>
         <div className="lg:col-span-1">
           <ApplicationHub
@@ -1380,20 +1383,30 @@ const Analytics: React.FC = () => {
         </div>
       </div>
 
-      {/* Third Row: CV Journeys Widget */}
-      <AnalyticsJourneyWidget
-        onResumeJourney={(journey) => {
-          // Navigate to Application Journey page and resume the specific journey
-          window.location.href = `/dashboard/application-journey?resume=${journey.id}`;
-        }}
-        onDeleteJourney={(journeyId) => {
-          // TODO: Implement delete journey functionality
-        }}
-        onViewJourney={(journey) => {
-          // TODO: Implement view journey functionality
-          window.location.href = `/dashboard/application-journey`;
-        }}
-      />
+      {/* Third Row: CV Journeys and Application Stats */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2 min-h-[400px]">
+          <AnalyticsJourneyWidget
+            onResumeJourney={(journey) => {
+              // Navigate to Application Journey page and resume the specific journey
+              window.location.href = `/dashboard/application-journey?resume=${journey.id}`;
+            }}
+            onDeleteJourney={(journeyId) => {
+              // TODO: Implement delete journey functionality
+            }}
+            onViewJourney={(journey) => {
+              // TODO: Implement view journey functionality
+              window.location.href = `/dashboard/application-journey`;
+            }}
+          />
+        </div>
+        <div className="lg:col-span-1 min-h-[400px] flex">
+          {/* Always render widget; it will show mock/fallback if needed */}
+          <div className="flex-1">
+            <ApplicationStatsWidget userId={userId || ''} />
+          </div>
+        </div>
+      </div>
 
       {/* Fourth Row: Performance Insights - Full Width */}
           <PerformanceInsights
@@ -1403,13 +1416,6 @@ const Analytics: React.FC = () => {
             selectedPeriod={selectedPeriod}
             onPeriodChange={setSelectedPeriod}
       />
-
-      {/* Fifth Row: Application Stats - Full Width */}
-      {userId && (
-        <div className="w-full">
-          <ApplicationStatsWidget userId={userId} />
-        </div>
-      )}
 
       {/* Enhanced Payment Modal */}
       <UniversalPaymentModal

@@ -58,8 +58,12 @@ const TopBar: React.FC<TopBarProps> = ({
 
           {/* Logo/Brand */}
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-lime-500 rounded-lg flex items-center justify-center">
-              <span className="text-black font-bold text-sm">CV</span>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center">
+              <img 
+                src="/images/Logo.png" 
+                alt="CVCircle Logo" 
+                className="w-8 h-8 object-contain"
+              />
             </div>
             <span className="text-white font-semibold text-lg hidden sm:block">
               <span className="text-lime-400">CV</span><span className="text-gray-300">Circle</span>

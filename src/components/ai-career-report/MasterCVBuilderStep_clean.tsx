@@ -67,16 +67,7 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   const [showPreview, setShowPreview] = useState(false);
   const [showAddSectionModal, setShowAddSectionModal] = useState(false);
-
-  // Initialize available sections if empty
-  React.useEffect(() => {
-    if (state.availableSections.length === 0) {
-      dispatch({
-        type: 'SET_AVAILABLE_SECTIONS',
-        payload: sections
-      });
-    }
-  }, [dispatch, state.availableSections.length]);
+  const [availableSections, setAvailableSections] = useState(sections);
 
   const updateCVData = (field: string, value: any) => {
     dispatch({
@@ -163,16 +154,10 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
   };
 
   const addNewSection = (sectionId: string) => {
-    console.log('Adding new section:', sectionId);
-    
     // Add to available sections
     const sectionToAdd = additionalSections.find(s => s.id === sectionId);
     if (sectionToAdd) {
-      dispatch({
-        type: 'ADD_SECTION',
-        payload: sectionToAdd
-      });
-      console.log('Section added to available sections:', sectionToAdd);
+      setAvailableSections(prev => [...prev, sectionToAdd]);
     }
 
     // Initialize CV data for the new section
@@ -224,7 +209,6 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
         break;
     }
     
-    console.log('CV data after adding section:', state.cvData);
     setShowAddSectionModal(false);
   };
 
@@ -557,7 +541,7 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
             <div>
               <label className="block text-white/80 text-sm font-medium mb-2">Technical Skills</label>
               <textarea
-                value={state.cvData.skills?.map(skill => typeof skill === 'string' ? skill : (skill as any).name).join(', ') || ''}
+                value={state.cvData.skills?.map(skill => skill.name).join(', ') || ''}
                 onChange={(e) => {
                   const skillNames = e.target.value.split(',').map(name => name.trim()).filter(name => name);
                   const skills = skillNames.map(name => ({ name, level: 'Intermediate' }));
@@ -1018,10 +1002,10 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
                     <label className="block text-white/80 text-sm font-medium mb-2">Position</label>
                     <input
                       type="text"
-                      value={(ref as any).position || ''}
+                      value={ref.position || ''}
                       onChange={(e) => {
                         const updatedReferences = [...(state.cvData.references || [])];
-                        updatedReferences[index] = { ...updatedReferences[index], position: e.target.value } as any;
+                        updatedReferences[index] = { ...updatedReferences[index], position: e.target.value };
                         updateCVData('references', updatedReferences);
                       }}
                       className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
@@ -1033,10 +1017,10 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
                     <label className="block text-white/80 text-sm font-medium mb-2">Company</label>
                     <input
                       type="text"
-                      value={(ref as any).company || ''}
+                      value={ref.company || ''}
                       onChange={(e) => {
                         const updatedReferences = [...(state.cvData.references || [])];
-                        updatedReferences[index] = { ...updatedReferences[index], company: e.target.value } as any;
+                        updatedReferences[index] = { ...updatedReferences[index], company: e.target.value };
                         updateCVData('references', updatedReferences);
                       }}
                       className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
@@ -1221,12 +1205,22 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
               </div>
             </div>
             
+            {/* Preview Button */}
+            <motion.button
+              onClick={() => setShowPreview(true)}
+              className="w-full flex items-center justify-center md:justify-start gap-2 px-2 md:px-4 py-2 bg-[#333333] text-white hover:bg-[#444444] rounded-lg transition-colors font-medium border border-white/20"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <Eye size={16} />
+              <span className="text-xs md:text-sm hidden md:block">CV Preview</span>
+            </motion.button>
           </div>
           
           {/* Section Navigation */}
           <div className="flex-1 p-2 md:p-4 space-y-2 overflow-y-auto">
-            {state.availableSections.map((section) => {
-              const IconComponent = section.icon;
+            {availableSections.map((section) => {
+              const Icon = section.icon;
               const isActive = state.activeSection === section.id;
               
               return (
@@ -1245,7 +1239,7 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
                   whileTap={{ scale: 0.98 }}
                   title={section.title}
                 >
-                  {React.createElement(IconComponent, { size: 18 })}
+                  <Icon size={18} />
                   <span className="font-medium text-xs md:text-sm hidden md:block">{section.title}</span>
                 </motion.button>
               );
@@ -1270,7 +1264,7 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
       <div className="flex-1 overflow-y-auto h-full">
         <div className="p-6">
           {/* Dynamic Sections */}
-          {state.availableSections.map((section, index) => renderSection(section, index))}
+          {availableSections.map((section, index) => renderSection(section, index))}
 
           {/* Bottom Navigation */}
           <div className="flex items-center justify-between mt-12 pt-8 border-t border-white/10">
@@ -1318,8 +1312,8 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
             
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {additionalSections.map((section) => {
-                const IconComponent = section.icon;
-                const isAlreadyAdded = state.availableSections.some(s => s.id === section.id);
+                const Icon = section.icon;
+                const isAlreadyAdded = availableSections.some(s => s.id === section.id);
                 
                 return (
                   <motion.button
@@ -1334,7 +1328,7 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
                     whileTap={!isAlreadyAdded ? { scale: 0.95 } : {}}
                     disabled={isAlreadyAdded}
                   >
-                    {React.createElement(IconComponent, { size: 32 })}
+                    <Icon size={32} />
                     <span className="font-medium text-sm text-center">{section.title}</span>
                     {isAlreadyAdded && (
                       <span className="text-xs text-white/50">Already Added</span>

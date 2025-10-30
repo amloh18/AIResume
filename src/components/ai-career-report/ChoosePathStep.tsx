@@ -23,14 +23,38 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
       const formData = new FormData();
       formData.append('file', file);
       
+      // Add timeout to prevent hanging requests
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      
       const response = await fetch('/api/cv/parse', {
         method: 'POST',
-        body: formData
+        body: formData,
+        headers: {
+          'Accept': 'application/json',
+        },
+        signal: controller.signal
       });
       
+      clearTimeout(timeoutId);
+      
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to parse CV');
+        const errorText = await response.text();
+        console.error('CV parsing failed with response:', errorText);
+        
+        // Check if response is HTML (error page)
+        if (errorText.trim().startsWith('<!DOCTYPE') || errorText.trim().startsWith('<html')) {
+          throw new Error(`Server error: ${response.status} ${response.statusText}. Please try again later.`);
+        }
+        
+        // Try to parse as JSON
+        try {
+          const errorData = JSON.parse(errorText);
+          throw new Error(errorData.error || 'Failed to parse CV');
+        } catch (parseError) {
+          // If it's not JSON, provide a generic error with more context
+          throw new Error(`Failed to parse CV. Server returned: ${response.status} ${response.statusText}`);
+        }
       }
       
       const result = await response.json();
@@ -63,7 +87,22 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
       }
     } catch (error) {
       console.error('CV parsing error:', error);
-      dispatch({ type: 'SET_UPLOAD_ERROR', payload: error instanceof Error ? error.message : 'An error occurred while parsing the CV' });
+      
+      let errorMessage = 'An error occurred while parsing the CV';
+      
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          errorMessage = 'Request timed out. Please try again with a smaller file.';
+        } else if (error.message.includes('Failed to fetch')) {
+          errorMessage = 'Network error. Please check your connection and try again.';
+        } else if (error.message.includes('Server error')) {
+          errorMessage = error.message;
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      dispatch({ type: 'SET_UPLOAD_ERROR', payload: errorMessage });
     } finally {
       dispatch({ type: 'SET_UPLOADING', payload: false });
     }
@@ -144,114 +183,169 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen p-4">
-        <div className="w-full max-w-6xl">
-          {/* Main Content */}
-          <div className="text-center mb-8">
-            <p className="text-white/80 text-lg">Choose how you'd like to start.</p>
-          </div>
-
-          {/* Main Content Cards */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            {/* Upload CV Card */}
-            <motion.div
-              className={`bg-[#263326] rounded-xl p-8 transition-all duration-300 ${
-                selectedOption === 'upload' ? 'ring-2 ring-[#80FF00]' : ''
-              }`}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <div className="text-center">
-                <div className="w-16 h-16 bg-[#80FF00] rounded-lg flex items-center justify-center mx-auto mb-6">
-                  <Upload className="h-8 w-8 text-black" />
-                </div>
-                
-                <h3 className="text-2xl font-bold text-white mb-4">Upload CV</h3>
-                <p className="text-white/80 mb-6">
-                  Have a CV already? Upload it here and we'll parse the information to fill out the fields for you.
-                </p>
-
-                {selectedOption !== 'upload' ? (
-                  <button
-                    onClick={() => setSelectedOption('upload')}
-                    className="bg-[#80FF00] text-black px-8 py-4 rounded-lg font-semibold text-lg hover:bg-[#70e600] transition-colors"
-                  >
-                    Choose File
-                  </button>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="border-2 border-dashed border-white/40 rounded-lg p-8 text-center">
-                      <Upload className="h-12 w-12 text-white/60 mx-auto mb-4" />
-                      <h4 className="text-lg font-semibold text-white mb-2">Drag & drop your file here</h4>
-                      <p className="text-white/60 mb-2">or</p>
-                      <button
-                        onClick={() => fileInputRef.current?.click()}
-                        className="text-[#80FF00] font-bold underline hover:text-[#70e600] transition-colors"
-                      >
-                        browse files
-                      </button>
-                      <p className="text-white/60 text-sm mt-2">PDF, DOC, DOCX up to 10MB</p>
-                    </div>
-
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                      onChange={handleFileSelect}
-                      className="hidden"
-                    />
-
-                    {state.uploadError && (
-                      <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <X className="h-4 w-4" />
-                          {state.uploadError}
-                        </div>
-                      </div>
-                    )}
-
-                    {state.isUploading && (
-                      <div className="p-4 bg-[#80FF00]/10 border border-[#80FF00]/20 rounded-lg text-[#80FF00] text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[#80FF00]"></div>
-                          Processing your CV...
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </motion.div>
-
-            {/* Start from Scratch Card */}
-            <motion.div
-              className={`bg-[#263326] rounded-xl p-8 transition-all duration-300 ${
-                selectedOption === 'manual' ? 'ring-2 ring-[#80FF00]' : ''
-              }`}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <div className="text-center">
-                <div className="w-16 h-16 bg-[#80FF00] rounded-lg flex items-center justify-center mx-auto mb-6">
-                  <FileText className="h-8 w-8 text-black" />
-                </div>
-                
-                <h3 className="text-2xl font-bold text-white mb-4">Start from Scratch</h3>
-                <p className="text-white/80 mb-6">
-                  Don't have a CV or want a fresh start? Fill out your information manually for a customized result.
-                </p>
-
-                <button
-                  onClick={handleManualStart}
-                  className="bg-[#80FF00] text-black px-8 py-4 rounded-lg font-semibold text-lg hover:bg-[#70e600] transition-colors flex items-center gap-3 mx-auto"
-                >
-                  Create Manually
-                  <ArrowRight className="h-5 w-5" />
-                </button>
-              </div>
-            </motion.div>
-          </div>
+    <div className="min-h-screen bg-[#1A201A] flex items-center justify-center p-4">
+      <div className="w-full max-w-7xl">
+        {/* Header Section */}
+        <div className="text-center mb-8">
+          
+          {/* Step Information */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className="mb-8"
+          >
+            <div className="text-[#80FF00] font-bold text-lg mb-2">Step 1 of 3</div>
+          </motion.div>
+          
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className="text-4xl md:text-5xl font-bold text-white mb-6"
+          >
+            Choose Your Path to Success
+          </motion.h1>
+          
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="text-xl text-white/70 max-w-2xl mx-auto leading-relaxed"
+          >
+            Get personalized career insights and recommendations tailored to your experience level and goals.
+          </motion.p>
         </div>
+
+        {/* Main Content Cards */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-5xl mx-auto">
+          {/* Upload CV Card */}
+          <motion.div
+            initial={{ opacity: 0, x: -50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className={`relative bg-[#263326] rounded-2xl p-8 transition-all duration-300 ${
+              selectedOption === 'upload' ? 'ring-2 ring-[#80FF00] shadow-2xl shadow-[#80FF00]/20' : 'hover:shadow-xl hover:shadow-black/20'
+            }`}
+            whileHover={{ scale: 1.02, y: -5 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            {/* Background Pattern */}
+            <div className="absolute inset-0 rounded-2xl bg-[#80FF00]/5 opacity-50"></div>
+            
+            <div className="relative z-10">
+              <div className="text-center mb-8">
+                <div className="w-20 h-20 bg-gradient-to-br from-[#80FF00] to-[#70e600] rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-[#80FF00]/30">
+                  <Upload className="h-10 w-10 text-black" />
+                </div>
+                
+                <h3 className="text-3xl font-bold text-white mb-4">Upload Your CV</h3>
+                <p className="text-white/70 text-lg leading-relaxed mb-8">
+                  Have an existing CV? Upload it and we'll analyze your experience to provide personalized career insights.
+                </p>
+              </div>
+
+              {selectedOption !== 'upload' ? (
+                <button
+                  onClick={() => setSelectedOption('upload')}
+                  className="w-full bg-gradient-to-r from-[#80FF00] to-[#70e600] text-black px-8 py-4 rounded-xl font-semibold text-lg hover:from-[#70e600] hover:to-[#60d600] transition-all duration-300 shadow-lg shadow-[#80FF00]/30 hover:shadow-xl hover:shadow-[#80FF00]/40"
+                >
+                  Choose File
+                </button>
+              ) : (
+                <div className="space-y-6">
+                  <div className="border-2 border-dashed border-white/20 rounded-xl p-8 text-center bg-white/5 backdrop-blur-sm">
+                    <Upload className="h-16 w-16 text-white/40 mx-auto mb-4" />
+                    <h4 className="text-xl font-semibold text-white mb-2">Drag & drop your file here</h4>
+                    <p className="text-white/50 mb-4">or</p>
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="text-[#80FF00] font-bold text-lg underline hover:text-[#70e600] transition-colors"
+                    >
+                      browse files
+                    </button>
+                    <p className="text-white/50 text-sm mt-4">PDF, DOC, DOCX up to 10MB</p>
+                  </div>
+
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+
+                  {state.uploadError && (
+                    <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-center backdrop-blur-sm">
+                      <div className="flex items-center justify-center gap-2">
+                        <X className="h-5 w-5" />
+                        <span className="font-medium">{state.uploadError}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {state.isUploading && (
+                    <div className="p-4 bg-[#80FF00]/10 border border-[#80FF00]/30 rounded-xl text-[#80FF00] text-center backdrop-blur-sm">
+                      <div className="flex items-center justify-center gap-3">
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#80FF00]"></div>
+                        <span className="font-medium">Processing your CV...</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </motion.div>
+
+          {/* Start from Scratch Card */}
+          <motion.div
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+            className={`relative bg-[#263326] rounded-2xl p-8 transition-all duration-300 ${
+              selectedOption === 'manual' ? 'ring-2 ring-[#80FF00] shadow-2xl shadow-[#80FF00]/20' : 'hover:shadow-xl hover:shadow-black/20'
+            }`}
+            whileHover={{ scale: 1.02, y: -5 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            {/* Background Pattern */}
+            <div className="absolute inset-0 rounded-2xl bg-[#80FF00]/5 opacity-50"></div>
+            
+            <div className="relative z-10">
+              <div className="text-center mb-8">
+                <div className="w-20 h-20 bg-gradient-to-br from-[#80FF00] to-[#70e600] rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-[#80FF00]/30">
+                  <FileText className="h-10 w-10 text-black" />
+                </div>
+                
+                <h3 className="text-3xl font-bold text-white mb-4">Start Fresh</h3>
+                <p className="text-white/70 text-lg leading-relaxed mb-8">
+                  Don't have a CV yet? No problem! We'll guide you through creating one from scratch with our smart builder.
+                </p>
+              </div>
+
+              <button
+                onClick={handleManualStart}
+                className="w-full bg-gradient-to-r from-[#80FF00] to-[#70e600] text-black px-8 py-4 rounded-xl font-semibold text-lg hover:from-[#70e600] hover:to-[#60d600] transition-all duration-300 shadow-lg shadow-[#80FF00]/30 hover:shadow-xl hover:shadow-[#80FF00]/40 flex items-center justify-center gap-3"
+              >
+                Create Manually
+                <ArrowRight className="h-5 w-5" />
+              </button>
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Bottom Info */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.5 }}
+          className="text-center mt-16"
+        >
+          <p className="text-white/50 text-sm">
+            Both options will lead to the same comprehensive AI career analysis
+          </p>
+        </motion.div>
+      </div>
     </div>
   );
 }

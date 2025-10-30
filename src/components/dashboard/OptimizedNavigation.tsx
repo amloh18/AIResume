@@ -114,13 +114,12 @@ const OptimizedNavigation: React.FC = () => {
           whileTap={{ scale: 0.95 }}
         >
           {/* Logo Icon */}
-          <div className="w-8 h-8 bg-gradient-to-br from-lime-400 to-lime-600 rounded-lg flex items-center justify-center shadow-lg">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="12" cy="12" r="10" stroke="white" strokeWidth="2"/>
-              <path d="M8 12h8" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-              <path d="M12 8v8" stroke="white" strokeWidth="2" strokeLinecap="round"/>
-              <circle cx="12" cy="12" r="3" fill="white"/>
-            </svg>
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center shadow-lg">
+            <img 
+              src="/images/Logo.png" 
+              alt="CVCircle Logo" 
+              className="w-8 h-8 object-contain"
+            />
           </div>
           {/* Logo Text */}
           <div className="flex items-center">

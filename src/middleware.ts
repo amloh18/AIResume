@@ -78,6 +78,7 @@ export default async function middleware(req: NextRequest) {
     // Allow public API routes
     const publicApiRoutes = [
       '/api/cvs/onboarding',
+      '/api/cv/parse',
       '/api/public',
       '/api/webhooks',
       '/api/health',
@@ -170,7 +171,10 @@ export const config = {
     // Only run for specific API routes that need authentication
     '/api/dashboard/(.*)',
     '/api/profile/(.*)',
-    '/api/cv/(.*)',
+    '/api/cv/create',
+    '/api/cv/update',
+    '/api/cv/delete',
+    '/api/cv/list',
     '/api/jobs/(.*)',
     '/api/cover-letters/(.*)',
   ],
