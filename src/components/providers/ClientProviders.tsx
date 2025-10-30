@@ -12,6 +12,7 @@ import { PaymentModalProvider } from '@/contexts/PaymentModalContext';
 import CookieConsent from '@/components/CookieConsent';
 import { NotificationProvider } from '@/contexts/NotificationContext';
 import { ConsoleLoggerProvider } from '@/contexts/ConsoleLoggerProvider';
+import SessionCleanup from '@/components/SessionCleanup';
 import { setupEventErrorHandling } from '@/lib/utils/errorHandler';
 
 interface ClientProvidersProps {
@@ -33,6 +34,7 @@ function ConditionalProviders({ children }: ClientProvidersProps) {
                 <ConsoleLoggerProvider>
                   <PerformanceMonitor />
                   <CookieConsent />
+                  <SessionCleanup />
                   {children}
                 </ConsoleLoggerProvider>
               </NotificationProvider>
@@ -53,6 +55,7 @@ function ConditionalProviders({ children }: ClientProvidersProps) {
               <ConsoleLoggerProvider>
                 <PerformanceMonitor />
                 <CookieConsent />
+                <SessionCleanup />
                 {children}
               </ConsoleLoggerProvider>
             </NotificationProvider>

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
+import { safeJsonParse } from '@/lib/utils/safeJsonParse';
 import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
 import { 
   FileText, 
@@ -689,7 +690,8 @@ const Canvas: React.FC = () => {
     try {
       const userData = localStorage.getItem('user');
       if (userData) {
-        const parsedUser = JSON.parse(userData);
+        const parsedUser = safeJsonParse(userData);
+        if (!parsedUser) return null;
         // Only return ID if it's a Firebase user
         if (parsedUser.firebaseUid) {
           return parsedUser.id || parsedUser._id;
@@ -704,15 +706,21 @@ const Canvas: React.FC = () => {
   const loadCVs = useCallback(async (userId?: string) => {
     try {
       setLoading(true);
-      const userIdToUse = getUserIdForAPI(user);
+      const userIdToUse = userId || getUserIdForAPI(user);
       
       if (!userIdToUse) {
+        console.log('❌ Canvas - No user ID available for loading CVs');
         setCvs([]);
+        setMasterCVs([]);
         return;
       }
       
+      console.log('🔍 Canvas - Loading CVs with user ID:', userIdToUse);
+      
       // Use unified service to get CVs
+      console.log('🔍 Canvas - Calling UnifiedCVService.getCVs...');
       const result = await UnifiedCVService.getCVs(userIdToUse, { projection: 'summary' });
+      console.log('🔍 Canvas - UnifiedCVService.getCVs result:', result);
       
       if (result && result.length > 0) {
         // Process CVs with unified data structure
@@ -728,7 +736,7 @@ const Canvas: React.FC = () => {
             thumbnail: cv.metadata?.thumbnailUrl,
             description: cv.description || '',
             cvData: cv.cvData || null, // Include CV data for preview
-            template: cv.templateId || null, // Include template data for preview
+            template: cv.template || null, // Include template data for preview
             completionPercentage: calculateCompletionPercentage(cv),
             isMaster: cv.metadata?.isMaster || cv.isMaster || false, // Include master flag - handle both formats
             atsScore: cv.metadata?.atsScore, // Include ATS score
@@ -767,8 +775,9 @@ const Canvas: React.FC = () => {
         // Store both Master CVs and regular CVs
         setCvs(regularCVs);
         setMasterCVs(masterCVs);
+        console.log('✅ Canvas - CVs loaded successfully:', { regular: regularCVs.length, master: masterCVs.length });
       } else {
-        console.log('🔍 Canvas - No CVs found');
+        console.log('🔍 Canvas - No CVs found for user:', userIdToUse);
         setCvs([]);
         setMasterCVs([]);
       }
@@ -1106,7 +1115,7 @@ const Canvas: React.FC = () => {
         const userData = localStorage.getItem('user');
         if (userData) {
           try {
-            const parsedUser = JSON.parse(userData);
+            const parsedUser = safeJsonParse(userData);
             if (parsedUser.firebaseUid) {
               userId = parsedUser.id || parsedUser._id;
             }
@@ -1180,7 +1189,7 @@ const Canvas: React.FC = () => {
         const userData = localStorage.getItem('user');
         if (userData) {
           try {
-            const parsedUser = JSON.parse(userData);
+            const parsedUser = safeJsonParse(userData);
             if (parsedUser.firebaseUid) {
               userId = parsedUser.id || parsedUser._id;
             }
@@ -1355,7 +1364,7 @@ const Canvas: React.FC = () => {
         console.log('🔍 Delete - localStorage user data:', userData);
         if (userData) {
           try {
-            const parsedUser = JSON.parse(userData);
+            const parsedUser = safeJsonParse(userData);
             if (parsedUser.firebaseUid) {
               userId = parsedUser.id || parsedUser._id;
               console.log('🔍 Delete - Parsed user ID from localStorage:', userId);
@@ -1753,6 +1762,12 @@ const Canvas: React.FC = () => {
 
         <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {/* Master CV Card - Always First */}
+          {console.log('🔍 Canvas - Rendering MasterCVCardOverlay with:', {
+            mongoDBUserId,
+            userIdFromAPI: getUserIdForAPI(user),
+            masterCVsLength: masterCVs.length,
+            masterCVs: masterCVs
+          })}
           <MasterCVCardOverlay
             onEditMasterCV={handleEditMasterCV}
             onDuplicateMasterCV={handleDuplicateMasterCV}

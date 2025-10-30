@@ -166,7 +166,18 @@ export async function POST(request: NextRequest) {
 
     console.log('Starting document parsing...');
     const startTime = Date.now();
-    const parsedData = await parseDocument(file);
+    
+    let parsedData;
+    try {
+      parsedData = await parseDocument(file);
+    } catch (parseError) {
+      console.error('Document parsing failed:', parseError);
+      return NextResponse.json(
+        { error: `Failed to parse document: ${parseError instanceof Error ? parseError.message : 'Unknown parsing error'}` },
+        { status: 500 }
+      );
+    }
+    
     const parseTime = Date.now() - startTime;
     
     // Add comprehensive debugging

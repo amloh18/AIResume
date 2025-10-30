@@ -44,15 +44,21 @@ export const authConfig: NextAuthOptions = {
     updateAge: 24 * 60 * 60, // 24 hours
   },
 
-  // Cookie configuration to prevent oversized cookies
+  // Cookie configuration to prevent oversized/duplicated cookies
+  useSecureCookies: process.env.NODE_ENV === 'production',
   cookies: {
     sessionToken: {
-      name: `next-auth.session-token`,
+      // Use __Secure- prefix in production per NextAuth guidance
+      name: process.env.NODE_ENV === 'production'
+        ? '__Secure-next-auth.session-token'
+        : 'next-auth.session-token',
       options: {
         httpOnly: true,
         sameSite: 'lax',
         path: '/',
         secure: process.env.NODE_ENV === 'production',
+        // In prod, scope to base domain to avoid duplicates across subdomains
+        ...(process.env.NODE_ENV === 'production' ? { domain: '.cvcircle.io' } : {}),
         maxAge: 30 * 24 * 60 * 60, // 30 days
       },
     },
@@ -81,12 +87,6 @@ export const authConfig: NextAuthOptions = {
         },
       },
       profile(profile) {
-        console.log('🔐 Google OAuth profile:', {
-          id: profile.sub,
-          email: profile.email,
-          name: profile.name,
-        });
-        
         return {
           id: profile.sub,
           email: profile.email,
@@ -107,7 +107,6 @@ export const authConfig: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          console.log('❌ Missing credentials');
           throw new Error('Please provide email and password');
         }
 
@@ -208,28 +207,10 @@ export const authConfig: NextAuthOptions = {
           }
 
           // Verify the code using the existing verification system
-          const verificationToken = await VerificationToken.findOne({
-            email: credentials.email.toLowerCase(),
-            type: 'passwordless-login',
-            isUsed: false
-          });
-
-          if (!verificationToken) {
-            console.log('❌ No verification token found for passwordless login:', credentials.email);
-            return null;
-          }
-
-          // Check if code is expired
-          if (isCodeExpired(verificationToken.createdAt)) {
-            await VerificationToken.deleteOne({ _id: verificationToken._id });
-            console.log('❌ Verification code expired for passwordless login:', credentials.email);
-            return null;
-          }
-
-          // Verify the code
+          // We verify directly; successful verification will delete the code (one-time use)
           const verificationResult = await VerificationToken.verifyCode(
-            credentials.verificationCode, 
-            credentials.email.toLowerCase(), 
+            credentials.verificationCode,
+            credentials.email.toLowerCase(),
             'passwordless-login'
           );
 
@@ -237,9 +218,6 @@ export const authConfig: NextAuthOptions = {
             console.log('❌ Invalid verification code for passwordless login:', credentials.email);
             return null;
           }
-
-          // Mark token as used
-          await VerificationToken.findByIdAndUpdate(verificationToken._id, { isUsed: true });
 
           // Update last login
           await User.findByIdAndUpdate(user._id, { lastLogin: new Date() });
@@ -443,12 +421,7 @@ export const authConfig: NextAuthOptions = {
       token.subscriptionStatus = (user as any).subscriptionStatus || 'inactive';
     }
 
-    // Handle session updates
-    if (trigger === 'update' && session) {
-      console.log('🔄 JWT callback - session update');
-      // Update token with new session data
-      token = { ...token, ...session };
-    }
+    // Avoid merging entire session into JWT; keeps cookie small to prevent 431
 
     return token;
   },

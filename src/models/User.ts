@@ -456,7 +456,7 @@ userSchema.pre('save', async function(next) {
     
     if (!this.settings) {
       this.settings = {
-        theme: 'auto',
+        theme: 'dark',
         notifications: {
           email: true,
           push: true,

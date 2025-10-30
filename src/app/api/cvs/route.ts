@@ -6,6 +6,7 @@ import { CV, Template, User } from '@/models';
 import { createPaginationOptions, paginateQuery, createErrorResponse } from '@/lib/db-utils';
 import { UnifiedCVAPIResponse, UnifiedCVDocument, UnifiedCVRequest } from '@/types/unified-cv-schema';
 import { getAuthenticatedUser } from '@/lib/auth-helpers';
+import { getTemplateById, isHardcodedTemplate } from '@/lib/templates/template-utils';
 import mongoose from 'mongoose';
 
 // GET - List CVs for a user with comprehensive filtering
@@ -188,6 +189,13 @@ export async function GET(request: NextRequest) {
           templateId: cv.templateId,
           templateName: cv.templateName,
           styling: cv.styling
+        }),
+        ...(projection === 'summary' && {
+          cvData: cv.cvData,
+          templateId: cv.templateId,
+          template: isHardcodedTemplate(cv.templateId?.toString() || '') 
+            ? getTemplateById(cv.templateId?.toString() || '') 
+            : cv.templateId // Include populated template data or hardcoded template
         })
       };
     });

@@ -173,10 +173,16 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
         sessionUserId: session?.user?.id
       });
       
+      if (!userId) {
+        throw new Error('No user ID provided');
+      }
+      
       // Use unified service to get master CV
+      console.log('🔍 MasterCVCardOverlay - Calling UnifiedCVService.getCVs...');
       const allCVs = await UnifiedCVService.getCVs(userId, { 
         projection: 'summary'
       });
+      console.log('🔍 MasterCVCardOverlay - UnifiedCVService.getCVs result:', allCVs);
       
       // Filter for master CVs - handle both old format (isMaster at root) and new format (metadata.isMaster)
       const masterCVs = allCVs.filter(cv => 

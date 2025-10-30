@@ -53,7 +53,8 @@ export const useUnifiedAuth = (): UseUnifiedAuthReturn => {
 
   // Determine authentication status
   const isAuthenticated = !!session?.user;
-  const userId = session?.user?.id || null;
+  // Use unified user id (falls back to email) so it's never null post-login
+  const userId = user?.id || null;
 
   // Error handling
   const error = null; // Add error handling if needed

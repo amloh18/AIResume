@@ -132,7 +132,7 @@ const nextConfig: NextConfig = {
     return config;
   },
   images: {
-    domains: ['ui-avatars.com', 'placehold.co'],
+    domains: ['ui-avatars.com', 'placehold.co', 'lh3.googleusercontent.com'],
   },
   // Performance optimizations
   experimental: {

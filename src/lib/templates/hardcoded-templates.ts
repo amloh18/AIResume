@@ -9,6 +9,7 @@ import { ExecutiveProfessionalLayoutTemplate } from './custom-renderers/Executiv
 import { ExecutiveStandardTemplate } from './custom-renderers/ExecutiveStandardTemplate';
 import { ProfessionalExtendedTemplate } from './custom-renderers/ProfessionalExtendedTemplate';
 import { TechProBlueTemplate } from './custom-renderers/TechProBlueTemplate';
+import { TheModernCVTemplate } from './custom-renderers/TheModernCVTemplate';
 
 // Hardcoded template registry
 export const CustomTemplates = {
@@ -18,7 +19,8 @@ export const CustomTemplates = {
   ExecutiveProfessionalLayoutTemplate,
   ExecutiveStandardTemplate,
   ProfessionalExtendedTemplate,
-  TechProBlueTemplate
+  TechProBlueTemplate,
+  TheModernCVTemplate
 };
 
 // Hardcoded template definitions
@@ -302,6 +304,46 @@ export const HARDCODED_TEMPLATES: ITemplate[] = [
     createdAt: new Date(),
     updatedAt: new Date(),
     customRenderer: 'TechProBlueTemplate'
+  },
+  {
+    _id: 'the-modern-cv-template',
+    id: 'the-modern-cv-template',
+    name: 'The Modern CV',
+    description: 'Contemporary template with modern typography, clean design, and professional layout with sidebar accent',
+    thumbnail: '/templates/IMG_0521.JPG',
+    category: 'cv',
+    categories: ['Modern', 'Professional'],
+    tier: 'free',
+    layoutType: 'two-column',
+    globalStyles: {
+      fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif',
+      primaryColor: '#111827',
+      secondaryColor: '#374151',
+      backgroundColor: '#ffffff',
+      fontSize: '14px',
+      lineHeight: '1.5',
+      spacing: '1.2rem',
+      borderRadius: '0px',
+      boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+      customCSS: ''
+    },
+    columnLayout: {
+      main: {
+        width: '100%',
+        sections: ['personal_header', 'summary', 'work_experience', 'education', 'skills', 'projects', 'languages']
+      }
+    },
+    sectionStyling: {},
+    availableSections: [],
+    templateData: {},
+    isActive: true,
+    isDefault: false,
+    isPublished: true,
+    globalAccess: true,
+    version: 1,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    customRenderer: 'TheModernCVTemplate'
   }
 ];
 

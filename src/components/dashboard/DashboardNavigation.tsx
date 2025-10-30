@@ -171,13 +171,24 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
             className="text-2xl font-bold mb-2 hover:opacity-90 transition-opacity"
           >
             {screenSize === 'tablet' ? (
-              <div className="w-8 h-8 bg-lime-500 rounded-lg flex items-center justify-center">
-                <CheckCircle size={20} className="text-gray-900 dark:text-white" />
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center">
+                <img 
+                  src="/images/Logo.png" 
+                  alt="CVCircle Logo" 
+                  className="w-8 h-8 object-contain"
+                />
               </div>
             ) : (
-              <span className="drop-shadow-lg">
-                <span className="text-lime-400">CV</span><span className="text-gray-600 dark:text-gray-300">Circle</span>
-              </span>
+              <div className="flex items-center gap-2">
+                <img 
+                  src="/images/Logo.png" 
+                  alt="CVCircle Logo" 
+                  className="w-8 h-8 object-contain"
+                />
+                <span className="drop-shadow-lg">
+                  <span className="text-lime-400">CV</span><span className="text-gray-600 dark:text-gray-300">Circle</span>
+                </span>
+              </div>
             )}
           </button>
         </div>

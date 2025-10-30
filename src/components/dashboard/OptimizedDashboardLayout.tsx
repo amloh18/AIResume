@@ -60,7 +60,7 @@ const DashboardContent: React.FC<{ children?: React.ReactNode }> = ({ children }
         <div className="flex flex-col flex-1 xl:pl-[335px]">
           {/* Page Content */}
           <main className="flex-1 overflow-auto">
-            <div className="p-6">
+            <div className="p-6 pb-[10px]">
               <CVCheckRedirect>
                 {children}
               </CVCheckRedirect>

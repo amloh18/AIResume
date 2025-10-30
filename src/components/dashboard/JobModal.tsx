@@ -563,16 +563,16 @@ Best regards,
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
-          className="bg-white dark:bg-[#1a230f] rounded-2xl shadow-2xl border border-gray-200 dark:border-lime-500/20 w-full max-w-6xl max-h-[90vh] overflow-hidden mx-4 sm:mx-0"
+          className="bg-[#1A201A] rounded-2xl shadow-2xl border border-white/10 w-full max-w-6xl max-h-[90vh] overflow-hidden mx-4 sm:mx-0"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-lime-500/20">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Job Application Details</h2>
+          <div className="flex items-center justify-between p-6 border-b border-white/10">
+            <h2 className="text-xl font-semibold text-white">Job Application Details</h2>
             <div className="flex items-center gap-3">
               <motion.button
                 onClick={handleOpenEditModal}
-                className="flex items-center gap-2 px-3 py-2 bg-lime-100 dark:bg-lime-500/20 hover:bg-lime-200 dark:hover:bg-lime-500/30 border border-lime-300 dark:border-lime-500/30 text-lime-600 dark:text-lime-400 rounded-full transition-colors"
+                className="flex items-center gap-2 px-3 py-2 bg-[#80FF00]/20 hover:bg-[#80FF00]/30 border border-[#80FF00]/30 text-[#80FF00] rounded-full transition-colors"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
@@ -581,24 +581,24 @@ Best regards,
               </motion.button>
               <motion.button
                 onClick={onClose}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-lime-500/20 rounded-lg transition-colors"
+                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
-                <X size={20} className="text-gray-400" />
+                <X size={20} className="text-white/60" />
               </motion.button>
             </div>
           </div>
 
           {/* Job Title and Company */}
           <div className="px-6 py-4">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{job.jobTitle}</h1>
-            <p className="text-gray-600 dark:text-gray-400 text-lg">at {job.company}</p>
+            <h1 className="text-2xl font-bold text-white mb-2">{job.jobTitle}</h1>
+            <p className="text-white/70 text-lg">at {job.company}</p>
           </div>
 
           {/* CV Journeys Section */}
           <div className="px-6 py-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">🎯 CV Journeys for this Job</h3>
+            <h3 className="text-lg font-semibold text-white mb-4">🎯 CV Journeys for this Job</h3>
             
             {journeys.length > 0 ? (
               <div className="space-y-4">
@@ -640,15 +640,15 @@ Best regards,
               </div>
             ) : (
               <div className="text-center py-8">
-                <Target size={48} className="text-gray-400 mx-auto mb-4" />
-                <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No CV Journeys Started</h4>
-                <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
+                <Target size={48} className="text-white/40 mx-auto mb-4" />
+                <h4 className="text-lg font-medium text-white mb-2">No CV Journeys Started</h4>
+                <p className="text-white/70 text-sm mb-4">
                   Create your first CV journey to start preparing for this job application.
                 </p>
                 <motion.button
                   onClick={handleCreateJourney}
                   disabled={isCreatingJourney}
-                  className="px-6 py-3 bg-lime-600 hover:bg-lime-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-6 py-3 bg-[#80FF00] hover:bg-[#70e600] text-black rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   whileHover={{ scale: isCreatingJourney ? 1 : 1.02 }}
                   whileTap={{ scale: isCreatingJourney ? 1 : 0.98 }}
                 >
@@ -765,7 +765,7 @@ Best regards,
                 <div className="bg-[#232f1c] border border-lime-500/20 rounded-2xl p-4">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-400">Status</span>
+                      <span className="text-white/60">Status</span>
                       <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                         job.status === 'applied' ? 'bg-lime-500 text-white' :
                         job.status === 'interview' ? 'bg-blue-500 text-white' :
@@ -782,7 +782,7 @@ Best regards,
                     </div>
                     
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-400">Priority</span>
+                      <span className="text-white/60">Priority</span>
                       <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                         job.priority === 'high' ? 'bg-red-500 text-white' :
                         job.priority === 'medium' ? 'bg-yellow-500 text-white' :
@@ -793,8 +793,8 @@ Best regards,
                     </div>
                     
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-400">Sponsorship</span>
-                      <span className="text-gray-300">
+                      <span className="text-white/60">Sponsorship</span>
+                      <span className="text-white/80">
                         {job.sponsorship === 'yes' ? 'Required' : 
                          job.sponsorship === 'no' ? 'Not Required' : 
                          'Unknown'}
@@ -802,18 +802,18 @@ Best regards,
                     </div>
                     
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-400">Salary</span>
-                      <span className="text-gray-300 text-xs">
+                      <span className="text-white/60">Salary</span>
+                      <span className="text-white/80 text-xs">
                         {formatJobSalary(job.salary, fallbacks.defaultSalary)}
                       </span>
                     </div>
                     
                     {job.tags && job.tags.length > 0 && (
                       <div>
-                        <span className="text-gray-400 block mb-2">Tags</span>
+                        <span className="text-white/60 block mb-2">Tags</span>
                         <div className="flex flex-wrap gap-2">
                           {job.tags.map((tag, index) => (
-                            <span key={index} className="px-2 py-1 bg-gray-600 text-gray-300 rounded text-xs">
+                            <span key={index} className="px-2 py-1 bg-white/10 text-white/80 rounded text-xs">
                               {tag}
                             </span>
                           ))}
@@ -826,27 +826,27 @@ Best regards,
                 {/* Job Insights */}
                 <div className="bg-[#232f1c] border border-lime-500/20 rounded-2xl p-4">
                   <div className="flex items-center gap-2 mb-4">
-                    <Star size={16} className="text-lime-400" />
+                    <Star size={16} className="text-[#80FF00]" />
                     <h3 className="text-lg font-semibold text-white">Job Insights</h3>
                   </div>
                   
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-400">Keyword Match Score</span>
-                      <span className="text-lime-400 font-semibold">
+                      <span className="text-white/60">Keyword Match Score</span>
+                      <span className="text-[#80FF00] font-semibold">
                         {insightsLoading ? '...' : `${insights?.keywordMatchScore || 0}%`}
                       </span>
                     </div>
                     
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-400">Company Hiring Trend</span>
+                      <span className="text-white/60">Company Hiring Trend</span>
                       <span className="text-white">
                         {insightsLoading ? '...' : insights?.companyHiringTrend || 'Unknown'}
                       </span>
                     </div>
                     
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-400">Skills Gap</span>
+                      <span className="text-white/60">Skills Gap</span>
                       <span className="text-white">
                         {insightsLoading ? '...' : insights?.skillsGap || 'Unable to analyze'}
                       </span>

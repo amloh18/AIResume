@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
         storageUsed: 0
       },
       settings: {
-        theme: 'auto',
+        theme: 'dark',
         notifications: {
           email: true,
           push: true

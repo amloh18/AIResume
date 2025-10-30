@@ -61,12 +61,15 @@ export default function UnifiedAuthForm({
 
   // Initialize form data only once
   useEffect(() => {
-    const initialData: Record<string, string> = {};
-    fields.forEach(field => {
-      initialData[field.name] = formData[field.name] || '';
-    });
-    setFormData(initialData);
-  }, [fields]); // Keep fields dependency but preserve existing values
+    if (!initializedRef.current) {
+      const initialData: Record<string, string> = {};
+      fields.forEach(field => {
+        initialData[field.name] = '';
+      });
+      setFormData(initialData);
+      initializedRef.current = true;
+    }
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -174,50 +177,51 @@ export default function UnifiedAuthForm({
 
     return (
       <div key={field.name}>
-        <label htmlFor={field.name} className="block text-sm font-medium text-gray-300 mb-2">
-          {field.label}
-        </label>
-        <div className="relative">
-          {field.icon && (
-            <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4">
-              {field.icon}
-            </div>
-          )}
-          <input
-            ref={isFirstField ? firstInputRef : undefined}
-            type={isPasswordField && !showPassword ? 'password' : 'text'}
-            id={field.name}
-            name={field.name}
-            value={formData[field.name] || ''}
-            onChange={handleInputChange}
-            onBlur={() => field.onBlur?.(formData[field.name] || '')}
-            placeholder={field.placeholder}
-            autoComplete={field.autoComplete}
-            required={field.required}
-            className={`w-full ${field.icon ? 'pl-10' : 'pl-4'} ${
-              isPasswordField ? 'pr-12' : 'pr-4'
-            } py-3 bg-black/10 border text-white placeholder-gray-400 focus:ring-2 transition-all duration-200 rounded-xl ${
-              fieldError 
-                ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
-                : 'border-gray-500/30 focus:border-[#88E03F] focus:ring-[#88E03F]'
-            }`}
-          />
-          {isPasswordField && field.showPasswordToggle && (
-            <button
-              type="button"
-              onClick={() => togglePasswordVisibility(field.name)}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
-            >
-              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </button>
-          )}
-          {isValidating[field.name] && (
-            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-              <div className="w-4 h-4 border-2 border-gray-400 border-t-lime-400 rounded-full animate-spin"></div>
-            </div>
-          )}
+        <div className="flex items-center gap-4">
+          <label htmlFor={field.name} className="text-sm font-medium text-white/80 w-24 flex-shrink-0">
+            {field.label}
+          </label>
+          <div className="relative flex-1">
+            {field.icon && (
+              <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4">
+                {field.icon}
+              </div>
+            )}
+            <input
+              ref={isFirstField ? firstInputRef : undefined}
+              type={isPasswordField && !showPassword ? 'password' : 'text'}
+              id={field.name}
+              name={field.name}
+              value={formData[field.name] || ''}
+              onChange={handleInputChange}
+              onBlur={() => field.onBlur?.(formData[field.name] || '')}
+              placeholder={field.placeholder}
+              autoComplete={field.autoComplete}
+              required={field.required}
+              className={`w-full ${field.icon ? 'pl-10' : 'pl-4'} ${
+                isPasswordField ? 'pr-12' : 'pr-4'
+              } py-3 bg-[#232f1c] border text-white placeholder-white/50 focus:ring-2 transition-all duration-200 rounded-xl ${
+                fieldError 
+                  ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
+                  : 'border-white/20 focus:border-[#80FF00] focus:ring-[#80FF00]'
+              }`}
+            />
+            {isPasswordField && field.showPasswordToggle && (
+              <button
+                type="button"
+                onClick={() => togglePasswordVisibility(field.name)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/60 hover:text-white transition-colors"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            )}
+            {isValidating[field.name] && (
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                <div className="w-4 h-4 border-2 border-gray-400 border-t-lime-400 rounded-full animate-spin"></div>
+              </div>
+            )}
+          </div>
         </div>
-        
         {fieldError && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
@@ -242,10 +246,10 @@ export default function UnifiedAuthForm({
           {/* Divider */}
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-600"></div>
+              <div className="w-full border-t border-white/20"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-transparent text-gray-400">Or continue with email</span>
+              <span className="px-2 bg-[#222B22] text-white/60">Or continue with email</span>
             </div>
           </div>
         </div>
@@ -290,7 +294,7 @@ export default function UnifiedAuthForm({
         <motion.button
           type="submit"
           disabled={isLoading}
-          className="w-full bg-[#88E03F] hover:bg-[#88E03F]/90 text-black font-semibold py-3 px-6 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="w-full bg-[#80FF00] hover:bg-[#70e600] text-black font-semibold py-3 px-6 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
         >

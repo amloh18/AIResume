@@ -215,7 +215,7 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
 
   if (loading) {
     return (
-      <div className="glass-widget-premium rounded-xl p-6">
+      <div className="glass-widget-premium rounded-xl p-6 h-full flex flex-col">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1">CV Journeys</h2>
@@ -223,7 +223,7 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
           </div>
         </div>
         
-        <div className="text-center py-6">
+        <div className="text-center py-6 flex-1 flex items-center justify-center">
           <div className="w-16 h-16 bg-gradient-to-br from-blue-400/20 to-blue-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <div className="w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
           </div>
@@ -237,7 +237,7 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
   }
 
   return (
-    <div className="glass-widget-premium rounded-xl p-6">
+    <div className="glass-widget-premium rounded-xl p-6 h-full flex flex-col">
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1">CV Journeys</h2>
@@ -271,7 +271,7 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
       </div>
 
       {incompleteJourneys.length === 0 ? (
-        <div className="text-center py-4">
+        <div className="text-center py-4 flex-1 flex items-center justify-center">
           <motion.div
             className="max-w-md mx-auto"
             initial={{ opacity: 0, y: 20 }}
@@ -287,7 +287,7 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
           </motion.div>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-4 flex-1 min-h-0 flex flex-col">
           {/* New Journey Card */}
           {showNewJourneyCard && (
             <motion.div
@@ -305,8 +305,8 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
             </motion.div>
           )}
           
-          {/* Scrollable Container for Journeys */}
-          <div className="max-h-[505px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
+          {/* Scrollable Container for Journeys - fills available height */}
+          <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
             <div className="space-y-4 pr-2">
               {incompleteJourneys.slice(0, journeysPerPage).map((journey, index) => (
                 <motion.div
