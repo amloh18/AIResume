@@ -10,7 +10,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { useNotifications } from '@/contexts/NotificationContext';
 
 interface CalendarSyncSettingsProps {
   userSettings: any;
@@ -21,7 +20,6 @@ export default function CalendarSyncSettings({ userSettings, onUpdateSettings }:
   const [isLoading, setIsLoading] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
-  const { addNotification } = useNotifications();
 
   const calendarSettings = userSettings?.advanced?.integrations?.calendar || {
     connected: false,
@@ -64,7 +62,7 @@ export default function CalendarSyncSettings({ userSettings, onUpdateSettings }:
       }
     } catch (error) {
       console.error('Error connecting calendar:', error);
-      addNotification({
+      // Removed notification:
         type: 'error',
         title: 'Connection Failed',
         message: 'Failed to connect to Google Calendar. Please try again.',
@@ -92,7 +90,7 @@ export default function CalendarSyncSettings({ userSettings, onUpdateSettings }:
       
       if (data.success) {
         setLastSyncTime(new Date());
-        addNotification({
+        // Removed notification:
           type: 'success',
           title: 'Sync Successful',
           message: `Synced ${data.syncedCount} job applications to your calendar.`,
@@ -103,7 +101,7 @@ export default function CalendarSyncSettings({ userSettings, onUpdateSettings }:
       }
     } catch (error) {
       console.error('Error syncing calendar:', error);
-      addNotification({
+      // Removed notification:
         type: 'error',
         title: 'Sync Failed',
         message: 'Failed to sync job applications to calendar. Please try again.',
@@ -135,7 +133,7 @@ export default function CalendarSyncSettings({ userSettings, onUpdateSettings }:
 
       onUpdateSettings(updatedSettings);
       
-      addNotification({
+      // Removed notification:
         type: 'success',
         title: 'Calendar Disconnected',
         message: 'Your calendar has been disconnected successfully.',
@@ -143,7 +141,7 @@ export default function CalendarSyncSettings({ userSettings, onUpdateSettings }:
       });
     } catch (error) {
       console.error('Error disconnecting calendar:', error);
-      addNotification({
+      // Removed notification:
         type: 'error',
         title: 'Disconnect Failed',
         message: 'Failed to disconnect calendar. Please try again.',

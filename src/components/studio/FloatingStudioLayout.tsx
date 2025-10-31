@@ -17,7 +17,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { getStudioLayoutClasses } from '@/lib/utils/themeUtils';
 import { useSession } from 'next-auth/react';
-import UserAvatar from '@/components/ui/UserAvatar';
+import UserAvatarDropdown from '@/components/ui/UserAvatarDropdown';
 
 
 interface FloatingStudioLayoutProps {
@@ -125,9 +125,9 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
 
         {/* Header - Different for Mobile vs Desktop */}
         {isMobile ? (
-          /* Mobile Header */
+          /* Mobile Header - Sticky */
           <motion.div
-            className="bg-white/95 dark:bg-[#1a230f] border-b border-gray-200/50 dark:border-white/10 shadow-lg p-4"
+            className="sticky top-0 z-30 bg-white/95 dark:bg-[#141810] border-b border-gray-200/50 dark:border-white/10 shadow-lg px-4 py-2"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
@@ -235,7 +235,7 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
 
 
                 {/* User Avatar */}
-                <UserAvatar 
+                <UserAvatarDropdown 
                   user={{
                     name: session?.user?.name || 'User',
                     email: session?.user?.email || 'user@example.com',
@@ -251,9 +251,9 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
             </div>
           </motion.div>
         ) : (
-          /* Desktop Floating Header Panel */
+          /* Desktop Floating Header Panel - Sticky */
           <motion.div
-            className="mx-4 mt-4 bg-white/95 dark:bg-[#1a230f] border border-gray-200/50 dark:border-white/10 shadow-lg rounded-2xl p-4"
+            className="sticky top-0 z-30 mb-4 bg-white/95 dark:bg-[#141810] border-b border-gray-200/50 dark:border-white/10 shadow-lg px-4 py-2"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
@@ -283,9 +283,12 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
                   <div className="text-gray-400 text-xl">/</div>
                   <div className="text-xl font-semibold text-lime-700 dark:text-lime-300">Studio</div>
                 </div>
+              </div>
 
-                {/* Document Title */}
-                <div className="flex items-center gap-3">
+              {/* Center Section - Document Title */}
+              <div className="flex-1 flex items-center justify-center">
+                {headerContent || (
+                  <div className="flex items-center gap-2 max-w-xs">
                   {isEditingTitle ? (
                     <input
                       type="text"
@@ -304,26 +307,34 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
                           setIsEditingTitle(false);
                         }
                       }}
-                      className="text-sm font-medium bg-transparent border-b border-lime-500 outline-none px-2 py-1 text-gray-700 dark:text-gray-300"
+                      className="text-sm font-medium bg-transparent border-b border-lime-500 outline-none px-2 py-1 text-gray-700 dark:text-gray-300 text-center w-full"
                       placeholder="Untitled CV"
                       autoFocus
                     />
                   ) : (
                     <div className="flex items-center space-x-2">
-                      <span className="text-sm font-medium text-gray-600 dark:text-gray-400">{documentTitle}</span>
+                      <span className="text-sm font-medium text-gray-600 dark:text-gray-400 truncate">{documentTitle}</span>
                       {onTitleUpdate && (
                         <button
                           onClick={() => {
                             setTempTitle(documentTitle);
                             setIsEditingTitle(true);
                           }}
-                          className="p-1 text-gray-400 hover:text-lime-600 dark:hover:text-lime-400 transition-colors rounded"
+                          className="p-1 text-gray-400 hover:text-lime-600 dark:hover:text-lime-400 transition-colors rounded flex-shrink-0"
                         >
                           <Edit3 className="h-3 w-3" />
                         </button>
                       )}
                     </div>
                   )}
+                  </div>
+                )}
+              </div>
+
+              {/* Right Section */}
+              <div className="flex items-center gap-3">
+                {/* Save Button */}
+                {onSave && (
                   <button
                     onClick={onSave}
                     disabled={saveStatus === 'saving'}
@@ -353,16 +364,8 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
                       </div>
                     )}
                   </button>
-                </div>
-              </div>
+                )}
 
-              {/* Center Section */}
-              <div className="flex-1 flex items-center justify-center">
-                {headerContent}
-              </div>
-
-              {/* Right Section */}
-              <div className="flex items-center gap-3">
                 {/* Export Menu - Expanding Inline Towards Left on Hover */}
                   {onDownload && (
                   <div className="relative group" data-export-menu>
@@ -469,7 +472,7 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
                 )}
 
                 {/* User Avatar */}
-                <UserAvatar 
+                <UserAvatarDropdown 
                   user={{
                     name: session?.user?.name || 'User',
                     email: session?.user?.email || 'user@example.com',
@@ -489,7 +492,7 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
         {/* Main Content Area - Different Layout for Mobile vs Desktop */}
         {isMobile ? (
           /* Mobile Layout: Right Panel First, Then Left Panel Below */
-          <div className="flex-1 flex flex-col min-h-0 p-4 gap-4">
+          <div className="flex-1 flex flex-col min-h-0 pt-2 pb-4 px-4 gap-4">
             {/* Right Panel - Full Width */}
             <div className="flex-shrink-0 h-1/2 overflow-hidden scrollbar-hide">
               {rightPanel}
@@ -501,22 +504,22 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
             </div>
           </div>
         ) : (
-          /* Desktop Layout - 50/50 Split */
-          <div className="flex-1 flex gap-4 min-h-0 p-4 pr-8">
-            {/* Left Panel - 50% width */}
+          /* Desktop Layout - Sidebar + Content + Preview */
+          <div className="flex-1 flex gap-4 min-h-0 pt-2 pb-4 px-4 pr-8">
+            {/* Left Panel - Flexible width (contains sidebar + content) */}
             <motion.div
-              className={`${layoutClasses.leftPanel} w-1/2 flex-shrink-0 overflow-hidden scrollbar-hide`}
+              className={`${layoutClasses.leftPanel} flex-1 min-w-0 overflow-hidden scrollbar-hide`}
               layout
               transition={{ duration: 0.3 }}
             >
               {leftPanel}
             </motion.div>
 
-            {/* Right Panel - 50% width */}
+            {/* Right Panel - ~40% width (Preview) */}
             <AnimatePresence>
               {rightPanelOpen && rightPanel && (
                 <motion.div
-                  className="w-1/2 flex-shrink-0 overflow-hidden scrollbar-hide"
+                  className="w-[40%] max-w-[45%] flex-shrink-0 overflow-hidden scrollbar-hide"
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 20 }}
