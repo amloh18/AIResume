@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { useNotifications } from '@/contexts/NotificationContext';
 
 export interface ConsoleLogEntry {
   level: 'log' | 'info' | 'warn' | 'error' | 'debug';
@@ -305,102 +304,9 @@ export function useConsoleLogger() {
     };
   }
 
-  const { addNotification } = useNotifications();
-
   const showToastNotification = useCallback((entry: ConsoleLogEntry) => {
-    // Only show user-relevant messages as toast notifications
-    const type = entry.level === 'error' ? 'error' : 
-                 entry.level === 'warn' ? 'warning' : 'info';
-    
-    // Create user-friendly titles
-    const getTitle = (level: string, message: string) => {
-      if (level === 'error') return 'Error';
-      if (level === 'warn') return 'Warning';
-      if (message.toLowerCase().includes('success') || message.toLowerCase().includes('saved')) return 'Success';
-      if (message.toLowerCase().includes('processing') || message.toLowerCase().includes('loading')) return 'Processing';
-      return 'Info';
-    };
-
-    // Determine if notification should be persistent and actionable
-    const shouldBePersistent = entry.level === 'error' || 
-                               entry.message.toLowerCase().includes('failed') ||
-                               entry.message.toLowerCase().includes('error occurred') ||
-                               entry.message.toLowerCase().includes('unable to');
-
-    const shouldBeActionable = entry.message.toLowerCase().includes('verify') ||
-                              entry.message.toLowerCase().includes('complete') ||
-                              entry.message.toLowerCase().includes('update') ||
-                              entry.message.toLowerCase().includes('configure');
-
-    // Create action button for actionable notifications
-    const getActionConfig = (message: string) => {
-      const lowerMessage = message.toLowerCase();
-      
-      if (lowerMessage.includes('verify email')) {
-        return {
-          actionLabel: 'Verify Email',
-          onAction: () => {
-            // Navigate to email verification or resend verification
-            window.location.href = '/dashboard/settings?tab=security';
-          }
-        };
-      }
-      
-      if (lowerMessage.includes('update profile')) {
-        return {
-          actionLabel: 'Update Profile',
-          onAction: () => {
-            window.location.href = '/dashboard/settings?tab=profile';
-          }
-        };
-      }
-      
-      if (lowerMessage.includes('security')) {
-        return {
-          actionLabel: 'Security Settings',
-          onAction: () => {
-            window.location.href = '/dashboard/settings?tab=security';
-          }
-        };
-      }
-      
-      if (lowerMessage.includes('subscription') || lowerMessage.includes('billing')) {
-        return {
-          actionLabel: 'Manage Subscription',
-          onAction: () => {
-            window.location.href = '/dashboard/settings?tab=billing';
-          }
-        };
-      }
-      
-      if (lowerMessage.includes('download') || lowerMessage.includes('export')) {
-        return {
-          actionLabel: 'Download',
-          onAction: () => {
-            // Trigger download or export action
-            console.log('Download action triggered');
-          }
-        };
-      }
-      
-      return null;
-    };
-
-    const actionConfig = shouldBeActionable ? getActionConfig(entry.message) : null;
-
-    // Defer the notification to avoid setState during render
-    setTimeout(() => {
-      addNotification({
-        type,
-        title: getTitle(entry.level, entry.message),
-        message: entry.message,
-        persistent: shouldBePersistent,
-        actionRequired: shouldBeActionable,
-        actionLabel: actionConfig?.actionLabel,
-        onAction: actionConfig?.onAction,
-      });
-    }, 0);
-  }, [addNotification]);
+    // Notification functionality removed
+  }, []);
 
   const showInlineMessage = (entry: ConsoleLogEntry) => {
     // This will be handled by the auth page components

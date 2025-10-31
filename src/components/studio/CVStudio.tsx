@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import FloatingStudioLayout from './FloatingStudioLayout';
-import TabbedStudioPanel from './TabbedStudioPanel';
+import SidebarStudioPanel from './SidebarStudioPanel';
 import ComprehensiveATSAnalyzer from './ComprehensiveATSAnalyzer';
 import DraggableSections from './DraggableSections';
 import CVSectionsAndOrdering from './CVSectionsAndOrdering';
@@ -31,8 +31,11 @@ import {
   Heart,
   Star,
   BookOpen,
-  Users
+  Users,
+  X,
+  Plus
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { UnifiedCVDataStructure, CVDataStructure } from '@/types/unified-cv-schema';
 import { useTemplateStore } from '@/lib/stores/templateStore';
 import { useJobStore } from '@/lib/stores/jobStore';
@@ -50,7 +53,6 @@ import { useJobJourney } from '@/contexts/JobJourneyContext';
 import ActionBlockerDialog from '@/components/modals/ActionBlockerDialog';
 import { CVJourneyLookupService, CVJourneyInfo } from '@/lib/services/cvJourneyLookupService';
 import { ApplicationPackageService } from '@/lib/services/applicationPackageService';
-import { useNotifications } from '@/contexts/NotificationContext';
 import { useDebounce } from '@/hooks/useDebounce';
 // Define fallback templates directly to avoid import issues
 const getFallbackTemplates = () => [
@@ -166,7 +168,6 @@ const CVStudio: React.FC<CVStudioProps> = ({
     right: true
   });
   const [justCreated, setJustCreated] = useState(false);
-  const { addNotification } = useNotifications();
 
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [jobAutoLoadedFromJourney, setJobAutoLoadedFromJourney] = useState(false);
@@ -237,6 +238,12 @@ const CVStudio: React.FC<CVStudioProps> = ({
     'personal_header', 'work_experience', 'skills', 'projects'
   ]));
   const [allSectionsCollapsed, setAllSectionsCollapsed] = useState(false);
+
+  // Sidebar state
+  const [activeSidebarSection, setActiveSidebarSection] = useState<'template' | 'design' | 'ai-report' | 'structure'>('structure');
+  const [activeStructureSection, setActiveStructureSection] = useState<string | null>(null);
+  const [previousStructureSectionIndex, setPreviousStructureSectionIndex] = useState<number>(-1);
+  const [showAddSectionModal, setShowAddSectionModal] = useState(false);
 
   // Action blocker state
   const [showActionBlocker, setShowActionBlocker] = useState(false);
@@ -366,12 +373,6 @@ const CVStudio: React.FC<CVStudioProps> = ({
 
             clearTimeout(saveTimeout);
             setSaveStatus('saved');
-            addNotification({
-              type: 'success',
-              title: 'Cover Letter Updated',
-              message: 'Your cover letter has been saved successfully',
-              persistent: false
-            });
           } else {
             // Check if journey already has a cover letter
             const existingCoverLetterId = journeyInfo?.coverLetterId;
@@ -465,15 +466,6 @@ const CVStudio: React.FC<CVStudioProps> = ({
             clearTimeout(saveTimeout);
             setSaveStatus('saved');
             
-            // Only show notification if not just created to avoid spam
-            if (!justCreated) {
-              addNotification({
-                type: 'success',
-                title: 'Cover Letter Updated',
-                message: 'Your cover letter has been saved successfully',
-                persistent: false
-              });
-            }
 
             setJustCreated(true);
             setTimeout(() => setJustCreated(false), 2000);
@@ -492,15 +484,6 @@ const CVStudio: React.FC<CVStudioProps> = ({
             clearTimeout(saveTimeout);
             setSaveStatus('saved');
             
-            // Only show notification for master CV saves
-            if (isMasterCV) {
-              addNotification({
-                type: 'success',
-                title: 'Master CV Updated',
-                message: 'Your master CV has been saved successfully',
-                persistent: false
-              });
-            }
             
             // Update last saved data
             setLastSavedData(JSON.stringify(data));
@@ -533,12 +516,6 @@ const CVStudio: React.FC<CVStudioProps> = ({
               
               clearTimeout(saveTimeout);
               setSaveStatus('saved');
-              addNotification({
-                type: 'success',
-                title: 'CV Updated',
-                message: 'Your CV has been saved successfully',
-                persistent: false
-              });
               return;
             }
 
@@ -588,15 +565,6 @@ const CVStudio: React.FC<CVStudioProps> = ({
             clearTimeout(saveTimeout);
             setSaveStatus('saved');
             
-            // Only show notification for master CV saves
-            if (isMasterCV) {
-              addNotification({
-                type: 'success',
-                title: 'Master CV Updated',
-                message: 'Your master CV has been saved successfully',
-                persistent: false
-              });
-            }
 
             // Set flag to prevent immediate autosave
             setJustCreated(true);
@@ -910,7 +878,43 @@ const CVStudio: React.FC<CVStudioProps> = ({
       case 'languages':
         return {
           language: '',
-          fluency: ''
+          fluency: 'intermediate'
+        };
+      case 'volunteer':
+        return {
+          organization: '',
+          position: '',
+          startDate: '',
+          endDate: '',
+          summary: '',
+          highlights: []
+        };
+      case 'awards':
+        return {
+          title: '',
+          date: '',
+          awarder: '',
+          summary: ''
+        };
+      case 'publications':
+        return {
+          name: '',
+          publisher: '',
+          releaseDate: '',
+          url: '',
+          summary: ''
+        };
+      case 'interests':
+        return {
+          name: '',
+          keywords: []
+        };
+      case 'references':
+        return {
+          name: '',
+          reference: '',
+          position: '',
+          company: ''
         };
       default:
         return {};
@@ -956,12 +960,6 @@ const CVStudio: React.FC<CVStudioProps> = ({
           }
 
           setSaveStatus('saved');
-          addNotification({
-            type: 'success',
-            title: 'Cover Letter Updated',
-            message: 'Your cover letter has been saved successfully',
-            persistent: false
-          });
         } else {
           console.log('🔍 Studio - Creating new cover letter...');
           const response = await fetch('/api/cover-letters', {
@@ -988,12 +986,6 @@ const CVStudio: React.FC<CVStudioProps> = ({
           console.log('✅ Studio - Cover letter created:', result);
           
           setSaveStatus('saved');
-          addNotification({
-            type: 'success',
-            title: 'Cover Letter Created',
-            message: 'Your cover letter has been saved successfully',
-            persistent: false
-          });
         }
       } else {
         // Save CV
@@ -1021,12 +1013,6 @@ const CVStudio: React.FC<CVStudioProps> = ({
           
           await CVService.updateCV(cvId, updateData, userId || undefined);
           setSaveStatus('saved');
-          addNotification({
-            type: 'success',
-            title: 'CV Updated',
-            message: 'Your CV has been saved successfully',
-            persistent: false
-          });
           setLastSavedData(JSON.stringify(cvData));
           
           // Trigger ATS recalculation if we have a journey and job
@@ -1080,26 +1066,14 @@ const CVStudio: React.FC<CVStudioProps> = ({
           
           console.log('✅ Studio - CV created:', newCV);
           setSaveStatus('saved');
-          addNotification({
-            type: 'success',
-            title: 'CV Created',
-            message: 'Your CV has been saved successfully',
-            persistent: false
-          });
           setLastSavedData(JSON.stringify(cvData));
         }
       }
     } catch (error) {
       console.error('❌ Studio - Save error:', error);
       setSaveStatus('error');
-      addNotification({
-        type: 'error',
-        title: 'Save Failed',
-        message: `Failed to save ${documentType === 'cover-letter' ? 'cover letter' : 'CV'}. Please try again.`,
-        persistent: false
-      });
     }
-  }, [documentType, coverLetterData, coverLetterId, coverLetterTitle, cvData, cvId, cvTitle, userId, selectedTemplate, isMasterCV, selectedJobId, addNotification]);
+  }, [documentType, coverLetterData, coverLetterId, coverLetterTitle, cvData, cvId, cvTitle, userId, selectedTemplate, isMasterCV, selectedJobId]);
 
   // Track if data has actually changed
 
@@ -2876,6 +2850,160 @@ const CVStudio: React.FC<CVStudioProps> = ({
     return icons[sectionId] || User;
   };
 
+  // Shared function to check if section has data - same logic as RestructuredStudioLayout
+  const hasSectionData = (sectionId: string): boolean => {
+    if (!cvData) return false;
+    
+    switch (sectionId) {
+      case 'personal_header':
+        // Always show personal information section
+        return true;
+      case 'work_experience':
+        return Array.isArray(cvData.work) && cvData.work.length > 0;
+      case 'education':
+        return Array.isArray(cvData.education) && cvData.education.length > 0;
+      case 'skills':
+        return Array.isArray(cvData.skills) && cvData.skills.length > 0;
+      case 'projects':
+        return Array.isArray(cvData.projects) && cvData.projects.length > 0;
+      case 'certificates':
+        return Array.isArray(cvData.certificates) && cvData.certificates.length > 0;
+      case 'languages':
+        return Array.isArray(cvData.languages) && cvData.languages.length > 0;
+      case 'volunteer':
+        return Array.isArray(cvData.volunteer) && cvData.volunteer.length > 0;
+      case 'awards':
+        return Array.isArray(cvData.awards) && cvData.awards.length > 0;
+      case 'publications':
+        return Array.isArray(cvData.publications) && cvData.publications.length > 0;
+      case 'interests':
+        return Array.isArray(cvData.interests) && cvData.interests.length > 0;
+      case 'references':
+        return Array.isArray(cvData.references) && cvData.references.length > 0;
+      default:
+        return false;
+    }
+  };
+
+  // Get CV sections for sidebar - synced with structure sections
+  const getCVSectionsForSidebar = () => {
+    if (!cvData) return [];
+    
+    const allSectionIds = ['personal_header', 'work_experience', 'education', 'skills', 'projects', 'certificates', 'languages', 'volunteer', 'awards', 'publications', 'interests', 'references'];
+    
+    // Filter to only show sections with data - same logic as RestructuredStudioLayout
+    const sectionsWithData = allSectionIds.filter(id => hasSectionData(id));
+    
+    return sectionsWithData.map(sectionId => ({
+      id: sectionId,
+      title: getSectionTitle(sectionId),
+      icon: getSectionIcon(sectionId),
+      visible: sectionVisibility[sectionId] !== false
+    }));
+  };
+
+  // Helper to get section title
+  const getSectionTitle = (sectionId: string) => {
+    const titles: Record<string, string> = {
+      personal_header: 'Personal Information',
+      work_experience: 'Work Experience',
+      education: 'Education',
+      skills: 'Skills',
+      projects: 'Projects',
+      certificates: 'Certificates',
+      languages: 'Languages',
+      volunteer: 'Volunteer Experience',
+      awards: 'Awards & Recognition',
+      publications: 'Publications',
+      interests: 'Interests',
+      references: 'References'
+    };
+    return titles[sectionId] || sectionId.charAt(0).toUpperCase() + sectionId.slice(1).replace(/_/g, ' ');
+  };
+
+  // Handle structure section click
+  const handleStructureSectionClick = (sectionId: string) => {
+    const currentIndex = sectionOrder.indexOf(sectionId);
+    const previousIndex = sectionOrder.findIndex(s => s === activeStructureSection);
+    
+    setActiveStructureSection(sectionId);
+    setPreviousStructureSectionIndex(previousIndex);
+    
+    // Scroll to section in the content if needed
+    // This will be handled by FloatingStudioLayout animation
+  };
+
+  // Get available sections that can be added (ones that don't have data yet)
+  const getAvailableSectionsToAdd = () => {
+    const allSectionIds = ['skills', 'projects', 'certificates', 'languages', 'volunteer', 'awards', 'publications', 'interests', 'references'];
+    const sectionTitles: Record<string, string> = {
+      skills: 'Skills',
+      projects: 'Projects',
+      certificates: 'Certificates',
+      languages: 'Languages',
+      volunteer: 'Volunteer Experience',
+      awards: 'Awards & Recognition',
+      publications: 'Publications',
+      interests: 'Interests',
+      references: 'References'
+    };
+    
+    return allSectionIds
+      .filter(sectionId => !hasSectionData(sectionId))
+      .map(sectionId => ({
+        id: sectionId,
+        title: sectionTitles[sectionId],
+        icon: getSectionIcon(sectionId)
+      }));
+  };
+
+  // Handle add section
+  const handleAddSection = () => {
+    setShowAddSectionModal(true);
+  };
+
+  // Add a new section with default data
+  const addNewSection = (sectionId: string) => {
+    if (!cvData) return;
+
+    const defaultData = getDefaultItemForSection(sectionId === 'work_experience' ? 'work' : sectionId as keyof CVDataStructure);
+    const updatedData = { ...cvData };
+
+    switch (sectionId) {
+      case 'skills':
+        updatedData.skills = [...(cvData.skills || []), defaultData];
+        break;
+      case 'projects':
+        updatedData.projects = [...(cvData.projects || []), defaultData];
+        break;
+      case 'certificates':
+        updatedData.certificates = [...(cvData.certificates || []), defaultData];
+        break;
+      case 'languages':
+        updatedData.languages = [...(cvData.languages || []), defaultData];
+        break;
+      case 'volunteer':
+        updatedData.volunteer = [...(cvData.volunteer || []), defaultData];
+        break;
+      case 'awards':
+        updatedData.awards = [...(cvData.awards || []), defaultData];
+        break;
+      case 'publications':
+        updatedData.publications = [...(cvData.publications || []), defaultData];
+        break;
+      case 'interests':
+        updatedData.interests = [...(cvData.interests || []), defaultData];
+        break;
+      case 'references':
+        updatedData.references = [...(cvData.references || []), defaultData];
+        break;
+    }
+
+    setCvData(updatedData);
+    setShowAddSectionModal(false);
+    setActiveStructureSection(sectionId);
+  };
+
   return (
     <>
       <FloatingStudioLayout
@@ -2885,7 +3013,14 @@ const CVStudio: React.FC<CVStudioProps> = ({
         onSave={manualSave}
         onDownload={() => handleExport('pdf')}
         leftPanel={
-          <TabbedStudioPanel
+          <SidebarStudioPanel
+            activeSection={activeSidebarSection}
+            onSectionChange={setActiveSidebarSection}
+            cvSections={getCVSectionsForSidebar()}
+            activeStructureSection={activeStructureSection}
+            onStructureSectionClick={handleStructureSectionClick}
+            onAddSection={handleAddSection}
+            previousStructureSectionIndex={previousStructureSectionIndex}
             structureContent={
               documentType === 'cover-letter' ? (
                 <div className="space-y-6">
@@ -2967,12 +3102,6 @@ const CVStudio: React.FC<CVStudioProps> = ({
                               hasJobData: !!finalJobData
                             });
                             
-                            addNotification({
-                              type: 'error',
-                              title: 'Missing Data',
-                              message: 'Please select both a CV and a job first. If you are in a journey, please wait for the data to load.',
-                              persistent: false
-                            });
                             button.disabled = false;
                             button.textContent = originalText;
                             return;
@@ -3049,12 +3178,6 @@ const CVStudio: React.FC<CVStudioProps> = ({
                           }
                         } catch (error) {
                           console.error('Error generating cover letter:', error);
-                          addNotification({
-                            type: 'error',
-                            title: 'Generation Failed',
-                            message: 'Failed to generate cover letter. Please try again.',
-                            persistent: false
-                          });
                         } finally {
                           // Restore button state
                           button.disabled = false;
@@ -3206,7 +3329,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
                 </div>
               ) : null
             }
-            cvSectionsAndOrderingContent={
+            structureContent={
               documentType === 'cv' && cvData ? (
                 <RestructuredStudioLayout
                   jobData={currentJob}
@@ -3288,7 +3411,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
                 }}
               />
             }
-            jobATSContent={
+            aiReportContent={
               documentType === 'cv' && cvData ? (
                 <ComprehensiveATSAnalyzer
                   selectedJobId={selectedJobId}
@@ -3307,7 +3430,6 @@ const CVStudio: React.FC<CVStudioProps> = ({
                 />
               ) : null
             }
-            documentType={documentType}
           />
         }
         rightPanel={
@@ -3349,6 +3471,78 @@ const CVStudio: React.FC<CVStudioProps> = ({
         onAction={actionBlockerConfig.onAction}
         actionLabel="Go to ATS Editor"
       />
+
+      {/* Add Section Modal */}
+      <AnimatePresence>
+        {showAddSectionModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          >
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+              onClick={() => setShowAddSectionModal(false)}
+            />
+
+            {/* Modal */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="relative w-full max-w-md bg-white dark:bg-[#1a230f] rounded-2xl shadow-2xl border border-gray-200 dark:border-white/10"
+            >
+              {/* Header */}
+              <div className="p-6 border-b border-gray-200 dark:border-white/10">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">Add New Section</h2>
+                  <button
+                    onClick={() => setShowAddSectionModal(false)}
+                    className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">Select a section to add to your CV</p>
+              </div>
+
+              {/* Sections List */}
+              <div className="p-6">
+                {getAvailableSectionsToAdd().length > 0 ? (
+                  <div className="space-y-2">
+                    {getAvailableSectionsToAdd().map((section) => {
+                      const IconComponent = section.icon;
+                      return (
+                        <motion.button
+                          key={section.id}
+                          onClick={() => addNewSection(section.id)}
+                          className="w-full flex items-center gap-3 p-4 rounded-lg border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors text-left"
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          <IconComponent className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                          <span className="font-medium text-gray-900 dark:text-white">{section.title}</span>
+                          <Plus className="h-4 w-4 text-gray-400 dark:text-gray-500 ml-auto" />
+                        </motion.button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-gray-600 dark:text-gray-400">All available sections have been added to your CV.</p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 };

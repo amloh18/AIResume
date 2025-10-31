@@ -53,7 +53,6 @@ import { useUserData, getUserDisplayName, getUserEmail, getUserAvatar } from '@/
 import { authenticatedFetch } from '@/lib/utils/apiUtils';
 import { ApplicationPackageService } from '@/lib/services/applicationPackageService';
 import { UnifiedCVService } from '@/lib/services/unified-cv-service';
-import { useNotifications } from '@/contexts/NotificationContext';
 import MasterCVCardOverlay from './MasterCVCardOverlay';
 import CVCardOverlay from './CVCardOverlay';
 import CoverLetterCardOverlay from './CoverLetterCardOverlay';
@@ -472,7 +471,7 @@ const Canvas: React.FC = () => {
         await createCV({ userId });
       }
     } catch (error) {
-      addToast('error', 'Failed to create CV');
+      // Removed notification:'error', 'Failed to create CV');
     }
   };
 
@@ -488,7 +487,7 @@ const Canvas: React.FC = () => {
       // Navigate to studio with master CV
       window.location.href = `/studio?cvId=${masterCV.id}&master=true`;
     } catch (error) {
-      addToast('error', 'Failed to open master CV');
+      // Removed notification:'error', 'Failed to open master CV');
     }
   };
 
@@ -497,7 +496,7 @@ const Canvas: React.FC = () => {
       
       const userId = getUserIdForAPI(user) || getUserIdFromLocalStorage();
       if (!userId) {
-        addToast('error', 'User not authenticated');
+        // Removed notification:'error', 'User not authenticated');
         return;
       }
 
@@ -514,12 +513,12 @@ const Canvas: React.FC = () => {
         // Navigate to studio with duplicated CV (freestanding, ready for job linking)
         window.location.href = `/studio?cvId=${duplicatedCVId}&mode=document-first`;
         
-        addToast('success', 'Master CV duplicated successfully! You can now link it to a job.');
+        // Removed notification:'success', 'Master CV duplicated successfully! You can now link it to a job.');
       } else {
         throw new Error(duplicateResult.message || 'Failed to duplicate master CV');
       }
     } catch (error) {
-      addToast('error', 'Failed to duplicate master CV');
+      // Removed notification:'error', 'Failed to duplicate master CV');
     }
   };
 
@@ -529,7 +528,7 @@ const Canvas: React.FC = () => {
       
       const userId = getUserIdForAPI(user) || getUserIdFromLocalStorage();
       if (!userId) {
-        addToast('error', 'User not authenticated');
+        // Removed notification:'error', 'User not authenticated');
         return;
       }
 
@@ -543,17 +542,17 @@ const Canvas: React.FC = () => {
       if (duplicateResult.success && duplicateResult.data?.cvId) {
         // Refresh CVs list to show the new freestanding duplicate
         loadCVs();
-        addToast('success', 'CV duplicated successfully! The copy is ready to be linked to a new job.');
+        // Removed notification:'success', 'CV duplicated successfully! The copy is ready to be linked to a new job.');
         
         // If the source CV was linked to a journey, inform user about the duplication principle
         if (cv.journeyId) {
-          addToast('info', 'A new freestanding copy was created. You can now link it to a different job application.', 5000);
+          // Removed notification:'info', 'A new freestanding copy was created. You can now link it to a different job application.', 5000);
         }
       } else {
         throw new Error(duplicateResult.message || 'Failed to duplicate CV');
       }
     } catch (error) {
-      addToast('error', 'Failed to duplicate CV');
+      // Removed notification:'error', 'Failed to duplicate CV');
     }
   };
 
@@ -562,7 +561,7 @@ const Canvas: React.FC = () => {
       // Open download URL in new tab
       window.open(`/api/cvs/download/${cv.id}`, '_blank');
     } catch (error) {
-      addToast('error', 'Failed to download CV');
+      // Removed notification:'error', 'Failed to download CV');
     }
   };
 
@@ -571,9 +570,9 @@ const Canvas: React.FC = () => {
       // Copy shareable link to clipboard
       const shareUrl = `${window.location.origin}/shared/cv/${cv.id}`;
       await navigator.clipboard.writeText(shareUrl);
-      addToast('success', 'Share link copied to clipboard!');
+      // Removed notification:'success', 'Share link copied to clipboard!');
     } catch (error) {
-      addToast('error', 'Failed to share CV');
+      // Removed notification:'error', 'Failed to share CV');
     }
   };
 
@@ -581,7 +580,7 @@ const Canvas: React.FC = () => {
     try {
       await deleteCV(cv.id);
     } catch (error) {
-      addToast('error', 'Failed to delete CV');
+      // Removed notification:'error', 'Failed to delete CV');
     }
   };
 
@@ -606,13 +605,13 @@ const Canvas: React.FC = () => {
           
           setShowJourneyModal(true);
         } else {
-          addToast('error', 'Failed to load job details');
+          // Removed notification:'error', 'Failed to load job details');
         }
       } else {
-        addToast('error', 'Failed to load job details');
+        // Removed notification:'error', 'Failed to load job details');
       }
     } catch (error) {
-      addToast('error', 'Failed to open journey details');
+      // Removed notification:'error', 'Failed to open journey details');
     }
   };
 
@@ -628,8 +627,6 @@ const Canvas: React.FC = () => {
   const [coverLetters, setCoverLetters] = useState<CoverLetter[]>([]);
   const [availableJobs, setAvailableJobs] = useState<Job[]>([]);
   const [linkingJobCVId, setLinkingJobCVId] = useState<string | null>(null);
-  const { notifications, addNotification, markAsRead, markAllAsRead, removeNotification } = useNotifications();
-  const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
   
   // Modal state
   const [modalConfig, setModalConfig] = useState<{
@@ -655,15 +652,6 @@ const Canvas: React.FC = () => {
     setModalConfig(prev => ({ ...prev, isOpen: false }));
   };
 
-  // Notification functions (using unified notification system)
-  const addToast = (type: 'success' | 'error' | 'info', message: string, duration: number = 4000) => {
-    addNotification({
-      type,
-      title: type === 'success' ? 'Success' : type === 'error' ? 'Error' : 'Info',
-      message,
-      persistent: false
-    });
-  };
 
 
   // Load CVs and Cover Letters from API
@@ -1087,18 +1075,18 @@ const Canvas: React.FC = () => {
             
             setShowJourneyModal(true);
           } else {
-            addToast('error', 'Failed to load job details');
+            // Removed notification:'error', 'Failed to load job details');
           }
         } else {
-          addToast('error', 'Failed to load job details');
+          // Removed notification:'error', 'Failed to load job details');
         }
       } else {
         // If no journey found, show a message or create a new journey
-        addToast('info', 'This CV is not linked to any application journey. Please create a journey first.');
+        // Removed notification:'info', 'This CV is not linked to any application journey. Please create a journey first.');
       }
     } catch (error) {
       console.error('Error opening journey details:', error);
-      addToast('error', 'Failed to open journey details');
+      // Removed notification:'error', 'Failed to open journey details');
     }
   };
 
@@ -1201,7 +1189,7 @@ const Canvas: React.FC = () => {
       
       if (!userId) {
         console.error('No user ID available for title update');
-        addToast('error', 'Please log in again to continue.');
+        // Removed notification:'error', 'Please log in again to continue.');
         return;
       }
 
@@ -1221,15 +1209,15 @@ const Canvas: React.FC = () => {
         ));
         setEditingCoverLetterId(null);
         setEditingCoverLetterTitle('');
-        addToast('success', 'Cover letter title updated successfully');
+        // Removed notification:'success', 'Cover letter title updated successfully');
       } else {
         const errorData = await response.json();
         console.error('Error updating cover letter title:', errorData);
-        addToast('error', 'Failed to update cover letter title. Please try again.');
+        // Removed notification:'error', 'Failed to update cover letter title. Please try again.');
       }
     } catch (error) {
       console.error('Error saving cover letter title:', error);
-      addToast('error', 'Error updating cover letter title. Please try again.');
+      // Removed notification:'error', 'Error updating cover letter title. Please try again.');
     }
   };
 
@@ -1242,7 +1230,7 @@ const Canvas: React.FC = () => {
     try {
       const userId = getUserIdForAPI(user);
       if (!userId) {
-        addToast('error', 'User not authenticated');
+        // Removed notification:'error', 'User not authenticated');
         return;
       }
 
@@ -1252,15 +1240,15 @@ const Canvas: React.FC = () => {
 
       if (response.ok) {
         setCoverLetters(coverLetters.filter(cl => cl.id !== coverLetter.id));
-        addToast('success', 'Cover letter deleted successfully');
+        // Removed notification:'success', 'Cover letter deleted successfully');
       } else {
         const errorData = await response.json();
         console.error('Delete cover letter error:', errorData);
-        addToast('error', errorData.error || 'Failed to delete cover letter');
+        // Removed notification:'error', errorData.error || 'Failed to delete cover letter');
       }
     } catch (error) {
       console.error('Error deleting cover letter:', error);
-      addToast('error', 'Error deleting cover letter');
+      // Removed notification:'error', 'Error deleting cover letter');
     }
   };
 
@@ -1269,7 +1257,7 @@ const Canvas: React.FC = () => {
     try {
       const userId = getUserIdForAPI(user);
       if (!userId) {
-        addToast('error', 'User not authenticated');
+        // Removed notification:'error', 'User not authenticated');
         return;
       }
 
@@ -1286,10 +1274,10 @@ const Canvas: React.FC = () => {
 
       // Refresh CVs list
       await loadCVs(userId);
-      addToast('success', `Successfully deleted ${unlinkedCVs.length} unlinked CVs`);
+      // Removed notification:'success', `Successfully deleted ${unlinkedCVs.length} unlinked CVs`);
     } catch (error) {
       console.error('Clean unlinked CVs error:', error);
-      addToast('error', 'Failed to clean unlinked CVs');
+      // Removed notification:'error', 'Failed to clean unlinked CVs');
     }
   };
 
@@ -1298,7 +1286,7 @@ const Canvas: React.FC = () => {
     try {
       const userId = getUserIdForAPI(user);
       if (!userId) {
-        addToast('error', 'User not authenticated');
+        // Removed notification:'error', 'User not authenticated');
         return;
       }
 
@@ -1315,10 +1303,10 @@ const Canvas: React.FC = () => {
 
       // Refresh cover letters list
       await loadCoverLetters();
-      addToast('success', `Successfully deleted ${unlinkedCoverLetters.length} unlinked cover letters`);
+      // Removed notification:'success', `Successfully deleted ${unlinkedCoverLetters.length} unlinked cover letters`);
     } catch (error) {
       console.error('Clean unlinked cover letters error:', error);
-      addToast('error', 'Failed to clean unlinked cover letters');
+      // Removed notification:'error', 'Failed to clean unlinked cover letters');
     }
   };
 
@@ -1339,13 +1327,13 @@ const Canvas: React.FC = () => {
         setCoverLetters(coverLetters.map(cl => 
           cl.id === coverLetterId ? { ...cl, isStarred: !cl.isStarred } : cl
         ));
-        addToast('success', coverLetter.isStarred ? 'Removed from favorites' : 'Added to favorites');
+        // Removed notification:'success', coverLetter.isStarred ? 'Removed from favorites' : 'Added to favorites');
       } else {
-        addToast('error', 'Failed to update favorite status');
+        // Removed notification:'error', 'Failed to update favorite status');
       }
     } catch (error) {
       console.error('Error toggling cover letter star:', error);
-      addToast('error', 'Error updating favorite status');
+      // Removed notification:'error', 'Error updating favorite status');
     }
   };
 
@@ -1433,16 +1421,12 @@ const Canvas: React.FC = () => {
         // Remove the CV from the local state
         setCvs(cvs.filter(cv => cv.id !== cvId));
         // Show success toast and notification
-        addToast('success', 'CV deleted successfully!');
-        addNotification('success', 'CV Deleted', 'Your CV has been successfully deleted.');
       } else {
         console.error('Failed to delete CV:', result.message);
-        addToast('error', `Failed to delete CV: ${result.message}`);
-        addNotification('error', 'Delete Failed', `Failed to delete CV: ${result.message}`);
       }
     } catch (error) {
       console.error('Error deleting CV:', error);
-      addToast('error', 'Error deleting CV. Please try again.');
+      // Removed notification:'error', 'Error deleting CV. Please try again.');
     } finally {
       setDeletingCVId(null);
     }
@@ -1637,10 +1621,6 @@ const Canvas: React.FC = () => {
           subscription: userData?.subscription
         }}
         showSettings={true}
-        notifications={notifications}
-        onMarkAsRead={markAsRead}
-        onMarkAllAsRead={markAllAsRead}
-        onRemoveNotification={removeNotification}
         onMobileMenuToggle={toggleSidebar}
         isMobileMenuOpen={isMobileMenuOpen}
       />
