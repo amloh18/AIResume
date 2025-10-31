@@ -194,7 +194,99 @@ const CVManagementSection: React.FC<{
     return !(isMasterAtRoot || isMasterInMetadata || isMasterInMetadataString);
   });
 
-  
+  // Extract professional profile information from Master CV
+  const getProfessionalProfile = () => {
+    if (!masterCV) {
+      return {
+        experienceLevel: 'Professional',
+        yearsExperience: 0,
+        skillsCount: 0
+      };
+    }
+
+    // Try to get data from Career Report (AI Analysis) first
+    const aiAnalysis = masterCV.metadata?.aiAnalysis;
+    let experienceLevel = 'Professional';
+    let yearsExperience = 0;
+    let skillsCount = 0;
+
+    // Get experience level from AI analysis if available
+    if (aiAnalysis?.experienceLevel?.level) {
+      experienceLevel = aiAnalysis.experienceLevel.level;
+    }
+
+    // Calculate years of experience from work history
+    if (masterCV.cvData?.work && Array.isArray(masterCV.cvData.work) && masterCV.cvData.work.length > 0) {
+      const workEntries = masterCV.cvData.work;
+      
+      // Get all start dates and calculate total experience
+      const startDates = workEntries
+        .map(job => {
+          const startDate = job.startDate;
+          if (!startDate) return null;
+          
+          // Try parsing various date formats
+          const parsedDate = new Date(startDate);
+          if (!isNaN(parsedDate.getTime())) {
+            return parsedDate;
+          }
+          
+          // Try parsing "YYYY-MM" or "MM/YYYY" formats
+          const yearMonthMatch = startDate.match(/(\d{4})[-\/](\d{1,2})/);
+          if (yearMonthMatch) {
+            const year = parseInt(yearMonthMatch[1]);
+            const month = parseInt(yearMonthMatch[2]) - 1; // Month is 0-indexed
+            return new Date(year, month, 1);
+          }
+          
+          // Try parsing just year
+          const yearMatch = startDate.match(/(\d{4})/);
+          if (yearMatch) {
+            const year = parseInt(yearMatch[1]);
+            return new Date(year, 0, 1);
+          }
+          
+          return null;
+        })
+        .filter(date => date !== null && !isNaN(date.getTime()))
+        .sort((a, b) => a!.getTime() - b!.getTime());
+      
+      if (startDates.length > 0 && startDates[0]) {
+        const earliestStart = startDates[0];
+        const now = new Date();
+        const yearsDiff = (now.getTime() - earliestStart.getTime()) / (1000 * 60 * 60 * 24 * 365);
+        yearsExperience = Math.floor(yearsDiff);
+      }
+    }
+
+    // Count skills from CV data
+    if (masterCV.cvData?.skills) {
+      if (Array.isArray(masterCV.cvData.skills)) {
+        // Handle different skill formats
+        skillsCount = masterCV.cvData.skills.reduce((count: number, skill: any) => {
+          if (typeof skill === 'string') {
+            return count + 1;
+          } else if (skill?.name) {
+            return count + 1;
+          } else if (skill?.skills && Array.isArray(skill.skills)) {
+            // If skills are grouped by category
+            return count + skill.skills.length;
+          } else if (skill?.keywords && Array.isArray(skill.keywords)) {
+            return count + skill.keywords.length;
+          }
+          return count;
+        }, 0);
+      }
+    }
+
+    return {
+      experienceLevel,
+      yearsExperience,
+      skillsCount
+    };
+  };
+
+  const profile = getProfessionalProfile();
 
   return (
     <div className="glass-widget-premium rounded-xl p-4 h-full flex flex-col w-full">
@@ -244,8 +336,17 @@ const CVManagementSection: React.FC<{
                     <User size={20} className="text-white" />
                   </div>
                   <div className="flex-1">
-                    <h4 className="text-gray-900 dark:text-white font-bold text-lg">Mid Level Professional</h4>
-                    <p className="text-gray-600 dark:text-white/60 text-sm">3 years experience • 3 skills</p>
+                    <h4 className="text-gray-900 dark:text-white font-bold text-lg">
+                      {profile.experienceLevel}
+                    </h4>
+                    <p className="text-gray-600 dark:text-white/60 text-sm">
+                      {profile.yearsExperience > 0 
+                        ? `${profile.yearsExperience} ${profile.yearsExperience === 1 ? 'year' : 'years'} experience`
+                        : 'No experience listed'
+                      }
+                      {profile.skillsCount > 0 && ` • ${profile.skillsCount} ${profile.skillsCount === 1 ? 'skill' : 'skills'}`}
+                      {profile.yearsExperience === 0 && profile.skillsCount === 0 && ' • Complete your profile'}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -951,8 +1052,9 @@ const PerformanceInsights: React.FC<{
 const RecentJobsWidget: React.FC<{ 
   jobs: any[];
   onViewJob: (jobId: string) => void;
+  onCreateJob?: () => void;
   analyticsData?: any;
-}> = ({ jobs, onViewJob, analyticsData }) => {
+}> = ({ jobs, onViewJob, onCreateJob, analyticsData }) => {
   const [activeView, setActiveView] = useState<'timeline' | 'status'>('timeline');
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -1014,8 +1116,22 @@ const RecentJobsWidget: React.FC<{
       <div className="space-y-2">
         {lastJobs.length === 0 ? (
           <div className="text-center py-8">
-            <div className="text-gray-400 mb-2">No recent applications</div>
-            <div className="text-sm text-gray-500">Start applying to jobs to see them here</div>
+            <div className="text-gray-400 dark:text-white/60 mb-3">
+              <Briefcase className="w-12 h-12 mx-auto mb-3 text-gray-400 dark:text-white/40" />
+              <p className="text-sm font-medium text-gray-600 dark:text-white/80 mb-1">No jobs added yet</p>
+              <p className="text-xs text-gray-500 dark:text-white/60 mb-4">Start tracking your job applications</p>
+            </div>
+            {onCreateJob && (
+              <motion.button
+                onClick={onCreateJob}
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-lime-400 to-lime-500 text-black rounded-lg font-semibold hover:from-lime-300 hover:to-lime-400 transition-all duration-200 mx-auto"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Plus size={16} />
+                Add Job to Start Tracking
+              </motion.button>
+            )}
           </div>
         ) : (
           lastJobs.map((job, index) => (
@@ -1359,6 +1475,7 @@ const Analytics: React.FC = () => {
           <RecentJobsWidget
             jobs={jobs}
             onViewJob={(jobId) => window.location.href = `/dashboard/application-tracker?job=${jobId}`}
+            onCreateJob={() => window.location.href = '/dashboard/application-tracker'}
             analyticsData={analyticsData}
           />
         </div>

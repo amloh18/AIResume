@@ -366,6 +366,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Determine if documents need to be created
+    const needsDocuments = !cvId && !coverLetterId;
+    const initialStatus = needsDocuments ? 'processing_documents' : 'in-progress';
+
     // Prepare journey data for creation
     const journeyData = {
       journeyId: `journey_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -373,7 +377,7 @@ export async function POST(request: NextRequest) {
       jobId,
       cvId: cvId || null,
       coverLetterId: coverLetterId || null,
-      status: 'in-progress',
+      status: initialStatus,
       currentStep: 1,
       totalSteps: steps.length || 5,
       jobTitle,
@@ -531,8 +535,28 @@ export async function POST(request: NextRequest) {
               journeyId: newJourney.journeyId,
               userId: newJourney.userId,
               firebaseUid: newJourney.firebaseUid,
-              jobTitle: newJourney.jobTitle
+              jobTitle: newJourney.jobTitle,
+              status: newJourney.status
             });
+
+            // If documents need to be created, trigger async creation
+            if (needsDocuments && newJourney.status === 'processing_documents') {
+              const baseUrl = process.env.NEXTAUTH_URL || process.env.VERCEL_URL || 'http://localhost:3000';
+              const createUrl = `${baseUrl}/api/journey-documents/create`;
+              
+              fetch(createUrl, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  ...(request.headers.get('cookie') && { Cookie: request.headers.get('cookie')! })
+                },
+                body: JSON.stringify({ journeyId: newJourney._id.toString() })
+              }).catch(error => {
+                console.error('❌ CV Journey POST API - Error triggering document creation:', error);
+              });
+              
+              console.log('🚀 CV Journey POST API - Triggered async document creation for journey:', newJourney._id);
+            }
 
             return NextResponse.json({
               success: true,
@@ -753,8 +777,47 @@ export async function POST(request: NextRequest) {
       journeyId: newJourney.journeyId,
       userId: newJourney.userId,
       firebaseUid: newJourney.firebaseUid,
-      jobTitle: newJourney.jobTitle
+      jobTitle: newJourney.jobTitle,
+      status: newJourney.status
     });
+
+    // If documents need to be created, trigger async creation with better error handling
+    if (needsDocuments && newJourney.status === 'processing_documents') {
+      const baseUrl = process.env.NEXTAUTH_URL || process.env.VERCEL_URL || 'http://localhost:3000';
+      const createUrl = `${baseUrl}/api/journey-documents/create`;
+      
+      // Trigger async document creation with proper error handling
+      fetch(createUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(request.headers.get('cookie') && { Cookie: request.headers.get('cookie')! }),
+          // Pass authorization headers if available
+          ...(request.headers.get('authorization') && { Authorization: request.headers.get('authorization')! })
+        },
+        body: JSON.stringify({ journeyId: newJourney._id.toString() })
+      })
+      .then(async (response) => {
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('❌ CV Journey POST API - Document creation failed:', response.status, errorText);
+        } else {
+          console.log('✅ CV Journey POST API - Document creation triggered successfully');
+        }
+      })
+      .catch(error => {
+        console.error('❌ CV Journey POST API - Error triggering document creation:', error);
+        // Update journey status to failed if the request itself fails
+        ApplicationJourney.findByIdAndUpdate(newJourney._id, {
+          status: 'creation_failed',
+          'metadata.updatedAt': new Date()
+        }).catch(updateError => {
+          console.error('❌ CV Journey POST API - Failed to update journey status:', updateError);
+        });
+      });
+      
+      console.log('🚀 CV Journey POST API - Triggered async document creation for journey:', newJourney._id);
+    }
 
     return NextResponse.json({
       success: true,
@@ -885,15 +948,17 @@ export async function DELETE(request: NextRequest) {
         const cv = await CV.findById(journey.cvId);
         
         if (cv) {
-          // Only delete if it's not a Master CV
-          if (!cv.isMaster && !cv.metadata?.isMaster) {
+          // Hard stop for Master CV protection
+          if (cv.isMaster || cv.metadata?.isMaster) {
+            console.error(`❌ CRITICAL: Attempt to delete Master CV ${cv._id} from journey ${journeyId}. Aborting CV deletion.`);
+            // Do NOT proceed with CV deletion - skip this step
+            console.log('⚠️ CV Journey DELETE API - Skipping Master CV deletion (protected)');
+          } else {
             console.log('🔍 CV Journey DELETE API - Deleting CV:', journey.cvId);
             const cvResult = await CV.findByIdAndDelete(journey.cvId);
             if (cvResult) {
               console.log('✅ CV Journey DELETE API - CV deleted successfully');
             }
-          } else {
-            console.log('⚠️ CV Journey DELETE API - Skipping Master CV deletion');
           }
         } else {
           console.log('⚠️ CV Journey DELETE API - CV not found (already deleted)');

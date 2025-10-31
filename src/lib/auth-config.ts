@@ -67,12 +67,6 @@ export const authConfig: NextAuthOptions = {
   // Secret for signing JWT tokens
   secret: NEXTAUTH_SECRET,
 
-  // Custom pages
-  pages: {
-    signIn: '/sign-in',
-    error: '/auth/error',
-  },
-
   // Authentication providers
   providers: [
     // Google OAuth Provider
@@ -119,44 +113,33 @@ export const authConfig: NextAuthOptions = {
             .lean();
 
           if (!user) {
-            console.log('❌ User not found:', credentials.email);
             return null; // Return null instead of throwing error for better NextAuth handling
           }
 
           // Check if user has a password (OAuth users don't have passwords)
           if (!user.password) {
-            console.log('❌ User has no password (OAuth user):', credentials.email);
             return null; // Return null instead of throwing error
           }
 
           // Verify password
           const userDoc = await User.findOne({ email: credentials.email.toLowerCase() }).select('+password');
           if (!userDoc) {
-            console.log('❌ User document not found for password verification:', credentials.email);
             return null;
           }
 
           const isPasswordValid = await userDoc.comparePassword(credentials.password);
 
           if (!isPasswordValid) {
-            console.log('❌ Invalid password for:', credentials.email);
             return null; // Return null instead of throwing error
           }
 
           // Check if email is verified
           if (!user.isEmailVerified) {
-            console.log('❌ Email not verified:', credentials.email);
             return null; // Return null instead of throwing error
           }
 
           // Update last login
           await User.findByIdAndUpdate(user._id, { lastLogin: new Date() });
-
-          console.log('✅ User authenticated:', {
-            id: user._id.toString(),
-            email: user.email,
-            name: `${user.firstName} ${user.lastName}`,
-          });
 
           return {
             id: user._id.toString(),
@@ -185,7 +168,6 @@ export const authConfig: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.verificationCode) {
-          console.log('❌ Missing passwordless credentials');
           return null;
         }
 
@@ -196,13 +178,11 @@ export const authConfig: NextAuthOptions = {
           const user = await User.findOne({ email: credentials.email.toLowerCase() }).lean();
 
           if (!user) {
-            console.log('❌ User not found for passwordless login:', credentials.email);
             return null;
           }
 
           // Check if user is email verified
           if (!user.isEmailVerified) {
-            console.log('❌ Email not verified for passwordless login:', credentials.email);
             return null;
           }
 
@@ -215,18 +195,11 @@ export const authConfig: NextAuthOptions = {
           );
 
           if (!verificationResult.valid) {
-            console.log('❌ Invalid verification code for passwordless login:', credentials.email);
             return null;
           }
 
           // Update last login
           await User.findByIdAndUpdate(user._id, { lastLogin: new Date() });
-
-          console.log('✅ Passwordless login successful:', {
-            id: user._id.toString(),
-            email: user.email,
-            name: `${user.firstName} ${user.lastName}`,
-          });
 
           return {
             id: user._id.toString(),
@@ -255,7 +228,6 @@ export const authConfig: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          console.log('❌ Missing admin credentials');
           throw new Error('Please provide email and password');
         }
 
@@ -271,38 +243,28 @@ export const authConfig: NextAuthOptions = {
             .lean();
 
           if (!user) {
-            console.log('❌ Admin user not found:', credentials.email);
             return null; // Return null instead of throwing error
           }
 
           // Check if user has a password
           if (!user.password) {
-            console.log('❌ Admin user has no password:', credentials.email);
             return null; // Return null instead of throwing error
           }
 
           // Verify password
           const userDoc = await User.findOne({ email: credentials.email.toLowerCase() }).select('+password');
           if (!userDoc) {
-            console.log('❌ Admin user document not found for password verification:', credentials.email);
             return null;
           }
 
           const isPasswordValid = await userDoc.comparePassword(credentials.password);
 
           if (!isPasswordValid) {
-            console.log('❌ Invalid admin password for:', credentials.email);
             return null; // Return null instead of throwing error
           }
 
           // Update last login
           await User.findByIdAndUpdate(user._id, { lastLogin: new Date() });
-
-          console.log('✅ Admin authenticated:', {
-            id: user._id.toString(),
-            email: user.email,
-            role: user.role,
-          });
 
           return {
             id: user._id.toString(),
@@ -325,44 +287,36 @@ export const authConfig: NextAuthOptions = {
     // Sign-in callback - control who can sign in
     async signIn({ user, account, profile }) {
       try {
-        console.log('🔐 SignIn callback triggered:', {
-          provider: account?.provider,
-          email: user.email,
-          hasAccount: !!account,
-          hasProfile: !!profile
-        });
-
         // Handle OAuth sign-in (Google)
         if (account?.provider === 'google') {
-          console.log('🔐 Google OAuth sign-in:', user.email);
-          
           if (!user.email) {
-            console.error('❌ No email provided by Google OAuth');
+            console.error('❌ Google OAuth: Missing email');
             return false;
           }
-
-          await connectDB();
 
           // Check if user exists
           const userEmail = user.email?.toLowerCase();
           if (!userEmail) {
-            console.error('❌ No email provided by Google OAuth');
+            console.error('❌ Google OAuth: Invalid email');
             return false;
           }
-          
+
+          // Connect to database (v1.8 approach - simple, rely on connection pooling)
+          await connectDB();
+
+          // Check if user exists
           let existingUser = await User.findOne({ email: userEmail });
 
           if (existingUser) {
-            console.log('✅ Existing user found, updating last login');
-            await User.findByIdAndUpdate(existingUser._id, { 
+            // Update existing user (v1.8 approach - simple update)
+            await User.findByIdAndUpdate(existingUser._id, {
               lastLogin: new Date(),
               avatar: user.image || existingUser.avatar,
               isEmailVerified: true, // OAuth users are pre-verified
             });
+            console.log('✅ Existing Google user updated:', existingUser._id);
           } else {
-            console.log('🆕 Creating new user from Google OAuth');
-            
-            // Extract first and last name from Google profile
+            // Create new user (v1.8 approach - minimal fields, let pre-save hook handle defaults)
             const userName = user.name || '';
             const nameParts = userName ? userName.split(' ') : ['User'];
             const firstName = nameParts[0] || 'User';
@@ -374,13 +328,13 @@ export const authConfig: NextAuthOptions = {
               lastName,
               avatar: user.image || null,
               authProvider: 'nextauth',
-              authProviderId: user.id || null,
+              authProviderId: user.id || `google_${account.providerAccountId}`,
               isEmailVerified: true, // OAuth users are pre-verified
               role: 'user',
               currentPlanKey: 'free',
               lastLogin: new Date(),
             });
-            console.log('✅ New user created:', existingUser._id);
+            console.log('✅ New Google user created:', existingUser._id);
           }
 
           // Store user ID in the user object for JWT callback
@@ -396,6 +350,7 @@ export const authConfig: NextAuthOptions = {
           user: user,
           account: account
         });
+        // Return false on error (v1.8 approach - simpler error handling)
         return false;
       }
     },
@@ -461,18 +416,10 @@ export const authConfig: NextAuthOptions = {
   // Events for logging
   events: {
     async signIn({ user, account, profile, isNewUser }) {
-      console.log('📝 User signed in:', {
-        userId: user.id,
-        email: user.email,
-        provider: account?.provider,
-        isNewUser,
-      });
+      // User sign-in event
     },
     async signOut({ token }) {
-      console.log('📝 User signed out:', {
-        userId: token?.id,
-        email: token?.email,
-      });
+      // User sign-out event
     },
   },
 };

@@ -26,6 +26,7 @@ import { getThemeClasses } from '@/lib/utils/themeUtils';
 
 interface Section {
   id: string;
+  type?: string; // Section type (e.g., 'work_experience') for structure-based architecture
   title: string;
   icon: any;
   visible: boolean;

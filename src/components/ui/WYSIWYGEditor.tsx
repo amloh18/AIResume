@@ -1,0 +1,168 @@
+'use client';
+
+import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { Bold, Italic, Underline, List, Undo2, Redo2, Sparkles } from 'lucide-react';
+import { useWYSIWYG } from './useWYSIWYG';
+import { WYSIWYGToolbar } from './WYSIWYGToolbar';
+
+interface WYSIWYGEditorProps {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  rows?: number;
+  className?: string;
+  showAIButton?: boolean;
+  onAIGenerate?: () => void;
+  isGenerating?: boolean;
+  fieldType?: 'summary' | 'experience' | 'other';
+  showToolbar?: boolean;
+}
+
+// Hook to get toolbar props for external rendering
+export function useWYSIWYGToolbarProps(value: string, onChange: (value: string) => void, showAIButton?: boolean, fieldType?: 'summary' | 'experience' | 'other', onAIGenerate?: () => void, isGenerating?: boolean) {
+  const {
+    formatState,
+    undoStack,
+    redoStack,
+    handleBold,
+    handleItalic,
+    handleUnderline,
+    handleBulletList,
+    handleUndo,
+    handleRedo
+  } = useWYSIWYG(value, onChange);
+
+  return {
+    toolbar: (
+      <WYSIWYGToolbar
+        formatState={formatState}
+        undoStack={undoStack}
+        redoStack={redoStack}
+        onBold={handleBold}
+        onItalic={handleItalic}
+        onUnderline={handleUnderline}
+        onBulletList={handleBulletList}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        showAIButton={showAIButton}
+        fieldType={fieldType}
+        onAIGenerate={onAIGenerate}
+        isGenerating={isGenerating}
+      />
+    )
+  };
+}
+
+const WYSIWYGEditor: React.FC<WYSIWYGEditorProps> = ({
+  value,
+  onChange,
+  placeholder = 'Start typing...',
+  rows = 4,
+  className = '',
+  showAIButton = false,
+  onAIGenerate,
+  isGenerating = false,
+  fieldType = 'other',
+  showToolbar = false
+}) => {
+  // Try to use context first, fallback to hook
+  let wysiwyg;
+  try {
+    wysiwyg = useWYSIWYGContext();
+  } catch {
+    wysiwyg = useWYSIWYG(value, onChange);
+  }
+  
+  const {
+    editorRef,
+    isFocused,
+    setIsFocused,
+    formatState,
+    updateFormatState,
+    handleContentChange,
+    handleBold,
+    handleItalic,
+    handleUnderline,
+    handleBulletList,
+    handleUndo,
+    handleRedo,
+    undoStack,
+    redoStack
+  } = wysiwyg;
+
+  const minHeight = `${rows * 1.5}rem`;
+
+  return (
+    <div className={`relative ${className}`}>
+      <div
+        className={`relative border border-white/20 rounded-lg bg-white/10 transition-all ${
+          isFocused ? 'border-[#80FF00] bg-white/15' : ''
+        }`}
+      >
+
+        {/* Editable Content Area */}
+        <div
+          ref={editorRef}
+          contentEditable
+          onInput={handleContentChange}
+          onFocus={() => {
+            setIsFocused(true);
+            updateFormatState();
+          }}
+          onBlur={() => setIsFocused(false)}
+          onMouseUp={updateFormatState}
+          onKeyUp={updateFormatState}
+          onPaste={(e) => {
+            e.preventDefault();
+            const text = e.clipboardData.getData('text/plain');
+            document.execCommand('insertText', false, text);
+            handleContentChange();
+          }}
+          className="w-full px-4 py-3 text-white placeholder-white/50 focus:outline-none resize-none overflow-y-auto"
+          style={{ minHeight, maxHeight: `${rows * 2}rem` }}
+          data-placeholder={placeholder}
+        />
+
+        {/* Placeholder */}
+        {(!value || value === '<br>' || value === '') && (
+          <div 
+            className="absolute top-3 left-4 text-white/50 pointer-events-none"
+            style={{ top: '0.75rem', left: '1rem' }}
+          >
+            {placeholder}
+          </div>
+        )}
+      </div>
+
+      {/* Styles for contenteditable */}
+      <style jsx>{`
+        [contenteditable] {
+          outline: none;
+        }
+        [contenteditable]:focus {
+          outline: none;
+        }
+        [contenteditable] ul {
+          list-style-type: disc;
+          padding-left: 1.5rem;
+          margin: 0.5rem 0;
+        }
+        [contenteditable] li {
+          margin: 0.25rem 0;
+        }
+        [contenteditable] strong {
+          font-weight: bold;
+        }
+        [contenteditable] em {
+          font-style: italic;
+        }
+        [contenteditable] u {
+          text-decoration: underline;
+        }
+      `}</style>
+    </div>
+  );
+};
+
+export default WYSIWYGEditor;
+export { WYSIWYGToolbar };

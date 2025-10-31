@@ -102,8 +102,8 @@ const TemplateRendererComponent: React.FC<TemplateRendererProps> = ({
   cvData,
   template,
   className = '',
-  sectionOrder,
-  sectionVisibility = {},
+  sectionOrder, // Legacy prop - kept for backward compatibility
+  sectionVisibility = {}, // Legacy prop - kept for backward compatibility
   enabledSections,
   customStyles = {}
 }) => {
@@ -123,14 +123,42 @@ const TemplateRendererComponent: React.FC<TemplateRendererProps> = ({
     return generateTemplateCSS(template.globalStyles);
   }, [template.globalStyles]);
   
-  // Convert frontend section order to template section order
-  const templateSectionOrder = sectionOrder ? convertToTemplateSectionOrder(sectionOrder) : undefined;
+  // NEW: Get sections from cvData.structure if it exists, otherwise fall back to legacy props
+  const sectionsFromStructure = useMemo(() => {
+    if (cvData.structure?.sections && Array.isArray(cvData.structure.sections)) {
+      // Use structure as source of truth - preserve all sections for lookup
+      return cvData.structure.sections.map(section => ({
+        id: section.id,
+        type: section.type,
+        visible: section.visible
+      }));
+    }
+    return null; // Fall back to legacy approach
+  }, [cvData.structure]);
+
+  // Determine section order - use structure if available, otherwise use legacy props
+  let finalSectionOrder: string[] | undefined;
+  let finalSectionVisibility: Record<string, boolean> = {};
+
+  if (sectionsFromStructure) {
+    // Use structure-based order and visibility
+    // Filter to only visible sections for order, but preserve all for lookup
+    const visibleSections = sectionsFromStructure.filter(s => s.visible);
+    finalSectionOrder = visibleSections.map(s => s.type);
+    sectionsFromStructure.forEach(section => {
+      finalSectionVisibility[section.type] = section.visible;
+    });
+  } else {
+    // Fall back to legacy props
+    finalSectionOrder = sectionOrder ? convertToTemplateSectionOrder(sectionOrder) : undefined;
+    finalSectionVisibility = sectionVisibility;
+  }
   
   // Determine which sections to render
   let sectionsToRender = getSectionsToRender(
     template.availableSections,
-    templateSectionOrder,
-    sectionVisibility,
+    finalSectionOrder,
+    finalSectionVisibility,
     enabledSections
   );
   
@@ -143,8 +171,29 @@ const TemplateRendererComponent: React.FC<TemplateRendererProps> = ({
   });
 
 
-  // Check if section has data
-  const hasDataForSection = (sectionKey: string): boolean => {
+  // Check if section has data - supports both structure/content map and legacy format
+  const hasDataForSection = (sectionKey: string, sectionId?: string): boolean => {
+    // If using structure/content map, check content map first
+    if (sectionId && cvData.content && cvData.content[sectionId]) {
+      const content = cvData.content[sectionId];
+      // Check if content has meaningful data
+      if (Array.isArray(content)) {
+        return content.length > 0;
+      }
+      if (typeof content === 'object' && content !== null) {
+        return Object.values(content).some(value => {
+          if (typeof value === 'string') return value.trim() !== '';
+          if (Array.isArray(value)) return value.length > 0;
+          if (typeof value === 'object' && value !== null) {
+            return Object.values(value).some(v => typeof v === 'string' && v.trim() !== '');
+          }
+          return false;
+        });
+      }
+      return !!content;
+    }
+
+    // Fall back to legacy format
     const dataKey = SECTION_DATA_MAP[sectionKey as keyof SectionDataMapping];
     if (!dataKey) return false;
 
@@ -201,11 +250,27 @@ const TemplateRendererComponent: React.FC<TemplateRendererProps> = ({
             return null;
           }
 
-          const dataKey = SECTION_DATA_MAP[section.key as keyof SectionDataMapping];
-          const sectionData = dataKey ? cvData[dataKey] : null;
+          // NEW: Get data from content map if using structure, otherwise from legacy arrays
+          let sectionData: any = null;
+          let sectionId: string | undefined = undefined;
+
+          if (sectionsFromStructure) {
+            // Find section in structure by type
+            const structureSection = sectionsFromStructure.find(s => s.type === section.key);
+            if (structureSection && cvData.content && cvData.content[structureSection.id]) {
+              sectionData = cvData.content[structureSection.id];
+              sectionId = structureSection.id;
+            }
+          }
+
+          // Fall back to legacy format if content map doesn't have data
+          if (!sectionData) {
+            const dataKey = SECTION_DATA_MAP[section.key as keyof SectionDataMapping];
+            sectionData = dataKey ? cvData[dataKey] : null;
+          }
 
           // Check if section has data before rendering
-          const hasData = hasDataForSection(section.key);
+          const hasData = hasDataForSection(section.key, sectionId);
           
           // Skip rendering if section has no data
           if (!hasData) {

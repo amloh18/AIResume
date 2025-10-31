@@ -77,9 +77,21 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Connect to database
-    await connectDB();
-    console.log('✅ Database connected for registration');
+    // Connect to database with error handling
+    try {
+      await connectDB();
+      console.log('✅ Database connected for registration');
+    } catch (dbError: any) {
+      console.error('❌ Database connection error during registration:', dbError);
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Database connection failed. Please try again in a moment.',
+          error: 'DATABASE_CONNECTION_ERROR'
+        },
+        { status: 503 }
+      );
+    }
     
     const body = await request.json();
     const { email, password, firstName, lastName } = body;
