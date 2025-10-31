@@ -103,6 +103,10 @@ const JobModal: React.FC<JobModalProps> = ({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isJobDescriptionExpanded, setIsJobDescriptionExpanded] = useState(false);
+  const [showEmailTemplate, setShowEmailTemplate] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [cvData, setCvData] = useState<any>(null);
+  const [loadingCV, setLoadingCV] = useState(false);
   
   // EditJobModal state for layered modal
   const [showEditJobModal, setShowEditJobModal] = useState(false);
@@ -111,38 +115,95 @@ const JobModal: React.FC<JobModalProps> = ({
   const { insights, loading: insightsLoading } = useJobInsights(job.id);
   const fallbacks = useJobFallbacks();
 
+  const loadJourneysForJob = async () => {
+    if (!user?.id || !job?.id) return;
+
+    setLoadingJourneys(true);
+    try {
+      console.log('🔍 Loading journeys for job:', job.id);
+      const response = await authenticatedFetchWithUserId(`/api/application-journey?jobId=${job.id}`, user.id);
+      const result = await response.json();
+
+      if (result.success && result.data.journeys) {
+        console.log('✅ Loaded journeys for job:', result.data.journeys);
+        setJourneys(result.data.journeys);
+      } else {
+        console.log('ℹ️ No journeys found for job:', job.id);
+        setJourneys([]);
+      }
+    } catch (error) {
+      console.error('❌ Error loading journeys for job:', error);
+      setJourneys([]);
+    } finally {
+      setLoadingJourneys(false);
+    }
+  };
+
+  // Load CV data for user information
+  const loadCVData = async (cvId?: string) => {
+    if (!user?.id) return;
+
+    setLoadingCV(true);
+    try {
+      // First try to get CV from journey if cvId provided
+      let targetCvId = cvId;
+      
+      // If no cvId from journey, try to get master CV
+      if (!targetCvId) {
+        const masterCVResponse = await authenticatedFetchWithUserId('/api/cvs/master', user.id);
+        const masterCVResult = await masterCVResponse.json();
+        if (masterCVResult.success && masterCVResult.data?.masterCV) {
+          targetCvId = masterCVResult.data.masterCV._id || masterCVResult.data.masterCV.id;
+        }
+      }
+      
+      if (targetCvId) {
+        const cvResponse = await authenticatedFetchWithUserId(`/api/cvs/${targetCvId}`, user.id);
+        const cvResult = await cvResponse.json();
+        if (cvResult.success && cvResult.data?.cv) {
+          setCvData(cvResult.data.cv.cvData);
+        } else if (cvResult.cv?.cvData) {
+          setCvData(cvResult.cv.cvData);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error loading CV data:', error);
+      // Try to get master CV as fallback
+      try {
+        const masterCVResponse = await authenticatedFetchWithUserId('/api/cvs/master', user.id);
+        const masterCVResult = await masterCVResponse.json();
+        if (masterCVResult.success && masterCVResult.data?.masterCV?.cvData) {
+          setCvData(masterCVResult.data.masterCV.cvData);
+        }
+      } catch (fallbackError) {
+        console.error('❌ Error loading master CV:', fallbackError);
+      }
+    } finally {
+      setLoadingCV(false);
+    }
+  };
+
   // Load journeys for this specific job when modal opens
   useEffect(() => {
-    const loadJourneysForJob = async () => {
-      if (!user?.id || !job?.id) return;
-
-      setLoadingJourneys(true);
-      try {
-        console.log('🔍 Loading journeys for job:', job.id);
-        const response = await authenticatedFetchWithUserId(`/api/application-journey?jobId=${job.id}`, user.id);
-        const result = await response.json();
-
-        if (result.success && result.data.journeys) {
-          console.log('✅ Loaded journeys for job:', result.data.journeys);
-          setJourneys(result.data.journeys);
-        } else {
-          console.log('ℹ️ No journeys found for job:', job.id);
-          setJourneys([]);
-        }
-      } catch (error) {
-        console.error('❌ Error loading journeys for job:', error);
-        setJourneys([]);
-      } finally {
-        setLoadingJourneys(false);
-      }
-    };
-
-    loadJourneysForJob();
+    if (user?.id && job?.id) {
+      loadJourneysForJob();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, job?.id]);
 
-
-
-
+  // Load CV data when journeys are loaded or when modal opens
+  useEffect(() => {
+    if (user?.id) {
+      // Try to get CV from first journey, otherwise get master CV
+      const firstJourneyWithCV = journeys.find(j => j.cvId);
+      if (firstJourneyWithCV?.cvId) {
+        loadCVData(firstJourneyWithCV.cvId);
+      } else {
+        loadCVData(); // Will fetch master CV
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [journeys, user?.id]);
 
   // Calculate days since job status last changed
   const getDaysSinceLastUpdate = (job: JobApplication) => {
@@ -187,18 +248,62 @@ const JobModal: React.FC<JobModalProps> = ({
     switch(job.status) {
       case 'applied':
         return `Following up on ${job.jobTitle} Application`;
+      case 'screening':
+        return `Re: ${job.jobTitle} Application - Screening Stage`;
       case 'interview':
         return `Thank you for the ${job.jobTitle} Interview`;
       case 'offer':
         return `Re: ${job.jobTitle} Offer`;
+      case 'accepted':
+        return `Acceptance: ${job.jobTitle} Position`;
+      case 'rejected':
+        return `Thank you - ${job.jobTitle} Application`;
       default:
         return 'Follow-up';
     }
   };
 
+  // Get user name from CV data
+  const getUserName = () => {
+    if (cvData?.basics?.name) {
+      return cvData.basics.name;
+    }
+    // Fallback to user from auth if available
+    if (user?.name) {
+      return user.name;
+    }
+    if (user?.firstName || user?.lastName) {
+      return `${user.firstName || ''} ${user.lastName || ''}`.trim();
+    }
+    return '[Your Name]';
+  };
+
+  // Get contact name from job details
+  const getContactName = () => {
+    if (job.contactDetails?.name) {
+      return job.contactDetails.name;
+    }
+    return '[Hiring Manager]';
+  };
+
+  // Get interviewer name (could be contact name or hiring manager)
+  const getInterviewerName = () => {
+    if (job.contactDetails?.name) {
+      return job.contactDetails.name;
+    }
+    if (job.contactDetails?.role) {
+      return job.contactDetails.role;
+    }
+    return '[Interviewer Name]';
+  };
+
   const getEmailTemplate = (job: JobApplication) => {
+    const userName = getUserName();
+    const contactName = getContactName();
+    const interviewerName = getInterviewerName();
+    
     const templates = {
-      applied: `Dear Hiring Manager,
+      applied: `Dear ${contactName},
 
 I hope this email finds you well. I recently applied for the ${job.jobTitle} position at ${job.company} and wanted to follow up on the status of my application.
 
@@ -207,8 +312,18 @@ I remain very interested in this opportunity and believe my skills and experienc
 Thank you for your time and consideration. I look forward to hearing from you.
 
 Best regards,
-[Your Name]`,
-      interview: `Dear [Interviewer Name],
+${userName}`,
+      screening: `Dear ${contactName},
+
+Thank you for considering my application for the ${job.jobTitle} position at ${job.company}. I was delighted to learn that my application has progressed to the screening stage.
+
+I remain very enthusiastic about this opportunity and would be happy to provide any additional information or documentation you may need. Please don't hesitate to reach out if you have any questions.
+
+Thank you for your time and consideration.
+
+Best regards,
+${userName}`,
+      interview: `Dear ${interviewerName},
 
 Thank you for taking the time to interview me for the ${job.jobTitle} position at ${job.company}. I enjoyed our conversation and learning more about the role and your team.
 
@@ -219,8 +334,8 @@ I wanted to follow up to see if there are any updates on next steps in the hirin
 Thank you again for your consideration.
 
 Best regards,
-[Your Name]`,
-      offer: `Dear [Hiring Manager],
+${userName}`,
+      offer: `Dear ${contactName},
 
 Thank you for extending an offer for the ${job.jobTitle} position at ${job.company}. I appreciate the opportunity and am excited about the possibility of joining your team.
 
@@ -229,7 +344,27 @@ I would like to discuss a few details regarding the offer. Could we schedule a c
 Thank you for your patience, and I look forward to our conversation.
 
 Best regards,
-[Your Name]`
+${userName}`,
+      accepted: `Dear ${contactName},
+
+I am thrilled to formally accept the offer for the ${job.jobTitle} position at ${job.company}. I am very excited about this opportunity and look forward to contributing to the team.
+
+I understand the next steps will be communicated shortly, and I am ready to proceed with any onboarding requirements. Please let me know if there is anything you need from me in the meantime.
+
+Thank you again for this wonderful opportunity. I am eager to get started!
+
+Best regards,
+${userName}`,
+      rejected: `Dear ${contactName},
+
+Thank you for considering my application for the ${job.jobTitle} position at ${job.company}. While I'm disappointed to learn that I wasn't selected for this role, I appreciate you taking the time to review my qualifications.
+
+I remain interested in future opportunities at ${job.company} and would welcome the chance to be considered for other positions that may align with my skills and experience.
+
+I wish you and the team all the best in finding the right candidate for this role.
+
+Best regards,
+${userName}`
     };
     return templates[job.status as keyof typeof templates] || '';
   };
@@ -302,6 +437,9 @@ Best regards,
         } else {
           toast.success('CV journey created successfully!');
         }
+        // Reload journeys immediately to show the new journey card
+        await loadJourneysForJob();
+        // Also refresh parent component
         await onRefresh();
       } else {
         const errorMessage = result.error || result.message || 'Failed to create journey';
@@ -477,6 +615,18 @@ Best regards,
     }
   };
 
+  const handleCopyToClipboard = async (text: string, fieldName: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(fieldName);
+      toast.success(`${fieldName === 'subject' ? 'Subject' : 'Email'} copied to clipboard!`);
+      setTimeout(() => setCopiedField(null), 2000);
+    } catch (error) {
+      console.error('Failed to copy:', error);
+      toast.error('Failed to copy to clipboard');
+    }
+  };
+
   const handleDeleteJob = async () => {
     try {
       const userId = user?.id;
@@ -563,11 +713,11 @@ Best regards,
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
-          className="bg-[#1A201A] rounded-2xl shadow-2xl border border-white/10 w-full max-w-6xl max-h-[90vh] overflow-hidden mx-4 sm:mx-0"
+          className="bg-[#1A201A] rounded-2xl shadow-2xl border border-white/10 w-full max-w-6xl max-h-[90vh] overflow-hidden mx-4 sm:mx-0 flex flex-col"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-white/10">
+          <div className="flex items-center justify-between p-6 border-b border-white/10 flex-shrink-0">
             <h2 className="text-xl font-semibold text-white">Job Application Details</h2>
             <div className="flex items-center gap-3">
               <motion.button
@@ -590,14 +740,16 @@ Best regards,
             </div>
           </div>
 
-          {/* Job Title and Company */}
-          <div className="px-6 py-4">
-            <h1 className="text-2xl font-bold text-white mb-2">{job.jobTitle}</h1>
-            <p className="text-white/70 text-lg">at {job.company}</p>
-          </div>
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto">
+            {/* Job Title and Company */}
+            <div className="px-6 py-4">
+              <h1 className="text-2xl font-bold text-white mb-2">{job.jobTitle}</h1>
+              <p className="text-white/70 text-lg">at {job.company}</p>
+            </div>
 
-          {/* CV Journeys Section */}
-          <div className="px-6 py-4">
+            {/* CV Journeys Section */}
+            <div className="px-6 py-4">
             <h3 className="text-lg font-semibold text-white mb-4">🎯 CV Journeys for this Job</h3>
             
             {journeys.length > 0 ? (
@@ -640,15 +792,15 @@ Best regards,
               </div>
             ) : (
               <div className="text-center py-8">
-                <Target size={48} className="text-white/40 mx-auto mb-4" />
-                <h4 className="text-lg font-medium text-white mb-2">No CV Journeys Started</h4>
-                <p className="text-white/70 text-sm mb-4">
+                <Target size={32} className="text-white/40 mx-auto mb-3" />
+                <h4 className="text-sm font-medium text-white mb-1">No CV Journeys Started</h4>
+                <p className="text-white/70 text-xs mb-3">
                   Create your first CV journey to start preparing for this job application.
                 </p>
                 <motion.button
                   onClick={handleCreateJourney}
                   disabled={isCreatingJourney}
-                  className="px-6 py-3 bg-[#80FF00] hover:bg-[#70e600] text-black rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 bg-[#80FF00] hover:bg-[#70e600] text-black rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   whileHover={{ scale: isCreatingJourney ? 1 : 1.02 }}
                   whileTap={{ scale: isCreatingJourney ? 1 : 0.98 }}
                 >
@@ -861,6 +1013,124 @@ Best regards,
                   </div>
                 </div>
 
+                {/* Follow-up & Templates Section */}
+                {(isFollowUpNeeded(job) || job.status === 'applied' || job.status === 'screening' || job.status === 'interview' || job.status === 'offer' || job.status === 'accepted' || job.status === 'rejected') && (
+                  <div className="bg-[#232f1c] border border-lime-500/20 rounded-2xl p-4">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Mail size={16} className="text-[#80FF00]" />
+                      <h3 className="text-lg font-semibold text-white">Follow-up & Templates</h3>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      {/* Follow-up Suggestion */}
+                      {isFollowUpNeeded(job) && (
+                        <div className="bg-lime-500/10 border border-lime-500/30 rounded-lg p-3">
+                          <div className="flex items-start gap-2">
+                            <AlertCircle size={16} className="text-lime-400 mt-0.5 flex-shrink-0" />
+                            <div className="flex-1">
+                              <p className="text-lime-200 text-sm">
+                                {getFollowUpSuggestion(job, getDaysSinceLastUpdate(job))}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Email Template */}
+                      {getEmailTemplate(job) && (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-sm font-medium text-white/80">Email Template</h4>
+                            <button
+                              onClick={() => setShowEmailTemplate(!showEmailTemplate)}
+                              className="text-xs text-[#80FF00] hover:text-[#80FF00]/80 transition-colors flex items-center gap-1"
+                            >
+                              {showEmailTemplate ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                              {showEmailTemplate ? 'Hide' : 'Show'}
+                            </button>
+                          </div>
+
+                          {showEmailTemplate && (
+                            <div className="space-y-3">
+                              {/* Subject Line */}
+                              <div className="bg-[#1A201A] rounded-lg p-3 border border-white/10">
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="text-xs text-white/60">Subject</span>
+                                  <motion.button
+                                    onClick={() => handleCopyToClipboard(getEmailSubject(job), 'subject')}
+                                    className="p-1.5 hover:bg-white/10 rounded transition-colors"
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                  >
+                                    {copiedField === 'subject' ? (
+                                      <CheckCircle size={14} className="text-lime-400" />
+                                    ) : (
+                                      <Copy size={14} className="text-white/60" />
+                                    )}
+                                  </motion.button>
+                                </div>
+                                <p className="text-white text-sm">{getEmailSubject(job)}</p>
+                              </div>
+
+                              {/* Email Body */}
+                              <div className="bg-[#1A201A] rounded-lg p-3 border border-white/10">
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="text-xs text-white/60">Email Body</span>
+                                  <motion.button
+                                    onClick={() => handleCopyToClipboard(getEmailTemplate(job), 'body')}
+                                    className="p-1.5 hover:bg-white/10 rounded transition-colors"
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                  >
+                                    {copiedField === 'body' ? (
+                                      <CheckCircle size={14} className="text-lime-400" />
+                                    ) : (
+                                      <Copy size={14} className="text-white/60" />
+                                    )}
+                                  </motion.button>
+                                </div>
+                                <pre className="text-white text-xs whitespace-pre-wrap font-sans max-h-48 overflow-y-auto">
+                                  {getEmailTemplate(job)}
+                                </pre>
+                              </div>
+
+                              {/* Contact Email (if available) */}
+                              {job.contactDetails?.email && (
+                                <div className="flex items-center gap-2 text-xs text-white/60">
+                                  <Mail size={12} />
+                                  <span>Send to: {job.contactDetails.email}</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Follow-up Timeline */}
+                      {getFollowUpTimeline(job).length > 0 && (
+                        <div className="space-y-2">
+                          <h4 className="text-sm font-medium text-white/80">Follow-up Timeline</h4>
+                          <div className="space-y-2">
+                            {getFollowUpTimeline(job).map((item, index) => (
+                              <div key={index} className="flex items-start gap-3 text-xs">
+                                <div className="flex-shrink-0 mt-1">
+                                  <div className="w-6 h-6 rounded-full bg-[#80FF00]/20 flex items-center justify-center border border-[#80FF00]/30">
+                                    <span className="text-[#80FF00] font-semibold">{index + 1}</span>
+                                  </div>
+                                </div>
+                                <div className="flex-1 pt-0.5">
+                                  <p className="text-white/80 font-medium">{item.day}</p>
+                                  <p className="text-white/60">{item.action}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Delete Application Button */}
                 <div className="flex justify-end">
                   <motion.button
@@ -878,8 +1148,6 @@ Best regards,
             </div>
           </div>
 
-          {/* Footer */}
-          <div className="p-6">
           </div>
         </motion.div>
       </motion.div>

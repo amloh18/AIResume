@@ -7,7 +7,7 @@ export interface IApplicationJourney extends Document {
   jobId: string;
   cvId?: string; // Single source of truth for CV-Job relationship
   coverLetterId?: string; // Single source of truth for CoverLetter-Job relationship
-  status: 'in-progress' | 'completed' | 'paused';
+  status: 'in-progress' | 'completed' | 'paused' | 'processing_documents' | 'creation_failed' | 'ready';
   currentStep: number;
   totalSteps: number;
   atsScore?: number;
@@ -75,7 +75,7 @@ const ApplicationJourneySchema = new Schema<IApplicationJourney>({
   },
   status: {
     type: String,
-    enum: ['in-progress', 'completed', 'paused'],
+    enum: ['in-progress', 'completed', 'paused', 'processing_documents', 'creation_failed', 'ready'],
     default: 'in-progress',
     index: true
   },

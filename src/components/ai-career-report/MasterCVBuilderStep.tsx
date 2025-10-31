@@ -28,6 +28,7 @@ import {
   X
 } from 'lucide-react';
 import CVPreviewModal from './CVPreviewModal';
+import WYSIWYGEditor, { WYSIWYGToolbar } from '@/components/ui/WYSIWYGEditor';
 
 interface MasterCVBuilderStepProps {
   onNext: () => void;
@@ -53,6 +54,23 @@ const additionalSections = [
   { id: 'summary', title: 'Summary', icon: FileText, color: 'emerald' }
 ];
 
+// Simple toolbar wrapper - toolbar operates on currently focused editor
+function ToolbarWrapper({ showAIButton, fieldType, onAIGenerate, isGenerating }: {
+  showAIButton?: boolean;
+  fieldType?: 'summary' | 'experience' | 'other';
+  onAIGenerate?: () => void;
+  isGenerating?: boolean;
+}) {
+  return (
+    <WYSIWYGToolbar
+      showAIButton={showAIButton}
+      fieldType={fieldType}
+      onAIGenerate={onAIGenerate}
+      isGenerating={isGenerating}
+    />
+  );
+}
+
 export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderStepProps) {
   const context = useAICareerReport();
   const { data: session } = useSession();
@@ -67,6 +85,7 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   const [showPreview, setShowPreview] = useState(false);
   const [showAddSectionModal, setShowAddSectionModal] = useState(false);
+  const [generatingAI, setGeneratingAI] = useState<{ [key: string]: boolean }>({});
 
   // Initialize available sections if empty
   React.useEffect(() => {
@@ -125,7 +144,8 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
       startDate: '',
       endDate: '',
       gpa: '',
-      courses: []
+      courses: [],
+      description: ''
     };
     updateCVData('education', [...state.cvData.education, newEducation]);
   };
@@ -146,7 +166,8 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
       name: '',
       issuer: '',
       date: '',
-      url: ''
+      url: '',
+      description: ''
     };
     updateCVData('certificates', [...(state.cvData.certificates || []), newCert]);
   };
@@ -160,6 +181,44 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
   const removeCertification = (index: number) => {
     const updatedCerts = state.cvData.certificates.filter((_, i) => i !== index);
     updateCVData('certificates', updatedCerts);
+  };
+
+  // AI generation handlers
+  const handleAIGenerate = async (type: 'summary' | 'experience', fieldId: string, currentContent: string, workIndex?: number) => {
+    setGeneratingAI(prev => ({ ...prev, [fieldId]: true }));
+    
+    try {
+      const response = await fetch('/api/ai/fix-and-improve', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          content: currentContent,
+          type,
+          cvData: state.cvData,
+          jobData: state.jobData || null
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate AI content');
+      }
+
+      const result = await response.json();
+      
+      if (result.success && result.content) {
+        if (type === 'summary') {
+          updateBasicInfo('summary', result.content);
+        } else if (type === 'experience' && workIndex !== undefined) {
+          updateWorkExperience(workIndex, 'summary', result.content);
+        }
+      }
+    } catch (error) {
+      console.error('AI generation error:', error);
+    } finally {
+      setGeneratingAI(prev => ({ ...prev, [fieldId]: false }));
+    }
   };
 
   const addNewSection = (sectionId: string) => {
@@ -389,12 +448,19 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
             </div>
             
             <div className="md:col-span-2">
-              <label className="block text-white/80 text-sm font-medium mb-2">Professional Summary</label>
-              <textarea
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-white/80 text-sm font-medium">Professional Summary</label>
+                <ToolbarWrapper
+                  showAIButton={true}
+                  fieldType="summary"
+                  onAIGenerate={() => handleAIGenerate('summary', 'professional-summary', state.cvData.basics.summary || '')}
+                  isGenerating={generatingAI['professional-summary'] || false}
+                />
+              </div>
+              <WYSIWYGEditor
                 value={state.cvData.basics.summary || ''}
-                onChange={(e) => updateBasicInfo('summary', e.target.value)}
+                onChange={(value) => updateBasicInfo('summary', value)}
                 rows={4}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors resize-none"
                 placeholder="Write a brief summary of your professional background and key achievements..."
               />
             </div>
@@ -465,12 +531,19 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
                 </div>
                 
                 <div className="mt-4">
-                  <label className="block text-white/80 text-sm font-medium mb-2">Description</label>
-                  <textarea
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-white/80 text-sm font-medium">Description</label>
+                    <ToolbarWrapper
+                      showAIButton={true}
+                      fieldType="experience"
+                      onAIGenerate={() => handleAIGenerate('experience', `work-experience-${index}`, work.summary || '', index)}
+                      isGenerating={generatingAI[`work-experience-${index}`] || false}
+                    />
+                  </div>
+                  <WYSIWYGEditor
                     value={work.summary || ''}
-                    onChange={(e) => updateWorkExperience(index, 'summary', e.target.value)}
+                    onChange={(value) => updateWorkExperience(index, 'summary', value)}
                     rows={4}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors resize-none"
                     placeholder="Describe your key responsibilities and achievements..."
                   />
                 </div>
@@ -538,6 +611,19 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
                     />
                   </div>
                 </div>
+                
+                <div className="mt-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-white/80 text-sm font-medium">Description</label>
+                    <ToolbarWrapper />
+                  </div>
+                  <WYSIWYGEditor
+                    value={edu.description || ''}
+                    onChange={(value) => updateEducation(index, 'description', value)}
+                    rows={3}
+                    placeholder="Describe your education, achievements, relevant coursework, or academic honors..."
+                  />
+                </div>
               </div>
             ))}
             
@@ -553,22 +639,70 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
 
       case 'skills':
         return (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-white/80 text-sm font-medium mb-2">Technical Skills</label>
-              <textarea
-                value={state.cvData.skills?.map(skill => typeof skill === 'string' ? skill : (skill as any).name).join(', ') || ''}
-                onChange={(e) => {
-                  const skillNames = e.target.value.split(',').map(name => name.trim()).filter(name => name);
-                  const skills = skillNames.map(name => ({ name, level: 'Intermediate' }));
-                  updateCVData('skills', skills);
-                }}
-                rows={4}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors resize-none"
-                placeholder="JavaScript, React, Node.js, Python, SQL..."
-              />
-              <p className="text-white/60 text-sm mt-1">Separate skills with commas</p>
-            </div>
+          <div className="space-y-6">
+            {(state.cvData.skills || []).map((skillGroup, index) => (
+              <div key={index} className="bg-white/5 rounded-xl p-6 border border-white/10">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-lg font-semibold text-white">
+                    {skillGroup.category || 'Skill Category'}
+                  </h4>
+                  <button
+                    onClick={() => {
+                      const updatedSkills = state.cvData.skills?.filter((_, i) => i !== index) || [];
+                      updateCVData('skills', updatedSkills);
+                    }}
+                    className="text-red-400 hover:text-red-300 transition-colors"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-white/80 text-sm font-medium mb-2">Category</label>
+                    <input
+                      type="text"
+                      value={skillGroup.category || ''}
+                      onChange={(e) => {
+                        const updatedSkills = [...(state.cvData.skills || [])];
+                        updatedSkills[index] = { ...updatedSkills[index], category: e.target.value };
+                        updateCVData('skills', updatedSkills);
+                      }}
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                      placeholder="Programming Languages, Frameworks, Tools..."
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-white/80 text-sm font-medium mb-2">Skills</label>
+                    <textarea
+                      value={skillGroup.skills?.join(', ') || ''}
+                      onChange={(e) => {
+                        const skillNames = e.target.value.split(',').map(name => name.trim()).filter(name => name);
+                        const updatedSkills = [...(state.cvData.skills || [])];
+                        updatedSkills[index] = { ...updatedSkills[index], skills: skillNames };
+                        updateCVData('skills', updatedSkills);
+                      }}
+                      rows={3}
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors resize-none"
+                      placeholder="JavaScript, React, Node.js, Python..."
+                    />
+                    <p className="text-white/60 text-sm mt-1">Separate skills with commas</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+            
+            <button
+              onClick={() => {
+                const newSkillGroup = { category: '', skills: [] };
+                updateCVData('skills', [...(state.cvData.skills || []), newSkillGroup]);
+              }}
+              className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/60 hover:text-[#80FF00] rounded-xl transition-colors flex items-center justify-center gap-2"
+            >
+              <Plus size={20} />
+              Add Skill Category
+            </button>
           </div>
         );
 
@@ -624,16 +758,18 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
                 </div>
                 
                 <div className="mt-4">
-                  <label className="block text-white/80 text-sm font-medium mb-2">Description</label>
-                  <textarea
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-white/80 text-sm font-medium">Description</label>
+                    <ToolbarWrapper />
+                  </div>
+                  <WYSIWYGEditor
                     value={project.description || ''}
-                    onChange={(e) => {
+                    onChange={(value) => {
                       const updatedProjects = [...(state.cvData.projects || [])];
-                      updatedProjects[index] = { ...updatedProjects[index], description: e.target.value };
+                      updatedProjects[index] = { ...updatedProjects[index], description: value };
                       updateCVData('projects', updatedProjects);
                     }}
                     rows={3}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors resize-none"
                     placeholder="Describe the project and your role..."
                   />
                 </div>
@@ -709,16 +845,18 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
                 </div>
                 
                 <div className="mt-4">
-                  <label className="block text-white/80 text-sm font-medium mb-2">Description</label>
-                  <textarea
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-white/80 text-sm font-medium">Description</label>
+                    <ToolbarWrapper />
+                  </div>
+                  <WYSIWYGEditor
                     value={award.summary || ''}
-                    onChange={(e) => {
+                    onChange={(value) => {
                       const updatedAwards = [...(state.cvData.awards || [])];
-                      updatedAwards[index] = { ...updatedAwards[index], summary: e.target.value };
+                      updatedAwards[index] = { ...updatedAwards[index], summary: value };
                       updateCVData('awards', updatedAwards);
                     }}
                     rows={3}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors resize-none"
                     placeholder="Describe the award and its significance..."
                   />
                 </div>
@@ -801,6 +939,19 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
                       placeholder="https://aws.amazon.com/certification/"
                     />
                   </div>
+                </div>
+                
+                <div className="mt-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-white/80 text-sm font-medium">Description</label>
+                    <ToolbarWrapper />
+                  </div>
+                  <WYSIWYGEditor
+                    value={cert.description || ''}
+                    onChange={(value) => updateCertification(index, 'description', value)}
+                    rows={3}
+                    placeholder="Describe the certification, its relevance, or what you learned..."
+                  />
                 </div>
               </div>
             ))}
@@ -897,16 +1048,18 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
                 </div>
                 
                 <div className="mt-4">
-                  <label className="block text-white/80 text-sm font-medium mb-2">Description</label>
-                  <textarea
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-white/80 text-sm font-medium">Description</label>
+                    <ToolbarWrapper />
+                  </div>
+                  <WYSIWYGEditor
                     value={vol.summary || ''}
-                    onChange={(e) => {
+                    onChange={(value) => {
                       const updatedVolunteer = [...(state.cvData.volunteer || [])];
-                      updatedVolunteer[index] = { ...updatedVolunteer[index], summary: e.target.value };
+                      updatedVolunteer[index] = { ...updatedVolunteer[index], summary: value };
                       updateCVData('volunteer', updatedVolunteer);
                     }}
                     rows={3}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors resize-none"
                     placeholder="Describe your volunteer work and impact..."
                   />
                 </div>
@@ -935,27 +1088,72 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
       case 'languages':
         return (
           <div className="space-y-4">
-            <div>
-              <label className="block text-white/80 text-sm font-medium mb-2">Languages</label>
-              <textarea
-                value={state.cvData.languages?.map(lang => `${lang.language} (${lang.fluency})`).join(', ') || ''}
-                onChange={(e) => {
-                  const languageEntries = e.target.value.split(',').map(entry => {
-                    const [language, fluency] = entry.trim().split('(');
-                    return {
-                      language: language?.trim() || '',
-                      fluency: fluency?.replace(')', '').trim() || 'Native'
-                    };
-                  }).filter(lang => lang.language);
+            {(state.cvData.languages || []).map((lang, index) => (
+              <div key={index} className="bg-white/5 rounded-xl p-6 border border-white/10">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-lg font-semibold text-white">
+                    {lang.language || 'Language'}
+                  </h4>
+                  <button
+                    onClick={() => {
+                      const updatedLanguages = state.cvData.languages?.filter((_, i) => i !== index) || [];
+                      updateCVData('languages', updatedLanguages);
+                    }}
+                    className="text-red-400 hover:text-red-300 transition-colors"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-white/80 text-sm font-medium mb-2">Language Name</label>
+                    <input
+                      type="text"
+                      value={lang.language || ''}
+                      onChange={(e) => {
+                        const updatedLanguages = [...(state.cvData.languages || [])];
+                        updatedLanguages[index] = { ...updatedLanguages[index], language: e.target.value };
+                        updateCVData('languages', updatedLanguages);
+                      }}
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                      placeholder="English"
+                    />
+                  </div>
                   
-                  updateCVData('languages', languageEntries);
-                }}
-                rows={4}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors resize-none"
-                placeholder="English (Native), Spanish (Fluent), French (Intermediate)..."
-              />
-              <p className="text-white/60 text-sm mt-1">Format: Language (Fluency Level)</p>
-            </div>
+                  <div>
+                    <label className="block text-white/80 text-sm font-medium mb-2">Fluency Level</label>
+                    <select
+                      value={lang.fluency || ''}
+                      onChange={(e) => {
+                        const updatedLanguages = [...(state.cvData.languages || [])];
+                        updatedLanguages[index] = { ...updatedLanguages[index], fluency: e.target.value };
+                        updateCVData('languages', updatedLanguages);
+                      }}
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                    >
+                      <option value="">Select fluency level</option>
+                      <option value="Native">Native</option>
+                      <option value="Fluent">Fluent</option>
+                      <option value="Advanced">Advanced</option>
+                      <option value="Intermediate">Intermediate</option>
+                      <option value="Basic">Basic</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            ))}
+            
+            <button
+              onClick={() => {
+                const newLanguage = { language: '', fluency: '' };
+                updateCVData('languages', [...(state.cvData.languages || []), newLanguage]);
+              }}
+              className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/60 hover:text-[#80FF00] rounded-xl transition-colors flex items-center justify-center gap-2"
+            >
+              <Plus size={20} />
+              Add Language
+            </button>
           </div>
         );
 
@@ -1161,16 +1359,18 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
                 </div>
                 
                 <div className="mt-4">
-                  <label className="block text-white/80 text-sm font-medium mb-2">Summary</label>
-                  <textarea
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-white/80 text-sm font-medium">Summary</label>
+                    <ToolbarWrapper />
+                  </div>
+                  <WYSIWYGEditor
                     value={pub.summary || ''}
-                    onChange={(e) => {
+                    onChange={(value) => {
                       const updatedPublications = [...(state.cvData.publications || [])];
-                      updatedPublications[index] = { ...updatedPublications[index], summary: e.target.value };
+                      updatedPublications[index] = { ...updatedPublications[index], summary: value };
                       updateCVData('publications', updatedPublications);
                     }}
                     rows={3}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors resize-none"
                     placeholder="Brief description of the publication..."
                   />
                 </div>

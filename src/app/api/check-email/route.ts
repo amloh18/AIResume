@@ -22,15 +22,39 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await connectDB();
+    try {
+      await connectDB();
+    } catch (dbError: any) {
+      console.error('❌ MongoDB connection error in check-email:', dbError);
+      return NextResponse.json(
+        { 
+          success: false, 
+          message: 'Database connection failed. Please try again later.',
+          error: 'DATABASE_CONNECTION_ERROR'
+        },
+        { status: 503 }
+      );
+    }
 
-    // Check if user exists
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
-    
-    return NextResponse.json({
-      success: true,
-      exists: !!existingUser
-    });
+    try {
+      // Check if user exists
+      const existingUser = await User.findOne({ email: email.toLowerCase() });
+      
+      return NextResponse.json({
+        success: true,
+        exists: !!existingUser
+      });
+    } catch (queryError: any) {
+      console.error('❌ Database query error in check-email:', queryError);
+      return NextResponse.json(
+        { 
+          success: false, 
+          message: 'Failed to check email. Please try again later.',
+          error: 'DATABASE_QUERY_ERROR'
+        },
+        { status: 500 }
+      );
+    }
 
   } catch (error: any) {
     console.error('❌ Check email error:', error);

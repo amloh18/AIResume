@@ -31,7 +31,7 @@ export function clearOldSessionData() {
       document.cookie = `${cookieName}=; path=/; max-age=0; ${isSecure ? 'secure;' : ''} samesite=strict`;
     });
     
-    console.log('✅ Cleared old session data (deprecated method)');
+
   } catch (error) {
     console.error('Error clearing old session data:', error);
   }

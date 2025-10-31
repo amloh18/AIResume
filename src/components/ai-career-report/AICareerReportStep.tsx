@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Target, 
@@ -43,6 +43,9 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
       generateAIAnalysis();
     }
   }, []);
+
+  // Track if auto-save has been attempted to prevent multiple attempts
+  const autoSaveAttempted = useRef(false);
 
   const generateAIAnalysis = async (isRetry = false) => {
     if (isRetry) {
@@ -101,7 +104,7 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
     }
   };
 
-  const handleSaveMasterCV = async () => {
+  const handleSaveMasterCV = useCallback(async () => {
     // Check if user is authenticated before saving
     if (!currentSession?.user) {
       setError('Please sign in to save your Master CV');
@@ -131,7 +134,7 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
         title: requestData.title,
         hasCVData: !!requestData.cvData,
         hasAIAnalysis: !!requestData.metadata.aiAnalysis,
-        authProviderId: session?.user?.id || session?.user?.email
+        authProviderId: currentSession?.user?.id || currentSession?.user?.email
       });
 
       const response = await fetch('/api/cvs/onboarding', {
@@ -188,6 +191,14 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
             showUpgradePopup: sessionStorage.getItem('showUpgradePopup')
           });
           
+          // Clear localStorage now that CV is saved
+          try {
+            localStorage.removeItem('ai-career-report-data');
+            console.log('✅ Cleared localStorage after saving Master CV');
+          } catch (error) {
+            console.warn('⚠️ Failed to clear localStorage:', error);
+          }
+          
           // Dispatch custom event to notify other components
           window.dispatchEvent(new CustomEvent('masterCVCreated'));
           console.log('🔍 AICareerReportStep - Custom event dispatched');
@@ -209,7 +220,44 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
         setError('Failed to save Master CV. Please try again.');
       }
     }
-  };
+  }, [currentSession, state.cvData, state.aiAnalysis, onComplete]);
+
+  // Auto-save Master CV when user becomes authenticated (if not already saved)
+  useEffect(() => {
+    const checkAndSave = async () => {
+      // Only auto-save if:
+      // 1. User is authenticated
+      // 2. We have CV data
+      // 3. AI analysis is complete
+      // 4. Master CV hasn't been saved yet (check sessionStorage flag)
+      // 5. We haven't already attempted auto-save
+      if (
+        currentSession?.user && 
+        state.cvData && 
+        state.aiAnalysis && 
+        !autoSaveAttempted.current &&
+        typeof window !== 'undefined'
+      ) {
+        const masterCVCreated = sessionStorage.getItem('masterCVCreated');
+        
+        if (masterCVCreated !== 'true') {
+          console.log('🔄 Auto-saving Master CV after authentication...');
+          autoSaveAttempted.current = true;
+          try {
+            await handleSaveMasterCV();
+          } catch (error) {
+            console.error('❌ Auto-save failed:', error);
+            // Reset flag so user can try again manually
+            autoSaveAttempted.current = false;
+          }
+        }
+      }
+    };
+
+    // Small delay to ensure session is fully loaded
+    const timer = setTimeout(checkAndSave, 1500);
+    return () => clearTimeout(timer);
+  }, [currentSession?.user, state.cvData, state.aiAnalysis, handleSaveMasterCV]);
 
   if (isGenerating) {
     return (
@@ -220,11 +268,11 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
             animate={{ rotate: 360 }}
             transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
           />
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Analyzing Your Career</h2>
-          <p className="text-gray-600 mb-8">
+          <h2 className="text-2xl font-bold text-white mb-4">Analyzing Your Career</h2>
+          <p className="text-white/80 mb-8">
             Our AI is analyzing your background to provide personalized career insights...
           </p>
-          <div className="space-y-2 text-sm text-gray-900/40">
+          <div className="space-y-2 text-sm text-white/70">
             <div className="flex items-center justify-center gap-2">
               <div className="w-2 h-2 bg-[#80FF00] rounded-full animate-pulse"></div>
               <span>Analyzing experience level</span>

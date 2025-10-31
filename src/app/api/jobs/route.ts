@@ -91,7 +91,8 @@ export async function POST(request: NextRequest) {
       deadline,
       applicationDate,
       sponsorship,
-      tags
+      tags,
+      contactDetails
     } = body;
     
     // Validate required fields
@@ -121,6 +122,7 @@ export async function POST(request: NextRequest) {
       deadline: deadline ? new Date(deadline) : undefined,
       applicationDate: applicationDate ? new Date(applicationDate) : undefined,
       sponsorship: sponsorship || 'unknown',
+      contactDetails: contactDetails || undefined,
       contacts: [],
       interviews: [],
       followUps: [],
@@ -245,17 +247,25 @@ export async function GET(request: NextRequest) {
       query.source = source;
     }
     
-    // Get job applications with pagination
+    // Get job applications with pagination - include ALL fields
     const jobApplications = await JobApplication.find(query)
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
-      .limit(limit)
-      .select('jobTitle company location source status priority createdAt updatedAt tags');
+      .limit(limit);
     
     // Get total count
     const total = await JobApplication.countDocuments(query);
     
     console.log('✅ Job applications retrieved from application tracker:', jobApplications.length);
+    
+    // Helper to convert Date to ISO string for frontend
+    const dateToISO = (date: Date | undefined | null): string | undefined => {
+      if (!date) return undefined;
+      if (date instanceof Date) {
+        return date.toISOString().split('T')[0]; // Return YYYY-MM-DD format
+      }
+      return undefined;
+    };
     
     return NextResponse.json({
       success: true,
@@ -265,10 +275,35 @@ export async function GET(request: NextRequest) {
           jobTitle: job.jobTitle,
           company: job.company,
           location: job.location,
+          jobUrl: job.jobUrl,
+          jobDescription: job.jobDescription,
           source: job.source,
           status: job.status,
           priority: job.priority,
-          tags: job.tags,
+          notes: job.notes,
+          sponsorship: job.sponsorship,
+          tags: job.tags || [],
+          contactDetails: job.contactDetails ? {
+            name: job.contactDetails.name || '',
+            email: job.contactDetails.email || '',
+            phone: job.contactDetails.phone || '',
+            role: job.contactDetails.role || ''
+          } : { name: '', email: '', phone: '', role: '' },
+          salary: job.salary,
+          deadline: dateToISO(job.deadline),
+          applicationDate: dateToISO(job.applicationDate),
+          interviews: (job.interviews || []).map((iv: any) => ({
+            ...iv.toObject ? iv.toObject() : iv,
+            date: iv.date instanceof Date ? dateToISO(iv.date) : iv.date
+          })),
+          followUps: (job.followUps || []).map((fu: any) => ({
+            ...fu.toObject ? fu.toObject() : fu,
+            date: fu.date instanceof Date ? dateToISO(fu.date) : fu.date
+          })),
+          attachments: (job.attachments || []).map((att: any) => att.toObject ? att.toObject() : att),
+          sourceUrl: job.sourceUrl,
+          atsScore: job.atsScore,
+          isArchived: job.isArchived || false,
           createdAt: job.createdAt,
           updatedAt: job.updatedAt
         })),

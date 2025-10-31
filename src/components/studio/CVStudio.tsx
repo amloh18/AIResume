@@ -54,6 +54,7 @@ import ActionBlockerDialog from '@/components/modals/ActionBlockerDialog';
 import { CVJourneyLookupService, CVJourneyInfo } from '@/lib/services/cvJourneyLookupService';
 import { ApplicationPackageService } from '@/lib/services/applicationPackageService';
 import { useDebounce } from '@/hooks/useDebounce';
+import { migrateLegacyCVToStructureFormat, hasStructure } from '@/lib/migrations/cv-structure-migration';
 // Define fallback templates directly to avoid import issues
 const getFallbackTemplates = () => [
   {
@@ -221,7 +222,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
     }
   }, [initialDocumentType]);
 
-  // Section management state
+  // Section management state (legacy - now synced with cvData.structure)
   const [sectionOrder, setSectionOrder] = useState([
     'personal_header', 'work_experience', 'education', 'skills', 'projects', 'certificates', 'languages'
   ]);
@@ -234,6 +235,138 @@ const CVStudio: React.FC<CVStudioProps> = ({
     certificates: true,
     languages: true
   });
+
+  // Helper functions for structure/content map
+  const getSectionOrderFromCVData = (data: UnifiedCVDataStructure | null): string[] => {
+    if (!data?.structure?.sections) {
+      return sectionOrder; // Fallback to current state
+    }
+    // Map structure section IDs to section types for compatibility
+    // Note: For now, we use types; later we'll need to track IDs properly
+    return data.structure.sections.map(s => s.type);
+  };
+
+  const getSectionVisibilityFromCVData = (data: UnifiedCVDataStructure | null): Record<string, boolean> => {
+    if (!data?.structure?.sections) {
+      return sectionVisibility; // Fallback to current state
+    }
+    const visibility: Record<string, boolean> = {};
+    // For structure sections, we need to track by type
+    // Note: This assumes one section per type initially; will need refinement for multiple sections of same type
+    data.structure.sections.forEach(section => {
+      visibility[section.type] = section.visible;
+    });
+    return visibility;
+  };
+
+  // Helper function to migrate and initialize CV data with structure
+  const migrateAndInitializeCVData = async (
+    data: UnifiedCVDataStructure,
+    templateId?: string | null
+  ): Promise<UnifiedCVDataStructure> => {
+    // Migrate legacy CV data to structure format if needed
+    if (!hasStructure(data)) {
+      console.log('🔄 Migrating legacy CV data to structure format...');
+      try {
+        // Try to get template for migration
+        let template: any = null;
+        if (templateId) {
+          try {
+            template = await TemplateService.getTemplate(templateId);
+          } catch (e) {
+            console.warn('⚠️ Could not fetch template for migration, using defaults');
+          }
+        }
+        data = migrateLegacyCVToStructureFormat(data, template);
+        console.log('✅ CV data migrated to structure format');
+      } catch (error) {
+        console.error('❌ Migration error:', error);
+        // Continue with original data if migration fails
+      }
+    }
+    return data;
+  };
+
+  // Helper function to set CV data with migration and structure initialization
+  const setCvDataWithStructure = useCallback(async (
+    newData: UnifiedCVDataStructure | null,
+    templateId?: string | null
+  ) => {
+    if (!newData) {
+      setCvData(null);
+      return;
+    }
+
+    // Migrate if needed
+    const migratedData = await migrateAndInitializeCVData(newData, templateId);
+
+    // Initialize section order and visibility from structure
+    const order = getSectionOrderFromCVData(migratedData);
+    const visibility = getSectionVisibilityFromCVData(migratedData);
+
+    setCvData(migratedData);
+    setSectionOrder(order);
+    setSectionVisibility(visibility);
+  }, []);
+
+  const updateStructureInCVData = (
+    data: UnifiedCVDataStructure | null,
+    updates: {
+      sectionOrder?: string[];
+      sectionVisibility?: Record<string, boolean>;
+    }
+  ): UnifiedCVDataStructure => {
+    if (!data) {
+      return data || {} as UnifiedCVDataStructure;
+    }
+
+    let updatedData = { ...data };
+
+    // Ensure structure exists
+    if (!updatedData.structure) {
+      updatedData.structure = { sections: [] };
+    }
+
+    // Clone structure
+    updatedData.structure = {
+      ...updatedData.structure,
+      sections: [...updatedData.structure.sections]
+    };
+
+    // Update section order
+    if (updates.sectionOrder) {
+      // Reorder sections array based on new order
+      const typeToSection = new Map(updatedData.structure.sections.map(s => [s.type, s]));
+      updatedData.structure.sections = updates.sectionOrder
+        .map(type => typeToSection.get(type))
+        .filter(Boolean) as typeof updatedData.structure.sections;
+      
+      // Add any missing sections
+      updates.sectionOrder.forEach(type => {
+        if (!typeToSection.has(type)) {
+          const sectionId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 
+            `section-${Date.now()}-${Math.random()}`;
+          updatedData.structure!.sections.push({
+            id: sectionId,
+            type,
+            visible: updates.sectionVisibility?.[type] ?? true
+          });
+        }
+      });
+    }
+
+    // Update section visibility
+    if (updates.sectionVisibility) {
+      updatedData.structure.sections = updatedData.structure.sections.map(section => ({
+        ...section,
+        visible: updates.sectionVisibility![section.type] !== undefined 
+          ? updates.sectionVisibility![section.type] 
+          : section.visible
+      }));
+    }
+
+    return updatedData;
+  };
   const [expandedSections, setExpandedSections] = useState(new Set([
     'personal_header', 'work_experience', 'skills', 'projects'
   ]));
@@ -795,7 +928,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
     });
   }, [cvId, userId, documentType, debouncedSave]);
 
-  // Add section
+  // Add section - updates both legacy arrays and structure/content map
   const addSection = useCallback((sectionType: keyof CVDataStructure, item?: any) => {
     setCvData(prev => {
       if (!prev) return prev;
@@ -805,14 +938,58 @@ const CVStudio: React.FC<CVStudioProps> = ({
 
       if (Array.isArray(section)) {
         const defaultItem = item || getDefaultItemForSection(sectionType);
+        
+        // Update legacy array
         newData[sectionType] = [...section, defaultItem] as any;
+
+        // Update structure and content map if using new architecture
+        if (newData.structure && newData.content) {
+          // Generate UUID for new section
+          const sectionId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 
+            `section-${Date.now()}-${Math.random()}`;
+          
+          // Map sectionType to section type string
+          const sectionTypeMap: Record<string, string> = {
+            'work': 'work_experience',
+            'volunteer': 'volunteer',
+            'education': 'education',
+            'awards': 'awards',
+            'certificates': 'certificates',
+            'publications': 'publications',
+            'skills': 'skills',
+            'languages': 'languages',
+            'interests': 'interests',
+            'references': 'references',
+            'projects': 'projects'
+          };
+
+          const sectionTypeString = sectionTypeMap[sectionType as string] || sectionType as string;
+
+          // Ensure structure exists
+          if (!newData.structure.sections) {
+            newData.structure.sections = [];
+          }
+
+          // Add to structure
+          newData.structure.sections.push({
+            id: sectionId,
+            type: sectionTypeString,
+            visible: true
+          });
+
+          // Add to content map
+          if (!newData.content) {
+            newData.content = {};
+          }
+          newData.content[sectionId] = { ...defaultItem };
+        }
       }
 
       return newData;
     });
   }, []);
 
-  // Remove section
+  // Remove section - updates both legacy arrays and structure/content map
   const removeSection = useCallback((sectionType: keyof CVDataStructure, index: number) => {
     setCvData(prev => {
       if (!prev) return prev;
@@ -821,7 +998,45 @@ const CVStudio: React.FC<CVStudioProps> = ({
       const section = newData[sectionType];
 
       if (Array.isArray(section)) {
-        // Remove the item at the specified index
+        // Map sectionType to section type string
+        const sectionTypeMap: Record<string, string> = {
+          'work': 'work_experience',
+          'volunteer': 'volunteer',
+          'education': 'education',
+          'awards': 'awards',
+          'certificates': 'certificates',
+          'publications': 'publications',
+          'skills': 'skills',
+          'languages': 'languages',
+          'interests': 'interests',
+          'references': 'references',
+          'projects': 'projects'
+        };
+
+        const sectionTypeString = sectionTypeMap[sectionType as string] || sectionType as string;
+
+        // Update structure and content map if using new architecture
+        if (newData.structure?.sections && newData.content) {
+          // Find all structure sections of this type
+          const sectionsOfType = newData.structure.sections.filter(s => s.type === sectionTypeString);
+          
+          if (sectionsOfType.length > index) {
+            const sectionToRemove = sectionsOfType[index];
+            
+            // Remove from structure
+            newData.structure.sections = newData.structure.sections.filter(
+              s => s.id !== sectionToRemove.id
+            );
+
+            // Remove from content map
+            if (newData.content[sectionToRemove.id]) {
+              const { [sectionToRemove.id]: removed, ...rest } = newData.content;
+              newData.content = rest;
+            }
+          }
+        }
+
+        // Update legacy array
         newData[sectionType] = section.filter((_, i) => i !== index) as any;
       }
 
@@ -1143,9 +1358,10 @@ const CVStudio: React.FC<CVStudioProps> = ({
           if (cvResponse.ok) {
             const cvResult = await cvResponse.json();
             const loadedCvData = cvResult.data?.cv?.cvData || cvResult.cv?.cvData;
+            const templateId = cvResult.data?.cv?.templateId || cvResult.cv?.templateId;
             if (loadedCvData) {
               console.log('✅ CVStudio - CV loaded from journey:', loadedCvData);
-              setCvData(loadedCvData);
+              await setCvDataWithStructure(loadedCvData, templateId);
               setCvTitle(cvResult.data?.cv?.title || cvResult.cv?.title || 'Untitled CV');
               
               // Check if this is a master CV
@@ -1192,7 +1408,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
         // Load the duplicated CV data
         const cvResult = await CVService.getCV(duplicatedCVId, userId);
         if (cvResult.cvData) {
-          setCvData(cvResult.cvData);
+          await setCvDataWithStructure(cvResult.cvData, cvResult.templateId);
           setCvTitle(cvResult.title || `${masterCV.title} (Copy for ${currentJob?.title || 'Job'})`);
           setIsMasterCV(false);
           setCurrentMasterCV(null);
@@ -1463,9 +1679,10 @@ const CVStudio: React.FC<CVStudioProps> = ({
                     if (cvResponse.ok) {
                       const cvResult = await cvResponse.json();
                       const cvData = cvResult.data?.cv?.cvData || cvResult.cv?.cvData;
+                      const templateId = cvResult.data?.cv?.templateId || cvResult.cv?.templateId;
                       if (cvData) {
                         console.log('✅ CVStudio - CV loaded:', cvData);
-                        setCvData(cvData);
+                        await setCvDataWithStructure(cvData, templateId);
                         setCvTitle(cvResult.data?.cv?.title || cvResult.cv?.title || 'Untitled CV');
                         
                         // Check if this is a master CV
@@ -1515,9 +1732,12 @@ const CVStudio: React.FC<CVStudioProps> = ({
                     if (cvResponse.ok) {
                       const cvResult = await cvResponse.json();
                       const cvData = cvResult.data?.cv?.cvData || cvResult.cv?.cvData;
-                      setCvData(cvData);
-                      setCvTitle(cvResult.data?.cv?.title || cvResult.cv?.title || 'Untitled CV');
-                      setOriginalCvId(coverLetter.cvId);
+                      const templateId = cvResult.data?.cv?.templateId || cvResult.cv?.templateId;
+                      if (cvData) {
+                        await setCvDataWithStructure(cvData, templateId);
+                        setCvTitle(cvResult.data?.cv?.title || cvResult.cv?.title || 'Untitled CV');
+                        setOriginalCvId(coverLetter.cvId);
+                      }
                     }
                   } catch (error) {
                     console.error('Error loading linked CV:', error);
@@ -1627,7 +1847,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
                   // Fallback to API call using unified service
                   const unifiedCV = await UnifiedCVService.getCV(cvId, userId);
                   console.log('Unified API CV data:', unifiedCV.cvData);
-                  setCvData(unifiedCV.cvData);
+                  await setCvDataWithStructure(unifiedCV.cvData, unifiedCV.templateId);
                 }
 
                 // Set template if available
@@ -2113,11 +2333,12 @@ const CVStudio: React.FC<CVStudioProps> = ({
         throw new Error('Failed to load CV');
       }
       const cvResult = await response.json();
-      const cvData = cvResult.data?.cv?.cvData || cvResult.cv?.cvData || cvResult.cvData;
+      let cvData = cvResult.data?.cv?.cvData || cvResult.cv?.cvData || cvResult.cvData;
       const cvTitle = cvResult.data?.cv?.title || cvResult.cv?.title || cvResult.title;
+      const templateId = cvResult.data?.cv?.templateId || cvResult.cv?.templateId;
       
       if (cvData) {
-        setCvData(cvData);
+        await setCvDataWithStructure(cvData, templateId);
         setCvTitle(cvTitle || 'Untitled CV');
         console.log('✅ CV data reloaded successfully:', cvTitle);
       } else {
@@ -2501,10 +2722,38 @@ const CVStudio: React.FC<CVStudioProps> = ({
   };
 
   const handleSectionVisibilityToggle = (sectionId: string) => {
+    // Update React state for immediate UI feedback
     setSectionVisibility(prev => ({
       ...prev,
       [sectionId]: !prev[sectionId]
     }));
+
+    // Update cvData structure for persistence
+    if (cvData) {
+      const updatedData = updateStructureInCVData(cvData, {
+        sectionVisibility: {
+          ...sectionVisibility,
+          [sectionId]: !sectionVisibility[sectionId]
+        }
+      });
+      setCvData(updatedData);
+    }
+  };
+
+  const handleSectionReorder = (newSections: Array<{ id: string; type: string }>) => {
+    // Extract new order from sections
+    const newOrder = newSections.map(s => s.type || s.id);
+    
+    // Update React state for immediate UI feedback
+    setSectionOrder(newOrder);
+
+    // Update cvData structure for persistence
+    if (cvData) {
+      const updatedData = updateStructureInCVData(cvData, {
+        sectionOrder: newOrder
+      });
+      setCvData(updatedData);
+    }
   };
 
   const handleToggleAllSections = () => {
@@ -2815,15 +3064,60 @@ const CVStudio: React.FC<CVStudioProps> = ({
       }
     };
 
-    return allSections.map(sectionId => {
+    // Build sections - use structure if available, otherwise use section type as ID
+    const sectionsList: Array<{ id: string; type: string }> = [];
+    
+    if (cvData?.structure?.sections && Array.isArray(cvData.structure.sections)) {
+      // Use structure sections - maintain order from structure
+      cvData.structure.sections.forEach(structureSection => {
+        sectionsList.push({
+          id: structureSection.id, // Use structure ID
+          type: structureSection.type // Use structure type
+        });
+      });
+      
+      // Add any sections from allSections that aren't in structure yet
+      allSections.forEach(sectionType => {
+        if (!sectionsList.some(s => s.type === sectionType)) {
+          sectionsList.push({
+            id: sectionType, // Use type as ID for new sections
+            type: sectionType
+          });
+        }
+      });
+    } else {
+      // Legacy: use section types as IDs
+      sectionOrder.forEach(sectionType => {
+        if (allSections.includes(sectionType)) {
+          sectionsList.push({
+            id: sectionType,
+            type: sectionType
+          });
+        }
+      });
+      
+      // Add any remaining sections
+      allSections.forEach(sectionType => {
+        if (!sectionsList.some(s => s.type === sectionType)) {
+          sectionsList.push({
+            id: sectionType,
+            type: sectionType
+          });
+        }
+      });
+    }
+
+    return sectionsList.map(section => {
+      const sectionId = section.type; // Use type for lookup
       const hasData = hasSectionData(sectionId);
       const isDisabled = !hasData;
       
       return {
-        id: sectionId,
+        id: section.id, // Structure ID or type ID
+        type: section.type, // Section type string
         title: sectionTitles[sectionId] || sectionId.charAt(0).toUpperCase() + sectionId.slice(1),
         icon: getSectionIcon(sectionId),
-        visible: sectionVisibility[sectionId] || false,
+        visible: sectionVisibility[sectionId] !== false, // Default to visible if not set
         expanded: expandedSections.has(sectionId),
         component: sectionComponents[sectionId],
         hasData,

@@ -44,7 +44,7 @@ export default function AuthErrorPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-[#141810] flex items-center justify-center px-4">
       <div className="max-w-md w-full">
         <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8 shadow-2xl">
           {/* Error Icon */}
