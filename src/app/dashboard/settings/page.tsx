@@ -34,7 +34,6 @@ import {
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import UniversalPaymentModal from '@/components/payment/UniversalPaymentModal';
 import RouteGuard from '@/components/auth/RouteGuard';
-import { useNotifications } from '@/contexts/NotificationContext';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import AddPaymentMethodModal from '@/components/payment/AddPaymentMethodModal';
 import ChangePasswordModal from '@/components/auth/ChangePasswordModal';
@@ -983,12 +982,7 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
   // Toast notification state
 
   const showToastNotification = (type: 'success' | 'error' | 'info', message: string) => {
-    addNotification({
-      type,
-      title: type === 'success' ? 'Success' : type === 'error' ? 'Error' : 'Info',
-      message,
-      persistent: false
-    });
+    // Notification removed
   };
 
   const handlePasswordChanged = () => {
@@ -1119,12 +1113,7 @@ const MembershipBilling = ({ user }: { user: User }) => {
   }, []);
 
   const showToastNotification = (type: 'success' | 'error' | 'info', message: string) => {
-    addNotification({
-      type,
-      title: type === 'success' ? 'Success' : type === 'error' ? 'Error' : 'Info',
-      message,
-      persistent: false
-    });
+    // Notification removed
   };
 
   const handlePaymentMethodAdded = (paymentMethod: any) => {
@@ -1585,12 +1574,7 @@ const ReferralsRewards_OLD = () => {
   // Toast notification state
 
   const showToastNotification = (type: 'success' | 'error' | 'info', message: string) => {
-    addNotification({
-      type,
-      title: type === 'success' ? 'Success' : type === 'error' ? 'Error' : 'Info',
-      message,
-      persistent: false
-    });
+    // Notification removed
   };
 
   useEffect(() => {
@@ -2139,7 +2123,6 @@ const SettingsContent = () => {
   const router = useRouter();
   const { toggleSidebar, isMobileMenuOpen } = useMobileSidebar();
   const searchParams = useSearchParams();
-  const { addNotification } = useNotifications();
   const [activeTab, setActiveTab] = useState('account');
   const [userData, setUserData] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);

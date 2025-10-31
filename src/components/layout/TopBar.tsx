@@ -1,15 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
-import { Bell, Settings, User, Menu, X } from 'lucide-react';
+import { Settings, User, Menu, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { getTopBarClasses } from '@/lib/utils/themeUtils';
 import UserAvatar from '@/components/ui/UserAvatar';
 import { useUserData } from '@/lib/hooks/useUserData';
 import { useSession } from 'next-auth/react';
-import { useNotifications } from '@/contexts/NotificationContext';
-import NotificationDropdown from '@/components/notifications/NotificationDropdown';
 
 interface TopBarProps {
   onMenuToggle?: () => void;
@@ -26,15 +24,9 @@ const TopBar: React.FC<TopBarProps> = ({
   const topBarClasses = getTopBarClasses();
   const { data: session } = useSession();
   const { userData } = useUserData();
-  const { notifications, unreadCount } = useNotifications();
-  const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
 
   const handleProfileClick = () => {
     router.push('/dashboard/settings');
-  };
-
-  const handleNotificationsClick = () => {
-    setShowNotificationDropdown(!showNotificationDropdown);
   };
 
   const handleSettingsClick = () => {
@@ -78,28 +70,6 @@ const TopBar: React.FC<TopBarProps> = ({
 
         {/* Right Section */}
         <div className="flex items-center gap-2">
-          {/* Notifications */}
-          <div className="relative">
-            <motion.button
-              onClick={handleNotificationsClick}
-              className={`${topBarClasses.button} relative`}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Bell size={18} />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                  {unreadCount}
-                </span>
-              )}
-            </motion.button>
-            
-            <NotificationDropdown
-              isOpen={showNotificationDropdown}
-              onClose={() => setShowNotificationDropdown(false)}
-            />
-          </div>
-
           {/* Settings */}
           <motion.button
             onClick={handleSettingsClick}

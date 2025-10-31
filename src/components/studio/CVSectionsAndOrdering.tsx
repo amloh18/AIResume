@@ -117,13 +117,8 @@ const CVSectionsAndOrdering: React.FC<CVSectionsAndOrderingProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Header with Controls - Outside the main panel */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-white mb-2">Create & Edit Your CV</h1>
-          <p className="text-gray-300">Fill in the details below to generate your professional resume.</p>
-        </div>
-        
+      {/* Controls - Removed dropdown header */}
+      <div className="flex items-center justify-end mb-6">
         <div className="flex items-center gap-3">
           <motion.button
             onClick={() => setIsOrderingMode(!isOrderingMode)}

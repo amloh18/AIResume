@@ -55,6 +55,35 @@ const JourneyStatusBanner: React.FC<JourneyStatusBannerProps> = ({ journey }) =>
   const [atsScoreState, setAtsScoreState] = useState<number | null>(null);
   const [atsScoreLoading, setAtsScoreLoading] = useState<boolean>(false);
   const hasAttemptedATSCalculation = React.useRef(false);
+  
+  // Scroll direction detection for hide/show banner
+  const [isVisible, setIsVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+  
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+
+      // Hide banner immediately when scrolling down, show when scrolling up
+      if (currentScrollY > lastScrollY && currentScrollY > 10) {
+        // Scrolling down past 10px - hide banner
+        setIsVisible(false);
+      } else if (currentScrollY < lastScrollY) {
+        // Scrolling up - show banner
+        setIsVisible(true);
+      }
+
+      // Always show at the very top
+      if (currentScrollY <= 10) {
+        setIsVisible(true);
+      }
+
+      setLastScrollY(currentScrollY);
+    };
+    
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [lastScrollY]);
 
   // Fetch ATS score function (same as journey card)
   const fetchATSScore = async (cvId: string, jobId: string) => {
@@ -240,7 +269,7 @@ const JourneyStatusBanner: React.FC<JourneyStatusBannerProps> = ({ journey }) =>
         };
       
       case 3: // ATS Score
-        const scoreValue = atsScoreState || cvData?.metadata?.atsScore || 0;
+        const scoreValue = (atsScoreState !== null ? atsScoreState : 0) || cvData?.metadata?.atsScore || 0;
         return {
           title: scoreValue > 0 ? `ATS Score: ${scoreValue}%` : 'ATS Score Pending',
           subtitle: scoreValue > 0 
@@ -362,12 +391,19 @@ const JourneyStatusBanner: React.FC<JourneyStatusBannerProps> = ({ journey }) =>
 
   return (
     <>
-      {/* Sliding Banner */}
+      {/* Sliding Banner - Above header, hides on scroll */}
       <motion.div
-        className="sticky top-0 left-0 right-0 bg-gradient-to-r from-lime-500/10 to-lime-600/10 border-b border-lime-500/20 z-50 backdrop-blur-sm"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
+        className="sticky top-0 left-0 right-0 mb-4 bg-gradient-to-r from-lime-500/10 to-lime-600/10 border-b border-lime-500/20 z-40 backdrop-blur-sm overflow-hidden"
+        initial={{ opacity: 1, y: 0 }}
+        animate={{ 
+          opacity: isVisible ? 1 : 0,
+          y: isVisible ? 0 : -100
+        }}
+        transition={{ duration: 0.3, ease: 'easeInOut' }}
+        style={{ 
+          pointerEvents: isVisible ? 'auto' : 'none',
+          marginBottom: isVisible ? '1rem' : 0
+        }}
       >
         {/* Compact Banner */}
         <div className="px-6 py-2">

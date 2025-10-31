@@ -30,7 +30,6 @@ import { useUnifiedAuth } from '@/lib/hooks/useUnifiedAuth';
 import { authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
 import { v4 as uuidv4 } from 'uuid';
 import { ApplicationPackageService } from '@/lib/services/applicationPackageService';
-import { useNotifications } from '@/contexts/NotificationContext';
 
 interface Job {
   id?: string;
@@ -115,7 +114,6 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
   userId
 }) => {
   const { user } = useUnifiedAuth();
-  const { addNotification } = useNotifications();
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
@@ -339,19 +337,6 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
 
               if (packageResult.success) {
                 console.log('✅ EditJobModal - Application Package created:', packageResult.data?.journeyId);
-                
-                // Show interactive toast notification instead of browser confirm
-                addNotification({
-                  type: 'success',
-                  title: 'Job Saved Successfully!',
-                  message: `Job "${savedJob.jobTitle}" has been saved successfully! Would you like to start creating your application package (CV + Cover Letter) for this job now?`,
-                  actionRequired: true,
-                  actionLabel: 'Start Application',
-                  onAction: () => {
-                    // Navigate to the Studio in CV onboarding mode for this job
-                    window.location.href = `/studio?journeyId=${packageResult.data?.journeyId}&mode=cv-onboarding`;
-                  }
-                });
               } else {
                 console.warn('⚠️ EditJobModal - Failed to create Application Package:', packageResult.message);
                 // Don't fail the job creation if package creation fails

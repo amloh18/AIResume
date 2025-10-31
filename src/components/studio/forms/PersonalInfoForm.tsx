@@ -67,20 +67,25 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
     profiles: data?.profiles || cvData?.basics?.profiles || []
   };
   
+  const handleFieldChange = (field: string, value: any) => {
+    // Handle top-level fields - pass field name without 'basics.' prefix
+    // RestructuredStudioLayout will add the prefix
+    const safeValue = typeof value === 'string' ? validateStringValue(value, field) : value;
+    onUpdate(field, safeValue);
+  };
+
   const handleNameChange = (value: string) => {
-    const safeValue = validateStringValue(value, 'name');
-    onUpdate({ ...safePersonalInfo, name: safeValue });
+    handleFieldChange('name', value);
   };
 
   const handleLocationChange = (field: string, value: string) => {
     const safeValue = validateStringValue(value, field);
-    onUpdate({
-      ...safePersonalInfo,
-      location: {
-        ...safePersonalInfo.location,
-        [field]: safeValue
-      }
-    });
+    const updatedLocation = {
+      ...safePersonalInfo.location,
+      [field]: safeValue
+    };
+    // Pass location object directly - RestructuredStudioLayout will handle the path
+    onUpdate('location', updatedLocation);
   };
 
   const handleProfileChange = (index: number, field: string, value: string) => {
@@ -90,7 +95,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
       ...updatedProfiles[index],
       [field]: safeValue
     };
-    onUpdate({ ...safePersonalInfo, profiles: updatedProfiles });
+    onUpdate('profiles', updatedProfiles);
   };
 
   const addProfile = () => {
@@ -99,12 +104,12 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
       username: '',
       url: ''
     };
-    onUpdate({ ...safePersonalInfo, profiles: [...safePersonalInfo.profiles, newProfile] });
+    onUpdate('basics.profiles', [...safePersonalInfo.profiles, newProfile]);
   };
 
   const removeProfile = (index: number) => {
     const updatedProfiles = safePersonalInfo.profiles.filter((_, i) => i !== index);
-    onUpdate({ ...safePersonalInfo, profiles: updatedProfiles });
+    onUpdate('profiles', updatedProfiles);
   };
 
   const themeClasses = getThemeClasses;
@@ -133,7 +138,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
       }
 
       const result = await response.json();
-      onUpdate({ ...safePersonalInfo, summary: result.summary });
+      handleFieldChange('summary', result.summary);
     } catch (error) {
       console.error('Error generating AI summary:', error);
     } finally {
@@ -160,10 +165,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
         <input
           type="text"
           value={safePersonalInfo.label}
-          onChange={(e) => {
-            const value = e.target.value;
-            onUpdate({ ...safePersonalInfo, label: value });
-          }}
+          onChange={(e) => handleFieldChange('label', e.target.value)}
           className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
           placeholder="Senior Product Manager"
         />
@@ -175,10 +177,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
         <input
           type="email"
           value={safePersonalInfo.email}
-          onChange={(e) => {
-            const value = e.target.value;
-            onUpdate({ ...safePersonalInfo, email: value });
-          }}
+          onChange={(e) => handleFieldChange('email', e.target.value)}
           className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
           placeholder="john.doe@example.com"
         />
@@ -189,10 +188,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
         <input
           type="tel"
           value={safePersonalInfo.phone}
-          onChange={(e) => {
-            const value = e.target.value;
-            onUpdate({ ...safePersonalInfo, phone: value });
-          }}
+          onChange={(e) => handleFieldChange('phone', e.target.value)}
           className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
           placeholder="+1 (555) 123-4567"
         />
@@ -204,10 +200,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
         <input
           type="url"
           value={safePersonalInfo.url}
-          onChange={(e) => {
-            const value = e.target.value;
-            onUpdate({ ...safePersonalInfo, url: value });
-          }}
+          onChange={(e) => handleFieldChange('url', e.target.value)}
           className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
           placeholder="https://yourportfolio.com"
         />
@@ -233,7 +226,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
         <label className="block text-white/80 text-sm font-medium mb-2">Summary</label>
         <textarea
           value={safePersonalInfo.summary}
-          onChange={(e) => onUpdate({ ...safePersonalInfo, summary: e.target.value })}
+          onChange={(e) => handleFieldChange('summary', e.target.value)}
           rows={4}
           className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors resize-none"
           placeholder="A brief summary about your professional background..."

@@ -10,7 +10,6 @@ import PerformanceMonitor from '@/components/ui/PerformanceMonitor';
 import { LoadingProvider } from './LoadingProvider';
 import { PaymentModalProvider } from '@/contexts/PaymentModalContext';
 import CookieConsent from '@/components/CookieConsent';
-import { NotificationProvider } from '@/contexts/NotificationContext';
 import { ConsoleLoggerProvider } from '@/contexts/ConsoleLoggerProvider';
 import SessionCleanup from '@/components/SessionCleanup';
 import { setupEventErrorHandling } from '@/lib/utils/errorHandler';
@@ -30,14 +29,12 @@ function ConditionalProviders({ children }: ClientProvidersProps) {
         <ThemeProvider>
           <LoadingProvider>
             <PaymentModalProvider>
-              <NotificationProvider>
-                <ConsoleLoggerProvider>
-                  <PerformanceMonitor />
-                  <CookieConsent />
-                  <SessionCleanup />
-                  {children}
-                </ConsoleLoggerProvider>
-              </NotificationProvider>
+              <ConsoleLoggerProvider>
+                <PerformanceMonitor />
+                <CookieConsent />
+                <SessionCleanup />
+                {children}
+              </ConsoleLoggerProvider>
             </PaymentModalProvider>
           </LoadingProvider>
         </ThemeProvider>
@@ -51,14 +48,12 @@ function ConditionalProviders({ children }: ClientProvidersProps) {
       <ThemeProvider>
         <LoadingProvider>
           <PaymentModalProvider>
-            <NotificationProvider>
-              <ConsoleLoggerProvider>
-                <PerformanceMonitor />
-                <CookieConsent />
-                <SessionCleanup />
-                {children}
-              </ConsoleLoggerProvider>
-            </NotificationProvider>
+            <ConsoleLoggerProvider>
+              <PerformanceMonitor />
+              <CookieConsent />
+              <SessionCleanup />
+              {children}
+            </ConsoleLoggerProvider>
           </PaymentModalProvider>
         </LoadingProvider>
       </ThemeProvider>
