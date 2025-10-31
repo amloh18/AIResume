@@ -23,7 +23,7 @@ export default function UnifiedAuthLayout({
   backText = 'Back to Home'
 }: UnifiedAuthLayoutProps) {
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 bg-[#1A201A]">
+    <div className="min-h-screen flex items-center justify-center px-4 bg-[#141810]">
       {/* Back Button */}
       {showBackButton && (
         <div className="absolute top-8 left-8">

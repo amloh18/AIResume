@@ -184,7 +184,7 @@ const ApplicationTracker: React.FC = () => {
       const jobsResponse = await authenticatedFetchWithUserId('/api/jobs', userId);
       const jobsResult = await jobsResponse.json();
       if (jobsResult.success) {
-        // Transform jobs to match our interface
+        // Transform jobs to match our interface - include ALL fields
         const transformedJobs = jobsResult.data.jobs.map((job: any) => ({
           id: job.id,
           _id: job.id,
@@ -194,16 +194,27 @@ const ApplicationTracker: React.FC = () => {
           company: job.company,
           status: job.status,
           jobDescription: job.jobDescription,
+          description: job.jobDescription, // For compatibility
           location: job.location,
+          jobUrl: job.jobUrl,
           salary: job.salary,
           jobType: job.type,
           type: job.type, // For compatibility
           source: job.source,
+          sourceUrl: job.sourceUrl,
           postedDate: job.postedDate,
           applicationDate: job.applicationDate,
           deadline: job.deadline,
           priority: job.priority || 'medium',
           notes: job.notes,
+          sponsorship: job.sponsorship,
+          tags: job.tags || [],
+          contactDetails: job.contactDetails || { name: '', email: '', phone: '', role: '' },
+          interviews: job.interviews || [],
+          followUps: job.followUps || [],
+          attachments: job.attachments || [],
+          atsScore: job.atsScore,
+          isArchived: job.isArchived || false,
           createdAt: job.createdAt,
           updatedAt: job.updatedAt
         }));
@@ -497,20 +508,32 @@ const ApplicationTracker: React.FC = () => {
   };
 
   const handleEditJob = (job: JobApplication) => {
-    // Map JobApplication to Job interface for the modal
+    // Map JobApplication to Job interface for the modal - include ALL fields
     const jobForModal = {
       id: job.id,
       jobTitle: job.jobTitle || job.title,
       company: job.company,
       location: job.location,
-      jobDescription: job.jobDescription,
+      jobUrl: job.jobUrl,
+      jobDescription: job.jobDescription || job.description,
       notes: job.notes,
       priority: job.priority,
       status: job.status,
-      deadline: job.deadline ? new Date(job.deadline).toISOString().split('T')[0] : '',
-      applicationDate: job.applicationDate ? new Date(job.applicationDate).toISOString().split('T')[0] : '',
+      deadline: job.deadline ? (typeof job.deadline === 'string' ? job.deadline : new Date(job.deadline).toISOString().split('T')[0]) : '',
+      applicationDate: job.applicationDate ? (typeof job.applicationDate === 'string' ? job.applicationDate : new Date(job.applicationDate).toISOString().split('T')[0]) : '',
       salary: job.salary,
-      // Add other fields as needed
+      sponsorship: job.sponsorship,
+      tags: job.tags || [],
+      contactDetails: job.contactDetails || { name: '', email: '', phone: '', role: '' },
+      interviews: job.interviews || [],
+      followUps: job.followUps || [],
+      attachments: job.attachments || [],
+      source: job.source,
+      sourceUrl: job.sourceUrl,
+      atsScore: job.atsScore,
+      atsAnalysis: job.atsAnalysis,
+      statusHistory: job.statusHistory || [],
+      isArchived: job.isArchived || false
     };
     setEditingJob(jobForModal as any);
     setShowAddJobModal(true);

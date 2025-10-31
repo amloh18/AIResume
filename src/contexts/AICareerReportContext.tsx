@@ -68,10 +68,12 @@ const STORAGE_KEY = 'ai-career-report-data';
 const saveToStorage = (state: AICareerReportState) => {
   if (typeof window !== 'undefined') {
     try {
-      // Only save steps 1 and 2 data, not step 3 (AI analysis)
+      // Save CV data and important state - also save step 3 data to preserve after sign-in
       const dataToSave = {
         currentStep: state.currentStep,
         cvData: state.cvData,
+        // Save AI analysis if it exists (for step 3 restoration)
+        aiAnalysis: state.aiAnalysis,
         uploadedFile: state.uploadedFile ? {
           name: state.uploadedFile.name,
           size: state.uploadedFile.size,
@@ -83,6 +85,8 @@ const saveToStorage = (state: AICareerReportState) => {
         isUploading: state.isUploading,
         uploadError: state.uploadError,
         availableSections: state.availableSections,
+        jobId: state.jobId,
+        jobData: state.jobData,
         lastSaved: Date.now()
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
@@ -158,14 +162,14 @@ const getInitialState = (): AICareerReportState => {
       references: []
     },
     uploadedFile: null, // File objects can't be serialized, will be handled separately
-    aiAnalysis: null,
+    aiAnalysis: savedData?.aiAnalysis || null, // Restore AI analysis if available
     isAnalyzing: false,
     completedSteps: savedData?.completedSteps || [],
     activeSection: savedData?.activeSection || 'personal',
     isUploading: false,
     uploadError: null,
-    jobData: null,
-    jobId: null,
+    jobData: savedData?.jobData || null,
+    jobId: savedData?.jobId || null,
     isLoadingJob: false,
     jobError: null,
     availableSections: savedData?.availableSections || []
@@ -303,19 +307,21 @@ const AICareerReportContext = createContext<{
 export function AICareerReportProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(aiCareerReportReducer, getInitialState());
 
-  // Save to localStorage whenever state changes (only for steps 1 and 2)
+  // Save to localStorage whenever state changes (keep saving for step 3 until CV is actually saved)
   useEffect(() => {
-    if (state.currentStep <= 2) {
-      saveToStorage(state);
+    // Always save CV data to localStorage, even in step 3, until Master CV is saved
+    // This ensures data persists if user needs to sign in
+    if (typeof window !== 'undefined') {
+      const masterCVCreated = sessionStorage.getItem('masterCVCreated');
+      if (masterCVCreated !== 'true') {
+        saveToStorage(state);
+      }
     }
   }, [state]);
 
-  // Clear storage when reaching step 3 (AI analysis)
-  useEffect(() => {
-    if (state.currentStep === 3) {
-      clearStorage();
-    }
-  }, [state.currentStep]);
+  // Don't clear storage when reaching step 3 - keep it until CV is actually saved
+  // Storage will be cleared when the Master CV is successfully created
+  // This ensures data persists if user needs to sign in
 
   const nextStep = () => {
     if (state.currentStep < 3) {

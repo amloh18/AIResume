@@ -129,7 +129,7 @@ export function clearSessionFromStorage(): void {
     sessionStorage.removeItem('fromLogin');
     sessionStorage.removeItem('fromRegistration');
     
-    console.log('✅ Cleared legacy session data');
+
   } catch (error) {
     console.error('Error clearing session from storage:', error);
   }

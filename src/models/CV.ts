@@ -55,6 +55,21 @@ const cvSchema = new Schema<ICV>({
     default: 1
   },
   cvData: {
+    // Structure and Content Map (new architecture) - Optional for backward compatibility
+    structure: {
+      type: Schema.Types.Mixed, // Use Mixed to allow flexible structure
+      required: false
+    },
+    content: { 
+      type: Schema.Types.Mixed, 
+      required: false 
+    }, // Content map keyed by section IDs
+    templateId: { 
+      type: Schema.Types.Mixed, 
+      required: false 
+    }, // Template ID for structure initialization
+    
+    // Legacy arrays kept for backward compatibility during migration
     basics: {
       name: { type: String, default: '' },
       label: { type: String, default: '' },
@@ -102,7 +117,8 @@ const cvSchema = new Schema<ICV>({
       startDate: { type: String },
       endDate: { type: String },
       score: { type: String },
-      courses: [{ type: String }]
+      courses: [{ type: String }],
+      description: { type: String }
     }],
     awards: [{
       title: { type: String },

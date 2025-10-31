@@ -24,6 +24,34 @@ const OnboardingCarouselModal: React.FC<OnboardingCarouselModalProps> = ({ userI
   const [currentCard, setCurrentCard] = useState(0);
   const [visitedCards, setVisitedCards] = useState<boolean[]>([false, false, false, false]);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [hasMasterCV, setHasMasterCV] = useState<boolean | null>(null);
+  const [isCheckingCV, setIsCheckingCV] = useState(true);
+
+  // Check if user has a master CV
+  useEffect(() => {
+    const checkMasterCV = async () => {
+      try {
+        setIsCheckingCV(true);
+        const response = await fetch(`/api/cvs/master?userId=${userId}`);
+        const result = await response.json();
+        
+        if (result.success && result.data?.masterCV) {
+          setHasMasterCV(true);
+        } else {
+          setHasMasterCV(false);
+        }
+      } catch (error) {
+        console.error('Error checking master CV:', error);
+        setHasMasterCV(false);
+      } finally {
+        setIsCheckingCV(false);
+      }
+    };
+
+    if (userId) {
+      checkMasterCV();
+    }
+  }, [userId]);
 
   // Mark current card as visited
   useEffect(() => {
@@ -177,15 +205,6 @@ const OnboardingCarouselModal: React.FC<OnboardingCarouselModalProps> = ({ userI
                 />
               ))}
             </div>
-            
-            {/* Dismiss Button */}
-            <button
-              onClick={handleDismiss}
-              className="text-white/60 hover:text-white transition-colors p-2 rounded-lg hover:bg-white/10"
-              title="Dismiss welcome (you can create Master CV anytime)"
-            >
-              <X className="w-5 h-5" />
-            </button>
           </div>
         </div>
 
@@ -318,15 +337,28 @@ const OnboardingCarouselModal: React.FC<OnboardingCarouselModalProps> = ({ userI
           </div>
 
           {currentCard === cards.length - 1 ? (
-            <motion.button
-              onClick={handleCreateMasterCV}
-              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-lime-400 to-lime-500 text-black rounded-lg font-semibold hover:from-lime-300 hover:to-lime-400 transition-all duration-200"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              Create Master CV
-              <ArrowRight className="w-5 h-5" />
-            </motion.button>
+            // Last card - show Create Master CV button only if no master CV exists
+            hasMasterCV === false && !isCheckingCV ? (
+              <motion.button
+                onClick={handleCreateMasterCV}
+                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-lime-400 to-lime-500 text-black rounded-lg font-semibold hover:from-lime-300 hover:to-lime-400 transition-all duration-200"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                Create Master CV
+                <ArrowRight className="w-5 h-5" />
+              </motion.button>
+            ) : (
+              // Show close button if master CV exists or while checking
+              <motion.button
+                onClick={handleDismiss}
+                className="flex items-center gap-2 px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-lg font-semibold transition-all duration-200 border border-white/20"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                Close
+              </motion.button>
+            )
           ) : (
             <motion.button
               onClick={nextCard}

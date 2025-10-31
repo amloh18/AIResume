@@ -8,7 +8,35 @@
  * NO TRANSFORMATION LAYERS - Direct serialization/deserialization only.
  */
 
+/**
+ * Section structure entry defining order and visibility
+ */
+export interface CVSectionStructure {
+  id: string;        // Unique UUID, e.g., "uuid-1", "uuid-2"
+  type: string;      // Section type, e.g., "personal_header", "work_experience"
+  visible: boolean;  // Section visibility
+}
+
+/**
+ * CV structure defining section order and metadata
+ */
+export interface CVStructure {
+  sections: CVSectionStructure[];
+}
+
+/**
+ * Content map keyed by section IDs
+ */
+export type CVContentMap = Record<string, any>;
+
 export interface UnifiedCVDataStructure {
+  // Structure and Content Map (new architecture)
+  structure?: CVStructure;  // Optional for backward compatibility
+  content?: CVContentMap;   // Optional for backward compatibility
+  
+  // Template ID
+  templateId?: string;      // Template ID for structure initialization
+  
   // Personal Information
   basics: {
     name: string;
@@ -64,6 +92,7 @@ export interface UnifiedCVDataStructure {
     endDate: string;
     score: string;
     courses: string[];
+    description?: string;
   }>;
 
   // Awards and Recognition
@@ -286,7 +315,8 @@ export const UNIFIED_CV_VALIDATION_SCHEMA = {
           startDate: { type: "string" },
           endDate: { type: "string" },
           score: { type: "string" },
-          courses: { type: "array", items: { type: "string" } }
+          courses: { type: "array", items: { type: "string" } },
+          description: { type: "string" }
         }
       }
     },

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import connectDB from '@/lib/database';
-import { JobApplication } from '@/models';
+import { JobApplication, User } from '@/models';
 import jwt from 'jsonwebtoken';
 import { getAuthenticatedUser } from '@/lib/auth-helpers';
 
@@ -93,7 +93,16 @@ export async function GET(
       }, { status: 404 });
     }
 
-    // Transform the job data to match the expected format
+    // Helper to convert Date to ISO string for frontend
+    const dateToISO = (date: Date | undefined | null): string | undefined => {
+      if (!date) return undefined;
+      if (date instanceof Date) {
+        return date.toISOString().split('T')[0]; // Return YYYY-MM-DD format
+      }
+      return undefined;
+    };
+
+    // Transform the job data to match the expected format - include ALL fields from database
     const transformedJob = {
       id: job._id,
       _id: job._id, // Include both id and _id for compatibility
@@ -101,19 +110,51 @@ export async function GET(
       jobTitle: job.jobTitle, // Include both title and jobTitle for compatibility
       company: job.company,
       location: job.location,
+      jobUrl: job.jobUrl,
       jobDescription: job.jobDescription,
+      description: job.jobDescription, // For compatibility
       requirements: job.requirements || [],
       responsibilities: job.responsibilities || [],
       salary: job.salary,
       type: job.type || 'full-time',
       remote: job.remote || false,
-      postedDate: job.postedDate,
-      applicationDeadline: job.applicationDeadline,
+      postedDate: dateToISO(job.postedDate),
+      applicationDeadline: dateToISO(job.applicationDeadline),
+      deadline: dateToISO(job.deadline),
+      applicationDate: dateToISO(job.applicationDate),
       status: job.status,
+      priority: job.priority,
+      notes: job.notes,
+      sponsorship: job.sponsorship,
+      tags: job.tags || [],
+      contactDetails: job.contactDetails ? {
+        name: job.contactDetails.name || '',
+        email: job.contactDetails.email || '',
+        phone: job.contactDetails.phone || '',
+        role: job.contactDetails.role || ''
+      } : { name: '', email: '', phone: '', role: '' },
+      interviews: (job.interviews || []).map((iv: any) => ({
+        ...iv,
+        date: iv.date instanceof Date ? iv.date.toISOString().split('T')[0] : iv.date
+      })),
+      followUps: (job.followUps || []).map((fu: any) => ({
+        ...fu,
+        date: fu.date instanceof Date ? fu.date.toISOString().split('T')[0] : fu.date
+      })),
+      attachments: job.attachments || [],
+      source: job.source,
+      sourceUrl: job.sourceUrl,
+      atsScore: job.atsScore,
+      atsAnalysis: job.atsAnalysis,
+      statusHistory: (job.statusHistory || []).map((sh: any) => ({
+        ...sh,
+        changedAt: sh.changedAt instanceof Date ? sh.changedAt.toISOString() : sh.changedAt
+      })),
+      isArchived: job.isArchived || false,
       // cvId removed - relationships now managed through CVJourney
       userId: job.userId,
-      createdAt: job.createdAt,
-      updatedAt: job.updatedAt
+      createdAt: job.createdAt instanceof Date ? job.createdAt.toISOString() : job.createdAt,
+      updatedAt: job.updatedAt instanceof Date ? job.updatedAt.toISOString() : job.updatedAt
     };
 
     return NextResponse.json({ 

@@ -200,16 +200,17 @@ export default function UnifiedAuthForm({
               required={field.required}
               className={`w-full ${field.icon ? 'pl-10' : 'pl-4'} ${
                 isPasswordField ? 'pr-12' : 'pr-4'
-              } py-3 bg-[#232f1c] border text-white placeholder-white/50 focus:ring-2 transition-all duration-200 rounded-xl ${
+              } py-3 bg-[#232f1c] text-white placeholder-white/50 transition-all duration-200 rounded-xl outline-none focus:outline-none ${
                 fieldError 
-                  ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
-                  : 'border-white/20 focus:border-[#80FF00] focus:ring-[#80FF00]'
+                  ? 'border border-red-500 focus:border-2 focus:border-red-500' 
+                  : 'border border-[#80FF00]/50 focus:border-2 focus:border-[#80FF00]'
               }`}
             />
             {isPasswordField && field.showPasswordToggle && (
               <button
                 type="button"
                 onClick={() => togglePasswordVisibility(field.name)}
+                tabIndex={-1}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/60 hover:text-white transition-colors"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}

@@ -144,13 +144,13 @@ export default function CodeInput({
             disabled={disabled}
             className={`
               w-16 h-16 text-2xl font-bold text-center
-              bg-transparent border-2 rounded-full
+              bg-transparent rounded-full
               text-white placeholder-gray-500
-              focus:outline-none focus:ring-2 focus:ring-[#88E03F]
+              outline-none focus:outline-none
               transition-all duration-200
               ${error 
-                ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
-                : 'border-[#505050] focus:border-[#88E03F]'
+                ? 'border border-red-500 focus:border-2 focus:border-red-500' 
+                : 'border border-[#80FF00]/50 focus:border-2 focus:border-[#80FF00]'
               }
               ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-text'}
             `}

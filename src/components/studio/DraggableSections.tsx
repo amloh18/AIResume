@@ -28,6 +28,7 @@ interface Section {
   isVisible: boolean;
   isExpanded: boolean;
   component: React.ReactNode;
+  type?: string; // Section type (e.g., 'work_experience') for structure-based architecture
 }
 
 interface DraggableSectionsProps {

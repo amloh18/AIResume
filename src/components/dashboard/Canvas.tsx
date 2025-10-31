@@ -709,8 +709,9 @@ const Canvas: React.FC = () => {
       console.log('🔍 Canvas - Calling UnifiedCVService.getCVs...');
       const result = await UnifiedCVService.getCVs(userIdToUse, { projection: 'summary' });
       console.log('🔍 Canvas - UnifiedCVService.getCVs result:', result);
+      console.log('🔍 Canvas - Result type:', typeof result, 'Is array:', Array.isArray(result), 'Length:', result?.length);
       
-      if (result && result.length > 0) {
+      if (result && Array.isArray(result) && result.length > 0) {
         // Process CVs with unified data structure
         const enrichedCVs = result.map((cv: any) => {
           
@@ -766,13 +767,16 @@ const Canvas: React.FC = () => {
         console.log('✅ Canvas - CVs loaded successfully:', { regular: regularCVs.length, master: masterCVs.length });
       } else {
         console.log('🔍 Canvas - No CVs found for user:', userIdToUse);
+        console.log('🔍 Canvas - Result was:', result);
         setCvs([]);
         setMasterCVs([]);
       }
-    } catch (error) {
-      console.error('Error loading CVs:', error);
-      setCvs([]);
-      setMasterCVs([]);
+    } catch (error: any) {
+      console.error('❌ Error loading CVs:', error);
+      console.error('❌ Error details:', error.message, error.stack);
+      // Don't clear CVs on error - keep existing ones if any
+      // setCvs([]);
+      // setMasterCVs([]);
     } finally {
       setLoading(false);
     }
@@ -1559,6 +1563,13 @@ const Canvas: React.FC = () => {
 
   // Filter and sort CVs
   const filteredAndSortedCVs = React.useMemo(() => {
+    console.log('🔍 Canvas - filteredAndSortedCVs calculation:', {
+      cvsLength: cvs.length,
+      searchQuery,
+      sortBy,
+      cvs: cvs.map(cv => ({ id: cv.id, title: cv.title }))
+    });
+    
     let filtered = cvs.filter(cv => {
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
@@ -1568,7 +1579,7 @@ const Canvas: React.FC = () => {
       return true;
     });
 
-    return filtered.sort((a, b) => {
+    const sorted = filtered.sort((a, b) => {
       switch (sortBy) {
         case 'title':
           return a.title.localeCompare(b.title);
@@ -1579,6 +1590,14 @@ const Canvas: React.FC = () => {
           return new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime();
       }
     });
+    
+    console.log('🔍 Canvas - filteredAndSortedCVs result:', {
+      filteredLength: filtered.length,
+      sortedLength: sorted.length,
+      sorted: sorted.map(cv => ({ id: cv.id, title: cv.title }))
+    });
+    
+    return sorted;
   }, [cvs, searchQuery, sortBy]);
 
   // Filter and sort Cover Letters
@@ -1742,11 +1761,16 @@ const Canvas: React.FC = () => {
 
         <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {/* Master CV Card - Always First */}
-          {console.log('🔍 Canvas - Rendering MasterCVCardOverlay with:', {
+          {console.log('🔍 Canvas - Rendering CV Grid:', {
+            activeTab,
+            loading,
+            cvsLength: cvs.length,
+            masterCVsLength: masterCVs.length,
+            filteredAndSortedCVsLength: filteredAndSortedCVs.length,
             mongoDBUserId,
             userIdFromAPI: getUserIdForAPI(user),
-            masterCVsLength: masterCVs.length,
-            masterCVs: masterCVs
+            masterCVs: masterCVs.map(m => ({ id: m.id, title: m.title })),
+            filteredCVs: filteredAndSortedCVs.map(cv => ({ id: cv.id, title: cv.title }))
           })}
           <MasterCVCardOverlay
             onEditMasterCV={handleEditMasterCV}
@@ -1778,30 +1802,49 @@ const Canvas: React.FC = () => {
             ))
           ) : (
             // CV Cards with Overlay Design
-            filteredAndSortedCVs.map((cv, index) => (
-              <CVCardOverlay
-                key={cv.id}
-                cv={{
-                  ...cv,
-                  thumbnail: cv.thumbnail || ''
-                }}
-                onEdit={handleCVClick}
-                onDownload={handleDownloadCV}
-                onDelete={handleDeleteCV}
-                onToggleStar={toggleStar}
-                onRename={(cvId, newTitle) => {
-                  setEditingTitle(newTitle);
-                  saveTitle(cvId);
-                }}
-                onEditJourney={handleEditJourney}
-                onTitleEdit={(cvId, newTitle) => setEditingTitle(newTitle)}
-                editingCVId={editingCVId}
-                editingTitle={editingTitle}
-                onStartEditing={startEditing}
-                onSaveTitle={saveTitle}
-                onCancelEditing={cancelEditing}
-              />
-            ))
+            filteredAndSortedCVs.length > 0 ? (
+              filteredAndSortedCVs.map((cv, index) => {
+                console.log('🔍 Canvas - Rendering CV Card:', { index, id: cv.id, title: cv.title });
+                return (
+                  <CVCardOverlay
+                    key={cv.id || `cv-${index}`}
+                    cv={{
+                      ...cv,
+                      thumbnail: cv.thumbnail || ''
+                    }}
+                    onEdit={handleCVClick}
+                    onDownload={handleDownloadCV}
+                    onDelete={handleDeleteCV}
+                    onToggleStar={toggleStar}
+                    onRename={(cvId, newTitle) => {
+                      setEditingTitle(newTitle);
+                      saveTitle(cvId);
+                    }}
+                    onEditJourney={handleEditJourney}
+                    onTitleEdit={(cvId, newTitle) => setEditingTitle(newTitle)}
+                    editingCVId={editingCVId}
+                    editingTitle={editingTitle}
+                    onStartEditing={startEditing}
+                    onSaveTitle={saveTitle}
+                    onCancelEditing={cancelEditing}
+                  />
+                );
+              })
+            ) : (
+              <div className="col-span-full text-center py-12">
+                <FileText className="w-16 h-16 mx-auto text-gray-400 dark:text-gray-600 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No CVs Found</h3>
+                <p className="text-gray-500 dark:text-gray-400 mb-4">
+                  {searchQuery ? 'No CVs match your search.' : "You haven't created any CVs yet."}
+                </p>
+                <button
+                  onClick={() => createCV()}
+                  className="px-4 py-2 bg-lime-500 hover:bg-lime-600 text-white rounded-full transition-colors"
+                >
+                  Create Your First CV
+                </button>
+              </div>
+            )
           )}
         </div>
         </div>

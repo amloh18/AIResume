@@ -609,35 +609,14 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
                 onClick={() => switchMode('reset')}
                 className="text-[#80FF00] hover:text-[#80FF00]/80 transition-colors duration-200 font-medium"
               >
-                Forgot Password?
-              </button>
-            </p>
-            <p className="text-white/70 text-sm text-center">
-              Don't have an account?{' '}
-              <button
-                onClick={() => switchMode('signup')}
-                className="text-[#80FF00] hover:text-[#80FF00]/80 transition-colors duration-200 font-medium"
-              >
-                Create Account
+                Reset Password
               </button>
             </p>
           </div>
         );
 
       case 'signup':
-        return (
-          <div className="space-y-3">
-            <p className="text-white/70 text-sm text-center">
-              Already have an account?{' '}
-              <button
-                onClick={() => switchMode('signin')}
-                className="text-[#80FF00] hover:text-[#80FF00]/80 transition-colors duration-200 font-medium"
-              >
-                Sign In
-              </button>
-            </p>
-          </div>
-        );
+        return null;
 
       case 'reset':
         return (
@@ -701,17 +680,6 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
     />
   ) : null;
 
-  if (status === 'loading') {
-    return (
-      <div className="h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-8 h-8 animate-spin text-lime-400" />
-          <p className="text-white text-sm">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
   // Show code verification screen
   if (mode === 'verify-code') {
     return (
@@ -742,6 +710,54 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
       backHref="/"
       backText="Back to Home"
     >
+      {/* Mode Toggle Switch - Only show for signin/signup */}
+      {(mode === 'signin' || mode === 'signup') && (
+        <div className="mb-6 flex justify-center">
+          <div className="relative inline-flex items-center bg-[#1A1A1A] rounded-full p-1.5 border border-white/10">
+            <motion.button
+              type="button"
+              onClick={() => switchMode('signin')}
+              className={`relative px-8 py-3 text-base font-medium rounded-full transition-all duration-300 z-10 ${
+                mode === 'signin'
+                  ? 'text-black'
+                  : 'text-white/70 hover:text-white'
+              }`}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              Sign In
+            </motion.button>
+            <motion.button
+              type="button"
+              onClick={() => switchMode('signup')}
+              className={`relative px-8 py-3 text-base font-medium rounded-full transition-all duration-300 z-10 ${
+                mode === 'signup'
+                  ? 'text-black'
+                  : 'text-white/70 hover:text-white'
+              }`}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              Sign Up
+            </motion.button>
+            {/* Active indicator pill */}
+            <motion.div
+              className="absolute top-1.5 bottom-1.5 bg-[#80FF00] rounded-full z-0"
+              initial={false}
+              animate={{
+                left: mode === 'signin' ? '6px' : '50%',
+                width: mode === 'signin' ? 'calc(50% - 6px)' : 'calc(50% - 6px)',
+              }}
+              transition={{
+                type: 'spring',
+                stiffness: 500,
+                damping: 30
+              }}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Icon */}
       {getIcon()}
       
@@ -833,22 +849,5 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
 
 // Wrapper component that handles mounting
 export default function UnifiedAuthPage({ initialMode = 'signin' }: AuthPageProps) {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return (
-      <div className="h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-8 h-8 animate-spin text-lime-400" />
-          <p className="text-white text-sm">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
   return <UnifiedAuthPageContent initialMode={initialMode} />;
 }

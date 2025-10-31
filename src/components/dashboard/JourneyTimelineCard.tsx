@@ -119,6 +119,8 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
   const hasAttemptedATSCalculation = React.useRef(false);
   const [mongoDBUserId, setMongoDBUserId] = React.useState<string | null>(null);
   const [showCVSelector, setShowCVSelector] = React.useState(false);
+  const [isRetryingDocuments, setIsRetryingDocuments] = React.useState(false);
+  const pollingIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
   
   // New state for Step 5 functionality
   const [showMoveToAppliedModal, setShowMoveToAppliedModal] = React.useState(false);
@@ -372,6 +374,103 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
     }
   }, [journey.cvId, journey.jobId, journey.atsScore, atsScore, atsScoreLoading]);
 
+  // Polling for document creation status
+  React.useEffect(() => {
+    // Poll if status is processing_documents OR if we're missing cvId or coverLetterId but status isn't failed
+    const needsPolling = journey.status === 'processing_documents' || 
+                         (journey.status !== 'creation_failed' && (!journey.cvId || !journey.coverLetterId));
+    
+    if (needsPolling) {
+      console.log('🔄 JourneyTimelineCard - Starting polling for journey:', journey.id, {
+        status: journey.status,
+        hasCvId: !!journey.cvId,
+        hasCoverLetterId: !!journey.coverLetterId
+      });
+      
+      // Poll every 2 seconds
+      pollingIntervalRef.current = setInterval(async () => {
+        try {
+          const response = await fetch(`/api/application-journey?jobId=${journey.jobId}`);
+          if (response.ok) {
+            const result = await response.json();
+            if (result.success && result.data?.journeys) {
+              const updatedJourney = result.data.journeys.find((j: any) => j.id === journey.id);
+              if (updatedJourney) {
+                // Check if documents were created (by checking cvId and coverLetterId)
+                const hasBothDocuments = updatedJourney.cvId && updatedJourney.coverLetterId;
+                const statusChanged = updatedJourney.status !== 'processing_documents';
+                
+                if (hasBothDocuments || statusChanged) {
+                  console.log('✅ JourneyTimelineCard - Documents created or status changed:', {
+                    status: updatedJourney.status,
+                    cvId: updatedJourney.cvId,
+                    coverLetterId: updatedJourney.coverLetterId
+                  });
+                  
+                  // Stop polling and refresh
+                  if (pollingIntervalRef.current) {
+                    clearInterval(pollingIntervalRef.current);
+                    pollingIntervalRef.current = null;
+                  }
+                  
+                  // Trigger refresh to update the component
+                  if (onRefresh) {
+                    console.log('🔄 JourneyTimelineCard - Triggering refresh');
+                    onRefresh();
+                  }
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error('❌ JourneyTimelineCard - Error polling journey status:', error);
+        }
+      }, 2000);
+      
+      return () => {
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+        }
+      };
+    } else {
+      // Stop polling if not needed
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    }
+  }, [journey.status, journey.id, journey.jobId, journey.cvId, journey.coverLetterId, onRefresh]);
+
+  // Handle retry for document creation
+  const handleRetryDocuments = async () => {
+    if (isRetryingDocuments) return;
+    
+    setIsRetryingDocuments(true);
+    try {
+      const response = await fetch('/api/journey-documents/retry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ journeyId: journey.id })
+      });
+      
+      if (response.ok) {
+        toast.success('Document creation retry triggered');
+        // Start polling again
+        if (onRefresh) {
+          setTimeout(() => onRefresh(), 1000);
+        }
+      } else {
+        toast.error('Failed to retry document creation');
+      }
+    } catch (error) {
+      console.error('❌ JourneyTimelineCard - Error retrying documents:', error);
+      toast.error('Failed to retry document creation');
+    } finally {
+      setIsRetryingDocuments(false);
+    }
+  };
+
   // Enhanced step status calculation using live progress data
   const getStepStatus = (stepId: number) => {
     switch (stepId) {
@@ -449,7 +548,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
 
   const handleCreateCV = () => {
     updateCurrentJobId(journey.jobId);
-    router.push(`/studio?journeyId=${journey.jobId}&mode=cv-onboarding`);
+    router.push(`/studio?journeyId=${journey.id}&jobId=${journey.jobId}&mode=cv-tailoring`);
   };
 
   const handleSelectCV = async (cvId: string) => {
@@ -862,41 +961,82 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
     
     setAtsScoreLoading(true);
     try {
-      console.log('🔍 JourneyTimelineCard - Calculating ATS score locally for CV:', cvId, 'Job:', jobId);
+      console.log('🔍 JourneyTimelineCard - Fetching ATS score for CV:', cvId, 'Job:', jobId);
       
-      // Simulate ATS score calculation with realistic data
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate processing time
+      // Use real ATS API endpoint
+      const response = await fetch('/api/ats/calculate-score', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          cvId,
+          jobId,
+          userId: mongoDBUserId
+        }),
+      });
       
-      const mockScore = Math.floor(Math.random() * 40) + 60; // Random score between 60-100
-      
-      console.log('✅ JourneyTimelineCard - ATS score calculated:', mockScore);
-      
-      setAtsScore(mockScore);
-      
-      // Update journey context
-      updateAtsScore(mockScore);
-      
-      // Update parent component with new score
-      if (onUpdateJourney) {
-        onUpdateJourney(journey.id, {
-          atsScore: mockScore,
-          currentStep: mockScore >= 80 ? 4 : 3
-        });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
       
-      // Update journey status based on score
-      if (mockScore >= 80) {
-        updateJourneyStatus('ats-checked');
-        updateCurrentStep(4);
-        toast.success(`ATS score calculated: ${mockScore}% - Great match!`);
+      const result = await response.json();
+      console.log('✅ JourneyTimelineCard - ATS score fetched:', result);
+      
+      if (result.success && result.data) {
+        const score = result.data.score || result.data.atsScore;
+        if (score !== undefined && score !== null) {
+          setAtsScore(score);
+          
+          // Update journey context
+          updateAtsScore(score);
+          
+          // Update journey with ATS score using PUT endpoint with journey.id
+          const journeyResponse = await fetch(`/api/application-journey/${journey.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              atsScore: score,
+              metadata: {
+                updatedAt: new Date(),
+                lastAccessedAt: new Date()
+              }
+            })
+          });
+          
+          if (journeyResponse.ok) {
+            console.log('✅ JourneyTimelineCard - ATS score saved to journey');
+          } else {
+            console.error('❌ JourneyTimelineCard - Failed to save ATS score to journey');
+          }
+          
+          // Update parent component with new score
+          if (onUpdateJourney) {
+            onUpdateJourney(journey.id, {
+              atsScore: score,
+              currentStep: score >= 80 ? 4 : 3
+            });
+          }
+          
+          // Update journey status based on score
+          if (score >= 80) {
+            updateJourneyStatus('ats-checked');
+            updateCurrentStep(4);
+            toast.success(`ATS score calculated: ${score}% - Great match!`);
+          } else {
+            updateJourneyStatus('ats-needs-improvement');
+            updateCurrentStep(3);
+            toast.info(`ATS score calculated: ${score}% - Consider optimizing for better match`);
+          }
+        } else {
+          throw new Error('Invalid score in response');
+        }
       } else {
-        updateJourneyStatus('ats-needs-improvement');
-        updateCurrentStep(3);
-        toast.info(`ATS score calculated: ${mockScore}% - Consider optimizing for better match`);
+        throw new Error(result.error || 'Failed to calculate ATS score');
       }
       
     } catch (error) {
-      console.error('❌ JourneyTimelineCard - Error calculating ATS score:', error);
+      console.error('❌ JourneyTimelineCard - Error fetching ATS score:', error);
       setAtsScore(-1); // Use -1 to indicate failed calculation
       toast.error('Network error during ATS calculation. Please check your connection.');
     } finally {
@@ -911,7 +1051,8 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
     try {
       console.log('🔍 JourneyTimelineCard - Running ATS check for CV:', journey.cvId, 'Job:', journey.jobId);
       
-      const response = await fetch('/api/ai/ats-score-disabled', {
+      // Use real ATS API endpoint
+      const response = await fetch('/api/ats/calculate-score', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -929,26 +1070,30 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
         
         if (result.success && result.data) {
           const score = result.data.score || result.data.atsScore;
-          if (score !== undefined) {
+          if (score !== undefined && score !== null) {
             // Update local state first
             setAtsScore(score);
             
             // Update journey context
             updateAtsScore(score);
             
-            // Update journey with ATS score
-            const journeyResponse = await fetch(`/api/application-journey`, {
-              method: 'POST',
+            // Update journey with ATS score using PUT endpoint with journey.id
+            const journeyResponse = await fetch(`/api/application-journey/${journey.id}`, {
+              method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                userId: mongoDBUserId,
-                jobId: journey.jobId,
-                atsScore: score
+                atsScore: score,
+                metadata: {
+                  updatedAt: new Date(),
+                  lastAccessedAt: new Date()
+                }
               })
             });
             
             if (journeyResponse.ok) {
               console.log('✅ JourneyTimelineCard - ATS score saved to journey');
+            } else {
+              console.error('❌ JourneyTimelineCard - Failed to save ATS score to journey');
             }
             
             // Update parent component with new score
@@ -966,6 +1111,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
               toast.success(`ATS score calculated: ${score}% - Great match!`);
             } else {
               updateJourneyStatus('ats-needs-improvement');
+              updateCurrentStep(3);
               toast.info(`ATS score calculated: ${score}% - Consider optimizing for better match`);
             }
           }
@@ -1811,6 +1957,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                       <CheckCircle className={`h-3 w-3 ${liveProgress.status === 'completed' ? 'text-blue-400' : 'text-lime-400'}`} />
                     )}
                   </div>
+                  {/* Handle document creation status */}
                   {journey.cvId ? (
                     <div>
                       {cvNotFound ? (
@@ -1878,7 +2025,11 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                           {liveProgress.status !== 'completed' && (
                             <div className="flex items-center gap-2 mt-1">
                               <motion.button
-                                onClick={() => router.push(`/studio?journeyId=${journey.jobId}&cvId=${journey.cvId}&jobId=${journey.jobId}&type=cv&mode=cv`)}
+                                onClick={() => {
+                                  // Determine mode: cv-tailoring if journey step <= 2, otherwise cv-edit
+                                  const mode = journey.currentStep <= 2 ? 'cv-tailoring' : 'cv-edit';
+                                  router.push(`/studio?journeyId=${journey.id}&cvId=${journey.cvId}&jobId=${journey.jobId}&type=cv&mode=${mode}`);
+                                }}
                                 className="text-xs text-lime-400 hover:text-lime-300 flex items-center gap-1"
                               >
                                 <ExternalLink className="h-3 w-3" />
@@ -1896,7 +2047,11 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                           {liveProgress.status === 'completed' && (
                             <div className="flex items-center gap-2 mt-1">
                               <motion.button
-                                onClick={() => router.push(`/studio?journeyId=${journey.jobId}&cvId=${journey.cvId}&jobId=${journey.jobId}&type=cv&mode=cv`)}
+                                onClick={() => {
+                                  // Determine mode: cv-tailoring if journey step <= 2, otherwise cv-edit
+                                  const mode = journey.currentStep <= 2 ? 'cv-tailoring' : 'cv-edit';
+                                  router.push(`/studio?journeyId=${journey.id}&cvId=${journey.cvId}&jobId=${journey.jobId}&type=cv&mode=${mode}`);
+                                }}
                                 className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
                               >
                                 <ExternalLink className="h-3 w-3" />
@@ -1907,17 +2062,40 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                         </div>
                       )}
                     </div>
-                  ) : (
+                  ) : journey.status === 'processing_documents' ? (
                     <div className="space-y-1">
-                      {/* Single Duplicate CV button */}
+                      <div className="flex items-center gap-2">
+                        <RefreshCw className="h-3 w-3 animate-spin text-blue-400" />
+                        <p className="text-xs text-blue-400 font-medium">Creating CV...</p>
+                      </div>
+                      <p className="text-xs text-white/60">Please wait while we create your CV</p>
+                    </div>
+                  ) : journey.status === 'creation_failed' ? (
+                    <div className="space-y-1">
+                      <p className="text-xs text-red-400 font-medium">Failed to create CV</p>
+                      <p className="text-xs text-red-300">Document creation encountered an error</p>
                       <motion.button
-                        onClick={() => setShowCVSelector(!showCVSelector)}
-                        className="w-full px-2 py-1 bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium rounded transition-colors flex items-center gap-1 justify-center"
+                        onClick={handleRetryDocuments}
+                        disabled={isRetryingDocuments}
+                        className="w-full px-2 py-1 bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium rounded transition-colors flex items-center gap-1 justify-center disabled:opacity-50"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                       >
-                        <Copy className="h-3 w-3" />
-                        Duplicate CV
+                        <RefreshCw className={`h-3 w-3 ${isRetryingDocuments ? 'animate-spin' : ''}`} />
+                        {isRetryingDocuments ? 'Retrying...' : 'Retry'}
+                      </motion.button>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <p className="text-xs text-white/60">No CV linked</p>
+                      <motion.button
+                        onClick={handleCreateCV}
+                        className="w-full px-2 py-1 bg-lime-500 hover:bg-lime-600 text-black text-xs font-medium rounded transition-colors flex items-center gap-1 justify-center"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <Plus className="h-3 w-3" />
+                        Create CV
                       </motion.button>
                     </div>
                   )}
@@ -2029,6 +2207,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                       <CheckCircle className={`h-3 w-3 ${liveProgress.status === 'completed' ? 'text-blue-400' : 'text-lime-400'}`} />
                     )}
                   </div>
+                  {/* Handle document creation status */}
                   {journey.coverLetterId ? (
                     <div>
                       {coverLetterNotFound ? (
@@ -2057,21 +2236,53 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                           <p className="text-xs text-white/60">
                             {linkedCoverLetter ? 'Ready for download' : 'Document linked'}
                           </p>
-                          <motion.button
-                            onClick={() => router.push(`/studio?journeyId=${journey.jobId}&jobId=${journey.jobId}&coverLetterId=${journey.coverLetterId}&type=cover_letter&mode=cover-letter`)}
-                            className={`mt-1 text-xs flex items-center gap-1 ${
-                              liveProgress.status === 'completed' 
-                                ? 'text-blue-400 hover:text-blue-300' 
-                                : 'text-lime-400 hover:text-lime-300'
-                            }`}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                          >
-                            <ExternalLink className="h-3 w-3" />
-                            Edit
-                          </motion.button>
+                          <div className="flex items-center gap-2 mt-1">
+                            <motion.button
+                              onClick={() => router.push(`/studio?journeyId=${journey.id}&jobId=${journey.jobId}&coverLetterId=${journey.coverLetterId}&type=cover_letter&mode=cover-letter-edit`)}
+                              className={`text-xs flex items-center gap-1 ${
+                                liveProgress.status === 'completed' 
+                                  ? 'text-blue-400 hover:text-blue-300' 
+                                  : 'text-lime-400 hover:text-lime-300'
+                              }`}
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                              Edit
+                            </motion.button>
+                            <motion.button
+                              onClick={() => setExpandedStep(expandedStep === 4 ? null : 4)}
+                              className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                            >
+                              <RefreshCw className="h-3 w-3" />
+                              Change
+                            </motion.button>
+                          </div>
                         </div>
                       )}
+                    </div>
+                  ) : journey.status === 'processing_documents' ? (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <RefreshCw className="h-3 w-3 animate-spin text-blue-400" />
+                        <p className="text-xs text-blue-400 font-medium">Creating Cover Letter...</p>
+                      </div>
+                      <p className="text-xs text-white/60">Please wait while we create your cover letter</p>
+                    </div>
+                  ) : journey.status === 'creation_failed' ? (
+                    <div className="space-y-1">
+                      <p className="text-xs text-red-400 font-medium">Failed to create Cover Letter</p>
+                      <p className="text-xs text-red-300">Document creation encountered an error</p>
+                      <motion.button
+                        onClick={handleRetryDocuments}
+                        disabled={isRetryingDocuments}
+                        className="w-full px-2 py-1 bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium rounded transition-colors flex items-center gap-1 justify-center disabled:opacity-50"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <RefreshCw className={`h-3 w-3 ${isRetryingDocuments ? 'animate-spin' : ''}`} />
+                        {isRetryingDocuments ? 'Retrying...' : 'Retry'}
+                      </motion.button>
                     </div>
                   ) : cvNotFound ? (
                     <div>

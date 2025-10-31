@@ -42,25 +42,16 @@ export async function POST(request: NextRequest) {
 
     await connectDB();
 
-    // Clean up expired codes
-    await cleanupExpiredCodes();
-
-    // Check rate limiting
-    const canSendCode = await checkCodeRateLimit(email);
-    if (!canSendCode) {
-      return NextResponse.json(
-        { success: false, message: 'Too many code requests. Please wait before requesting another code.' },
-        { status: 429 }
-      );
-    }
-
-    // Check cooldown
-    const cooldownPassed = await checkCodeCooldown(email);
-    if (!cooldownPassed) {
-      return NextResponse.json(
-        { success: false, message: 'Please wait 60 seconds before requesting another code.' },
-        { status: 429 }
-      );
+    // For passwordless-login, check if user exists FIRST before rate limiting
+    // This ensures we show "account not registered" instead of "too many requests"
+    if (type === 'passwordless-login') {
+      const user = await User.findOne({ email: email.toLowerCase() });
+      if (!user) {
+        return NextResponse.json(
+          { success: false, message: 'No account found with this email. Please sign up first.' },
+          { status: 404 }
+        );
+      }
     }
 
     // For email-verification, check if user exists and is not verified
@@ -80,8 +71,26 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // For passwordless-login, allow sending codes to any email
-    // The verification will check if user exists and create account if needed
+    // Clean up expired codes
+    await cleanupExpiredCodes();
+
+    // Check rate limiting (only after user existence check for passwordless-login)
+    const canSendCode = await checkCodeRateLimit(email);
+    if (!canSendCode) {
+      return NextResponse.json(
+        { success: false, message: 'Too many code requests. Please wait before requesting another code.' },
+        { status: 429 }
+      );
+    }
+
+    // Check cooldown
+    const cooldownPassed = await checkCodeCooldown(email);
+    if (!cooldownPassed) {
+      return NextResponse.json(
+        { success: false, message: 'Please wait 60 seconds before requesting another code.' },
+        { status: 429 }
+      );
+    }
 
     // Generate verification code
     const code = generateVerificationCode();
