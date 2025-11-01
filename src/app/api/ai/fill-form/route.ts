@@ -152,19 +152,39 @@ function fillSummary(cvData: UnifiedCVDataStructure, jobData: any, keywords: str
 function fillSkills(cvData: UnifiedCVDataStructure, keywords: string[]): Partial<UnifiedCVDataStructure> {
   let skills = [...(cvData.skills || [])];
 
-  // Add missing keywords as skills
-  const existingSkillNames = skills.map(skill => skill.name?.toLowerCase() || '');
+  // Get all existing skill names (flattened from all categories)
+  const existingSkillNames = skills.flatMap(skillCategory => 
+    (skillCategory.skills || []).map(skill => skill.toLowerCase())
+  );
+
+  // Filter out keywords that already exist
   const missingKeywords = keywords.filter(keyword => 
     !existingSkillNames.includes(keyword.toLowerCase())
   );
 
-  // Add missing keywords as new skills
+  // Group missing keywords by category and add them
+  const categoryMap = new Map<string, string[]>();
   missingKeywords.slice(0, 10).forEach(keyword => {
-    skills.push({
-      name: keyword.charAt(0).toUpperCase() + keyword.slice(1),
-      level: 'Intermediate',
-      category: getSkillCategory(keyword)
-    });
+    const category = getSkillCategory(keyword);
+    if (!categoryMap.has(category)) {
+      categoryMap.set(category, []);
+    }
+    categoryMap.get(category)!.push(keyword.charAt(0).toUpperCase() + keyword.slice(1));
+  });
+
+  // Add new skills to existing categories or create new categories
+  categoryMap.forEach((newSkills, category) => {
+    const existingCategory = skills.find(s => s.category.toLowerCase() === category.toLowerCase());
+    if (existingCategory) {
+      // Add to existing category
+      existingCategory.skills = [...(existingCategory.skills || []), ...newSkills];
+    } else {
+      // Create new category
+      skills.push({
+        category,
+        skills: newSkills
+      });
+    }
   });
 
   return { skills };
@@ -346,11 +366,15 @@ function generateFormFillSuggestions(filledData: Partial<UnifiedCVDataStructure>
   
   // Check if skills were added
   if (filledData.skills && filledData.skills.length > 0) {
-    const newSkills = filledData.skills.filter(skill => 
-      keywords.some(keyword => skill.name?.toLowerCase().includes(keyword.toLowerCase()))
-    );
-    if (newSkills.length > 0) {
-      suggestions.push(`Added ${newSkills.length} relevant skills to your CV`);
+    // Count new skills added (skills that match keywords)
+    const newSkillsCount = filledData.skills.reduce((count, skillCategory) => {
+      const matchingSkills = (skillCategory.skills || []).filter(skill => 
+        keywords.some(keyword => skill.toLowerCase().includes(keyword.toLowerCase()))
+      );
+      return count + matchingSkills.length;
+    }, 0);
+    if (newSkillsCount > 0) {
+      suggestions.push(`Added ${newSkillsCount} relevant skills to your CV`);
     }
   }
   

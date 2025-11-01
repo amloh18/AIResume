@@ -248,6 +248,24 @@ function CVStructureSections({
   };
 
   const updateCVField = (field: string, value: any) => {
+    // Validate value for array fields - ensure they're always arrays
+    const arrayFields = ['work', 'volunteer', 'education', 'awards', 'certificates', 
+                         'publications', 'skills', 'languages', 'interests', 'references', 'projects'];
+    
+    // If field is just an array field name (e.g., "awards", "certificates"), ensure value is an array
+    if (arrayFields.includes(field)) {
+      if (!Array.isArray(value)) {
+        console.warn(`⚠️ StructurePanel - Field ${field} must be an array, but got ${typeof value}. Converting to array.`);
+        // If value is a string that matches the field name, it's an error - use empty array
+        if (typeof value === 'string' && value === field) {
+          value = [];
+        } else {
+          // Default to empty array for non-array values
+          value = [];
+        }
+      }
+    }
+
     const fieldPath = field.split('.');
     const updatedData = { ...cvData };
     let current: any = updatedData;
@@ -257,11 +275,18 @@ function CVStructureSections({
       const key = fieldPath[i];
       const nextKey = fieldPath[i + 1];
       
+      // Validate that array fields remain arrays
+      if (arrayFields.includes(key) && current[key] !== undefined && !Array.isArray(current[key])) {
+        console.warn(`⚠️ StructurePanel - Field ${key} should be an array but is ${typeof current[key]}. Resetting to empty array.`);
+        current[key] = [];
+      }
+      
       // If current[key] doesn't exist or is not an object/array, create it
       if (!current[key] || typeof current[key] !== 'object') {
-        // Check if next key is a number (array index)
+        // Check if next key is a number (array index) or if current key is an array field
         const isArrayIndex = !isNaN(parseInt(nextKey));
-        current[key] = isArrayIndex ? [] : {};
+        const isArrayField = arrayFields.includes(key);
+        current[key] = (isArrayIndex || isArrayField) ? [] : {};
       } else {
         // Make a shallow copy to avoid mutating nested objects
         current[key] = Array.isArray(current[key]) ? [...current[key]] : { ...current[key] };
@@ -270,7 +295,14 @@ function CVStructureSections({
       current = current[key];
     }
 
-    current[fieldPath[fieldPath.length - 1]] = value;
+    // Final validation before setting value
+    const finalKey = fieldPath[fieldPath.length - 1];
+    if (arrayFields.includes(finalKey) && !Array.isArray(value)) {
+      console.warn(`⚠️ StructurePanel - Attempted to set ${finalKey} (array field) with non-array value. Skipping update.`);
+      return; // Don't update if trying to set array field with non-array value
+    }
+
+    current[finalKey] = value;
     onUpdateCV(updatedData);
   };
 

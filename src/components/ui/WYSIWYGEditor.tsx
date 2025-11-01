@@ -1,7 +1,6 @@
 'use client';
 
-import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { Bold, Italic, Underline, List, Undo2, Redo2, Sparkles } from 'lucide-react';
+import React from 'react';
 import { useWYSIWYG } from './useWYSIWYG';
 import { WYSIWYGToolbar } from './WYSIWYGToolbar';
 
@@ -65,14 +64,7 @@ const WYSIWYGEditor: React.FC<WYSIWYGEditorProps> = ({
   fieldType = 'other',
   showToolbar = false
 }) => {
-  // Try to use context first, fallback to hook
-  let wysiwyg;
-  try {
-    wysiwyg = useWYSIWYGContext();
-  } catch {
-    wysiwyg = useWYSIWYG(value, onChange);
-  }
-  
+  // Use the WYSIWYG hook directly - hooks must be called unconditionally
   const {
     editorRef,
     isFocused,
@@ -88,7 +80,7 @@ const WYSIWYGEditor: React.FC<WYSIWYGEditorProps> = ({
     handleRedo,
     undoStack,
     redoStack
-  } = wysiwyg;
+  } = useWYSIWYG(value, onChange);
 
   const minHeight = `${rows * 1.5}rem`;
 
@@ -112,11 +104,13 @@ const WYSIWYGEditor: React.FC<WYSIWYGEditorProps> = ({
           onBlur={() => setIsFocused(false)}
           onMouseUp={updateFormatState}
           onKeyUp={updateFormatState}
-          onPaste={(e) => {
+          onPaste={(e: React.ClipboardEvent<HTMLDivElement>) => {
             e.preventDefault();
             const text = e.clipboardData.getData('text/plain');
-            document.execCommand('insertText', false, text);
-            handleContentChange();
+            if (editorRef.current) {
+              document.execCommand('insertText', false, text);
+              handleContentChange();
+            }
           }}
           className="w-full px-4 py-3 text-white placeholder-white/50 focus:outline-none resize-none overflow-y-auto"
           style={{ minHeight, maxHeight: `${rows * 2}rem` }}

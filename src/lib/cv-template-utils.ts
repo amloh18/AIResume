@@ -7,6 +7,7 @@
 
 import mongoose from 'mongoose';
 import { CV, Template } from '@/models';
+import { HARDCODED_TEMPLATES } from '@/lib/templates/hardcoded-templates';
 
 export interface CVWithTemplate {
   _id: string;
@@ -35,23 +36,86 @@ export interface CVWithTemplate {
  */
 export async function getCVWithTemplate(cvId: string): Promise<CVWithTemplate | null> {
   try {
-    const cv = await CV.findById(cvId)
-      .populate('templateId', 'name globalStyles availableSections')
-      .lean();
+    const cv = await CV.findById(cvId).lean();
     
     if (!cv) {
       return null;
     }
 
+    // Get templateId as string for comparison
+    const templateIdString = cv.templateId?.toString() || '';
+    
+    // First check if it's a hardcoded template
+    const hardcodedTemplate = HARDCODED_TEMPLATES.find(
+      t => t.id === templateIdString || t._id === templateIdString
+    );
+
+    let templateData;
+    
+    if (hardcodedTemplate) {
+      // Use hardcoded template data
+      templateData = {
+        _id: hardcodedTemplate.id || hardcodedTemplate._id,
+        name: hardcodedTemplate.name,
+        globalStyles: hardcodedTemplate.globalStyles,
+        availableSections: hardcodedTemplate.availableSections
+      };
+      console.log('✅ getCVWithTemplate - Using hardcoded template:', hardcodedTemplate.name);
+    } else {
+      // Try to populate from database
+      try {
+        const populatedCv = await CV.findById(cvId)
+          .populate('templateId', 'name globalStyles availableSections')
+          .lean();
+        
+        if (populatedCv?.templateId && typeof populatedCv.templateId === 'object') {
+          templateData = {
+            _id: (populatedCv.templateId as any)._id.toString(),
+            name: (populatedCv.templateId as any).name,
+            globalStyles: (populatedCv.templateId as any).globalStyles,
+            availableSections: (populatedCv.templateId as any).availableSections
+          };
+          console.log('✅ getCVWithTemplate - Using database template:', templateData.name);
+        } else if (templateIdString) {
+          // Template ID exists but template not found - might be deleted, fallback to hardcoded
+          console.warn('⚠️ getCVWithTemplate - Template not found in database, checking hardcoded templates:', templateIdString);
+          const fallbackTemplate = HARDCODED_TEMPLATES.find(
+            t => t.id === templateIdString || t._id === templateIdString
+          );
+          if (fallbackTemplate) {
+            templateData = {
+              _id: fallbackTemplate.id || fallbackTemplate._id,
+              name: fallbackTemplate.name,
+              globalStyles: fallbackTemplate.globalStyles,
+              availableSections: fallbackTemplate.availableSections
+            };
+            console.log('✅ getCVWithTemplate - Found fallback hardcoded template:', fallbackTemplate.name);
+          }
+        }
+      } catch (populateError) {
+        console.warn('⚠️ getCVWithTemplate - Populate failed, checking hardcoded templates:', populateError);
+        // If populate fails (template deleted), check hardcoded templates
+        if (templateIdString) {
+          const fallbackTemplate = HARDCODED_TEMPLATES.find(
+            t => t.id === templateIdString || t._id === templateIdString
+          );
+          if (fallbackTemplate) {
+            templateData = {
+              _id: fallbackTemplate.id || fallbackTemplate._id,
+              name: fallbackTemplate.name,
+              globalStyles: fallbackTemplate.globalStyles,
+              availableSections: fallbackTemplate.availableSections
+            };
+            console.log('✅ getCVWithTemplate - Using fallback hardcoded template:', fallbackTemplate.name);
+          }
+        }
+      }
+    }
+
     return {
       ...cv,
       _id: cv._id.toString(),
-      template: cv.templateId ? {
-        _id: cv.templateId._id.toString(),
-        name: cv.templateId.name,
-        globalStyles: cv.templateId.globalStyles,
-        availableSections: cv.templateId.availableSections
-      } : undefined
+      template: templateData
     } as CVWithTemplate;
   } catch (error) {
     console.error('Error fetching CV with template:', error);
@@ -71,8 +135,7 @@ export async function getCVsWithTemplates(
   } = {}
 ): Promise<CVWithTemplate[]> {
   try {
-    let cvQuery = CV.find(query)
-      .populate('templateId', 'name globalStyles availableSections');
+    let cvQuery = CV.find(query);
 
     if (options.limit) {
       cvQuery = cvQuery.limit(options.limit);
@@ -88,16 +151,39 @@ export async function getCVsWithTemplates(
 
     const cvs = await cvQuery.lean();
 
-    return cvs.map(cv => ({
-      ...cv,
-      _id: cv._id.toString(),
-      template: cv.templateId ? {
-        _id: cv.templateId._id.toString(),
-        name: cv.templateId.name,
-        globalStyles: cv.templateId.globalStyles,
-        availableSections: cv.templateId.availableSections
-      } : undefined
-    })) as CVWithTemplate[];
+    return cvs.map(cv => {
+      const templateIdString = cv.templateId?.toString() || '';
+      
+      // Check hardcoded templates first
+      const hardcodedTemplate = HARDCODED_TEMPLATES.find(
+        t => t.id === templateIdString || t._id === templateIdString
+      );
+
+      let templateData;
+      
+      if (hardcodedTemplate) {
+        templateData = {
+          _id: hardcodedTemplate.id || hardcodedTemplate._id,
+          name: hardcodedTemplate.name,
+          globalStyles: hardcodedTemplate.globalStyles,
+          availableSections: hardcodedTemplate.availableSections
+        };
+      } else if (cv.templateId && typeof cv.templateId === 'object') {
+        // Populated from database
+        templateData = {
+          _id: cv.templateId._id.toString(),
+          name: cv.templateId.name,
+          globalStyles: cv.templateId.globalStyles,
+          availableSections: cv.templateId.availableSections
+        };
+      }
+
+      return {
+        ...cv,
+        _id: cv._id.toString(),
+        template: templateData
+      };
+    }) as CVWithTemplate[];
   } catch (error) {
     console.error('Error fetching CVs with templates:', error);
     return [];

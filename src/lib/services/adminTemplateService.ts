@@ -123,6 +123,17 @@ export class AdminTemplateService {
    */
   static async getDefaultTemplate(category: string = 'cv'): Promise<ITemplate | null> {
     try {
+      // First check hardcoded templates for default
+      const { HARDCODED_TEMPLATES } = await import('@/lib/templates/hardcoded-templates');
+      const hardcodedDefault = HARDCODED_TEMPLATES.find(
+        t => t.isDefault === true && t.category === category
+      );
+      
+      if (hardcodedDefault) {
+        console.log(`✅ AdminTemplateService - Using hardcoded default template: ${hardcodedDefault.name}`);
+        return hardcodedDefault;
+      }
+      
       await connectDB();
       
       const template = await Template.findOne({

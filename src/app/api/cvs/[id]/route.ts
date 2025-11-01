@@ -7,6 +7,109 @@ import { toObjectId, createErrorResponse } from '@/lib/db-utils';
 import { getCVWithTemplate } from '@/lib/cv-template-utils';
 import mongoose from 'mongoose';
 
+/**
+ * Sanitize and validate CV data to ensure correct structure
+ * Fixes issues where field names might be passed as values
+ */
+function sanitizeCVData(cvData: any): any {
+  if (!cvData || typeof cvData !== 'object') {
+    return cvData;
+  }
+
+  const sanitized = { ...cvData };
+
+  // Array fields that must be arrays
+  const arrayFields = [
+    'work', 'volunteer', 'education', 'awards', 'certificates',
+    'publications', 'skills', 'languages', 'interests', 'references', 'projects'
+  ];
+
+  // Ensure all array fields are arrays, not strings or other types
+  for (const field of arrayFields) {
+    if (sanitized[field] !== undefined) {
+      // If it's a string that matches the field name, it's likely an error - convert to empty array
+      if (typeof sanitized[field] === 'string' && sanitized[field] === field) {
+        console.warn(`⚠️ CV UPDATE API - Field ${field} had string value "${field}", converting to empty array`);
+        sanitized[field] = [];
+      } else if (!Array.isArray(sanitized[field])) {
+        // If it's not an array and not undefined, convert to empty array
+        console.warn(`⚠️ CV UPDATE API - Field ${field} is not an array (type: ${typeof sanitized[field]}), converting to empty array`);
+        sanitized[field] = [];
+      } else {
+        // It's an array - sanitize each item to ensure proper structure
+        sanitized[field] = sanitized[field].map((item: any, index: number) => {
+          if (!item || typeof item !== 'object') {
+            // If item is not an object, return a default structure
+            return getDefaultItemForField(field);
+          }
+          
+          // Clean each property in the item
+          const cleanedItem = { ...item };
+          
+          // Remove any properties that have field paths as values (e.g., "projects.1.description" as value)
+          for (const key in cleanedItem) {
+            const value = cleanedItem[key];
+            if (typeof value === 'string' && value.includes('.') && value.split('.').length > 1) {
+              // Check if the value matches a field path pattern
+              const pathParts = value.split('.');
+              if (pathParts[0] === field || arrayFields.includes(pathParts[0])) {
+                console.warn(`⚠️ CV UPDATE API - Removing invalid value "${value}" from ${field}[${index}].${key}`);
+                cleanedItem[key] = '';
+              }
+            }
+          }
+          
+          return cleanedItem;
+        });
+      }
+    }
+  }
+
+  // Ensure basics is an object with proper structure
+  if (sanitized.basics && typeof sanitized.basics === 'object') {
+    sanitized.basics = {
+      name: sanitized.basics.name || '',
+      label: sanitized.basics.label || '',
+      image: sanitized.basics.image || '',
+      email: sanitized.basics.email || '',
+      phone: sanitized.basics.phone || '',
+      url: sanitized.basics.url || '',
+      summary: sanitized.basics.summary || '',
+      location: {
+        address: sanitized.basics.location?.address || '',
+        postalCode: sanitized.basics.location?.postalCode || '',
+        city: sanitized.basics.location?.city || '',
+        countryCode: sanitized.basics.location?.countryCode || '',
+        region: sanitized.basics.location?.region || ''
+      },
+      profiles: Array.isArray(sanitized.basics.profiles) ? sanitized.basics.profiles : []
+    };
+  }
+
+  return sanitized;
+}
+
+/**
+ * Get default item structure for a field
+ */
+function getDefaultItemForField(field: string): any {
+  const defaults: Record<string, any> = {
+    work: { name: '', position: '', url: '', startDate: '', endDate: '', summary: '', highlights: [] },
+    volunteer: { organization: '', position: '', url: '', startDate: '', endDate: '', summary: '', highlights: [] },
+    education: { institution: '', url: '', area: '', studyType: '', startDate: '', endDate: '', score: '', courses: [], description: '' },
+    awards: { title: '', date: '', awarder: '', summary: '' },
+    certificates: { name: '', date: '', issuer: '', url: '', description: '' },
+    publications: { name: '', publisher: '', releaseDate: '', url: '', summary: '' },
+    skills: { category: '', skills: [] },
+    languages: { language: '', fluency: '' },
+    interests: { name: '', keywords: [] },
+    references: { name: '', reference: '' },
+    projects: { name: '', startDate: '', endDate: '', description: '', highlights: [], keywords: [], url: '' }
+  };
+  
+  return defaults[field] || {};
+}
+
 // GET - Get a specific CV by ID with template data
 export async function GET(
   request: NextRequest,
@@ -157,7 +260,17 @@ export async function PUT(
     
     for (const field of allowedFields) {
       if (body[field] !== undefined) {
-        updateData[field] = body[field];
+        // Sanitize cvData before adding to updateData
+        if (field === 'cvData') {
+          updateData[field] = sanitizeCVData(body[field]);
+          console.log('🔍 CV UPDATE API - Sanitized cvData:', {
+            awards: Array.isArray(updateData[field]?.awards),
+            certificates: Array.isArray(updateData[field]?.certificates),
+            projects: Array.isArray(updateData[field]?.projects)
+          });
+        } else {
+          updateData[field] = body[field];
+        }
       }
     }
 
@@ -182,9 +295,18 @@ export async function PUT(
       }
     }
 
+    // Handle metadata updates properly
+    if (body.isMaster !== undefined) {
+      // If isMaster is provided at root level, update metadata
+      if (!updateData.metadata) {
+        updateData.metadata = { ...cv.metadata };
+      }
+      updateData.metadata.isMaster = body.isMaster;
+    }
+    
     // Update metadata.lastModified
     if (!updateData.metadata) {
-      updateData.metadata = cv.metadata;
+      updateData.metadata = { ...cv.metadata };
     }
     updateData.metadata.lastModified = new Date();
 

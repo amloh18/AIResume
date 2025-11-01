@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
+import type { MyJwtPayload } from '@/types/jwt-payload';
 
 export async function GET() {
   try {
@@ -13,7 +14,7 @@ export async function GET() {
 
     try {
       // Verify the JWT token
-      const decoded = jwt.verify(adminToken.value, process.env.NEXTAUTH_SECRET || 'fallback-secret') as any;
+      const decoded = jwt.verify(adminToken.value, process.env.NEXTAUTH_SECRET || 'fallback-secret') as MyJwtPayload;
       
       return NextResponse.json({ 
         success: true, 

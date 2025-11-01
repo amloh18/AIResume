@@ -12,6 +12,7 @@ export interface EmailTemplateData {
   usageLimit?: number;
   currentUsage?: number;
   expirationDate?: string;
+  daysLeft?: number;
 }
 
 // Base email template with consistent styling
@@ -449,24 +450,108 @@ export function getPasswordResetTemplate(data: EmailTemplateData) {
   const content = `
     <h2 class="title">Reset Your Password</h2>
     <p class="subtitle">Click the button below to set a new password for your account.</p>
-    
+
     <div class="content">
       <p>We received a request to reset your password for your CVCircle account. If you made this request, click the button below to set a new password.</p>
-      
+
       <a href="${data.link}" class="button">Reset Password</a>
-      
+
       <div class="warning">
         <p class="warning-text">
           <strong>Security Alert:</strong> This link will expire in 1 hour. If you didn't request this password reset, please ignore this email.
         </p>
       </div>
-      
+
       <p style="color: #a0a0a0; font-size: 14px; margin: 30px 0 0 0;">
         If the button doesn't work, copy and paste this link into your browser:<br>
         <a href="${data.link}" style="color: #78c708; word-break: break-all;">${data.link}</a>
       </p>
     </div>
   `;
-  
+
   return getBaseTemplate('Reset Your Password - CVCircle', content);
+}
+
+// 8. Welcome Email Template (alias for new user template)
+export function getWelcomeEmailTemplate(data: EmailTemplateData) {
+  return getNewUserTemplate(data);
+}
+
+// 9. Membership Reminder Template
+export function getMembershipReminderTemplate(data: EmailTemplateData) {
+  const daysText = data.daysLeft === 1 ? 'day' : 'days';
+  const content = `
+    <h2 class="title">Membership Expiring Soon</h2>
+    <p class="subtitle">Don't lose access to your premium CVCircle features.</p>
+
+    <div class="content">
+      <p>Hi ${data.firstName}, your CVCircle membership will expire in ${data.daysLeft} ${daysText}. Renew now to continue enjoying all premium features!</p>
+
+      <div class="highlight">
+        <p class="highlight-text">🎯 What you'll lose without membership:</p>
+        <ul style="color: #e0e0e0; text-align: left; margin: 15px 0;">
+          <li>Unlimited CV creation</li>
+          <li>Premium templates</li>
+          <li>Advanced ATS optimization</li>
+          <li>Priority support</li>
+          <li>Cover letter generator</li>
+        </ul>
+      </div>
+
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-number">${data.daysLeft}</div>
+          <div class="stat-label">${daysText} left</div>
+        </div>
+        <div class="stat">
+          <div class="stat-number">∞</div>
+          <div class="stat-label">CVs with Pro</div>
+        </div>
+        <div class="stat">
+          <div class="stat-number">15+</div>
+          <div class="stat-label">Templates</div>
+        </div>
+      </div>
+
+      <a href="https://www.cvcircle.io/dashboard?renew=true" class="button">Renew Membership</a>
+
+      <div class="warning">
+        <p class="warning-text">
+          <strong>Urgent:</strong> Your membership expires on ${data.expirationDate}. Renew before then to avoid service interruption.
+        </p>
+      </div>
+    </div>
+  `;
+
+  return getBaseTemplate('Membership Expiring Soon - CVCircle', content);
+}
+
+// 10. Test Email Template
+export function getTestEmailTemplate() {
+  const content = `
+    <h2 class="title">Test Email</h2>
+    <p class="subtitle">This is a test email from CVCircle.</p>
+
+    <div class="content">
+      <p>This email confirms that your CVCircle email service is working correctly.</p>
+
+      <div class="highlight">
+        <p class="highlight-text">✅ Email service is operational</p>
+        <p style="color: #e0e0e0; margin: 10px 0 0 0;">If you received this email, your email configuration is working properly.</p>
+      </div>
+
+      <div class="info">
+        <p class="info-text">
+          <strong>Test completed at:</strong> ${new Date().toLocaleString()}<br>
+          <strong>Service:</strong> CVCircle Email System
+        </p>
+      </div>
+
+      <p style="color: #a0a0a0; font-size: 14px; margin: 30px 0 0 0;">
+        This is an automated test message. No action is required.
+      </p>
+    </div>
+  `;
+
+  return getBaseTemplate('Test Email - CVCircle', content);
 }
