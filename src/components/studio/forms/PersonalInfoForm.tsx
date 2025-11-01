@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { User, Mail, Phone, Globe, MapPin, Plus, Trash2, Sparkles, RefreshCw } from 'lucide-react';
 import RichTextEditor from '@/components/ui/RichTextEditor';
-import { getThemeClasses } from '@/lib/utils/themeUtils';
+import WYSIWYGEditor, { WYSIWYGToolbar } from '@/components/ui/WYSIWYGEditor';
 import { validateStringValue } from '@/lib/utils/eventHandlers';
 
 interface PersonalInfoFormProps {
@@ -111,8 +111,6 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
     const updatedProfiles = safePersonalInfo.profiles.filter((_, i) => i !== index);
     onUpdate('profiles', updatedProfiles);
   };
-
-  const themeClasses = getThemeClasses;
 
   const generateAISummary = async () => {
     if (!userId) return;
@@ -223,13 +221,20 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
 
       {/* Professional Summary */}
       <div className="md:col-span-2">
-        <label className="block text-white/80 text-sm font-medium mb-2">Summary</label>
-        <textarea
+        <div className="flex items-center justify-between mb-2">
+          <label className="block text-white/80 text-sm font-medium">Professional Summary</label>
+          <WYSIWYGToolbar
+            showAIButton={true}
+            fieldType="summary"
+            onAIGenerate={generateAISummary}
+            isGenerating={isGeneratingSummary}
+          />
+        </div>
+        <WYSIWYGEditor
           value={safePersonalInfo.summary}
-          onChange={(e) => handleFieldChange('summary', e.target.value)}
+          onChange={(value) => handleFieldChange('summary', value)}
           rows={4}
-          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors resize-none"
-          placeholder="A brief summary about your professional background..."
+          placeholder="Write a brief summary of your professional background and key achievements..."
         />
       </div>
 

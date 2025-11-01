@@ -1,10 +1,7 @@
 'use client';
 
 import React from 'react';
-import { motion } from 'framer-motion';
-import { Plus, Trash2, Users } from 'lucide-react';
-import { getThemeClasses } from '@/lib/utils/themeUtils';
-import ProfessionalTextField from '@/components/ui/ProfessionalTextField';
+import { Plus, Trash2 } from 'lucide-react';
 
 interface ReferencesSectionProps {
   data: any[];
@@ -19,8 +16,6 @@ const ReferencesSection: React.FC<ReferencesSectionProps> = ({
   onAdd,
   onRemove
 }) => {
-  const themeClasses = getThemeClasses;
-  
   // Ensure we have proper data structure
   const safeData = Array.isArray(data) ? data : [];
 
@@ -44,75 +39,53 @@ const ReferencesSection: React.FC<ReferencesSectionProps> = ({
   };
 
   return (
-    <div className="space-y-4 p-4">
-      <div className="flex items-center justify-end">
-        <motion.button
-          onClick={addReference}
-          className="flex items-center gap-2 px-3 py-2 bg-lime-500 hover:bg-lime-600 text-white rounded-lg transition-colors"
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-        >
-          <Plus className="w-4 h-4" />
-          Add Reference
-        </motion.button>
-      </div>
-
-      {safeData.length === 0 ? (
-        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-          <Users className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-          <p>No references added yet</p>
-          <p className="text-sm">Click "Add Reference" to get started</p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {safeData.map((reference, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-white dark:bg-[#1a230f] border border-gray-200 dark:border-white/10 rounded-lg p-4"
+    <>
+      {safeData.map((reference, index) => (
+        <div key={index} className="bg-white/5 rounded-xl p-6 border border-white/10 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h4 className="text-lg font-semibold text-white">{reference.name || 'Reference Name'}</h4>
+            <button
+              onClick={() => removeReference(index)}
+              className="text-red-400 hover:text-red-300 transition-colors"
             >
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="font-medium text-gray-900 dark:text-white">
-                  Reference #{index + 1}
-                </h4>
-                <button
-                  onClick={() => removeReference(index)}
-                  className="text-red-500 hover:text-red-700 transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <ProfessionalTextField
-                  label="Reference Name"
-                  value={reference.name || ''}
-                  onChange={(value) => updateReference(index, 'name', value)}
-                  placeholder="e.g., Dr. John Smith, Sarah Johnson"
-                  showFormattingHelp={false}
-                  showStatistics={false}
-                  showPreview={false}
-                />
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Reference Details
-                  </label>
-                  <textarea
-                    value={reference.reference || ''}
-                    onChange={(e) => updateReference(index, 'reference', e.target.value)}
-                    placeholder="Include: Name, Title, Company, Phone, Email, Relationship"
-                    className="w-full p-3 border border-gray-200 dark:border-white/10 rounded-lg bg-white dark:bg-[#313a28] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-lime-500 focus:border-transparent"
-                    rows={4}
-                  />
-                </div>
-              </div>
-            </motion.div>
-          ))}
+              <Trash2 size={16} />
+            </button>
+          </div>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-white/80 text-sm font-medium mb-2">Name</label>
+              <input
+                type="text"
+                value={reference.name || ''}
+                onChange={(e) => updateReference(index, 'name', e.target.value)}
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                placeholder="Dr. John Smith"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-white/80 text-sm font-medium mb-2">Reference Details</label>
+              <textarea
+                value={reference.reference || ''}
+                onChange={(e) => updateReference(index, 'reference', e.target.value)}
+                placeholder="Include: Title, Company, Phone, Email, Relationship"
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                rows={4}
+              />
+            </div>
+          </div>
         </div>
-      )}
-    </div>
+      ))}
+      
+      <button
+        onClick={addReference}
+        className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/60 hover:text-[#80FF00] rounded-xl transition-colors flex items-center justify-center gap-2"
+      >
+        <Plus size={20} />
+        Add Reference
+      </button>
+    </>
   );
 };
 

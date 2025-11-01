@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { User } from '@/models';
 import connectDB from '@/lib/database';
+import type { MyJwtPayload } from '@/types/jwt-payload';
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,9 +21,9 @@ export async function POST(request: NextRequest) {
     const token = authHeader.substring(7); // Remove 'Bearer ' prefix
     
     // Verify JWT token
-    let decoded;
+    let decoded: MyJwtPayload;
     try {
-      decoded = jwt.verify(token, process.env.NEXTAUTH_SECRET || 'fallback-secret');
+      decoded = jwt.verify(token, process.env.NEXTAUTH_SECRET || 'fallback-secret') as MyJwtPayload;
     } catch (jwtError) {
       console.log('❌ Extension Auth - Invalid JWT token:', jwtError);
       return NextResponse.json(

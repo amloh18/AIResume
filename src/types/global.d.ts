@@ -21,6 +21,7 @@ declare module 'pdf-parse' {
   }
   
   function pdfParse(buffer: Buffer): Promise<PDFData>;
+  export default pdfParse;
   export = pdfParse;
 }
 

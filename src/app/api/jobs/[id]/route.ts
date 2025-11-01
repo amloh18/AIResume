@@ -5,6 +5,7 @@ import connectDB from '@/lib/database';
 import { JobApplication, User } from '@/models';
 import jwt from 'jsonwebtoken';
 import { getAuthenticatedUser } from '@/lib/auth-helpers';
+import type { MyJwtPayload } from '@/types/jwt-payload';
 
 export async function GET(
   request: NextRequest,
@@ -23,7 +24,7 @@ export async function GET(
       const token = authHeader.substring(7);
       
       try {
-        const decoded = jwt.verify(token, process.env.NEXTAUTH_SECRET!) as any;
+        const decoded = jwt.verify(token, process.env.NEXTAUTH_SECRET!) as MyJwtPayload;
         
         if (decoded.type !== 'extension') {
           console.log('❌ Invalid token type');
@@ -189,7 +190,7 @@ export async function PUT(
       const token = authHeader.substring(7);
       
       try {
-        const decoded = jwt.verify(token, process.env.NEXTAUTH_SECRET!) as any;
+        const decoded = jwt.verify(token, process.env.NEXTAUTH_SECRET!) as MyJwtPayload;
         
         if (decoded.type !== 'extension') {
           console.log('❌ Invalid token type');
@@ -387,7 +388,7 @@ export async function DELETE(
       const token = authHeader.substring(7);
       
       try {
-        const decoded = jwt.verify(token, process.env.NEXTAUTH_SECRET!) as any;
+        const decoded = jwt.verify(token, process.env.NEXTAUTH_SECRET!) as MyJwtPayload;
         
         if (decoded.type !== 'extension') {
           console.log('❌ Invalid token type');

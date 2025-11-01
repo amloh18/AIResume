@@ -208,25 +208,25 @@ function restructureAll(content: string, keywords: string[], requirements: strin
   
   // Restructure summary if present
   if (content.toLowerCase().includes('summary') || content.toLowerCase().includes('profile')) {
-    const summaryMatch = content.match(/(summary|profile)[:\s]*(.*?)(?=\n\n|\n[A-Z]|$)/is);
+    const summaryMatch = content.match(/(summary|profile)[:\s]*([\s\S]*?)(?=\n\n|\n[A-Z]|$)/i);
     if (summaryMatch) {
       const originalSummary = summaryMatch[2];
       const newSummary = restructureSummary(originalSummary, keywords, requirements);
       restructured = restructured.replace(originalSummary, newSummary);
     }
   }
-  
+
   // Restructure experience sections
-  const experienceSections = content.match(/(experience|work)[:\s]*(.*?)(?=\n\n|\n[A-Z]|$)/gis);
+  const experienceSections = content.match(/(experience|work)[:\s]*([\s\S]*?)(?=\n\n|\n[A-Z]|$)/gi);
   if (experienceSections) {
     experienceSections.forEach(section => {
       const restructuredSection = restructureExperience(section, keywords, requirements);
       restructured = restructured.replace(section, restructuredSection);
     });
   }
-  
+
   // Restructure skills section
-  const skillsMatch = content.match(/(skills|technologies)[:\s]*(.*?)(?=\n\n|\n[A-Z]|$)/is);
+  const skillsMatch = content.match(/(skills|technologies)[:\s]*([\s\S]*?)(?=\n\n|\n[A-Z]|$)/i);
   if (skillsMatch) {
     const originalSkills = skillsMatch[2];
     const newSkills = restructureSkills(originalSkills, keywords);

@@ -1,4 +1,4 @@
-import mongoose, { Document, Schema } from 'mongoose';
+import mongoose, { Document, Schema, Model } from 'mongoose';
 
 export interface IVerificationToken extends Document {
   userId: mongoose.Types.ObjectId | string;
@@ -12,6 +12,46 @@ export interface IVerificationToken extends Document {
   updatedAt: Date;
 }
 
+// Interface for the Model with custom static methods
+export interface IVerificationTokenModel extends Model<IVerificationToken> {
+  createToken(
+    userId: mongoose.Types.ObjectId | string | null,
+    email: string,
+    type: 'email' | 'password',
+    expirationHours?: number
+  ): Promise<IVerificationToken>;
+  
+  createCode(
+    userId: mongoose.Types.ObjectId | string | null,
+    email: string,
+    type: 'email-verification' | 'passwordless-login' | 'password-reset',
+    code: string
+  ): Promise<IVerificationToken>;
+  
+  verifyCode(
+    code: string,
+    email: string,
+    type: 'email-verification' | 'passwordless-login' | 'password-reset'
+  ): Promise<{
+    valid: boolean;
+    message: string;
+    userId?: mongoose.Types.ObjectId | string;
+  }>;
+  
+  verifyToken(
+    token: string,
+    email: string,
+    type: 'email' | 'password'
+  ): Promise<{
+    valid: boolean;
+    message: string;
+    userId?: mongoose.Types.ObjectId | string;
+  }>;
+  
+  cleanupExpired(): Promise<number>;
+}
+
+// Create schema with typed statics
 const verificationTokenSchema = new Schema<IVerificationToken>({
   userId: {
     type: Schema.Types.Mixed, // Allow both ObjectId and string
@@ -75,8 +115,8 @@ verificationTokenSchema.index({ code: 1, email: 1, type: 1 });
 verificationTokenSchema.index({ email: 1, type: 1, createdAt: 1 }); // For rate limiting
 
 // Static method to create verification token
-verificationTokenSchema.statics.createToken = async function(
-  userId: mongoose.Types.ObjectId | string,
+(verificationTokenSchema.statics as IVerificationTokenModel).createToken = async function(
+  userId: mongoose.Types.ObjectId | string | null,
   email: string,
   type: 'email' | 'password',
   expirationHours: number = 24
@@ -88,11 +128,11 @@ verificationTokenSchema.statics.createToken = async function(
   const expiresAt = new Date(Date.now() + expirationHours * 60 * 60 * 1000);
   
   // Remove any existing tokens for this user/email/type
-  await this.deleteMany({ userId, email, type });
+  await this.deleteMany({ ...(userId && { userId }), email, type });
   
   // Create new token
   const verificationToken = new this({
-    userId,
+    ...(userId && { userId }), // Only include userId if provided
     token,
     type,
     email,
@@ -103,7 +143,7 @@ verificationTokenSchema.statics.createToken = async function(
 };
 
 // Static method to create verification code
-verificationTokenSchema.statics.createCode = async function(
+(verificationTokenSchema.statics as IVerificationTokenModel).createCode = async function(
   userId: mongoose.Types.ObjectId | string | null,
   email: string,
   type: 'email-verification' | 'passwordless-login' | 'password-reset',
@@ -128,7 +168,7 @@ verificationTokenSchema.statics.createCode = async function(
 };
 
 // Static method to verify code
-verificationTokenSchema.statics.verifyCode = async function(
+(verificationTokenSchema.statics as IVerificationTokenModel).verifyCode = async function(
   code: string,
   email: string,
   type: 'email-verification' | 'passwordless-login' | 'password-reset'
@@ -160,7 +200,7 @@ verificationTokenSchema.statics.verifyCode = async function(
 };
 
 // Static method to verify token
-verificationTokenSchema.statics.verifyToken = async function(
+(verificationTokenSchema.statics as IVerificationTokenModel).verifyToken = async function(
   token: string,
   email: string,
   type: 'email' | 'password'
@@ -187,7 +227,7 @@ verificationTokenSchema.statics.verifyToken = async function(
 };
 
 // Static method to clean up expired tokens (backup cleanup)
-verificationTokenSchema.statics.cleanupExpired = async function() {
+(verificationTokenSchema.statics as IVerificationTokenModel).cleanupExpired = async function() {
   const result = await this.deleteMany({
     expiresAt: { $lt: new Date() }
   });
@@ -196,4 +236,8 @@ verificationTokenSchema.statics.cleanupExpired = async function() {
   return result.deletedCount;
 };
 
-export default mongoose.models.VerificationToken || mongoose.model<IVerificationToken>('VerificationToken', verificationTokenSchema);
+// Export the model with proper typing
+const VerificationToken: IVerificationTokenModel = (mongoose.models.VerificationToken as IVerificationTokenModel) || 
+  mongoose.model<IVerificationToken, IVerificationTokenModel>('VerificationToken', verificationTokenSchema);
+
+export default VerificationToken;

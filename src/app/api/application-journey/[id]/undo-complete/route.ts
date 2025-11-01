@@ -72,12 +72,10 @@ export async function POST(
         $unset: {
           completedAt: 1,
           journeyDuration: 1,
-          applicationDate: 1
-        },
-        'steps.4.status': 'active',
-        $unset: {
+          applicationDate: 1,
           'steps.4.completedAt': 1
-        }
+        },
+        'steps.4.status': 'active'
       },
       { new: true }
     );

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/database';
 import { User } from '@/models';
 import jwt from 'jsonwebtoken';
+import type { MyJwtPayload } from '@/types/jwt-payload';
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,9 +22,9 @@ export async function POST(request: NextRequest) {
     const token = authHeader.substring(7); // Remove 'Bearer ' prefix
     
     // Verify the JWT token
-    let decoded;
+    let decoded: MyJwtPayload;
     try {
-      decoded = jwt.verify(token, process.env.NEXTAUTH_SECRET!) as any;
+      decoded = jwt.verify(token, process.env.NEXTAUTH_SECRET!) as MyJwtPayload;
     } catch (error) {
       console.log('❌ Invalid token:', error);
       return NextResponse.json(

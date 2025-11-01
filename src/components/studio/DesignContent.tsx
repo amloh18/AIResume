@@ -10,7 +10,6 @@ import {
   RotateCcw,
   Code
 } from 'lucide-react';
-import { getThemeClasses } from '@/lib/utils/themeUtils';
 
 interface DesignContentProps {
   onSettingsChange?: (settings: any) => void;
@@ -19,8 +18,6 @@ interface DesignContentProps {
 const DesignContent: React.FC<DesignContentProps> = ({
   onSettingsChange
 }) => {
-  const themeClasses = getThemeClasses;
-  
   const [designSettings, setDesignSettings] = useState({
     fontFamily: 'Inter',
     headerFontSize: 24,
@@ -64,42 +61,42 @@ const DesignContent: React.FC<DesignContentProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="h-full w-full bg-[#1A201A] p-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-2xl font-bold text-white mb-2">Design Settings</h1>
-          <p className="text-gray-300">Customize the visual appearance of your CV.</p>
+          <h1 className="text-xl font-bold text-white mb-1">Design Settings</h1>
+          <p className="text-sm text-white/60">Customize the visual appearance of your CV.</p>
         </div>
         
         <div className="flex items-center gap-3">
           <motion.button
             onClick={handleReset}
-            className="px-6 py-2 text-sm bg-green-600/20 text-green-400 rounded-full hover:bg-green-600/30 transition-colors"
+            className="px-4 py-1.5 text-xs bg-green-600/20 text-green-400 rounded-lg hover:bg-green-600/30 transition-colors"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
-            <RotateCcw className="w-4 h-4 inline mr-2" />
+            <RotateCcw className="w-3 h-3 inline mr-1.5" />
             Reset
           </motion.button>
         </div>
       </div>
 
+      {/* Cards in 2-column grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {/* Typography Section */}
-      <div className="bg-white/5 rounded-2xl border border-white/10 transition-all duration-300">
-        <div className="flex items-center justify-between p-6">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
-                <Type className="w-5 h-5 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold text-white">Typography</h3>
+      <div className="bg-white/5 rounded-xl border border-white/10 transition-all duration-300">
+        <div className="flex items-center justify-between p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Type className="w-4 h-4 text-white" />
             </div>
+            <h3 className="text-base font-semibold text-white">Typography</h3>
           </div>
         </div>
         
-        <div className="px-6 pb-6">
-          <div className="pt-4 space-y-6">
+        <div className="px-4 pb-4">
+          <div className="pt-2 space-y-4">
             {/* Font Family */}
             <div>
               <label className="block text-white/80 text-sm font-medium mb-2">Font Family</label>
@@ -118,7 +115,7 @@ const DesignContent: React.FC<DesignContentProps> = ({
             </div>
 
             {/* Font Sizes */}
-            <div className="grid grid-cols-3 gap-6">
+            <div className="grid grid-cols-3 gap-4">
               <div>
                 <label className="block text-white/80 text-sm font-medium mb-2">Header Size</label>
                 <input
@@ -161,24 +158,22 @@ const DesignContent: React.FC<DesignContentProps> = ({
       </div>
 
       {/* Layout Section */}
-      <div className="bg-white/5 rounded-2xl border border-white/10 transition-all duration-300">
-        <div className="flex items-center justify-between p-6">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
-                <Layout className="w-5 h-5 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold text-white">Layout</h3>
+      <div className="bg-white/5 rounded-xl border border-white/10 transition-all duration-300">
+        <div className="flex items-center justify-between p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Layout className="w-4 h-4 text-white" />
             </div>
+            <h3 className="text-base font-semibold text-white">Layout</h3>
           </div>
         </div>
         
-        <div className="px-6 pb-6">
-          <div className="pt-4 space-y-6">
+        <div className="px-4 pb-4">
+          <div className="pt-2 space-y-4">
             {/* Alignment */}
             <div>
               <label className="block text-white/80 text-sm font-medium mb-2">Text Alignment for CV Header</label>
-              <p className="text-xs text-white/60 mb-4">Affects basics section only (excluding professional summary)</p>
+              <p className="text-xs text-white/50 mb-3">Affects basics section only (excluding professional summary)</p>
               <div className="flex gap-3">
                 {['left', 'center', 'right'].map((align) => (
                   <button
@@ -215,21 +210,19 @@ const DesignContent: React.FC<DesignContentProps> = ({
       </div>
 
       {/* Skills Display Type Section */}
-      <div className="bg-white/5 rounded-2xl border border-white/10 transition-all duration-300">
-        <div className="flex items-center justify-between p-6">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <Code className="w-5 h-5 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold text-white">Skills Display</h3>
+      <div className="bg-white/5 rounded-xl border border-white/10 transition-all duration-300">
+        <div className="flex items-center justify-between p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Code className="w-4 h-4 text-white" />
             </div>
+            <h3 className="text-base font-semibold text-white">Skills Display</h3>
           </div>
         </div>
         
-        <div className="px-6 pb-6">
-          <div className="pt-4">
-            <div className="grid grid-cols-1 gap-4">
+        <div className="px-4 pb-4">
+          <div className="pt-2">
+            <div className="grid grid-cols-1 gap-3">
               {[
                 { 
                   id: 'category', 
@@ -253,13 +246,13 @@ const DesignContent: React.FC<DesignContentProps> = ({
                 <button
                   key={displayType.id}
                   onClick={() => handleSettingChange('skillsDisplayType', displayType.id)}
-                  className={`p-4 rounded-lg border transition-colors text-left ${
+                  className={`p-3 rounded-lg border transition-colors text-left ${
                     designSettings.skillsDisplayType === displayType.id
                       ? 'border-[#80FF00] bg-[#80FF00]/10'
                       : 'border-white/20 hover:bg-white/10'
                   }`}
                 >
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-col gap-1">
                     <span className="text-sm font-medium text-white">{displayType.name}</span>
                     <span className="text-xs text-white/60">{displayType.description}</span>
                   </div>
@@ -271,21 +264,19 @@ const DesignContent: React.FC<DesignContentProps> = ({
       </div>
 
       {/* Color Scheme Section */}
-      <div className="bg-white/5 rounded-2xl border border-white/10 transition-all duration-300">
-        <div className="flex items-center justify-between p-6">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
-                <Palette className="w-5 h-5 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold text-white">Color Scheme</h3>
+      <div className="bg-white/5 rounded-xl border border-white/10 transition-all duration-300">
+        <div className="flex items-center justify-between p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Palette className="w-4 h-4 text-white" />
             </div>
+            <h3 className="text-base font-semibold text-white">Color Scheme</h3>
           </div>
         </div>
         
-        <div className="px-6 pb-6">
-          <div className="pt-4">
-            <div className="grid grid-cols-2 gap-4">
+        <div className="px-4 pb-4">
+          <div className="pt-2">
+            <div className="grid grid-cols-2 gap-3">
               {[
                 { id: 'black-black', name: 'Black/Black', colors: ['#000000', '#000000'] },
                 { id: 'black-grey', name: 'Black/Dark Grey', colors: ['#000000', '#374151'] },
@@ -295,18 +286,18 @@ const DesignContent: React.FC<DesignContentProps> = ({
                 <button
                   key={scheme.id}
                   onClick={() => handleSettingChange('colorScheme', scheme.id)}
-                  className={`p-4 rounded-lg border transition-colors ${
+                  className={`p-3 rounded-lg border transition-colors ${
                     designSettings.colorScheme === scheme.id
                       ? 'border-[#80FF00] bg-[#80FF00]/10'
                       : 'border-white/20 hover:bg-white/10'
                   }`}
                 >
-                  <div className="flex items-center gap-3 mb-2">
+                  <div className="flex items-center gap-2">
                     <div className="flex gap-1">
                       {scheme.colors.map((color, i) => (
                         <div
                           key={i}
-                          className="w-4 h-4 rounded-full"
+                          className="w-3 h-3 rounded-full"
                           style={{ backgroundColor: color }}
                         />
                       ))}
@@ -318,6 +309,7 @@ const DesignContent: React.FC<DesignContentProps> = ({
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

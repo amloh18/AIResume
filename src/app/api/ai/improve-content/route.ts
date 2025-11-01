@@ -5,10 +5,12 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 export async function POST(request: NextRequest) {
+  let promptText = '';
   try {
     const { prompt, cvData, jobData } = await request.json();
+    promptText = String(prompt || '');
 
-    if (!prompt) {
+    if (!promptText) {
       return NextResponse.json(
         { success: false, error: 'Prompt is required' },
         { status: 400 }
@@ -19,7 +21,7 @@ export async function POST(request: NextRequest) {
     const enhancedPrompt = `
 You are an expert CV/resume writer and career coach. Your task is to improve CV content based on the following request:
 
-${prompt}
+${promptText}
 
 Additional Context:
 - CV Data: ${JSON.stringify(cvData || {}, null, 2)}
@@ -74,14 +76,14 @@ Please provide the improved content only, without explanations or markdown forma
 
     // Determine the type of content being improved
     let fallbackContent = 'Improved content based on best practices...';
-    if (prompt.includes('summary')) fallbackContent = fallbackResponses.summary;
-    else if (prompt.includes('description')) fallbackContent = fallbackResponses.description;
-    else if (prompt.includes('highlights')) fallbackContent = fallbackResponses.highlights;
-    else if (prompt.includes('achievements')) fallbackContent = fallbackResponses.achievements;
-    else if (prompt.includes('skills')) fallbackContent = fallbackResponses.skills;
-    else if (prompt.includes('projects')) fallbackContent = fallbackResponses.projects;
-    else if (prompt.includes('position')) fallbackContent = fallbackResponses.position;
-    else if (prompt.includes('company')) fallbackContent = fallbackResponses.company;
+    if (promptText.includes('summary')) fallbackContent = fallbackResponses.summary;
+    else if (promptText.includes('description')) fallbackContent = fallbackResponses.description;
+    else if (promptText.includes('highlights')) fallbackContent = fallbackResponses.highlights;
+    else if (promptText.includes('achievements')) fallbackContent = fallbackResponses.achievements;
+    else if (promptText.includes('skills')) fallbackContent = fallbackResponses.skills;
+    else if (promptText.includes('projects')) fallbackContent = fallbackResponses.projects;
+    else if (promptText.includes('position')) fallbackContent = fallbackResponses.position;
+    else if (promptText.includes('company')) fallbackContent = fallbackResponses.company;
 
     return NextResponse.json({
       success: true,

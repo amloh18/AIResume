@@ -62,12 +62,6 @@ export default function CalendarSyncSettings({ userSettings, onUpdateSettings }:
       }
     } catch (error) {
       console.error('Error connecting calendar:', error);
-      // Removed notification:
-        type: 'error',
-        title: 'Connection Failed',
-        message: 'Failed to connect to Google Calendar. Please try again.',
-        persistent: false
-      });
       setIsConnecting(false);
     }
   };
@@ -90,23 +84,11 @@ export default function CalendarSyncSettings({ userSettings, onUpdateSettings }:
       
       if (data.success) {
         setLastSyncTime(new Date());
-        // Removed notification:
-          type: 'success',
-          title: 'Sync Successful',
-          message: `Synced ${data.syncedCount} job applications to your calendar.`,
-          persistent: false
-        });
       } else {
         throw new Error(data.error || 'Failed to sync to calendar');
       }
     } catch (error) {
       console.error('Error syncing calendar:', error);
-      // Removed notification:
-        type: 'error',
-        title: 'Sync Failed',
-        message: 'Failed to sync job applications to calendar. Please try again.',
-        persistent: false
-      });
     } finally {
       setIsLoading(false);
     }
@@ -132,21 +114,8 @@ export default function CalendarSyncSettings({ userSettings, onUpdateSettings }:
       };
 
       onUpdateSettings(updatedSettings);
-      
-      // Removed notification:
-        type: 'success',
-        title: 'Calendar Disconnected',
-        message: 'Your calendar has been disconnected successfully.',
-        persistent: false
-      });
     } catch (error) {
       console.error('Error disconnecting calendar:', error);
-      // Removed notification:
-        type: 'error',
-        title: 'Disconnect Failed',
-        message: 'Failed to disconnect calendar. Please try again.',
-        persistent: false
-      });
     }
   };
 

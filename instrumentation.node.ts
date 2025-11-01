@@ -5,6 +5,9 @@
  * It's separated from the main instrumentation.ts to avoid Edge Runtime issues.
  */
 
+// Export empty object to make this a valid module
+export {};
+
 // Only run in Node.js runtime
 if (process.env.NEXT_RUNTIME === 'nodejs') {
   console.log('🔧 Loading OpenTelemetry instrumentation for Node.js runtime');

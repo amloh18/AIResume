@@ -1,21 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { EnhancedAIService } from '@/lib/services/enhancedAIService';
+import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 
 export async function POST(request: NextRequest) {
   try {
     const { testType } = await request.json();
 
     // Mock CV data for testing
-    const mockCVData = {
+    const mockCVData: UnifiedCVDataStructure = {
       basics: {
         name: 'John Doe',
+        label: '',
+        image: '',
         email: 'john@example.com',
-        summary: 'Experienced software developer with 5 years of experience in web development and team leadership.'
+        phone: '',
+        url: '',
+        summary: 'Experienced software developer with 5 years of experience in web development and team leadership.',
+        location: {
+          address: '',
+          postalCode: '',
+          city: '',
+          countryCode: '',
+          region: ''
+        },
+        profiles: []
       },
       work: [
         {
-          position: 'Senior Software Developer',
           name: 'Tech Corp',
+          position: 'Senior Software Developer',
+          url: '',
           startDate: '2020-01-01',
           endDate: 'Present',
           summary: 'Led development of web applications using React and Node.js',
@@ -28,17 +42,30 @@ export async function POST(request: NextRequest) {
       ],
       skills: [
         {
-          name: 'Technical Skills',
-          keywords: ['JavaScript', 'React', 'Node.js', 'Python', 'SQL']
+          category: 'Technical Skills',
+          skills: ['JavaScript', 'React', 'Node.js', 'Python', 'SQL']
         }
       ],
       education: [
         {
           institution: 'University of Technology',
+          url: '',
+          area: 'Computer Science',
           studyType: 'Bachelor',
-          area: 'Computer Science'
+          startDate: '',
+          endDate: '',
+          score: '',
+          courses: []
         }
-      ]
+      ],
+      volunteer: [],
+      awards: [],
+      certificates: [],
+      publications: [],
+      languages: [],
+      interests: [],
+      references: [],
+      projects: []
     };
 
     // Mock job data for testing
@@ -46,8 +73,18 @@ export async function POST(request: NextRequest) {
       id: 'job-1',
       title: 'Senior Full Stack Developer',
       company: 'Innovation Inc',
+      location: 'San Francisco, CA',
       description: 'We are looking for a Senior Full Stack Developer with experience in React, Node.js, and cloud technologies. The ideal candidate will have 5+ years of experience and strong leadership skills.',
-      requirements: '5+ years experience, React, Node.js, AWS, team leadership'
+      requirements: ['5+ years experience', 'React', 'Node.js', 'AWS', 'team leadership'],
+      responsibilities: ['Develop web applications', 'Lead development team', 'Mentor junior developers'],
+      skills: ['JavaScript', 'React', 'Node.js', 'AWS', 'Docker'],
+      type: 'full-time' as const,
+      remote: false,
+      postedDate: '2024-01-01',
+      status: 'active' as const,
+      userId: 'test-user',
+      createdAt: '2024-01-01T00:00:00Z',
+      updatedAt: '2024-01-01T00:00:00Z'
     };
 
     let testResults: any = {};
@@ -65,7 +102,7 @@ export async function POST(request: NextRequest) {
           });
           testResults.sectionGeneration = { success: true, content: result };
         } catch (error) {
-          testResults.sectionGeneration = { success: false, error: error.message };
+          testResults.sectionGeneration = { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
         }
         break;
 
@@ -74,7 +111,7 @@ export async function POST(request: NextRequest) {
           const result = await EnhancedAIService.generateComprehensiveATSAnalysis(mockCVData, mockJobData);
           testResults.atsAnalysis = { success: true, data: result };
         } catch (error) {
-          testResults.atsAnalysis = { success: false, error: error.message };
+          testResults.atsAnalysis = { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
         }
         break;
 
@@ -88,7 +125,7 @@ export async function POST(request: NextRequest) {
           );
           testResults.coverLetter = { success: true, content: result };
         } catch (error) {
-          testResults.coverLetter = { success: false, error: error.message };
+          testResults.coverLetter = { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
         }
         break;
 
@@ -97,7 +134,7 @@ export async function POST(request: NextRequest) {
           const level = EnhancedAIService.calculateExperienceLevel(mockCVData);
           testResults.experienceLevel = { success: true, level };
         } catch (error) {
-          testResults.experienceLevel = { success: false, error: error.message };
+          testResults.experienceLevel = { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
         }
         break;
 
@@ -106,7 +143,7 @@ export async function POST(request: NextRequest) {
           const keywords = EnhancedAIService.extractTopKeywords(mockJobData.description, 5);
           testResults.keywords = { success: true, keywords };
         } catch (error) {
-          testResults.keywords = { success: false, error: error.message };
+          testResults.keywords = { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
         }
         break;
 
@@ -114,7 +151,7 @@ export async function POST(request: NextRequest) {
         // Test all functionality
         const tests = [
           'section-generation',
-          'ats-analysis', 
+          'ats-analysis',
           'cover-letter',
           'experience-level',
           'keywords'
@@ -130,7 +167,7 @@ export async function POST(request: NextRequest) {
             const data = await response.json();
             testResults[test] = data;
           } catch (error) {
-            testResults[test] = { success: false, error: error.message };
+            testResults[test] = { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
           }
         }
         break;

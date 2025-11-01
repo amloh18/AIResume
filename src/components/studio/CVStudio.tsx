@@ -606,10 +606,14 @@ const CVStudio: React.FC<CVStudioProps> = ({
         } else {
           // Handle CV save
           if (cvId) {
+            // Ensure templateId is a string (handle hardcoded templates)
+            const templateId = selectedTemplate?.id || selectedTemplate?._id || selectedTemplate?.templateId || '';
+            const templateIdString = typeof templateId === 'string' ? templateId : String(templateId);
+            
             await CVService.updateCV(cvId, {
               title: cvTitle,
               cvData: data,
-              templateId: selectedTemplate?.id || selectedTemplate?._id || '',
+              templateId: templateIdString,
               metadata: {
                 isMaster: isMasterCV
               }
@@ -626,10 +630,14 @@ const CVStudio: React.FC<CVStudioProps> = ({
             if (existingCvId) {
               
               // Update the existing CV
+              // Ensure templateId is a string (handle hardcoded templates)
+              const templateId = selectedTemplate?.id || selectedTemplate?._id || selectedTemplate?.templateId || '';
+              const templateIdString = typeof templateId === 'string' ? templateId : String(templateId);
+              
               await CVService.updateCV(existingCvId, {
                 title: cvTitle,
                 cvData: data,
-                templateId: selectedTemplate?.id || selectedTemplate?._id || '',
+                templateId: templateIdString,
                 metadata: {
                   isMaster: isMasterCV
                 }
@@ -769,7 +777,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
         journey = await CVJourneyLookupService.getJourneyInfoForStudio(
           cvId,
           coverLetterId,
-          jobId,
+          selectedJobId || undefined,
           userId
         );
       }
@@ -864,6 +872,24 @@ const CVStudio: React.FC<CVStudioProps> = ({
     setCvData(prev => {
       if (!prev) return prev;
 
+      // Validate value for array fields - ensure they're always arrays
+      const arrayFields = ['work', 'volunteer', 'education', 'awards', 'certificates', 
+                           'publications', 'skills', 'languages', 'interests', 'references', 'projects'];
+      
+      // If path is just an array field name (e.g., "awards", "certificates"), ensure value is an array
+      if (arrayFields.includes(path)) {
+        if (!Array.isArray(value)) {
+          console.warn(`⚠️ CVStudio - Field ${path} must be an array, but got ${typeof value}. Converting to array.`);
+          // If value is a string that matches the field name, it's an error - use empty array
+          if (typeof value === 'string' && value === path) {
+            value = [];
+          } else {
+            // Default to empty array for non-array values
+            value = [];
+          }
+        }
+      }
+
       const pathArray = path.split('.');
       const newData = { ...prev };
       let current: any = newData;
@@ -873,11 +899,18 @@ const CVStudio: React.FC<CVStudioProps> = ({
         const key = pathArray[i];
         const nextKey = pathArray[i + 1];
         
+        // Validate that array fields remain arrays
+        if (arrayFields.includes(key) && current[key] !== undefined && !Array.isArray(current[key])) {
+          console.warn(`⚠️ CVStudio - Field ${key} should be an array but is ${typeof current[key]}. Resetting to empty array.`);
+          current[key] = [];
+        }
+        
         // If current[key] doesn't exist or is not an object/array, create it
         if (!current[key] || typeof current[key] !== 'object') {
-          // Check if next key is a number (array index)
+          // Check if next key is a number (array index) or if current key is an array field
           const isArrayIndex = !isNaN(parseInt(nextKey));
-          current[key] = isArrayIndex ? [] : {};
+          const isArrayField = arrayFields.includes(key);
+          current[key] = (isArrayIndex || isArrayField) ? [] : {};
         } else {
           // Make a shallow copy to avoid mutating nested objects
           current[key] = Array.isArray(current[key]) ? [...current[key]] : { ...current[key] };
@@ -886,7 +919,14 @@ const CVStudio: React.FC<CVStudioProps> = ({
         current = current[key];
       }
 
-      current[pathArray[pathArray.length - 1]] = value;
+      // Final validation before setting value
+      const finalKey = pathArray[pathArray.length - 1];
+      if (arrayFields.includes(finalKey) && !Array.isArray(value)) {
+        console.warn(`⚠️ CVStudio - Attempted to set ${finalKey} (array field) with non-array value. Skipping update.`);
+        return prev; // Don't update if trying to set array field with non-array value
+      }
+
+      current[finalKey] = value;
 
       // Auto-update CV title when name, label, or summary changes
       if (path.startsWith('basics.') && (path.includes('name') || path.includes('label') || path.includes('summary'))) {
@@ -1224,7 +1264,12 @@ const CVStudio: React.FC<CVStudioProps> = ({
               isMaster: isMasterCV
             }
           };
+          // Ensure templateId is a string (handle hardcoded templates)
+          const templateId = selectedTemplate?.id || selectedTemplate?._id || selectedTemplate?.templateId || '';
+          updateData.templateId = typeof templateId === 'string' ? templateId : String(templateId);
+          
           console.log('🔍 Studio - Update data:', updateData);
+          console.log('🔍 Studio - Template ID being saved:', updateData.templateId);
           
           await CVService.updateCV(cvId, updateData, userId || undefined);
           setSaveStatus('saved');
@@ -2079,7 +2124,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
             }
           }
 
-          // Set template if available, otherwise use Executive Professional as default
+          // Set template if available, otherwise use Elegant Timeline as default
           if (cvResult && cvResult.templateId && templatesResult.length > 0) {
             // Handle both id and _id fields for template matching
             const templateIdToMatch = cvResult.templateId.toString();
@@ -2090,13 +2135,13 @@ const CVStudio: React.FC<CVStudioProps> = ({
               t._id?.toString() === templateIdToMatch
             );
 
-            // If not found in database templates, check hardcoded/fallback templates
+            // If not found in database templates, check hardcoded templates
             if (!template) {
               console.log('⚠️ Studio - Template not found in database, checking hardcoded templates');
-              const fallbackTemplates = getFallbackTemplates();
+              const { HARDCODED_TEMPLATES } = await import('@/lib/templates/hardcoded-templates');
 
               // Check if templateId matches any hardcoded template names or IDs
-              template = fallbackTemplates.find((t: any) =>
+              template = HARDCODED_TEMPLATES.find((t: any) =>
                 t.id === templateIdToMatch ||
                 t._id === templateIdToMatch ||
                 t.name.toLowerCase().replace(/\s+/g, '-').includes(templateIdToMatch.toLowerCase()) ||
@@ -2107,18 +2152,34 @@ const CVStudio: React.FC<CVStudioProps> = ({
                 console.log('✅ Studio - Found hardcoded template:', template.name);
                 setSelectedTemplate(template);
               } else {
-                console.log('⚠️ Studio - Template not found in hardcoded templates either, using fallback');
-                // Fallback to first available template
-                setSelectedTemplate(templatesResult[0] || fallbackTemplates[0]);
+                console.log('⚠️ Studio - Template not found in hardcoded templates either, using Elegant Timeline as fallback');
+                // Fallback to Elegant Timeline
+                const elegantTimeline = HARDCODED_TEMPLATES.find((t: any) => 
+                  t.name === 'Elegant Timeline' || t.name.toLowerCase().includes('elegant timeline')
+                );
+                setSelectedTemplate(elegantTimeline || templatesResult[0] || HARDCODED_TEMPLATES[0]);
               }
             } else {
               console.log('✅ Studio - Loaded template from CV:', template.name);
               setSelectedTemplate(template);
             }
           } else if (templatesResult.length > 0) {
-            console.log('✅ Studio - No template specified, using first available template as default');
-            // No template specified, use first available template
-            setSelectedTemplate(templatesResult[0]);
+            console.log('✅ Studio - No template specified, using Elegant Timeline as default');
+            // No template specified, use Elegant Timeline as default
+            const elegantTimeline = templatesResult.find((t: any) => 
+              t.name === 'Elegant Timeline' || t.name.toLowerCase().includes('elegant timeline')
+            );
+            setSelectedTemplate(elegantTimeline || templatesResult[0]);
+          } else {
+            // If no templates from database, use hardcoded templates
+            const { HARDCODED_TEMPLATES } = await import('@/lib/templates/hardcoded-templates');
+            const elegantTimeline = HARDCODED_TEMPLATES.find((t: any) => 
+              t.name === 'Elegant Timeline' || t.name.toLowerCase().includes('elegant timeline')
+            );
+            if (elegantTimeline) {
+              console.log('✅ Studio - Using hardcoded Elegant Timeline as default');
+              setSelectedTemplate(elegantTimeline);
+            }
           }
         } else {
             // Create default CV data structure
@@ -2159,12 +2220,22 @@ const CVStudio: React.FC<CVStudioProps> = ({
             setCvTitle('Untitled CV');
 
             // If no cvId is provided, we're creating a new CV
-            // Set Executive Professional as default template if available, otherwise use first template
+            // Set Elegant Timeline as default template if available, otherwise use first template
             if (templatesResult.length > 0) {
-              const executiveProfessional = templatesResult.find((t: any) => 
-                t.name === 'Executive Professional' || t.name.toLowerCase().includes('executive professional')
+              const elegantTimeline = templatesResult.find((t: any) => 
+                t.name === 'Elegant Timeline' || t.name.toLowerCase().includes('elegant timeline')
               );
-              setSelectedTemplate(executiveProfessional || templatesResult[0]);
+              setSelectedTemplate(elegantTimeline || templatesResult[0]);
+            } else {
+              // If no templates from database, use hardcoded templates
+              const { HARDCODED_TEMPLATES } = await import('@/lib/templates/hardcoded-templates');
+              const elegantTimeline = HARDCODED_TEMPLATES.find((t: any) => 
+                t.name === 'Elegant Timeline' || t.name.toLowerCase().includes('elegant timeline')
+              );
+              if (elegantTimeline) {
+                console.log('✅ Studio - Using hardcoded Elegant Timeline as default for new CV');
+                setSelectedTemplate(elegantTimeline);
+              }
             }
           }
         }
@@ -2195,7 +2266,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
         format,
         userId,
         cvId,
-        jobId: selectedJobId || jobId
+        jobId: selectedJobId || journeyInfo?.jobId || undefined
       };
 
       const response = await fetch('/api/cv/export', {
@@ -3766,77 +3837,55 @@ const CVStudio: React.FC<CVStudioProps> = ({
         actionLabel="Go to ATS Editor"
       />
 
-      {/* Add Section Modal */}
-      <AnimatePresence>
+      {/* Add Section Modal - Matching MasterCVBuilderStep */}
         {showAddSectionModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="bg-[#222B22] rounded-2xl p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto"
           >
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-              onClick={() => setShowAddSectionModal(false)}
-            />
-
-            {/* Modal */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="relative w-full max-w-md bg-white dark:bg-[#1a230f] rounded-2xl shadow-2xl border border-gray-200 dark:border-white/10"
-            >
-              {/* Header */}
-              <div className="p-6 border-b border-gray-200 dark:border-white/10">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">Add New Section</h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-white">Add New Section</h2>
                   <button
                     onClick={() => setShowAddSectionModal(false)}
-                    className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                className="text-white/60 hover:text-white transition-colors"
                   >
-                    <X className="h-5 w-5" />
+                <X size={24} />
                   </button>
-                </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">Select a section to add to your CV</p>
               </div>
 
-              {/* Sections List */}
-              <div className="p-6">
-                {getAvailableSectionsToAdd().length > 0 ? (
-                  <div className="space-y-2">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     {getAvailableSectionsToAdd().map((section) => {
                       const IconComponent = section.icon;
+                const isAlreadyAdded = hasSectionData(section.id);
+                
                       return (
                         <motion.button
                           key={section.id}
-                          onClick={() => addNewSection(section.id)}
-                          className="w-full flex items-center gap-3 p-4 rounded-lg border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors text-left"
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
+                    onClick={() => !isAlreadyAdded && addNewSection(section.id)}
+                    className={`w-full aspect-square flex flex-col items-center justify-center gap-3 p-4 rounded-xl transition-all duration-200 ${
+                      isAlreadyAdded
+                        ? 'bg-white/5 text-white/30 cursor-not-allowed'
+                        : 'bg-white/10 hover:bg-white/20 text-white hover:scale-105'
+                    }`}
+                    whileHover={!isAlreadyAdded ? { scale: 1.05 } : {}}
+                    whileTap={!isAlreadyAdded ? { scale: 0.95 } : {}}
+                    disabled={isAlreadyAdded}
                         >
-                          <IconComponent className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-                          <span className="font-medium text-gray-900 dark:text-white">{section.title}</span>
-                          <Plus className="h-4 w-4 text-gray-400 dark:text-gray-500 ml-auto" />
+                    {React.createElement(IconComponent, { size: 32 })}
+                    <span className="font-medium text-sm text-center">{section.title}</span>
+                    {isAlreadyAdded && (
+                      <span className="text-xs text-white/50">Already Added</span>
+                    )}
                         </motion.button>
                       );
                     })}
                   </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <p className="text-gray-600 dark:text-gray-400">All available sections have been added to your CV.</p>
+          </motion.div>
                   </div>
                 )}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </>
   );
 };
