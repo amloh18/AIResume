@@ -2,9 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { sendEmailVerification } from '@/lib/email-service';
 import connectDB from '@/lib/database';
 import User from '@/models/User';
+import type { IUser } from '@/models/User';
 import VerificationToken from '@/models/VerificationToken';
 
 export async function POST(request: NextRequest) {
+  // Declare newUser in outer scope to access it in catch block
+  let newUser: IUser | null = null;
+  
   try {
     const { email, firstName, lastName } = await request.json();
 
@@ -111,7 +115,7 @@ export async function POST(request: NextRequest) {
 
     // Create user in database regardless of email status
     try {
-      const user = new User({
+      newUser = new User({
         email,
         firstName: firstName.trim(),
         lastName: lastName.trim(),
@@ -144,18 +148,27 @@ export async function POST(request: NextRequest) {
         }
       });
 
-      await user.save();
+      // Type guard: ensure newUser is not null before using it
+      if (!newUser) {
+        console.error('❌ Cannot save user because newUser is null.');
+        return NextResponse.json(
+          { success: false, message: 'Failed to create user account.' },
+          { status: 500 }
+        );
+      }
+
+      await newUser.save();
       console.log('✅ User created in database');
 
       // Update verification token with user ID
-      verificationToken.userId = user._id;
+      verificationToken.userId = newUser._id;
       await verificationToken.save();
       
       if (emailSent) {
         return NextResponse.json({
           success: true,
           message: 'Account created! Please check your email to verify your account.',
-          userId: user._id,
+          userId: newUser._id,
         });
       } else {
         return NextResponse.json({
@@ -168,6 +181,16 @@ export async function POST(request: NextRequest) {
 
     } catch (dbError: any) {
       console.error('❌ Failed to create user in database:', dbError);
+      
+      // If user was created successfully but error occurred elsewhere, return success with user info
+      if (newUser && newUser._id) {
+        return NextResponse.json({
+          success: true,
+          message: 'Account created! You can sign in now...',
+          userId: newUser._id,
+          emailServiceStatus: 'unavailable'
+        });
+      }
       
       // If it's a duplicate key error, user already exists
       if (dbError.code === 11000) {

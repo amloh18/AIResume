@@ -8,6 +8,7 @@ let mammoth: any = null;
 const initLibraries = async () => {
   if (!pdfParse) {
     try {
+      // @ts-ignore - pdf-parse doesn't have type definitions
       const pdfParseModule = await import('pdf-parse');
       pdfParse = pdfParseModule.default || pdfParseModule;
     } catch (error) {
@@ -346,8 +347,3 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// Type declarations for modules without types
-declare module 'pdf-parse' {
-  function pdfParse(buffer: Buffer): Promise<{ text: string }>;
-  export default pdfParse;
-}

@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken'
 import { NextRequest, NextResponse } from 'next/server'
 import User from '@/models/User'
 import connectDB from '@/lib/database'
+import type { MyJwtPayload } from '@/types/jwt-payload'
 
 const JWT_SECRET = process.env.JWT_SECRET || '12626db0bdab7694da7152d2c76b07c1c9acc71571f1134ca832085d3dce5b11'
 
@@ -107,7 +108,7 @@ export async function authenticateUser(email: string, password: string): Promise
 
 export async function verifyToken(token: string): Promise<AuthResult> {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as any
+    const decoded = jwt.verify(token, JWT_SECRET) as MyJwtPayload
     
     await connectDB()
     

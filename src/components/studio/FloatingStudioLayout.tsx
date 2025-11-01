@@ -119,9 +119,9 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
   };
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-[#1A201A]">
       {/* Main Studio Container */}
-      <div className="h-screen overflow-hidden flex flex-col">
+      <div className="h-screen overflow-hidden flex flex-col bg-[#1A201A]">
 
         {/* Header - Different for Mobile vs Desktop */}
         {isMobile ? (
@@ -253,7 +253,7 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
         ) : (
           /* Desktop Floating Header Panel - Sticky */
           <motion.div
-            className="sticky top-0 z-30 mb-4 bg-white/95 dark:bg-[#141810] border-b border-gray-200/50 dark:border-white/10 shadow-lg px-4 py-2"
+            className="sticky top-0 z-30 bg-white/95 dark:bg-[#141810] border-b border-gray-200/50 dark:border-white/10 shadow-lg px-4 py-2"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
@@ -492,7 +492,7 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
         {/* Main Content Area - Different Layout for Mobile vs Desktop */}
         {isMobile ? (
           /* Mobile Layout: Right Panel First, Then Left Panel Below */
-          <div className="flex-1 flex flex-col min-h-0 pt-2 pb-4 px-4 gap-4">
+          <div className="flex-1 flex flex-col min-h-0 gap-4">
             {/* Right Panel - Full Width */}
             <div className="flex-shrink-0 h-1/2 overflow-hidden scrollbar-hide">
               {rightPanel}
@@ -505,7 +505,7 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
           </div>
         ) : (
           /* Desktop Layout - Sidebar + Content + Preview */
-          <div className="flex-1 flex gap-4 min-h-0 pt-2 pb-4 px-4 pr-8">
+          <div className="flex-1 flex gap-4 min-h-0">
             {/* Left Panel - Flexible width (contains sidebar + content) */}
             <motion.div
               className={`${layoutClasses.leftPanel} flex-1 min-w-0 overflow-hidden scrollbar-hide`}

@@ -319,20 +319,31 @@ export async function POST(request: NextRequest) {
     // Ensure templateId is provided or get default template
     let finalTemplateId = templateId;
     if (!finalTemplateId) {
-      const defaultTemplate = await Template.findOne({ isDefault: true, category: 'cv' });
-      if (!defaultTemplate) {
-        console.log('❌ CV POST API - No default template found');
-        return NextResponse.json(
-          { success: false, error: 'No template specified and no default template available' },
-          { status: 400 }
-        );
+      // First check hardcoded templates for default
+      const { HARDCODED_TEMPLATES } = await import('@/lib/templates/hardcoded-templates');
+      const hardcodedDefault = HARDCODED_TEMPLATES.find(
+        t => t.isDefault === true && t.category === 'cv'
+      );
+      
+      if (hardcodedDefault) {
+        finalTemplateId = hardcodedDefault.id || hardcodedDefault._id;
+        console.log('✅ CV POST API - Using hardcoded default template:', hardcodedDefault.name);
+      } else {
+        // Fallback to database
+        const defaultTemplate = await Template.findOne({ isDefault: true, category: 'cv' });
+        if (!defaultTemplate) {
+          console.log('❌ CV POST API - No default template found');
+          return NextResponse.json(
+            { success: false, error: 'No template specified and no default template available' },
+            { status: 400 }
+          );
+        }
+        finalTemplateId = defaultTemplate._id;
+        console.log('🔍 CV POST API - Using database default template:', defaultTemplate.name);
       }
-      finalTemplateId = defaultTemplate._id;
-      console.log('🔍 CV POST API - Using default template:', defaultTemplate.name);
     }
 
     // Validate template exists (check hardcoded templates first)
-    const { HARDCODED_TEMPLATES } = await import('@/lib/templates/hardcoded-templates');
     const hardcodedTemplate = HARDCODED_TEMPLATES.find(t => t.id === finalTemplateId || t._id === finalTemplateId);
 
     if (!hardcodedTemplate) {

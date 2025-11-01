@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
       // Simple enhancement - in production, this would use AI
       refinedContent = content
         .split('\n')
-        .map(line => {
+        .map((line: string) => {
           if (line.trim()) {
             // Add action verbs if not present
             if (!line.match(/^(Led|Managed|Developed|Created|Implemented|Improved|Increased|Reduced|Optimized|Designed|Built|Established|Coordinated|Supervised|Analyzed|Resolved|Delivered|Achieved|Generated|Streamlined)/i)) {

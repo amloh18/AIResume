@@ -219,7 +219,7 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
   };
 
   return (
-    <div className="h-full flex flex-col bg-white/95 dark:bg-[#1a230f] relative">
+    <div className="h-full flex flex-col bg-[#1A201A] relative">
       {/* Top Controls Bar */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200/50 dark:border-white/10">
         {/* Left Side - Document Type Switcher */}

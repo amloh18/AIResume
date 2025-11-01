@@ -123,7 +123,7 @@ export default function RestructuredStudioLayout({
             open={expandedCVSections.has('personal_header')}
             onOpenChange={() => toggleCVSection('personal_header')}
           >
-            <div className={`border rounded-xl ${expandedCVSections.has('personal_header') ? 'border-[#2D332D]' : 'border-[#2D332D] bg-[#1A201A]'}`}>
+            <div className="bg-white/5 rounded-2xl border border-white/10">
               <CollapsibleTrigger asChild>
                 <Button
                   variant="ghost"
@@ -197,6 +197,8 @@ export default function RestructuredStudioLayout({
                       onUpdateCV?.({ ...cvData, work: data });
                     }
                   }}
+                  jobData={jobContext}
+                  userId={userId}
                 />
               </CollapsibleContent>
             </div>
@@ -779,7 +781,8 @@ export default function RestructuredStudioLayout({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="h-full w-full bg-[#1A201A]">
+      <div className="pt-6 px-6 pb-6 space-y-4">
       {/* Header with Collapse All/Expand All Button */}
       {sectionsWithData.length > 0 && (
         <div className="flex items-center justify-between mb-4">
@@ -788,6 +791,7 @@ export default function RestructuredStudioLayout({
             variant="outline"
             size="sm"
             onClick={() => {
+              if (sectionsWithData.length === 0) return;
               const allExpanded = sectionsWithData.every(id => expandedCVSections.has(id));
               if (allExpanded) {
                 setExpandedCVSections(new Set());
@@ -797,14 +801,15 @@ export default function RestructuredStudioLayout({
             }}
             className="bg-[#2D332D] border-[#2D332D] text-white hover:bg-[#3D433D]"
           >
-            {sectionsWithData.every(id => expandedCVSections.has(id)) ? 'Collapse All' : 'Expand All'}
+            {sectionsWithData.length > 0 && sectionsWithData.every(id => expandedCVSections.has(id)) ? 'Collapse All' : 'Expand All'}
           </Button>
         </div>
       )}
 
       {/* Render only sections with data */}
-      <div className="space-y-2">
+        <div className="space-y-2 pb-6">
         {sectionsWithData.map(sectionId => renderSection(sectionId))}
+        </div>
       </div>
     </div>
   );

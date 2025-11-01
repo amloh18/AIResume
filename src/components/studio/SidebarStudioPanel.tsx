@@ -157,21 +157,16 @@ const SidebarStudioPanel: React.FC<SidebarStudioPanelProps> = ({
   };
 
   return (
-    <div className="flex h-full gap-4">
-      {/* Sidebar - with margin and rounded corners */}
+    <div className="flex h-full bg-[#1A201A]">
+      {/* Sticky Sidebar - Matching MasterCVBuilderStep theme */}
+      <div className="w-20 md:w-80 flex-shrink-0 p-2 md:p-4">
       <div
-        className="p-2 flex-shrink-0 flex flex-col"
+          className="bg-[#222B22] rounded-2xl border border-white/10 h-full flex flex-col shadow-xl overflow-hidden"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        style={{ height: 'calc(100vh - 5rem - 4rem - 2rem)' }}
-      >
-        <motion.div
-          className="bg-[#222B22] rounded-2xl border border-white/10 flex-1 flex flex-col shadow-xl overflow-hidden min-h-0"
-          animate={{ width: isHovered ? 240 : 80 }}
-          transition={{ duration: 0.3, ease: 'easeInOut' }}
         >
           {/* Main Sections Navigation */}
-          <div className="flex-1 p-2 space-y-2 overflow-y-auto min-h-0">
+          <div className="flex-1 p-2 md:p-4 space-y-2 overflow-y-auto min-h-0">
             {mainSections.map((section) => {
               const IconComponent = section.icon;
               const isActive = localActiveSection === section.id;
@@ -180,7 +175,7 @@ const SidebarStudioPanel: React.FC<SidebarStudioPanelProps> = ({
                 <motion.button
                   key={section.id}
                   onClick={() => handleSectionClick(section.id as any)}
-                  className={`w-full flex items-center ${isHovered ? 'justify-start' : 'justify-center'} gap-2 md:gap-3 px-2 md:px-4 py-3 rounded-xl transition-all duration-200 ${
+                  className={`w-full flex items-center justify-center md:justify-start gap-2 md:gap-3 px-2 md:px-4 py-3 rounded-xl transition-all duration-200 ${
                     isActive
                       ? 'bg-gradient-to-r from-[#80FF00] to-[#70e600] text-black shadow-lg'
                       : 'text-white/70 hover:text-white hover:bg-white/5'
@@ -189,15 +184,8 @@ const SidebarStudioPanel: React.FC<SidebarStudioPanelProps> = ({
                   whileTap={{ scale: 0.98 }}
                   title={section.title}
                 >
-                  <IconComponent size={18} className="flex-shrink-0" />
-                  <motion.span 
-                    className="font-medium text-xs md:text-sm"
-                    animate={{ opacity: isHovered ? 1 : 0, width: isHovered ? 'auto' : 0 }}
-                    transition={{ duration: 0.2 }}
-                    style={{ overflow: 'hidden', whiteSpace: 'nowrap' }}
-                  >
-                    {section.title}
-                  </motion.span>
+                  {React.createElement(IconComponent, { size: 18 })}
+                  <span className="font-medium text-xs md:text-sm hidden md:block">{section.title}</span>
                 </motion.button>
               );
             })}
@@ -205,7 +193,7 @@ const SidebarStudioPanel: React.FC<SidebarStudioPanelProps> = ({
             {/* Structure Sub-sections (only shown when Structure is active) */}
             {localActiveSection === 'structure' && cvSections.length > 0 && (
               <div className="mt-4 pt-4 border-t border-white/10">
-                <div className="space-y-1">
+                <div className="space-y-2">
                   {cvSections.map((section) => {
                     const IconComponent = getSectionIcon(section.id);
                     const isActive = activeStructureSection === section.id;
@@ -214,7 +202,7 @@ const SidebarStudioPanel: React.FC<SidebarStudioPanelProps> = ({
                       <motion.button
                         key={section.id}
                         onClick={() => handleStructureSubSectionClick(section.id)}
-                        className={`w-full flex items-center ${isHovered ? 'justify-start' : 'justify-center'} gap-2 md:gap-3 px-2 md:px-3 py-2 rounded-lg transition-all duration-200 text-sm ${
+                        className={`w-full flex items-center justify-center md:justify-start gap-2 md:gap-3 px-2 md:px-3 py-2 rounded-lg transition-all duration-200 text-sm ${
                           isActive
                             ? 'bg-[#80FF00]/20 text-[#80FF00]'
                             : 'text-white/60 hover:text-white hover:bg-white/5'
@@ -223,15 +211,8 @@ const SidebarStudioPanel: React.FC<SidebarStudioPanelProps> = ({
                         whileTap={{ scale: 0.98 }}
                         title={getSectionTitle(section.id)}
                       >
-                        <IconComponent size={16} className="flex-shrink-0" />
-                        <motion.span 
-                          className="font-medium text-xs"
-                          animate={{ opacity: isHovered ? 1 : 0, width: isHovered ? 'auto' : 0 }}
-                          transition={{ duration: 0.2 }}
-                          style={{ overflow: 'hidden', whiteSpace: 'nowrap' }}
-                        >
-                          {getSectionTitle(section.id)}
-                        </motion.span>
+                        {React.createElement(IconComponent, { size: 16 })}
+                        <span className="font-medium text-xs hidden md:block">{getSectionTitle(section.id)}</span>
                       </motion.button>
                     );
                   })}
@@ -242,35 +223,26 @@ const SidebarStudioPanel: React.FC<SidebarStudioPanelProps> = ({
 
           {/* Add Section Button (only shown when Structure is active) */}
           {localActiveSection === 'structure' && onAddSection && (
-            <div className="p-2 border-t border-white/10">
-              <motion.button
+            <div className="p-2 md:p-4 border-t border-white/10">
+              <button 
                 onClick={onAddSection}
-                className={`w-full flex items-center ${isHovered ? 'justify-start' : 'justify-center'} gap-2 md:gap-3 px-2 md:px-4 py-3 text-[#80FF00] hover:text-[#70e600] transition-colors rounded-xl hover:bg-white/5`}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                className="w-full flex items-center justify-center md:justify-start gap-2 md:gap-3 px-2 md:px-4 py-3 text-[#80FF00] hover:text-[#70e600] transition-colors rounded-xl hover:bg-white/5"
                 title="Add New Section"
               >
-                <Plus size={18} className="flex-shrink-0" />
-                <motion.span 
-                  className="font-medium text-xs md:text-sm"
-                  animate={{ opacity: isHovered ? 1 : 0, width: isHovered ? 'auto' : 0 }}
-                  transition={{ duration: 0.2 }}
-                  style={{ overflow: 'hidden', whiteSpace: 'nowrap' }}
-                >
-                  Add Section
-                </motion.span>
-              </motion.button>
+                <Plus size={18} />
+                <span className="font-medium text-xs md:text-sm hidden md:block">Add New Section</span>
+              </button>
             </div>
           )}
-        </motion.div>
+        </div>
       </div>
 
-      {/* Main Content Area with Slide Animation */}
-      <div className="flex-1 overflow-hidden">
+      {/* Main Content Area - Matching MasterCVBuilderStep */}
+      <div className={`flex-1 overflow-y-auto h-full bg-[#1A201A] ${localActiveSection === 'structure' ? '-mt-2 -ml-4 -mb-4' : ''}`}>
         <AnimatePresence mode="wait">
           <motion.div
             key={`${localActiveSection}-${activeStructureSection || ''}`}
-            className="h-full overflow-y-auto"
+            className="h-full w-full"
             initial={{ 
               opacity: 0, 
               y: localActiveSection === 'structure' && activeStructureSection 

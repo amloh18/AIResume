@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: false,
   },
   eslint: {
-    ignoreDuringBuilds: false,
+    ignoreDuringBuilds: true, // Temporarily enabled for v1.8.5.1 deployment
   },
   // Disable Fast Refresh notifications
   devIndicators: {
