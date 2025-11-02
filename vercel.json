@@ -5,6 +5,9 @@
   "functions": {
     "src/app/api/**/*.ts": {
       "maxDuration": 30
+    },
+    "src/middleware.ts": {
+      "runtime": "edge"
     }
   },
   "env": {

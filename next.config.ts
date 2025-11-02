@@ -84,9 +84,8 @@ const nextConfig: NextConfig = {
     }
 
     // Fix OpenTelemetry module resolution for Edge Runtime
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      // Disable OpenTelemetry modules in Edge Runtime
+    // This is critical for Vercel Edge Functions which don't support OpenTelemetry
+    const opentelemetryAliases = {
       '@opentelemetry/api': false,
       '@opentelemetry/core': false,
       '@opentelemetry/instrumentation': false,
@@ -115,6 +114,29 @@ const nextConfig: NextConfig = {
       '@opentelemetry/redis-common': false,
       '@opentelemetry/sql-common': false,
     };
+
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      ...opentelemetryAliases,
+    };
+
+    // For Edge Runtime builds (middleware), exclude instrumentation to prevent OpenTelemetry bundling
+    // This prevents Next.js from loading instrumentation.ts during Edge builds
+    if (config.target === 'webworker' || config.target === 'node') {
+      // Check if this is an Edge Runtime build by looking for middleware in the entry
+      const isEdgeBuild = config.entry && typeof config.entry === 'object' && 
+        Object.keys(config.entry).some(key => key.includes('middleware'));
+      
+      if (isEdgeBuild) {
+        // Exclude instrumentation from Edge builds
+        config.resolve.alias['./instrumentation'] = false;
+        config.resolve.alias['./instrumentation.js'] = false;
+        config.resolve.alias['./instrumentation.ts'] = false;
+      }
+    }
+
+    // Note: Edge Runtime bundling is handled separately by Next.js/Vercel
+    // The aliases above should prevent OpenTelemetry from being bundled in Edge Runtime
 
     // Handle optional dependencies for Vercel
     config.externals = config.externals || [];
@@ -165,6 +187,19 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizeCss: true,
     optimizePackageImports: ['lucide-react', 'lottie-react'],
+    // Exclude OpenTelemetry from Edge Runtime bundles
+    serverComponentsExternalPackages: [
+      '@opentelemetry/api',
+      '@opentelemetry/core',
+      '@opentelemetry/instrumentation',
+      '@opentelemetry/semantic-conventions',
+      '@opentelemetry/api-logs',
+      '@opentelemetry/context-async-hooks',
+      '@opentelemetry/instrumentation-http',
+      '@opentelemetry/instrumentation-mongodb',
+      '@opentelemetry/instrumentation-mongoose',
+      '@opentelemetry/instrumentation-express',
+    ],
   },
   
   // Force dynamic rendering for all pages to prevent SSR issues
@@ -244,7 +279,20 @@ const nextConfig: NextConfig = {
   trailingSlash: false,
   
   // External packages for server-side rendering
-  serverExternalPackages: ['mongoose', 'firebase-admin', 'next-auth', 'openid-client', 'pdf2pic'],
+  serverExternalPackages: [
+    'mongoose', 
+    'firebase-admin', 
+    'next-auth', 
+    'openid-client', 
+    'pdf2pic',
+    // Exclude OpenTelemetry from Edge Runtime
+    '@opentelemetry/api',
+    '@opentelemetry/core',
+    '@opentelemetry/instrumentation',
+    '@opentelemetry/semantic-conventions',
+    '@opentelemetry/api-logs',
+    '@opentelemetry/context-async-hooks',
+  ],
   // Handle dynamic imports
   async rewrites() {
     return [
