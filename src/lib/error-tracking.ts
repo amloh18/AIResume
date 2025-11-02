@@ -49,10 +49,17 @@ class ErrorTrackingService {
   }
 
   private initializeSentry() {
+    // Never initialize Sentry in Edge Runtime
+    if (typeof process === 'undefined' || process.env.NEXT_RUNTIME === 'edge' || process.env.NEXT_RUNTIME === 'experimental-edge') {
+      return;
+    }
+
     try {
       if (typeof window === 'undefined') {
-        // Server-side Sentry
-        const { init, captureException, setUser, setTag, setContext } = require('@sentry/nextjs');
+        // Server-side Sentry - use dynamic require with variable to prevent Edge bundler analysis
+        const sentryPkg = '@sentry/nextjs';
+        const SentryModule = require(sentryPkg);
+        const { init, captureException, setUser, setTag, setContext } = SentryModule;
         
         init({
           dsn: this.config.dsn,
@@ -71,8 +78,10 @@ class ErrorTrackingService {
           }
         };
       } else {
-        // Client-side Sentry
-        const { init, captureException, setUser, setTag, setContext, addBreadcrumb } = require('@sentry/browser');
+        // Client-side Sentry - use dynamic require with variable
+        const sentryBrowserPkg = '@sentry/browser';
+        const SentryBrowserModule = require(sentryBrowserPkg);
+        const { init, captureException, setUser, setTag, setContext, addBreadcrumb } = SentryBrowserModule;
         
         init({
           dsn: this.config.dsn,
