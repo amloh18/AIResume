@@ -4,7 +4,7 @@ import { verifyToken, isAdmin, isAuthenticated, getUserId, getUserRole } from '@
 import { log } from '@/lib/edge-logger'
 
 // Explicitly mark as Edge Runtime
-export const runtime = 'edge'
+export const runtime = 'experimental-edge'
 
 const protectedRoutes = [
   '/dashboard',
