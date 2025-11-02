@@ -151,7 +151,6 @@
     "zustand": "^5.0.7"
   },
   "optionalDependencies": {
-    "@comment": "Sentry disabled to prevent OpenTelemetry in Edge Runtime",
     "canvas": "2.11.2",
     "puppeteer": "^24.15.0",
     "tesseract.js": "6.0.1"
