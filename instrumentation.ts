@@ -4,32 +4,32 @@
  * This file is automatically loaded by Next.js when instrumentation is enabled.
  * It runs in the Node.js runtime, not the Edge Runtime.
  * 
- * IMPORTANT: This file must never import OpenTelemetry at the top level to avoid
- * Edge Runtime bundling issues on Vercel.
+ * IMPORTANT: This file must be Edge-safe. Vercel's Edge bundler analyzes this file
+ * even though it doesn't run in Edge Runtime, so we must avoid any static references.
  */
 
 export async function register() {
-  // Only run in Node.js runtime (not Edge Runtime)
-  // Check we're in Node.js runtime and not Edge Runtime
-  if (
-    typeof process === 'undefined' || 
-    !process.env.NEXT_RUNTIME ||
-    process.env.NEXT_RUNTIME !== 'nodejs'
-  ) {
-    // Skip instrumentation in Edge Runtime or when runtime is ambiguous
+  // Only run in Node.js runtime - check runtime environment first
+  if (typeof process === 'undefined') {
     return;
   }
 
-  // Dynamically import OpenTelemetry setup to avoid Edge Runtime issues
-  // This import happens at runtime, not build time, so it won't be bundled for Edge
+  const runtime = process.env.NEXT_RUNTIME;
+  if (!runtime || runtime !== 'nodejs') {
+    return;
+  }
+
+  // Dynamically import instrumentation setup using variable to prevent static analysis
+  // The bundler cannot statically analyze variable-based imports
   try {
-    // Use dynamic import with string literal to prevent static analysis
-    const instrumentationPath = './instrumentation.node';
-    await import(instrumentationPath);
-  } catch (error) {
-    // Silently fail if OpenTelemetry is not available (e.g., in Edge Runtime)
-    if (process.env.NODE_ENV === 'development') {
-      console.warn('Failed to load OpenTelemetry instrumentation:', error);
-    }
+    // Build module path dynamically to prevent static analysis
+    const basePath = './instrumentation';
+    const ext = '.node';
+    const fullPath = basePath + ext;
+    
+    // Use dynamic import with variable (not string literal) to prevent bundler analysis
+    await import(fullPath);
+  } catch {
+    // Silently fail - instrumentation is optional
   }
 }

@@ -115,24 +115,27 @@ const nextConfig: NextConfig = {
       '@opentelemetry/sql-common': false,
     };
 
+    // Apply OpenTelemetry exclusions to all builds
     config.resolve.alias = {
       ...config.resolve.alias,
       ...opentelemetryAliases,
     };
 
-    // For Edge Runtime builds (middleware), exclude instrumentation to prevent OpenTelemetry bundling
-    // This prevents Next.js from loading instrumentation.ts during Edge builds
-    if (config.target === 'webworker' || config.target === 'node') {
-      // Check if this is an Edge Runtime build by looking for middleware in the entry
-      const isEdgeBuild = config.entry && typeof config.entry === 'object' && 
-        Object.keys(config.entry).some(key => key.includes('middleware'));
-      
-      if (isEdgeBuild) {
-        // Exclude instrumentation from Edge builds
-        config.resolve.alias['./instrumentation'] = false;
-        config.resolve.alias['./instrumentation.js'] = false;
-        config.resolve.alias['./instrumentation.ts'] = false;
-      }
+    // For Edge Runtime builds (middleware), exclude instrumentation completely
+    // Vercel's Edge bundler analyzes all files, so we need to be aggressive
+    const isMiddlewareBuild = config.entry && typeof config.entry === 'object' && 
+      Object.keys(config.entry).some(key => 
+        key.includes('middleware') || key.includes('edge')
+      );
+    
+    if (isMiddlewareBuild || !isServer) {
+      // Exclude instrumentation from Edge builds to prevent OpenTelemetry analysis
+      config.resolve.alias['./instrumentation'] = false;
+      config.resolve.alias['./instrumentation.js'] = false;
+      config.resolve.alias['./instrumentation.ts'] = false;
+      config.resolve.alias['instrumentation'] = false;
+      config.resolve.alias['instrumentation.js'] = false;
+      config.resolve.alias['instrumentation.ts'] = false;
     }
 
     // Note: Edge Runtime bundling is handled separately by Next.js/Vercel
