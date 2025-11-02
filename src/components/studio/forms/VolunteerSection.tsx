@@ -28,18 +28,26 @@ const VolunteerSection: React.FC<VolunteerSectionProps> = ({
       endDate: '',
       summary: ''
     };
-    onUpdate('volunteer', [...safeData, newVolunteer]);
+    onUpdate('volunteer', (prevVolunteer) => {
+      return [...(prevVolunteer || []), newVolunteer];
+    });
   };
 
   const removeVolunteer = (index: number) => {
-    const updatedData = safeData.filter((_, i) => i !== index);
-    onUpdate('volunteer', updatedData);
+    onUpdate('volunteer', (prevVolunteer) => {
+      return (prevVolunteer || []).filter((_, i) => i !== index);
+    });
   };
 
   const updateVolunteer = (index: number, field: string, value: any) => {
-    const updatedData = [...safeData];
-    updatedData[index] = { ...updatedData[index], [field]: value };
-    onUpdate('volunteer', updatedData);
+    onUpdate('volunteer', (prevVolunteer) => {
+      const newArray = [...(prevVolunteer || [])];
+      if (!newArray[index]) {
+        newArray[index] = {};
+      }
+      newArray[index] = { ...newArray[index], [field]: value };
+      return newArray;
+    });
   };
 
   return (

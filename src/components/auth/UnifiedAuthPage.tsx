@@ -202,109 +202,69 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
     setError('');
 
     try {
-      // For passwordless login, sign in directly via NextAuth so the code is verified there
-      if (verificationType === 'passwordless-login') {
-        try {
-          const signInResult = await signIn('passwordless', {
-            email,
-            verificationCode: code,
-            redirect: false
-          } as any);
+      // Handle different verification types
+      switch (verificationType) {
+        case 'passwordless-login': {
+          try {
+            const signInResult = await signIn('passwordless', {
+              email,
+              verificationCode: code,
+              redirect: false
+            } as any);
 
-          if ((signInResult as any)?.ok) {
-            setSuccess('Authentication successful, redirecting...');
-            setTimeout(() => {
-              router.push('/dashboard');
-            }, 800);
-          } else {
-            setError('Invalid or expired code. Please request a new one.');
+            if ((signInResult as any)?.ok) {
+              setSuccess('Authentication successful, redirecting...');
+              setTimeout(() => {
+                router.push('/dashboard');
+              }, 800);
+            } else {
+              setError('Invalid or expired code. Please request a new one.');
+            }
+          } catch (err) {
+            console.error('Passwordless NextAuth sign-in failed:', err);
+            setError('Failed to sign you in with the code. Please try again.');
+          } finally {
+            setIsLoading(false);
           }
-        } catch (err) {
-          console.error('Passwordless NextAuth sign-in failed:', err);
-          setError('Failed to sign you in with the code. Please try again.');
-        } finally {
-          setIsLoading(false);
+          return;
         }
-        return;
-      }
 
-      const response = await fetch('/api/auth/verify-and-signin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          email, 
-          code, 
-          type: verificationType 
-        }),
-      });
+        default: {
+          // Handle other verification types (email-verification, password-reset)
+          const response = await fetch('/api/auth/verify-and-signin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email,
+              code,
+              type: verificationType
+            }),
+          });
 
-      const result = await response.json();
-      
-      if (result.success) {
-        setSuccess(result.message || 'Code verified successfully!');
-        
-        // Handle based on verification type
-        if (verificationType === 'email-verification') {
-          // Email verified - redirect to sign in
-          setTimeout(() => {
-            setMode('signin');
-            setSuccess('');
-            setError('');
-            setEmail('');
-          }, 2000);
-        } else if (verificationType === 'passwordless-login') {
-          // Passwordless login - sign in automatically
-          if (!result.requiresSignIn) {
-            // Sign in the user automatically using NextAuth passwordless provider
-            try {
-              const { signIn } = await import('next-auth/react');
-              const signInResult = await signIn('passwordless', {
-                email: result.email,
-                verificationCode: code, // Use the code that was just verified
-                redirect: false
-              });
-              
-              if (signInResult?.ok) {
-                // Redirect to dashboard after successful sign-in
-                setTimeout(() => {
-                  router.push('/dashboard');
-                }, 1000);
-              } else {
-                // Fallback to sign-in mode if automatic sign-in fails
-                setTimeout(() => {
-                  setMode('signin');
-                  setSuccess('');
-                  setError('');
-                  setEmail('');
-                }, 2000);
-              }
-            } catch (error) {
-              console.error('Auto sign-in failed:', error);
-              // Fallback to sign-in mode
+          const result = await response.json();
+
+          if (result.success) {
+            setSuccess(result.message || 'Code verified successfully!');
+
+            // Handle based on verification type
+            if (verificationType === 'email-verification') {
+              // Email verified - redirect to sign in
               setTimeout(() => {
                 setMode('signin');
                 setSuccess('');
                 setError('');
                 setEmail('');
               }, 2000);
+            } else if (verificationType === 'password-reset') {
+              // Password reset - show success message
+              setSuccess('Code verified! You can now set a new password.');
+              // In a real implementation, you would redirect to a password reset form
             }
           } else {
-            // Fallback to sign-in mode
-            setTimeout(() => {
-              setMode('signin');
-              setSuccess('');
-              setError('');
-              setEmail('');
-            }, 2000);
+            setError(result.message || 'Invalid verification code.');
+            setRemainingAttempts(result.remainingAttempts || 0);
           }
-        } else if (verificationType === 'password-reset') {
-          // Password reset - show success message
-          setSuccess('Code verified! You can now set a new password.');
-          // In a real implementation, you would redirect to a password reset form
         }
-      } else {
-        setError(result.message || 'Invalid verification code.');
-        setRemainingAttempts(result.remainingAttempts || 0);
       }
     } catch (error: any) {
       console.error('Code verification error:', error);

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Template } from '@/lib/stores/templateStore';
-import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import EnhancedCVPreview from './EnhancedCVPreview';
 import CVPreviewContent from './CVPreviewContent';
 

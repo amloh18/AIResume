@@ -24,6 +24,9 @@ export interface IPromotionalOffer extends Document {
   createdBy: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
+  // Virtual properties
+  isCurrentlyValid: boolean;
+  daysRemaining: number;
 }
 
 const promotionalOfferSchema = new Schema<IPromotionalOffer>({

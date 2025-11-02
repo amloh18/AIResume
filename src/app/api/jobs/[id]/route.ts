@@ -34,7 +34,7 @@ export async function GET(
           );
         }
         
-        userId = decoded.userId;
+        userId = decoded.userId || '';
         console.log('✅ Extension token verified for user:', userId);
       } catch (error) {
         console.log('❌ Invalid extension token:', error);
@@ -200,7 +200,7 @@ export async function PUT(
           );
         }
         
-        userId = decoded.userId;
+        userId = decoded.userId || '';
         console.log('✅ Extension token verified for user:', userId);
       } catch (error) {
         console.log('❌ Invalid extension token:', error);
@@ -302,8 +302,8 @@ export async function PUT(
     // Update CV journeys with new job data if job title or company changed
     if (body.jobTitle || body.company) {
       try {
-        const { CVJourney } = await import('@/models');
-        await CVJourney.updateMany(
+        const { ApplicationJourney } = await import('@/models');
+        await ApplicationJourney.updateMany(
           { jobId: resolvedParams.id },
           { 
             $set: { 
@@ -398,7 +398,7 @@ export async function DELETE(
           );
         }
         
-        userId = decoded.userId;
+        userId = decoded.userId || '';
         console.log('✅ Extension token verified for user:', userId);
       } catch (error) {
         console.log('❌ Invalid extension token:', error);

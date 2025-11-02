@@ -110,10 +110,10 @@ const FAQ = () => {
           transition={{ duration: 0.8, ease: "easeOut" }}
           viewport={{ once: true, margin: "-50px" }}
         >
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white text-center mb-6">
+          <h2 className="text-3xl sm:text-3xl lg:text-5xl font-bold text-white text-center mb-6">
             Frequently Asked Questions
           </h2>
-          <p className="text-xl text-white/70 max-w-3xl mx-auto leading-relaxed font-light">
+          <p className="text-sm sm:text-base lg:text-xl text-white/70 max-w-3xl mx-auto leading-relaxed font-light">
             Everything you need to know about our plans, features, and policies. Can't find what you're looking for? 
             <span className="text-lime-400 font-medium"> Contact our support team</span>.
           </p>
@@ -153,7 +153,7 @@ const FAQ = () => {
                       toggleItem(item.id);
                     }}
                   >
-                    <h3 className="text-lg sm:text-xl font-semibold text-white pr-4 group-hover:text-lime-400 transition-colors duration-300">
+                    <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-white pr-4 group-hover:text-lime-400 transition-colors duration-300">
                       {item.question}
                     </h3>
                     <div
@@ -173,7 +173,7 @@ const FAQ = () => {
                   >
                     <div className="px-8 pb-6">
                       <div className="border-t border-white/10 pt-4">
-                        <p className="text-white/80 leading-relaxed text-base font-light">
+                        <p className="text-white/80 leading-relaxed text-sm sm:text-base font-light">
                           {item.answer}
                         </p>
                       </div>
@@ -193,7 +193,7 @@ const FAQ = () => {
           transition={{ duration: 0.8, ease: "easeOut" }}
           viewport={{ once: true, margin: "-50px" }}
         >
-          <p className="text-white/60 mb-6 text-lg">Still have questions?</p>
+          <p className="text-white/60 mb-6 text-sm sm:text-base lg:text-lg">Still have questions?</p>
           <motion.button 
             className="group text-lime-400 hover:text-lime-300 font-semibold transition-colors duration-300 flex items-center gap-2 mx-auto"
             whileHover={{ x: 5 }}

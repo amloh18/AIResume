@@ -9,14 +9,14 @@ import {
   FileText,
   Loader2
 } from 'lucide-react';
-import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { Template } from '@/lib/stores/templateStore';
 import { Job } from '@/lib/stores/jobStore';
 import { downloadAsPDF, downloadAsDOCX, downloadAsImage } from '@/lib/utils/download';
 import { TemplateRenderer } from '@/lib/templates/template-renderer';
 
 interface CVPreviewProps {
-  cvData: UnifiedUnifiedCVDataStructure | null;
+  cvData: UnifiedCVDataStructure | null;
   template: Template | null;
   jobData: Job | null;
   zoom?: number;

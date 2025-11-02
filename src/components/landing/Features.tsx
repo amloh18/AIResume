@@ -83,13 +83,13 @@ const Features = () => {
           transition={{ duration: 0.8, ease: "easeOut" }}
           viewport={{ once: true, margin: "-50px" }}
         >
-          <h2 className="text-3xl sm:text-5xl font-bold text-white mb-6 text-center">
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-6 text-center">
             Everything you need to{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-lime-500">
               succeed
             </span>
           </h2>
-          <p className="text-lg text-white/70 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-sm sm:text-base lg:text-lg text-white/70 max-w-3xl mx-auto leading-relaxed">
             Powerful tools designed to streamline your job search process and help you stand out from the competition.
           </p>
         </motion.div>
@@ -133,19 +133,43 @@ const Features = () => {
                     transition: { duration: 0.3 }
                   }}
                 >
-                  <div className="relative w-full h-full">
+                  <div 
+                    className="relative w-full h-full"
+                    style={{
+                      transform: feature.id === 'never-miss-role' 
+                        ? 'scale(0.9)' :
+                      feature.id === 'gain-your-edge' 
+                        ? 'scale(0.9)' :
+                      feature.id === 'one-click-career-kit' 
+                        ? 'scale(1.1)' :
+                      'scale(1)'
+                    }}
+                  >
                     {feature.image.endsWith('.svg') ? (
                       <img
                         src={feature.image}
                         alt={feature.title}
-                        className="w-full h-full object-cover"
+                        className={`w-full h-full ${
+                          feature.id === 'never-miss-role' ? 'object-contain brightness-0 invert' :
+                          feature.id === 'gain-your-edge' ? 'object-contain' :
+                          feature.id === 'one-click-career-kit' ? 'object-cover' :
+                          'object-cover'
+                        }`}
                       />
                     ) : (
                       <Image
                         src={feature.image}
                         alt={feature.title}
                         fill
-                        className="object-cover"
+                        className={
+                          feature.id === 'never-miss-role' 
+                            ? 'object-contain brightness-0 invert' :
+                          feature.id === 'gain-your-edge' 
+                            ? 'object-contain' :
+                          feature.id === 'one-click-career-kit' 
+                            ? 'object-cover' :
+                          'object-cover'
+                        }
                       />
                     )}
                   </div>
@@ -153,18 +177,18 @@ const Features = () => {
 
                 {/* Content */}
                 <div className="p-6 flex flex-col flex-grow">
-                  <h3 className="text-2xl font-bold text-white group-hover:text-lime-400 transition-colors duration-300 mb-4">
+                  <h3 className="text-xl sm:text-2xl font-bold text-white group-hover:text-lime-400 transition-colors duration-300 mb-4">
                     {feature.title}
                   </h3>
                   
-                  <p className="text-white/70 leading-relaxed text-lg flex-grow">
+                  <p className="text-white/70 leading-relaxed text-sm sm:text-base lg:text-lg flex-grow">
                     {feature.description}
                   </p>
                   
                   {/* CTA Button */}
                   <motion.a
                     href={feature.ctaLink}
-                    className="group/btn relative inline-flex items-center gap-2 bg-gradient-to-r from-lime-400 to-lime-500 text-black px-6 py-3 rounded-full font-semibold text-base shadow-lg hover:shadow-lime-400/50 transition-all overflow-hidden mt-6 w-fit"
+                    className="group/btn relative inline-flex items-center gap-2 bg-gradient-to-r from-lime-400 to-lime-500 text-black px-5 py-2.5 sm:px-6 sm:py-3 rounded-full font-semibold text-sm sm:text-base shadow-lg hover:shadow-lime-400/50 transition-all overflow-hidden mt-6 w-fit"
                     whileHover={{ 
                       scale: 1.05,
                       boxShadow: "0 15px 30px -8px rgba(132, 204, 22, 0.5)"

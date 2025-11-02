@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Quote, Star, TrendingUp, Users, Award, ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { motion, useAnimationFrame } from 'framer-motion';
+import { Quote, Star, TrendingUp, Users, Award } from 'lucide-react';
 
 interface TestimonialData {
   _id: string;
@@ -27,34 +27,59 @@ const Testimonials = () => {
     successRate: "95%",
     jobsLanded: "10K+"
   });
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [cardsPerView, setCardsPerView] = useState(1);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const scrollPositionRef = useRef(0);
+  const animationSpeedRef = useRef(0.5); // Base speed (lower = faster)
 
   // Default testimonials as fallback
   const defaultTestimonials = [
     {
       _id: "1",
-      username: "Sarah Chen",
-      designation: "Software Engineer",
-      company: "Google",
+      username: "Sunil K.",
+      designation: "Lead Engineer",
+      company: "",
       starRating: 5,
-      message: "CVCircle helped me land my dream job at Google. The CV builder is incredibly intuitive and professional."
+      message: "I hate AI features. They're gimmicks. I expected this one to just overwrite my experience with generic, 'synergized' buzzwords. It doesn't. I was surprised that I could use it to generate a few ideas for a bullet point, and then edit it down to sound like me. It's an efficient tool for breaking writer's block, not a crutch. It *stays out of your way*. I respect that."
     },
     {
       _id: "2",
-      username: "Michael Rodriguez",
-      designation: "Product Manager",
-      company: "Microsoft",
+      username: "Jessica M.",
+      designation: "Marketing Coordinator",
+      company: "",
       starRating: 5,
-      message: "The job tracker feature is a game-changer. I can finally keep track of all my applications in one place."
+      message: "I was a complete hot mess. My job search was like 50 different tabs, a Notes app file, and a spreadsheet I'd *sometimes* update. The browser extension is just... CLUTCH. I'm on a job site, I click, and it's saved. I don't have to think. The tracker is the only thing keeping me sane. *LITERALLY*."
     },
     {
       _id: "3",
-      username: "Emily Johnson",
-      designation: "UX Designer",
-      company: "Amazon",
+      username: "Tom P.",
+      designation: "Operations Manager",
+      company: "",
       starRating: 5,
-      message: "The community support is amazing. I got feedback from real HR professionals that helped me improve my resume significantly."
+      message: "I'm pretty organized, but even I lose track of which application went where. The email reminders are a simple, but very effective, feature. That gentle nudge that says 'It's been 7 days since you applied to X' is all I need. It's professional, it's not obnoxious, and it's honestly helped me stay on top of my follow-ups."
+    },
+    {
+      _id: "4",
+      username: "Emily R.",
+      designation: "Product & Marketing",
+      company: "",
+      starRating: 5,
+      message: "I'm trying to pivot from marketing into product management, so my 'one-size-fits-all' CV was getting me nowhere. I used to have 10 different 'CV_v2_final_FINAL.doc' files. The 'Journey' feature is just plain smart. I have my 'Marketing' journey and my 'Product' journey, each with its own tailored CV and cover letter. It's *so well-thought-out*."
+    },
+    {
+      _id: "5",
+      username: "David G.",
+      designation: "Office Administrator",
+      company: "",
+      starRating: 5,
+      message: "I'm just going to be honest, I'm not good with computers. The idea of formatting a resume gives me actual anxiety. My old Word template would just... explode if I tried to add a new line. This is the first time I've ever used a CV builder that felt safe. It's clean, it's simple, and I can't 'break' it. It's a huge relief."
+    },
+    {
+      _id: "6",
+      username: "Sarah B.",
+      designation: "Sales Director",
+      company: "",
+      starRating: 5,
+      message: "I had a critical formatting bug right before a major application deadline. I was panicking. I sent a support message at 9 PM on a Sunday, expecting a bot. A real person emailed me back in 20 minutes, had me try one thing, and when that didn't work, they *personally* fixed the issue on my account. I was stunned. That's how you earn a customer for life."
     }
   ];
 
@@ -69,24 +94,98 @@ const Testimonials = () => {
     setTestimonials(defaultTestimonials);
     
     // Try to fetch from API, but don't block rendering
-    fetchTestimonials();
-    fetchMetrics();
+    fetchTestimonials().catch(console.error);
+    fetchMetrics().catch(console.error);
     
-    // Set cards per view based on screen size
-    const updateCardsPerView = () => {
-      if (window.innerWidth >= 1024) {
-        setCardsPerView(3);
-      } else if (window.innerWidth >= 768) {
-        setCardsPerView(2);
-      } else {
-        setCardsPerView(1);
-      }
-    };
-
-    updateCardsPerView();
-    window.addEventListener('resize', updateCardsPerView);
-    return () => window.removeEventListener('resize', updateCardsPerView);
   }, []);
+
+  // Calculate dynamic speed based on card position relative to center
+  const calculateSpeed = useCallback(() => {
+    if (typeof window === 'undefined' || !scrollContainerRef.current) return 0.5;
+
+    const container = scrollContainerRef.current;
+    const containerParent = container.parentElement;
+    if (!containerParent) return 0.5;
+
+    // Use the viewport center or the visible container center
+    const containerRect = containerParent.getBoundingClientRect();
+    // Center of the visible viewport area (accounting for the mask)
+    const containerCenter = window.innerWidth / 2;
+    
+    const cards = container.querySelectorAll('[data-testimonial-card]');
+    if (cards.length === 0) return 0.5;
+    
+    let minDistance = Infinity;
+    
+    cards.forEach((card) => {
+      const cardRect = card.getBoundingClientRect();
+      const cardCenter = cardRect.left + cardRect.width / 2;
+      const distance = Math.abs(cardCenter - containerCenter);
+      if (distance < minDistance) {
+        minDistance = distance;
+      }
+    });
+    
+    // Calculate speed: faster when far from center, slower when centered
+    // Normalize distance (0 = centered, 1 = at edge)
+    const maxDistance = containerRect.width / 2;
+    const normalizedDistance = Math.min(minDistance / maxDistance, 1);
+    
+    // Speed multiplier: 3.0 (fast, far from center) to 0.3 (slow, centered)
+    // Use easing function for smooth transitions (ease-out cubic)
+    const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+    const easedDistance = easeOutCubic(normalizedDistance);
+    const speedMultiplier = 0.3 + (2.7 * easedDistance);
+    
+    return speedMultiplier;
+  }, []);
+
+  // Update animation speed based on card positions using requestAnimationFrame
+  useEffect(() => {
+    if (!scrollContainerRef.current) return;
+    
+    let rafId: number;
+    let lastUpdate = 0;
+    const updateInterval = 100; // Update speed every 100ms for performance
+    
+    const updateSpeed = (timestamp: number) => {
+      if (timestamp - lastUpdate >= updateInterval) {
+        animationSpeedRef.current = calculateSpeed();
+        lastUpdate = timestamp;
+      }
+      rafId = requestAnimationFrame(updateSpeed);
+    };
+    
+    rafId = requestAnimationFrame(updateSpeed);
+    
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId);
+    };
+  }, [testimonials, calculateSpeed]);
+
+  // Animation frame for smooth scrolling
+  useAnimationFrame((time, delta) => {
+    if (!scrollContainerRef.current) return;
+    
+    const speedMultiplier = animationSpeedRef.current;
+    // Base speed: 30 pixels per second, adjusted by multiplier
+    // Lower multiplier = slower scroll (when centered)
+    // Higher multiplier = faster scroll (when not centered)
+    const baseSpeed = 30; // pixels per second
+    const increment = (delta / 1000) * (baseSpeed * speedMultiplier);
+    
+    scrollPositionRef.current += increment;
+    
+    const container = scrollContainerRef.current;
+    const totalWidth = container.scrollWidth / 2; // Since we duplicate the content
+    
+    // Reset position when we've scrolled through one complete set
+    if (scrollPositionRef.current >= totalWidth) {
+      scrollPositionRef.current = 0;
+    }
+    
+    container.style.transform = `translateX(-${scrollPositionRef.current}px)`;
+  });
 
   const fetchTestimonials = async () => {
     try {
@@ -115,17 +214,6 @@ const Testimonials = () => {
     }
   };
 
-  const nextSlide = () => {
-    setCurrentIndex((prevIndex) => 
-      prevIndex + cardsPerView >= testimonials.length ? 0 : prevIndex + cardsPerView
-    );
-  };
-
-  const prevSlide = () => {
-    setCurrentIndex((prevIndex) => 
-      prevIndex - cardsPerView < 0 ? Math.max(0, testimonials.length - cardsPerView) : prevIndex - cardsPerView
-    );
-  };
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -149,6 +237,27 @@ const Testimonials = () => {
       y: 0, 
       scale: 1
     }
+  };
+
+  // Helper function to render message with accent-colored highlighted text
+  const renderMessageWithAccents = (message: string) => {
+    const parts = message.split(/(\*[^*]+\*)/g);
+    return (
+      <>
+        {parts.map((part, index) => {
+          if (part.startsWith('*') && part.endsWith('*')) {
+            // Remove asterisks and apply accent color
+            const text = part.slice(1, -1);
+            return (
+              <span key={index} className="text-lime-400 font-medium">
+                {text}
+              </span>
+            );
+          }
+          return <span key={index}>{part}</span>;
+        })}
+      </>
+    );
   };
 
   return (
@@ -184,7 +293,7 @@ const Testimonials = () => {
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-lime-400/5 to-blue-400/5 rounded-full blur-3xl"></div>
       </div>
       
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full h-full flex flex-col justify-center">
+      <div className="relative z-10 max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 w-full h-full flex flex-col justify-center">
         {/* Section Header */}
         <motion.div 
           className="text-center mb-16"
@@ -193,50 +302,53 @@ const Testimonials = () => {
           transition={{ duration: 0.8 }}
           viewport={{ once: true }}
         >
-          <h2 className="text-3xl sm:text-5xl font-bold text-white mb-6 text-center">
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-6 text-center">
             The new way to{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-lime-500">
               build Tailored CV
             </span>
           </h2>
-          <p className="text-lg text-white/70 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-sm sm:text-base lg:text-lg text-white/70 max-w-3xl mx-auto leading-relaxed">
             Join thousands of successful job seekers who have landed their dream positions using <span className="text-lime-400">CV</span><span className="text-white/70">Circle</span>.
           </p>
         </motion.div>
 
-        {/* Enhanced Testimonials Carousel */}
+        {/* Enhanced Testimonials Carousel - Continuous Scroll */}
         <motion.div 
-          className="relative mb-20"
+          className="relative mb-20 -mx-2 sm:-mx-6 lg:-mx-8"
           variants={containerVariants}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-100px" }}
+          style={{
+            maskImage: 'linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)'
+          }}
         >
           {/* Carousel Container */}
           <div className="relative overflow-hidden">
-            <motion.div 
-              className="flex transition-transform duration-500 ease-in-out"
-              style={{ 
-                transform: `translateX(-${currentIndex * (100 / cardsPerView)}%)`,
-                width: `${(testimonials.length / cardsPerView) * 100}%`
-              }}
+            <div 
+              ref={scrollContainerRef}
+              className="flex items-stretch space-x-4 sm:space-x-6 lg:space-x-8 whitespace-nowrap"
+              style={{ willChange: 'transform' }}
             >
-              {testimonials.map((testimonial, index) => (
+              {/* First set of testimonials */}
+              {(testimonials.length > 0 ? testimonials : defaultTestimonials).map((testimonial, index) => (
                 <motion.div
                   key={testimonial._id}
-                  className="group relative flex-shrink-0 px-4"
-                  style={{ width: `${100 / cardsPerView}%` }}
+                  data-testimonial-card
+                  className="group relative flex-shrink-0 w-[280px] sm:w-[320px] lg:w-[360px]"
                   variants={cardVariants}
                 >
                   <motion.div
-                    className="relative bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-xl border border-white/10 rounded-3xl p-8 h-full card-hover"
+                    className="relative bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-xl border border-white/10 rounded-3xl p-5 sm:p-6 h-[450px] card-hover w-full max-w-full box-border flex flex-col overflow-hidden"
+                    style={{ willChange: 'transform', minWidth: 0 }}
                     whileHover={{ 
                       scale: 1.02,
                       y: -5,
                       boxShadow: "0 15px 30px -5px rgba(0, 0, 0, 0.3)"
                     }}
                     whileTap={{ scale: 0.98 }}
-                    style={{ willChange: 'transform' }}
                   >
                     {/* Glow Effect */}
                     <motion.div
@@ -246,7 +358,7 @@ const Testimonials = () => {
                     
                     {/* Quote Icon */}
                     <motion.div 
-                      className="text-5xl text-lime-400 mb-6"
+                      className="text-2xl sm:text-3xl lg:text-4xl text-lime-400 mb-3 sm:mb-4"
                       whileHover={{ 
                         scale: 1.2,
                         rotateY: 15,
@@ -261,12 +373,12 @@ const Testimonials = () => {
                     </motion.div>
                     
                     {/* Quote Text */}
-                    <p className="text-white/80 text-lg leading-relaxed mb-8 relative z-10">
-                      {testimonial.message}
+                    <p className="text-white/80 text-xs sm:text-sm lg:text-base leading-relaxed mb-4 sm:mb-6 relative z-10 flex-grow whitespace-normal break-words" style={{ wordWrap: 'break-word', overflowWrap: 'break-word', minWidth: 0 }}>
+                      {renderMessageWithAccents(testimonial.message)}
                     </p>
                     
                     {/* Rating */}
-                    <div className="flex items-center gap-1 mb-6 relative z-10">
+                    <div className="flex items-center gap-1 mb-3 sm:mb-4 relative z-10">
                       {[...Array(testimonial.starRating)].map((_, i) => (
                         <motion.div
                           key={i}
@@ -275,120 +387,114 @@ const Testimonials = () => {
                           transition={{ delay: 0.5 + i * 0.1 }}
                           whileHover={{ scale: 1.2 }}
                         >
-                          <Star size={20} className="text-yellow-400 fill-current" />
+                          <Star size={14} className="text-yellow-400 fill-current sm:w-4 sm:h-4" />
                         </motion.div>
                       ))}
                     </div>
                     
                     {/* Author Info */}
-                    <div className="flex items-center gap-4 relative z-10">
-                      <div className="w-12 h-12 bg-gradient-to-br from-lime-400 to-lime-500 rounded-full flex items-center justify-center">
-                        <span className="text-black font-bold text-lg">
+                    <div className="flex items-center gap-2 sm:gap-3 relative z-10 mt-auto">
+                      <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-lime-400 to-lime-500 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-black font-bold text-sm sm:text-base">
                           {testimonial.username.charAt(0)}
                         </span>
                       </div>
-                      <div>
-                        <div className="text-white font-semibold text-lg">
+                      <div className="min-w-0 flex-1">
+                        <div className="text-white font-semibold text-xs sm:text-sm truncate">
                           {testimonial.username}
                         </div>
-                        <div className="text-white/60 text-sm">
-                          {testimonial.designation} at {testimonial.company}
+                        <div className="text-white/60 text-xs truncate">
+                          {testimonial.designation}
                         </div>
                       </div>
                     </div>
                   </motion.div>
                 </motion.div>
               ))}
-            </motion.div>
-          </div>
-
-          {/* Navigation Arrows */}
-          {testimonials.length > cardsPerView && (
-            <>
-              <button
-                onClick={prevSlide}
-                className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full p-3 hover:bg-white/20 transition-all duration-300 z-10"
-                aria-label="Previous testimonials"
-              >
-                <ChevronLeft size={24} className="text-white" />
-              </button>
-              <button
-                onClick={nextSlide}
-                className="absolute right-0 top-1/2 transform -translate-y-1/2 translate-x-4 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full p-3 hover:bg-white/20 transition-all duration-300 z-10"
-                aria-label="Next testimonials"
-              >
-                <ChevronRight size={24} className="text-white" />
-              </button>
-            </>
-          )}
-
-          {/* Dots Indicator */}
-          {testimonials.length > cardsPerView && (
-            <div className="flex justify-center gap-2 mt-8">
-              {Array.from({ length: Math.ceil(testimonials.length / cardsPerView) }).map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentIndex(index * cardsPerView)}
-                  className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                    Math.floor(currentIndex / cardsPerView) === index
-                      ? 'bg-lime-400 scale-125'
-                      : 'bg-white/30 hover:bg-white/50'
-                  }`}
-                  aria-label={`Go to slide ${index + 1}`}
-                />
+              
+              {/* Duplicate set for seamless loop */}
+              {(testimonials.length > 0 ? testimonials : defaultTestimonials).map((testimonial, index) => (
+                <motion.div
+                  key={`${testimonial._id}-duplicate`}
+                  data-testimonial-card
+                  className="group relative flex-shrink-0 w-[280px] sm:w-[320px] lg:w-[360px]"
+                  variants={cardVariants}
+                >
+                  <motion.div
+                    className="relative bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-xl border border-white/10 rounded-3xl p-5 sm:p-6 h-[450px] card-hover w-full max-w-full box-border flex flex-col overflow-hidden"
+                    style={{ willChange: 'transform', minWidth: 0 }}
+                    whileHover={{ 
+                      scale: 1.02,
+                      y: -5,
+                      boxShadow: "0 15px 30px -5px rgba(0, 0, 0, 0.3)"
+                    }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    {/* Glow Effect */}
+                    <motion.div
+                      className="absolute inset-0 rounded-3xl bg-gradient-to-br from-lime-400/10 to-blue-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                      style={{ filter: 'blur(20px)' }}
+                    />
+                    
+                    {/* Quote Icon */}
+                    <motion.div 
+                      className="text-2xl sm:text-3xl lg:text-4xl text-lime-400 mb-3 sm:mb-4"
+                      whileHover={{ 
+                        scale: 1.2,
+                        rotateY: 15,
+                        textShadow: "0 0 30px rgba(132, 204, 22, 0.5)"
+                      }}
+                      style={{
+                        transformStyle: 'preserve-3d',
+                        perspective: '1000px'
+                      }}
+                    >
+                      <Quote />
+                    </motion.div>
+                    
+                    {/* Quote Text */}
+                    <p className="text-white/80 text-xs sm:text-sm lg:text-base leading-relaxed mb-4 sm:mb-6 relative z-10 flex-grow whitespace-normal break-words" style={{ wordWrap: 'break-word', overflowWrap: 'break-word', minWidth: 0 }}>
+                      {renderMessageWithAccents(testimonial.message)}
+                    </p>
+                    
+                    {/* Rating */}
+                    <div className="flex items-center gap-1 mb-3 sm:mb-4 relative z-10">
+                      {[...Array(testimonial.starRating)].map((_, i) => (
+                        <motion.div
+                          key={i}
+                          initial={{ opacity: 0, scale: 0 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ delay: 0.5 + i * 0.1 }}
+                          whileHover={{ scale: 1.2 }}
+                        >
+                          <Star size={14} className="text-yellow-400 fill-current sm:w-4 sm:h-4" />
+                        </motion.div>
+                      ))}
+                    </div>
+                    
+                    {/* Author Info */}
+                    <div className="flex items-center gap-2 sm:gap-3 relative z-10 mt-auto">
+                      <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-lime-400 to-lime-500 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-black font-bold text-sm sm:text-base">
+                          {testimonial.username.charAt(0)}
+                        </span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-white font-semibold text-xs sm:text-sm truncate">
+                          {testimonial.username}
+                        </div>
+                        <div className="text-white/60 text-xs truncate">
+                          {testimonial.designation}
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                </motion.div>
               ))}
             </div>
-          )}
+          </div>
         </motion.div>
 
-        {/* Enhanced Stats - Horizontal for all screens */}
-        <motion.div 
-          className="flex flex-row justify-center items-center gap-4 sm:gap-8 lg:gap-16"
-          initial={{ opacity: 0, y: 50 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.5 }}
-          viewport={{ once: true }}
-        >
-          {stats.map((stat, index) => {
-            const IconComponent = stat.icon;
-            return (
-              <motion.div 
-                key={index}
-                className="text-center group flex-1"
-                whileHover={{ scale: 1.05, y: -10 }}
-                style={{
-                  transformStyle: 'preserve-3d',
-                  perspective: '1000px'
-                }}
-              >
-                <motion.div 
-                  className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-lime-400 to-lime-500 rounded-2xl flex items-center justify-center mx-auto mb-3 sm:mb-6 shadow-2xl"
-                  whileHover={{ 
-                    scale: 1.2,
-                    rotateY: 15,
-                    boxShadow: "0 20px 40px -12px rgba(132, 204, 22, 0.5)"
-                  }}
-                  style={{
-                    transformStyle: 'preserve-3d',
-                    perspective: '1000px'
-                  }}
-                >
-                  <IconComponent size={24} className="text-black sm:w-8 sm:h-8" />
-                </motion.div>
-                <motion.div 
-                  className="text-3xl sm:text-5xl font-bold text-lime-400 mb-2 sm:mb-4"
-                  whileHover={{ 
-                    scale: 1.1,
-                    textShadow: "0 0 30px rgba(132, 204, 22, 0.5)"
-                  }}
-                >
-                  {stat.number}
-                </motion.div>
-                <div className="text-white/60 text-sm sm:text-lg font-medium">{stat.label}</div>
-              </motion.div>
-            );
-          })}
-        </motion.div>
       </div>
     </section>
   );

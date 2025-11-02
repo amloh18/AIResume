@@ -172,7 +172,7 @@ const HowItWorks = () => {
           viewport={{ once: true, margin: "-50px" }}
         >
           <motion.h3
-            className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-6 text-center"
+            className="text-3xl sm:text-3xl lg:text-5xl font-bold text-white mb-6 text-center"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
@@ -187,11 +187,15 @@ const HowItWorks = () => {
 
         {/* Horizontal Steps Flow */}
         <motion.div
-          className="flex flex-wrap justify-center gap-8 mb-16"
+          className="flex flex-nowrap justify-center gap-4 sm:gap-8 mb-16 overflow-x-auto pb-4 scrollbar-hide"
           initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
           viewport={{ once: true }}
+          style={{
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none'
+          }}
         >
           {steps.map((step, index) => {
             const isActive = activeStep === index;
@@ -199,7 +203,7 @@ const HowItWorks = () => {
             return (
               <motion.div
                 key={index}
-                className="flex flex-col items-center cursor-pointer group"
+                className="flex flex-col items-center cursor-pointer group flex-shrink-0"
                 onClick={() => handleStepClick(index)}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -207,7 +211,7 @@ const HowItWorks = () => {
               >
                 {/* Step Circle */}
                 <motion.div
-                  className={`w-16 h-16 rounded-full flex items-center justify-center text-white font-bold text-xl mb-3 transition-all duration-300 ${
+                  className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-white font-bold text-lg sm:text-xl mb-2 sm:mb-3 transition-all duration-300 ${
                     isActive 
                       ? 'bg-gradient-to-r from-lime-400 to-lime-500 shadow-lg shadow-lime-400/50' 
                       : 'bg-gray-800 border-2 border-white/20'
@@ -225,7 +229,7 @@ const HowItWorks = () => {
                 
                 {/* Step Title */}
                 <motion.h4 
-                  className={`text-sm font-medium text-center transition-colors duration-300 ${
+                  className={`text-xs sm:text-sm font-medium text-center transition-colors duration-300 max-w-[80px] sm:max-w-none ${
                     isActive ? 'text-lime-400' : 'text-white'
                   }`}
                 >
@@ -266,7 +270,7 @@ const HowItWorks = () => {
               
               {/* Main Title */}
               <motion.h4 
-                className="text-3xl lg:text-4xl font-bold text-white"
+                className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white"
                 initial={{ opacity: 0, y: 10 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.5 }}
@@ -277,7 +281,7 @@ const HowItWorks = () => {
               
               {/* Description */}
               <motion.p
-                className="text-white/80 leading-relaxed text-lg font-light"
+                className="text-white/80 leading-relaxed text-sm sm:text-base lg:text-lg font-light"
                 initial={{ opacity: 0, y: 10 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.6 }}

@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Generate quantification suggestions
-    const suggestions = await AIAssistantService.quantifyAchievements(cvData, jobData);
+    const suggestions = await AIAssistantService.quantifyAchievements(cvData.cvData, jobData);
 
     return NextResponse.json({
       success: true,

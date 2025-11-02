@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Generate achievement suggestions
-    const suggestions = await AIAssistantService.generateAchievements(cvData, jobData);
+    const suggestions = await AIAssistantService.generateAchievements(cvData.cvData, jobData);
 
     return NextResponse.json({
       success: true,

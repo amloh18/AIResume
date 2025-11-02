@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Generate content optimization suggestions
-    const suggestions = await AIAssistantService.optimizeContent(cvData, jobData);
+    const suggestions = await AIAssistantService.optimizeContent(cvData.cvData, jobData);
 
     return NextResponse.json({
       success: true,

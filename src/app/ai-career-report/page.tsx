@@ -15,7 +15,7 @@ const AICareerReportClient = dynamicImport(
       <div className="min-h-screen bg-[#1A261A] flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-2 border-[#80FF00] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-white/60">Loading AI Career Guide...</p>
+          <p className="text-white/60">Loading Master CV...</p>
         </div>
       </div>
     )
@@ -28,7 +28,7 @@ export default function AICareerReportPage() {
       <div className="min-h-screen bg-[#1A261A] flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-2 border-[#80FF00] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-white/60">Loading AI Career Guide...</p>
+          <p className="text-white/60">Loading Master CV...</p>
         </div>
       </div>
     }>

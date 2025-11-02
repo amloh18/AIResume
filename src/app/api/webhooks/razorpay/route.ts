@@ -12,7 +12,8 @@ const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
 export async function POST(request: NextRequest) {
   try {
     const body = await request.text();
-    const signature = headers().get('x-razorpay-signature');
+    const headersList = await headers();
+    const signature = headersList.get('x-razorpay-signature');
 
     if (!signature || !webhookSecret) {
       return NextResponse.json({ error: 'Missing signature or webhook secret' }, { status: 400 });
@@ -194,6 +195,9 @@ async function handleSubscriptionCharged(subscription: any) {
     }
 
     // Get the latest invoice for this subscription
+    if (!razorpay) {
+      return NextResponse.json({ error: 'Razorpay not configured' }, { status: 500 });
+    }
     const invoices = await razorpay.invoices.all({
       subscription_id: subscription.id,
       count: 1
@@ -205,7 +209,7 @@ async function handleSubscriptionCharged(subscription: any) {
       // Create invoice record for recurring payment
       await Invoice.create({
         userId: userId,
-        amount: invoice.amount / 100,
+        amount: Number(invoice.amount || 0) / 100,
         currency: invoice.currency,
         status: 'paid',
         planName: subscription.notes.planName || 'Pro Plan',

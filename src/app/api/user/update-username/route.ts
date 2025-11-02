@@ -112,7 +112,7 @@ export async function PUT(request: NextRequest) {
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating username:', error);
     
     // Handle duplicate key error

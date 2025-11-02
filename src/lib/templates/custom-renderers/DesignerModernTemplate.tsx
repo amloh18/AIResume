@@ -322,7 +322,7 @@ export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
               <div className="skills-list">
                 {skills.map((skill, index) => (
                   <div key={index} className="skill-item">
-                    {skill.name}
+                    {skill.category}: {skill.skills.join(', ')}
                   </div>
                 ))}
               </div>

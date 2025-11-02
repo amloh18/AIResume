@@ -120,11 +120,16 @@ async function checkExternalServices(): Promise<{
   stripe: 'healthy' | 'unhealthy' | 'unknown';
   razorpay: 'healthy' | 'unhealthy' | 'unknown';
 }> {
-  const services = {
-    gemini: 'unknown' as const,
-    email: 'unknown' as const,
-    stripe: 'unknown' as const,
-    razorpay: 'unknown' as const
+  const services: {
+    gemini: 'healthy' | 'unhealthy' | 'unknown';
+    email: 'healthy' | 'unhealthy' | 'unknown';
+    stripe: 'healthy' | 'unhealthy' | 'unknown';
+    razorpay: 'healthy' | 'unhealthy' | 'unknown';
+  } = {
+    gemini: 'unknown',
+    email: 'unknown',
+    stripe: 'unknown',
+    razorpay: 'unknown'
   };
 
   // Check Gemini API

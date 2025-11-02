@@ -60,6 +60,15 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
       const result = await response.json();
       
       if (result.basics) {
+        // Check if the parsing failed and error message is in basics.summary
+        const errorMessagePattern = /Unable to extract text from this PDF/i;
+        if (result.basics.summary && errorMessagePattern.test(result.basics.summary)) {
+          // Extract the error message and show it in step 1
+          const errorMessage = result.basics.summary.replace(/⚠️\s*/, '').trim();
+          dispatch({ type: 'SET_UPLOAD_ERROR', payload: errorMessage });
+          return;
+        }
+        
         // Use the same normalization logic as Master CV onboarding
         const normalizedResult = {
           ...result,
@@ -277,9 +286,14 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
 
                   {state.uploadError && (
                     <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-center backdrop-blur-sm">
-                      <div className="flex items-center justify-center gap-2">
-                        <X className="h-5 w-5" />
-                        <span className="font-medium">{state.uploadError}</span>
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="flex items-center gap-2">
+                          <X className="h-5 w-5" />
+                          <span className="font-medium">Upload Error</span>
+                        </div>
+                        <div className="text-sm text-left whitespace-pre-line mt-2">
+                          {state.uploadError}
+                        </div>
                       </div>
                     </div>
                   )}

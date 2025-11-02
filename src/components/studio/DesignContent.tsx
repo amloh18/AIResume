@@ -1,40 +1,69 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Palette, 
-  Type, 
-  Layout, 
-  Spacing,
+import {
+  Palette,
+  Type,
+  Layout,
   RotateCcw,
-  Code
+  Code,
+  Ruler
 } from 'lucide-react';
 
 interface DesignContentProps {
   onSettingsChange?: (settings: any) => void;
+  currentTemplate?: any;
+  cvData?: any;
 }
 
 const DesignContent: React.FC<DesignContentProps> = ({
-  onSettingsChange
+  onSettingsChange,
+  currentTemplate,
+  cvData
 }) => {
+  // Initialize design settings from template or defaults
   const [designSettings, setDesignSettings] = useState({
-    fontFamily: 'Inter',
-    headerFontSize: 24,
-    bodyFontSize: 14,
-    sectionFontSize: 18,
-    lineSpacing: 1.2,
-    letterSpacing: 0,
-    sectionSpacing: 16,
+    fontFamily: currentTemplate?.globalStyles?.fontFamily || 'Inter',
+    headerFontSize: parseInt(currentTemplate?.globalStyles?.headerFontSize) || 24,
+    bodyFontSize: parseInt(currentTemplate?.globalStyles?.fontSize) || 14,
+    sectionFontSize: parseInt(currentTemplate?.globalStyles?.sectionFontSize) || 18,
+    lineSpacing: parseFloat(currentTemplate?.globalStyles?.lineHeight) || 1.5,
+    letterSpacing: parseInt(currentTemplate?.globalStyles?.letterSpacing) || 0,
+    sectionSpacing: parseInt(currentTemplate?.globalStyles?.spacing) || 24,
     colorScheme: 'professional',
+    primaryColor: currentTemplate?.globalStyles?.primaryColor || '#000000',
+    secondaryColor: currentTemplate?.globalStyles?.secondaryColor || '#374151',
+    accentColor: currentTemplate?.globalStyles?.accentColor || '#80FF00',
     alignment: 'left' as 'left' | 'center' | 'right',
     pagePadding: { top: 32, bottom: 32, left: 32, right: 32 },
-    skillsDisplayType: 'category' as 'category' | 'chips' | 'comma'
+    skillsDisplayType: 'category' as 'category' | 'chips' | 'comma',
+    sectionStyle: 'underline' as 'underline' | 'background' | 'border' | 'minimal',
+    dateFormat: 'MMM YYYY' as 'MMM YYYY' | 'MM/YYYY' | 'YYYY-MM' | 'Full',
+    bulletStyle: 'disc' as 'disc' | 'square' | 'circle' | 'arrow'
   });
+
+  // Sync settings when template changes
+  useEffect(() => {
+    if (currentTemplate?.globalStyles) {
+      setDesignSettings(prev => ({
+        ...prev,
+        fontFamily: currentTemplate.globalStyles.fontFamily || prev.fontFamily,
+        headerFontSize: parseInt(currentTemplate.globalStyles.headerFontSize) || prev.headerFontSize,
+        bodyFontSize: parseInt(currentTemplate.globalStyles.fontSize) || prev.bodyFontSize,
+        sectionFontSize: parseInt(currentTemplate.globalStyles.sectionFontSize) || prev.sectionFontSize,
+        lineSpacing: parseFloat(currentTemplate.globalStyles.lineHeight) || prev.lineSpacing,
+        primaryColor: currentTemplate.globalStyles.primaryColor || prev.primaryColor,
+        secondaryColor: currentTemplate.globalStyles.secondaryColor || prev.secondaryColor
+      }));
+    }
+  }, [currentTemplate]);
 
   const handleSettingChange = (key: string, value: any) => {
     const newSettings = { ...designSettings, [key]: value };
     setDesignSettings(newSettings);
+    
+    // Immediately apply to template and trigger re-render
     if (onSettingsChange) {
       onSettingsChange(newSettings);
     }
@@ -46,13 +75,19 @@ const DesignContent: React.FC<DesignContentProps> = ({
       headerFontSize: 24,
       bodyFontSize: 14,
       sectionFontSize: 18,
-      lineSpacing: 1.2,
+      lineSpacing: 1.5,
       letterSpacing: 0,
-      sectionSpacing: 16,
+      sectionSpacing: 24,
       colorScheme: 'professional',
+      primaryColor: '#000000',
+      secondaryColor: '#374151',
+      accentColor: '#80FF00',
       alignment: 'left' as 'left' | 'center' | 'right',
       pagePadding: { top: 32, bottom: 32, left: 32, right: 32 },
-      skillsDisplayType: 'category' as 'category' | 'chips' | 'comma'
+      skillsDisplayType: 'category' as 'category' | 'chips' | 'comma',
+      sectionStyle: 'underline' as 'underline' | 'background' | 'border' | 'minimal',
+      dateFormat: 'MMM YYYY' as 'MMM YYYY' | 'MM/YYYY' | 'YYYY-MM' | 'Full',
+      bulletStyle: 'disc' as 'disc' | 'square' | 'circle' | 'arrow'
     };
     setDesignSettings(defaultSettings);
     if (onSettingsChange) {
@@ -267,10 +302,138 @@ const DesignContent: React.FC<DesignContentProps> = ({
       <div className="bg-white/5 rounded-xl border border-white/10 transition-all duration-300">
         <div className="flex items-center justify-between p-4">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+            <div className="w-8 h-8 bg-gradient-to-r from-pink-500 to-pink-600 rounded-lg flex items-center justify-center flex-shrink-0">
               <Palette className="w-4 h-4 text-white" />
             </div>
-            <h3 className="text-base font-semibold text-white">Color Scheme</h3>
+            <h3 className="text-base font-semibold text-white">Colors</h3>
+          </div>
+        </div>
+        
+        <div className="px-4 pb-4">
+          <div className="pt-2 space-y-4">
+            {/* Color Presets */}
+            <div>
+              <label className="block text-white/80 text-sm font-medium mb-2">Color Presets</label>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { id: 'black-black', name: 'Black/Black', primary: '#000000', secondary: '#000000' },
+                  { id: 'black-grey', name: 'Black/Grey', primary: '#000000', secondary: '#374151' },
+                  { id: 'blue-black', name: 'Blue/Black', primary: '#2563eb', secondary: '#000000' },
+                  { id: 'green-black', name: 'Green/Black', primary: '#16a34a', secondary: '#000000' },
+                  { id: 'purple-grey', name: 'Purple/Grey', primary: '#7c3aed', secondary: '#6b7280' },
+                  { id: 'navy-slate', name: 'Navy/Slate', primary: '#1e40af', secondary: '#475569' }
+                ].map((scheme) => (
+                  <button
+                    key={scheme.id}
+                    onClick={() => {
+                      handleSettingChange('primaryColor', scheme.primary);
+                      handleSettingChange('secondaryColor', scheme.secondary);
+                      handleSettingChange('colorScheme', scheme.id);
+                    }}
+                    className={`p-3 rounded-lg border transition-colors ${
+                      designSettings.colorScheme === scheme.id
+                        ? 'border-[#80FF00] bg-[#80FF00]/10'
+                        : 'border-white/20 hover:bg-white/10'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="flex gap-1">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: scheme.primary }} />
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: scheme.secondary }} />
+                      </div>
+                      <span className="text-sm font-medium text-white">{scheme.name}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Custom Colors */}
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block text-white/80 text-xs font-medium mb-2">Primary</label>
+                <input
+                  type="color"
+                  value={designSettings.primaryColor}
+                  onChange={(e) => handleSettingChange('primaryColor', e.target.value)}
+                  className="w-full h-10 rounded-lg border border-white/20 bg-white/10 cursor-pointer"
+                />
+              </div>
+              <div>
+                <label className="block text-white/80 text-xs font-medium mb-2">Secondary</label>
+                <input
+                  type="color"
+                  value={designSettings.secondaryColor}
+                  onChange={(e) => handleSettingChange('secondaryColor', e.target.value)}
+                  className="w-full h-10 rounded-lg border border-white/20 bg-white/10 cursor-pointer"
+                />
+              </div>
+              <div>
+                <label className="block text-white/80 text-xs font-medium mb-2">Accent</label>
+                <input
+                  type="color"
+                  value={designSettings.accentColor}
+                  onChange={(e) => handleSettingChange('accentColor', e.target.value)}
+                  className="w-full h-10 rounded-lg border border-white/20 bg-white/10 cursor-pointer"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Spacing Section */}
+      <div className="bg-white/5 rounded-xl border border-white/10 transition-all duration-300">
+        <div className="flex items-center justify-between p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Ruler className="w-4 h-4 text-white" />
+            </div>
+            <h3 className="text-base font-semibold text-white">Spacing</h3>
+          </div>
+        </div>
+        
+        <div className="px-4 pb-4">
+          <div className="pt-2 space-y-4">
+            <div>
+              <label className="block text-white/80 text-sm font-medium mb-2">Section Spacing</label>
+              <input
+                type="range"
+                min="8"
+                max="48"
+                step="4"
+                value={designSettings.sectionSpacing}
+                onChange={(e) => handleSettingChange('sectionSpacing', parseInt(e.target.value))}
+                className="w-full accent-[#80FF00]"
+              />
+              <span className="text-xs text-white/60">{designSettings.sectionSpacing}px</span>
+            </div>
+
+            <div>
+              <label className="block text-white/80 text-sm font-medium mb-2">Letter Spacing</label>
+              <input
+                type="range"
+                min="-1"
+                max="2"
+                step="0.1"
+                value={designSettings.letterSpacing}
+                onChange={(e) => handleSettingChange('letterSpacing', parseFloat(e.target.value))}
+                className="w-full accent-[#80FF00]"
+              />
+              <span className="text-xs text-white/60">{designSettings.letterSpacing}px</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Section Style */}
+      <div className="bg-white/5 rounded-xl border border-white/10 transition-all duration-300">
+        <div className="flex items-center justify-between p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Layout className="w-4 h-4 text-white" />
+            </div>
+            <h3 className="text-base font-semibold text-white">Section Headings</h3>
           </div>
         </div>
         
@@ -278,32 +441,62 @@ const DesignContent: React.FC<DesignContentProps> = ({
           <div className="pt-2">
             <div className="grid grid-cols-2 gap-3">
               {[
-                { id: 'black-black', name: 'Black/Black', colors: ['#000000', '#000000'] },
-                { id: 'black-grey', name: 'Black/Dark Grey', colors: ['#000000', '#374151'] },
-                { id: 'blue-black', name: 'Blue/Black', colors: ['#2563eb', '#000000'] },
-                { id: 'green-black', name: 'Green/Black', colors: ['#16a34a', '#000000'] }
-              ].map((scheme) => (
+                { id: 'underline', name: 'Underline', icon: '___' },
+                { id: 'background', name: 'Background', icon: '█░░' },
+                { id: 'border', name: 'Border', icon: '┌─┐' },
+                { id: 'minimal', name: 'Minimal', icon: 'T' }
+              ].map((style) => (
                 <button
-                  key={scheme.id}
-                  onClick={() => handleSettingChange('colorScheme', scheme.id)}
+                  key={style.id}
+                  onClick={() => handleSettingChange('sectionStyle', style.id)}
                   className={`p-3 rounded-lg border transition-colors ${
-                    designSettings.colorScheme === scheme.id
+                    designSettings.sectionStyle === style.id
                       ? 'border-[#80FF00] bg-[#80FF00]/10'
                       : 'border-white/20 hover:bg-white/10'
                   }`}
                 >
-                  <div className="flex items-center gap-2">
-                    <div className="flex gap-1">
-                      {scheme.colors.map((color, i) => (
-                        <div
-                          key={i}
-                          className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: color }}
-                        />
-                      ))}
-                    </div>
-                    <span className="text-sm font-medium text-white">{scheme.name}</span>
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-sm font-mono">{style.icon}</span>
+                    <span className="text-xs font-medium text-white">{style.name}</span>
                   </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Date Format */}
+      <div className="bg-white/5 rounded-xl border border-white/10 transition-all duration-300">
+        <div className="flex items-center justify-between p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gradient-to-r from-teal-500 to-teal-600 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Type className="w-4 h-4 text-white" />
+            </div>
+            <h3 className="text-base font-semibold text-white">Date Format</h3>
+          </div>
+        </div>
+        
+        <div className="px-4 pb-4">
+          <div className="pt-2">
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { id: 'MMM YYYY', name: 'Jan 2024', example: 'Jan 2024' },
+                { id: 'MM/YYYY', name: '01/2024', example: '01/2024' },
+                { id: 'YYYY-MM', name: '2024-01', example: '2024-01' },
+                { id: 'Full', name: 'January 2024', example: 'January 2024' }
+              ].map((format) => (
+                <button
+                  key={format.id}
+                  onClick={() => handleSettingChange('dateFormat', format.id)}
+                  className={`p-3 rounded-lg border transition-colors text-left ${
+                    designSettings.dateFormat === format.id
+                      ? 'border-[#80FF00] bg-[#80FF00]/10'
+                      : 'border-white/20 hover:bg-white/10'
+                  }`}
+                >
+                  <span className="text-xs font-medium text-white block">{format.name}</span>
+                  <span className="text-xs text-white/60">{format.example}</span>
                 </button>
               ))}
             </div>

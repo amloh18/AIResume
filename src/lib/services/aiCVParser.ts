@@ -1,4 +1,4 @@
-import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { adaptParsedCVToUnified, validateCVData } from '@/lib/data-adapters/cv-data-adapter';
 
 export interface ParsedCVData {

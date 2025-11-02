@@ -40,7 +40,7 @@ Please provide the improved content only, without explanations or markdown forma
 `;
 
     // Generate content using Gemini
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
     
     const result = await model.generateContent(enhancedPrompt);
     const response = await result.response;

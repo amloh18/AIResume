@@ -27,7 +27,7 @@ import {
   Lock
 } from 'lucide-react';
 import CircularProgress from '@/components/ui/CircularProgress';
-import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { Job } from '@/lib/stores/jobStore';
 import { useAIStore } from '@/lib/stores/aiStore';
 import { useAIAssistant } from '@/lib/hooks/useAIAssistant';

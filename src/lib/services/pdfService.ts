@@ -1,4 +1,4 @@
-import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { Template } from '@/lib/stores/templateStore';
 
 export class PDFService {
@@ -101,7 +101,7 @@ export class PDFService {
         
         doc.setFontSize(14);
         doc.setTextColor(50, 50, 50);
-        doc.text(edu.degree, 20, yPos);
+        doc.text(`${edu.studyType} ${edu.area && `in ${edu.area}`}`, 20, yPos);
         yPos += 7;
         
         doc.setFontSize(12);

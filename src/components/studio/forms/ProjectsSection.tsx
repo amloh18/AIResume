@@ -29,11 +29,16 @@ const ProjectsSection: React.FC<ProjectsSectionProps> = ({
   // Ensure we have proper data structure
   const safeData = Array.isArray(data) ? data : [];
 
-  // Update project item - update full array like WorkExperienceSection
+  // Update project item - use functional updates to avoid stale state
   const updateProject = (index: number, field: string, value: any) => {
-    const updatedData = [...safeData];
-    updatedData[index] = { ...updatedData[index], [field]: value };
-    onUpdate('projects', updatedData);
+    onUpdate('projects', (prevProjects) => {
+      const newArray = [...(prevProjects || [])];
+      if (!newArray[index]) {
+        newArray[index] = {};
+      }
+      newArray[index] = { ...newArray[index], [field]: value };
+      return newArray;
+    });
   };
 
   const generateAIDescription = async (index: number, projectItem: any) => {
@@ -75,8 +80,9 @@ const ProjectsSection: React.FC<ProjectsSectionProps> = ({
             <h4 className="text-lg font-semibold text-white">{project.name || 'Project Name'}</h4>
             <button
               onClick={() => {
-                const updatedData = safeData.filter((_, i) => i !== index);
-                onUpdate('projects', updatedData);
+                onUpdate('projects', (prevProjects) => {
+                  return (prevProjects || []).filter((_, i) => i !== index);
+                });
               }}
               className="text-red-400 hover:text-red-300 transition-colors"
             >

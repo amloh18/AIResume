@@ -1,6 +1,6 @@
 import React from 'react';
 import { Calendar, BookOpen, ExternalLink, User } from 'lucide-react';
-import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ISectionBlueprint, ITemplate } from '@/models/Template';
 
 interface PublicationsProps {

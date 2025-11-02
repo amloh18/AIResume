@@ -15,6 +15,8 @@ interface PageHeaderProps {
     username?: string;
     profilePhoto?: string;
     designation?: string;
+    subscription?: any;
+    isEmailVerified?: boolean;
   };
   showSettings?: boolean;
   onMobileMenuToggle?: () => void;

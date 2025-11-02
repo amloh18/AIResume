@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
-import { addPageBreakCSS } from '../template-utils';
 
 interface ElegantTimelineTemplateProps {
   cvData: UnifiedCVDataStructure;
@@ -494,9 +493,9 @@ export const ElegantTimelineTemplate: React.FC<ElegantTimelineTemplateProps> = (
               <div className="skills-list">
                 {skills.map((skill, index) => (
                   <div key={index} className="skill-category">
-                    <div className="skill-category-name">{skill.name}</div>
+                    <div className="skill-category-name">{skill.category}</div>
                     <div className="skill-list">
-                      {skill.keywords?.join(', ') || ''}
+                      {skill.skills.join(', ')}
                     </div>
                   </div>
                 ))}

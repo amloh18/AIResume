@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  ZoomIn, 
-  ZoomOut, 
-  Maximize, 
-  FileText, 
-  ChevronLeft, 
+import {
+  ZoomIn,
+  ZoomOut,
+  Maximize,
+  FileText,
+  ChevronLeft,
   ChevronRight,
   RotateCcw,
   Sun,
@@ -18,13 +18,14 @@ import {
   Loader2,
   Image
 } from 'lucide-react';
-import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { Template } from '@/lib/stores/templateStore';
 import { Job } from '@/lib/stores/jobStore';
 import CVPreview from './CVPreview';
 import CoverLetterPreview from './CoverLetterPreview';
 import { downloadAsJSON, downloadAsPDF, downloadAsDOCX, downloadAsImage } from '@/lib/utils/download';
 import { useTheme } from '@/lib/contexts/ThemeContext';
+import { generatePageBreakCSS, A4_HEIGHT_PX } from '@/lib/utils/pageBreakHelper';
 
 interface PreviewPanelProps {
   cvData: UnifiedCVDataStructure | null;
@@ -170,28 +171,30 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
 
   const renderCVPreview = () => {
     return (
-      <CVPreview
-        cvData={cvData}
-        template={template}
-        jobData={jobData}
-        zoom={zoom}
-        setZoom={setZoom}
-        paperSize={paperSize}
-        setPaperSize={setPaperSize}
-        documentType={documentType}
-        sectionOrder={sectionOrder}
-        sectionVisibility={sectionVisibility}
-        pagePadding={pagePadding}
-        setPagePadding={setPagePadding}
-        onDocumentTypeChange={onDocumentTypeChange}
-        isMasterCV={isMasterCV}
-        coverLetterData={coverLetterData}
-        theme="light"
-        showBadge={false}
-        templateStyles={template?.globalStyles}
-        customCSS={template?.customCSS || template?.globalStyles?.customCSS}
-        templateName={template?.name}
-      />
+      <div className="cv-preview-container" style={{ minHeight: A4_HEIGHT_PX }}>
+        <CVPreview
+          cvData={cvData}
+          template={template}
+          jobData={jobData}
+          zoom={zoom}
+          setZoom={setZoom}
+          paperSize={paperSize}
+          setPaperSize={setPaperSize}
+          documentType={documentType}
+          sectionOrder={sectionOrder}
+          sectionVisibility={sectionVisibility}
+          pagePadding={pagePadding}
+          setPagePadding={setPagePadding}
+          onDocumentTypeChange={onDocumentTypeChange}
+          isMasterCV={isMasterCV}
+          coverLetterData={coverLetterData}
+          theme="light"
+          showBadge={false}
+          templateStyles={template?.globalStyles}
+          customCSS={template?.customCSS || template?.globalStyles?.customCSS}
+          templateName={template?.name}
+        />
+      </div>
     );
   };
 
@@ -220,6 +223,9 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
 
   return (
     <div className="h-full flex flex-col bg-[#1A201A] relative">
+      {/* Inject Page Break CSS for smart A4 splitting */}
+      <style dangerouslySetInnerHTML={{ __html: generatePageBreakCSS() }} />
+      
       {/* Top Controls Bar */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200/50 dark:border-white/10">
         {/* Left Side - Document Type Switcher */}
@@ -268,16 +274,16 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
           </div>
         )}
 
-        {/* Right Side - Controls (Only show for CV) */}
-        {documentType === 'cv' && (
-          <div className="flex items-center space-x-3">
-            {/* Paper Size Toggle */}
+        {/* Right Side - Controls */}
+        <div className="flex items-center space-x-3">
+          {/* Paper Size Toggle - Only for CV */}
+          {documentType === 'cv' && (
             <div className="flex items-center space-x-1 bg-white dark:bg-gray-800 rounded-lg p-1">
               <button
                 onClick={() => setPaperSize('A4')}
                 className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
-                  paperSize === 'A4' 
-                    ? 'bg-lime-600 text-white shadow-sm' 
+                  paperSize === 'A4'
+                    ? 'bg-lime-600 text-white shadow-sm'
                     : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                 }`}
               >
@@ -286,51 +292,51 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
               <button
                 onClick={() => setPaperSize('Letter')}
                 className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
-                  paperSize === 'Letter' 
-                    ? 'bg-lime-600 text-white shadow-sm' 
+                  paperSize === 'Letter'
+                    ? 'bg-lime-600 text-white shadow-sm'
                     : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                 }`}
               >
                 US Letter
               </button>
             </div>
+          )}
 
-            {/* Zoom Controls */}
-            <div className="flex items-center space-x-2 bg-white dark:bg-gray-800 rounded-lg px-3 py-1.5">
-              <button
-                onClick={handleZoomOut}
-                disabled={zoom <= 0.5}
-                className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
-                title="Zoom Out"
-              >
-                <ZoomOut className="w-3.5 h-3.5 text-gray-600 dark:text-gray-300" />
-              </button>
-              
-              <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 min-w-[45px] text-center">
-                {Math.round(zoom * 100)}%
-              </span>
-              
-              <button
-                onClick={handleZoomIn}
-                disabled={zoom >= 2}
-                className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
-                title="Zoom In"
-              >
-                <ZoomIn className="w-3.5 h-3.5 text-gray-600 dark:text-gray-300" />
-              </button>
-              
-              <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1"></div>
-              
-              <button
-                onClick={handleResetZoom}
-                className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200"
-                title="Reset to 100%"
-              >
-                <RotateCcw className="w-3.5 h-3.5 text-gray-600 dark:text-gray-300" />
-              </button>
-            </div>
+          {/* Zoom Controls - Show for both CV and Cover Letter */}
+          <div className="flex items-center space-x-2 bg-white dark:bg-gray-800 rounded-lg px-3 py-1.5">
+            <button
+              onClick={handleZoomOut}
+              disabled={zoom <= 0.5}
+              className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
+              title="Zoom Out"
+            >
+              <ZoomOut className="w-3.5 h-3.5 text-gray-600 dark:text-gray-300" />
+            </button>
+            
+            <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 min-w-[45px] text-center">
+              {Math.round(zoom * 100)}%
+            </span>
+            
+            <button
+              onClick={handleZoomIn}
+              disabled={zoom >= 2}
+              className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
+              title="Zoom In"
+            >
+              <ZoomIn className="w-3.5 h-3.5 text-gray-600 dark:text-gray-300" />
+            </button>
+            
+            <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1"></div>
+            
+            <button
+              onClick={handleResetZoom}
+              className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200"
+              title="Reset to 100%"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-gray-600 dark:text-gray-300" />
+            </button>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Preview Area */}

@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
 
     console.log('🔍 Master CV API - Query condition:', queryCondition);
 
-    const masterCV = await CV.findOne(queryCondition).lean();
+    const masterCV = await CV.findOne(queryCondition).lean() as any;
     console.log('🔍 Master CV API - Query executed, result:', {
       found: !!masterCV,
       masterCVId: masterCV?._id,

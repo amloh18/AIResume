@@ -3,7 +3,7 @@ import { useAIStore } from '@/lib/stores/aiStore';
 import { useJobStore } from '@/lib/stores/jobStore';
 import { AIAssistantService } from '@/lib/services/aiAssistantService';
 import { debounce } from 'lodash';
-import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 
 export const useAIAssistant = (
   cvId: string | null, 

@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Generate skills mapping suggestions
-    const suggestions = await AIAssistantService.mapSkillsAndKeywords(cvData, jobData);
+    const suggestions = await AIAssistantService.mapSkillsAndKeywords(cvData.cvData, jobData);
 
     return NextResponse.json({
       success: true,
