@@ -153,10 +153,10 @@ export async function POST(request: NextRequest) {
       }
 
       paymentDetails = {
-        paymentProviderId: paymentResult.payment.id,
-        amount: paymentResult.payment.amount / 100, // Convert from paise
-        currency: paymentResult.payment.currency,
-        metadata: paymentResult.payment.notes
+        paymentProviderId: paymentResult.payment?.id || '',
+        amount: Number(paymentResult.payment?.amount || 0) / 100, // Convert from paise
+        currency: paymentResult.payment?.currency || '',
+        metadata: paymentResult.payment?.notes || {}
       };
     } else {
       return NextResponse.json(

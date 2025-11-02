@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 
 import { DocumentType, StudioSessionContext, JobData } from '@/types/studio';
-import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';

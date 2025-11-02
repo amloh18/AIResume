@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
               { email: session?.user?.email }
             ]
           }).lean();
-          if (user && journeyUserId !== user._id.toString()) {
+          if (user && journeyUserId !== (user as any)._id.toString()) {
             journey = null; // Ownership doesn't match
           }
         } else if (requestUserId && journeyUserId !== requestUserId) {
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
         if (session?.user?.email) {
           const user = await User.findOne({ email: session.user.email }).lean();
           if (user) {
-            mongoUserId = user._id.toString();
+            mongoUserId = (user as any)._id.toString();
           }
         }
       }
@@ -164,7 +164,7 @@ export async function POST(request: NextRequest) {
           { status: 404 }
         );
       }
-      userId = user._id.toString();
+      userId = (user as any)._id.toString();
     }
 
     let cvId: string | null = journey.cvId;

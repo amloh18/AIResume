@@ -361,11 +361,11 @@ export const ProfessionalExtendedTemplate: React.FC<ProfessionalExtendedTemplate
               <div className="skills-list">
                 {skills.map((skill, index) => (
                   <div key={index} className="skill-item">
-                    <div className="skill-name">{skill.name}</div>
+                    <div className="skill-name">{skill.category}</div>
                     <div className="skill-bar">
                       <div 
                         className="skill-fill" 
-                        style={{ width: `${Math.min(100, (skill.keywords?.length || 1) * 15)}%` }}
+                        style={{ width: `${Math.min(100, (skill.skills.length || 1) * 15)}%` }}
                       ></div>
                     </div>
                   </div>

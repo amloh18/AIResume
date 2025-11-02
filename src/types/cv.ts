@@ -211,3 +211,45 @@ export interface UserRole {
   color: string;
   available?: boolean;
 }
+
+export interface CVJourney {
+  id: string;
+  userId: string;
+  jobId: string;
+  jobTitle: string;
+  company: string;
+  status: 'in-progress' | 'completed' | 'paused' | 'processing_documents' | 'creation_failed' | 'ready';
+  currentStep: number;
+  totalSteps: number;
+  cvId?: string;
+  coverLetterId?: string;
+  atsScore?: number;
+  steps: Array<{
+    stepId: number;
+    name: string;
+    status: 'pending' | 'active' | 'completed';
+    completedAt?: Date;
+    data?: any;
+  }>;
+  metadata: {
+    createdAt: Date;
+    updatedAt: Date;
+    lastAccessedAt: Date;
+    completedAt?: Date;
+    tags?: string[];
+    notes?: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+  lastWorkedOn?: string;
+  completedAt?: string;
+  journeyDuration?: number;
+  atsScoreHistory?: Array<{ score: number; calculatedAt: string }>;
+  downloadHistory?: Array<{ downloadedAt: string; fileType: string }>;
+  _debug?: {
+    linkedCVId?: string;
+    linkedCVMetadata?: any;
+    linkedCoverLetterId?: string;
+    jobStatus?: string;
+  };
+}

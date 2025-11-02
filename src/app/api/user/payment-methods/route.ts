@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      paymentMethods: paymentMethods.map(method => ({
+      paymentMethods: paymentMethods.map((method: any) => ({
         id: method._id,
         type: method.type,
         provider: method.provider,
@@ -103,16 +103,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const PaymentMethodModel = await getAdminPaymentMethod();
+
     // If this is being set as default, unset other default payment methods
     if (isDefault) {
-      await PaymentMethod.updateMany(
+      await PaymentMethodModel.updateMany(
         { userId: user._id, isDefault: true },
         { isDefault: false }
       );
     }
 
     // Create new payment method
-    const paymentMethod = new PaymentMethod({
+    const paymentMethod = new PaymentMethodModel({
       userId: user._id,
       type,
       provider,
@@ -186,8 +188,10 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
+    const PaymentMethodModel = await getAdminPaymentMethod();
+
     // Soft delete the payment method
-    const result = await PaymentMethod.updateOne(
+    const result = await PaymentMethodModel.updateOne(
       { _id: paymentMethodId, userId: user._id },
       { isActive: false }
     );

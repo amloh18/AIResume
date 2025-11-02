@@ -41,7 +41,7 @@ interface Journey {
   jobId: string;
   jobTitle: string;
   company: string;
-  status: 'in-progress' | 'completed';
+  status: 'in-progress' | 'completed' | 'paused' | 'processing_documents' | 'creation_failed' | 'ready';
   currentStep: number;
   totalSteps: number;
   createdAt: string;
@@ -297,7 +297,6 @@ const ApplicationJourneyPageContent: React.FC = () => {
   const handleDeleteJourney = async (journeyId: string) => {
     try {
       setIsDeleting(true);
-      const userId = user?.uid;
       if (!userId) {
         console.error('No user ID available');
         return;

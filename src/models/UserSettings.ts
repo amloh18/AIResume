@@ -636,7 +636,7 @@ const userSettingsSchema = new Schema<IUserSettings>({
 }, {
   timestamps: true,
   toJSON: {
-    transform: function(doc, ret) {
+    transform: function(doc, ret: any) {
       // Remove sensitive fields from JSON output
       delete ret.security?.twoFactorSecret;
       delete ret.security?.backupCodes;

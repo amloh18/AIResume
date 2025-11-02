@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Briefcase, Plus, Search, Filter, MoreVertical, 
+import {
+  Briefcase, Plus, Search, Filter, MoreVertical,
   Calendar, MapPin, DollarSign, Eye, Edit, Trash2,
   CheckCircle, Clock, AlertCircle, Target, FileText,
   ArrowRight, ChevronDown, ChevronUp, Star, Zap,
@@ -23,6 +23,7 @@ import toast from 'react-hot-toast';
 import { useOptimizedDataFetching } from '@/lib/hooks/useOptimizedDataFetching';
 import { ApplicationTrackerSkeleton } from '@/components/ui/OptimizedSkeletons';
 import { formatCardTime } from '@/lib/utils/timeUtils';
+import { CVJourney } from '@/types/cv';
 
 interface JobApplication {
   id: string;
@@ -33,7 +34,9 @@ interface JobApplication {
   company: string;
   status: 'created' | 'applied' | 'screening' | 'interview' | 'offer' | 'rejected' | 'accepted' | 'withdrawn';
   jobDescription?: string;
+  description?: string; // For compatibility
   location?: string;
+  jobUrl?: string;
   salary?: {
     min?: number;
     max?: number;
@@ -43,43 +46,32 @@ interface JobApplication {
   jobType?: 'full-time' | 'part-time' | 'contract' | 'internship';
   type?: string; // For compatibility
   source?: string;
+  sourceUrl?: string;
   postedDate?: Date;
   applicationDate?: Date;
   deadline?: Date;
   priority: 'low' | 'medium' | 'high';
   notes?: string;
+  sponsorship?: 'yes' | 'no' | 'unknown';
+  tags?: string[];
+  contactDetails?: {
+    name: string;
+    email: string;
+    phone: string;
+    role: string;
+  };
+  interviews?: any[];
+  followUps?: any[];
+  attachments?: any[];
+  atsScore?: number;
+  atsAnalysis?: any;
+  statusHistory?: any[];
+  isArchived?: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
-interface CVJourney {
-  id: string;
-  userId: string;
-  jobId: string;
-  jobTitle: string;
-  company: string;
-  status: 'in-progress' | 'completed' | 'paused';
-  currentStep: number;
-  totalSteps: number;
-  cvId?: string;
-  coverLetterId?: string;
-  atsScore?: number;
-  steps: Array<{
-    stepId: number;
-    name: string;
-    status: 'pending' | 'active' | 'completed';
-    completedAt?: Date;
-    data?: any;
-  }>;
-  metadata: {
-    createdAt: Date;
-    updatedAt: Date;
-    lastAccessedAt: Date;
-    completedAt?: Date;
-    tags?: string[];
-    notes?: string;
-  };
-}
+
 
 const ApplicationTracker: React.FC = () => {
   const { user, loading: authLoading, isAuthenticated } = useUnifiedAuth();
@@ -181,7 +173,7 @@ const ApplicationTracker: React.FC = () => {
       setLoading(true);
       
       // Load jobs
-      const jobsResponse = await authenticatedFetchWithUserId('/api/jobs', userId);
+      const jobsResponse = await authenticatedFetchWithUserId('/api/jobs', userId || undefined);
       const jobsResult = await jobsResponse.json();
       if (jobsResult.success) {
         // Transform jobs to match our interface - include ALL fields
@@ -222,7 +214,7 @@ const ApplicationTracker: React.FC = () => {
       }
 
       // Load CV journeys using cv-journey API with cleanup
-      const journeysResponse = await authenticatedFetchWithUserId('/api/application-journey', userId, {
+      const journeysResponse = await authenticatedFetchWithUserId('/api/application-journey', userId || undefined, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -249,39 +241,32 @@ const ApplicationTracker: React.FC = () => {
     if (journey.status === 'completed') {
       return 100;
     }
-    
-    // If journey is paused, return current progress
-    if (journey.status === 'paused') {
-      const completedSteps = journey.steps?.filter(step => step.status === 'completed').length || 0;
-      const totalSteps = journey.steps?.length || 5;
-      return Math.round((completedSteps / totalSteps) * 100);
-    }
-    
+
     // For in-progress journeys, calculate based on current step and completed steps
     if (journey.steps && journey.steps.length > 0) {
       const completedSteps = journey.steps.filter(step => step.status === 'completed').length;
       const totalSteps = journey.steps.length;
-      
+
       // If we have a currentStep, use it for more accurate progress
       if (journey.currentStep && journey.currentStep > 0) {
         // Calculate progress based on current step (more accurate)
         const stepProgress = (journey.currentStep - 1) / totalSteps * 100;
         const completedProgress = (completedSteps / totalSteps) * 100;
-        
+
         // Return the higher of the two for better accuracy
         return Math.round(Math.max(stepProgress, completedProgress));
       }
-      
+
       // Fallback to completed steps calculation
       return Math.round((completedSteps / totalSteps) * 100);
     }
-    
+
     // If no steps data, use currentStep if available
     if (journey.currentStep && journey.currentStep > 0) {
       const totalSteps = journey.totalSteps || 5;
       return Math.round(((journey.currentStep - 1) / totalSteps) * 100);
     }
-    
+
     return 0;
   };
 
@@ -297,27 +282,19 @@ const ApplicationTracker: React.FC = () => {
         }
         return '1 Ready to Apply';
       }
-      if (journey.status === 'paused') return '1 CV Journey Paused';
       return '1 CV Journey Active';
     }
     const completedCount = jobJourneys.filter(j => j.status === 'completed').length;
     const activeCount = jobJourneys.filter(j => j.status === 'in-progress').length;
-    const pausedCount = jobJourneys.filter(j => j.status === 'paused').length;
-    
+
     if (completedCount > 0 && activeCount > 0) {
       return `${completedCount} Ready, ${activeCount} Active`;
-    } else if (completedCount > 0 && pausedCount > 0) {
-      return `${completedCount} Ready, ${pausedCount} Paused`;
     } else if (completedCount > 0) {
       // Don't show "Ready to Apply" for Applied/Interview/Offer/Rejected stages
       if (['applied', 'interview', 'offer', 'rejected'].includes(jobStatus || '')) {
         return `${completedCount} CV Journeys Completed`;
       }
       return `${completedCount} Ready to Apply`;
-    } else if (pausedCount > 0 && activeCount > 0) {
-      return `${activeCount} Active, ${pausedCount} Paused`;
-    } else if (pausedCount > 0) {
-      return `${pausedCount} CV Journeys Paused`;
     } else {
       return `${activeCount} CV Journeys Active`;
     }
@@ -615,7 +592,7 @@ const ApplicationTracker: React.FC = () => {
 
     try {
       // Update job status
-      const response = await authenticatedFetchWithUserId(`/api/jobs/${draggedJob}`, userId, {
+      const response = await authenticatedFetchWithUserId(`/api/jobs/${draggedJob}`, userId || undefined, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -664,7 +641,7 @@ const ApplicationTracker: React.FC = () => {
   const handleBulkStatusUpdate = async (newStatus: string) => {
     try {
       const promises = Array.from(selectedJobs).map(jobId =>
-        authenticatedFetchWithUserId(`/api/jobs/${jobId}`, userId, {
+        authenticatedFetchWithUserId(`/api/jobs/${jobId}`, userId || undefined, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -694,7 +671,7 @@ const ApplicationTracker: React.FC = () => {
 
     try {
       const promises = Array.from(selectedJobs).map(jobId =>
-        authenticatedFetchWithUserId(`/api/jobs/${jobId}`, userId, {
+        authenticatedFetchWithUserId(`/api/jobs/${jobId}`, userId || undefined, {
           method: 'DELETE',
         })
       );
@@ -723,7 +700,6 @@ const ApplicationTracker: React.FC = () => {
           username: userData?.username || '',
           profilePhoto: getUserAvatar(userData),
           designation: userData?.role || '',
-          role: user?.role,
           subscription: userData?.subscription
         }}
         showSettings={true}
@@ -1222,7 +1198,7 @@ const ApplicationTracker: React.FC = () => {
                                      </div>
                                      
                                      {/* ATS Score */}
-                                     {atsScore !== null && (
+                                     {atsScore !== null && atsScore !== undefined && (
                                        <div className={`flex items-center gap-1 text-xs font-medium ${
                                          atsScore >= 85 ? 'text-green-500' :
                                          atsScore >= 70 ? 'text-blue-500' :

@@ -195,9 +195,7 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
       case 'references':
         updateCVData('references', [...(state.cvData.references || []), {
           name: '',
-          reference: '',
-          position: '',
-          company: ''
+          reference: ''
         }]);
         break;
       case 'summary':
@@ -541,10 +539,10 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
             <div>
               <label className="block text-white/80 text-sm font-medium mb-2">Technical Skills</label>
               <textarea
-                value={state.cvData.skills?.map(skill => skill.name).join(', ') || ''}
+                value={state.cvData.skills?.map(skill => skill.category).join(', ') || ''}
                 onChange={(e) => {
-                  const skillNames = e.target.value.split(',').map(name => name.trim()).filter(name => name);
-                  const skills = skillNames.map(name => ({ name, level: 'Intermediate' }));
+                  const skillCategories = e.target.value.split(',').map(category => category.trim()).filter(category => category);
+                  const skills = skillCategories.map(category => ({ category, skills: [] }));
                   updateCVData('skills', skills);
                 }}
                 rows={4}
@@ -997,41 +995,11 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
                       placeholder="John Smith"
                     />
                   </div>
-                  
+
                   <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">Position</label>
+                    <label className="block text-white/80 text-sm font-medium mb-2">Contact Information</label>
                     <input
                       type="text"
-                      value={ref.position || ''}
-                      onChange={(e) => {
-                        const updatedReferences = [...(state.cvData.references || [])];
-                        updatedReferences[index] = { ...updatedReferences[index], position: e.target.value };
-                        updateCVData('references', updatedReferences);
-                      }}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="Senior Manager"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">Company</label>
-                    <input
-                      type="text"
-                      value={ref.company || ''}
-                      onChange={(e) => {
-                        const updatedReferences = [...(state.cvData.references || [])];
-                        updatedReferences[index] = { ...updatedReferences[index], company: e.target.value };
-                        updateCVData('references', updatedReferences);
-                      }}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="Tech Corp"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">Email</label>
-                    <input
-                      type="email"
                       value={ref.reference || ''}
                       onChange={(e) => {
                         const updatedReferences = [...(state.cvData.references || [])];
@@ -1039,7 +1007,7 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
                         updateCVData('references', updatedReferences);
                       }}
                       className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="john.smith@company.com"
+                      placeholder="Email or phone number"
                     />
                   </div>
                 </div>
@@ -1050,8 +1018,6 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
               onClick={() => {
                 const newReference = {
                   name: '',
-                  position: '',
-                  company: '',
                   reference: ''
                 };
                 updateCVData('references', [...(state.cvData.references || []), newReference]);

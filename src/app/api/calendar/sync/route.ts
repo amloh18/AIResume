@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { connectDB } from '@/lib/mongodb';
 import Job from '@/models/Job';
-import ApplicationJourney from '@/models/ApplicationJourney';
+import { ApplicationJourney } from '@/models/ApplicationJourney';
 
 export async function POST(request: NextRequest) {
   try {

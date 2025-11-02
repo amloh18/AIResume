@@ -29,6 +29,7 @@ interface Campaign {
   subject: string;
   htmlContent: string;
   status: 'draft' | 'scheduled' | 'sent' | 'cancelled';
+  targetFilters: any;
   targetedUserCount: number;
   sentCount: number;
   openedCount: number;
@@ -360,4 +361,3 @@ export default function EmailCampaignManager() {
     </div>
   );
 }
-

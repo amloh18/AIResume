@@ -7,6 +7,7 @@ interface UnifiedUser {
   id: string;
   email: string;
   name: string;
+  username?: string;
   image?: string;
   firebaseUid?: string;
   isFirebaseUser: boolean;

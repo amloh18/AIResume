@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
 import { authenticatedFetch, authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
-import { 
+import {
   X, Briefcase, MapPin, DollarSign, Calendar, ExternalLink,
   FileText, CheckCircle, Clock, AlertCircle, Plus, Edit, Trash2,
   Target, Building2, Star, Copy, Archive, ChevronDown, ChevronUp, User, Mail
@@ -14,6 +14,7 @@ import JobInfoContent from './JobInfoContent';
 import EditJobModal from '../modals/EditJobModal';
 import toast from 'react-hot-toast';
 import { useJobInsights, useJobFallbacks, formatJobDate, formatJobSalary, formatJobUrl } from '@/hooks/useJobInsights';
+import { CVJourney } from '@/types/cv';
 
 interface JobApplication {
   id: string;
@@ -54,34 +55,7 @@ interface JobApplication {
   updatedAt: string;
 }
 
-interface CVJourney {
-  id: string;
-  userId: string;
-  jobId: string;
-  jobTitle: string;
-  company: string;
-  status: 'in-progress' | 'completed' | 'paused';
-  currentStep: number;
-  totalSteps: number;
-  cvId?: string;
-  coverLetterId?: string;
-  atsScore?: number;
-  steps: Array<{
-    stepId: number;
-    name: string;
-    status: 'pending' | 'active' | 'completed';
-    completedAt?: Date;
-    data?: any;
-  }>;
-  metadata: {
-    createdAt: Date;
-    updatedAt: Date;
-    lastAccessedAt: Date;
-    completedAt?: Date;
-    tags?: string[];
-    notes?: string;
-  };
-}
+
 
 interface JobModalProps {
   job: JobApplication;

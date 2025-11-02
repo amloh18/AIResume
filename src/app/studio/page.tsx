@@ -17,7 +17,18 @@ function StudioPageContent() {
   const { user, loading: authLoading, isAuthenticated } = useUnifiedAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [currentJourney, setCurrentJourney] = useState(null);
+  const [currentJourney, setCurrentJourney] = useState<{
+    id: string;
+    jobId: string;
+    jobTitle: string;
+    company: string;
+    status: 'in-progress' | 'completed';
+    currentStep: number;
+    totalSteps: number;
+    atsScore?: number;
+    cvId?: string;
+    coverLetterId?: string;
+  } | undefined>(undefined);
 
   // Get URL parameters - NEW STRUCTURE: journeyId-first approach
   const journeyId = searchParams.get('journeyId'); // PRIMARY: Journey ID for proper Application Package context
@@ -29,7 +40,7 @@ function StudioPageContent() {
   const mode = searchParams.get('mode'); // 'cv-onboarding', 'ats-edit', 'cover-letter-edit', 'document-first'
 
   // Determine which ID to use based on type
-  const finalDocumentType = documentType || (type === 'cover_letter' ? 'cover-letter' : 'cv');
+  const finalDocumentType: 'cv' | 'cover-letter' = documentType === 'cover-letter' || type === 'cover_letter' ? 'cover-letter' : 'cv';
   const documentId = finalDocumentType === 'cover-letter' ? coverLetterId : cvId;
 
   // NEW APPROACH: Use journeyId for reliable Application Package context

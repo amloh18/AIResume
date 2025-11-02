@@ -161,9 +161,9 @@ const RecentActivity: React.FC = () => {
       const timeIndex = Math.floor(Math.random() * timeIntervals.length);
       
       // Add some variation to status
-      let status = activityType.status;
-      if (Math.random() < 0.1) { // 10% chance of error
-        status = 'error';
+      let status: 'success' | 'warning' | 'info' = activityType.status as 'success' | 'warning' | 'info';
+      if (Math.random() < 0.1) { // 10% chance of error - map to warning since error isn't allowed
+        status = 'warning';
       } else if (Math.random() < 0.2) { // 20% chance of warning
         status = 'warning';
       }
@@ -326,4 +326,4 @@ const RecentActivity: React.FC = () => {
   );
 };
 
-export default RecentActivity; 
+export default RecentActivity;

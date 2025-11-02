@@ -491,8 +491,23 @@ export const defaultProfessionalTemplate: Omit<ITemplate, '_id' | 'createdAt' | 
 };
 
 // CSS variable injection for dynamic theming
-export const generateTemplateCSS = (globalStyles: ITemplate['globalStyles']): string => {
-  const { primaryColor, secondaryColor, backgroundColor, fontFamily, fontSize, lineHeight, spacing } = globalStyles;
+export const generateTemplateCSS = (globalStyles: ITemplate['globalStyles'] | undefined): string => {
+  // Provide default values if globalStyles is undefined
+  const defaultStyles: ITemplate['globalStyles'] = {
+    fontFamily: 'Calibri, Arial, sans-serif',
+    primaryColor: '#000000',
+    secondaryColor: '#000000',
+    backgroundColor: '#ffffff',
+    fontSize: '11pt',
+    lineHeight: '1.2',
+    spacing: '16px',
+    borderRadius: '0px',
+    boxShadow: 'none',
+    customCSS: ''
+  };
+
+  const styles = globalStyles || defaultStyles;
+  const { primaryColor, secondaryColor, backgroundColor, fontFamily, fontSize, lineHeight, spacing } = styles;
   
   // Convert hex color to RGB for alpha transparency usage
   const hexToRgb = (hex: string) => {

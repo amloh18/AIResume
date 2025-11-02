@@ -1,4 +1,4 @@
-import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { AISuggestion } from '@/lib/stores/aiStore';
 
 export interface SuggestionApplicationResult {

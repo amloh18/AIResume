@@ -56,6 +56,9 @@ interface SidebarStudioPanelProps {
   
   // Animation props for structure sections
   previousStructureSectionIndex?: number;
+  
+  // Document type to hide AI Report for cover letters
+  documentType?: 'cv' | 'cover-letter';
 }
 
 const SidebarStudioPanel: React.FC<SidebarStudioPanelProps> = ({
@@ -69,7 +72,8 @@ const SidebarStudioPanel: React.FC<SidebarStudioPanelProps> = ({
   onAddSection,
   activeSection = 'structure',
   onSectionChange,
-  previousStructureSectionIndex = -1
+  previousStructureSectionIndex = -1,
+  documentType = 'cv'
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [localActiveSection, setLocalActiveSection] = useState<'template' | 'design' | 'ai-report' | 'structure'>(activeSection);
@@ -78,10 +82,11 @@ const SidebarStudioPanel: React.FC<SidebarStudioPanelProps> = ({
     setLocalActiveSection(activeSection);
   }, [activeSection]);
 
+  // Filter out AI Report for cover letter mode
   const mainSections: SidebarSection[] = [
     { id: 'template', title: 'Template', icon: Layout },
     { id: 'design', title: 'Design', icon: Palette },
-    { id: 'ai-report', title: 'AI Report', icon: BarChart3 },
+    ...(documentType === 'cv' ? [{ id: 'ai-report', title: 'AI Report', icon: BarChart3 }] : []),
     { id: 'structure', title: 'Structure', icon: FileText }
   ];
 

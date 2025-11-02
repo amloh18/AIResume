@@ -260,7 +260,7 @@ const CVUpload: React.FC<CVUploadProps> = ({ onCVParsed, onClose }) => {
     const skills = Array.isArray(data.skills) ? data.skills.map((s: any) => ({
       category: sanitizeString(s?.name || 'Skills'), // name -> category
       skills: Array.isArray(s?.keywords) ? s.keywords.map(sanitizeString).filter(Boolean) : [] // keywords -> skills
-    })).filter(skill => skill.category && skill.skills.length > 0) : [];
+    })).filter((skill: any) => skill.category && skill.skills.length > 0) : [];
 
     // Map projects with proper field mapping
     const projects = Array.isArray(data.projects) ? data.projects.map((p: any) => ({
@@ -272,7 +272,7 @@ const CVUpload: React.FC<CVUploadProps> = ({ onCVParsed, onClose }) => {
       startDate: asMonth(p?.startDate),
       endDate: asMonth(p?.endDate),
       current: !p?.endDate || p?.endDate === '' // current if no end date
-    })).filter(project => project.title) : [];
+    })).filter((project: any) => project.title) : [];
 
     // Ensure all string fields are properly sanitized to prevent validation errors
     function sanitizeString(str: any): string {
@@ -348,7 +348,7 @@ const CVUpload: React.FC<CVUploadProps> = ({ onCVParsed, onClose }) => {
       skills: Array.isArray(data.skills) ? data.skills.map((skill: any) => ({
         category: sanitizeString(skill.category) || 'Skills',
         skills: Array.isArray(skill.skills) ? skill.skills.map(sanitizeString).filter(Boolean) : []
-      })).filter(skill => skill.category && skill.skills.length > 0) : [],
+      })).filter((skill: any) => skill.category && skill.skills.length > 0) : [],
       projects: Array.isArray(data.projects) ? data.projects.map((proj: any) => ({
         title: sanitizeString(proj.title) || '',
         description: sanitizeString(proj.description) || '',
@@ -358,7 +358,7 @@ const CVUpload: React.FC<CVUploadProps> = ({ onCVParsed, onClose }) => {
         startDate: asMonth(proj.startDate),
         endDate: asMonth(proj.endDate),
         current: Boolean(proj.current)
-      })).filter(project => project.title) : []
+      })).filter((project: any) => project.title) : []
     };
 
     // Helper function to sanitize strings
@@ -464,44 +464,45 @@ const CVUpload: React.FC<CVUploadProps> = ({ onCVParsed, onClose }) => {
                 </div>
 
                 {/* Drop Zone */}
-                <motion.div
-                  {...getRootProps()}
-                  className={`relative border-2 border-dashed rounded-3xl p-12 text-center transition-all duration-300 ${
-                    isDragActive
-                      ? 'border-lime-400 bg-lime-400/10'
-                      : 'border-white/20 hover:border-white/40 hover:bg-white/5'
-                  }`}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <input {...getInputProps()} />
-                  
+                <div {...getRootProps()}>
                   <motion.div
-                    className="flex flex-col items-center space-y-4"
-                    animate={isDragActive ? { scale: 1.05 } : { scale: 1 }}
+                    className={`relative border-2 border-dashed rounded-3xl p-12 text-center transition-all duration-300 cursor-pointer ${
+                      isDragActive
+                        ? 'border-lime-400 bg-lime-400/10'
+                        : 'border-white/20 hover:border-white/40 hover:bg-white/5'
+                    }`}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
                   >
+                    <input {...getInputProps()} />
+
                     <motion.div
-                      className="p-6 rounded-full bg-gradient-to-br from-lime-400 to-lime-500"
-                      animate={isDragActive ? { rotate: 360 } : { rotate: 0 }}
-                      transition={{ duration: 0.5 }}
+                      className="flex flex-col items-center space-y-4"
+                      animate={isDragActive ? { scale: 1.05 } : { scale: 1 }}
                     >
-                      <Upload size={48} className="text-black" />
-                    </motion.div>
-                    
-                    <div>
-                      <h3 className="text-2xl font-bold text-white mb-2">
-                        {isDragActive ? 'Drop your CV here' : 'Drag & drop your CV'}
-                      </h3>
-                      <p className="text-white/60 text-lg">
-                        or click to browse files
+                      <motion.div
+                        className="p-6 rounded-full bg-gradient-to-br from-lime-400 to-lime-500"
+                        animate={isDragActive ? { rotate: 360 } : { rotate: 0 }}
+                        transition={{ duration: 0.5 }}
+                      >
+                        <Upload size={48} className="text-black" />
+                      </motion.div>
+
+                      <div>
+                        <h3 className="text-2xl font-bold text-white mb-2">
+                          {isDragActive ? 'Drop your CV here' : 'Drag & drop your CV'}
+                        </h3>
+                        <p className="text-white/60 text-lg">
+                          or click to browse files
+                        </p>
+                      </div>
+
+                      <p className="text-white/40 text-sm">
+                        Supports PDF, DOC, DOCX, RTF, JPG, PNG (Max 10MB)
                       </p>
-                    </div>
-                    
-                    <p className="text-white/40 text-sm">
-                      Supports PDF, DOC, DOCX, RTF, JPG, PNG (Max 10MB)
-                    </p>
+                    </motion.div>
                   </motion.div>
-                </motion.div>
+                </div>
 
                 {/* Or Divider */}
                 <div className="relative">
@@ -661,4 +662,4 @@ const CVUpload: React.FC<CVUploadProps> = ({ onCVParsed, onClose }) => {
   );
 };
 
-export default CVUpload; 
+export default CVUpload;

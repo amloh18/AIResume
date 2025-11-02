@@ -21,6 +21,8 @@ const CertificatesSection: React.FC<CertificatesSectionProps> = ({
   jobData,
   userId
 }) => {
+  const [generatingIndex, setGeneratingIndex] = useState<number | null>(null);
+  
   // Ensure we have proper data structure
   const safeData = Array.isArray(data) ? data : [];
 
@@ -63,19 +65,27 @@ const CertificatesSection: React.FC<CertificatesSectionProps> = ({
       url: '',
       description: ''
     };
-    onUpdate('certificates', [...safeData, newCertificate]);
+    onUpdate('certificates', (prevCertificates) => {
+      return [...(prevCertificates || []), newCertificate];
+    });
   };
 
   const removeCertificate = (index: number) => {
-    const updatedData = safeData.filter((_, i) => i !== index);
-    onUpdate('certificates', updatedData);
+    onUpdate('certificates', (prevCertificates) => {
+      return (prevCertificates || []).filter((_, i) => i !== index);
+    });
   };
 
-  // Update certificate item - update full array like WorkExperienceSection
+  // Update certificate item - use functional updates to avoid stale state
   const updateCertificate = (index: number, field: string, value: any) => {
-    const updatedData = [...safeData];
-    updatedData[index] = { ...updatedData[index], [field]: value };
-    onUpdate('certificates', updatedData);
+    onUpdate('certificates', (prevCertificates) => {
+      const newArray = [...(prevCertificates || [])];
+      if (!newArray[index]) {
+        newArray[index] = {};
+      }
+      newArray[index] = { ...newArray[index], [field]: value };
+      return newArray;
+    });
   };
 
   return (

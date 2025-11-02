@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Generate summary suggestions
-    const suggestions = await AIAssistantService.buildTailoredSummary(cvData, jobData);
+    const suggestions = await AIAssistantService.buildTailoredSummary(cvData.cvData, jobData);
 
     return NextResponse.json({
       success: true,

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Edit, 
@@ -128,10 +128,27 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
     checkForLinkedJourney();
   }, [cv.id, session?.user?.id]);
 
+  // Track if we've attempted to fetch thumbnail to prevent loops
+  const thumbnailFetchAttemptedRef = useRef<string | null>(null);
+
+  // Reset attempted flag when CV changes
+  useEffect(() => {
+    if (cv?.id && thumbnailFetchAttemptedRef.current !== cv.id) {
+      thumbnailFetchAttemptedRef.current = null;
+    }
+  }, [cv.id]);
+
   // Fetch thumbnail if missing
   useEffect(() => {
+    // Early return conditions
+    if (!cv?.id) return;
+    if (thumbnailUrl) return; // Already have thumbnail
+    if (thumbnailLoading) return; // Already loading
+    if (thumbnailFetchAttemptedRef.current === cv.id) return; // Already attempted for this CV
+
     const fetchThumbnail = async () => {
-      if (thumbnailUrl || thumbnailLoading) return;
+      // Mark as attempted to prevent retries
+      thumbnailFetchAttemptedRef.current = cv.id;
       
       try {
         setThumbnailLoading(true);
@@ -146,17 +163,25 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
           const result = await response.json();
           if (result.success && result.thumbnailUrl) {
             setThumbnailUrl(result.thumbnailUrl);
+          } else {
+            // Reset attempted flag on failure so we can retry later if needed
+            thumbnailFetchAttemptedRef.current = null;
           }
+        } else {
+          // Reset attempted flag on error so we can retry later if needed
+          thumbnailFetchAttemptedRef.current = null;
         }
       } catch (error) {
         console.error('Error fetching thumbnail:', error);
+        // Reset attempted flag on error so we can retry later if needed
+        thumbnailFetchAttemptedRef.current = null;
       } finally {
         setThumbnailLoading(false);
       }
     };
 
     fetchThumbnail();
-  }, [cv.id, thumbnailUrl, thumbnailLoading]);
+  }, [cv.id, thumbnailUrl]); // Only depend on CV ID and thumbnail URL, not loading state
 
   const formatDate = (dateString: string) => {
     return formatDetailedTime(dateString);

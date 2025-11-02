@@ -12,10 +12,16 @@ const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 export async function POST(request: NextRequest) {
   try {
     const body = await request.text();
-    const signature = headers().get('stripe-signature');
+    const headersList = await headers();
+    const signature = headersList.get('stripe-signature');
 
     if (!signature || !webhookSecret) {
       return NextResponse.json({ error: 'Missing signature or webhook secret' }, { status: 400 });
+    }
+
+    if (!stripe) {
+      console.error('Stripe not configured');
+      return NextResponse.json({ error: 'Stripe not configured' }, { status: 500 });
     }
 
     let event;
@@ -89,7 +95,7 @@ async function handleCheckoutSessionCompleted(session: any) {
     }
 
     // Update user subscription
-    const subscriptionData = {
+    const subscriptionData: any = {
       currentPlanKey: planKey,
       subscription: {
         planKey: planKey,
@@ -108,7 +114,7 @@ async function handleCheckoutSessionCompleted(session: any) {
     if (planKey === 'day_pass') {
       const expiryDate = new Date();
       expiryDate.setHours(expiryDate.getHours() + (plan.dayPassDuration || 24));
-      
+
       subscriptionData.subscription.currentPeriodEnd = expiryDate;
       subscriptionData.subscription.endDate = expiryDate;
     }
@@ -143,7 +149,12 @@ async function handleCheckoutSessionCompleted(session: any) {
 
 async function handleInvoicePaymentSucceeded(invoice: any) {
   try {
-    const subscription = await stripe.subscriptions.retrieve(invoice.subscription);
+    if (!stripe) {
+      console.error('Stripe not configured');
+      return;
+    }
+
+    const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string);
     const { planKey, userId, planId } = subscription.metadata;
 
     if (!userId || !planKey) {
@@ -152,9 +163,10 @@ async function handleInvoicePaymentSucceeded(invoice: any) {
     }
 
     // Update subscription period
+    const sub = subscription as any;
     await User.findByIdAndUpdate(userId, {
-      'subscription.currentPeriodStart': new Date(subscription.current_period_start * 1000),
-      'subscription.currentPeriodEnd': new Date(subscription.current_period_end * 1000)
+      'subscription.currentPeriodStart': new Date(sub.current_period_start * 1000),
+      'subscription.currentPeriodEnd': new Date(sub.current_period_end * 1000)
     });
 
     // Create invoice record for recurring payment

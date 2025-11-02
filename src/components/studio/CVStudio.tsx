@@ -9,7 +9,10 @@ import ComprehensiveATSAnalyzer from './ComprehensiveATSAnalyzer';
 import DraggableSections from './DraggableSections';
 import CVSectionsAndOrdering from './CVSectionsAndOrdering';
 import DesignContent from './DesignContent';
+import CoverLetterDesignContent from './CoverLetterDesignContent';
 import TemplateContent from './TemplateContent';
+import CoverLetterTemplateContent from './CoverLetterTemplateContent';
+import CoverLetterStructureContent from './CoverLetterStructureContent';
 import PreviewPanel from './PreviewPanel';
 import RestructuredStudioLayout from './RestructuredStudioLayout';
 import PersonalInfoForm from './forms/PersonalInfoForm';
@@ -36,7 +39,7 @@ import {
   Plus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { UnifiedCVDataStructure, CVDataStructure } from '@/types/unified-cv-schema';
+import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { useTemplateStore } from '@/lib/stores/templateStore';
 import { useJobStore } from '@/lib/stores/jobStore';
 import { UnifiedCVService as CVService } from '@/lib/services/unified-cv-service';
@@ -55,6 +58,7 @@ import { CVJourneyLookupService, CVJourneyInfo } from '@/lib/services/cvJourneyL
 import { ApplicationPackageService } from '@/lib/services/applicationPackageService';
 import { useDebounce } from '@/hooks/useDebounce';
 import { migrateLegacyCVToStructureFormat, hasStructure } from '@/lib/migrations/cv-structure-migration';
+import toast from 'react-hot-toast';
 // Define fallback templates directly to avoid import issues
 const getFallbackTemplates = () => [
   {
@@ -476,7 +480,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
 
   // Debounced autosave - defined early to avoid reference errors
   const debouncedSave = useCallback(
-    debounce(async (data: CVDataStructure) => {
+    debounce(async (data: UnifiedCVDataStructure) => {
       try {
         setSaveStatus('saving');
 
@@ -542,12 +546,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
                 
                 clearTimeout(saveTimeout);
                 setSaveStatus('saved');
-                addNotification({
-                  type: 'success',
-                  title: 'Cover Letter Updated',
-                  message: 'Your cover letter has been saved successfully',
-                  persistent: false
-                });
+                toast.success('Cover Letter Updated');
                 return;
               }
             }
@@ -579,29 +578,34 @@ const CVStudio: React.FC<CVStudioProps> = ({
             }
 
             const result = await response.json();
-            const newCoverLetterId = result.data.id;
+            const newCoverLetterId = result.data?.id || result.data?.coverLetter?.id || result.id;
 
-            // Update journey with new cover letter ID
-            await updateJourneyWithDocument(newCoverLetterId, 'cover-letter');
+            if (newCoverLetterId) {
+              // Update journey with new cover letter ID
+              await updateJourneyWithDocument(newCoverLetterId, 'cover-letter');
 
-            // Update URL to include the new cover letter ID and preserve cvJourneyId
-            const urlParams = new URLSearchParams();
-            urlParams.set('type', 'cover_letter');
-            urlParams.set('coverLetterId', newCoverLetterId);
-            if (journeyInfo?.jobId || selectedJobId) {
-              urlParams.set('jobId', journeyInfo?.jobId || selectedJobId);
+              // Update URL to include the new cover letter ID and preserve journeyId
+              const urlParams = new URLSearchParams();
+              urlParams.set('type', 'cover_letter');
+              urlParams.set('mode', 'cover-letter');
+              urlParams.set('coverLetterId', newCoverLetterId);
+              if (journeyInfo?.jobId || selectedJobId) {
+                urlParams.set('jobId', journeyInfo?.jobId || selectedJobId || '');
+              }
+              if (journeyInfo?.journeyId || journeyId) {
+                urlParams.set('journeyId', journeyInfo?.journeyId || journeyId || '');
+              }
+              router.replace(`/studio?${urlParams.toString()}`);
+
+              clearTimeout(saveTimeout);
+              setSaveStatus('saved');
+              
+              // Store the new cover letter ID
+              setOriginalCoverLetterId(newCoverLetterId);
+
+              setJustCreated(true);
+              setTimeout(() => setJustCreated(false), 2000);
             }
-            if (journeyInfo?.journeyId || cvJourneyId) {
-              urlParams.set('cvJourneyId', journeyInfo?.journeyId || cvJourneyId);
-            }
-            router.replace(`/studio?${urlParams.toString()}`);
-
-            clearTimeout(saveTimeout);
-            setSaveStatus('saved');
-            
-
-            setJustCreated(true);
-            setTimeout(() => setJustCreated(false), 2000);
           }
         } else {
           // Handle CV save
@@ -650,9 +654,9 @@ const CVStudio: React.FC<CVStudioProps> = ({
               if (journeyInfo?.jobId || selectedJobId || jobId) {
                 urlParams.set('jobId', journeyInfo?.jobId || selectedJobId || jobId);
               }
-              if (journeyInfo?.journeyId || cvJourneyId) {
-                urlParams.set('cvJourneyId', journeyInfo?.journeyId || cvJourneyId);
-              }
+            if (journeyInfo?.journeyId || journeyId) {
+              urlParams.set('cvJourneyId', journeyInfo?.journeyId || journeyId);
+            }
               router.replace(`/studio?${urlParams.toString()}`);
               
               clearTimeout(saveTimeout);
@@ -690,7 +694,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
             urlParams.set('cvId', newCvId);
             
             // Prioritize journeyId for reliable Application Package context
-            const primaryJourneyId = journeyId || journeyInfo?.journeyId || cvJourneyId;
+            const primaryJourneyId = journeyId || journeyInfo?.journeyId;
             if (primaryJourneyId) {
               urlParams.set('journeyId', primaryJourneyId);
             }
@@ -868,13 +872,33 @@ const CVStudio: React.FC<CVStudioProps> = ({
   };
 
   // Update CV field
-  const updateCVField = useCallback((path: string, value: any) => {
+  const updateCVField = useCallback((path: string, valueOrFn: any) => {
     setCvData(prev => {
       if (!prev) return prev;
 
       // Validate value for array fields - ensure they're always arrays
-      const arrayFields = ['work', 'volunteer', 'education', 'awards', 'certificates', 
+      const arrayFields = ['work', 'volunteer', 'education', 'awards', 'certificates',
                            'publications', 'skills', 'languages', 'interests', 'references', 'projects'];
+
+      // Support functional updates - if valueOrFn is a function, get the current value and call the function
+      let value: any;
+      if (typeof valueOrFn === 'function') {
+        // For functional updates, navigate to the current value at the path and pass it to the updater function
+        const pathArray = path.split('.');
+        let current: any = prev;
+        for (let i = 0; i < pathArray.length; i++) {
+          if (current && typeof current === 'object') {
+            current = current[pathArray[i]];
+          } else {
+            current = undefined;
+            break;
+          }
+        }
+        value = valueOrFn(current); // Pass existing value to updater function
+      } else {
+        // Direct value assignment
+        value = valueOrFn;
+      }
       
       // If path is just an array field name (e.g., "awards", "certificates"), ensure value is an array
       if (arrayFields.includes(path)) {
@@ -969,7 +993,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
   }, [cvId, userId, documentType, debouncedSave]);
 
   // Add section - updates both legacy arrays and structure/content map
-  const addSection = useCallback((sectionType: keyof CVDataStructure, item?: any) => {
+  const addSection = useCallback((sectionType: keyof UnifiedCVDataStructure, item?: any) => {
     setCvData(prev => {
       if (!prev) return prev;
 
@@ -1030,7 +1054,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
   }, []);
 
   // Remove section - updates both legacy arrays and structure/content map
-  const removeSection = useCallback((sectionType: keyof CVDataStructure, index: number) => {
+  const removeSection = useCallback((sectionType: keyof UnifiedCVDataStructure, index: number) => {
     setCvData(prev => {
       if (!prev) return prev;
 
@@ -1085,7 +1109,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
   }, []);
 
   // Get default item for section
-  const getDefaultItemForSection = (sectionType: keyof CVDataStructure) => {
+  const getDefaultItemForSection = (sectionType: keyof UnifiedCVDataStructure) => {
     switch (sectionType) {
       case 'work':
         return {
@@ -1628,21 +1652,37 @@ const CVStudio: React.FC<CVStudioProps> = ({
           // Load Cover Letter data
           if (coverLetterId) {
             try {
+              console.log('🔍 CVStudio - Loading cover letter:', { coverLetterId, userId });
               const response = await fetch(`/api/cover-letters/${coverLetterId}?userId=${userId}`);
+              console.log('🔍 CVStudio - Cover letter API response status:', response.status);
+              
               if (!response.ok) {
-                throw new Error('Failed to load cover letter');
+                const errorText = await response.text();
+                console.error('❌ CVStudio - Cover letter API error:', response.status, errorText);
+                throw new Error(`Failed to load cover letter: ${response.status} - ${errorText}`);
               }
+              
               const coverLetterResult = await response.json();
-              console.log('Cover letter data loaded:', coverLetterResult);
+              console.log('✅ CVStudio - Cover letter API response:', coverLetterResult);
               
               // Handle different response structures
               const coverLetter = coverLetterResult.coverLetter || coverLetterResult.data?.coverLetter || coverLetterResult;
+              
+              if (!coverLetter) {
+                console.error('❌ CVStudio - No cover letter in response:', coverLetterResult);
+                throw new Error('Cover letter data not found in response');
+              }
+              
+              console.log('✅ CVStudio - Setting cover letter data:', coverLetter);
               setCoverLetterData({
                 content: coverLetter.content || '',
                 title: coverLetter.title || 'Untitled Cover Letter',
                 metadata: coverLetter.metadata || {}
               });
               setCoverLetterTitle(coverLetter.title || 'Untitled Cover Letter');
+              
+              // Store the coverLetterId
+              setOriginalCoverLetterId(coverLetterId);
 
               // Load CV and Job data from journey context
               let loadedJourneyInfo = null;
@@ -1682,7 +1722,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
                   loadedJourneyInfo = await CVJourneyLookupService.getJourneyInfoForStudio(
                     null, // cvId
                     coverLetterId, // coverLetterId
-                    jobId, // jobId from URL
+                    selectedJobId || undefined, // use selectedJobId instead of undefined jobId
                     userId
                   );
                   if (loadedJourneyInfo) {
@@ -1790,8 +1830,13 @@ const CVStudio: React.FC<CVStudioProps> = ({
                 }
               }
             } catch (error) {
-              console.error('Error loading cover letter:', error);
-              setError('Failed to load cover letter data');
+              console.error('❌ Error loading cover letter:', error);
+              // CRITICAL: Cover letter itself failed to load
+              console.error('❌ CRITICAL: Failed to load cover letter:', error);
+              const errorMessage = error instanceof Error ? error.message : 'Failed to load cover letter data';
+              setError(errorMessage);
+              setIsLoading(false);
+              return;
             }
           } else {
             // Create default cover letter data with auto-linked job and CV
@@ -2124,10 +2169,12 @@ const CVStudio: React.FC<CVStudioProps> = ({
             }
           }
 
-          // Set template if available, otherwise use Elegant Timeline as default
-          if (cvResult && cvResult.templateId && templatesResult.length > 0) {
-            // Handle both id and _id fields for template matching
+          // Set template - FIXED: Properly load saved template from CV
+          if (cvResult && cvResult.templateId) {
+            console.log('🔍 Studio - Loading saved template:', cvResult.templateId);
             const templateIdToMatch = cvResult.templateId.toString();
+            
+            // First, try to find in database templates
             let template = templatesResult.find((t: any) =>
               t.id === templateIdToMatch ||
               t._id === templateIdToMatch ||
@@ -2135,51 +2182,28 @@ const CVStudio: React.FC<CVStudioProps> = ({
               t._id?.toString() === templateIdToMatch
             );
 
-            // If not found in database templates, check hardcoded templates
+            // If not found in database, check hardcoded templates
             if (!template) {
-              console.log('⚠️ Studio - Template not found in database, checking hardcoded templates');
               const { HARDCODED_TEMPLATES } = await import('@/lib/templates/hardcoded-templates');
-
-              // Check if templateId matches any hardcoded template names or IDs
               template = HARDCODED_TEMPLATES.find((t: any) =>
                 t.id === templateIdToMatch ||
                 t._id === templateIdToMatch ||
-                t.name.toLowerCase().replace(/\s+/g, '-').includes(templateIdToMatch.toLowerCase()) ||
+                t.name.toLowerCase().replace(/\s+/g, '-') === templateIdToMatch.toLowerCase() ||
                 templateIdToMatch.toLowerCase().includes(t.name.toLowerCase().replace(/\s+/g, '-'))
               );
+            }
 
-              if (template) {
-                console.log('✅ Studio - Found hardcoded template:', template.name);
-                setSelectedTemplate(template);
-              } else {
-                console.log('⚠️ Studio - Template not found in hardcoded templates either, using Elegant Timeline as fallback');
-                // Fallback to Elegant Timeline
-                const elegantTimeline = HARDCODED_TEMPLATES.find((t: any) => 
-                  t.name === 'Elegant Timeline' || t.name.toLowerCase().includes('elegant timeline')
-                );
-                setSelectedTemplate(elegantTimeline || templatesResult[0] || HARDCODED_TEMPLATES[0]);
-              }
-            } else {
-              console.log('✅ Studio - Loaded template from CV:', template.name);
+            if (template) {
+              console.log('✅ Studio - Loaded saved template:', template.name);
               setSelectedTemplate(template);
+            } else {
+              console.warn('⚠️ Studio - Saved template not found, keeping current selection');
+              // Don't force default if template not found - keep user selection
             }
-          } else if (templatesResult.length > 0) {
-            console.log('✅ Studio - No template specified, using Elegant Timeline as default');
-            // No template specified, use Elegant Timeline as default
-            const elegantTimeline = templatesResult.find((t: any) => 
-              t.name === 'Elegant Timeline' || t.name.toLowerCase().includes('elegant timeline')
-            );
-            setSelectedTemplate(elegantTimeline || templatesResult[0]);
-          } else {
-            // If no templates from database, use hardcoded templates
-            const { HARDCODED_TEMPLATES } = await import('@/lib/templates/hardcoded-templates');
-            const elegantTimeline = HARDCODED_TEMPLATES.find((t: any) => 
-              t.name === 'Elegant Timeline' || t.name.toLowerCase().includes('elegant timeline')
-            );
-            if (elegantTimeline) {
-              console.log('✅ Studio - Using hardcoded Elegant Timeline as default');
-              setSelectedTemplate(elegantTimeline);
-            }
+          } else if (!selectedTemplate && templatesResult.length > 0) {
+            // Only set default if no template is currently selected
+            console.log('🔍 Studio - No saved template, setting first available');
+            setSelectedTemplate(templatesResult[0]);
           }
         } else {
             // Create default CV data structure
@@ -2466,7 +2490,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
     }
     
     // CRITICAL: Load fresh journey data from database before switching
-    const currentJourneyId = journeyId || journeyInfo?.journeyId || cvJourneyId;
+    const currentJourneyId = journeyId || journeyInfo?.journeyId;
     let freshJourneyData = journeyInfo;
     
     if (currentJourneyId && userId) {
@@ -2520,7 +2544,6 @@ const CVStudio: React.FC<CVStudioProps> = ({
     console.log('🔄 Document type change - Current context:', {
       journeyId,
       journeyInfoJourneyId: journeyInfo?.journeyId,
-      cvJourneyId,
       currentJourneyId,
       currentJobId,
       originalCvId,
@@ -2577,9 +2600,9 @@ const CVStudio: React.FC<CVStudioProps> = ({
       }
       
       // Find existing cover letter ID from multiple sources
-      const existingCoverLetterId = freshJourneyData?.coverLetterId || 
-                                   journeyInfo?.coverLetterId || 
-                                   originalCoverLetterId || 
+      const existingCoverLetterId = freshJourneyData?.coverLetterId ||
+                                   journeyInfo?.coverLetterId ||
+                                   originalCoverLetterId ||
                                    coverLetterId;
       
       console.log('🔄 Switching to cover letter - Checking for existing cover letter:', {
@@ -2590,17 +2613,11 @@ const CVStudio: React.FC<CVStudioProps> = ({
         finalExistingId: existingCoverLetterId
       });
       
+      // Determine final cover letter ID to use
+      let finalCoverLetterId: string | null = existingCoverLetterId || null;
+      
       if (existingCoverLetterId) {
-        newParams.set('coverLetterId', existingCoverLetterId);
-        // Remove cvId param when in cover letter mode
-        newParams.delete('cvId');
-        
-        console.log('✅ Cover letter params set:', {
-          coverLetterId: newParams.get('coverLetterId'),
-          cvId: newParams.get('cvId'),
-          type: newParams.get('type'),
-          mode: newParams.get('mode')
-        });
+        console.log('✅ Using existing cover letter ID:', existingCoverLetterId);
         
         // Update state to ensure we track this coverLetterId
         setOriginalCoverLetterId(existingCoverLetterId);
@@ -2608,31 +2625,28 @@ const CVStudio: React.FC<CVStudioProps> = ({
         // Reload cover letter data
         try {
           await reloadCoverLetterData(existingCoverLetterId);
-          console.log('✅ Using existing cover letter:', existingCoverLetterId);
+          console.log('✅ Cover letter data reloaded');
         } catch (error) {
-          console.error('❌ Error reloading cover letter, but continuing:', error);
+          console.error('❌ Error reloading cover letter:', error);
         }
       } else {
-        // Final safety check: Query the journey again to make sure no cover letter exists
+        // No existing cover letter found - need to create one
+        console.log('🔍 No existing cover letter found, creating new one');
+        
+        // Final safety check: Query the journey to make sure no cover letter exists
         if (currentJourneyId && userId) {
           try {
-            console.log('🔍 Final safety check - Querying journey for existing cover letter...');
+            console.log('🔍 Safety check - Querying journey for cover letter...');
             const safetyCheckResponse = await fetch(`/api/application-journey/${currentJourneyId}?userId=${userId}`);
+            
             if (safetyCheckResponse.ok) {
               const safetyCheckResult = await safetyCheckResponse.json();
               const safetyCoverLetterId = safetyCheckResult.data?.journey?.coverLetterId;
               
               if (safetyCoverLetterId) {
-                console.log('✅ Found existing cover letter in safety check:', safetyCoverLetterId);
-                newParams.set('coverLetterId', safetyCoverLetterId);
-                newParams.delete('cvId');
+                console.log('✅ Found cover letter in safety check:', safetyCoverLetterId);
+                finalCoverLetterId = safetyCoverLetterId;
                 setOriginalCoverLetterId(safetyCoverLetterId);
-                
-                try {
-                  await reloadCoverLetterData(safetyCoverLetterId);
-                } catch (error) {
-                  console.error('❌ Error reloading cover letter, but continuing:', error);
-                }
                 
                 // Update local journey info
                 setJourneyInfo(prev => prev ? {
@@ -2640,30 +2654,28 @@ const CVStudio: React.FC<CVStudioProps> = ({
                   coverLetterId: safetyCoverLetterId
                 } : null);
                 
-                console.log('✅ Using existing cover letter from safety check');
-                // DON'T return early - let URL update happen at the end
-                // Continue to the URL update at the end of the function
-              } else {
-                // Create new cover letter using duplication flow
-                console.log('🔍 Creating new cover letter for journey using duplication flow');
+                // Reload the cover letter data
                 try {
-                  // Import the default service
+                  await reloadCoverLetterData(safetyCoverLetterId);
+                } catch (error) {
+                  console.error('❌ Error reloading cover letter:', error);
+                }
+              } else {
+                // No cover letter exists - create new one via duplication
+                console.log('🔍 Creating new cover letter via duplication');
+                try {
                   const { defaultCoverLetterService } = await import('@/lib/services/defaultCoverLetterService');
-                  
-                  // Ensure we have a default cover letter to duplicate from
                   const defaultCoverLetterId = await defaultCoverLetterService.ensureDefaultCoverLetter(userId);
                   
-                  // Generate cover letter name
-                  const coverLetterTitle = `${journeyInfo?.company || currentJob?.company || 'Company'}_${journeyInfo?.jobTitle || currentJob?.title || 'Position'} | Cover_Letter`;
+                  const newCoverLetterTitle = `${journeyInfo?.company || currentJob?.company || 'Company'}_${journeyInfo?.jobTitle || currentJob?.title || 'Position'} | Cover_Letter`;
                   
-                  // Duplicate the default cover letter
                   const duplicateResponse = await fetch('/api/cover-letters/duplicate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                       sourceCoverLetterId: defaultCoverLetterId,
-                      userId: userId,
-                      customTitle: coverLetterTitle,
+                      userId,
+                      customTitle: newCoverLetterTitle,
                       jobId: currentJobId,
                       journeyId: currentJourneyId
                     })
@@ -2673,37 +2685,31 @@ const CVStudio: React.FC<CVStudioProps> = ({
                     const duplicateResult = await duplicateResponse.json();
                     const newCoverLetterData = duplicateResult.data?.coverLetter || duplicateResult.coverLetter;
                     
-                    if (newCoverLetterData && (newCoverLetterData.id || newCoverLetterData._id)) {
+                    if (newCoverLetterData) {
                       const newCoverLetterId = newCoverLetterData.id || newCoverLetterData._id;
-                      newParams.set('coverLetterId', newCoverLetterId);
-                      // Remove cvId param when in cover letter mode
-                      newParams.delete('cvId');
+                      finalCoverLetterId = newCoverLetterId;
                       
-                      // Update component state
+                      // Update state
                       setOriginalCoverLetterId(newCoverLetterId);
                       setCoverLetterData(newCoverLetterData);
-                      setCoverLetterTitle(newCoverLetterData.title || coverLetterTitle);
+                      setCoverLetterTitle(newCoverLetterData.title || newCoverLetterTitle);
                       
-                      // Update journey with new cover letter
+                      // Update journey
                       if (currentJourneyId) {
                         await updateJourneyWithDocument(newCoverLetterId, 'cover-letter');
-                        
-                        // Update local journey info to prevent future duplicates
                         setJourneyInfo(prev => prev ? {
                           ...prev,
                           coverLetterId: newCoverLetterId
                         } : null);
-                        
-                        console.log('✅ Updated journey with new cover letter ID:', newCoverLetterId);
                       }
                       
-                      console.log('✅ Created new cover letter via duplication:', newCoverLetterId);
+                      console.log('✅ Created new cover letter:', newCoverLetterId);
                     }
                   } else {
-                    console.error('❌ Failed to duplicate cover letter:', duplicateResponse.status);
+                    console.error('❌ Duplication failed:', await duplicateResponse.text());
                   }
                 } catch (error) {
-                  console.error('❌ Failed to create cover letter via duplication:', error);
+                  console.error('❌ Error creating cover letter:', error);
                 }
               }
             }
@@ -2711,6 +2717,15 @@ const CVStudio: React.FC<CVStudioProps> = ({
             console.error('❌ Safety check failed:', error);
           }
         }
+      }
+      
+      // CRITICAL: Always set coverLetterId in URL if we have one
+      if (finalCoverLetterId) {
+        newParams.set('coverLetterId', finalCoverLetterId);
+        newParams.delete('cvId');
+        console.log('✅ Final cover letter ID set in URL:', finalCoverLetterId);
+      } else {
+        console.warn('⚠️ No cover letter ID available for URL');
       }
     } else {
       // Switch to CV mode
@@ -3253,17 +3268,16 @@ const CVStudio: React.FC<CVStudioProps> = ({
   // Get CV sections for sidebar - synced with structure sections
   const getCVSectionsForSidebar = () => {
     if (!cvData) return [];
-    
+
     const allSectionIds = ['personal_header', 'work_experience', 'education', 'skills', 'projects', 'certificates', 'languages', 'volunteer', 'awards', 'publications', 'interests', 'references'];
-    
-    // Filter to only show sections with data - same logic as RestructuredStudioLayout
-    const sectionsWithData = allSectionIds.filter(id => hasSectionData(id));
-    
-    return sectionsWithData.map(sectionId => ({
+
+    // Show all sections in sidebar, not just those with data - users need to see sections they can edit
+    return allSectionIds.map(sectionId => ({
       id: sectionId,
       title: getSectionTitle(sectionId),
       icon: getSectionIcon(sectionId),
-      visible: sectionVisibility[sectionId] !== false
+      visible: sectionVisibility[sectionId] !== false,
+      hasData: hasSectionData(sectionId) // Include data status for UI indicators
     }));
   };
 
@@ -3327,44 +3341,50 @@ const CVStudio: React.FC<CVStudioProps> = ({
     setShowAddSectionModal(true);
   };
 
-  // Add a new section with default data
+  // Add a new section with default data - use functional updates to avoid stale state
   const addNewSection = (sectionId: string) => {
-    if (!cvData) return;
-
     const defaultData = getDefaultItemForSection(sectionId === 'work_experience' ? 'work' : sectionId as keyof CVDataStructure);
-    const updatedData = { ...cvData };
+    
+    setCvData(prev => {
+      if (!prev) return prev;
+      
+      const updatedData = { ...prev };
 
-    switch (sectionId) {
-      case 'skills':
-        updatedData.skills = [...(cvData.skills || []), defaultData];
-        break;
-      case 'projects':
-        updatedData.projects = [...(cvData.projects || []), defaultData];
-        break;
-      case 'certificates':
-        updatedData.certificates = [...(cvData.certificates || []), defaultData];
-        break;
-      case 'languages':
-        updatedData.languages = [...(cvData.languages || []), defaultData];
-        break;
-      case 'volunteer':
-        updatedData.volunteer = [...(cvData.volunteer || []), defaultData];
-        break;
-      case 'awards':
-        updatedData.awards = [...(cvData.awards || []), defaultData];
-        break;
-      case 'publications':
-        updatedData.publications = [...(cvData.publications || []), defaultData];
-        break;
-      case 'interests':
-        updatedData.interests = [...(cvData.interests || []), defaultData];
-        break;
-      case 'references':
-        updatedData.references = [...(cvData.references || []), defaultData];
-        break;
-    }
+      switch (sectionId) {
+        case 'skills':
+          updatedData.skills = [...(prev.skills || []), defaultData];
+          break;
+        case 'projects':
+          updatedData.projects = [...(prev.projects || []), defaultData];
+          break;
+        case 'certificates':
+          updatedData.certificates = [...(prev.certificates || []), defaultData];
+          break;
+        case 'languages':
+          updatedData.languages = [...(prev.languages || []), defaultData];
+          break;
+        case 'volunteer':
+          updatedData.volunteer = [...(prev.volunteer || []), defaultData];
+          break;
+        case 'awards':
+          updatedData.awards = [...(prev.awards || []), defaultData];
+          break;
+        case 'publications':
+          updatedData.publications = [...(prev.publications || []), defaultData];
+          break;
+        case 'interests':
+          updatedData.interests = [...(prev.interests || []), defaultData];
+          break;
+        case 'references':
+          updatedData.references = [...(prev.references || []), defaultData];
+          break;
+        default:
+          return prev;
+      }
 
-    setCvData(updatedData);
+      return updatedData;
+    });
+    
     setShowAddSectionModal(false);
     setActiveStructureSection(sectionId);
   };
@@ -3386,289 +3406,40 @@ const CVStudio: React.FC<CVStudioProps> = ({
             onStructureSectionClick={handleStructureSectionClick}
             onAddSection={handleAddSection}
             previousStructureSectionIndex={previousStructureSectionIndex}
+            documentType={documentType}
             structureContent={
               documentType === 'cover-letter' ? (
-                <div className="space-y-6">
-                  {/* AI Cover Letter Generator */}
-                  <div className={`bg-white dark:bg-[#1a230f] rounded-lg border border-gray-200 dark:border-white/10 p-6`}>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">AI Assistant</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                      Generate a personalized cover letter based on your CV and the selected job position.
-                    </p>
-                    <button
-                      onClick={async (e) => {
-                        // Add loading state
-                        const button = e.target as HTMLButtonElement;
-                        const originalText = button.textContent;
-                        button.disabled = true;
-                        button.textContent = 'Generating...';
-                        
-                        console.log('🔍 AI Cover Letter Generation - Starting:', {
-                          hasCvData: !!cvData,
-                          hasCurrentJob: !!currentJob,
-                          hasJourneyInfo: !!journeyInfo,
-                          journeyInfo
-                        });
-
-                        try {
-                          let finalCvData = cvData;
-                          let finalJobData = currentJob;
-
-                          // If data is missing and we have journeyInfo, load it
-                          if ((!finalCvData || !finalJobData) && journeyInfo) {
-                            console.log('📥 Loading missing data from journey...');
-                            
-                            // Load both in parallel
-                            const promises = [];
-                            
-                            if (!finalCvData && journeyInfo.cvId) {
-                              promises.push(
-                                fetch(`/api/cvs/${journeyInfo.cvId}?userId=${userId}`)
-                                  .then(res => res.json())
-                                  .then(result => {
-                                    const data = result.data?.cv?.cvData || result.cv?.cvData;
-                                    if (data) {
-                                      finalCvData = data;
-                                      setCvData(data);
-                                      console.log('✅ CV loaded');
-                                    }
-                                  })
-                                  .catch(err => console.error('❌ CV load failed:', err))
-                              );
-                            }
-                            
-                            if (!finalJobData && journeyInfo.jobId) {
-                              promises.push(
-                                fetch(`/api/jobs?userId=${userId}&jobId=${journeyInfo.jobId}`)
-                                  .then(res => res.json())
-                                  .then(result => {
-                                    const job = result.data?.jobs?.find((j: any) => j.id === journeyInfo.jobId) || result.job || result;
-                                    if (job) {
-                                      finalJobData = job;
-                                      setCurrentJob(job);
-                                      console.log('✅ Job loaded');
-                                    }
-                                  })
-                                  .catch(err => console.error('❌ Job load failed:', err))
-                              );
-                            }
-                            
-                            if (promises.length > 0) {
-                              await Promise.all(promises);
-                              // Small delay to ensure state updates
-                              await new Promise(resolve => setTimeout(resolve, 100));
-                            }
-                          }
-
-                          // Final validation
-                          if (!finalCvData || !finalJobData) {
-                            console.error('❌ Still missing data after load attempt:', {
-                              hasCvData: !!finalCvData,
-                              hasJobData: !!finalJobData
-                            });
-                            
-                            button.disabled = false;
-                            button.textContent = originalText;
-                            return;
-                          }
-
-                          console.log('✅ Data validated, generating cover letter...');
-                          
-                          // Try the main API endpoint first
-                          let response = await fetch('/api/ai/cover-letter-generate', {
-                            method: 'POST',
-                            headers: {
-                              'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
-                              cvData: finalCvData,
-                              jobData: finalJobData,
-                              recipientName: 'Hiring Manager',
-                              companyName: finalJobData.company
-                            }),
-                          });
-
-                          // If main endpoint fails, try the fallback
-                          if (!response.ok) {
-                            console.log('Main API failed, trying fallback...');
-                            response = await fetch('/api/ai/generate-cover-letter', {
-                              method: 'POST',
-                              headers: {
-                                'Content-Type': 'application/json',
-                              },
-                              body: JSON.stringify({
-                                cvInfo: {
-                                  name: finalCvData?.basics?.name || '',
-                                  email: finalCvData?.basics?.email || '',
-                                  phone: finalCvData?.basics?.phone || '',
-                                  location: finalCvData?.basics?.location || '',
-                                  summary: finalCvData?.basics?.summary || '',
-                                  experience: finalCvData?.work || [],
-                                  skills: finalCvData?.skills || []
-                                },
-                                jobInfo: {
-                                  title: finalJobData?.title || finalJobData?.jobTitle || '',
-                                  company: finalJobData?.company || '',
-                                  description: finalJobData?.jobDescription || '',
-                                  requirements: finalJobData?.requirements || []
-                                }
-                              }),
-                            });
-                          }
-
-                          if (!response.ok) {
-                            const errorData = await response.json().catch(() => ({}));
-                            console.error('API Error:', response.status, errorData);
-                            throw new Error(`API Error: ${response.status} - ${errorData.error || 'Unknown error'}`);
-                          }
-
-                          const result = await response.json();
-                          console.log('API Response:', result);
-                          
-                          if (result.success && result.content) {
-                            // Update cover letter data with the generated content
-                            setCoverLetterData((prev: any) => ({
-                              ...prev,
-                              content: result.content
-                            }));
-                            addNotification({
-                              type: 'success',
-                              title: 'Cover Letter Generated',
-                              message: 'Your AI-generated cover letter is ready!',
-                              persistent: false
-                            });
-                          } else {
-                            console.error('No content in response:', result);
-                            throw new Error(`No content generated: ${result.error || 'Unknown error'}`);
-                          }
-                        } catch (error) {
-                          console.error('Error generating cover letter:', error);
-                        } finally {
-                          // Restore button state
-                          button.disabled = false;
-                          button.textContent = originalText;
-                        }
-                      }}
-                      className="px-4 py-2 bg-lime-600 text-white rounded-lg hover:bg-lime-700 transition-colors"
-                    >
-                      Generate with AI
-                    </button>
-                  </div>
-
-                  {/* Cover Letter Content */}
-                  <div className={`bg-white dark:bg-[#1a230f] rounded-lg border border-gray-200 dark:border-white/10 p-6`}>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Cover Letter Content</h3>
-                    
-                    {/* Formatting Options */}
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      <button
-                        onClick={() => {
-                          const textarea = document.querySelector('textarea[data-cover-letter]') as HTMLTextAreaElement;
-                          if (textarea) {
-                            const start = textarea.selectionStart;
-                            const end = textarea.selectionEnd;
-                            const selectedText = textarea.value.substring(start, end);
-                            const newText = textarea.value.substring(0, start) + `**${selectedText}**` + textarea.value.substring(end);
-                            setCoverLetterData((prev: any) => ({
-                              ...prev,
-                              content: newText
-                            }));
-                            // Force re-render by updating the textarea value
-                            setTimeout(() => {
-                              textarea.focus();
-                              textarea.setSelectionRange(start + 2, end + 2);
-                            }, 0);
-                          }
-                        }}
-                        className="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-                        title="Bold"
-                      >
-                        <strong>B</strong>
-                      </button>
-                      <button
-                        onClick={() => {
-                          const textarea = document.querySelector('textarea[data-cover-letter]') as HTMLTextAreaElement;
-                          if (textarea) {
-                            const start = textarea.selectionStart;
-                            const end = textarea.selectionEnd;
-                            const selectedText = textarea.value.substring(start, end);
-                            const newText = textarea.value.substring(0, start) + `*${selectedText}*` + textarea.value.substring(end);
-                            setCoverLetterData((prev: any) => ({
-                              ...prev,
-                              content: newText
-                            }));
-                            // Force re-render by updating the textarea value
-                            setTimeout(() => {
-                              textarea.focus();
-                              textarea.setSelectionRange(start + 1, end + 1);
-                            }, 0);
-                          }
-                        }}
-                        className="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-                        title="Italic"
-                      >
-                        <em>I</em>
-                      </button>
-                      <button
-                        onClick={() => {
-                          const textarea = document.querySelector('textarea[data-cover-letter]') as HTMLTextAreaElement;
-                          if (textarea) {
-                            const start = textarea.selectionStart;
-                            const end = textarea.selectionEnd;
-                            const selectedText = textarea.value.substring(start, end);
-                            const newText = textarea.value.substring(0, start) + `\n\n${selectedText}\n\n` + textarea.value.substring(end);
-                            setCoverLetterData((prev: any) => ({
-                              ...prev,
-                              content: newText
-                            }));
-                            textarea.focus();
-                            textarea.setSelectionRange(start + 2, end + 2);
-                          }
-                        }}
-                        className="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-                        title="New Paragraph"
-                      >
-                        ¶
-                      </button>
-                      <button
-                        onClick={() => {
-                          const textarea = document.querySelector('textarea[data-cover-letter]') as HTMLTextAreaElement;
-                          if (textarea) {
-                            const start = textarea.selectionStart;
-                            const end = textarea.selectionEnd;
-                            const selectedText = textarea.value.substring(start, end);
-                            const newText = textarea.value.substring(0, start) + `\n• ${selectedText}` + textarea.value.substring(end);
-                            setCoverLetterData((prev: any) => ({
-                              ...prev,
-                              content: newText
-                            }));
-                            textarea.focus();
-                            textarea.setSelectionRange(start + 3, end + 3);
-                          }
-                        }}
-                        className="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-                        title="Bullet Point"
-                      >
-                        •
-                      </button>
-                    </div>
-                    
-                    <textarea
-                      data-cover-letter
-                      className="w-full h-64 p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none"
-                      placeholder="Write your cover letter content here or use AI to generate it..."
-                      value={coverLetterData?.content || ''}
-                      onChange={(e) => setCoverLetterData((prev: any) => ({
-                        ...prev,
-                        content: e.target.value
-                      }))}
-                      style={{ whiteSpace: 'pre-wrap' }}
-                    />
-                    <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                      Tip: Use **bold** for emphasis, *italic* for style, and double line breaks for paragraphs
-                    </div>
-                  </div>
+                <div className="h-full w-full bg-[#1A201A] p-6">
+                  <CoverLetterStructureContent
+                    coverLetterData={coverLetterData}
+                    onUpdate={setCoverLetterData}
+                    cvData={cvData}
+                    jobData={currentJob}
+                    userId={userId}
+                  />
                 </div>
+              ) : documentType === 'cv' && cvData ? (
+                <RestructuredStudioLayout
+                  jobData={currentJob}
+                  onJobChange={() => {
+                    // Handle job change - could open job selector modal
+                    console.log('Job change requested');
+                  }}
+                  selectedJobId={selectedJobId}
+                  onJobSelection={handleJobSelection}
+                  userId={userId}
+                  cvData={cvData}
+                  cvId={cvId}
+                  onUpdateField={updateCVField}
+                  onScoreUpdate={(score) => {
+                    updateAtsScore(score);
+                    if (score >= 60) {
+                      updateJourneyStatus('ats-checked');
+                    }
+                  }}
+                  onUpdateCV={setCvData}
+                  jobContext={currentJob}
+                />
               ) : isLoading ? (
                 <div className="space-y-4">
                   {/* Skeleton for sections while loading */}
@@ -3694,87 +3465,94 @@ const CVStudio: React.FC<CVStudioProps> = ({
                 </div>
               ) : null
             }
-            structureContent={
-              documentType === 'cv' && cvData ? (
-                <RestructuredStudioLayout
-                  jobData={currentJob}
-                  onJobChange={() => {
-                    // Handle job change - could open job selector modal
-                    console.log('Job change requested');
-                  }}
-                  selectedJobId={selectedJobId}
-                  onJobSelection={handleJobSelection}
-                  userId={userId}
-                  cvData={cvData}
-                  cvId={cvId}
-                  onUpdateField={updateCVField}
-                  onScoreUpdate={(score) => {
-                    updateAtsScore(score);
-                    if (score >= 60) {
-                      updateJourneyStatus('ats-checked');
-                    }
-                  }}
-                  onUpdateCV={setCvData}
-                  jobContext={currentJob}
-                />
-              ) : null
-            }
             designContent={
-              <DesignContent
-                onSettingsChange={(settings) => {
-                  console.log('Design settings changed:', settings);
-                  // Apply design settings to template
-                  if (selectedTemplate) {
-                    const updatedTemplate = {
-                      ...selectedTemplate,
-                      globalStyles: {
-                        ...selectedTemplate.globalStyles,
-                        fontFamily: settings.fontFamily,
-                        fontSize: `${settings.bodyFontSize}px`,
-                        lineHeight: settings.lineSpacing.toString(),
-                        primaryColor: settings.colorScheme === 'professional' ? '#1f2937' :
-                          settings.colorScheme === 'modern' ? '#059669' :
-                            settings.colorScheme === 'creative' ? '#7c3aed' : '#374151'
-                      }
-                    };
-                    setSelectedTemplate(updatedTemplate);
-                  }
-                }}
-              />
-            }
-            templateContent={
-              <TemplateContent
-                selectedTemplate={selectedTemplate}
-                onTemplateSelect={async (template) => {
-                  setSelectedTemplate(template);
-                  console.log('Template selected:', template);
-                  
-                  // Auto-save the template selection if we have a CV ID
-                  if (cvId && cvData) {
-                    try {
-                      setSaveStatus('saving');
-                      const updateData = {
-                        title: cvTitle,
-                        cvData: cvData,
-                        templateId: template?.id || template?._id || '',
-                        metadata: {
-                          isMaster: isMasterCV
+              documentType === 'cover-letter' ? (
+                <CoverLetterDesignContent
+                  currentTemplate={selectedTemplate}
+                  coverLetterData={coverLetterData}
+                  onSettingsChange={(settings) => {
+                    console.log('Cover letter design settings changed:', settings);
+                    // Apply design settings for cover letter
+                  }}
+                />
+              ) : (
+                <DesignContent
+                  currentTemplate={selectedTemplate}
+                  cvData={cvData}
+                  onSettingsChange={(settings) => {
+                    console.log('Design settings changed:', settings);
+                    // Apply design settings to template in real-time
+                    if (selectedTemplate) {
+                      const updatedTemplate = {
+                        ...selectedTemplate,
+                        globalStyles: {
+                          ...selectedTemplate.globalStyles,
+                          fontFamily: settings.fontFamily,
+                          fontSize: `${settings.bodyFontSize}px`,
+                          headerFontSize: `${settings.headerFontSize}px`,
+                          sectionFontSize: `${settings.sectionFontSize}px`,
+                          lineHeight: settings.lineSpacing.toString(),
+                          letterSpacing: `${settings.letterSpacing}px`,
+                          spacing: `${settings.sectionSpacing}px`,
+                          primaryColor: settings.primaryColor || settings.colorScheme?.split('-')[0] || '#000000',
+                          secondaryColor: settings.secondaryColor || '#374151',
+                          accentColor: settings.accentColor || '#80FF00'
                         }
                       };
+                      setSelectedTemplate(updatedTemplate);
                       
-                      await CVService.updateCV(cvId, updateData, userId || undefined);
-                      setSaveStatus('saved');
-                      console.log('✅ Template selection auto-saved');
-                    } catch (error) {
-                      console.error('❌ Failed to auto-save template selection:', error);
-                      setSaveStatus('error');
+                      // Auto-save template changes if we have a CV ID
+                      if (cvId && cvData) {
+                        debouncedSave(cvData);
+                      }
                     }
-                  }
-                }}
-                onTemplatePreview={(template) => {
-                  console.log('Template preview:', template);
-                }}
-              />
+                  }}
+                />
+              )
+            }
+            templateContent={
+              documentType === 'cover-letter' ? (
+                <CoverLetterTemplateContent
+                  selectedTemplate={selectedTemplate as any}
+                  onTemplateSelect={(template) => {
+                    setSelectedTemplate(template as any);
+                    console.log('Cover letter template selected:', template);
+                  }}
+                />
+              ) : (
+                <TemplateContent
+                  selectedTemplate={selectedTemplate}
+                  onTemplateSelect={async (template) => {
+                    setSelectedTemplate(template);
+                    console.log('Template selected:', template);
+                    
+                    // Auto-save the template selection if we have a CV ID
+                    if (cvId && cvData) {
+                      try {
+                        setSaveStatus('saving');
+                        const updateData = {
+                          title: cvTitle,
+                          cvData: cvData,
+                          templateId: template?.id || template?._id || '',
+                          metadata: {
+                            isMaster: isMasterCV
+                          }
+                        };
+                        
+                        await CVService.updateCV(cvId, updateData, userId || undefined);
+                        setSaveStatus('saved');
+                        console.log('✅ Template selection auto-saved');
+                      } catch (error) {
+                        console.error('❌ Failed to auto-save template selection:', error);
+                        setSaveStatus('error');
+                      }
+                    }
+                  }}
+                  onTemplatePreview={(template) => {
+                    console.log('Template preview:', template);
+                  }}
+                />
+              )
             }
             aiReportContent={
               documentType === 'cv' && cvData ? (

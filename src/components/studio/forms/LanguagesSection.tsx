@@ -24,18 +24,26 @@ const LanguagesSection: React.FC<LanguagesSectionProps> = ({
       language: '',
       fluency: ''
     };
-    onUpdate('languages', [...safeData, newLanguage]);
+    onUpdate('languages', (prevLanguages) => {
+      return [...(prevLanguages || []), newLanguage];
+    });
   };
 
   const removeLanguage = (index: number) => {
-    const updatedData = safeData.filter((_, i) => i !== index);
-    onUpdate('languages', updatedData);
+    onUpdate('languages', (prevLanguages) => {
+      return (prevLanguages || []).filter((_, i) => i !== index);
+    });
   };
 
   const updateLanguage = (index: number, field: string, value: any) => {
-    const updatedData = [...safeData];
-    updatedData[index] = { ...updatedData[index], [field]: value };
-    onUpdate('languages', updatedData);
+    onUpdate('languages', (prevLanguages) => {
+      const newArray = [...(prevLanguages || [])];
+      if (!newArray[index]) {
+        newArray[index] = {};
+      }
+      newArray[index] = { ...newArray[index], [field]: value };
+      return newArray;
+    });
   };
 
   const fluencyLevels = [
