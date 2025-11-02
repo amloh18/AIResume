@@ -612,12 +612,12 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-gray-900">Career Coherence Score</h3>
-                <div className="text-3xl font-bold text-[#80FF00]">{careerCoherence?.score || 85}%</div>
+                <div className="text-3xl font-bold text-[#80FF00]">{careerCoherence?.score ?? 85}%</div>
               </div>
               <p className="text-gray-600 mb-4">
-                {careerCoherence?.score >= 80 ? 
+                {(careerCoherence?.score ?? 85) >= 80 ?
                   "Your career path shows strong alignment with consistent progression." :
-                  careerCoherence?.score >= 60 ?
+                  (careerCoherence?.score ?? 85) >= 60 ?
                   "Your career path shows moderate alignment with some areas for improvement." :
                   "Your career path could benefit from more focused progression and consistency."
                 }

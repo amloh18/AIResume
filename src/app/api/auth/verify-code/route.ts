@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/database';
 import VerificationToken from '@/models/VerificationToken';
 import User from '@/models/User';
+import mongoose from 'mongoose';
 import { 
   validateCodeFormat, 
   incrementFailedAttempts,
@@ -59,7 +60,7 @@ export async function POST(request: NextRequest) {
     // Check if code has exceeded max attempts
     if (hasExceededMaxAttempts(verificationToken.attempts)) {
       // Delete the token to prevent further attempts
-      await VerificationToken.deleteOne({ _id: verificationToken._id });
+      await VerificationToken.deleteOne({ _id: verificationToken._id as mongoose.Types.ObjectId });
       
       return NextResponse.json(
         { success: false, message: 'Code has exceeded maximum attempts. Please request a new code.' },
@@ -69,7 +70,7 @@ export async function POST(request: NextRequest) {
 
     // Check if code is expired (additional check)
     if (isCodeExpired(verificationToken.createdAt)) {
-      await VerificationToken.deleteOne({ _id: verificationToken._id });
+      await VerificationToken.deleteOne({ _id: verificationToken._id as mongoose.Types.ObjectId });
       
       return NextResponse.json(
         { success: false, message: 'Code has expired. Please request a new code.' },
@@ -82,7 +83,7 @@ export async function POST(request: NextRequest) {
 
     if (!verificationResult.valid) {
       // Increment failed attempts
-      const newAttemptCount = await incrementFailedAttempts(verificationToken._id.toString());
+      const newAttemptCount = await incrementFailedAttempts((verificationToken._id as mongoose.Types.ObjectId).toString());
       const remainingAttempts = 5 - newAttemptCount;
 
       return NextResponse.json(

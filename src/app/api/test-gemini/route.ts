@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
 
     // Initialize Gemini AI
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     // Test with a simple prompt
     const result = await model.generateContent('Hello, respond with "API is working"');

@@ -1,4 +1,4 @@
-import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 
 /**
  * Generates an automatic CV name based on professional title and summary

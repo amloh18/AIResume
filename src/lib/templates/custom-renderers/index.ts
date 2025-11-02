@@ -1,25 +1,25 @@
 // Custom Template Renderers
 // These are hardcoded templates with 100% accurate mapping to specific CV designs
 
-export { ExecutiveMinimalTemplate } from './ExecutiveMinimalTemplate';
 export { DataDrivenProTemplate } from './DataDrivenProTemplate';
-export { CorporateClassicTemplate } from './CorporateClassicTemplate';
+export { DesignerModernTemplate } from './DesignerModernTemplate';
 export { TechProBlueTemplate } from './TechProBlueTemplate';
-export { MinimalistCreativeTemplate } from './MinimalistCreativeTemplate';
+export { ExecutiveProfessionalLayoutTemplate } from './ExecutiveProfessionalLayoutTemplate';
 export { ExecutiveStandardTemplate } from './ExecutiveStandardTemplate';
-export { ATSClassicTemplate } from './ATSClassicTemplate';
+export { ElegantTimelineTemplate } from './ElegantTimelineTemplate';
 export { TheModernCVTemplate } from './TheModernCVTemplate';
+export { ProfessionalExtendedTemplate } from './ProfessionalExtendedTemplate';
 
 // Template mapping for easy reference
 export const CUSTOM_TEMPLATES = {
-  'executive-minimal': 'ExecutiveMinimalTemplate',
-  'data-driven-pro': 'DataDrivenProTemplate', 
-  'corporate-classic': 'CorporateClassicTemplate',
+  'data-driven-pro': 'DataDrivenProTemplate',
+  'designer-modern': 'DesignerModernTemplate',
   'tech-pro-blue': 'TechProBlueTemplate',
-  'minimalist-creative': 'MinimalistCreativeTemplate',
+  'executive-professional-layout': 'ExecutiveProfessionalLayoutTemplate',
   'executive-standard': 'ExecutiveStandardTemplate',
-  'ats-classic': 'ATSClassicTemplate',
-  'the-modern-cv': 'TheModernCVTemplate'
+  'elegant-timeline': 'ElegantTimelineTemplate',
+  'the-modern-cv': 'TheModernCVTemplate',
+  'professional-extended': 'ProfessionalExtendedTemplate'
 } as const;
 
 export type CustomTemplateKey = keyof typeof CUSTOM_TEMPLATES;

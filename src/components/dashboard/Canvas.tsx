@@ -706,8 +706,9 @@ const Canvas: React.FC = () => {
       console.log('🔍 Canvas - Loading CVs with user ID:', userIdToUse);
       
       // Use unified service to get CVs
+      // Use 'full' projection to include cvData and template needed for preview rendering
       console.log('🔍 Canvas - Calling UnifiedCVService.getCVs...');
-      const result = await UnifiedCVService.getCVs(userIdToUse, { projection: 'summary' });
+      const result = await UnifiedCVService.getCVs(userIdToUse, { projection: 'full' });
       console.log('🔍 Canvas - UnifiedCVService.getCVs result:', result);
       console.log('🔍 Canvas - Result type:', typeof result, 'Is array:', Array.isArray(result), 'Length:', result?.length);
       
@@ -725,7 +726,7 @@ const Canvas: React.FC = () => {
             thumbnail: cv.metadata?.thumbnailUrl,
             description: cv.description || '',
             cvData: cv.cvData || null, // Include CV data for preview
-            template: cv.template || null, // Include template data for preview
+            template: cv.template || (cv.templateId ? { _id: cv.templateId, name: cv.templateName || 'Default Template' } : null), // Include template data for preview - handle both populated and ID formats
             completionPercentage: calculateCompletionPercentage(cv),
             isMaster: cv.metadata?.isMaster || cv.isMaster || false, // Include master flag - handle both formats
             atsScore: cv.metadata?.atsScore, // Include ATS score
@@ -1712,7 +1713,34 @@ const Canvas: React.FC = () => {
           </div>
         </div>
 
-        {/* Clean Unlinked Button - Only show for CV tab */}
+      </div>
+
+      {/* Tab Navigation */}
+      <div className="flex items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-2">
+          <motion.button
+            onClick={() => setActiveTab('cv')}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
+              activeTab === 'cv' ? 'bg-gradient-to-r from-lime-500 to-lime-600 text-white shadow-md' : 'bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 text-gray-700 dark:text-gray-300 hover:bg-[#141810] dark:hover:bg-[#141810]'
+            }`}
+            whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+          >
+            <FileText size={16} className="inline mr-2" />
+            CVs
+          </motion.button>
+          <motion.button
+            onClick={() => setActiveTab('coverLetter')}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
+              activeTab === 'coverLetter' ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md' : 'bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 text-gray-700 dark:text-gray-300 hover:bg-[#141810] dark:hover:bg-[#141810]'
+            }`}
+            whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+          >
+            <PenTool size={16} className="inline mr-2" />
+            Cover Letters
+          </motion.button>
+        </div>
+        
+        {/* Clean Unlinked Button - Inline with tab selector */}
         {activeTab === 'cv' && (
           <CleanUnlinkedButton
             type="cv"
@@ -1722,30 +1750,15 @@ const Canvas: React.FC = () => {
             className="bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30"
           />
         )}
-      </div>
-
-      {/* Tab Navigation */}
-      <div className="flex items-center gap-2 mb-6">
-        <motion.button
-          onClick={() => setActiveTab('cv')}
-          className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
-            activeTab === 'cv' ? 'bg-gradient-to-r from-lime-500 to-lime-600 text-white shadow-md' : 'bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 text-gray-700 dark:text-gray-300 hover:bg-[#141810] dark:hover:bg-[#141810]'
-          }`}
-          whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-        >
-          <FileText size={16} className="inline mr-2" />
-          CVs
-        </motion.button>
-        <motion.button
-          onClick={() => setActiveTab('coverLetter')}
-          className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
-            activeTab === 'coverLetter' ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md' : 'bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 text-gray-700 dark:text-gray-300 hover:bg-[#141810] dark:hover:bg-[#141810]'
-          }`}
-          whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-        >
-          <PenTool size={16} className="inline mr-2" />
-          Cover Letters
-        </motion.button>
+        {activeTab === 'coverLetter' && (
+          <CleanUnlinkedButton
+            type="cover-letter"
+            items={coverLetters}
+            journeys={journeys}
+            onClean={handleCleanUnlinkedCoverLetters}
+            className="bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30"
+          />
+        )}
       </div>
 
       {/* Main Content Based on Active Tab */}
@@ -1769,7 +1782,14 @@ const Canvas: React.FC = () => {
             filteredAndSortedCVsLength: filteredAndSortedCVs.length,
             mongoDBUserId,
             userIdFromAPI: getUserIdForAPI(user),
-            masterCVs: masterCVs.map(m => ({ id: m.id, title: m.title })),
+            masterCVs: masterCVs.map(m => ({ 
+              id: m.id, 
+              title: m.title,
+              hasCvData: !!m.cvData,
+              hasTemplate: !!m.template,
+              templateType: typeof m.template,
+              templateKeys: m.template ? Object.keys(m.template) : []
+            })),
             filteredCVs: filteredAndSortedCVs.map(cv => ({ id: cv.id, title: cv.title }))
           })}
           <MasterCVCardOverlay
@@ -1784,7 +1804,14 @@ const Canvas: React.FC = () => {
               status: masterCVs[0].status,
               isMaster: true,
               cvData: masterCVs[0].cvData,
-              template: masterCVs[0].template,
+              template: masterCVs[0].template && typeof masterCVs[0].template === 'object' 
+                ? masterCVs[0].template 
+                : (masterCVs[0].templateId ? { 
+                    _id: masterCVs[0].templateId, 
+                    name: masterCVs[0].templateName || 'Default Template',
+                    globalStyles: {},
+                    availableSections: []
+                  } : null),
               isStarred: masterCVs[0].isStarred,
               thumbnail: masterCVs[0].thumbnail || '',
               metadata: masterCVs[0].metadata
@@ -1830,21 +1857,7 @@ const Canvas: React.FC = () => {
                   />
                 );
               })
-            ) : (
-              <div className="col-span-full text-center py-12">
-                <FileText className="w-16 h-16 mx-auto text-gray-400 dark:text-gray-600 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No CVs Found</h3>
-                <p className="text-gray-500 dark:text-gray-400 mb-4">
-                  {searchQuery ? 'No CVs match your search.' : "You haven't created any CVs yet."}
-                </p>
-                <button
-                  onClick={() => createCV()}
-                  className="px-4 py-2 bg-lime-500 hover:bg-lime-600 text-white rounded-full transition-colors"
-                >
-                  Create Your First CV
-                </button>
-              </div>
-            )
+            ) : null
           )}
         </div>
         </div>
@@ -1853,76 +1866,78 @@ const Canvas: React.FC = () => {
         {/* Right Column - Sidebar */}
         <div className="space-y-6">
           {/* KPI Metrics - 2x2 Grid */}
-          <div className="bg-white dark:bg-[#040402] border border-gray-200 dark:border-gray-700 rounded-xl p-6">
-            <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-4 flex items-center gap-2">
-              <TrendingUp size={14} className="text-blue-400" />
-              CV Metrics
-            </h3>
+          <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-8 shadow-sm">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-8 h-8 bg-[#80FF00] rounded flex items-center justify-center">
+                <TrendingUp className="w-5 h-5 text-black" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-white">CV Metrics</h3>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <motion.div
-                className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+                className="bg-gray-50 dark:bg-[#313a28] border border-gray-200 dark:border-white/10 rounded-lg p-4"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
               >
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 bg-gradient-to-br from-lime-400/20 to-lime-500/20 rounded-lg flex items-center justify-center">
-                    <FileText size={12} className="text-lime-400" />
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-[#80FF00] rounded flex items-center justify-center">
+                    <FileText className="w-5 h-5 text-black" />
                   </div>
                   <div>
-                    <p className="text-gray-600 dark:text-white/60 text-xs">Total CVs</p>
-                    <p className="text-sm font-bold text-gray-900 dark:text-white">{cvs.length}</p>
+                    <p className="text-gray-600 dark:text-gray-400 text-xs">Total CVs</p>
+                    <p className="text-lg font-bold text-gray-900 dark:text-white">{cvs.length}</p>
                   </div>
                 </div>
               </motion.div>
 
               <motion.div
-                className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+                className="bg-gray-50 dark:bg-[#313a28] border border-gray-200 dark:border-white/10 rounded-lg p-4"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
               >
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 bg-gradient-to-br from-blue-400/20 to-blue-500/20 rounded-lg flex items-center justify-center">
-                    <Eye size={12} className="text-blue-400" />
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-[#80FF00] rounded flex items-center justify-center">
+                    <Eye className="w-5 h-5 text-black" />
                   </div>
                   <div>
-                    <p className="text-gray-600 dark:text-white/60 text-xs">Views</p>
-                    <p className="text-sm font-bold text-gray-900 dark:text-white">{cvs.reduce((sum, cv) => sum + cv.views, 0)}</p>
+                    <p className="text-gray-600 dark:text-gray-400 text-xs">Views</p>
+                    <p className="text-lg font-bold text-gray-900 dark:text-white">{cvs.reduce((sum, cv) => sum + cv.views, 0)}</p>
                   </div>
                 </div>
               </motion.div>
 
               <motion.div
-                className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+                className="bg-gray-50 dark:bg-[#313a28] border border-gray-200 dark:border-white/10 rounded-lg p-4"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
               >
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 bg-gradient-to-br from-purple-400/20 to-purple-500/20 rounded-lg flex items-center justify-center">
-                    <Star size={12} className="text-purple-400" />
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-[#80FF00] rounded flex items-center justify-center">
+                    <Star className="w-5 h-5 text-black" />
                   </div>
                   <div>
-                    <p className="text-gray-600 dark:text-white/60 text-xs">Starred</p>
-                    <p className="text-sm font-bold text-gray-900 dark:text-white">{cvs.filter(cv => cv.isStarred).length}</p>
+                    <p className="text-gray-600 dark:text-gray-400 text-xs">Starred</p>
+                    <p className="text-lg font-bold text-gray-900 dark:text-white">{cvs.filter(cv => cv.isStarred).length}</p>
                   </div>
                 </div>
               </motion.div>
 
               <motion.div
-                className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+                className="bg-gray-50 dark:bg-[#313a28] border border-gray-200 dark:border-white/10 rounded-lg p-4"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
               >
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 bg-gradient-to-br from-green-400/20 to-green-500/20 rounded-lg flex items-center justify-center">
-                    <CheckCircle size={12} className="text-green-400" />
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-[#80FF00] rounded flex items-center justify-center">
+                    <CheckCircle className="w-5 h-5 text-black" />
                   </div>
                   <div>
-                    <p className="text-gray-600 dark:text-white/60 text-xs">Published</p>
-                    <p className="text-sm font-bold text-gray-900 dark:text-white">{cvs.filter(cv => cv.status === 'published').length}</p>
+                    <p className="text-gray-600 dark:text-gray-400 text-xs">Published</p>
+                    <p className="text-lg font-bold text-gray-900 dark:text-white">{cvs.filter(cv => cv.status === 'published').length}</p>
                   </div>
                 </div>
               </motion.div>
@@ -1930,23 +1945,25 @@ const Canvas: React.FC = () => {
           </div>
 
           {/* CV Tips */}
-          <div className="bg-white dark:bg-[#040402] border border-gray-200 dark:border-gray-700 rounded-xl p-6">
-            <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-4 flex items-center gap-2">
-              <Lightbulb size={14} className="text-yellow-400" />
-              CV Tips
-            </h3>
-            <div className="space-y-3">
-              <div className="p-3 bg-yellow-400/10 border border-yellow-400/20 rounded-lg">
-                <p className="text-yellow-400 text-xs font-medium mb-1">Keep it concise</p>
-                <p className="text-gray-600 dark:text-white/60 text-xs">Limit your CV to 1-2 pages for better readability</p>
+          <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-8 shadow-sm">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-8 h-8 bg-[#80FF00] rounded flex items-center justify-center">
+                <Lightbulb className="w-5 h-5 text-black" />
               </div>
-              <div className="p-3 bg-blue-400/10 border border-blue-400/20 rounded-lg">
-                <p className="text-blue-400 text-xs font-medium mb-1">Use action verbs</p>
-                <p className="text-gray-600 dark:text-white/60 text-xs">Start bullet points with strong action verbs</p>
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-white">CV Tips</h3>
+            </div>
+            <div className="space-y-4">
+              <div className="bg-gray-50 dark:bg-[#313a28] border border-gray-200 dark:border-white/10 rounded-lg p-4">
+                <p className="text-[#80FF00] text-sm font-bold mb-2">Keep it concise</p>
+                <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">Limit your CV to 1-2 pages for better readability</p>
               </div>
-              <div className="p-3 bg-green-400/10 border border-green-400/20 rounded-lg">
-                <p className="text-green-400 text-xs font-medium mb-1">Quantify achievements</p>
-                <p className="text-gray-600 dark:text-white/60 text-xs">Include specific numbers and metrics when possible</p>
+              <div className="bg-gray-50 dark:bg-[#313a28] border border-gray-200 dark:border-white/10 rounded-lg p-4">
+                <p className="text-[#80FF00] text-sm font-bold mb-2">Use action verbs</p>
+                <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">Start bullet points with strong action verbs</p>
+              </div>
+              <div className="bg-gray-50 dark:bg-[#313a28] border border-gray-200 dark:border-white/10 rounded-lg p-4">
+                <p className="text-[#80FF00] text-sm font-bold mb-2">Quantify achievements</p>
+                <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">Include specific numbers and metrics when possible</p>
               </div>
             </div>
           </div>
@@ -1997,76 +2014,78 @@ const Canvas: React.FC = () => {
           {/* Right Column - Sidebar */}
           <div className="space-y-6">
             {/* KPI Metrics - 2x2 Grid */}
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
-              <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-4 flex items-center gap-2">
-                <TrendingUp size={14} className="text-blue-400" />
-                Cover Letter Metrics
-              </h3>
+            <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-8 shadow-sm">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-8 h-8 bg-[#80FF00] rounded flex items-center justify-center">
+                  <TrendingUp className="w-5 h-5 text-black" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Cover Letter Metrics</h3>
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <motion.div
-                  className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+                  className="bg-gray-50 dark:bg-[#313a28] border border-gray-200 dark:border-white/10 rounded-lg p-4"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 }}
                 >
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 bg-gradient-to-br from-blue-400/20 to-blue-500/20 rounded-lg flex items-center justify-center">
-                      <PenTool size={12} className="text-blue-400" />
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-[#80FF00] rounded flex items-center justify-center">
+                      <PenTool className="w-5 h-5 text-black" />
                     </div>
                     <div>
-                      <p className="text-white/60 text-xs">Total</p>
-                      <p className="text-sm font-bold text-white">{coverLetters.length}</p>
+                      <p className="text-gray-600 dark:text-gray-400 text-xs">Total</p>
+                      <p className="text-lg font-bold text-gray-900 dark:text-white">{coverLetters.length}</p>
                     </div>
                   </div>
                 </motion.div>
 
                 <motion.div
-                  className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+                  className="bg-gray-50 dark:bg-[#313a28] border border-gray-200 dark:border-white/10 rounded-lg p-4"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 }}
                 >
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 bg-gradient-to-br from-purple-400/20 to-purple-500/20 rounded-lg flex items-center justify-center">
-                      <Eye size={12} className="text-purple-400" />
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-[#80FF00] rounded flex items-center justify-center">
+                      <Eye className="w-5 h-5 text-black" />
                     </div>
                     <div>
-                      <p className="text-white/60 text-xs">Views</p>
-                      <p className="text-sm font-bold text-white">{coverLetters.reduce((sum, cl) => sum + cl.views, 0)}</p>
+                      <p className="text-gray-600 dark:text-gray-400 text-xs">Views</p>
+                      <p className="text-lg font-bold text-gray-900 dark:text-white">{coverLetters.reduce((sum, cl) => sum + cl.views, 0)}</p>
                     </div>
                   </div>
                 </motion.div>
 
                 <motion.div
-                  className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+                  className="bg-gray-50 dark:bg-[#313a28] border border-gray-200 dark:border-white/10 rounded-lg p-4"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3 }}
                 >
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 bg-gradient-to-br from-green-400/20 to-green-500/20 rounded-lg flex items-center justify-center">
-                      <Star size={12} className="text-green-400" />
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-[#80FF00] rounded flex items-center justify-center">
+                      <Star className="w-5 h-5 text-black" />
                     </div>
                     <div>
-                      <p className="text-white/60 text-xs">Starred</p>
-                      <p className="text-sm font-bold text-white">{coverLetters.filter(cl => cl.isStarred).length}</p>
+                      <p className="text-gray-600 dark:text-gray-400 text-xs">Starred</p>
+                      <p className="text-lg font-bold text-gray-900 dark:text-white">{coverLetters.filter(cl => cl.isStarred).length}</p>
                     </div>
                   </div>
                 </motion.div>
 
                 <motion.div
-                  className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
+                  className="bg-gray-50 dark:bg-[#313a28] border border-gray-200 dark:border-white/10 rounded-lg p-4"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4 }}
                 >
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 bg-gradient-to-br from-orange-400/20 to-orange-500/20 rounded-lg flex items-center justify-center">
-                      <CheckCircle size={12} className="text-orange-400" />
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-[#80FF00] rounded flex items-center justify-center">
+                      <CheckCircle className="w-5 h-5 text-black" />
                     </div>
                     <div>
-                      <p className="text-white/60 text-xs">Published</p>
-                      <p className="text-sm font-bold text-white">{coverLetters.filter(cl => cl.status === 'final').length}</p>
+                      <p className="text-gray-600 dark:text-gray-400 text-xs">Published</p>
+                      <p className="text-lg font-bold text-gray-900 dark:text-white">{coverLetters.filter(cl => cl.status === 'final').length}</p>
                     </div>
                   </div>
                 </motion.div>
@@ -2074,37 +2093,28 @@ const Canvas: React.FC = () => {
             </div>
 
             {/* Cover Letter Tips */}
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6">
-              <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-4 flex items-center gap-2">
-                <Lightbulb size={14} className="text-blue-400" />
-                Cover Letter Tips
-              </h3>
-              <div className="space-y-3">
-                <div className="p-3 bg-blue-400/10 border border-blue-400/20 rounded-lg">
-                  <p className="text-blue-400 text-xs font-medium mb-1">Personalize it</p>
-                  <p className="text-white/60 text-xs">Address the hiring manager by name when possible</p>
+            <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-8 shadow-sm">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-8 h-8 bg-[#80FF00] rounded flex items-center justify-center">
+                  <Lightbulb className="w-5 h-5 text-black" />
                 </div>
-                <div className="p-3 bg-green-400/10 border border-green-400/20 rounded-lg">
-                  <p className="text-green-400 text-xs font-medium mb-1">Show enthusiasm</p>
-                  <p className="text-white/60 text-xs">Express genuine interest in the company and role</p>
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Cover Letter Tips</h3>
+              </div>
+              <div className="space-y-4">
+                <div className="bg-gray-50 dark:bg-[#313a28] border border-gray-200 dark:border-white/10 rounded-lg p-4">
+                  <p className="text-[#80FF00] text-sm font-bold mb-2">Personalize it</p>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">Address the hiring manager by name when possible</p>
                 </div>
-                <div className="p-3 bg-purple-400/10 border border-purple-400/20 rounded-lg">
-                  <p className="text-purple-400 text-xs font-medium mb-1">Keep it concise</p>
-                  <p className="text-white/60 text-xs">Limit to one page and focus on key achievements</p>
+                <div className="bg-gray-50 dark:bg-[#313a28] border border-gray-200 dark:border-white/10 rounded-lg p-4">
+                  <p className="text-[#80FF00] text-sm font-bold mb-2">Show enthusiasm</p>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">Express genuine interest in the company and role</p>
+                </div>
+                <div className="bg-gray-50 dark:bg-[#313a28] border border-gray-200 dark:border-white/10 rounded-lg p-4">
+                  <p className="text-[#80FF00] text-sm font-bold mb-2">Keep it concise</p>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">Limit to one page and focus on key achievements</p>
                 </div>
               </div>
             </div>
-
-            {/* Clean Unlinked Button - Only show for Cover Letter tab */}
-            {activeTab === 'coverLetter' && (
-              <CleanUnlinkedButton
-                type="cover-letter"
-                items={coverLetters}
-                journeys={journeys}
-                onClean={handleCleanUnlinkedCoverLetters}
-                className="bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30"
-              />
-            )}
           </div>
         </div>
       )}

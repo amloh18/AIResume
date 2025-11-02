@@ -117,11 +117,11 @@ export async function POST(request: NextRequest) {
     
     if (isFirebaseUser) {
       // For Firebase users, use createWithFirebaseUid
+      // Get MongoDB userId from source cover letter or create a new one
+      const mongoUserId = sourceCoverLetter.userId || new mongoose.Types.ObjectId().toString();
       savedCoverLetter = await createWithFirebaseUid(
         CoverLetter,
         {
-          userId: sourceCoverLetter.userId || new mongoose.Types.ObjectId().toString(),
-          firebaseUid: userId,
           title: uniqueTitle,
           content: sourceCoverLetter.content,
           status: 'draft',
@@ -135,6 +135,7 @@ export async function POST(request: NextRequest) {
             version: 1
           }
         },
+        mongoUserId, // MongoDB userId
         userId // Firebase UID
       );
     } else {

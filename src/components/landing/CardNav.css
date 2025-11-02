@@ -13,7 +13,7 @@
   display: block;
   height: 70px;
   padding: 0;
-  background-color: rgba(0, 0, 0, 0.4);
+  background-color: rgba(0, 0, 0, 0.75);
   backdrop-filter: blur(20px);
   border: 2px solid rgba(255, 255, 255, 0.2);
   border-radius: 35px;
@@ -52,7 +52,7 @@
 .nav-link {
   background: none;
   border: none;
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(255, 255, 255, 1);
   font-size: 15px;
   font-weight: 500;
   cursor: pointer;
@@ -148,7 +148,7 @@
   display: none;
   background: none;
   border: none;
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(255, 255, 255, 1);
   cursor: pointer;
   padding: 0.5rem;
   border-radius: 8px;
@@ -196,7 +196,7 @@
 .mobile-nav-link {
   background: none;
   border: none;
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(255, 255, 255, 1);
   font-size: 16px;
   font-weight: 500;
   cursor: pointer;

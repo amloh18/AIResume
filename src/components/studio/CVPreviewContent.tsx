@@ -2,11 +2,11 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Eye } from 'lucide-react';
-import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { DesignSettings, SectionConfig } from '@/types/design-settings';
 
 interface CVPreviewContentProps {
-  cvData: UnifiedUnifiedCVDataStructure | null;
+  cvData: UnifiedCVDataStructure | null;
   theme?: 'light' | 'dark';
   showBadge?: boolean;
   sectionOrder?: string[];

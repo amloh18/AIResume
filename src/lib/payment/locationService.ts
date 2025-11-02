@@ -239,37 +239,134 @@ const COUNTRY_CURRENCIES: Record<string, { currency: string; symbol: string }> =
 };
 
 export class LocationService {
-  static async getLocationData(): Promise<LocationData> {
+  // Helper function to add timeout to fetch
+  private static async fetchWithTimeout(url: string, timeoutMs = 5000): Promise<Response> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    
     try {
-      // Try to get location from IP geolocation
-      const response = await fetch('https://ipapi.co/json/');
-      const data = await response.json();
-      
-      const countryCode = data.country_code || 'US';
-      const currencyInfo = COUNTRY_CURRENCIES[countryCode] || COUNTRY_CURRENCIES.default;
-      const paymentPartner = COUNTRY_PAYMENT_PARTNERS[countryCode] || COUNTRY_PAYMENT_PARTNERS.default;
-      const exchangeRate = EXCHANGE_RATES[currencyInfo.currency] || 1.0;
-
-      return {
-        country: data.country_name || 'United States',
-        countryCode,
-        currency: currencyInfo.currency,
-        currencySymbol: currencyInfo.symbol,
-        paymentPartner,
-        exchangeRate
-      };
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        },
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      return response;
     } catch (error) {
-      console.error('Error getting location data:', error);
-      // Fallback to default values
-      return {
-        country: 'United States',
-        countryCode: 'US',
-        currency: 'USD',
-        currencySymbol: '$',
-        paymentPartner: 'stripe',
-        exchangeRate: 1.08
-      };
+      clearTimeout(timeoutId);
+      throw error;
     }
+  }
+
+  static async getLocationData(): Promise<LocationData> {
+    // Try multiple IP geolocation services as fallbacks
+    const services = [
+      { url: 'https://ipapi.co/json/', parse: (data: any) => ({ code: data.country_code, name: data.country_name }) },
+      { url: 'https://ip-api.com/json/', parse: (data: any) => ({ code: data.countryCode, name: data.country }) },
+      { url: 'https://api.country.is/', parse: (data: any) => ({ code: data.country, name: data.country }) },
+    ];
+
+    for (const service of services) {
+      try {
+        const response = await this.fetchWithTimeout(service.url, 5000);
+
+        if (!response.ok) {
+          continue; // Try next service
+        }
+
+        const data = await response.json();
+        const parsed = service.parse(data);
+        
+        if (!parsed || !parsed.code || parsed.code.length !== 2) {
+          continue; // Invalid response, try next service
+        }
+
+        const countryCode = parsed.code.toUpperCase();
+        
+        const currencyInfo = COUNTRY_CURRENCIES[countryCode] || COUNTRY_CURRENCIES.default;
+        const paymentPartner = COUNTRY_PAYMENT_PARTNERS[countryCode] || COUNTRY_PAYMENT_PARTNERS.default;
+        const exchangeRate = EXCHANGE_RATES[currencyInfo.currency] || 1.0;
+
+        const locationData: LocationData = {
+          country: parsed.name || 'Unknown',
+          countryCode,
+          currency: currencyInfo.currency,
+          currencySymbol: currencyInfo.symbol,
+          paymentPartner,
+          exchangeRate
+        };
+
+        console.log('Location detected:', locationData);
+        return locationData;
+      } catch (error) {
+        // Continue to next service on error
+        console.warn(`Location service ${service.url} failed:`, error);
+        continue;
+      }
+    }
+
+    // If all services fail, try to detect from browser language/timezone
+    try {
+      const browserLocale = navigator.language || (navigator as any).userLanguage;
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      
+      console.log('Browser locale:', browserLocale, 'Timezone:', timezone);
+      
+      // Try to infer country from timezone
+      const timezoneToCountry: Record<string, string> = {
+        'Asia/Kolkata': 'IN',
+        'Asia/Calcutta': 'IN',
+        'Asia/Karachi': 'PK',
+        'Asia/Dhaka': 'BD',
+        'Europe/London': 'GB',
+        'America/New_York': 'US',
+        'America/Los_Angeles': 'US',
+        'America/Toronto': 'CA',
+        'Australia/Sydney': 'AU',
+        'Europe/Paris': 'FR',
+        'Europe/Berlin': 'DE',
+        'Europe/Rome': 'IT',
+        'Europe/Madrid': 'ES',
+        'Europe/Amsterdam': 'NL',
+        'Europe/Brussels': 'BE',
+        'Europe/Vienna': 'AT',
+        'Europe/Warsaw': 'PL',
+      };
+
+      const inferredCountryCode = timezoneToCountry[timezone];
+      if (inferredCountryCode) {
+        const currencyInfo = COUNTRY_CURRENCIES[inferredCountryCode] || COUNTRY_CURRENCIES.default;
+        const paymentPartner = COUNTRY_PAYMENT_PARTNERS[inferredCountryCode] || COUNTRY_PAYMENT_PARTNERS.default;
+        const exchangeRate = EXCHANGE_RATES[currencyInfo.currency] || 1.0;
+
+        const locationData: LocationData = {
+          country: 'Detected from timezone',
+          countryCode: inferredCountryCode,
+          currency: currencyInfo.currency,
+          currencySymbol: currencyInfo.symbol,
+          paymentPartner,
+          exchangeRate
+        };
+
+        console.log('Location inferred from timezone:', locationData);
+        return locationData;
+      }
+    } catch (error) {
+      console.warn('Failed to infer location from browser:', error);
+    }
+
+    // Final fallback to default values
+    console.warn('All location detection methods failed, using default (US)');
+    return {
+      country: 'United States',
+      countryCode: 'US',
+      currency: 'USD',
+      currencySymbol: '$',
+      paymentPartner: 'stripe',
+      exchangeRate: 1.08
+    };
   }
 
   static convertPrice(originalPrice: number, originalCurrency: string, targetCurrency: string): PricingData {

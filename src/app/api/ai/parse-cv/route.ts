@@ -1,30 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import mammoth from 'mammoth';
 
-// Import libraries with proper error handling
-let pdfParse: any = null;
-let mammoth: any = null;
-
-// Initialize libraries safely
-const initLibraries = async () => {
-  if (!pdfParse) {
-    try {
-      // @ts-ignore - pdf-parse doesn't have type definitions
-      const pdfParseModule = await import('pdf-parse');
-      pdfParse = pdfParseModule.default || pdfParseModule;
-    } catch (error) {
-      console.warn('pdf-parse not available:', error);
-    }
-  }
-  
-  if (!mammoth) {
-    try {
-      const mammothModule = await import('mammoth');
-      mammoth = mammothModule.default || mammothModule;
-    } catch (error) {
-      console.warn('mammoth not available:', error);
-    }
-  }
-};
+// pdf-parse is loaded dynamically to avoid bundling test files
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent';
@@ -78,31 +55,18 @@ Date formatting rules: Prefer YYYY-MM. If only a year is known use YYYY. If date
 }
 
 async function extractFromPDF(buffer: Buffer): Promise<string> {
-  // Initialize libraries
-  await initLibraries();
-  
-  // Try pdf-parse first
-  if (pdfParse) {
-    try {
-      const result = await pdfParse(buffer);
-      return result.text || '';
-    } catch (error) {
-      console.warn('pdf-parse failed:', error);
-    }
+  try {
+    // Load pdf-parse dynamically to avoid bundling test files
+    const pdfParse = (await import('pdf-parse')).default;
+    const result = await pdfParse(buffer);
+    return result.text || '';
+  } catch (error) {
+    console.warn('pdf-parse failed:', error);
+    throw new Error('Failed to parse PDF file. Please ensure the PDF contains readable text.');
   }
-  
-  // If no PDF libraries are available, return a helpful message
-  throw new Error('PDF parsing libraries are not available. Please try uploading a text file or copy-paste your CV content.');
 }
 
 async function extractFromDocx(buffer: Buffer): Promise<string> {
-  // Initialize libraries
-  await initLibraries();
-  
-  if (!mammoth) {
-    throw new Error('DOCX parsing library not available');
-  }
-  
   try {
     const result = await mammoth.extractRawText({ buffer });
     return result.value || '';

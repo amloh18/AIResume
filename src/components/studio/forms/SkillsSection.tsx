@@ -22,11 +22,16 @@ const SkillsSection: React.FC<SkillsSectionProps> = ({
   // Ensure we have proper data structure
   const safeData = Array.isArray(data) ? data : [];
 
-  // Update skill item - update full array like WorkExperienceSection
+  // Update skill item - use functional updates to avoid stale state
   const updateSkill = (index: number, field: string, value: any) => {
-    const updatedData = [...safeData];
-    updatedData[index] = { ...updatedData[index], [field]: value };
-    onUpdate('skills', updatedData);
+    onUpdate('skills', (prevSkills) => {
+      const newArray = [...(prevSkills || [])];
+      if (!newArray[index]) {
+        newArray[index] = {};
+      }
+      newArray[index] = { ...newArray[index], [field]: value };
+      return newArray;
+    });
   };
 
   return (
@@ -37,8 +42,9 @@ const SkillsSection: React.FC<SkillsSectionProps> = ({
             <h4 className="text-lg font-semibold text-white">{skill.category || skill.name || 'Skill Category'}</h4>
             <button
               onClick={() => {
-                const updatedData = safeData.filter((_, i) => i !== index);
-                onUpdate('skills', updatedData);
+                onUpdate('skills', (prevSkills) => {
+                  return (prevSkills || []).filter((_, i) => i !== index);
+                });
               }}
               className="text-red-400 hover:text-red-300 transition-colors"
             >

@@ -40,13 +40,22 @@ class StructuredLogger {
   private isProduction: boolean;
 
   constructor() {
-    this.isDevelopment = process.env.NODE_ENV === 'development';
-    this.isProduction = process.env.NODE_ENV === 'production';
-    
-    // Set log level based on environment
-    const envLogLevel = process.env.LOG_LEVEL?.toUpperCase();
-    this.logLevel = envLogLevel ? LogLevel[envLogLevel as keyof typeof LogLevel] : 
-                   this.isDevelopment ? LogLevel.DEBUG : LogLevel.INFO;
+    const hasProcess = typeof process !== 'undefined' && typeof process.env !== 'undefined';
+    const nodeEnv = hasProcess ? process.env.NODE_ENV : undefined;
+
+    this.isDevelopment = nodeEnv === 'development';
+    this.isProduction = nodeEnv === 'production';
+
+    // Set log level based on environment, guarding for Edge Runtime (no process)
+    const rawLogLevel = hasProcess ? process.env.LOG_LEVEL : undefined;
+    const envLogLevel = rawLogLevel ? rawLogLevel.toUpperCase() : undefined;
+
+    this.logLevel =
+      envLogLevel && typeof LogLevel[envLogLevel as keyof typeof LogLevel] !== 'undefined'
+        ? LogLevel[envLogLevel as keyof typeof LogLevel]
+        : this.isDevelopment
+          ? LogLevel.DEBUG
+          : LogLevel.INFO;
   }
 
   private shouldLog(level: LogLevel): boolean {

@@ -26,6 +26,9 @@ export interface ISubscription extends Document {
   };
   createdAt: Date;
   updatedAt: Date;
+  // Virtual properties
+  isActive: boolean;
+  daysRemaining: number;
 }
 
 const subscriptionSchema = new Schema<ISubscription>({

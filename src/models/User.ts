@@ -405,7 +405,7 @@ const userSchema = new Schema<IUser>({
 }, {
   timestamps: true,
   toJSON: {
-    transform: function(doc, ret) {
+    transform: function(doc, ret: any) {
       delete ret.password;
       delete ret.emailVerificationToken;
       delete ret.emailVerificationExpires;

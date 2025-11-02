@@ -96,16 +96,16 @@ export default function UnifiedAuthForm({
     // Real-time validation
     const field = fields.find(f => f.name === name);
     if (field?.validation) {
-      // For confirmPassword, pass the current password value
       let error;
       if (name === 'confirmPassword') {
+        // For confirmPassword, pass the current password value as second parameter
         const passwordField = fields.find(f => f.name === 'password');
         const passwordValue = passwordField ? newFormData[passwordField.name] || '' : '';
-        error = field.validation(value, passwordValue);
+        error = (field.validation as any)(value, passwordValue);
       } else {
         error = field.validation(value);
       }
-      
+
       setFieldErrors(prev => ({
         ...prev,
         [name]: error || ''
@@ -115,8 +115,8 @@ export default function UnifiedAuthForm({
     // Also validate confirmPassword when password changes
     if (name === 'password') {
       const confirmPasswordField = fields.find(f => f.name === 'confirmPassword');
-      if (confirmPasswordField && newFormData.confirmPassword) {
-        const error = confirmPasswordField.validation(newFormData.confirmPassword, value);
+      if (confirmPasswordField?.validation && newFormData.confirmPassword) {
+        const error = (confirmPasswordField.validation as any)(newFormData.confirmPassword, value);
         setFieldErrors(prev => ({
           ...prev,
           confirmPassword: error || ''

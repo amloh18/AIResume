@@ -305,7 +305,7 @@ const templateSchema = new Schema<ITemplate>({
 }, {
   timestamps: true,
   toJSON: {
-    transform: function(doc, ret) {
+    transform: function(doc, ret: any) {
       ret.id = ret._id;
       delete ret._id;
       delete ret.__v;
@@ -337,4 +337,4 @@ templateSchema.pre('save', async function(next) {
 // Export the schema for use in admin models
 export { templateSchema };
 
-export default mongoose.models.Template || mongoose.model<ITemplate>('Template', templateSchema); 
+export default mongoose.models.Template || mongoose.model<ITemplate>('Template', templateSchema);

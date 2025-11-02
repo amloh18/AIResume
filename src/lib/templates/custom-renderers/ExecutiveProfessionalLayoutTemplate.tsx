@@ -233,7 +233,6 @@ export const ExecutiveProfessionalLayoutTemplate: React.FC<ExecutiveProfessional
                 <div>
                   <div className="job-title">{job.position}</div>
                   <div className="company-name">{job.name}</div>
-                  {job.location && <div className="job-location">{job.location}</div>}
                 </div>
                 <div className="job-dates">{job.startDate} – {job.endDate || 'Present'}</div>
               </div>
@@ -264,7 +263,6 @@ export const ExecutiveProfessionalLayoutTemplate: React.FC<ExecutiveProfessional
                 <div>
                   <div className="degree-title">{edu.studyType} {edu.area && `in ${edu.area}`}</div>
                   <div className="institution-name">{edu.institution}</div>
-                  {edu.location && <div className="education-location">{edu.location}</div>}
                 </div>
                 <div className="education-dates">{edu.startDate} – {edu.endDate || 'Present'}</div>
               </div>
@@ -280,8 +278,8 @@ export const ExecutiveProfessionalLayoutTemplate: React.FC<ExecutiveProfessional
           <div className="skills-container">
             {skills.map((skill, index) => (
               <div key={index}>
-                <div className="skill-category">{skill.name}:</div>
-                <div className="skill-list">{skill.keywords?.join(', ') || ''}</div>
+                <div className="skill-category">{skill.category}:</div>
+                <div className="skill-list">{skill.skills.join(', ')}</div>
               </div>
             ))}
           </div>

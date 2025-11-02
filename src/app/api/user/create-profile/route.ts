@@ -1,19 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectDB } from '@/lib/mongodb';
-// Firebase admin imports removed - using NextAuth
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import connectDB from '@/lib/database';
 import User from '@/models/User';
 
 export async function POST(request: NextRequest) {
   try {
+    // Verify user is authenticated via NextAuth
+    const session = await getServerSession(authOptions);
+    
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        { success: false, error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
     await connectDB();
     
     const body = await request.json();
     const { 
-      idToken, 
       firstName, 
       lastName, 
       username, 
-      email, 
       location, 
       website, 
       linkedin, 
@@ -23,47 +32,31 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Validate required fields
-    if (!idToken || !firstName || !lastName || !email) {
+    if (!firstName || !lastName) {
       return NextResponse.json(
-        { success: false, error: 'Missing required fields' },
+        { success: false, error: 'First name and last name are required' },
         { status: 400 }
       );
     }
 
-    // Verify Firebase token
-    const decodedToken = await verifyFirebaseToken(idToken);
-    if (!decodedToken) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid Firebase token' },
-        { status: 401 }
-      );
-    }
-
-    const firebaseUid = decodedToken.uid;
-    const firebaseEmail = decodedToken.email;
-
-    // Verify email matches
-    if (firebaseEmail !== email) {
-      return NextResponse.json(
-        { success: false, error: 'Email mismatch with Firebase token' },
-        { status: 400 }
-      );
-    }
+    const email = session.user.email;
 
     // Check if user already exists
-    let existingUser = await User.findOne({ 
-      $or: [
-        { email: email },
-        { firebaseUid: firebaseUid }
-      ]
-    });
+    let existingUser = await User.findOne({ email });
 
     if (existingUser) {
-      // Update existing user with Firebase UID if not already set
-      if (!existingUser.firebaseUid) {
-        existingUser.firebaseUid = firebaseUid;
-        await existingUser.save();
-      }
+      // Update existing user profile
+      existingUser.firstName = firstName.trim();
+      existingUser.lastName = lastName.trim();
+      if (username) existingUser.username = username.trim();
+      if (location) existingUser.location = location.trim();
+      if (website) existingUser.website = website.trim();
+      if (linkedin) existingUser.linkedin = linkedin.trim();
+      if (github) existingUser.github = github.trim();
+      if (company) existingUser.company = company.trim();
+      if (professionalSummary) existingUser.summary = professionalSummary.trim();
+      
+      await existingUser.save();
 
       return NextResponse.json({
         success: true,
@@ -71,7 +64,6 @@ export async function POST(request: NextRequest) {
         data: {
           id: existingUser._id,
           email: existingUser.email,
-          firebaseUid: existingUser.firebaseUid,
           firstName: existingUser.firstName,
           lastName: existingUser.lastName
         }
@@ -101,11 +93,10 @@ export async function POST(request: NextRequest) {
       github: github?.trim() || undefined,
       company: company?.trim() || undefined,
       summary: professionalSummary?.trim() || undefined,
-      firebaseUid,
-      isEmailVerified: true, // Firebase users are pre-verified
+      isEmailVerified: true, // Google Auth users are pre-verified
       role: 'user',
       currentPlanKey: 'free',
-      authProvider: 'firebase',
+      authProvider: 'nextauth',
       monthlyGoal: 20,
       usage: {
         cvJourneyCount: 0,
@@ -136,17 +127,16 @@ export async function POST(request: NextRequest) {
       lastLogin: new Date(),
     };
 
-    console.log('🔍 Creating Firebase user with data:', {
+    console.log('🔍 Creating user with data:', {
       email: userData.email,
       firstName: userData.firstName,
-      lastName: userData.lastName,
-      firebaseUid: userData.firebaseUid
+      lastName: userData.lastName
     });
 
     const newUser = new User(userData);
     await newUser.save();
 
-    console.log('✅ New Firebase user created:', newUser._id);
+    console.log('✅ New user created:', newUser._id);
 
     return NextResponse.json({
       success: true,
@@ -154,7 +144,6 @@ export async function POST(request: NextRequest) {
       data: {
         id: newUser._id,
         email: newUser.email,
-        firebaseUid: newUser.firebaseUid,
         firstName: newUser.firstName,
         lastName: newUser.lastName,
         username: newUser.username

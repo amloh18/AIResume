@@ -3,7 +3,7 @@
 import React, { useState, useCallback } from 'react';
 
 export interface ConsoleLogEntry {
-  level: 'log' | 'info' | 'warn' | 'error' | 'debug';
+  level: 'log' | 'info' | 'warn' | 'error' | 'debug' | 'success';
   message: string;
   timestamp: Date;
   data?: any[];
@@ -40,6 +40,11 @@ class ConsoleLogger {
       error: console.error,
       debug: console.debug,
     };
+    
+    // Store original console globally for error handlers to access
+    if (typeof window !== 'undefined') {
+      (window as any).__originalConsole__ = this.originalConsole;
+    }
   }
 
   /**
@@ -86,7 +91,24 @@ class ConsoleLogger {
       if (this.originalConsole && this.originalConsole.error) {
         this.originalConsole.error(...args);
       }
-      this.handleLog('error', args);
+      
+      // Skip custom logging if args contain Event objects or empty objects to prevent recursion
+      const hasProblematicObject = args.some(arg => {
+        if (!arg || typeof arg !== 'object') return false;
+        // Check for Event objects
+        if (arg instanceof Event || ('target' in arg && 'preventDefault' in arg)) return true;
+        // Check for empty objects
+        try {
+          const keys = Object.keys(arg);
+          return keys.length === 0 && Object.getPrototypeOf(arg) === Object.prototype;
+        } catch {
+          return false;
+        }
+      });
+      
+      if (!hasProblematicObject) {
+        this.handleLog('error', args);
+      }
     };
 
     console.debug = (...args) => {
@@ -115,6 +137,29 @@ class ConsoleLogger {
   }
 
   private handleLog(level: ConsoleLogEntry['level'], args: any[]) {
+    // Skip logging if args contain Event objects or problematic empty objects
+    const hasEventObject = args.some(arg => 
+      arg && typeof arg === 'object' && 
+      (arg instanceof Event || ('target' in arg && 'preventDefault' in arg))
+    );
+    
+    const hasEmptyObject = args.some(arg => {
+      if (!arg || typeof arg !== 'object') return false;
+      try {
+        const keys = Object.keys(arg);
+        const ownProps = Object.getOwnPropertyNames(arg);
+        return keys.length === 0 && ownProps.length === 0 &&
+          Object.getPrototypeOf(arg) === Object.prototype;
+      } catch {
+        return false;
+      }
+    });
+    
+    // If we have problematic objects, skip our custom logging but still call original console
+    if (hasEventObject || hasEmptyObject) {
+      return; // Original console already called in the wrapper
+    }
+    
     const message = this.formatMessage(args);
     const entry: ConsoleLogEntry = {
       level,
@@ -270,14 +315,40 @@ class ConsoleLogger {
   private formatMessage(args: any[]): string {
     return args
       .map(arg => {
-        if (typeof arg === 'string') return arg;
-        if (typeof arg === 'object' && arg !== null) {
+        // Skip Event objects and empty objects to prevent [object Event] errors
+        if (arg && typeof arg === 'object') {
+          // Check if it's an Event object
+          if (arg instanceof Event || ('target' in arg && 'preventDefault' in arg)) {
+            return '[Event object - safely handled]';
+          }
+          
+          // Check if it's an empty object
+          const keys = Object.keys(arg);
+          if (keys.length === 0 && Object.getPrototypeOf(arg) === Object.prototype) {
+            return '[Empty object]';
+          }
+          
+          // Try to serialize, but handle circular references and Event objects
           try {
-            return JSON.stringify(arg, null, 2);
+            // Use a replacer to skip Event objects
+            return JSON.stringify(arg, (key, value) => {
+              if (value && typeof value === 'object') {
+                if (value instanceof Event || ('target' in value && 'preventDefault' in value)) {
+                  return '[Event object]';
+                }
+              }
+              return value;
+            }, 2);
           } catch {
-            return String(arg);
+            // If serialization fails, return a safe string representation
+            try {
+              return String(arg);
+            } catch {
+              return '[Object that could not be stringified]';
+            }
           }
         }
+        if (typeof arg === 'string') return arg;
         return String(arg);
       })
       .join(' ');

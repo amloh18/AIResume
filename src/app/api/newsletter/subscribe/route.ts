@@ -18,8 +18,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if email already exists
-    const Newsletter = await getAdminNewsletter();
-    const existingSubscription = await Newsletter.findOne({ email: email.toLowerCase() });
+    const NewsletterModel = await getAdminNewsletter();
+    const existingSubscription = await NewsletterModel.findOne({ email: email.toLowerCase() });
     
     if (existingSubscription) {
       if (existingSubscription.isActive) {
@@ -44,10 +44,10 @@ export async function POST(request: NextRequest) {
     // Get client info
     const userAgent = request.headers.get('user-agent') || '';
     const forwarded = request.headers.get('x-forwarded-for');
-    const ipAddress = forwarded ? forwarded.split(',')[0] : request.ip || '';
+    const ipAddress = forwarded ? forwarded.split(',')[0] : '';
 
     // Create new subscription
-    const newsletter = new Newsletter({
+    const newsletter = new NewsletterModel({
       email: email.toLowerCase(),
       source,
       userAgent,
@@ -83,7 +83,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const subscription = await Newsletter.findOne({ 
+    const NewsletterModel = await getAdminNewsletter();
+    const subscription = await NewsletterModel.findOne({ 
       email: email.toLowerCase() 
     });
 

@@ -1,4 +1,4 @@
-import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 
 /**
  * Adapter utility to convert between CV data formats

@@ -1,4 +1,4 @@
-import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 
 // Download CV data as JSON
 export const downloadAsJSON = (cvData: UnifiedCVDataStructure, filename: string = 'cv-data.json') => {

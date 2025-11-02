@@ -1,4 +1,5 @@
-import { MongooseService, mongooseUtils } from '../mongoose-utils.ts';
+import 'server-only';
+import { MongooseService, mongooseUtils } from '../mongoose-utils';
 import User, { IUser } from '../../models/User';
 import CV, { ICV } from '../../models/CV';
 import JobApplication, { IJobApplication } from '../../models/JobApplication';

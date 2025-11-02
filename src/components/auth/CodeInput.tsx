@@ -132,7 +132,7 @@ export default function CodeInput({
         {digits.map((digit, index) => (
           <motion.input
             key={index}
-            ref={(el) => (inputRefs.current[index] = el)}
+            ref={(el) => { inputRefs.current[index] = el; }}
             type="text"
             inputMode="numeric"
             pattern="\d*"

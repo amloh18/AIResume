@@ -175,41 +175,41 @@ const SystemHealth: React.FC = () => {
     {
       name: 'Database',
       icon: Database,
-      data: systemStatus.database || { status: 'unknown', responseTime: 0, connections: 0, uptime: 'Unknown' },
+      data: systemStatus?.database || { status: 'unknown' as const, responseTime: 0, connections: 0, uptime: 'Unknown' },
       metrics: [
-        { label: 'Response Time', value: `${systemStatus.database?.responseTime || 0}ms` },
-        { label: 'Connections', value: systemStatus.database?.connections || 0 },
-        { label: 'Uptime', value: systemStatus.database?.uptime || 'Unknown' }
+        { label: 'Response Time', value: `${systemStatus?.database?.responseTime ?? 0}ms` },
+        { label: 'Connections', value: systemStatus?.database?.connections ?? 0 },
+        { label: 'Uptime', value: systemStatus?.database?.uptime ?? 'Unknown' }
       ]
     },
     {
       name: 'API Server',
       icon: Server,
-      data: systemStatus.api || { status: 'unknown', responseTime: 0, requestsPerMinute: 0, errorRate: 0 },
+      data: systemStatus?.api || { status: 'unknown' as const, responseTime: 0, requestsPerMinute: 0, errorRate: 0 },
       metrics: [
-        { label: 'Response Time', value: `${systemStatus.api?.responseTime || 0}ms` },
-        { label: 'Requests/min', value: systemStatus.api?.requestsPerMinute || 0 },
-        { label: 'Error Rate', value: `${systemStatus.api?.errorRate || 0}%` }
+        { label: 'Response Time', value: `${systemStatus?.api?.responseTime ?? 0}ms` },
+        { label: 'Requests/min', value: systemStatus?.api?.requestsPerMinute ?? 0 },
+        { label: 'Error Rate', value: `${systemStatus?.api?.errorRate ?? 0}%` }
       ]
     },
     {
       name: 'Storage',
       icon: HardDrive,
-      data: systemStatus.storage || { status: 'unknown', used: 0, total: 0, percentage: 0 },
+      data: systemStatus?.storage || { status: 'unknown' as const, used: 0, total: 0, percentage: 0 },
       metrics: [
-        { label: 'Used', value: `${systemStatus.storage?.used || 0}GB` },
-        { label: 'Total', value: `${systemStatus.storage?.total || 0}GB` },
-        { label: 'Usage', value: `${systemStatus.storage?.percentage || 0}%` }
+        { label: 'Used', value: `${systemStatus?.storage?.used ?? 0}GB` },
+        { label: 'Total', value: `${systemStatus?.storage?.total ?? 0}GB` },
+        { label: 'Usage', value: `${systemStatus?.storage?.percentage ?? 0}%` }
       ]
     },
     {
       name: 'Memory',
       icon: Cpu,
-      data: systemStatus.memory || { status: 'unknown', used: 0, total: 0, percentage: 0 },
+      data: systemStatus?.memory || { status: 'unknown' as const, used: 0, total: 0, percentage: 0 },
       metrics: [
-        { label: 'Used', value: `${systemStatus.memory?.used || 0}GB` },
-        { label: 'Total', value: `${systemStatus.memory?.total || 0}GB` },
-        { label: 'Usage', value: `${systemStatus.memory?.percentage || 0}%` }
+        { label: 'Used', value: `${systemStatus?.memory?.used ?? 0}GB` },
+        { label: 'Total', value: `${systemStatus?.memory?.total ?? 0}GB` },
+        { label: 'Usage', value: `${systemStatus?.memory?.percentage ?? 0}%` }
       ]
     }
   ];
@@ -603,4 +603,4 @@ const SystemHealth: React.FC = () => {
   );
 };
 
-export default SystemHealth; 
+export default SystemHealth;

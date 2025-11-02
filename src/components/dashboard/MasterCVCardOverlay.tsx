@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Crown,
@@ -114,10 +114,27 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
     }
   }, [userId, masterCVData]);
 
+  // Track if we've attempted to fetch thumbnail to prevent loops
+  const thumbnailFetchAttemptedRef = useRef<string | null>(null);
+
+  // Reset attempted flag when CV changes
+  useEffect(() => {
+    if (masterCV?.id && thumbnailFetchAttemptedRef.current !== masterCV.id) {
+      thumbnailFetchAttemptedRef.current = null;
+    }
+  }, [masterCV?.id]);
+
   // Fetch thumbnail if missing
   useEffect(() => {
+    // Early return conditions
+    if (!masterCV?.id) return;
+    if (thumbnailUrl) return; // Already have thumbnail
+    if (thumbnailLoading) return; // Already loading
+    if (thumbnailFetchAttemptedRef.current === masterCV.id) return; // Already attempted for this CV
+
     const fetchThumbnail = async () => {
-      if (!masterCV || thumbnailUrl || thumbnailLoading) return;
+      // Mark as attempted to prevent retries
+      thumbnailFetchAttemptedRef.current = masterCV.id;
       
       console.log('🔍 MasterCVCardOverlay - Fetching thumbnail for Master CV:', {
         masterCVId: masterCV.id,
@@ -146,20 +163,26 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
             console.log('🔍 MasterCVCardOverlay - Thumbnail URL set:', result.thumbnailUrl);
           } else {
             console.log('🔍 MasterCVCardOverlay - Thumbnail generation failed:', result.error);
+            // Reset attempted flag on failure so we can retry later if needed
+            thumbnailFetchAttemptedRef.current = null;
           }
         } else {
           const errorResult = await response.json();
           console.log('🔍 MasterCVCardOverlay - Thumbnail API error:', errorResult);
+          // Reset attempted flag on error so we can retry later if needed
+          thumbnailFetchAttemptedRef.current = null;
         }
       } catch (error) {
         console.error('Error fetching thumbnail:', error);
+        // Reset attempted flag on error so we can retry later if needed
+        thumbnailFetchAttemptedRef.current = null;
       } finally {
         setThumbnailLoading(false);
       }
     };
 
     fetchThumbnail();
-  }, [masterCV, thumbnailUrl, thumbnailLoading]);
+  }, [masterCV?.id, thumbnailUrl]); // Only depend on CV ID and thumbnail URL, not loading state
 
   const fetchMasterCV = async () => {
     try {
@@ -197,6 +220,32 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
       if (masterCVs && masterCVs.length > 0) {
         const masterCVData = masterCVs[0];
         console.log('✅ MasterCVCardOverlay - Master CV found:', masterCVData);
+        console.log('🔍 MasterCVCardOverlay - Template data:', {
+          hasTemplate: !!masterCVData.template,
+          templateType: typeof masterCVData.template,
+          templateKeys: masterCVData.template ? Object.keys(masterCVData.template) : [],
+          templateId: masterCVData.templateId
+        });
+        
+        // Fetch full template if only templateId is provided or template is incomplete
+        let template = masterCVData.template;
+        if (!template || typeof template === 'string' || !template.globalStyles) {
+          if (masterCVData.templateId) {
+            try {
+              console.log('🔍 MasterCVCardOverlay - Fetching full template data for:', masterCVData.templateId);
+              const templateResponse = await fetch(`/api/templates/${masterCVData.templateId}`);
+              if (templateResponse.ok) {
+                const templateResult = await templateResponse.json();
+                if (templateResult.success && templateResult.data) {
+                  template = templateResult.data;
+                  console.log('✅ MasterCVCardOverlay - Template fetched successfully');
+                }
+              }
+            } catch (templateError) {
+              console.warn('⚠️ MasterCVCardOverlay - Failed to fetch template:', templateError);
+            }
+          }
+        }
         
         // Transform to expected format - handle both old and new formats
         const transformedMasterCV = {
@@ -206,9 +255,17 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
           status: masterCVData.status,
           isMaster: masterCVData.metadata?.isMaster || masterCVData.isMaster || true, // Handle both formats
           cvData: masterCVData.cvData,
+          template: template, // Include fetched template
           isStarred: masterCVData.metadata?.starred || false,
           thumbnail: masterCVData.metadata?.thumbnailUrl
         };
+        
+        console.log('🔍 MasterCVCardOverlay - Transformed Master CV:', {
+          id: transformedMasterCV.id,
+          hasCvData: !!transformedMasterCV.cvData,
+          hasTemplate: !!transformedMasterCV.template,
+          templateHasGlobalStyles: !!transformedMasterCV.template?.globalStyles
+        });
         
         setMasterCV(transformedMasterCV);
         setThumbnailUrl(transformedMasterCV.thumbnail);
@@ -375,7 +432,7 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
                backgroundImage: thumbnailUrl ? `url(${thumbnailUrl})` : 'none'
              }}>
           {/* Master CV Preview */}
-          {masterCV?.cvData && masterCV?.template ? (
+          {masterCV?.cvData && masterCV?.template && masterCV.template.globalStyles ? (
             <CVPreviewThumbnail 
               cvData={masterCV.cvData}
               template={masterCV.template}

@@ -27,7 +27,6 @@ import {
   FileText,
   X
 } from 'lucide-react';
-import CVPreviewModal from './CVPreviewModal';
 import WYSIWYGEditor, { WYSIWYGToolbar } from '@/components/ui/WYSIWYGEditor';
 
 interface MasterCVBuilderStepProps {
@@ -83,7 +82,6 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
   
   const { state, dispatch } = context;
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
-  const [showPreview, setShowPreview] = useState(false);
   const [showAddSectionModal, setShowAddSectionModal] = useState(false);
   const [generatingAI, setGeneratingAI] = useState<{ [key: string]: boolean }>({});
 
@@ -1420,7 +1418,6 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
                 Click on a section title to navigate.
               </div>
             </div>
-            
           </div>
           
           {/* Section Navigation */}
@@ -1545,15 +1542,6 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
             </div>
           </motion.div>
         </div>
-      )}
-
-      {/* CV Preview Modal */}
-      {showPreview && (
-        <CVPreviewModal
-          isOpen={showPreview}
-          onClose={() => setShowPreview(false)}
-          cvData={state.cvData}
-        />
       )}
     </div>
   );

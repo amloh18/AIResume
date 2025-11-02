@@ -37,9 +37,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      mongoUserId: user._id,
-      authProviderId: user.authProviderId,
-      authProvider: user.authProvider
+      mongoUserId: (user as any)._id,
+      authProviderId: (user as any).authProviderId,
+      authProvider: (user as any).authProvider
     });
 
   } catch (error: any) {

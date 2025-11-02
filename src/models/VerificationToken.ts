@@ -115,7 +115,7 @@ verificationTokenSchema.index({ code: 1, email: 1, type: 1 });
 verificationTokenSchema.index({ email: 1, type: 1, createdAt: 1 }); // For rate limiting
 
 // Static method to create verification token
-(verificationTokenSchema.statics as IVerificationTokenModel).createToken = async function(
+(verificationTokenSchema.statics as unknown as IVerificationTokenModel).createToken = async function(
   userId: mongoose.Types.ObjectId | string | null,
   email: string,
   type: 'email' | 'password',
@@ -143,7 +143,7 @@ verificationTokenSchema.index({ email: 1, type: 1, createdAt: 1 }); // For rate 
 };
 
 // Static method to create verification code
-(verificationTokenSchema.statics as IVerificationTokenModel).createCode = async function(
+(verificationTokenSchema.statics as unknown as IVerificationTokenModel).createCode = async function(
   userId: mongoose.Types.ObjectId | string | null,
   email: string,
   type: 'email-verification' | 'passwordless-login' | 'password-reset',
@@ -168,7 +168,7 @@ verificationTokenSchema.index({ email: 1, type: 1, createdAt: 1 }); // For rate 
 };
 
 // Static method to verify code
-(verificationTokenSchema.statics as IVerificationTokenModel).verifyCode = async function(
+(verificationTokenSchema.statics as unknown as IVerificationTokenModel).verifyCode = async function(
   code: string,
   email: string,
   type: 'email-verification' | 'passwordless-login' | 'password-reset'
@@ -200,7 +200,7 @@ verificationTokenSchema.index({ email: 1, type: 1, createdAt: 1 }); // For rate 
 };
 
 // Static method to verify token
-(verificationTokenSchema.statics as IVerificationTokenModel).verifyToken = async function(
+(verificationTokenSchema.statics as unknown as IVerificationTokenModel).verifyToken = async function(
   token: string,
   email: string,
   type: 'email' | 'password'
@@ -227,7 +227,7 @@ verificationTokenSchema.index({ email: 1, type: 1, createdAt: 1 }); // For rate 
 };
 
 // Static method to clean up expired tokens (backup cleanup)
-(verificationTokenSchema.statics as IVerificationTokenModel).cleanupExpired = async function() {
+(verificationTokenSchema.statics as unknown as IVerificationTokenModel).cleanupExpired = async function() {
   const result = await this.deleteMany({
     expiresAt: { $lt: new Date() }
   });

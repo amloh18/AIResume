@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import connectDB from '@/lib/mongodb';
+import connectDB from '@/lib/database';
 import Coupon from '@/models/Coupon';
 
 export async function POST(request: NextRequest) {

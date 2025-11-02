@@ -273,6 +273,68 @@ export default function ComprehensiveATSAnalyzer({
     return text;
   }, []);
 
+  // Helper to extract all skills from CV data
+  const extractCVSkills = useCallback((): string[] => {
+    if (!cvData?.skills) return [];
+    
+    const allSkills: string[] = [];
+    cvData.skills.forEach((skill: any) => {
+      if (skill.category && Array.isArray(skill.skills)) {
+        allSkills.push(...skill.skills);
+      } else if (skill.name) {
+        allSkills.push(skill.name);
+      } else if (Array.isArray(skill.keywords)) {
+        allSkills.push(...skill.keywords);
+      }
+    });
+    
+    return allSkills.filter(s => s && s.trim());
+  }, [cvData]);
+
+  // Helper to calc years of experience from CV data
+  const calculateYearsOfExperience = useCallback((): number => {
+    if (!cvData?.work || !Array.isArray(cvData.work)) return 0;
+    
+    let totalMonths = 0;
+    cvData.work.forEach((exp: any) => {
+      if (exp.startDate) {
+        const start = new Date(exp.startDate);
+        const end = exp.endDate && exp.endDate.toLowerCase() !== 'present'
+          ? new Date(exp.endDate)
+          : new Date();
+        
+        if (!isNaN(start.getTime())) {
+          const months = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 30);
+          totalMonths += Math.max(0, months);
+        }
+      }
+    });
+    
+    return Math.round(totalMonths / 12 * 10) / 10; // Round to 1 decimal
+  }, [cvData]);
+
+  // Helper to get education level from CV
+  const getEducationLevel = useCallback((): string => {
+    if (!cvData?.education || !Array.isArray(cvData.education) || cvData.education.length === 0) {
+      return 'Not specified';
+    }
+    
+    const highestEd = cvData.education[0]; // Assuming first is highest
+    return highestEd.studyType || highestEd.area || 'Degree';
+  }, [cvData]);
+
+  // Helper to extract action verbs from CV
+  const extractActionVerbs = useCallback((): string[] => {
+    const actionVerbsList = ['led', 'managed', 'developed', 'implemented', 'created', 'designed',
+      'built', 'established', 'achieved', 'improved', 'optimized', 'delivered', 'launched',
+      'increased', 'reduced', 'coordinated', 'executed', 'initiated', 'spearheaded'];
+    
+    const cvText = convertCVToText(cvData).toLowerCase();
+    const found = actionVerbsList.filter(verb => cvText.includes(verb));
+    
+    return found.map(v => v.charAt(0).toUpperCase() + v.slice(1));
+  }, [cvData, convertCVToText]);
+
   // Run ATS Analysis
   const runATSAnalysis = useCallback(async () => {
     if (!selectedJobId || !cvData) {
@@ -284,78 +346,116 @@ export default function ComprehensiveATSAnalyzer({
     }
     isAnalyzingRef.current = true;
     setIsLoading(true);
-    setApiError(null); // Clear any previous errors
+    setApiError(null);
+    
     try {
       const cvText = convertCVToText(cvData);
-      const jobDescription = jobData?.jobDescription || '';
+      const jobDescription = jobData?.jobDescription || jobData?.description || '';
       
-      
-      // Validate required data before making API call
       if (!cvText || cvText.trim().length === 0) {
         setApiError('CV text is empty or could not be generated');
         return;
       }
       
-      // Enhanced job description validation with fallback
-      let finalJobDescription = jobDescription;
-      if (!finalJobDescription || finalJobDescription.trim().length === 0) {
-        // Try alternative fields
-        finalJobDescription = jobData?.description || 
-                             jobData?.requirements || 
-                             jobData?.responsibilities || 
-                             '';
-        
-        // If still empty, create a basic description from available data
-        if (!finalJobDescription || finalJobDescription.trim().length === 0) {
-          finalJobDescription = `Position: ${jobData?.jobTitle || 'Unknown Position'}\nCompany: ${jobData?.company || 'Unknown Company'}\n\nThis job requires relevant experience and skills in the field.`;
-        }
-      }
-      
-      if (!finalJobDescription || finalJobDescription.trim().length === 0) {
-        setApiError('Job description is empty or not available. Please add a job description to enable ATS analysis.');
+      if (!jobDescription || jobDescription.trim().length === 0) {
+        setApiError('Job description is empty. Please add a job description to enable ATS analysis.');
         return;
       }
+
+      // Extract actual CV data
+      const cvSkills = extractCVSkills();
+      const yearsExp = calculateYearsOfExperience();
+      const educationLevel = getEducationLevel();
+      const actionVerbs = extractActionVerbs();
       
-      // Simple ATS analysis implementation
-      const atsScore = Math.floor(Math.random() * 40) + 60; // Random score between 60-100
+      // Extract job keywords (simple tokenization)
+      const jobKeywords = jobDescription
+        .toLowerCase()
+        .split(/\W+/)
+        .filter((word: string) => word.length > 3)
+        .slice(0, 50);
       
-      // Simulate analysis delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const cvTextLower = cvText.toLowerCase();
+      
+      // Match keywords
+      const matchedKeywords = jobKeywords.filter((kw: string) => cvTextLower.includes(kw));
+      const missingKeywords = jobKeywords
+        .filter((kw: string) => !cvTextLower.includes(kw))
+        .slice(0, 10);
+      
+      // Calculate scores based on actual data
+      const keywordMatchScore = Math.min(100, (matchedKeywords.length / Math.max(jobKeywords.length, 1)) * 100);
+      const experienceScore = Math.min(100, (yearsExp / 3) * 100); // 3+ years = 100%
+      const actionVerbScore = Math.min(100, (actionVerbs.length / 5) * 100); // 5+ verbs = 100%
+      const skillsScore = Math.min(100, (cvSkills.length / 10) * 100); // 10+ skills = 100%
+      const formatScore = cvData.basics?.name && cvData.basics?.email ? 90 : 60;
+      
+      // Overall score (weighted average)
+      const overallScore = Math.round(
+        keywordMatchScore * 0.3 +
+        experienceScore * 0.25 +
+        actionVerbScore * 0.15 +
+        skillsScore * 0.2 +
+        formatScore * 0.1
+      );
+      
+      // Determine profile level
+      let profileLevel = {
+        title: 'Entry Level',
+        yearsExperience: yearsExp,
+        description: 'Early career professional'
+      };
+      
+      if (yearsExp >= 7) {
+        profileLevel = {
+          title: 'Senior Professional',
+          yearsExperience: yearsExp,
+          description: 'Experienced professional with extensive background'
+        };
+      } else if (yearsExp >= 3) {
+        profileLevel = {
+          title: 'Mid-Level Professional',
+          yearsExperience: yearsExp,
+          description: 'Experienced professional with solid track record'
+        };
+      }
       
       const result = {
-        score: atsScore,
-        profileLevel: {
-          title: 'Professional',
-          yearsExperience: 3,
-          description: 'Mid-level professional with relevant experience'
-        },
+        score: Math.max(40, Math.min(100, overallScore)), // Clamp between 40-100
+        profileLevel,
         breakdown: {
-          keywordMatch: Math.floor(Math.random() * 30) + 70,
-          experienceEducation: Math.floor(Math.random() * 30) + 70,
-          actionVerbs: Math.floor(Math.random() * 30) + 70,
-          formatting: Math.floor(Math.random() * 30) + 70,
-          skills: Math.floor(Math.random() * 30) + 70
+          keywordMatch: Math.round(keywordMatchScore),
+          experienceEducation: Math.round(experienceScore),
+          actionVerbs: Math.round(actionVerbScore),
+          formatting: Math.round(formatScore),
+          skills: Math.round(skillsScore)
         },
         details: {
-          matchedKeywords: ['JavaScript', 'React', 'Node.js', 'TypeScript', 'MongoDB'],
-          missingKeywords: ['Python', 'AWS', 'Docker'],
-          experienceYears: 3,
-          educationLevel: 'Bachelor\'s Degree',
-          actionVerbMatches: ['Developed', 'Implemented', 'Managed', 'Led'],
-          skillsMatched: ['JavaScript', 'React', 'Node.js'],
-          skillsMissing: ['Python', 'AWS'],
-          formatIssues: ['Consider adding more quantifiable achievements']
+          matchedKeywords: matchedKeywords.slice(0, 20),
+          missingKeywords: missingKeywords.slice(0, 10),
+          experienceYears: yearsExp,
+          educationLevel,
+          actionVerbMatches: actionVerbs,
+          skillsMatched: cvSkills.slice(0, 10),
+          skillsMissing: missingKeywords.slice(0, 5),
+          formatIssues: []
         },
         suggestions: [
-          'Add more technical keywords from the job description',
-          'Include specific achievements with quantifiable results',
-          'Highlight relevant certifications or training'
+          matchedKeywords.length < jobKeywords.length * 0.5
+            ? 'Add more keywords from the job description to your CV'
+            : 'Good keyword coverage',
+          yearsExp < 2
+            ? 'Consider highlighting all relevant experience including internships'
+            : 'Experience level is appropriate',
+          actionVerbs.length < 5
+            ? 'Use more action verbs to describe your achievements'
+            : 'Good use of action verbs'
         ],
         optimizations: {
-          summary: 'Your CV shows good technical skills but could benefit from more specific achievements and additional keywords.',
+          summary: `Your CV has ${overallScore >= 70 ? 'good' : 'moderate'} alignment with the job requirements.`,
           workExperience: [],
-          skills: ['Python', 'AWS', 'Docker'],
-          keywords: ['Machine Learning', 'Cloud Computing', 'DevOps']
+          skills: missingKeywords.slice(0, 5),
+          keywords: missingKeywords.slice(0, 8)
         }
       };
 
@@ -364,12 +464,12 @@ export default function ComprehensiveATSAnalyzer({
         onScoreUpdate(result.score);
       }
     } catch (error) {
-      setApiError(`Network Error: ${error}`);
+      setApiError(`Analysis Error: ${error}`);
     } finally {
       isAnalyzingRef.current = false;
       setIsLoading(false);
     }
-  }, [selectedJobId, cvData, jobData, userId, cvId, onScoreUpdate]);
+  }, [selectedJobId, cvData, jobData, onScoreUpdate, extractCVSkills, calculateYearsOfExperience, getEducationLevel, extractActionVerbs, convertCVToText]);
 
   // Auto Fix functionality
   const handleAutoFix = useCallback(async () => {

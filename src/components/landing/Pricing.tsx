@@ -4,6 +4,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Check, Star, ArrowRight, Brain, Users, Crown, Globe, CreditCard, Shield, Clock, Gift } from 'lucide-react';
 import { LocationService, LocationData, PricingData } from '@/lib/payment/locationService';
+import { getRegionalPricing, isEUCountry, getEUPricing, RegionalPricing } from '@/lib/pricing/regionalPricing';
 import LoadingAnimation from '@/components/ui/LoadingAnimation';
 import UniversalPaymentModal from '@/components/payment/UniversalPaymentModal';
 
@@ -54,6 +55,41 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
   const [promotionalOffers, setPromotionalOffers] = useState<any[]>([]);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<DatabasePricingPlan | null>(null);
+  const [regionalPricing, setRegionalPricing] = useState<RegionalPricing | null>(null);
+
+  // Fetch location and set regional pricing
+  useEffect(() => {
+    const detectLocation = async () => {
+      try {
+        console.log('Detecting user location...');
+        const location = await LocationService.getLocationData();
+        console.log('Location detected:', location);
+        
+        setLocationData(location);
+        setSelectedCurrency(location.currency);
+        
+        // Get regional pricing based on country
+        let pricing: RegionalPricing;
+        if (isEUCountry(location.countryCode)) {
+          pricing = getEUPricing();
+        } else {
+          pricing = getRegionalPricing(location.countryCode);
+        }
+        
+        console.log('Regional pricing set:', pricing);
+        setRegionalPricing(pricing);
+      } catch (error) {
+        console.error('Error detecting location:', error);
+        // Fallback to India pricing if error (more likely in development)
+        const fallbackPricing = getRegionalPricing('IN');
+        console.log('Using fallback pricing (India):', fallbackPricing);
+        setRegionalPricing(fallbackPricing);
+        setSelectedCurrency('INR');
+      }
+    };
+
+    detectLocation();
+  }, []);
 
   // Fetch pricing plans and promotional offers
   useEffect(() => {
@@ -95,31 +131,80 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
     fetchData();
   }, []);
 
-  // Get converted price for a plan
-  const getConvertedPrice = (plan: DatabasePricingPlan): PricingData => {
-    if (!locationData) {
+  // Get regional price for a plan (returns price string with currency symbol)
+  const getRegionalPrice = (plan: DatabasePricingPlan): string => {
+    if (!regionalPricing) {
+      // Fallback to default prices if regional pricing not loaded yet
+      const fallbackPrice = plan.price_one_time || plan.price_monthly || 0;
+      return `${plan.currency || 'GBP'} ${fallbackPrice}`;
+    }
+
+    // Map plan keys to regional pricing
+    switch (plan.key) {
+      case 'day_pass':
+        return regionalPricing.dayPass;
+      case 'pro_monthly':
+        return regionalPricing.monthly;
+      case 'pro_quarterly':
+        return regionalPricing.quarterly;
+      case 'pro_yearly':
+        return regionalPricing.yearly;
+      default:
+        const fallbackPrice = plan.price_one_time || plan.price_monthly || 0;
+        return `${regionalPricing.currencySymbol}${fallbackPrice}`;
+    }
+  };
+
+  // Get monthly equivalent price for quarterly and yearly plans
+  const getMonthlyEquivalent = (plan: DatabasePricingPlan): { price: string; showMonthly: boolean } => {
+    if (!regionalPricing) {
+      return { price: '', showMonthly: false };
+    }
+
+    // Helper function to extract numeric value from price string
+    const extractNumericValue = (priceString: string): number => {
+      // Remove all non-numeric characters except dots and commas
+      let cleaned = priceString.replace(/[^\d.,]/g, '');
+      // Handle comma as thousands separator (e.g., 1,999 -> 1999)
+      cleaned = cleaned.replace(/,/g, '');
+      return parseFloat(cleaned) || 0;
+    };
+
+    // Helper function to format price nicely
+    const formatMonthlyPrice = (num: number): string => {
+      // Round to nearest whole number
+      const rounded = Math.round(num);
+      return rounded.toString();
+    };
+
+    if (plan.key === 'pro_quarterly') {
+      // Extract numeric value from quarterly price
+      const quarterlyNum = extractNumericValue(regionalPricing.quarterly);
+      const monthlyNum = quarterlyNum / 3;
+      const formattedMonthly = formatMonthlyPrice(monthlyNum);
       return {
-        price: plan.price_monthly || 0,
-        currency: plan.currency,
-        originalPrice: plan.price_monthly || 0,
-        originalCurrency: plan.currency
+        price: `${regionalPricing.currencySymbol}${formattedMonthly}/month`,
+        showMonthly: true
       };
     }
 
-    const basePrice = plan.price_one_time || plan.price_monthly || 0;
-    const convertedPrice = LocationService.convertPrice(
-      basePrice || 0,
-      plan.currency,
-      selectedCurrency,
-      locationData
-    );
+    if (plan.key === 'pro_yearly') {
+      // Extract numeric value from yearly price
+      const yearlyNum = extractNumericValue(regionalPricing.yearly);
+      const monthlyNum = yearlyNum / 12;
+      const formattedMonthly = formatMonthlyPrice(monthlyNum);
+      return {
+        price: `${regionalPricing.currencySymbol}${formattedMonthly}/month`,
+        showMonthly: true
+      };
+    }
 
-    return {
-      price: convertedPrice,
-      currency: selectedCurrency,
-      originalPrice: basePrice || 0,
-      originalCurrency: plan.currency
-    };
+    return { price: '', showMonthly: false };
+  };
+
+  // Get currency symbol for display
+  const getCurrencySymbol = (): string => {
+    return regionalPricing?.currencySymbol || '£';
   };
 
   // Get effective price (promotional or regular)
@@ -172,7 +257,16 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
     setShowPaymentModal(true);
     
     if (onPlanSelect) {
-      const pricingData = getConvertedPrice(plan);
+      // Create pricing data from regional pricing
+      const regionalPriceStr = getRegionalPrice(plan);
+      // Extract numeric value from price string (handles commas, dots, currency symbols)
+      const priceValue = parseFloat(regionalPriceStr.replace(/[^\d.,]/g, '').replace(',', ''));
+      const pricingData: PricingData = {
+        price: priceValue,
+        currency: regionalPricing?.currency || 'GBP',
+        originalPrice: plan.price_one_time || plan.price_monthly || 0,
+        originalCurrency: plan.currency
+      };
       onPlanSelect(plan, pricingData);
     }
   };
@@ -250,13 +344,13 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
           transition={{ duration: 0.8 }}
           viewport={{ once: true }}
         >
-          <h2 className="text-3xl sm:text-5xl font-bold text-white mb-6 text-center">
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-6 text-center">
             Simple,{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-lime-500">
               Transparent Pricing
             </span>
           </h2>
-          <p className="text-lg text-white/70 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-sm sm:text-base lg:text-lg text-white/70 max-w-3xl mx-auto leading-relaxed">
             Choose the plan that fits your career goals. No hidden fees, no surprises.
           </p>
         </motion.div>
@@ -269,23 +363,42 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
           transition={{ duration: 0.6, delay: 0.2 }}
           viewport={{ once: true }}
         >
-          <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-1">
+          <div className="relative bg-white/5 backdrop-blur-sm border border-white/10 rounded-full p-1 inline-flex">
+            {/* Sliding background indicator */}
+            <motion.div
+              className="absolute top-1 bottom-1 bg-lime-400 rounded-full shadow-lg z-0"
+              initial={false}
+              animate={{
+                left: selectedCategory === 'essential' 
+                  ? '4px' 
+                  : 'calc(50% + 2px)',
+              }}
+              transition={{
+                type: 'spring',
+                stiffness: 300,
+                damping: 30,
+              }}
+              style={{
+                width: 'calc(50% - 4px)',
+              }}
+            />
+            
             <button
               onClick={() => setSelectedCategory('essential')}
-              className={`px-8 py-4 rounded-lg font-medium transition-all duration-300 ${
+              className={`relative z-10 min-w-[140px] px-6 py-3 sm:min-w-[160px] sm:px-8 sm:py-4 rounded-full font-medium text-sm sm:text-base transition-colors duration-300 ${
                 selectedCategory === 'essential'
-                  ? 'bg-lime-400 text-black shadow-lg'
-                  : 'text-white/70 hover:text-white hover:bg-white/5'
+                  ? 'text-black'
+                  : 'text-white/70 hover:text-white'
               }`}
             >
               Essential
             </button>
             <button
               onClick={() => setSelectedCategory('professional')}
-              className={`px-8 py-4 rounded-lg font-medium transition-all duration-300 ${
+              className={`relative z-10 min-w-[140px] px-6 py-3 sm:min-w-[160px] sm:px-8 sm:py-4 rounded-full font-medium text-sm sm:text-base transition-colors duration-300 ${
                 selectedCategory === 'professional'
-                  ? 'bg-lime-400 text-black shadow-lg'
-                  : 'text-white/70 hover:text-white hover:bg-white/5'
+                  ? 'text-black'
+                  : 'text-white/70 hover:text-white'
               }`}
             >
               Professional
@@ -296,24 +409,30 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
 
         {/* Plans Grid */}
         <motion.div 
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+          className={`grid gap-6 ${
+            filteredPlans.length === 2
+              ? 'grid-cols-1 md:grid-cols-2 max-w-3xl mx-auto'
+              : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+          }`}
           initial={{ opacity: 0, y: 50 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.4 }}
           viewport={{ once: true }}
         >
           {filteredPlans.map((plan, index) => {
-            const pricingData = getConvertedPrice(plan);
+            const regionalPrice = getRegionalPrice(plan);
+            const currencySymbol = getCurrencySymbol();
             const effectivePrice = getEffectivePrice(plan);
             const hasPromo = hasPromotionalPricing(plan);
             const Icon = getPlanIcon(plan.key);
+            const monthlyEquivalent = getMonthlyEquivalent(plan);
 
             return (
-              <motion.div
-                key={plan._id}
-                className={`group relative bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-xl border border-white/10 rounded-2xl p-6 h-full card-hover ${
-                  plan.isPopular ? 'ring-2 ring-purple-400/50' : ''
-                }`}
+                <motion.div
+                  key={plan._id}
+                  className={`group relative bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-xl border border-white/10 rounded-2xl p-6 min-h-[600px] flex flex-col card-hover ${
+                    plan.isPopular ? 'ring-2 ring-lime-400/50' : ''
+                  }`}
                 initial={{ opacity: 0, y: 50 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.1 * index }}
@@ -321,19 +440,19 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
                 whileHover={{ 
                   scale: 1.02,
                   y: -5,
-                  boxShadow: "0 15px 30px -5px rgba(168, 85, 247, 0.3)"
+                  boxShadow: "0 15px 30px -5px rgba(132, 204, 22, 0.3)"
                 }}
                 style={{ willChange: 'transform' }}
               >
                 {/* Glow Effect */}
                 <motion.div
-                  className="absolute inset-0 rounded-2xl bg-gradient-to-br from-purple-400/10 to-purple-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                  className="absolute inset-0 rounded-2xl bg-gradient-to-br from-lime-400/10 to-lime-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
                   style={{ filter: 'blur(20px)' }}
                 />
                 {/* Popular Badge */}
                 {plan.isPopular && (
                   <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10">
-                    <span className="bg-purple-400 text-white text-xs font-medium px-3 py-1 rounded-full shadow-lg">
+                    <span className="bg-lime-400 text-black text-xs font-medium px-3 py-1 rounded-full shadow-lg">
                       Most Popular
                     </span>
                   </div>
@@ -342,7 +461,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
                 {/* Promotional Badge */}
                 {hasPromo && (
                   <div className="absolute -top-3 right-3 z-10">
-                    <span className="bg-purple-400 text-white text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1 shadow-lg">
+                    <span className="bg-lime-400 text-black text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1 shadow-lg">
                       <Gift size={10} />
                       {plan.promotionDescription || 'Limited Time!'}
                     </span>
@@ -351,11 +470,11 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
 
                 {/* Plan Icon */}
                 <motion.div 
-                  className={`inline-flex items-center justify-center w-12 h-12 rounded-xl mb-4 bg-gradient-to-br from-purple-400 to-purple-500 shadow-lg relative z-10`}
+                  className={`inline-flex items-center justify-center w-12 h-12 rounded-xl mb-4 bg-gradient-to-br from-lime-400 to-lime-500 shadow-lg relative z-10`}
                   whileHover={{ 
                     scale: 1.1,
                     rotateY: 15,
-                    boxShadow: "0 20px 40px -12px rgba(168, 85, 247, 0.5)"
+                    boxShadow: "0 20px 40px -12px rgba(132, 204, 22, 0.5)"
                   }}
                   style={{
                     transformStyle: 'preserve-3d',
@@ -366,48 +485,66 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
                 </motion.div>
 
                 {/* Plan Name */}
-                <h3 className="text-xl font-bold mb-3 text-white relative z-10">{plan.name}</h3>
+                <h3 className="text-lg sm:text-xl font-bold mb-3 text-white relative z-10">{plan.name}</h3>
 
                 {/* Plan Description */}
-                <p className="text-white/80 mb-4 text-xs leading-relaxed relative z-10">
+                <p className="text-white/80 mb-4 text-xs sm:text-sm leading-relaxed relative z-10">
                   {plan.description}
                 </p>
 
                 {/* Pricing */}
                 <div className="mb-6 relative z-10">
                   {plan.key === 'free' ? (
-                    <div className="text-3xl font-bold text-white">Free</div>
+                    <div className="text-2xl sm:text-3xl font-bold text-white">Free</div>
                   ) : (
                     <div>
                       {hasPromo ? (
                         <div>
-                          <div className="flex items-baseline gap-2">
-                            <span className="text-3xl font-bold text-white">
-                              {selectedCurrency} {effectivePrice}
-                            </span>
-                            <span className="text-lg text-white/50 line-through">
-                              {selectedCurrency} {plan.price_one_time || plan.price_monthly}
-                            </span>
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-baseline gap-2 flex-wrap">
+                              <span className="text-2xl sm:text-3xl font-bold text-white">
+                                {monthlyEquivalent.showMonthly ? monthlyEquivalent.price : regionalPrice}
+                              </span>
+                              <span className="text-base sm:text-lg text-white/50 line-through">
+                                {currencySymbol}{plan.price_one_time || plan.price_monthly}
+                              </span>
+                            </div>
+                            {monthlyEquivalent.showMonthly && (
+                              <div className="text-sm text-white/60">
+                                {regionalPrice} total
+                              </div>
+                            )}
                           </div>
-                          <div className="text-xs text-purple-400 font-medium">
+                          <div className="text-xs sm:text-sm text-lime-400 font-medium mt-1">
                             {plan.promotionDescription || 'Limited Time Offer!'}
                           </div>
                         </div>
                       ) : (
-                        <div className="text-3xl font-bold text-white">
-                          {selectedCurrency} {effectivePrice}
+                        <div>
+                          <div className="text-2xl sm:text-3xl font-bold text-white">
+                            {monthlyEquivalent.showMonthly ? monthlyEquivalent.price : regionalPrice}
+                          </div>
+                          {monthlyEquivalent.showMonthly && (
+                            <div className="text-sm text-white/60 mt-1">
+                              {regionalPrice} total
+                            </div>
+                          )}
                         </div>
                       )}
-                      <div className="text-white/60 text-xs">
-                        {plan.key === 'day_pass' ? 'one-time' : plan.billingCycle || 'one-time'}
+                      <div className="text-white/60 text-xs sm:text-sm mt-1">
+                        {plan.key === 'day_pass' 
+                          ? 'one-time' 
+                          : monthlyEquivalent.showMonthly 
+                            ? 'billed as shown above'
+                            : plan.billingCycle || 'one-time'}
                       </div>
                     </div>
                   )}
                 </div>
 
                 {/* Features */}
-                <ul className="space-y-2 mb-6 relative z-10">
-                  {plan.features.slice(0, 4).map((feature, featureIndex) => (
+                <ul className="space-y-3 mb-6 relative z-10 flex-grow">
+                  {plan.features.map((feature, featureIndex) => (
                     <li key={featureIndex} className="flex items-start gap-2">
                       <motion.div
                         initial={{ opacity: 0, scale: 0 }}
@@ -415,16 +552,11 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
                         transition={{ delay: 0.5 + featureIndex * 0.1 }}
                         whileHover={{ scale: 1.2 }}
                       >
-                        <Check size={16} className="text-purple-400 flex-shrink-0 mt-0.5" />
+                        <Check size={18} className="text-lime-400 flex-shrink-0 mt-0.5" />
                       </motion.div>
-                      <span className="text-white/80 text-xs">{feature}</span>
+                      <span className="text-white/80 text-sm sm:text-base leading-relaxed">{feature}</span>
                     </li>
                   ))}
-                  {plan.features.length > 4 && (
-                    <li className="text-white/60 text-xs">
-                      +{plan.features.length - 4} more features
-                    </li>
-                  )}
                 </ul>
 
                 {/* Not Included Features */}
@@ -447,10 +579,10 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
                 {/* CTA Button */}
                 <motion.button
                   onClick={() => handlePlanSelect(plan)}
-                  className="w-full py-3 px-4 bg-gradient-to-r from-purple-400 to-purple-500 text-white font-semibold rounded-lg hover:from-purple-500 hover:to-purple-600 transition-all duration-300 transform hover:scale-105 shadow-lg relative z-10"
+                  className="w-full py-3 px-4 bg-gradient-to-r from-lime-400 to-lime-500 text-black font-semibold rounded-lg hover:from-lime-500 hover:to-lime-600 transition-all duration-300 transform hover:scale-105 shadow-lg relative z-10"
                   whileHover={{ 
                     scale: 1.05,
-                    boxShadow: "0 20px 40px -12px rgba(168, 85, 247, 0.5)"
+                    boxShadow: "0 20px 40px -12px rgba(132, 204, 22, 0.5)"
                   }}
                   whileTap={{ scale: 0.95 }}
                 >
@@ -472,7 +604,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
         >
           <p className="text-white/70 mb-4 text-sm">Have questions about pricing?</p>
           <motion.button 
-            className="group text-purple-400 hover:text-purple-300 font-semibold transition-colors duration-300 flex items-center gap-2 mx-auto"
+            className="group text-lime-400 hover:text-lime-300 font-semibold transition-colors duration-300 flex items-center gap-2 mx-auto"
             whileHover={{ x: 5 }}
           >
             <span>Contact our sales team</span>

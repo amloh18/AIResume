@@ -32,6 +32,7 @@ export class UnifiedCVService {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include', // Include cookies for authentication
     });
     
     if (!response.ok) {
@@ -39,7 +40,26 @@ export class UnifiedCVService {
       throw new Error(`Failed to fetch CV: ${response.status} ${errorText}`);
     }
     
-    const result: UnifiedCVAPIResponse = await response.json();
+    // Get response text once and check if it's empty
+    const responseText = await response.text();
+    if (!responseText || responseText.trim().length === 0) {
+      throw new Error('Empty response from server');
+    }
+    
+    // Check content type
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      throw new Error(`Invalid response format. Expected JSON, got: ${contentType || 'empty'}. Response: ${responseText.substring(0, 100)}`);
+    }
+    
+    let result: UnifiedCVAPIResponse;
+    try {
+      result = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('❌ UnifiedCVService.getCV - JSON parse error:', parseError);
+      console.error('❌ UnifiedCVService.getCV - Response text:', responseText.substring(0, 200));
+      throw new Error(`Invalid JSON response: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
+    }
     
     if (!result.success || !result.data?.cv) {
       throw new Error('CV not found or access denied');
@@ -79,6 +99,7 @@ export class UnifiedCVService {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include', // Include cookies for authentication
     });
     
     if (!response.ok) {
@@ -86,7 +107,26 @@ export class UnifiedCVService {
       throw new Error(`Failed to fetch CVs: ${response.status} ${errorText}`);
     }
     
-    const result: UnifiedCVAPIResponse = await response.json();
+    // Get response text once and check if it's empty
+    const responseText = await response.text();
+    if (!responseText || responseText.trim().length === 0) {
+      throw new Error('Empty response from server');
+    }
+    
+    // Check content type
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      throw new Error(`Invalid response format. Expected JSON, got: ${contentType || 'empty'}. Response: ${responseText.substring(0, 100)}`);
+    }
+    
+    let result: UnifiedCVAPIResponse;
+    try {
+      result = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('❌ UnifiedCVService.getCVs - JSON parse error:', parseError);
+      console.error('❌ UnifiedCVService.getCVs - Response text:', responseText.substring(0, 200));
+      throw new Error(`Invalid JSON response: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
+    }
     
     if (!result.success || !result.data?.cvs) {
       throw new Error('Failed to fetch CVs');

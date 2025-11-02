@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
           );
         }
         
-        userId = decoded.userId;
+        userId = decoded.userId || '';
         source = 'extension';
         console.log('✅ Extension token verified for user:', userId);
       } catch (error) {
@@ -183,7 +183,7 @@ export async function GET(request: NextRequest) {
           );
         }
         
-        userId = decoded.userId;
+        userId = decoded.userId || '';
         console.log('✅ Extension token verified for user:', userId);
       } catch (error) {
         console.log('❌ Invalid extension token:', error);

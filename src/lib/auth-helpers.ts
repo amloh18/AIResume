@@ -25,13 +25,15 @@ export interface AuthResult {
  */
 export async function getAuthenticatedUser(request?: NextRequest): Promise<AuthResult | null> {
   try {
-    // Get NextAuth session
+    // Get NextAuth session - getServerSession works automatically with cookies in App Router
+    // The request parameter is optional but we log if it's missing
     const session = await getServerSession(authConfig);
     
     if (session?.user?.email) {
       console.log('✅ Auth - NextAuth session found:', session.user.email);
       
       // Get full user data from database if needed
+      // Note: connectDB is idempotent, safe to call multiple times
       await connectDB();
       const dbUser = await User.findOne({ email: session.user.email });
       
@@ -44,6 +46,7 @@ export async function getAuthenticatedUser(request?: NextRequest): Promise<AuthR
       }
       
       // If user not in database yet (shouldn't happen), return session data
+      console.warn('⚠️ Auth - User in session but not found in database:', session.user.email);
       return {
         user: session.user,
         userEmail: session.user.email,
@@ -56,6 +59,10 @@ export async function getAuthenticatedUser(request?: NextRequest): Promise<AuthR
 
   } catch (error) {
     console.error('❌ Auth - Error during authentication:', error);
+    if (error instanceof Error) {
+      console.error('❌ Auth - Error message:', error.message);
+      console.error('❌ Auth - Error stack:', error.stack);
+    }
     return null;
   }
 }

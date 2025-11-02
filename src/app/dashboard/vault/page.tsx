@@ -8,7 +8,7 @@ import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
 
 const VaultPage: React.FC = () => {
   const { user, loading: authLoading, isAuthenticated } = useUnifiedAuth();
-  const { toggleSidebar, isMobileMenuOpen } = useMobileSidebar();
+  const { toggleSidebar, isOpen: isMobileMenuOpen } = useMobileSidebar();
 
   return (
     <div className="space-y-6">

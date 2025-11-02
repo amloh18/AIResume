@@ -4,10 +4,11 @@ import connectDB from '@/lib/database';
 import User from '@/models/User';
 import type { IUser } from '@/models/User';
 import VerificationToken from '@/models/VerificationToken';
+import mongoose, { HydratedDocument } from 'mongoose';
 
 export async function POST(request: NextRequest) {
   // Declare newUser in outer scope to access it in catch block
-  let newUser: IUser | null = null;
+  let newUser: HydratedDocument<IUser> | null = null;
   
   try {
     const { email, firstName, lastName } = await request.json();
@@ -161,20 +162,20 @@ export async function POST(request: NextRequest) {
       console.log('✅ User created in database');
 
       // Update verification token with user ID
-      verificationToken.userId = newUser._id;
+      verificationToken.userId = (newUser._id as mongoose.Types.ObjectId).toString();
       await verificationToken.save();
       
       if (emailSent) {
         return NextResponse.json({
           success: true,
           message: 'Account created! Please check your email to verify your account.',
-          userId: newUser._id,
+          userId: (newUser._id as mongoose.Types.ObjectId).toString(),
         });
       } else {
         return NextResponse.json({
           success: true,
           message: 'Account created! You can sign in now. Email verification is temporarily unavailable.',
-          userId: newUser._id,
+          userId: (newUser._id as mongoose.Types.ObjectId).toString(),
           emailServiceStatus: 'unavailable'
         });
       }
@@ -183,11 +184,11 @@ export async function POST(request: NextRequest) {
       console.error('❌ Failed to create user in database:', dbError);
       
       // If user was created successfully but error occurred elsewhere, return success with user info
-      if (newUser && newUser._id) {
+      if (newUser && (newUser._id as mongoose.Types.ObjectId | undefined)) {
         return NextResponse.json({
           success: true,
           message: 'Account created! You can sign in now...',
-          userId: newUser._id,
+          userId: (newUser._id as mongoose.Types.ObjectId).toString(),
           emailServiceStatus: 'unavailable'
         });
       }

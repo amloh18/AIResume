@@ -214,22 +214,22 @@ export async function GET(request: NextRequest) {
     const now = new Date();
     const enhancedPlans = plans.map(plan => {
       // Check if promotion is active
-      const isPromotionActive = plan.promotionValidFrom && plan.promotionValidUntil &&
-        new Date(plan.promotionValidFrom) <= now && new Date(plan.promotionValidUntil) >= now;
+      const isPromotionActive = (plan as any).promotionValidFrom && (plan as any).promotionValidUntil &&
+        new Date((plan as any).promotionValidFrom) <= now && new Date((plan as any).promotionValidUntil) >= now;
 
       // Calculate effective prices
       const effectivePrice = {
-        monthly: isPromotionActive && plan.promotionalPrice_monthly 
-          ? plan.promotionalPrice_monthly 
+        monthly: isPromotionActive && (plan as any).promotionalPrice_monthly 
+          ? (plan as any).promotionalPrice_monthly 
           : plan.price_monthly,
-        quarterly: isPromotionActive && plan.promotionalPrice_quarterly 
-          ? plan.promotionalPrice_quarterly 
+        quarterly: isPromotionActive && (plan as any).promotionalPrice_quarterly 
+          ? (plan as any).promotionalPrice_quarterly 
           : plan.price_quarterly,
-        yearly: isPromotionActive && plan.promotionalPrice_yearly 
-          ? plan.promotionalPrice_yearly 
+        yearly: isPromotionActive && (plan as any).promotionalPrice_yearly 
+          ? (plan as any).promotionalPrice_yearly 
           : plan.price_yearly,
-        oneTime: isPromotionActive && plan.promotionalPrice_one_time 
-          ? plan.promotionalPrice_one_time 
+        oneTime: isPromotionActive && (plan as any).promotionalPrice_one_time 
+          ? (plan as any).promotionalPrice_one_time 
           : plan.price_one_time
       };
 
@@ -247,8 +247,8 @@ export async function GET(request: NextRequest) {
         isPromotionActive,
         effectivePrice,
         // Add days remaining for promotion
-        promotionDaysRemaining: isPromotionActive && plan.promotionValidUntil 
-          ? Math.ceil((new Date(plan.promotionValidUntil).getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+        promotionDaysRemaining: isPromotionActive && (plan as any).promotionValidUntil
+          ? Math.ceil((new Date((plan as any).promotionValidUntil).getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
           : null
       };
     });

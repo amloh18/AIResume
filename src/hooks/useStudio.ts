@@ -13,7 +13,7 @@ import {
   CVData,
   CoverLetterData
 } from '@/types/studio';
-import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { requireAuthContext } from '@/lib/user-resolution';
 
 /**

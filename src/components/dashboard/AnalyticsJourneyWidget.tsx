@@ -17,7 +17,7 @@ interface Journey {
   jobId: string;
   jobTitle: string;
   company: string;
-  status: 'in-progress' | 'completed';
+  status: 'in-progress' | 'completed' | 'paused' | 'processing_documents' | 'creation_failed' | 'ready';
   currentStep: number;
   totalSteps: number;
   createdAt: string;
@@ -125,7 +125,7 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
   const handleDeleteJourney = async (journeyId: string) => {
     try {
       setIsDeleting(true);
-      const userId = session?.user?.id;
+      const userId = getUserIdForAPI(user);
       if (!userId) {
         console.error('No user ID available');
         return;
@@ -166,7 +166,10 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
   }) => {
     console.log('🎉 Journey created:', journeyData);
     setShowNewJourneyCard(false);
-    await fetchJourneys(); // Refresh the journeys list
+    const userId = getUserIdForAPI(user);
+    if (userId) {
+      await fetchJourneys(userId); // Refresh the journeys list
+    }
   };
 
   const getCurrentPageJourneys = () => {

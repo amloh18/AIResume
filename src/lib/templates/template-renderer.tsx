@@ -120,8 +120,8 @@ const TemplateRendererComponent: React.FC<TemplateRendererProps> = ({
 
   // Memoize CSS generation to avoid regenerating on every render
   const templateCSS = useMemo(() => {
-    return generateTemplateCSS(template.globalStyles);
-  }, [template.globalStyles]);
+    return generateTemplateCSS(template?.globalStyles);
+  }, [template?.globalStyles]);
   
   // NEW: Get sections from cvData.structure if it exists, otherwise fall back to legacy props
   const sectionsFromStructure = useMemo(() => {
@@ -224,22 +224,22 @@ const TemplateRendererComponent: React.FC<TemplateRendererProps> = ({
 
   // Memoize combined CSS to prevent recalculation
   const combinedCSS = useMemo(() => {
-    return templateCSS + (template.globalStyles.customCSS || '');
-  }, [templateCSS, template.globalStyles.customCSS]);
+    return templateCSS + (template?.globalStyles?.customCSS || '');
+  }, [templateCSS, template?.globalStyles?.customCSS]);
 
   return (
     <>
       {/* Inject template CSS */}
       <style dangerouslySetInnerHTML={{ __html: combinedCSS }} />
       
-      <div 
+      <div
         className={`cv-container ${className}`}
         style={{
-          fontFamily: template.globalStyles.fontFamily,
-          fontSize: template.globalStyles.fontSize,
-          lineHeight: template.globalStyles.lineHeight,
-          backgroundColor: template.globalStyles.backgroundColor,
-          color: template.globalStyles.primaryColor,
+          fontFamily: template?.globalStyles?.fontFamily || 'Calibri, Arial, sans-serif',
+          fontSize: template?.globalStyles?.fontSize || '11pt',
+          lineHeight: template?.globalStyles?.lineHeight || '1.2',
+          backgroundColor: template?.globalStyles?.backgroundColor || '#ffffff',
+          color: template?.globalStyles?.primaryColor || '#000000',
           ...customStyles
         }}
       >

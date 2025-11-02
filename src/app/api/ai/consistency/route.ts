@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Generate consistency check suggestions
-    const suggestions = await AIAssistantService.checkConsistency(cvData);
+    const suggestions = await AIAssistantService.checkConsistency(cvData.cvData);
 
     return NextResponse.json({
       success: true,

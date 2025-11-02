@@ -26,33 +26,56 @@ const InterestsSection: React.FC<InterestsSectionProps> = ({
       name: '',
       keywords: []
     };
-    onUpdate('interests', [...safeData, newInterest]);
+    onUpdate('interests', (prevInterests) => {
+      return [...(prevInterests || []), newInterest];
+    });
   };
 
   const removeInterest = (index: number) => {
-    const updatedData = safeData.filter((_, i) => i !== index);
-    onUpdate('interests', updatedData);
+    onUpdate('interests', (prevInterests) => {
+      return (prevInterests || []).filter((_, i) => i !== index);
+    });
   };
 
   const updateInterest = (index: number, field: string, value: any) => {
-    const updatedData = [...safeData];
-    updatedData[index] = { ...updatedData[index], [field]: value };
-    onUpdate('interests', updatedData);
+    onUpdate('interests', (prevInterests) => {
+      const newArray = [...(prevInterests || [])];
+      if (!newArray[index]) {
+        newArray[index] = {};
+      }
+      newArray[index] = { ...newArray[index], [field]: value };
+      return newArray;
+    });
   };
 
   const addKeyword = (index: number) => {
     if (newKeyword.trim()) {
-      const updatedData = [...safeData];
-      updatedData[index].keywords = [...(updatedData[index].keywords || []), newKeyword.trim()];
-      onUpdate('interests', updatedData);
+      onUpdate('interests', (prevInterests) => {
+        const newArray = [...(prevInterests || [])];
+        if (!newArray[index]) {
+          newArray[index] = { keywords: [] };
+        }
+        newArray[index] = {
+          ...newArray[index],
+          keywords: [...(newArray[index].keywords || []), newKeyword.trim()]
+        };
+        return newArray;
+      });
       setNewKeyword('');
     }
   };
 
   const removeKeyword = (index: number, keywordIndex: number) => {
-    const updatedData = [...safeData];
-    updatedData[index].keywords = updatedData[index].keywords.filter((_, i) => i !== keywordIndex);
-    onUpdate('interests', updatedData);
+    onUpdate('interests', (prevInterests) => {
+      const newArray = [...(prevInterests || [])];
+      if (newArray[index] && Array.isArray(newArray[index].keywords)) {
+        newArray[index] = {
+          ...newArray[index],
+          keywords: newArray[index].keywords.filter((_, i) => i !== keywordIndex)
+        };
+      }
+      return newArray;
+    });
   };
 
   return (

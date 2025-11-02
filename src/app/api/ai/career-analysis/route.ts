@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
 
     console.log('📊 CV text extracted, length:', cvText.length);
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     // Run all analyses in parallel for better performance
     console.log('🤖 Running AI analysis...');

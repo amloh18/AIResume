@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
+import Image from 'next/image';
 
 const ChromeExtension = () => {
   return (
@@ -15,83 +16,122 @@ const ChromeExtension = () => {
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <motion.div
-          className="text-center mb-12"
+          className="mb-12"
           initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
           viewport={{ once: true, margin: "-50px" }}
         >
-          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
-            Works on{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-lime-500">
-              15+ Job Sites
-            </span>
-          </h2>
-          <p className="text-lg text-white/70 max-w-2xl mx-auto">
-            Seamlessly integrate with all major job boards and career platforms
-          </p>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6 mb-4">
+            <div className="flex-1">
+              <h2 className="text-3xl sm:text-3xl lg:text-4xl font-bold text-white mb-4 text-left">
+                Our Browser Extension Works on
+                <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-lime-500">
+                  100+ Job Sites
+                </span>
+              </h2>
+              <p className="text-sm sm:text-base lg:text-lg text-white/70 max-w-2xl text-left">
+                Seamlessly integrate with all major job boards and career platforms
+              </p>
+            </div>
+            <motion.button
+              onClick={() => window.location.href = '/chrome-extension'}
+              className="bg-lime-400 hover:bg-lime-500 text-black font-semibold px-6 py-3 sm:px-8 sm:py-4 rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg shadow-lime-400/20 whitespace-nowrap flex-shrink-0"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              initial={{ opacity: 0, x: 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              viewport={{ once: true }}
+            >
+              Download Browser Extension
+            </motion.button>
+          </div>
         </motion.div>
 
         {/* Job Sites Ticker */}
         <motion.div
-          className="relative overflow-hidden"
+          className="relative overflow-hidden -mx-4 sm:-mx-6 lg:-mx-8"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
           viewport={{ once: true }}
+          style={{
+            maskImage: 'linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)'
+          }}
         >
           <div className="flex items-center space-x-8 whitespace-nowrap animate-scroll">
             {[
-              { name: 'LinkedIn', logo: '🔗', color: 'from-blue-600 to-blue-700' },
-              { name: 'Indeed', logo: '💼', color: 'from-blue-500 to-blue-600' },
-              { name: 'Glassdoor', logo: '🏢', color: 'from-blue-700 to-blue-800' },
-              { name: 'ZipRecruiter', logo: '⚡', color: 'from-blue-400 to-blue-500' },
-              { name: 'Monster', logo: '👹', color: 'from-blue-600 to-blue-700' },
-              { name: 'AngelList', logo: '👼', color: 'from-blue-500 to-blue-600' },
-              { name: 'RemoteOK', logo: '🌍', color: 'from-blue-600 to-blue-700' },
-              { name: 'We Work Remotely', logo: '🏠', color: 'from-blue-500 to-blue-600' },
-              { name: 'Dice', logo: '🎲', color: 'from-blue-600 to-blue-700' },
-              { name: 'Stack Overflow', logo: '💻', color: 'from-blue-500 to-blue-600' },
-              { name: 'FlexJobs', logo: '💪', color: 'from-blue-600 to-blue-700' },
-              { name: 'CareerBuilder', logo: '🏗️', color: 'from-blue-500 to-blue-600' },
-              { name: 'SimplyHired', logo: '🎯', color: 'from-blue-600 to-blue-700' },
-              { name: 'Upwork', logo: '🚀', color: 'from-blue-500 to-blue-600' },
-              { name: 'Freelancer', logo: '💼', color: 'from-blue-600 to-blue-700' }
+              { name: 'LinkedIn', logoUrl: 'https://logo.clearbit.com/linkedin.com' },
+              { name: 'Indeed', logoUrl: 'https://logo.clearbit.com/indeed.com' },
+              { name: 'Glassdoor', logoUrl: 'https://logo.clearbit.com/glassdoor.com' },
+              { name: 'ZipRecruiter', logoUrl: 'https://logo.clearbit.com/ziprecruiter.com' },
+              { name: 'Monster', logoUrl: 'https://logo.clearbit.com/monster.com' },
+              { name: 'AngelList', logoUrl: 'https://logo.clearbit.com/angel.co' },
+              { name: 'RemoteOK', logoUrl: 'https://logo.clearbit.com/remoteok.com' },
+              { name: 'We Work Remotely', logoUrl: 'https://logo.clearbit.com/weworkremotely.com' },
+              { name: 'Dice', logoUrl: 'https://logo.clearbit.com/dice.com' },
+              { name: 'Stack Overflow', logoUrl: 'https://logo.clearbit.com/stackoverflow.com' },
+              { name: 'FlexJobs', logoUrl: 'https://logo.clearbit.com/flexjobs.com' },
+              { name: 'CareerBuilder', logoUrl: 'https://logo.clearbit.com/careerbuilder.com' },
+              { name: 'SimplyHired', logoUrl: 'https://logo.clearbit.com/simplyhired.com' },
+              { name: 'Upwork', logoUrl: 'https://logo.clearbit.com/upwork.com' },
+              { name: 'Freelancer', logoUrl: 'https://logo.clearbit.com/freelancer.com' }
             ].map((site, index) => (
               <motion.div
                 key={site.name}
-                className={`bg-gradient-to-r ${site.color} rounded-xl px-6 py-4 text-white text-sm font-medium shadow-lg flex items-center space-x-3 flex-shrink-0`}
+                className="rounded-xl px-4 py-3 sm:px-6 sm:py-4 text-white text-xs sm:text-sm font-medium shadow-lg flex items-center space-x-2 sm:space-x-3 flex-shrink-0"
+                style={{ backgroundColor: '#603a86' }}
                 whileHover={{ scale: 1.05, y: -2 }}
               >
-                <span className="text-xl">{site.logo}</span>
+                <div className="relative w-6 h-6 sm:w-8 sm:h-8 flex-shrink-0">
+                  <Image
+                    src={site.logoUrl}
+                    alt={site.name}
+                    fill
+                    className="object-contain"
+                    unoptimized
+                  />
+                </div>
                 <span className="font-semibold">{site.name}</span>
               </motion.div>
             ))}
             
             {/* Duplicate set for seamless loop */}
             {[
-              { name: 'LinkedIn', logo: '🔗', color: 'from-blue-600 to-blue-700' },
-              { name: 'Indeed', logo: '💼', color: 'from-blue-500 to-blue-600' },
-              { name: 'Glassdoor', logo: '🏢', color: 'from-blue-700 to-blue-800' },
-              { name: 'ZipRecruiter', logo: '⚡', color: 'from-blue-400 to-blue-500' },
-              { name: 'Monster', logo: '👹', color: 'from-blue-600 to-blue-700' },
-              { name: 'AngelList', logo: '👼', color: 'from-blue-500 to-blue-600' },
-              { name: 'RemoteOK', logo: '🌍', color: 'from-blue-600 to-blue-700' },
-              { name: 'We Work Remotely', logo: '🏠', color: 'from-blue-500 to-blue-600' },
-              { name: 'Dice', logo: '🎲', color: 'from-blue-600 to-blue-700' },
-              { name: 'Stack Overflow', logo: '💻', color: 'from-blue-500 to-blue-600' },
-              { name: 'FlexJobs', logo: '💪', color: 'from-blue-600 to-blue-700' },
-              { name: 'CareerBuilder', logo: '🏗️', color: 'from-blue-500 to-blue-600' },
-              { name: 'SimplyHired', logo: '🎯', color: 'from-blue-600 to-blue-700' },
-              { name: 'Upwork', logo: '🚀', color: 'from-blue-500 to-blue-600' },
-              { name: 'Freelancer', logo: '💼', color: 'from-blue-600 to-blue-700' }
+              { name: 'LinkedIn', logoUrl: 'https://logo.clearbit.com/linkedin.com' },
+              { name: 'Indeed', logoUrl: 'https://logo.clearbit.com/indeed.com' },
+              { name: 'Glassdoor', logoUrl: 'https://logo.clearbit.com/glassdoor.com' },
+              { name: 'ZipRecruiter', logoUrl: 'https://logo.clearbit.com/ziprecruiter.com' },
+              { name: 'Monster', logoUrl: 'https://logo.clearbit.com/monster.com' },
+              { name: 'AngelList', logoUrl: 'https://logo.clearbit.com/angel.co' },
+              { name: 'RemoteOK', logoUrl: 'https://logo.clearbit.com/remoteok.com' },
+              { name: 'We Work Remotely', logoUrl: 'https://logo.clearbit.com/weworkremotely.com' },
+              { name: 'Dice', logoUrl: 'https://logo.clearbit.com/dice.com' },
+              { name: 'Stack Overflow', logoUrl: 'https://logo.clearbit.com/stackoverflow.com' },
+              { name: 'FlexJobs', logoUrl: 'https://logo.clearbit.com/flexjobs.com' },
+              { name: 'CareerBuilder', logoUrl: 'https://logo.clearbit.com/careerbuilder.com' },
+              { name: 'SimplyHired', logoUrl: 'https://logo.clearbit.com/simplyhired.com' },
+              { name: 'Upwork', logoUrl: 'https://logo.clearbit.com/upwork.com' },
+              { name: 'Freelancer', logoUrl: 'https://logo.clearbit.com/freelancer.com' }
             ].map((site, index) => (
               <motion.div
                 key={`${site.name}-duplicate`}
-                className={`bg-gradient-to-r ${site.color} rounded-xl px-6 py-4 text-white text-sm font-medium shadow-lg flex items-center space-x-3 flex-shrink-0`}
+                className="rounded-xl px-4 py-3 sm:px-6 sm:py-4 text-white text-xs sm:text-sm font-medium shadow-lg flex items-center space-x-2 sm:space-x-3 flex-shrink-0"
+                style={{ backgroundColor: '#603a86' }}
                 whileHover={{ scale: 1.05, y: -2 }}
               >
-                <span className="text-xl">{site.logo}</span>
+                <div className="relative w-6 h-6 sm:w-8 sm:h-8 flex-shrink-0">
+                  <Image
+                    src={site.logoUrl}
+                    alt={site.name}
+                    fill
+                    className="object-contain"
+                    unoptimized
+                  />
+                </div>
                 <span className="font-semibold">{site.name}</span>
               </motion.div>
             ))}

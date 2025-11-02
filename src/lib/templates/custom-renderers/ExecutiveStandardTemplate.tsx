@@ -12,7 +12,7 @@ export const ExecutiveStandardTemplate: React.FC<ExecutiveStandardTemplateProps>
   cvData, 
   className = '' 
 }) => {
-  const { basics, work, education, skills, certifications } = cvData;
+  const { basics, work, education, skills } = cvData;
 
   return (
     <div className={`executive-standard-template ${className}`}>
@@ -213,8 +213,7 @@ export const ExecutiveStandardTemplate: React.FC<ExecutiveStandardTemplateProps>
             <div className="experience-header">
               <div>
                 <div className="job-title">{job.position}</div>
-                <div className="company-name">{job.company}</div>
-                <div className="location">{job.location}</div>
+                <div className="company-name">{job.name}</div>
               </div>
               <div className="dates">{job.startDate} – {job.endDate || 'Present'}</div>
             </div>
@@ -236,8 +235,7 @@ export const ExecutiveStandardTemplate: React.FC<ExecutiveStandardTemplateProps>
               <div>
                 <div className="degree-title">{edu.studyType} {edu.area}</div>
                 <div className="institution-name">{edu.institution}</div>
-                <div className="location">{edu.location}</div>
-                {edu.gpa && <div style={{ fontSize: '0.9rem', color: '#6B7280', marginTop: '0.25rem' }}>GPA: {edu.gpa}</div>}
+                {edu.score && <div style={{ fontSize: '0.9rem', color: '#6B7280', marginTop: '0.25rem' }}>Score: {edu.score}</div>}
               </div>
               <div className="dates">{edu.startDate} – {edu.endDate}</div>
             </div>
@@ -252,12 +250,9 @@ export const ExecutiveStandardTemplate: React.FC<ExecutiveStandardTemplateProps>
           {skills && skills.length > 0 ? (
             skills.map((skill, index) => (
               <div key={index} className="skills-category">
-                <div className="skills-category-title">{skill.name}</div>
+                <div className="skills-category-title">{skill.category}</div>
                 <div className="skills-list">
-                  {Array.isArray(skill.keywords) 
-                    ? skill.keywords.join(', ') 
-                    : skill.level || 'Proficient'
-                  }
+                  {skill.skills.join(', ')}
                 </div>
               </div>
             ))
@@ -270,23 +265,6 @@ export const ExecutiveStandardTemplate: React.FC<ExecutiveStandardTemplateProps>
         </div>
       </div>
 
-      {/* Certifications */}
-      {certifications && certifications.length > 0 && (
-        <div className="section">
-          <h2 className="section-title">Certifications</h2>
-          {certifications.map((cert, index) => (
-            <div key={index} className="certification-item">
-              <div className="certification-header">
-                <div>
-                  <div className="certification-title">{cert.name}</div>
-                  <div className="certification-issuer">{cert.issuer}</div>
-                </div>
-                <div className="certification-year">{cert.date}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 };

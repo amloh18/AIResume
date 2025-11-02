@@ -210,7 +210,7 @@ export class JobService {
     offer: number;
     rejected: number;
   }> {
-    const response = await this.getJobs({ userId, period });
+    const response = await this.getJobs({ userId, period: period as 'day' | 'week' | 'month' | 'all' });
     return response.counts;
   }
 
@@ -220,8 +220,8 @@ export class JobService {
       hasInterviewWithin: within,
       sort: 'createdAt'
     });
-    return response.jobs.filter(job => 
-      job.interviews && job.interviews.length > 0
+    return response.jobs.filter(job =>
+      (job as any).interviews && (job as any).interviews.length > 0
     );
   }
 
@@ -245,7 +245,7 @@ export class JobService {
       offers: string;
     };
   }> {
-    const response = await this.getJobs({ userId, period });
+    const response = await this.getJobs({ userId, period: period as 'day' | 'week' | 'month' | 'all' });
     return response.summary;
   }
 

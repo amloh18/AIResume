@@ -14,7 +14,21 @@ interface CVPreviewModalProps {
 export default function CVPreviewModal({ isOpen, onClose, cvData }: CVPreviewModalProps) {
   const formatDate = (dateString: string) => {
     if (!dateString) return '';
+    // Handle YYYY-MM format
+    if (/^\d{4}-\d{2}$/.test(dateString)) {
+      const [year, month] = dateString.split('-');
+      const date = new Date(parseInt(year), parseInt(month) - 1);
+      return date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short' 
+      });
+    }
+    // Handle YYYY format
+    if (/^\d{4}$/.test(dateString)) {
+      return dateString;
+    }
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) return dateString;
     return date.toLocaleDateString('en-US', { 
       year: 'numeric', 
       month: 'short' 
@@ -22,8 +36,12 @@ export default function CVPreviewModal({ isOpen, onClose, cvData }: CVPreviewMod
   };
 
   const formatDateRange = (startDate: string, endDate: string, isCurrent: boolean) => {
-    const start = formatDate(startDate);
-    const end = isCurrent ? 'Present' : formatDate(endDate);
+    if (!startDate && !endDate) return '';
+    const start = startDate ? formatDate(startDate) : '';
+    const end = isCurrent ? 'Present' : (endDate ? formatDate(endDate) : '');
+    if (!start && !end) return '';
+    if (!start) return end;
+    if (!end) return start;
     return `${start} - ${end}`;
   };
 
@@ -31,13 +49,14 @@ export default function CVPreviewModal({ isOpen, onClose, cvData }: CVPreviewMod
 
   return (
     <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-        onClick={onClose}
-      >
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={onClose}
+        >
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -193,15 +212,15 @@ export default function CVPreviewModal({ isOpen, onClose, cvData }: CVPreviewMod
                     {cvData.skills.map((skill, index) => (
                       <div key={index}>
                         <h3 className="font-semibold text-gray-900 mb-2">
-                          {skill.name}
+                          {skill.category}
                         </h3>
                         <div className="flex flex-wrap gap-2">
-                          {skill.keywords?.map((keyword, i) => (
+                          {skill.skills?.map((skillItem, i) => (
                             <span
                               key={i}
                               className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
                             >
-                              {keyword}
+                              {skillItem}
                             </span>
                           ))}
                         </div>
@@ -294,6 +313,7 @@ export default function CVPreviewModal({ isOpen, onClose, cvData }: CVPreviewMod
           </div>
         </motion.div>
       </motion.div>
+      )}
     </AnimatePresence>
   );
 }

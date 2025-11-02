@@ -272,8 +272,8 @@ const PaymentPartnerStats: React.FC<PaymentPartnerStatsProps> = ({ selectedCurre
                 innerRadius={40}
                 fill="#8884d8"
                 dataKey="value"
-                label={({ name, value, transactions }) => 
-                  `${name}: ${formatCurrency(value, selectedCurrency)} (${transactions} txns)`
+                  label={({ name, value, transactions }) =>
+                  `${name}: ${formatCurrency(Number(value), selectedCurrency)} (${transactions} txns)`
                 }
               >
                 {pieChartData.map((entry, index) => (

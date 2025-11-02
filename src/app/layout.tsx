@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 import './globals.css'
 import ClientProviders from '@/components/providers/ClientProviders'
 
@@ -80,16 +81,16 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       { url: '/images/favicon.png', sizes: '32x32', type: 'image/png' },
-      { url: '/images/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/images/favicon.png', sizes: '16x16', type: 'image/png' },
     ],
     shortcut: '/images/favicon.png',
     apple: [
-      { url: '/images/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+      { url: '/images/favicon.png', sizes: '180x180', type: 'image/png' },
     ],
     other: [
       {
         rel: 'mask-icon',
-        url: '/images/safari-pinned-tab.svg',
+        url: '/images/favicon.png',
         color: '#5bbad5',
       },
     ],
@@ -110,6 +111,7 @@ export default function RootLayout({
           {children}
         </ClientProviders>
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   )

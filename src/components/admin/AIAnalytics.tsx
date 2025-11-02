@@ -128,7 +128,7 @@ const AIAnalytics: React.FC = () => {
 
   // Generate realistic daily usage data if none exists
   const getDailyUsageData = () => {
-    if (aiData.dailyUsage.length > 0) {
+    if (aiData?.dailyUsage && aiData.dailyUsage.length > 0) {
       return aiData.dailyUsage;
     }
     
@@ -399,7 +399,7 @@ const AIAnalytics: React.FC = () => {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
+                  label={({ name, percent }) => `${name} ${((percent as number || 0) * 100).toFixed(0)}%`}
                   outerRadius={60}
                   fill="#8884d8"
                   dataKey="value"
@@ -539,4 +539,4 @@ const AIAnalytics: React.FC = () => {
   );
 };
 
-export default AIAnalytics; 
+export default AIAnalytics;

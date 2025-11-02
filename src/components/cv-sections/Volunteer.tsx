@@ -1,7 +1,8 @@
 import React from 'react';
 import { Calendar, Heart, ExternalLink } from 'lucide-react';
-import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ISectionBlueprint, ITemplate } from '@/models/Template';
+import { parseFormattedText } from '@/lib/utils/textFormatting';
 
 interface VolunteerProps {
   data: UnifiedCVDataStructure['volunteer'];
@@ -51,43 +52,43 @@ const Volunteer: React.FC<VolunteerProps> = ({
               <div className="item-title-group">
                 <h3 className="item-title">
                   <Heart size={16} className="volunteer-icon" />
-                  {volunteer.position || 'Volunteer Position'}
+                  {volunteerItem.position || 'Volunteer Position'}
                 </h3>
                 <div className="organization-info">
                   <span className="organization-name">
-                    {volunteer.organization || 'Organization Name'}
+                    {volunteerItem.organization || 'Organization Name'}
                   </span>
-                  {volunteer.url && (
-                    <a 
-                      href={volunteer.url} 
-                      target="_blank" 
+                  {volunteerItem.url && (
+                    <a
+                      href={volunteerItem.url}
+                      target="_blank"
                       rel="noopener noreferrer"
                       className="organization-link"
-                      aria-label={`Visit ${volunteer.organization} website`}
+                      aria-label={`Visit ${volunteerItem.organization} website`}
                     >
                       <ExternalLink size={12} />
                     </a>
                   )}
                 </div>
               </div>
-              
+
               <div className="item-date">
                 <Calendar size={12} />
                 <span>
-                  {formatDateRange(volunteer.startDate, volunteer.endDate)}
+                  {formatDateRange(volunteerItem.startDate, volunteerItem.endDate)}
                 </span>
               </div>
             </div>
 
-            {volunteer.summary && (
+            {volunteerItem.summary && (
               <div className="volunteer-summary">
-                <p>{volunteer.summary}</p>
+                <p>{volunteerItem.summary}</p>
               </div>
             )}
 
-            {volunteer.highlights && volunteer.highlights.length > 0 && (
+            {volunteerItem.highlights && volunteerItem.highlights.length > 0 && (
               <ul className="highlight-list">
-                {volunteer.highlights.map((highlight, highlightIndex) => (
+                {volunteerItem.highlights.map((highlight, highlightIndex) => (
                   <li key={highlightIndex} dangerouslySetInnerHTML={{ __html: parseFormattedText(highlight) }} />
                 ))}
               </ul>

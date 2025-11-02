@@ -147,143 +147,12 @@ const Footer = () => {
             </div>
           </motion.div>
 
-          {/* Column 2: Quick Links */}
+          {/* Column 2: Contact Details */}
           <motion.div 
             className="space-y-8"
             initial={{ opacity: 0, y: 50 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
-            viewport={{ once: true }}
-          >
-            <h3 className="text-2xl font-bold text-white">Quick Links</h3>
-            <ul className="space-y-3">
-              {quickLinks.map((link, index) => (
-                <motion.li 
-                  key={index}
-                  whileHover={{ x: 10 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <motion.a
-                    href={link.href}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      scrollToSection(link.href);
-                    }}
-                    className="text-white/60 hover:text-lime-400 transition-colors duration-300 text-lg font-medium group flex items-center gap-2"
-                    whileHover={{ x: 5 }}
-                  >
-                    <span>{link.name}</span>
-                    <motion.div
-                      className="opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                      whileHover={{ rotate: 45 }}
-                    >
-                      <ArrowRight size={16} />
-                    </motion.div>
-                  </motion.a>
-                </motion.li>
-              ))}
-            </ul>
-          </motion.div>
-
-          {/* Column 3: Newsletter */}
-          <motion.div 
-            className="space-y-8"
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-            viewport={{ once: true }}
-          >
-            <h3 className="text-2xl font-bold text-white">Stay Updated</h3>
-            <p className="text-white/70 text-lg">
-              Get the latest updates on new features and job search tips.
-            </p>
-            <form onSubmit={handleNewsletterSubscription} className="space-y-3">
-              <motion.input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email"
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors duration-300 backdrop-blur-sm text-sm"
-                whileFocus={{ scale: 1.02 }}
-                disabled={isSubscribing}
-              />
-              
-              <motion.button 
-                type="submit"
-                disabled={isSubscribing}
-                className="w-full group relative bg-gradient-to-r from-lime-400 to-lime-500 text-black px-3 py-2 rounded-xl font-semibold hover:shadow-2xl hover:shadow-lime-400/25 transition-all duration-300 overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
-                whileHover={{ 
-                  scale: isSubscribing ? 1 : 1.05,
-                  rotateY: isSubscribing ? 0 : 5,
-                  boxShadow: isSubscribing ? "none" : "0 20px 40px -12px rgba(132, 204, 22, 0.4)"
-                }}
-                whileTap={{ scale: isSubscribing ? 1 : 0.95 }}
-                style={{
-                  transformStyle: 'preserve-3d',
-                  perspective: '1000px'
-                }}
-              >
-                <motion.div
-                  className="absolute inset-0 bg-gradient-to-r from-lime-300 to-lime-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                  style={{ filter: 'blur(20px)' }}
-                />
-                <motion.div
-                  className="relative flex items-center justify-center gap-2"
-                  whileHover={{ x: isSubscribing ? 0 : 5 }}
-                >
-                  {isSubscribing ? (
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                    >
-                      <Mail size={12} />
-                    </motion.div>
-                  ) : (
-                    <Mail size={12} />
-                  )}
-                  <span className="text-xs">{isSubscribing ? 'Subscribing...' : 'Subscribe'}</span>
-                  {!isSubscribing && (
-                    <motion.div
-                      whileHover={{ rotate: 45 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <ArrowRight size={10} />
-                    </motion.div>
-                  )}
-                </motion.div>
-              </motion.button>
-              
-              {/* Status Message */}
-              {statusMessage && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={`flex items-center gap-2 text-sm ${
-                    subscriptionStatus === 'success' 
-                      ? 'text-lime-400' 
-                      : subscriptionStatus === 'error' 
-                        ? 'text-red-400' 
-                        : 'text-white/60'
-                  }`}
-                >
-                  {subscriptionStatus === 'success' && <CheckCircle size={16} />}
-                  {subscriptionStatus === 'error' && <AlertCircle size={16} />}
-                  {statusMessage}
-                </motion.div>
-              )}
-              
-              <p className="text-sm text-white/40">
-                We respect your privacy. Unsubscribe at any time.
-              </p>
-            </form>
-          </motion.div>
-
-          {/* Column 4: Contact Details */}
-          <motion.div 
-            className="space-y-8"
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.6 }}
             viewport={{ once: true }}
           >
             <h3 className="text-xl font-bold text-white mb-6">Contact Us</h3>
@@ -379,6 +248,138 @@ const Footer = () => {
                 </div>
               </motion.div>
             </div>
+          </motion.div>
+
+          {/* Column 3: Newsletter */}
+          <motion.div 
+            className="space-y-8"
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+            viewport={{ once: true }}
+          >
+            <h3 className="text-2xl font-bold text-white">Stay Updated</h3>
+            <p className="text-white/70 text-lg">
+              Get the latest updates on new features and job search tips.
+            </p>
+            <form onSubmit={handleNewsletterSubscription} className="space-y-3">
+              <motion.input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your email"
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors duration-300 backdrop-blur-sm text-sm"
+                whileFocus={{ scale: 1.02 }}
+                disabled={isSubscribing}
+              />
+              
+              <motion.button 
+                type="submit"
+                disabled={isSubscribing}
+                className="w-full group relative bg-gradient-to-r from-lime-400 to-lime-500 text-black px-3 py-2 rounded-xl font-semibold hover:shadow-2xl hover:shadow-lime-400/25 transition-all duration-300 overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
+                whileHover={{ 
+                  scale: isSubscribing ? 1 : 1.05,
+                  rotateY: isSubscribing ? 0 : 5,
+                  boxShadow: isSubscribing ? "none" : "0 20px 40px -12px rgba(132, 204, 22, 0.4)"
+                }}
+                whileTap={{ scale: isSubscribing ? 1 : 0.95 }}
+                style={{
+                  transformStyle: 'preserve-3d',
+                  perspective: '1000px'
+                }}
+              >
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-r from-lime-300 to-lime-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                  style={{ filter: 'blur(20px)' }}
+                />
+                <motion.div
+                  className="relative flex items-center justify-center gap-2"
+                  whileHover={{ x: isSubscribing ? 0 : 5 }}
+                >
+                  {isSubscribing ? (
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    >
+                      <Mail size={12} />
+                    </motion.div>
+                  ) : (
+                    <Mail size={12} />
+                  )}
+                  <span className="text-xs">{isSubscribing ? 'Subscribing...' : 'Subscribe'}</span>
+                  {!isSubscribing && (
+                    <motion.div
+                      whileHover={{ rotate: 45 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <ArrowRight size={10} />
+                    </motion.div>
+                  )}
+                </motion.div>
+              </motion.button>
+              
+              {/* Status Message */}
+              {statusMessage && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={`flex items-center gap-2 text-sm ${
+                    subscriptionStatus === 'success' 
+                      ? 'text-lime-400' 
+                      : subscriptionStatus === 'error' 
+                        ? 'text-red-400' 
+                        : 'text-white/60'
+                  }`}
+                >
+                  {subscriptionStatus === 'success' && <CheckCircle size={16} />}
+                  {subscriptionStatus === 'error' && <AlertCircle size={16} />}
+                  {statusMessage}
+                </motion.div>
+              )}
+              
+              <p className="text-sm text-white/40">
+                We respect your privacy. Unsubscribe at any time.
+              </p>
+            </form>
+          </motion.div>
+
+          {/* Column 4: Quick Links */}
+          <motion.div 
+            className="space-y-8"
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.6 }}
+            viewport={{ once: true }}
+          >
+            <h3 className="text-2xl font-bold text-white text-right">Quick Links</h3>
+            <ul className="space-y-3">
+              {quickLinks.map((link, index) => (
+                <motion.li 
+                  key={index}
+                  className="flex justify-end"
+                  whileHover={{ x: -10 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <motion.a
+                    href={link.href}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      scrollToSection(link.href);
+                    }}
+                    className="text-white/60 hover:text-lime-400 transition-colors duration-300 text-lg font-medium group flex items-center gap-2"
+                    whileHover={{ x: -5 }}
+                  >
+                    <span>{link.name}</span>
+                    <motion.div
+                      className="opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                      whileHover={{ rotate: 45 }}
+                    >
+                      <ArrowRight size={16} />
+                    </motion.div>
+                  </motion.a>
+                </motion.li>
+              ))}
+            </ul>
           </motion.div>
         </motion.div>
 

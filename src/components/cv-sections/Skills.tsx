@@ -1,6 +1,6 @@
 import React from 'react';
 import { Code2, Star, Zap } from 'lucide-react';
-import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ISectionBlueprint, ITemplate } from '@/models/Template';
 
 interface SkillsProps {
@@ -55,11 +55,11 @@ const Skills: React.FC<SkillsProps> = ({
           <div key={index} className="skill-group">
             <div className="skill-category">
               <span className="skill-category-title">
-                {skillGroup.category || skillGroup.name || 'Skills'}:
+                {skillGroup.category || 'Skills'}:
               </span>
-              {(skillGroup.skills || skillGroup.keywords) && (skillGroup.skills || skillGroup.keywords).length > 0 && (
+              {skillGroup.skills && skillGroup.skills.length > 0 && (
                 <span className="skill-list">
-                  {(skillGroup.skills || skillGroup.keywords).join(', ')}
+                  {skillGroup.skills.join(', ')}
                 </span>
               )}
             </div>

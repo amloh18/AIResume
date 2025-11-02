@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { useUserPlan } from '@/lib/hooks/useUserPlan';
 import { AIAssistantService } from '@/lib/services/aiAssistantService';
-import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { Job } from '@/lib/stores/jobStore';
 import ProfessionalTextField from '@/components/ui/ProfessionalTextField';
 

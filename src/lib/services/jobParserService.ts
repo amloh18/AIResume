@@ -58,6 +58,9 @@ export class JobParserService {
         ]
       });
     }
+    if (!this.browser) {
+      throw new Error('Browser not initialized');
+    }
     return this.browser;
   }
 
@@ -84,7 +87,10 @@ export class JobParserService {
   private async waitForContent(page: Page, timeout: number = 10000): Promise<void> {
     try {
       // Wait for the page to load
-      await page.waitForLoadState('networkidle', { timeout });
+      await page.waitForNavigation({ timeout });
+      await page.waitForFunction(() => {
+        return document.readyState === 'complete';
+      }, { timeout });
       
       // Wait for some content to appear
       await page.waitForFunction(() => {
@@ -169,15 +175,15 @@ export class JobParserService {
     return {
       title: title || 'Job Title Not Found',
       company: company || 'Company Not Found',
-      location,
+      location: location || undefined,
       salary,
       description: description || 'Description not available',
       requirements,
       skills,
-      jobType,
-      experience,
-      education,
-      postedDate,
+      jobType: jobType || undefined,
+      experience: experience || undefined,
+      education: education || undefined,
+      postedDate: postedDate || undefined,
       sourceUrl: url
     };
   }

@@ -86,7 +86,7 @@ interface CareerAnalysis {
 const CareerReportPage: React.FC = () => {
   const { user, loading: authLoading, isAuthenticated } = useUnifiedAuth();
   const { userData, loading: userLoading } = useUserData();
-  const { toggleSidebar, isMobileMenuOpen } = useMobileSidebar();
+  const { toggleSidebar, isOpen } = useMobileSidebar();
   const router = useRouter();
   const [careerAnalysis, setCareerAnalysis] = useState<CareerAnalysis | null>(null);
   const [loading, setLoading] = useState(true);
@@ -308,7 +308,7 @@ const CareerReportPage: React.FC = () => {
           }}
           showSettings={true}
           onMobileMenuToggle={toggleSidebar}
-          isMobileMenuOpen={isMobileMenuOpen}
+          isMobileMenuOpen={isOpen}
         />
         
         <div className="flex items-center justify-center py-20">
@@ -336,7 +336,7 @@ const CareerReportPage: React.FC = () => {
           }}
           showSettings={true}
           onMobileMenuToggle={toggleSidebar}
-          isMobileMenuOpen={isMobileMenuOpen}
+          isMobileMenuOpen={isOpen}
         />
         
         <div className="flex items-center justify-center py-20">
@@ -381,7 +381,7 @@ const CareerReportPage: React.FC = () => {
           }}
           showSettings={true}
           onMobileMenuToggle={toggleSidebar}
-          isMobileMenuOpen={isMobileMenuOpen}
+          isMobileMenuOpen={isOpen}
         />
         
         <div className="flex items-center justify-center py-20">
@@ -419,7 +419,7 @@ const CareerReportPage: React.FC = () => {
         }}
         showSettings={true}
         onMobileMenuToggle={toggleSidebar}
-        isMobileMenuOpen={isMobileMenuOpen}
+        isMobileMenuOpen={isOpen}
       />
 
       {/* Action Bar */}

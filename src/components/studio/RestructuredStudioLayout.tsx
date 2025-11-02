@@ -62,14 +62,59 @@ export default function RestructuredStudioLayout({
 }: RestructuredStudioLayoutProps) {
   const [expandedCVSections, setExpandedCVSections] = useState<Set<string>>(new Set(['personal_header']));
 
-  // Function to check if a section has data or has been initialized
+  // Function to check if a section should be visible based on structure OR legacy data
+  const isSectionVisible = (sectionId: string): boolean => {
+    if (!cvData) return false;
+    
+    // Check structure visibility first (source of truth for new architecture)
+    if (cvData.structure?.sections && Array.isArray(cvData.structure.sections)) {
+      const structureSection = cvData.structure.sections.find(s => s.type === sectionId);
+      if (structureSection) {
+        // If section exists in structure, use its visibility flag
+        return structureSection.visible !== false;
+      }
+    }
+    
+    // Fallback: check legacy data for backward compatibility
+    // Personal header is always visible
+    if (sectionId === 'personal_header') return true;
+    
+    // For other sections, check if they have been initialized (array exists, even if empty)
+    switch (sectionId) {
+      case 'work_experience':
+        return Array.isArray(cvData.work);
+      case 'education':
+        return Array.isArray(cvData.education);
+      case 'skills':
+        return Array.isArray(cvData.skills);
+      case 'projects':
+        return Array.isArray(cvData.projects);
+      case 'certificates':
+        return Array.isArray(cvData.certificates);
+      case 'languages':
+        return Array.isArray(cvData.languages);
+      case 'volunteer':
+        return Array.isArray(cvData.volunteer);
+      case 'awards':
+        return Array.isArray(cvData.awards);
+      case 'publications':
+        return Array.isArray(cvData.publications);
+      case 'interests':
+        return Array.isArray(cvData.interests);
+      case 'references':
+        return Array.isArray(cvData.references);
+      default:
+        return false;
+    }
+  };
+
+  // Helper function to check if section has actual data (for UI indicators)
   const hasSectionData = (sectionId: string): boolean => {
     if (!cvData) return false;
     
     switch (sectionId) {
       case 'personal_header':
-        // Always show personal information section
-        return true;
+        return !!(cvData.basics?.name || cvData.basics?.email || cvData.basics?.phone);
       case 'work_experience':
         return Array.isArray(cvData.work) && cvData.work.length > 0;
       case 'education':
@@ -110,8 +155,8 @@ export default function RestructuredStudioLayout({
   // Define all possible sections
   const allSectionIds = ['personal_header', 'work_experience', 'education', 'skills', 'projects', 'certificates', 'languages', 'volunteer', 'awards', 'publications', 'interests', 'references'];
   
-  // Filter to only show sections with data
-  const sectionsWithData = allSectionIds.filter(id => hasSectionData(id));
+  // Show sections based on structure visibility OR legacy data initialization
+  const visibleSections = allSectionIds.filter(id => isSectionVisible(id));
 
   // Helper function to render section based on ID
   const renderSection = (sectionId: string) => {
@@ -784,31 +829,31 @@ export default function RestructuredStudioLayout({
     <div className="h-full w-full bg-[#1A201A]">
       <div className="pt-6 px-6 pb-6 space-y-4">
       {/* Header with Collapse All/Expand All Button */}
-      {sectionsWithData.length > 0 && (
+      {visibleSections.length > 0 && (
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-white">CV Sections</h3>
           <Button
             variant="outline"
             size="sm"
             onClick={() => {
-              if (sectionsWithData.length === 0) return;
-              const allExpanded = sectionsWithData.every(id => expandedCVSections.has(id));
+              if (visibleSections.length === 0) return;
+              const allExpanded = visibleSections.every((id: string) => expandedCVSections.has(id));
               if (allExpanded) {
                 setExpandedCVSections(new Set());
               } else {
-                setExpandedCVSections(new Set(sectionsWithData));
+                setExpandedCVSections(new Set(visibleSections));
               }
             }}
             className="bg-[#2D332D] border-[#2D332D] text-white hover:bg-[#3D433D]"
           >
-            {sectionsWithData.length > 0 && sectionsWithData.every(id => expandedCVSections.has(id)) ? 'Collapse All' : 'Expand All'}
+            {visibleSections.length > 0 && visibleSections.every((id: string) => expandedCVSections.has(id)) ? 'Collapse All' : 'Expand All'}
           </Button>
         </div>
       )}
 
-      {/* Render only sections with data */}
+      {/* Render visible sections (based on structure or initialization) */}
         <div className="space-y-2 pb-6">
-        {sectionsWithData.map(sectionId => renderSection(sectionId))}
+        {visibleSections.map((sectionId: string) => renderSection(sectionId))}
         </div>
       </div>
     </div>

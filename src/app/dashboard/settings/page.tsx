@@ -40,6 +40,7 @@ import ChangePasswordModal from '@/components/auth/ChangePasswordModal';
 // TwoFactorModal removed - 2FA not implemented yet
 import PageHeader from '@/components/dashboard/PageHeader';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
+import CalendarSyncSettings from '@/components/settings/CalendarSyncSettings';
 
 // --- TYPES ---
 
@@ -2121,7 +2122,7 @@ const getTabDescription = (tab: string) => {
 const SettingsContent = () => {
   const { user, loading: authLoading, isAuthenticated } = useUnifiedAuth();
   const router = useRouter();
-  const { toggleSidebar, isMobileMenuOpen } = useMobileSidebar();
+  const { toggleSidebar, isOpen } = useMobileSidebar();
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState('account');
   const [userData, setUserData] = useState<User | null>(null);
@@ -2289,7 +2290,7 @@ const SettingsContent = () => {
             }}
             showSettings={true}
             onMobileMenuToggle={toggleSidebar}
-            isMobileMenuOpen={isMobileMenuOpen}
+            isMobileMenuOpen={isOpen}
           />
         </div>
         

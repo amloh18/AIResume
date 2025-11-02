@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
       return await handleDayPassPayment(plan, user, billingDetails, paymentProvider);
     } else {
       // Pro plans - subscription
-      return await handleProPlanPayment(plan, user, interval, billingDetails, paymentProvider);
+      return await handleProPlanPayment(plan, user, interval, billingDetails, paymentProvider, returnUrl);
     }
 
   } catch (error) {
@@ -88,6 +88,9 @@ async function handleDayPassPayment(
   const amount = plan.price_one_time * 100; // Convert to cents/paisa
 
   if (provider === 'stripe') {
+    if (!stripe) {
+      return NextResponse.json({ error: 'Stripe is not configured' }, { status: 500 });
+    }
     try {
       // Create Stripe PaymentIntent for one-time payment
       const paymentIntent = await stripe.paymentIntents.create({
@@ -116,6 +119,9 @@ async function handleDayPassPayment(
     }
 
   } else if (provider === 'razorpay') {
+    if (!razorpay) {
+      return NextResponse.json({ error: 'Razorpay is not configured' }, { status: 500 });
+    }
     try {
       // Create Razorpay Order for one-time payment
       const order = await razorpay.orders.create({
@@ -151,7 +157,8 @@ async function handleProPlanPayment(
   user: any, 
   interval: string, 
   billingDetails: any, 
-  provider: string
+  provider: string,
+  returnUrl?: string
 ) {
   // Determine the correct price based on interval
   let priceId: string | undefined;
@@ -174,6 +181,9 @@ async function handleProPlanPayment(
       return NextResponse.json({ error: 'Price not configured for this plan' }, { status: 400 });
     }
 
+    if (!stripe) {
+      return NextResponse.json({ error: 'Stripe is not configured' }, { status: 500 });
+    }
     try {
       // Create or get Stripe customer
       let customerId = user.subscription?.providerCustomerId;
@@ -250,12 +260,16 @@ async function handleProPlanPayment(
       return NextResponse.json({ error: 'Plan not configured for Razorpay' }, { status: 400 });
     }
 
+    if (!razorpay) {
+      return NextResponse.json({ error: 'Razorpay is not configured' }, { status: 500 });
+    }
+
     try {
       // Create Razorpay Subscription
       const subscription = await razorpay.subscriptions.create({
         plan_id: planId,
         customer_notify: 1,
-        total_count: null, // Ongoing subscription
+        total_count: undefined as any, // Ongoing subscription
         notes: {
           planKey: plan.key,
           userId: user._id.toString(),

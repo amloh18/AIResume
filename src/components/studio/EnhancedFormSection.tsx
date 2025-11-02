@@ -17,7 +17,7 @@ import AIEnhancedFormField from './AIEnhancedFormField';
 import ATSScoreGauge from '@/components/ui/ATSScoreGauge';
 import JobSelector from './JobSelector';
 import CVParserButton from './CVParserButton';
-import { UnifiedUnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { Job } from '@/lib/stores/jobStore';
 import { useUserPlan } from '@/lib/hooks/useUserPlan';
 

@@ -1,3 +1,4 @@
+import 'server-only';
 import mongoose from 'mongoose';
 
 // Load environment variables
@@ -10,10 +11,16 @@ console.log('🔍 MongoDB URI check:', MONGODB_URI ? 'URI found' : 'URI missing'
  * in development. This prevents connections growing exponentially
  * during API Route usage.
  */
-let cached = global.mongoose;
+type MongooseCache = {
+  conn: typeof mongoose | null;
+  promise: Promise<typeof mongoose> | null;
+};
+
+const globalAny = global as any;
+let cached: MongooseCache = globalAny.mongooseCache;
 
 if (!cached) {
-  cached = global.mongoose = { conn: null, promise: null };
+  cached = globalAny.mongooseCache = { conn: null, promise: null };
 }
 
 // Connection options with better error handling

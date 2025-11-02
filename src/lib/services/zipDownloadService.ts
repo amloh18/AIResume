@@ -67,13 +67,32 @@ export class ZipDownloadService {
     try {
       // Generate CV PDF
       if (cvData && journeyData.cvId) {
-        const cvPdf = await PDFService.generatePDF(cvData, {}); // Use default template
+        const cvPdf = await PDFService.generatePDF(cvData, {
+          id: 'default',
+          name: 'Default Template',
+          description: 'Default template',
+          thumbnail: '',
+          category: 'cv',
+          categories: [],
+          tier: 'free',
+          layoutType: 'one-column',
+          globalStyles: {},
+          columnLayout: {},
+          sectionStyling: {},
+          availableSections: [],
+          templateData: {},
+          isActive: true,
+          isDefault: false,
+          isPublished: true,
+          globalAccess: true,
+          version: 1
+        } as any); // Use default template
         zip.file(`${journeyData.jobTitle} - CV.pdf`, cvPdf);
       }
 
       // Generate Cover Letter PDF
       if (coverLetterData && journeyData.coverLetterId) {
-        const coverLetterPdf = await PDFService.generateCoverLetterPDF(coverLetterData);
+        const coverLetterPdf = await this.generateCoverLetterPDF(coverLetterData);
         zip.file(`${journeyData.jobTitle} - Cover Letter.pdf`, coverLetterPdf);
       }
 
@@ -110,13 +129,32 @@ export class ZipDownloadService {
         if (!cvData || !journeyData.cvId) {
           throw new Error('CV data not available');
         }
-        return await PDFService.generatePDF(cvData, {});
+        return await PDFService.generatePDF(cvData, {
+          id: 'default',
+          name: 'Default Template',
+          description: 'Default template',
+          thumbnail: '',
+          category: 'cv',
+          categories: [],
+          tier: 'free',
+          layoutType: 'one-column',
+          globalStyles: {},
+          columnLayout: {},
+          sectionStyling: {},
+          availableSections: [],
+          templateData: {},
+          isActive: true,
+          isDefault: false,
+          isPublished: true,
+          globalAccess: true,
+          version: 1
+        } as any);
 
       case 'coverLetter':
         if (!coverLetterData || !journeyData.coverLetterId) {
           throw new Error('Cover letter data not available');
         }
-        return await PDFService.generateCoverLetterPDF(coverLetterData);
+        return await this.generateCoverLetterPDF(coverLetterData);
 
       case 'jobDescription':
         return await this.generateJobDescriptionPDF(jobData);

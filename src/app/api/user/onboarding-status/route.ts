@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import connectDB from '@/lib/mongodb';
+import connectDB from '@/lib/database';
 import User from '@/models/User';
 import CV from '@/models/CV';
 

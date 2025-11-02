@@ -283,7 +283,8 @@ export function generateStudioBreadcrumbs(params: StudioNavigationParams): Array
   }
   
   breadcrumbs.push({
-    label: `${params.documentType === 'cv' ? 'CV' : 'Cover Letter'} Studio`
+    label: `${params.documentType === 'cv' ? 'CV' : 'Cover Letter'} Studio`,
+    href: '/studio'
   });
   
   return breadcrumbs;

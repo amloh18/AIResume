@@ -7,6 +7,8 @@ import { createPaginationOptions, paginateQuery, createErrorResponse } from '@/l
 import { UnifiedCVAPIResponse, UnifiedCVDocument, UnifiedCVRequest } from '@/types/unified-cv-schema';
 import { getAuthenticatedUser } from '@/lib/auth-helpers';
 import { getTemplateById, isHardcodedTemplate } from '@/lib/templates/template-utils';
+import { extractUserIdentifier, createWithFirebaseUid } from '@/lib/firebase-uid-utils';
+import { HARDCODED_TEMPLATES } from '@/lib/templates/hardcoded-templates';
 import mongoose from 'mongoose';
 
 // GET - List CVs for a user with comprehensive filtering
@@ -14,8 +16,12 @@ export async function GET(request: NextRequest) {
   try {
     console.log('🔍 CV API - Starting GET request');
 
-    // Check authentication using NextAuth
-    const authResult = await getAuthenticatedUser();
+    // Ensure database is connected first
+    await connectDB();
+    console.log('🔍 CV API - Database connected');
+
+    // Check authentication using NextAuth - pass request for proper cookie handling
+    const authResult = await getAuthenticatedUser(request);
     console.log('🔍 CV API - Auth check:', { 
       hasAuth: !!authResult,
       email: authResult?.userEmail 
@@ -34,6 +40,15 @@ export async function GET(request: NextRequest) {
     const userId = authResult.userId;
     
     console.log('🔍 CV API - User info:', { userEmail, userId });
+    
+    // Validate userId
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+      console.error('❌ CV API - Invalid userId:', userId);
+      return NextResponse.json(
+        { success: false, error: 'Invalid user ID' },
+        { status: 400 }
+      );
+    }
     
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type'); // 'cv' or 'cover'
@@ -209,7 +224,7 @@ export async function GET(request: NextRequest) {
 
     // Convert to unified schema format
     const unifiedCvs: UnifiedCVDocument[] = transformedCvs.map(cv => ({
-      id: cv.id,
+      id: String(cv.id),
       userId: userId, // Use the userId from authResult
       title: cv.title,
       cvData: cv.cvData,
@@ -253,7 +268,22 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(response);
 
   } catch (error: any) {
-    console.error('Get CVs error:', error);
+    console.error('❌ Get CVs error:', error);
+    console.error('❌ Error details:', {
+      message: error?.message,
+      stack: error?.stack,
+      name: error?.name,
+      cause: error?.cause
+    });
+    
+    // More detailed error logging
+    if (error instanceof mongoose.Error) {
+      console.error('❌ Mongoose error:', error.message);
+    }
+    if (error instanceof Error) {
+      console.error('❌ Error stack:', error.stack);
+    }
+    
     const errorResponse = createErrorResponse(error);
     
     return NextResponse.json(
@@ -397,7 +427,7 @@ export async function POST(request: NextRequest) {
           { status: 404 }
         );
       }
-      userId = user._id;
+      userId = (user as any)._id;
       firebaseUid = userIdentifier.id;
     } else {
       userId = new mongoose.Types.ObjectId(userIdentifier.id);

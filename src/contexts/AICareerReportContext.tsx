@@ -23,6 +23,56 @@ export interface AIAnalysis {
       rationale: string;
     };
   };
+  impactScore?: {
+    quantifiableStatements?: number;
+    highImpactVerbs?: number;
+    industryKeywords?: number;
+    insights?: Array<{
+      type: string;
+      message: string;
+    }>;
+  };
+  careerCoherence?: {
+    score?: number;
+    strengths?: string[];
+    redFlags?: Array<{
+      issue: string;
+      impact: string;
+      action?: string;
+    }>;
+  };
+  cvOptimization?: {
+    totalLength?: string;
+    bulletPointLength?: string;
+    educationPlacement?: string;
+  };
+  skillsGap?: {
+    skills?: Array<{
+      name: string;
+      mentions: number;
+      quantifiedUse: number;
+      gapInsight: string;
+    }>;
+    focusDistribution?: Array<{
+      area: string;
+      percentage: number;
+    }>;
+  };
+  seniorTranslation?: {
+    translations?: Array<{
+      current: string;
+      improved: string;
+      shift: string;
+    }>;
+  };
+  industrySpecialization?: {
+    specialization?: string;
+    keywords?: string[];
+    contactIssues?: Array<{
+      issue: string;
+      action: string;
+    }>;
+  };
 }
 
 export interface AICareerReportState {
@@ -137,6 +187,7 @@ const getInitialState = (): AICareerReportState => {
       basics: {
         name: '',
         label: '',
+        image: '',
         email: '',
         phone: '',
         url: '',
@@ -151,15 +202,16 @@ const getInitialState = (): AICareerReportState => {
         profiles: []
       },
       work: [],
-      education: [],
-      skills: [],
-      projects: [],
-      certificates: [],
-      languages: [],
       volunteer: [],
+      education: [],
+      awards: [],
+      certificates: [],
       publications: [],
+      skills: [],
+      languages: [],
       interests: [],
-      references: []
+      references: [],
+      projects: []
     },
     uploadedFile: null, // File objects can't be serialized, will be handled separately
     aiAnalysis: savedData?.aiAnalysis || null, // Restore AI analysis if available
@@ -287,7 +339,7 @@ function aiCareerReportReducer(
       };
 
     case 'RESET_STATE':
-      return initialState;
+      return getInitialState();
 
     default:
       return state;

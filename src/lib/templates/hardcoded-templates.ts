@@ -23,10 +23,14 @@ export const CustomTemplates = {
   TheModernCVTemplate
 };
 
+// Type for template without Mongoose properties
+type HardcodedTemplate = Omit<ITemplate, '$assertPopulated' | '$clearModifiedPaths' | '$clone' | '$createModifiedPathsSnapshot' | '$get' | '$getPopulatedDocs' | '$ignore' | '$inc' | '$init' | '$isDefault' | '$isDeleted' | '$isEmpty' | '$isModified' | '$isNew' | '$markModified' | '$model' | '$ne' | '$op' | '$populate' | '$pull' | '$push' | '$remove' | '$replaceOne' | '$save' | '$set' | '$setDefaults' | '__parentArray' | '__parent' | '__children' | '__getPopulated' | '__setSchema' | 'createdAt' | 'updatedAt' | '__v'> & {
+  _id?: string;
+};
+
 // Hardcoded template definitions
-export const HARDCODED_TEMPLATES: ITemplate[] = [
+export const HARDCODED_TEMPLATES: HardcodedTemplate[] = [
   {
-    _id: 'data-driven-pro-template',
     id: 'data-driven-pro-template',
     name: 'Data Driven Pro',
     description: 'Professional template designed for data scientists, analysts, and technical professionals',
@@ -61,12 +65,9 @@ export const HARDCODED_TEMPLATES: ITemplate[] = [
     isPublished: true,
     globalAccess: true,
     version: 1,
-    createdAt: new Date(),
-    updatedAt: new Date(),
     customRenderer: 'DataDrivenProTemplate'
   },
   {
-    _id: 'designer-modern-template',
     id: 'designer-modern-template',
     name: 'Designer Modern',
     description: 'Contemporary template with modern typography and clean design aesthetics',
@@ -101,12 +102,9 @@ export const HARDCODED_TEMPLATES: ITemplate[] = [
     isPublished: true,
     globalAccess: true,
     version: 1,
-    createdAt: new Date(),
-    updatedAt: new Date(),
     customRenderer: 'DesignerModernTemplate'
   },
   {
-    _id: 'elegant-timeline-template',
     id: 'elegant-timeline-template',
     name: 'Elegant Timeline',
     description: 'Sophisticated template with timeline-based layout and elegant typography',
@@ -141,12 +139,9 @@ export const HARDCODED_TEMPLATES: ITemplate[] = [
     isPublished: true,
     globalAccess: true,
     version: 1,
-    createdAt: new Date(),
-    updatedAt: new Date(),
     customRenderer: 'ElegantTimelineTemplate'
   },
   {
-    _id: 'executive-professional-layout-template',
     id: 'executive-professional-layout-template',
     name: 'Executive Professional',
     description: 'Professional layout designed for executive-level positions',
@@ -181,12 +176,9 @@ export const HARDCODED_TEMPLATES: ITemplate[] = [
     isPublished: true,
     globalAccess: true,
     version: 1,
-    createdAt: new Date(),
-    updatedAt: new Date(),
     customRenderer: 'ExecutiveProfessionalLayoutTemplate'
   },
   {
-    _id: 'executive-standard-template',
     id: 'executive-standard-template',
     name: 'Executive Standard',
     description: 'Standard executive template with traditional corporate styling',
@@ -221,12 +213,9 @@ export const HARDCODED_TEMPLATES: ITemplate[] = [
     isPublished: true,
     globalAccess: true,
     version: 1,
-    createdAt: new Date(),
-    updatedAt: new Date(),
     customRenderer: 'ExecutiveStandardTemplate'
   },
   {
-    _id: 'professional-extended-template',
     id: 'professional-extended-template',
     name: 'Professional Extended',
     description: 'Comprehensive professional template with extended sections and detailed layout',
@@ -261,12 +250,9 @@ export const HARDCODED_TEMPLATES: ITemplate[] = [
     isPublished: true,
     globalAccess: true,
     version: 1,
-    createdAt: new Date(),
-    updatedAt: new Date(),
     customRenderer: 'ProfessionalExtendedTemplate'
   },
   {
-    _id: 'tech-pro-blue-template',
     id: 'tech-pro-blue-template',
     name: 'Tech Pro Blue',
     description: 'Technical professional template with blue accent colors and modern design',
@@ -301,12 +287,9 @@ export const HARDCODED_TEMPLATES: ITemplate[] = [
     isPublished: true,
     globalAccess: true,
     version: 1,
-    createdAt: new Date(),
-    updatedAt: new Date(),
     customRenderer: 'TechProBlueTemplate'
   },
   {
-    _id: 'the-modern-cv-template',
     id: 'the-modern-cv-template',
     name: 'The Modern CV',
     description: 'Contemporary template with modern typography, clean design, and professional layout with sidebar accent',
@@ -341,8 +324,6 @@ export const HARDCODED_TEMPLATES: ITemplate[] = [
     isPublished: true,
     globalAccess: true,
     version: 1,
-    createdAt: new Date(),
-    updatedAt: new Date(),
     customRenderer: 'TheModernCVTemplate'
   }
 ];
@@ -383,8 +364,7 @@ export const generateHardcodedTemplatePreview = (templateId: string): UnifiedCVD
           'Implemented new features for customer-facing web application using React and Redux',
           'Collaborated with product managers and designers to define project requirements',
           'Participated in code reviews and contributed to improving code quality'
-        ],
-        location: 'San Francisco, CA'
+        ]
       },
       {
         name: 'StartupXYZ',
@@ -397,8 +377,7 @@ export const generateHardcodedTemplatePreview = (templateId: string): UnifiedCVD
           'Built responsive web applications using React, Node.js, and MongoDB',
           'Implemented RESTful APIs and database design',
           'Collaborated with design team to create user-friendly interfaces'
-        ],
-        location: 'San Francisco, CA'
+        ]
       }
     ],
     volunteer: [],
@@ -411,8 +390,7 @@ export const generateHardcodedTemplatePreview = (templateId: string): UnifiedCVD
         startDate: '2015-09',
         endDate: '2019-05',
         score: '3.8 GPA',
-        courses: [],
-        location: 'Berkeley, CA'
+        courses: []
       }
     ],
     awards: [
@@ -427,19 +405,16 @@ export const generateHardcodedTemplatePreview = (templateId: string): UnifiedCVD
     publications: [],
     skills: [
       {
-        name: 'Programming Languages',
-        level: 'Advanced',
-        keywords: ['JavaScript', 'TypeScript', 'Python', 'Java', 'C++']
+        category: 'Programming Languages',
+        skills: ['JavaScript', 'TypeScript', 'Python', 'Java', 'C++']
       },
       {
-        name: 'Frameworks & Libraries',
-        level: 'Advanced',
-        keywords: ['React', 'Node.js', 'Express', 'Django', 'Spring Boot']
+        category: 'Frameworks & Libraries',
+        skills: ['React', 'Node.js', 'Express', 'Django', 'Spring Boot']
       },
       {
-        name: 'Tools & Technologies',
-        level: 'Intermediate',
-        keywords: ['Git', 'Docker', 'AWS', 'MongoDB', 'PostgreSQL']
+        category: 'Tools & Technologies',
+        skills: ['Git', 'Docker', 'AWS', 'MongoDB', 'PostgreSQL']
       }
     ],
     languages: [

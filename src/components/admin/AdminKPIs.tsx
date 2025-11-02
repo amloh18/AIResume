@@ -32,14 +32,14 @@ import {
 } from 'recharts';
 
 interface KPIData {
-  totalUsers: number;
-  activeUsers: number;
-  totalCVs: number;
-  totalJobs: number;
-  totalCoverLetters: number;
-  aiUsage: number;
-  revenue: number;
-  growthRate: number;
+  totalUsers?: number;
+  activeUsers?: number;
+  totalCVs?: number;
+  totalJobs?: number;
+  totalCoverLetters?: number;
+  aiUsage?: number;
+  revenue?: number;
+  growthRate?: number;
 }
 
 interface ChartData {
@@ -255,7 +255,7 @@ const AdminKPIs: React.FC<AdminKPIsProps> = ({ onNotificationClick }) => {
       title: 'Total Users',
       value: kpiData?.totalUsers?.toLocaleString() || '0',
       change: kpiData?.totalUsers ? calculateChange(kpiData.totalUsers, 50) : '+0%',
-      changeType: kpiData?.totalUsers > 50 ? 'positive' : 'negative',
+      changeType: (kpiData?.totalUsers ?? 0) > 50 ? 'positive' : 'negative',
       icon: Users,
       color: 'bg-blue-500'
     },
@@ -263,7 +263,7 @@ const AdminKPIs: React.FC<AdminKPIsProps> = ({ onNotificationClick }) => {
       title: 'Active Users',
       value: kpiData?.activeUsers?.toLocaleString() || '0',
       change: kpiData?.activeUsers ? calculateChange(kpiData.activeUsers, 20) : '+0%',
-      changeType: kpiData?.activeUsers > 20 ? 'positive' : 'negative',
+      changeType: (kpiData?.activeUsers ?? 0) > 20 ? 'positive' : 'negative',
       icon: Activity,
       color: 'bg-green-500'
     },
@@ -271,7 +271,7 @@ const AdminKPIs: React.FC<AdminKPIsProps> = ({ onNotificationClick }) => {
       title: 'CVs Created',
       value: kpiData?.totalCVs?.toLocaleString() || '0',
       change: kpiData?.totalCVs ? calculateChange(kpiData.totalCVs, 30) : '+0%',
-      changeType: kpiData?.totalCVs > 30 ? 'positive' : 'negative',
+      changeType: (kpiData?.totalCVs ?? 0) > 30 ? 'positive' : 'negative',
       icon: FileText,
       color: 'bg-purple-500'
     },
@@ -279,7 +279,7 @@ const AdminKPIs: React.FC<AdminKPIsProps> = ({ onNotificationClick }) => {
       title: 'Jobs Tracked',
       value: kpiData?.totalJobs?.toLocaleString() || '0',
       change: kpiData?.totalJobs ? calculateChange(kpiData.totalJobs, 15) : '+0%',
-      changeType: kpiData?.totalJobs > 15 ? 'positive' : 'negative',
+      changeType: (kpiData?.totalJobs ?? 0) > 15 ? 'positive' : 'negative',
       icon: TrendingUp,
       color: 'bg-orange-500'
     },
@@ -287,7 +287,7 @@ const AdminKPIs: React.FC<AdminKPIsProps> = ({ onNotificationClick }) => {
       title: 'Cover Letters',
       value: kpiData?.totalCoverLetters?.toLocaleString() || '0',
       change: kpiData?.totalCoverLetters ? calculateChange(kpiData.totalCoverLetters, 10) : '+0%',
-      changeType: kpiData?.totalCoverLetters > 10 ? 'positive' : 'negative',
+      changeType: (kpiData?.totalCoverLetters ?? 0) > 10 ? 'positive' : 'negative',
       icon: FileText,
       color: 'bg-indigo-500'
     },
@@ -295,7 +295,7 @@ const AdminKPIs: React.FC<AdminKPIsProps> = ({ onNotificationClick }) => {
       title: 'AI Usage',
       value: kpiData?.aiUsage?.toLocaleString() || '0',
       change: kpiData?.aiUsage ? calculateChange(kpiData.aiUsage, 200) : '+0%',
-      changeType: kpiData?.aiUsage > 200 ? 'positive' : 'negative',
+      changeType: (kpiData?.aiUsage ?? 0) > 200 ? 'positive' : 'negative',
       icon: Activity,
       color: 'bg-pink-500'
     },
@@ -303,7 +303,7 @@ const AdminKPIs: React.FC<AdminKPIsProps> = ({ onNotificationClick }) => {
       title: 'Revenue',
       value: `$${kpiData?.revenue?.toLocaleString() || '0'}`,
       change: kpiData?.revenue ? calculateChange(kpiData.revenue, 1000) : '+0%',
-      changeType: kpiData?.revenue > 1000 ? 'positive' : 'negative',
+      changeType: (kpiData?.revenue ?? 0) > 1000 ? 'positive' : 'negative',
       icon: DollarSign,
       color: 'bg-emerald-500'
     },
@@ -311,17 +311,17 @@ const AdminKPIs: React.FC<AdminKPIsProps> = ({ onNotificationClick }) => {
       title: 'Growth Rate',
       value: `${kpiData?.growthRate || 0}%`,
       change: kpiData?.growthRate ? (kpiData.growthRate > 0 ? `+${kpiData.growthRate}%` : `${kpiData.growthRate}%`) : '+0%',
-      changeType: kpiData?.growthRate > 0 ? 'positive' : 'negative',
+      changeType: (kpiData?.growthRate ?? 0) > 0 ? 'positive' : 'negative',
       icon: TrendingUp,
       color: 'bg-cyan-500'
     }
   ];
 
   const pieChartData = kpiData ? [
-    { name: 'CVs', value: kpiData.totalCVs, color: '#8B5CF6' },
-    { name: 'Jobs', value: kpiData.totalJobs, color: '#F59E0B' },
-    { name: 'Cover Letters', value: kpiData.totalCoverLetters, color: '#3B82F6' },
-    { name: 'AI Usage', value: kpiData.aiUsage, color: '#EC4899' }
+    { name: 'CVs', value: kpiData.totalCVs ?? 0, color: '#8B5CF6' },
+    { name: 'Jobs', value: kpiData.totalJobs ?? 0, color: '#F59E0B' },
+    { name: 'Cover Letters', value: kpiData.totalCoverLetters ?? 0, color: '#3B82F6' },
+    { name: 'AI Usage', value: kpiData.aiUsage ?? 0, color: '#EC4899' }
   ] : [];
 
   // Show error state if no data is available
@@ -644,4 +644,4 @@ const AdminKPIs: React.FC<AdminKPIsProps> = ({ onNotificationClick }) => {
   );
 };
 
-export default AdminKPIs; 
+export default AdminKPIs;

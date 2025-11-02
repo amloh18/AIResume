@@ -7,7 +7,9 @@ import { AICareerReportProvider, useAICareerReport } from '@/contexts/AICareerRe
 import ChoosePathStep from '@/components/ai-career-report/ChoosePathStep';
 import MasterCVBuilderStep from '@/components/ai-career-report/MasterCVBuilderStep';
 import AICareerReportStep from '@/components/ai-career-report/AICareerReportStep';
+import CVPreviewModal from '@/components/ai-career-report/CVPreviewModal';
 import { motion } from 'framer-motion';
+import Image from 'next/image';
 import { ArrowLeft, Sparkles, Eye, Save, CheckCircle, LogOut } from 'lucide-react';
 
 // Main Content Component
@@ -20,6 +22,7 @@ function AICareerReportContent() {
   const modeParam = searchParams.get('mode');
   const jobIdParam = searchParams.get('jobId');
   const [showSavedIndicator, setShowSavedIndicator] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   // Handle URL parameters and authentication
   useEffect(() => {
@@ -115,7 +118,7 @@ function AICareerReportContent() {
     <div className="min-h-screen bg-[#1A201A]">
 
       {/* Header */}
-      <div className="relative z-10 bg-[#1A261A]">
+      <div className="sticky top-0 z-50 bg-[#1A261A] border-b border-white/10 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
             {/* Left side - Back button, Logo, and Step Information */}
@@ -135,12 +138,19 @@ function AICareerReportContent() {
 
               {/* Logo */}
               <div className="flex items-center gap-3">
+                <Image 
+                  src="/images/Logo.png" 
+                  alt="CV Circle Logo" 
+                  width={40} 
+                  height={40}
+                  className="object-contain rounded-lg"
+                />
                 <div className="text-2xl font-bold">
-                  <span className="text-white">CV</span>
-                  <span className="text-white">CIRCLE</span>
+                  <span className="text-lime-400">CV</span>
+                  <span className="text-white">Circle</span>
                 </div>
                 <div className="text-sm text-white bg-lime-400/20 px-2 py-1 rounded-full">
-                  AI Career Guide
+                  Master CV
                 </div>
               </div>
 
@@ -245,6 +255,15 @@ function AICareerReportContent() {
           </div>
         )}
       </div>
+
+      {/* CV Preview Modal */}
+      {showPreview && (
+        <CVPreviewModal
+          isOpen={showPreview}
+          onClose={() => setShowPreview(false)}
+          cvData={state.cvData}
+        />
+      )}
     </div>
   );
 }
@@ -257,7 +276,7 @@ export default function AICareerReportClient() {
         <div className="min-h-screen bg-[#1A201A] flex items-center justify-center">
           <div className="text-center">
             <div className="w-8 h-8 border-2 border-lime-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-white">Loading AI Career Guide...</p>
+            <p className="text-white">Loading Master CV...</p>
           </div>
         </div>
       }>

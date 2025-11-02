@@ -11,6 +11,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
+import { UnifiedCVService } from '@/lib/services/unified-cv-service';
 
 interface MasterCV {
   id: string;
@@ -57,22 +58,47 @@ const MasterCVCard: React.FC<MasterCVCardProps> = ({
         sessionUserId: session?.user?.id
       });
       
-      const response = await fetch(`/api/cvs/master?userId=${userId}`);
-      console.log('🔍 MasterCVCard - API response status:', response.status);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (!userId) {
+        throw new Error('No user ID provided');
       }
       
-      const result = await response.json();
-      console.log('🔍 MasterCVCard - API response data:', result);
+      // Use unified service to get master CV - same approach as MasterCVCardOverlay in dashboard
+      console.log('🔍 MasterCVCard - Calling UnifiedCVService.getCVs...');
+      const allCVs = await UnifiedCVService.getCVs(userId, { 
+        projection: 'summary'
+      });
+      console.log('🔍 MasterCVCard - UnifiedCVService.getCVs result:', allCVs);
       
-      if (result.success && result.data?.masterCV) {
-        console.log('✅ MasterCVCard - Master CV found:', result.data.masterCV);
-        setMasterCV(result.data.masterCV);
+      // Filter for master CVs - handle both old format (isMaster at root) and new format (metadata.isMaster)
+      const masterCVs = allCVs.filter(cv => 
+        cv.metadata?.isMaster === true || 
+        cv.metadata?.isMaster === 'true' ||
+        cv.isMaster === true ||
+        cv.isMaster === 'true'
+      );
+      
+      console.log('🔍 MasterCVCard - Unified service response:', masterCVs);
+      
+      if (masterCVs && masterCVs.length > 0) {
+        const masterCVData = masterCVs[0];
+        console.log('✅ MasterCVCard - Master CV found:', masterCVData);
+        
+        // Transform to expected format - handle both old and new formats
+        const transformedMasterCV = {
+          id: masterCVData.id,
+          title: masterCVData.title,
+          lastModified: new Date(masterCVData.metadata?.lastModified || masterCVData.updatedAt).toLocaleDateString(),
+          status: masterCVData.status,
+          isMaster: masterCVData.metadata?.isMaster || masterCVData.isMaster || true, // Handle both formats
+          cvData: masterCVData.cvData,
+          isStarred: masterCVData.metadata?.starred || false,
+          thumbnail: masterCVData.metadata?.thumbnailUrl
+        };
+        
+        setMasterCV(transformedMasterCV);
       } else {
-        console.log('❌ MasterCVCard - No master CV found in response');
-        setError(result.message || 'No master CV found');
+        console.log('❌ MasterCVCard - No master CV found');
+        setError('No master CV found');
       }
     } catch (error) {
       console.error('❌ MasterCVCard - Error fetching master CV:', error);

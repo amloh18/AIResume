@@ -221,16 +221,16 @@ const CVManagementSection: React.FC<{
       
       // Get all start dates and calculate total experience
       const startDates = workEntries
-        .map(job => {
+        .map((job: any) => {
           const startDate = job.startDate;
           if (!startDate) return null;
-          
+
           // Try parsing various date formats
           const parsedDate = new Date(startDate);
           if (!isNaN(parsedDate.getTime())) {
             return parsedDate;
           }
-          
+
           // Try parsing "YYYY-MM" or "MM/YYYY" formats
           const yearMonthMatch = startDate.match(/(\d{4})[-\/](\d{1,2})/);
           if (yearMonthMatch) {
@@ -238,18 +238,18 @@ const CVManagementSection: React.FC<{
             const month = parseInt(yearMonthMatch[2]) - 1; // Month is 0-indexed
             return new Date(year, month, 1);
           }
-          
+
           // Try parsing just year
           const yearMatch = startDate.match(/(\d{4})/);
           if (yearMatch) {
             const year = parseInt(yearMatch[1]);
             return new Date(year, 0, 1);
           }
-          
+
           return null;
         })
-        .filter(date => date !== null && !isNaN(date.getTime()))
-        .sort((a, b) => a!.getTime() - b!.getTime());
+        .filter((date: any) => date !== null && !isNaN(date.getTime()))
+        .sort((a: any, b: any) => a!.getTime() - b!.getTime());
       
       if (startDates.length > 0 && startDates[0]) {
         const earliestStart = startDates[0];
@@ -609,7 +609,14 @@ const IntelligenceDashboard: React.FC<{
     const masterCV = cvs.find(cv => cv.isMaster === true || cv.metadata?.isMaster === true);
     if (!masterCV?.cvData) return null;
 
-    const profile = {
+    const profile: {
+      experience: number;
+      skills: string[];
+      industries: string[];
+      jobTitles: string[];
+      location: string;
+      experienceLevel: string;
+    } = {
       experience: 0,
       skills: [],
       industries: [],
@@ -621,13 +628,13 @@ const IntelligenceDashboard: React.FC<{
     // Calculate years of experience
     if (masterCV.cvData.work && Array.isArray(masterCV.cvData.work)) {
       const workExperience = masterCV.cvData.work;
-      profile.jobTitles = workExperience.map(job => job.position || job.title).filter(Boolean);
-      
+      profile.jobTitles = workExperience.map((job: any) => job.position || job.title).filter(Boolean);
+
       // Calculate total experience
       const startDates = workExperience
-        .map(job => new Date(job.startDate))
-        .filter(date => !isNaN(date.getTime()))
-        .sort((a, b) => a.getTime() - b.getTime());
+        .map((job: any) => new Date(job.startDate))
+        .filter((date: any) => !isNaN(date.getTime()))
+        .sort((a: any, b: any) => a.getTime() - b.getTime());
       
       if (startDates.length > 0) {
         const earliestStart = startDates[0];
@@ -643,7 +650,7 @@ const IntelligenceDashboard: React.FC<{
 
     // Extract skills
     if (masterCV.cvData.skills && Array.isArray(masterCV.cvData.skills)) {
-      profile.skills = masterCV.cvData.skills.map(skill => skill.name || skill).filter(Boolean);
+      profile.skills = masterCV.cvData.skills.map((skill: any) => skill.name || skill).filter(Boolean);
     }
 
     // Extract location
@@ -652,8 +659,8 @@ const IntelligenceDashboard: React.FC<{
     }
 
     // Extract industries from applied jobs
-    const jobIndustries = jobs.map(job => job.industry).filter(Boolean);
-    profile.industries = [...new Set(jobIndustries)];
+    const jobIndustries = jobs.map((job: any) => job.industry).filter(Boolean);
+    profile.industries = Array.from(new Set(jobIndustries));
 
     return profile;
   };
@@ -696,7 +703,7 @@ const IntelligenceDashboard: React.FC<{
       senior: { appVolume: 10, responseRate: 40, interviewRate: 20, timeToOffer: 30 }
     };
 
-    const userBenchmark = benchmarks[userProfile?.experienceLevel || 'entry'] || benchmarks.entry;
+    const userBenchmark = benchmarks[userProfile?.experienceLevel as keyof typeof benchmarks] || benchmarks.entry;
 
     return {
       metrics,
@@ -1252,8 +1259,6 @@ const Analytics: React.FC = () => {
     {
       cacheDuration: 300000, // 5 minutes
       staleWhileRevalidate: true,
-      priority: ['cvs', 'jobs', 'analytics', 'drafts'], // Priority order for Analytics page
-      timeout: 10000, // 10 second timeout for individual requests
       retryAttempts: 2 // Retry failed requests twice
     }
   );
@@ -1434,7 +1439,6 @@ const Analytics: React.FC = () => {
           username: userProfile?.username || '',
           profilePhoto: getUserAvatar(userProfile),
           designation: userProfile?.role || '',
-          role: user?.role,
           subscription: userProfile?.subscription
         }}
         showSettings={true}
@@ -1467,7 +1471,7 @@ const Analytics: React.FC = () => {
             onSetMasterCV={handleSetMasterCV}
             predictions={analyticsData?.predictions}
             onUpdateGoal={handleUpdateMonthlyGoal}
-            userId={userId}
+            userId={userId ?? undefined}
             jobs={jobs}
           />
         </div>
@@ -1538,7 +1542,7 @@ const Analytics: React.FC = () => {
       <UniversalPaymentModal
         isOpen={showPaymentModal}
         onClose={() => setShowPaymentModal(false)}
-        preselectedPlanKey={selectedPlanKey || undefined}
+        preselectedPlanKey={selectedPlanKey ?? undefined}
         onSuccess={(subscription) => {
           console.log('Payment successful:', subscription);
           setShowPaymentModal(false);

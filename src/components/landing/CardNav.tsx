@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Menu, X } from 'lucide-react';
 import './CardNav.css';
 
@@ -24,6 +24,7 @@ const CardNav = ({
   onCtaClick
 }: CardNavProps) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const navRef = useRef<HTMLElement>(null);
 
   const handleCtaClick = () => {
     if (onCtaClick) {
@@ -35,6 +36,7 @@ const CardNav = ({
       }
     }
   };
+
 
   const scrollToSection = (href: string) => {
     if (typeof window === 'undefined') return;
@@ -54,12 +56,12 @@ const CardNav = ({
 
   return (
     <div className={`card-nav-container ${className}`}>
-      <nav className="card-nav">
+      <nav ref={navRef} className="card-nav">
         <div className="card-nav-content">
           <div className="logo-container">
             <span className="logo-text">
-              <span className="text-lime-400">CV</span>
-              <span className="text-gray-300">Circle</span>
+              <span>CV</span>
+              <span>Circle</span>
             </span>
           </div>
 

@@ -46,7 +46,7 @@ interface Journey {
   jobId: string;
   jobTitle: string;
   company: string;
-  status: 'in-progress' | 'completed';
+  status: 'in-progress' | 'completed' | 'paused' | 'processing_documents' | 'creation_failed' | 'ready';
   currentStep: number;
   totalSteps: number;
   createdAt: string;
@@ -54,6 +54,11 @@ interface Journey {
   atsScore?: number;
   cvId?: string;
   coverLetterId?: string;
+  lastWorkedOn?: string;
+  completedAt?: string;
+  journeyDuration?: number;
+  atsScoreHistory?: Array<{ score: number; calculatedAt: string }>;
+  downloadHistory?: Array<{ downloadedAt: string; fileType: string }>;
   _debug?: {
     linkedCVId?: string;
     linkedCVMetadata?: any;
@@ -68,7 +73,11 @@ interface CV {
   status: string;
   createdAt: string;
   lastModified: string;
+  updatedAt: string;
   jobId?: string;
+  isMaster?: boolean;
+  metadata?: any;
+  journeyId?: string | null;
 }
 
 interface CoverLetter {
@@ -129,7 +138,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
     coverLetter: number;
     jobDescription: number;
     total: number;
-  } | null>(null);
+  } | undefined>(undefined);
   const [isCompletingJourney, setIsCompletingJourney] = React.useState(false);
   const [showUndoToast, setShowUndoToast] = React.useState(false);
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = React.useState(false);
@@ -600,7 +609,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
         if (result.message === 'Journey updated successfully') {
           toast.success('CV linked to journey successfully!');
         } else if (result.message === 'Journey already exists with current data') {
-          toast.info('CV already linked to this journey');
+          toast.success('CV already linked to this journey');
         } else {
           toast.success('CV linked to journey successfully!');
         }
@@ -1026,7 +1035,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
           } else {
             updateJourneyStatus('ats-needs-improvement');
             updateCurrentStep(3);
-            toast.info(`ATS score calculated: ${score}% - Consider optimizing for better match`);
+            toast.success(`ATS score calculated: ${score}% - Consider optimizing for better match`);
           }
         } else {
           throw new Error('Invalid score in response');
@@ -1112,7 +1121,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
             } else {
               updateJourneyStatus('ats-needs-improvement');
               updateCurrentStep(3);
-              toast.info(`ATS score calculated: ${score}% - Consider optimizing for better match`);
+              toast.success(`ATS score calculated: ${score}% - Consider optimizing for better match`);
             }
           }
         } else {
@@ -1132,6 +1141,10 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
     }
   };
 
+
+  const handleCreateCoverLetter = () => {
+    router.push(`/studio?journeyId=${journey.id}&jobId=${journey.jobId}&mode=cover-letter-tailoring`);
+  };
 
   const handleSelectCoverLetter = (coverLetterId: string) => {
     updateCoverLetterId(coverLetterId);
@@ -1591,7 +1604,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 <span>{journey.company}</span>
                 {liveProgress.status !== 'completed' && (() => {
                   const estimatedTime = JourneyAnalyticsService.calculateEstimatedTimeToCompletion(
-                    journey, 
+                    journey as any,
                     []
                   );
                   const formattedTime = JourneyAnalyticsService.formatEstimatedTime(estimatedTime);
@@ -1740,7 +1753,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 {liveProgress.status !== 'completed' && (() => {
                   // Calculate estimated time to completion
                   const estimatedTime = JourneyAnalyticsService.calculateEstimatedTimeToCompletion(
-                    journey, 
+                    journey as any,
                     [] // We'll need to pass all journeys from parent component
                   );
                   const formattedTime = JourneyAnalyticsService.formatEstimatedTime(estimatedTime);

@@ -7,8 +7,73 @@ import Typewriter from '../ui/Typewriter';
 import { Play, ArrowRight, Sparkles } from 'lucide-react';
 
 const Hero = () => {
-  const typewriterWords = ['CV', 'Cover Letter', 'Job Applications'];
+  const typewriterPhrases = [
+    { action: 'Create', item: 'CV' },
+    { action: 'Create', item: 'Cover Letter' },
+    { action: 'Track', item: 'Job Application' }
+  ];
   const [scrollY, setScrollY] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentAction, setCurrentAction] = useState('');
+  const [currentItem, setCurrentItem] = useState('');
+  const [isTypingAction, setIsTypingAction] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Typewriter effect
+  useEffect(() => {
+    const currentPhrase = typewriterPhrases[currentIndex];
+    
+    if (isTypingAction) {
+      // Typing the action word (Create/Track) in white
+      if (currentAction.length < currentPhrase.action.length) {
+        const timeout = setTimeout(() => {
+          setCurrentAction(currentPhrase.action.slice(0, currentAction.length + 1));
+        }, 150);
+        return () => clearTimeout(timeout);
+      } else {
+        // Move to typing the item
+        const timeout = setTimeout(() => {
+          setIsTypingAction(false);
+        }, 300);
+        return () => clearTimeout(timeout);
+      }
+    } else {
+      // Typing the item (CV/Cover Letter/job application)
+      if (isDeleting) {
+        if (currentItem.length > 0) {
+          const timeout = setTimeout(() => {
+            setCurrentItem(currentItem.slice(0, -1));
+          }, 100);
+          return () => clearTimeout(timeout);
+        } else if (currentAction.length > 0) {
+          const timeout = setTimeout(() => {
+            setCurrentAction(currentAction.slice(0, -1));
+          }, 100);
+          return () => clearTimeout(timeout);
+        } else {
+          // Move to next phrase
+          setIsDeleting(false);
+          setIsTypingAction(true);
+          setCurrentIndex((prev) => (prev + 1) % typewriterPhrases.length);
+          setCurrentAction('');
+          setCurrentItem('');
+        }
+      } else {
+        if (currentItem.length < currentPhrase.item.length) {
+          const timeout = setTimeout(() => {
+            setCurrentItem(currentPhrase.item.slice(0, currentItem.length + 1));
+          }, 150);
+          return () => clearTimeout(timeout);
+        } else {
+          // Pause before deleting
+          const timeout = setTimeout(() => {
+            setIsDeleting(true);
+          }, 2000);
+          return () => clearTimeout(timeout);
+        }
+      }
+    }
+  }, [currentAction, currentItem, currentIndex, isTypingAction, isDeleting, typewriterPhrases]);
 
   useEffect(() => {
     let ticking = false;
@@ -37,7 +102,7 @@ const Hero = () => {
       <div className="relative z-10 text-center px-4 sm:px-6 lg:px-8 w-full max-w-7xl mx-auto" style={{ paddingTop: 'var(--navbar-height, 80px)' }}>
         {/* Main Heading with 3D Effect - Optimized */}
         <motion.h1
-          className="text-4xl sm:text-6xl lg:text-7xl font-bold text-white mb-6 gpu-accelerated"
+          className="text-3xl sm:text-5xl lg:text-7xl font-bold text-white mb-6 gpu-accelerated"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: "easeOut", delay: 0.1 }}
@@ -46,7 +111,6 @@ const Hero = () => {
             willChange: 'transform, opacity'
           }}
         >
-          Track{' '}
           <motion.span
             className="inline-block"
             whileHover={{ 
@@ -56,16 +120,20 @@ const Hero = () => {
             transition={{ duration: 0.2 }}
             style={{ willChange: 'transform' }}
           >
-            <Typewriter 
-              words={typewriterWords} 
-              className="text-lime-400"
-            />
+            <span className="text-white">{currentAction}</span>
+            {currentAction.length > 0 && <span className="text-white"> </span>}
+            <span className="text-lime-400">
+              {currentItem}
+              {!isDeleting && (currentAction.length > 0 || currentItem.length > 0) && (
+                <span className="animate-pulse">|</span>
+              )}
+            </span>
           </motion.span>
         </motion.h1>
 
         {/* Subheading - Optimized */}
         <motion.p
-          className="text-xl sm:text-2xl text-white/80 mb-12 max-w-3xl mx-auto leading-relaxed"
+          className="text-base sm:text-xl lg:text-2xl text-white/80 mb-12 max-w-3xl mx-auto leading-relaxed"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.3, ease: "easeOut" }}
@@ -84,7 +152,7 @@ const Hero = () => {
         >
           <motion.a
             href="/sign-up"
-            className="group relative inline-block bg-gradient-to-r from-lime-400 to-lime-500 text-black px-10 py-5 rounded-full font-semibold text-lg shadow-2xl hover:shadow-lime-400/50 transition-all overflow-hidden btn-hover"
+            className="group relative inline-block bg-gradient-to-r from-lime-400 to-lime-500 text-black px-5 py-2.5 sm:px-8 sm:py-4 lg:px-10 lg:py-5 rounded-full font-semibold text-sm sm:text-base lg:text-lg shadow-2xl hover:shadow-lime-400/50 transition-all overflow-hidden btn-hover"
             whileHover={{ 
               scale: 1.02,
               boxShadow: "0 15px 30px -5px rgba(132, 204, 22, 0.3)"
@@ -97,7 +165,7 @@ const Hero = () => {
               style={{ filter: 'blur(20px)' }}
             />
             <motion.div
-              className="relative flex items-center gap-3"
+              className="relative flex items-center gap-2 sm:gap-3"
               whileHover={{ x: 5 }}
             >
               <span>Get Started</span>
@@ -105,14 +173,14 @@ const Hero = () => {
                 whileHover={{ rotate: 45 }}
                 transition={{ duration: 0.3 }}
               >
-                <ArrowRight size={20} />
+                <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
               </motion.div>
             </motion.div>
           </motion.a>
           
           <motion.a
             href="/ai-career-report"
-            className="group relative border-2 border-lime-400/50 text-lime-400 px-10 py-5 rounded-full font-semibold text-lg hover:bg-lime-400/10 transition-all backdrop-blur-sm overflow-hidden flex items-center gap-3"
+            className="group relative border-2 border-lime-400/50 text-lime-400 px-5 py-2.5 sm:px-8 sm:py-4 lg:px-10 lg:py-5 rounded-full font-semibold text-sm sm:text-base lg:text-lg hover:bg-lime-400/10 transition-all backdrop-blur-sm overflow-hidden flex items-center gap-2 sm:gap-3"
             whileHover={{ 
               scale: 1.05,
               borderColor: 'rgba(132, 204, 22, 0.8)',
@@ -124,9 +192,9 @@ const Hero = () => {
               perspective: '1000px'
             }}
           >
-            <Sparkles size={20} />
+            <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
             <span>AI Career Guide</span>
-            <ArrowRight size={20} />
+            <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
           </motion.a>
           
         </motion.div>

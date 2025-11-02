@@ -6,6 +6,7 @@ import CV from '@/models/CV';
 export interface UserProfile {
   id: string;
   username: string;
+  email: string;
   firstName: string;
   lastName: string;
   avatar?: string;
@@ -87,6 +88,7 @@ export async function getUserProfile(username: string): Promise<UserProfile | nu
     const profile: UserProfile = {
       id: user._id.toString(),
       username: user.username || username, // Use provided username or user's username
+      email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
       avatar: user.avatar || undefined,

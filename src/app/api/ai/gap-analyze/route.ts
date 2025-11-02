@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Generate gap analysis suggestions
-    const suggestions = await AIAssistantService.analyzeGaps(cvData, jobData);
+    const suggestions = await AIAssistantService.analyzeGaps(cvData.cvData, jobData);
 
     return NextResponse.json({
       success: true,
