@@ -45,3 +45,13 @@ public/CV\ templates/
 
 # TypeScript build info
 tsconfig.tsbuildinfo
+
+# Instrumentation files (prevent OpenTelemetry from being bundled in Edge Runtime)
+instrumentation.ts
+instrumentation.js
+instrumentation.node.ts
+instrumentation.*.ts
+instrumentation.*.js
+src/instrumentation.ts
+src/instrumentation.js
+</dirt>

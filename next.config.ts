@@ -118,6 +118,10 @@ const nextConfig: NextConfig = {
       '@sentry/node': false,
       '@sentry/browser': false,
       '@sentry/core': false,
+      '@sentry/utils': false,
+      '@sentry/types': false,
+      '@sentry/integrations': false,
+      '@sentry/tracing': false,
     };
 
     // Apply OpenTelemetry exclusions to all builds
@@ -147,6 +151,8 @@ const nextConfig: NextConfig = {
       config.resolve.alias['@/lib/error-tracking'] = false;
       config.resolve.alias['./src/lib/monitoring'] = false;
       config.resolve.alias['./src/lib/error-tracking'] = false;
+      config.resolve.alias['@/lib/structured-logger'] = '@/lib/edge-logger';
+      config.resolve.alias['./src/lib/structured-logger'] = './src/lib/edge-logger';
     }
 
     // Note: Edge Runtime bundling is handled separately by Next.js/Vercel
@@ -302,6 +308,10 @@ const nextConfig: NextConfig = {
     '@sentry/node',
     '@sentry/browser',
     '@sentry/core',
+    '@sentry/utils',
+    '@sentry/types',
+    '@sentry/integrations',
+    '@sentry/tracing',
   ],
   // Handle dynamic imports
   async rewrites() {

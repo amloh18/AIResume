@@ -5,6 +5,15 @@
   "functions": {
     "src/app/api/**/*.ts": {
       "maxDuration": 30
+    },
+    "src/middleware.ts": {
+      "runtime": "edge",
+      "excludeFiles": [
+        "**/node_modules/@opentelemetry/**",
+        "**/node_modules/@sentry/**",
+        "**/instrumentation.ts",
+        "**/instrumentation.js"
+      ]
     }
   },
   "env": {
