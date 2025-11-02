@@ -7,7 +7,6 @@
       "maxDuration": 30
     }
   },
-  "_comment": "NOTE: Vercel's build environment doesn't support installing system packages via apt-get. For OCR (pdf2pic) to work, you need ImageMagick and Ghostscript. Options: 1) Use Docker deployment, 2) Use a different PDF-to-image library that doesn't require system dependencies, or 3) Accept that OCR will only work in environments where ImageMagick/Ghostscript are pre-installed.",
   "env": {
     "NODE_ENV": "production"
   },
