@@ -13,10 +13,17 @@ let isSentryInitialized = false;
 async function initializeSentry() {
   if (isSentryInitialized) return;
 
+  // Never initialize Sentry in Edge Runtime
+  if (typeof process === 'undefined' || process.env.NEXT_RUNTIME !== 'nodejs') {
+    return;
+  }
+
   try {
-    // Dynamic import to avoid bundling Sentry in development
+    // Dynamic import to avoid bundling Sentry in development or Edge Runtime
     if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {
-      Sentry = await import('@sentry/nextjs');
+      // Use variable-based import to prevent static analysis by Edge bundlers
+      const sentryModule = '@sentry/nextjs';
+      Sentry = await import(sentryModule);
       
       Sentry.init({
         dsn: process.env.SENTRY_DSN,
@@ -323,7 +330,8 @@ export class SecurityMonitor {
 }
 
 // Initialize monitoring on module load
-if (process.env.NODE_ENV === 'production') {
+// Only initialize in Node.js runtime, never in Edge Runtime
+if (process.env.NODE_ENV === 'production' && typeof process !== 'undefined' && process.env.NEXT_RUNTIME === 'nodejs') {
   initializeSentry();
 }
 

@@ -83,8 +83,8 @@ const nextConfig: NextConfig = {
       }
     }
 
-    // Fix OpenTelemetry module resolution for Edge Runtime
-    // This is critical for Vercel Edge Functions which don't support OpenTelemetry
+    // Fix OpenTelemetry and Sentry module resolution for Edge Runtime
+    // This is critical for Vercel Edge Functions which don't support these modules
     const opentelemetryAliases = {
       '@opentelemetry/api': false,
       '@opentelemetry/core': false,
@@ -113,6 +113,11 @@ const nextConfig: NextConfig = {
       '@opentelemetry/instrumentation-fs': false,
       '@opentelemetry/redis-common': false,
       '@opentelemetry/sql-common': false,
+      // Exclude Sentry from Edge Runtime (it depends on OpenTelemetry)
+      '@sentry/nextjs': false,
+      '@sentry/node': false,
+      '@sentry/browser': false,
+      '@sentry/core': false,
     };
 
     // Apply OpenTelemetry exclusions to all builds
@@ -121,7 +126,7 @@ const nextConfig: NextConfig = {
       ...opentelemetryAliases,
     };
 
-    // For Edge Runtime builds (middleware), exclude instrumentation completely
+    // For Edge Runtime builds (middleware), exclude instrumentation and Sentry completely
     // Vercel's Edge bundler analyzes all files, so we need to be aggressive
     const isMiddlewareBuild = config.entry && typeof config.entry === 'object' && 
       Object.keys(config.entry).some(key => 
@@ -136,6 +141,12 @@ const nextConfig: NextConfig = {
       config.resolve.alias['instrumentation'] = false;
       config.resolve.alias['instrumentation.js'] = false;
       config.resolve.alias['instrumentation.ts'] = false;
+      
+      // Exclude Sentry and monitoring modules from Edge builds
+      config.resolve.alias['@/lib/monitoring'] = false;
+      config.resolve.alias['@/lib/error-tracking'] = false;
+      config.resolve.alias['./src/lib/monitoring'] = false;
+      config.resolve.alias['./src/lib/error-tracking'] = false;
     }
 
     // Note: Edge Runtime bundling is handled separately by Next.js/Vercel
@@ -286,6 +297,11 @@ const nextConfig: NextConfig = {
     '@opentelemetry/instrumentation-mongodb',
     '@opentelemetry/instrumentation-mongoose',
     '@opentelemetry/instrumentation-express',
+    // Exclude Sentry from Edge Runtime (it depends on OpenTelemetry)
+    '@sentry/nextjs',
+    '@sentry/node',
+    '@sentry/browser',
+    '@sentry/core',
   ],
   // Handle dynamic imports
   async rewrites() {
