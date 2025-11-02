@@ -3,6 +3,9 @@ import type { NextRequest } from 'next/server'
 import { verifyToken, isAdmin, isAuthenticated, getUserId, getUserRole } from '@/lib/edge-auth'
 import { log } from '@/lib/structured-logger'
 
+// Explicitly mark as Edge Runtime
+export const runtime = 'edge'
+
 // Ensure we're running in Edge Runtime
 if (typeof EdgeRuntime === 'undefined') {
   console.warn('⚠️ Middleware is not running in Edge Runtime');
