@@ -187,19 +187,6 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizeCss: true,
     optimizePackageImports: ['lucide-react', 'lottie-react'],
-    // Exclude OpenTelemetry from Edge Runtime bundles
-    serverComponentsExternalPackages: [
-      '@opentelemetry/api',
-      '@opentelemetry/core',
-      '@opentelemetry/instrumentation',
-      '@opentelemetry/semantic-conventions',
-      '@opentelemetry/api-logs',
-      '@opentelemetry/context-async-hooks',
-      '@opentelemetry/instrumentation-http',
-      '@opentelemetry/instrumentation-mongodb',
-      '@opentelemetry/instrumentation-mongoose',
-      '@opentelemetry/instrumentation-express',
-    ],
   },
   
   // Force dynamic rendering for all pages to prevent SSR issues
@@ -292,6 +279,10 @@ const nextConfig: NextConfig = {
     '@opentelemetry/semantic-conventions',
     '@opentelemetry/api-logs',
     '@opentelemetry/context-async-hooks',
+    '@opentelemetry/instrumentation-http',
+    '@opentelemetry/instrumentation-mongodb',
+    '@opentelemetry/instrumentation-mongoose',
+    '@opentelemetry/instrumentation-express',
   ],
   // Handle dynamic imports
   async rewrites() {
