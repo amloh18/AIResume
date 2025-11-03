@@ -36,10 +36,10 @@ export const downloadAsPDF = async (elementRef: HTMLElement, filename: string = 
     
     // Enhanced configuration for better PDF quality matching preview
     const opt = {
-      margin: [10, 10, 10, 10],
+      margin: [10, 10, 10, 10] as [number, number, number, number],
       filename: filename,
       image: { 
-        type: 'jpeg', 
+        type: 'jpeg' as const, 
         quality: 0.98 
       },
       html2canvas: { 
@@ -70,7 +70,7 @@ export const downloadAsPDF = async (elementRef: HTMLElement, filename: string = 
       jsPDF: { 
         unit: 'mm', 
         format: 'a4', 
-        orientation: 'portrait',
+        orientation: 'portrait' as const,
         compress: true,
         // Optimize for high quality output
         precision: 16,
@@ -230,7 +230,7 @@ export const downloadAsDOCX = async (cvData: UnifiedCVDataStructure, filename: s
               heading: HeadingLevel.HEADING_2,
             }),
             new Paragraph({
-              text: cvData.skills.map(skill => skill.name).join(', '),
+              text: cvData.skills.map(skill => skill.category + ': ' + skill.skills.join(', ')).join('; '),
             }),
             new Paragraph({ text: '' }), // Spacing
           ] : []),

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import User from '@/models/User';
 // Firebase admin imports removed - using NextAuth password reset
 
@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
   try {
     console.log('🔄 Password reset confirmation started');
     
-    await connectDB();
+    await getConnection();
     console.log('✅ Database connected');
     
     const body = await request.json();

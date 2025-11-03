@@ -184,7 +184,7 @@ const cvSchema = new Schema<ICV>({
 }, {
   timestamps: true,
   toJSON: {
-    transform: function(doc, ret) {
+    transform: function(doc, ret: any) {
       ret.id = ret._id;
       delete ret._id;
       delete ret.__v;
@@ -204,13 +204,14 @@ cvSchema.index({ 'metadata.isPublic': 1, 'metadata.lastModified': -1 }); // Publ
 cvSchema.pre('save', async function(next) {
   this.metadata.lastModified = new Date();
   
-  // If this CV is being set as master, unset any existing master CV for this user
-  if (this.metadata.isMaster && (this.isModified('metadata.isMaster') || this.isNew)) {
-    await this.constructor.updateMany(
-      { userId: this.userId, _id: { $ne: this._id } },
-      { $set: { 'metadata.isMaster': false } }
-    );
-  }
+    // If this CV is being set as master, unset any existing master CV for this user
+    if (this.metadata.isMaster && (this.isModified('metadata.isMaster') || this.isNew)) {
+      const CVModel = this.constructor as any;
+      await CVModel.updateMany(
+        { userId: this.userId, _id: { $ne: this._id } },
+        { $set: { 'metadata.isMaster': false } }
+      );
+    }
   
   next();
 });

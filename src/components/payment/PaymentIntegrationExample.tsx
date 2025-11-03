@@ -10,23 +10,19 @@ import UpgradePrompt from './UpgradePrompt';
 // Example component showing how to integrate payment modal with usage limits
 const PaymentIntegrationExample: React.FC = () => {
   const { 
-    canCreateCV, 
-    canCreateJourney, 
-    canRunATSCheck,
-    triggerCVCreationUpgrade,
-    triggerJourneyCreationUpgrade,
-    triggerATSCheckUpgrade,
-    limits,
-    counts,
+    canCreateCV,
+    canPerformATSCheck,
+    canExport,
+    usageLimits,
     loading 
   } = useUsageLimits();
 
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
   const [upgradeContext, setUpgradeContext] = useState<string>('');
 
-  const handleCreateCV = () => {
-    const cvCheck = canCreateCV();
-    if (cvCheck.canPerform) {
+  const handleCreateCV = async () => {
+    const cvCheck = await canCreateCV();
+    if (cvCheck.allowed) {
       // Proceed with CV creation
       console.log('Creating CV...');
     } else {
@@ -35,9 +31,9 @@ const PaymentIntegrationExample: React.FC = () => {
     }
   };
 
-  const handleCreateJourney = () => {
-    const journeyCheck = canCreateJourney();
-    if (journeyCheck.canPerform) {
+  const handleCreateJourney = async () => {
+    const journeyCheck = await canCreateCV(); // Use same check as CV creation
+    if (journeyCheck.allowed) {
       // Proceed with journey creation
       console.log('Creating journey...');
     } else {
@@ -46,9 +42,9 @@ const PaymentIntegrationExample: React.FC = () => {
     }
   };
 
-  const handleATSCheck = () => {
-    const atsCheck = canRunATSCheck();
-    if (atsCheck.canPerform) {
+  const handleATSCheck = async () => {
+    const atsCheck = await canPerformATSCheck();
+    if (atsCheck.allowed) {
       // Proceed with ATS check
       console.log('Running ATS check...');
     } else {
@@ -77,7 +73,7 @@ const PaymentIntegrationExample: React.FC = () => {
       </div>
 
       {/* Usage Stats */}
-      {limits && counts && (
+      {usageLimits && (
         <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
             Current Usage
@@ -89,14 +85,14 @@ const PaymentIntegrationExample: React.FC = () => {
                   CV Creations
                 </span>
                 <span className="text-sm text-gray-600 dark:text-gray-400">
-                  {counts.cv_creation_count} / {limits.cv_creation_limit}
+                  {usageLimits.cvCreatedCount} / {usageLimits.planLimits.maxCVs === -1 ? '∞' : usageLimits.planLimits.maxCVs}
                 </span>
               </div>
               <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
                 <div
                   className="bg-blue-500 h-2 rounded-full transition-all duration-300"
                   style={{ 
-                    width: `${Math.min(100, (counts.cv_creation_count / limits.cv_creation_limit) * 100)}%` 
+                    width: usageLimits.planLimits.maxCVs === -1 ? '100%' : `${Math.min(100, (usageLimits.cvCreatedCount / usageLimits.planLimits.maxCVs) * 100)}%` 
                   }}
                 />
               </div>
@@ -108,14 +104,14 @@ const PaymentIntegrationExample: React.FC = () => {
                   CV Journeys
                 </span>
                 <span className="text-sm text-gray-600 dark:text-gray-400">
-                  {counts.cv_journey_count} / {limits.cv_journey_limit}
+                  {usageLimits.cvJourneyCount} / {usageLimits.planLimits.maxCVs === -1 ? '∞' : usageLimits.planLimits.maxCVs}
                 </span>
               </div>
               <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
                 <div
                   className="bg-green-500 h-2 rounded-full transition-all duration-300"
                   style={{ 
-                    width: `${Math.min(100, (counts.cv_journey_count / limits.cv_journey_limit) * 100)}%` 
+                    width: usageLimits.planLimits.maxCVs === -1 ? '100%' : `${Math.min(100, (usageLimits.cvJourneyCount / usageLimits.planLimits.maxCVs) * 100)}%` 
                   }}
                 />
               </div>
@@ -127,14 +123,14 @@ const PaymentIntegrationExample: React.FC = () => {
                   ATS Checks
                 </span>
                 <span className="text-sm text-gray-600 dark:text-gray-400">
-                  {counts.ats_check_count} / {limits.ats_check_limit}
+                  {usageLimits.atsCheckCount} / {usageLimits.planLimits.maxCVs === -1 ? '∞' : usageLimits.planLimits.maxCVs}
                 </span>
               </div>
               <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
                 <div
                   className="bg-purple-500 h-2 rounded-full transition-all duration-300"
                   style={{ 
-                    width: `${Math.min(100, (counts.ats_check_count / limits.ats_check_limit) * 100)}%` 
+                    width: usageLimits.planLimits.maxCVs === -1 ? '100%' : `${Math.min(100, (usageLimits.atsCheckCount / usageLimits.planLimits.maxCVs) * 100)}%` 
                   }}
                 />
               </div>
@@ -158,24 +154,10 @@ const PaymentIntegrationExample: React.FC = () => {
             </p>
             <button
               onClick={handleCreateCV}
-              className={`w-full py-2 px-4 rounded-lg font-medium transition-colors ${
-                canCreateCV().canPerform
-                  ? 'bg-blue-500 text-white hover:bg-blue-600'
-                  : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-              }`}
-              disabled={!canCreateCV().canPerform}
+              className="w-full py-2 px-4 rounded-lg font-medium transition-colors bg-blue-500 text-white hover:bg-blue-600"
             >
-              {canCreateCV().canPerform ? (
-                <>
-                  <Plus className="w-4 h-4 inline mr-2" />
-                  Create CV
-                </>
-              ) : (
-                <>
-                  <AlertCircle className="w-4 h-4 inline mr-2" />
-                  Limit Reached
-                </>
-              )}
+              <Plus className="w-4 h-4 inline mr-2" />
+              Create CV
             </button>
           </div>
         </div>
@@ -193,24 +175,10 @@ const PaymentIntegrationExample: React.FC = () => {
             </p>
             <button
               onClick={handleCreateJourney}
-              className={`w-full py-2 px-4 rounded-lg font-medium transition-colors ${
-                canCreateJourney().canPerform
-                  ? 'bg-green-500 text-white hover:bg-green-600'
-                  : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-              }`}
-              disabled={!canCreateJourney().canPerform}
+              className="w-full py-2 px-4 rounded-lg font-medium transition-colors bg-green-500 text-white hover:bg-green-600"
             >
-              {canCreateJourney().canPerform ? (
-                <>
-                  <Plus className="w-4 h-4 inline mr-2" />
-                  Start Journey
-                </>
-              ) : (
-                <>
-                  <AlertCircle className="w-4 h-4 inline mr-2" />
-                  Limit Reached
-                </>
-              )}
+              <Plus className="w-4 h-4 inline mr-2" />
+              Start Journey
             </button>
           </div>
         </div>
@@ -228,24 +196,10 @@ const PaymentIntegrationExample: React.FC = () => {
             </p>
             <button
               onClick={handleATSCheck}
-              className={`w-full py-2 px-4 rounded-lg font-medium transition-colors ${
-                canRunATSCheck().canPerform
-                  ? 'bg-purple-500 text-white hover:bg-purple-600'
-                  : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-              }`}
-              disabled={!canRunATSCheck().canPerform}
+              className="w-full py-2 px-4 rounded-lg font-medium transition-colors bg-purple-500 text-white hover:bg-purple-600"
             >
-              {canRunATSCheck().canPerform ? (
-                <>
-                  <CheckCircle className="w-4 h-4 inline mr-2" />
-                  Run Check
-                </>
-              ) : (
-                <>
-                  <AlertCircle className="w-4 h-4 inline mr-2" />
-                  Limit Reached
-                </>
-              )}
+              <CheckCircle className="w-4 h-4 inline mr-2" />
+              Run Check
             </button>
           </div>
         </div>
@@ -279,12 +233,12 @@ const PaymentIntegrationExample: React.FC = () => {
         description="You've reached your limit"
         feature={upgradeContext === 'cv-creation' ? 'CV Creation' : 
                 upgradeContext === 'cv-journey' ? 'CV Journey' : 'ATS Check'}
-        currentCount={upgradeContext === 'cv-creation' ? counts?.cv_creation_count || 0 :
-                     upgradeContext === 'cv-journey' ? counts?.cv_journey_count || 0 :
-                     counts?.ats_check_count || 0}
-        limit={upgradeContext === 'cv-creation' ? limits?.cv_creation_limit || 1 :
-               upgradeContext === 'cv-journey' ? limits?.cv_journey_limit || 1 :
-               limits?.ats_check_limit || 1}
+        currentCount={upgradeContext === 'cv-creation' ? usageLimits?.cvCreatedCount || 0 :
+                     upgradeContext === 'cv-journey' ? usageLimits?.cvJourneyCount || 0 :
+                     usageLimits?.atsCheckCount || 0}
+        limit={upgradeContext === 'cv-creation' ? usageLimits?.planLimits.maxCVs || 1 :
+               upgradeContext === 'cv-journey' ? usageLimits?.planLimits.maxCVs || 1 :
+               usageLimits?.planLimits.maxCVs || 1}
         preselectedPlanKey="pro_monthly"
         triggerContext={upgradeContext}
       />

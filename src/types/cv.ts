@@ -253,3 +253,9 @@ export interface CVJourney {
     jobStatus?: string;
   };
 }
+
+// Re-export UnifiedCVDataStructure from unified-cv-schema
+export type { UnifiedCVDataStructure } from './unified-cv-schema';
+
+// Re-export CoverLetterData from studio
+export type { CoverLetterData } from './studio';

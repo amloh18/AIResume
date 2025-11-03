@@ -117,7 +117,7 @@ export function withRateLimit(maxRequests: number, windowMs: number = 60000) {
         const windowStart = now - windowMs;
 
         // Clean up old entries
-        for (const [key, value] of requests.entries()) {
+        for (const [key, value] of Array.from(requests.entries())) {
           if (value.resetTime < now) {
             requests.delete(key);
           }

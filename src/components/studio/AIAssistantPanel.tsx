@@ -138,11 +138,20 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
     
     const keywords: string[] = [];
     
-    // Extract from skills
+    // Extract from skills (structure: { category: string; skills: string[] })
     if (cvData.skills && Array.isArray(cvData.skills)) {
       cvData.skills.forEach(skill => {
-        if (skill.keywords && Array.isArray(skill.keywords)) {
-          keywords.push(...skill.keywords);
+        if (skill.skills && Array.isArray(skill.skills)) {
+          keywords.push(...skill.skills);
+        }
+      });
+    }
+    
+    // Extract from projects keywords
+    if (cvData.projects && Array.isArray(cvData.projects)) {
+      cvData.projects.forEach(project => {
+        if (project.keywords && Array.isArray(project.keywords)) {
+          keywords.push(...project.keywords);
         }
       });
     }
@@ -160,7 +169,7 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
     }
     
     // Remove duplicates and limit to 8 keywords
-    return [...new Set(keywords)].slice(0, 8);
+    return Array.from(new Set(keywords)).slice(0, 8);
   };
 
   const handleUseSuggestion = (suggestion: AISuggestion) => {
@@ -222,7 +231,7 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
               {ats.updating ? 'Updating...' : ats.updatedAt ? `Updated ${formatTimestamp(ats.updatedAt)}` : 'Not calculated'}
             </span>
             {jobData && (
-              <span className="text-lime-400">Context: {jobData.title}</span>
+              <span className="text-lime-400">Context: {jobData.title || (jobData as any).jobTitle}</span>
             )}
           </div>
         </div>
@@ -234,7 +243,7 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
             {ats.analysis.missingKeywords.length > 0 && (
               <div className="bg-gray-700 rounded-lg p-4">
                 <h3 className="text-sm font-medium text-gray-300 mb-3">
-                  {jobData ? `Missing Keywords for ${jobData.title}` : 'Missing Keywords'}
+                  {jobData ? `Missing Keywords for ${jobData.title || (jobData as any).jobTitle}` : 'Missing Keywords'}
                 </h3>
                 <div className="space-y-2">
                   {ats.analysis.missingKeywords.slice(0, 5).map((keyword, index) => (
@@ -312,7 +321,7 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
             </div>
             <p className="text-xs text-gray-500">
               {jobData ? 
-                `Click "Generate" to get personalized suggestions for ${jobData.title || jobData.jobTitle}` :
+                `Click "Generate" to get personalized suggestions for ${jobData.title || (jobData as any).jobTitle}` :
                 'Click "Generate" to get AI suggestions for your CV'
               }
             </p>
@@ -335,7 +344,7 @@ const AIAssistantPanel: React.FC<AIAssistantPanelProps> = ({
             </div>
             <p className="text-xs text-gray-500">
               {jobData ? 
-                `No specific suggestions for ${jobData.title || jobData.jobTitle}. Your CV looks good in this area!` :
+                `No specific suggestions for ${jobData.title || (jobData as any).jobTitle}. Your CV looks good in this area!` :
                 'No specific suggestions. Your CV looks good in this area!'
               }
             </p>

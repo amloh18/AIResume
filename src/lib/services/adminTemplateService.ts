@@ -5,7 +5,7 @@
  * This centralizes template management across the platform
  */
 
-import connectDB from '@/lib/database';
+import getConnection from '@/lib/database';
 import Template from '@/models/Template';
 import { ITemplate } from '@/models/Template';
 
@@ -19,7 +19,7 @@ export class AdminTemplateService {
     isActive?: boolean;
   } = {}): Promise<ITemplate[]> {
     try {
-      await connectDB();
+      await getConnection();
       
       const query: any = {};
       
@@ -40,12 +40,13 @@ export class AdminTemplateService {
         .lean()
         .exec();
       
-      console.log(`📋 Retrieved ${templates.length} templates from primary database`);
+      const templatesArray = Array.isArray(templates) ? templates : [templates];
+      console.log(`📋 Retrieved ${templatesArray.length} templates from primary database`);
       
-      return templates.map((template: any) => ({
+      return templatesArray.map((template: any) => ({
         ...template,
-        id: template._id.toString(),
-        _id: template._id.toString()
+        id: template._id?.toString() || '',
+        _id: template._id?.toString() || ''
       })) as ITemplate[];
       
     } catch (error) {
@@ -60,7 +61,7 @@ export class AdminTemplateService {
    */
   static async getTemplateById(templateId: string): Promise<ITemplate | null> {
     try {
-      await connectDB();
+      await getConnection();
       
       if (!templateId || templateId === 'fallback') {
         console.log('📋 Using fallback template');
@@ -78,13 +79,19 @@ export class AdminTemplateService {
         return fallbackTemplates[0] || null;
       }
       
-      console.log(`📋 Retrieved template: ${template.name} from primary database`);
+      const templateDoc = Array.isArray(template) ? template[0] : template;
+      if (!templateDoc) {
+        const fallbackTemplates = this.getFallbackTemplates();
+        return fallbackTemplates[0] || null;
+      }
+      
+      console.log(`📋 Retrieved template: ${(templateDoc as any).name} from primary database`);
       
       return {
-        ...template,
-        id: template._id.toString(),
-        _id: template._id.toString()
-      } as ITemplate;
+        ...templateDoc,
+        id: (templateDoc as any)._id?.toString() || '',
+        _id: (templateDoc as any)._id?.toString() || ''
+      } as unknown as ITemplate;
       
     } catch (error) {
       console.error('❌ Error fetching template by ID:', error);
@@ -131,10 +138,10 @@ export class AdminTemplateService {
       
       if (hardcodedDefault) {
         console.log(`✅ AdminTemplateService - Using hardcoded default template: ${hardcodedDefault.name}`);
-        return hardcodedDefault;
+        return hardcodedDefault as unknown as ITemplate;
       }
       
-      await connectDB();
+      await getConnection();
       
       const template = await Template.findOne({
         category,
@@ -150,11 +157,14 @@ export class AdminTemplateService {
         }).lean().exec();
         
         if (fallbackTemplate) {
-          return {
-            ...fallbackTemplate,
-            id: fallbackTemplate._id.toString(),
-            _id: fallbackTemplate._id.toString()
-          } as ITemplate;
+          const templateDoc = Array.isArray(fallbackTemplate) ? fallbackTemplate[0] : fallbackTemplate;
+          if (templateDoc) {
+            return {
+              ...templateDoc,
+              id: (templateDoc as any)._id?.toString() || '',
+              _id: (templateDoc as any)._id?.toString() || ''
+            } as unknown as ITemplate;
+          }
         }
         
         // Use static fallback
@@ -162,11 +172,17 @@ export class AdminTemplateService {
         return fallbackTemplates.find(t => t.isDefault) || fallbackTemplates[0] || null;
       }
       
+      const templateDoc = Array.isArray(template) ? template[0] : template;
+      if (!templateDoc) {
+        const fallbackTemplates = this.getFallbackTemplates({ category });
+        return fallbackTemplates.find(t => t.isDefault) || fallbackTemplates[0] || null;
+      }
+      
       return {
-        ...template,
-        id: template._id.toString(),
-        _id: template._id.toString()
-      } as ITemplate;
+        ...templateDoc,
+        id: (templateDoc as any)._id?.toString() || '',
+        _id: (templateDoc as any)._id?.toString() || ''
+      } as unknown as ITemplate;
       
     } catch (error) {
       console.error('❌ Error fetching default template:', error);
@@ -183,7 +199,7 @@ export class AdminTemplateService {
     category: string = 'cv'
   ): Promise<ITemplate[]> {
     try {
-      await connectDB();
+      await getConnection();
       
       const templates = await Template.find({
         category,
@@ -220,7 +236,7 @@ export class AdminTemplateService {
     tier?: 'free' | 'premium';
     isActive?: boolean;
   } = {}): ITemplate[] {
-    const fallbackTemplates: ITemplate[] = [
+    const fallbackTemplates = [
       {
         _id: 'fallback-1' as any,
         id: 'fallback-1',
@@ -320,7 +336,7 @@ export class AdminTemplateService {
     }
 
     console.log(`📋 Returning ${filteredTemplates.length} fallback templates`);
-    return filteredTemplates;
+    return filteredTemplates as ITemplate[];
   }
 }
 

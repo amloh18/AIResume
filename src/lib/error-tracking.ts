@@ -42,7 +42,8 @@ class ErrorTrackingService {
           break;
       }
     } catch (error) {
-      log.error('Failed to initialize error tracking service', error, {
+      const err = error instanceof Error ? error : new Error(String(error));
+      log.error('Failed to initialize error tracking service', err, {
         service: this.config.service
       });
     }
@@ -50,7 +51,7 @@ class ErrorTrackingService {
 
   private initializeSentry() {
     // Never initialize Sentry in Edge Runtime
-    if (typeof process === 'undefined' || process.env.NEXT_RUNTIME === 'edge' || process.env.NEXT_RUNTIME === 'experimental-edge') {
+    if (typeof process === 'undefined' || process.env.NEXT_RUNTIME === 'edge') {
       return;
     }
 
@@ -99,7 +100,8 @@ class ErrorTrackingService {
         };
       }
     } catch (error) {
-      log.warn('Sentry not available, using fallback error tracking', { error: error.message });
+      const err = error instanceof Error ? error : new Error(String(error));
+      log.warn('Sentry not available, using fallback error tracking', { error: err.message });
       this.initializeCustom();
     }
   }
@@ -136,7 +138,8 @@ class ErrorTrackingService {
         }
       };
     } catch (error) {
-      log.warn('LogRocket not available, using fallback error tracking', { error: error.message });
+      const err = error instanceof Error ? error : new Error(String(error));
+      log.warn('LogRocket not available, using fallback error tracking', { error: err.message });
       this.initializeCustom();
     }
   }
@@ -207,9 +210,9 @@ class ErrorTrackingService {
       this.service.captureException(error, enrichedContext);
       
       // Also log to our structured logger
-      log.error('Exception captured by error tracking', error, enrichedContext);
+      log.error('Exception captured by error tracking', error instanceof Error ? error : new Error(String(error)), enrichedContext);
     } catch (trackingError) {
-      log.error('Failed to capture exception in error tracking service', trackingError);
+      log.error('Failed to capture exception in error tracking service', trackingError instanceof Error ? trackingError : new Error(String(trackingError)), {});
     }
   }
 
@@ -235,9 +238,15 @@ class ErrorTrackingService {
       this.service.captureException(error, enrichedContext);
       
       // Also log to our structured logger
-      log[level](message, enrichedContext);
+      if (level === 'error') {
+        log.error(message, new Error(message), enrichedContext);
+      } else if (level === 'info') {
+        log.info(message, enrichedContext);
+      } else if (level === 'warning') {
+        log.warn(message, enrichedContext);
+      }
     } catch (trackingError) {
-      log.error('Failed to capture message in error tracking service', trackingError);
+      log.error('Failed to capture message in error tracking service', trackingError instanceof Error ? trackingError : new Error(String(trackingError)), {});
     }
   }
 
@@ -251,7 +260,8 @@ class ErrorTrackingService {
       this.service.setUser(user);
       log.info('User set in error tracking service', { userId: user.id });
     } catch (error) {
-      log.error('Failed to set user in error tracking service', error);
+      const err = error instanceof Error ? error : new Error(String(error));
+      log.error('Failed to set user in error tracking service', err);
     }
   }
 
@@ -265,7 +275,8 @@ class ErrorTrackingService {
       this.service.setTag(key, value);
       log.debug('Tag set in error tracking service', { key, value });
     } catch (error) {
-      log.error('Failed to set tag in error tracking service', error);
+      const err = error instanceof Error ? error : new Error(String(error));
+      log.error('Failed to set tag in error tracking service', err);
     }
   }
 
@@ -279,7 +290,8 @@ class ErrorTrackingService {
       this.service.setContext(key, context);
       log.debug('Context set in error tracking service', { key, context });
     } catch (error) {
-      log.error('Failed to set context in error tracking service', error);
+      const err = error instanceof Error ? error : new Error(String(error));
+      log.error('Failed to set context in error tracking service', err);
     }
   }
 
@@ -301,7 +313,8 @@ class ErrorTrackingService {
       this.service.addBreadcrumb(breadcrumb);
       log.debug('Breadcrumb added to error tracking service', breadcrumb);
     } catch (error) {
-      log.error('Failed to add breadcrumb to error tracking service', error);
+      const err = error instanceof Error ? error : new Error(String(error));
+      log.error('Failed to add breadcrumb to error tracking service', err);
     }
   }
 
@@ -314,7 +327,8 @@ class ErrorTrackingService {
     try {
       return this.service.startTransaction({ name, op });
     } catch (error) {
-      log.error('Failed to start transaction in error tracking service', error);
+      const err = error instanceof Error ? error : new Error(String(error));
+      log.error('Failed to start transaction in error tracking service', err);
       return null;
     }
   }
@@ -329,7 +343,8 @@ class ErrorTrackingService {
       this.service.setRelease(release);
       log.info('Release set in error tracking service', { release });
     } catch (error) {
-      log.error('Failed to set release in error tracking service', error);
+      const err = error instanceof Error ? error : new Error(String(error));
+      log.error('Failed to set release in error tracking service', err);
     }
   }
 }

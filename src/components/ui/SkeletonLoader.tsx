@@ -34,10 +34,10 @@ export const Skeleton: React.FC<SkeletonProps> = ({
       transition: {
         repeat: Infinity,
         duration: 1.5,
-        ease: 'linear'
+        ease: 'linear' as const
       }
     }
-  };
+  } as const;
 
   const style: React.CSSProperties = {};
   if (width) style.width = typeof width === 'number' ? `${width}px` : width;

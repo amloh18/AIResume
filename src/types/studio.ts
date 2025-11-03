@@ -1,4 +1,5 @@
 import { CVDataStructure } from './cv';
+import { UnifiedCVDataStructure } from './unified-cv-schema';
 
 // Studio Entry Modes
 export type StudioEntryMode = 'journey' | 'standalone';
@@ -111,7 +112,7 @@ export interface StudioState {
   lastSavedAt?: Date;
   
   // Document Data
-  documentData: CVDataStructure | string; // CV data or cover letter content
+  documentData: UnifiedCVDataStructure | CVDataStructure | string; // CV data or cover letter content
   documentTitle: string;
   isDocumentModified: boolean;
   
@@ -148,7 +149,7 @@ export interface StudioActions {
   initializeSession: (params: StudioInitParams) => Promise<void>;
   
   // Document Operations
-  updateDocument: (data: CVDataStructure | string) => void;
+  updateDocument: (data: UnifiedCVDataStructure | CVDataStructure | string) => void;
   saveDocument: () => Promise<void>;
   switchTemplate: (templateId: string) => void;
   

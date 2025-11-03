@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { useAIStore } from '@/lib/stores/aiStore';
+import { useAIStore, AISuggestion } from '@/lib/stores/aiStore';
 import { useJobStore } from '@/lib/stores/jobStore';
 import { AIAssistantService } from '@/lib/services/aiAssistantService';
 import { debounce } from 'lodash';
@@ -39,8 +39,8 @@ export const useAIAssistant = (
       }
       
       // Check if CV data has meaningful content
-      const hasContent = cvData.personalInfo?.name || 
-                        cvData.experience?.length > 0 || 
+      const hasContent = cvData.basics?.name || 
+                        cvData.work?.length > 0 || 
                         cvData.education?.length > 0 || 
                         cvData.skills?.length > 0;
       
@@ -67,7 +67,13 @@ export const useAIAssistant = (
           isBaseline
         });
         
-        setATSScore(analysis.score, analysis, isBaseline);
+        setATSScore(analysis.score, {
+          score: analysis.score,
+          missingKeywords: analysis.missingKeywords || [],
+          weakKeywords: [],
+          strengths: analysis.strengths || [],
+          suggestions: analysis.suggestions || []
+        }, isBaseline);
       } catch (error) {
         console.error('ATS calculation error:', error);
         setSectionError('ats-score', error instanceof Error ? error.message : 'Failed to calculate ATS score');
@@ -89,7 +95,7 @@ export const useAIAssistant = (
 
     console.log('🚀 useAIAssistant - Starting generation with job:', {
       jobId: currentJob.id,
-      jobTitle: currentJob.title || currentJob.jobTitle,
+      jobTitle: currentJob.title,
       company: currentJob.company
     });
 
@@ -114,8 +120,9 @@ export const useAIAssistant = (
             comprehensiveAnalysis.ATSScoreAndKeywords.score,
             {
               score: comprehensiveAnalysis.ATSScoreAndKeywords.score,
-              missingKeywords: comprehensiveAnalysis.ATSScoreAndKeywords.missingKeywords,
-              strengths: comprehensiveAnalysis.ATSScoreAndKeywords.matchedKeywords,
+              missingKeywords: comprehensiveAnalysis.ATSScoreAndKeywords.missingKeywords || [],
+              weakKeywords: [],
+              strengths: comprehensiveAnalysis.ATSScoreAndKeywords.matchedKeywords || [],
               suggestions: []
             },
             false
@@ -232,7 +239,7 @@ export const useAIAssistant = (
     });
 
     if (cvData && currentJob && cvId) {
-      console.log('🚀 useAIAssistant - Starting auto-generation for job:', currentJob.jobTitle);
+      console.log('🚀 useAIAssistant - Starting auto-generation for job:', currentJob.title);
       
       // Mark sections as out of date first
       markAllJobBasedSectionsOutOfDate();
@@ -355,7 +362,7 @@ export const useAIAssistant = (
     setLoadingBySection(sectionId, true);
 
     try {
-      let suggestions;
+      let suggestions: AISuggestion[] = [];
       switch (sectionId) {
         case 'ats-score':
           // ATS score is calculated separately, not through suggestions

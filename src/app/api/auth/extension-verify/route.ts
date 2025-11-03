@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { User } from '@/models';
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import type { MyJwtPayload } from '@/types/jwt-payload';
 
 export async function POST(request: NextRequest) {
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     console.log('✅ Extension Auth - JWT token verified for user:', decoded.userId);
     
     // Connect to database
-    await connectDB();
+    await getConnection();
     
     // Get user from database
     const user = await User.findById(decoded.userId);

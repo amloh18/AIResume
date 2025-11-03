@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import User from '@/models/User';
 import { createErrorResponse } from '@/lib/db-utils';
 import { getServerSession } from 'next-auth';
@@ -7,7 +7,7 @@ import { authOptions } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
-    await connectDB();
+    await getConnection();
     
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    await connectDB();
+    await getConnection();
     
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {

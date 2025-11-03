@@ -132,7 +132,7 @@ function JobContextSection({
         <Briefcase className="w-4 h-4 text-white" />
         <h3 className="font-semibold text-white">Job Context</h3>
         {linkedJob && (
-          <Badge variant="secondary" size="sm">
+          <Badge variant="secondary" className="text-xs">
             {sessionContext.mode === 'journey' ? 'Linked' : 'Selected'}
           </Badge>
         )}
@@ -156,7 +156,7 @@ function JobContextSection({
             <h4 className="font-medium text-white">{linkedJob.jobTitle}</h4>
             <p className="text-sm text-[#A0A0A0]">{linkedJob.company}</p>
             {linkedJob.priority && (
-              <Badge variant="outline" size="sm" className="mt-2">
+              <Badge variant="outline" className="mt-2 text-xs">
                 {linkedJob.priority} priority
               </Badge>
             )}
@@ -212,7 +212,7 @@ function JobContextSection({
                 </span>
               </div>
               <p className="text-xs text-green-300">
-                Your {documentType} will be analyzed against requirements for {linkedJob.jobTitle} at {linkedJob.company}.
+                Your {sessionContext.documentType} will be analyzed against requirements for {linkedJob.jobTitle} at {linkedJob.company}.
               </p>
             </motion.div>
           )}
@@ -450,7 +450,7 @@ function CVStructureSections({
                 <span className="text-lg">{section.icon}</span>
                 <span className="font-medium text-white">{section.title}</span>
                 {section.id === 'work_experience' && jobContext && (
-                  <Badge variant="secondary" size="sm">ATS</Badge>
+                  <Badge variant="secondary" className="text-xs">ATS</Badge>
                 )}
               </div>
               <ChevronDown className={`w-4 h-4 transition-transform text-white ${openSections.has(section.id) ? 'rotate-180' : ''}`} />
@@ -488,8 +488,8 @@ function renderSectionContent(
     case 'personal_header':
       return (
         <PersonalInfoForm
-          personalInfo={cvData.basics || {}}
-          onUpdate={updateCVField}
+          data={cvData.basics || {}}
+          onUpdate={(field: string, value: any) => updateCVField(`basics.${field}`, value)}
           cvData={cvData}
           jobData={jobContext}
           userId=""
@@ -500,9 +500,7 @@ function renderSectionContent(
       return (
         <WorkExperienceSection
           data={cvData.work || []}
-          onUpdate={updateCVField}
-          onAdd={() => addSection('work')}
-          onRemove={(index) => removeSection('work', index)}
+          onUpdate={(data: any[]) => updateCVField('work', data)}
           jobData={jobContext}
           userId=""
         />
@@ -534,9 +532,9 @@ function renderSectionContent(
       return (
         <AwardsSection
           data={cvData.awards || []}
-          onUpdate={updateCVField}
+          onUpdate={(data: any[]) => updateCVField('awards', data)}
           onAdd={() => addSection('awards')}
-          onRemove={(index) => removeSection('awards', index)}
+          onRemove={(index: number) => removeSection('awards', index)}
         />
       );
     
@@ -641,7 +639,7 @@ function CoverLetterStructureSection({
   ];
 
   const generateTemplate = (templateId: string) => {
-    const templates = {
+    const templates: Record<string, string> = {
       professional: `Dear Hiring Manager,
 
 I am writing to express my strong interest in the ${jobContext?.jobTitle || '[Position]'} position at ${jobContext?.company || '[Company]'}. With my background and experience, I am confident I would be a valuable addition to your team.

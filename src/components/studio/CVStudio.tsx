@@ -198,16 +198,30 @@ const CVStudio: React.FC<CVStudioProps> = ({
   const [coverLetterTitle, setCoverLetterTitle] = useState<string>('Untitled Cover Letter');
 
   // Store original document IDs to preserve them during switching
-  const [originalCvId, setOriginalCvId] = useState<string | null>(cvId);
-  const [originalCoverLetterId, setOriginalCoverLetterId] = useState<string | null>(coverLetterId);
+  const [originalCvId, setOriginalCvId] = useState<string | null>(cvId || null);
+  const [originalCoverLetterId, setOriginalCoverLetterId] = useState<string | null>(coverLetterId || null);
 
   // Update original IDs when props change (but don't overwrite if we already have them)
   useEffect(() => {
-    if (cvId && !originalCvId) {
+    if (cvId && !originalCvId && typeof cvId === 'string') {
       setOriginalCvId(cvId);
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('originalCvId', cvId);
+        } catch (e) {
+          console.warn('Failed to set localStorage:', e);
+        }
+      }
     }
-    if (coverLetterId && !originalCoverLetterId) {
+    if (coverLetterId && !originalCoverLetterId && typeof coverLetterId === 'string') {
       setOriginalCoverLetterId(coverLetterId);
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('originalCoverLetterId', coverLetterId);
+        } catch (e) {
+          console.warn('Failed to set localStorage:', e);
+        }
+      }
     }
   }, [cvId, coverLetterId, originalCvId, originalCoverLetterId]);
 
@@ -536,11 +550,12 @@ const CVStudio: React.FC<CVStudioProps> = ({
                 const urlParams = new URLSearchParams();
                 urlParams.set('type', 'cover_letter');
                 urlParams.set('coverLetterId', existingCoverLetterId);
-                if (journeyInfo?.jobId || selectedJobId) {
-                  urlParams.set('jobId', journeyInfo?.jobId || selectedJobId);
+                const jobId = journeyInfo?.jobId || selectedJobId;
+                if (jobId) {
+                  urlParams.set('jobId', jobId);
                 }
                 if (journeyInfo?.journeyId) {
-                  urlParams.set('journeyId', journeyInfo?.journeyId);
+                  urlParams.set('journeyId', journeyInfo.journeyId);
                 }
                 router.replace(`/studio?${urlParams.toString()}`);
                 
@@ -611,7 +626,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
           // Handle CV save
           if (cvId) {
             // Ensure templateId is a string (handle hardcoded templates)
-            const templateId = selectedTemplate?.id || selectedTemplate?._id || selectedTemplate?.templateId || '';
+            const templateId = selectedTemplate?._id?.toString() || selectedTemplate?.id?.toString() || '';
             const templateIdString = typeof templateId === 'string' ? templateId : String(templateId);
             
             await CVService.updateCV(cvId, {
@@ -635,7 +650,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
               
               // Update the existing CV
               // Ensure templateId is a string (handle hardcoded templates)
-              const templateId = selectedTemplate?.id || selectedTemplate?._id || selectedTemplate?.templateId || '';
+              const templateId = selectedTemplate?._id?.toString() || selectedTemplate?.id?.toString() || '';
               const templateIdString = typeof templateId === 'string' ? templateId : String(templateId);
               
               await CVService.updateCV(existingCvId, {
@@ -651,11 +666,11 @@ const CVStudio: React.FC<CVStudioProps> = ({
               const urlParams = new URLSearchParams();
               urlParams.set('type', 'cv');
               urlParams.set('cvId', existingCvId);
-              if (journeyInfo?.jobId || selectedJobId || jobId) {
-                urlParams.set('jobId', journeyInfo?.jobId || selectedJobId || jobId);
+              if (journeyInfo?.jobId || selectedJobId) {
+                urlParams.set('jobId', journeyInfo?.jobId || selectedJobId || '');
               }
             if (journeyInfo?.journeyId || journeyId) {
-              urlParams.set('cvJourneyId', journeyInfo?.journeyId || journeyId);
+              urlParams.set('cvJourneyId', (journeyInfo?.journeyId || journeyId || '').toString());
             }
               router.replace(`/studio?${urlParams.toString()}`);
               
@@ -673,17 +688,16 @@ const CVStudio: React.FC<CVStudioProps> = ({
 
             // Create new CV
             const newCV = await CVService.createCV({
-              userId: userId || '',
               title: cvTitle || 'Untitled CV',
               cvData: data,
-              templateId: selectedTemplate?.id || selectedTemplate?._id || '',
+              templateId: selectedTemplate?._id?.toString() || selectedTemplate?.id?.toString() || '',
               metadata: {
                 isMaster: isMasterCV
               }
-            });
+            }, userId || '');
 
             // Extract CV ID and update URL
-            const newCvId = newCV.data?.cv?.id || newCV.data?.cv?._id || newCV.id || newCV._id;
+            const newCvId = (newCV as any)?.data?.cv?.id || (newCV as any)?.data?.cv?._id || (newCV as any)?.id || (newCV as any)?._id || '';
 
             // Update journey with new CV ID
             await updateJourneyWithDocument(newCvId, 'cv');
@@ -700,8 +714,9 @@ const CVStudio: React.FC<CVStudioProps> = ({
             }
             
             // Keep jobId for backwards compatibility
-            if (journeyInfo?.jobId || selectedJobId) {
-              urlParams.set('jobId', journeyInfo?.jobId || selectedJobId);
+            const jobId = journeyInfo?.jobId || selectedJobId;
+            if (jobId) {
+              urlParams.set('jobId', jobId);
             }
             
             router.replace(`/studio?${urlParams.toString()}`);
@@ -779,10 +794,10 @@ const CVStudio: React.FC<CVStudioProps> = ({
       } else {
         // FALLBACK: Legacy approach for backwards compatibility
         journey = await CVJourneyLookupService.getJourneyInfoForStudio(
+          userId,
           cvId,
           coverLetterId,
-          selectedJobId || undefined,
-          userId
+          selectedJobId || undefined
         );
       }
 
@@ -1134,9 +1149,8 @@ const CVStudio: React.FC<CVStudioProps> = ({
         };
       case 'skills':
         return {
-          name: '',
-          level: '',
-          keywords: []
+          category: '',
+          skills: []
         };
       case 'projects':
         return {
@@ -1283,13 +1297,13 @@ const CVStudio: React.FC<CVStudioProps> = ({
           const updateData = {
             title: cvTitle,
             cvData: cvData,
-            templateId: selectedTemplate?.id || selectedTemplate?._id || '',
+            templateId: selectedTemplate?._id?.toString() || selectedTemplate?.id?.toString() || '',
             metadata: {
               isMaster: isMasterCV
             }
           };
           // Ensure templateId is a string (handle hardcoded templates)
-          const templateId = selectedTemplate?.id || selectedTemplate?._id || selectedTemplate?.templateId || '';
+          const templateId = selectedTemplate?._id?.toString() || selectedTemplate?.id?.toString() || '';
           updateData.templateId = typeof templateId === 'string' ? templateId : String(templateId);
           
           console.log('🔍 Studio - Update data:', updateData);
@@ -1339,14 +1353,13 @@ const CVStudio: React.FC<CVStudioProps> = ({
         } else {
           // Create new CV with proper structure
           const newCV = await CVService.createCV({
-            userId: userId || '',
             title: cvTitle || 'Untitled CV',
             cvData: cvData,
-            templateId: selectedTemplate?.id || selectedTemplate?._id || '',
+            templateId: selectedTemplate?._id?.toString() || selectedTemplate?.id?.toString() || '',
             metadata: {
               isMaster: isMasterCV
             }
-          });
+          }, userId || '');
           
           console.log('✅ Studio - CV created:', newCV);
           setSaveStatus('saved');
@@ -1626,18 +1639,15 @@ const CVStudio: React.FC<CVStudioProps> = ({
           // If no specific jobId provided, try to load job from CV Journey
           try {
             const journeyInfo = await CVJourneyLookupService.getJourneyInfoForStudio(
+              userId,
               cvId,
               coverLetterId,
-              null, // no specific jobId
-              userId
+              null // no specific jobId
             );
             
             if (journeyInfo && journeyInfo.jobTitle && journeyInfo.company) {
-              setCurrentJob({
-                id: journeyInfo.jobId,
-                title: journeyInfo.jobTitle,
-                company: journeyInfo.company
-              });
+              // Can't set currentJob with partial data - Job type requires all fields
+              // Just keep journeyInfo for job context instead
               setSelectedJobId(journeyInfo.jobId);
               setJobAutoLoadedFromJourney(true);
               console.log('🔍 CVStudio - Auto-loaded job from CV Journey:', journeyInfo.jobTitle);
@@ -1720,10 +1730,10 @@ const CVStudio: React.FC<CVStudioProps> = ({
               if (!loadedJourneyInfo) {
                 try {
                   loadedJourneyInfo = await CVJourneyLookupService.getJourneyInfoForStudio(
+                    userId,
                     null, // cvId
                     coverLetterId, // coverLetterId
-                    selectedJobId || undefined, // use selectedJobId instead of undefined jobId
-                    userId
+                    selectedJobId || undefined // use selectedJobId instead of undefined jobId
                   );
                   if (loadedJourneyInfo) {
                     console.log('🔍 CVStudio - Loaded CV Journey data from lookup service:', loadedJourneyInfo);
@@ -1886,7 +1896,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
             // Generate smart cover letter title based on job context
             const jobData = currentJob;
             const smartTitle = generateDocumentName({
-              jobTitle: jobData?.title || jobData?.jobTitle || journeyInfo?.jobTitle,
+              jobTitle: jobData?.title || (jobData as any)?.jobTitle || journeyInfo?.jobTitle,
               company: jobData?.company || journeyInfo?.company,
               documentType: 'cover-letter'
             });
@@ -1899,7 +1909,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
               jobId: selectedJobId || journeyInfo?.jobId, // Auto-link job from URL params or journey
               metadata: {
                 targetCompany: jobData?.company || journeyInfo?.company || '',
-                targetPosition: jobData?.title || jobData?.jobTitle || journeyInfo?.jobTitle || '',
+                targetPosition: jobData?.title || (jobData as any)?.jobTitle || journeyInfo?.jobTitle || '',
                 keywords: [],
                 wordCount: 0,
                 isPublic: false,
@@ -2131,10 +2141,10 @@ const CVStudio: React.FC<CVStudioProps> = ({
                 // Load CV Journey data to get job and cover letter information
                 try {
                   const journeyInfo = await CVJourneyLookupService.getJourneyInfoForStudio(
+                    userId,
                     cvId,
                     null, // coverLetterId
-                    null, // jobId - will be determined from journey data
-                    userId
+                    null // jobId - will be determined from journey data
                   );
                   
                   if (journeyInfo) {
@@ -2142,11 +2152,8 @@ const CVStudio: React.FC<CVStudioProps> = ({
                     
                     // Set job information from CV Journey
                     if (journeyInfo.jobTitle && journeyInfo.company) {
-                      setCurrentJob({
-                        id: journeyInfo.jobId,
-                        title: journeyInfo.jobTitle,
-                        company: journeyInfo.company
-                      });
+                      // Can't set currentJob with partial data - Job type requires all fields
+                      // Just keep journeyInfo for job context instead
                       // Auto-select the job in the job selector
                       setSelectedJobId(journeyInfo.jobId);
                       setJobAutoLoadedFromJourney(true);
@@ -2207,7 +2214,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
           }
         } else {
             // Create default CV data structure
-            const defaultCVData: CVDataStructure = {
+            const defaultCVData: UnifiedCVDataStructure = {
               basics: {
                 name: '',
                 label: '',
@@ -2539,7 +2546,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
     // This prevents race conditions and ensures URL is source of truth
     
     // Build new URL parameters using fresh journey data
-    const currentJobId = freshJourneyData?.jobId || selectedJobId || jobId;
+    const currentJobId = freshJourneyData?.jobId || selectedJobId;
     
     console.log('🔄 Document type change - Current context:', {
       journeyId,
@@ -2925,8 +2932,8 @@ const CVStudio: React.FC<CVStudioProps> = ({
         urlParams.set('type', 'cv');
         urlParams.set('cvId', masterCV.id);
         urlParams.set('master', 'true');
-        if (selectedJobId || jobId) {
-          urlParams.set('jobId', selectedJobId || jobId);
+        if (selectedJobId) {
+          urlParams.set('jobId', selectedJobId);
         }
         router.replace(`/studio?${urlParams.toString()}`);
       } else {
@@ -2961,7 +2968,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
           userId: userId,
           jobTitle: currentJob?.title || 'Untitled Job',
           company: currentJob?.company || 'Company',
-          jobId: selectedJobId || jobId
+          jobId: selectedJobId || undefined
         }),
       });
 
@@ -2982,8 +2989,8 @@ const CVStudio: React.FC<CVStudioProps> = ({
           const urlParams = new URLSearchParams();
           urlParams.set('type', 'cv');
           urlParams.set('cvId', duplicatedCV.id);
-          if (selectedJobId || jobId) {
-            urlParams.set('jobId', selectedJobId || jobId);
+          if (selectedJobId) {
+            urlParams.set('jobId', selectedJobId);
           }
           router.replace(`/studio?${urlParams.toString()}`);
           
@@ -3011,7 +3018,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
     const sectionComponents: Record<string, React.ReactNode> = {
       personal_header: (
         <PersonalInfoForm
-          personalInfo={cvData?.basics || {
+          data={cvData?.basics || {
             name: '', label: '', image: '', email: '', phone: '', url: '', summary: '',
             location: { address: '', postalCode: '', city: '', countryCode: '', region: '' },
             profiles: []
@@ -3025,9 +3032,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
       work_experience: (
         <WorkExperienceSection
           data={cvData?.work || []}
-          onUpdate={updateCVField}
-          onAdd={() => addSection('work')}
-          onRemove={(index) => removeSection('work', index)}
+          onUpdate={(data: any[]) => updateCVField('work', data)}
           jobData={currentJob}
           userId={userId}
         />
@@ -3343,41 +3348,57 @@ const CVStudio: React.FC<CVStudioProps> = ({
 
   // Add a new section with default data - use functional updates to avoid stale state
   const addNewSection = (sectionId: string) => {
-    const defaultData = getDefaultItemForSection(sectionId === 'work_experience' ? 'work' : sectionId as keyof CVDataStructure);
-    
     setCvData(prev => {
       if (!prev) return prev;
       
       const updatedData = { ...prev };
 
       switch (sectionId) {
-        case 'skills':
-          updatedData.skills = [...(prev.skills || []), defaultData];
+        case 'skills': {
+          const defaultSkill = getDefaultItemForSection('skills') as { category: string; skills: string[] };
+          updatedData.skills = [...(prev.skills || []), defaultSkill];
           break;
-        case 'projects':
-          updatedData.projects = [...(prev.projects || []), defaultData];
+        }
+        case 'projects': {
+          const defaultProject = getDefaultItemForSection('projects') as unknown as { name: string; startDate: string; endDate: string; description: string; highlights: string[]; keywords: string[]; url: string };
+          updatedData.projects = [...(prev.projects || []), defaultProject];
           break;
-        case 'certificates':
-          updatedData.certificates = [...(prev.certificates || []), defaultData];
+        }
+        case 'certificates': {
+          const defaultCert = getDefaultItemForSection('certificates') as unknown as { name: string; date: string; issuer: string; url: string; description: string };
+          updatedData.certificates = [...(prev.certificates || []), defaultCert];
           break;
-        case 'languages':
-          updatedData.languages = [...(prev.languages || []), defaultData];
+        }
+        case 'languages': {
+          const defaultLang = getDefaultItemForSection('languages') as { language: string; fluency: string };
+          updatedData.languages = [...(prev.languages || []), defaultLang];
           break;
-        case 'volunteer':
-          updatedData.volunteer = [...(prev.volunteer || []), defaultData];
+        }
+        case 'volunteer': {
+          const defaultVolunteer = getDefaultItemForSection('volunteer') as unknown as { organization: string; position: string; url: string; startDate: string; endDate: string; summary: string; highlights: string[] };
+          updatedData.volunteer = [...(prev.volunteer || []), defaultVolunteer];
           break;
-        case 'awards':
-          updatedData.awards = [...(prev.awards || []), defaultData];
+        }
+        case 'awards': {
+          const defaultAward = getDefaultItemForSection('awards') as { title: string; date: string; awarder: string; summary: string };
+          updatedData.awards = [...(prev.awards || []), defaultAward];
           break;
-        case 'publications':
-          updatedData.publications = [...(prev.publications || []), defaultData];
+        }
+        case 'publications': {
+          const defaultPub = getDefaultItemForSection('publications') as { name: string; publisher: string; releaseDate: string; url: string; summary: string };
+          updatedData.publications = [...(prev.publications || []), defaultPub];
           break;
-        case 'interests':
-          updatedData.interests = [...(prev.interests || []), defaultData];
+        }
+        case 'interests': {
+          const defaultInterest = getDefaultItemForSection('interests') as { name: string; keywords: string[] };
+          updatedData.interests = [...(prev.interests || []), defaultInterest];
           break;
-        case 'references':
-          updatedData.references = [...(prev.references || []), defaultData];
+        }
+        case 'references': {
+          const defaultRef = getDefaultItemForSection('references') as { name: string; reference: string };
+          updatedData.references = [...(prev.references || []), defaultRef];
           break;
+        }
         default:
           return prev;
       }
@@ -3402,7 +3423,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
             activeSection={activeSidebarSection}
             onSectionChange={setActiveSidebarSection}
             cvSections={getCVSectionsForSidebar()}
-            activeStructureSection={activeStructureSection}
+            activeStructureSection={activeStructureSection || undefined}
             onStructureSectionClick={handleStructureSectionClick}
             onAddSection={handleAddSection}
             previousStructureSectionIndex={previousStructureSectionIndex}
@@ -3429,7 +3450,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
                   onJobSelection={handleJobSelection}
                   userId={userId}
                   cvData={cvData}
-                  cvId={cvId}
+                  cvId={cvId || ''}
                   onUpdateField={updateCVField}
                   onScoreUpdate={(score) => {
                     updateAtsScore(score);
@@ -3562,7 +3583,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
                   userId={userId}
                   cvData={cvData}
                   jobData={currentJob}
-                  cvId={cvId}
+                  cvId={cvId || undefined}
                   onUpdateField={updateCVField}
                   onScoreUpdate={(score) => {
                     updateAtsScore(score);

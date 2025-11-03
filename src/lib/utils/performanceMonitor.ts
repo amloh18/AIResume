@@ -1,4 +1,5 @@
 // Performance monitoring utilities for measuring dashboard improvements
+import React from 'react';
 
 interface PerformanceMetrics {
   pageLoadTime: number;
@@ -203,7 +204,7 @@ export function measureRenderTime<T extends React.ComponentType<any>>(
   Component: T,
   componentName: string
 ): T {
-  return React.forwardRef<any, React.ComponentProps<T>>((props, ref) => {
+  const WrappedComponent = React.forwardRef<any, React.ComponentProps<T>>((props, ref) => {
     const startTime = performance.now();
     
     const result = React.createElement(Component, { ...props, ref });
@@ -215,7 +216,9 @@ export function measureRenderTime<T extends React.ComponentType<any>>(
     });
     
     return result;
-  }) as T;
+  });
+  
+  return WrappedComponent as unknown as T;
 }
 
 // Performance comparison utility

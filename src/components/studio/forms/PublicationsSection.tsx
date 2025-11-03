@@ -28,22 +28,22 @@ const PublicationsSection: React.FC<PublicationsSectionProps> = ({
       url: '',
       summary: ''
     };
-    onUpdate('publications', (prevPublications) => {
+    onUpdate('publications', (prevPublications: Array<{ name: string; publisher: string; releaseDate: string; url: string; summary: string }>) => {
       return [...(prevPublications || []), newPublication];
     });
   };
 
   const removePublication = (index: number) => {
-    onUpdate('publications', (prevPublications) => {
-      return (prevPublications || []).filter((_, i) => i !== index);
+    onUpdate('publications', (prevPublications: Array<{ name: string; publisher: string; releaseDate: string; url: string; summary: string }>) => {
+      return (prevPublications || []).filter((_: any, i: number) => i !== index);
     });
   };
 
   const updatePublication = (index: number, field: string, value: any) => {
-    onUpdate('publications', (prevPublications) => {
+    onUpdate('publications', (prevPublications: Array<{ name: string; publisher: string; releaseDate: string; url: string; summary: string }>) => {
       const newArray = [...(prevPublications || [])];
       if (!newArray[index]) {
-        newArray[index] = {};
+        newArray[index] = { name: '', publisher: '', releaseDate: '', url: '', summary: '' };
       }
       newArray[index] = { ...newArray[index], [field]: value };
       return newArray;

@@ -21,6 +21,7 @@ interface CV {
   id: string;
   title: string;
   lastModified: string;
+  updatedAt?: string;
   status: 'draft' | 'published' | 'archived';
   views: number;
   isStarred: boolean;
@@ -29,6 +30,10 @@ interface CV {
   cvData?: any;
   completionPercentage?: number;
   isMaster?: boolean;
+  metadata?: {
+    isMaster?: boolean;
+    [key: string]: any;
+  };
 }
 
 interface CVCardProps {

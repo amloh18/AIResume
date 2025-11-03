@@ -28,22 +28,22 @@ const VolunteerSection: React.FC<VolunteerSectionProps> = ({
       endDate: '',
       summary: ''
     };
-    onUpdate('volunteer', (prevVolunteer) => {
+    onUpdate('volunteer', (prevVolunteer: Array<{ organization: string; position: string; url: string; startDate: string; endDate: string; summary: string; highlights: string[] }>) => {
       return [...(prevVolunteer || []), newVolunteer];
     });
   };
 
   const removeVolunteer = (index: number) => {
-    onUpdate('volunteer', (prevVolunteer) => {
-      return (prevVolunteer || []).filter((_, i) => i !== index);
+    onUpdate('volunteer', (prevVolunteer: Array<{ organization: string; position: string; url: string; startDate: string; endDate: string; summary: string; highlights: string[] }>) => {
+      return (prevVolunteer || []).filter((_: any, i: number) => i !== index);
     });
   };
 
   const updateVolunteer = (index: number, field: string, value: any) => {
-    onUpdate('volunteer', (prevVolunteer) => {
+    onUpdate('volunteer', (prevVolunteer: Array<{ organization: string; position: string; url: string; startDate: string; endDate: string; summary: string; highlights: string[] }>) => {
       const newArray = [...(prevVolunteer || [])];
       if (!newArray[index]) {
-        newArray[index] = {};
+        newArray[index] = { organization: '', position: '', url: '', startDate: '', endDate: '', summary: '', highlights: [] };
       }
       newArray[index] = { ...newArray[index], [field]: value };
       return newArray;

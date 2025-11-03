@@ -3,22 +3,30 @@
 // Force dynamic rendering to prevent SSR issues
 export const dynamic = 'force-dynamic';
 
-import { useCustomAuth } from '@/contexts/CustomAuthContext'
-import { CustomAuthProvider } from '@/contexts/CustomAuthContext'
+import { useUnifiedAuth } from '@/hooks/useUnifiedAuth'
+import { signOut } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 
 function DashboardContent() {
-  const { user, loading, signOut } = useCustomAuth()
+  const { user, isAuthenticated, isLoading } = useUnifiedAuth()
   const router = useRouter()
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.push('/custom-signin')
+    if (!isLoading && !isAuthenticated) {
+      router.push('/sign-in')
     }
-  }, [user, loading, router])
+  }, [isAuthenticated, isLoading, router])
 
-  if (loading) {
+  const handleSignOut = async () => {
+    try {
+      await signOut({ callbackUrl: '/sign-in', redirect: true })
+    } catch (error) {
+      console.error('Sign out error:', error)
+    }
+  }
+
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900">
         <div className="text-white text-xl">Loading...</div>
@@ -26,7 +34,7 @@ function DashboardContent() {
     )
   }
 
-  if (!user) {
+  if (!user || !isAuthenticated) {
     return null
   }
 
@@ -36,7 +44,7 @@ function DashboardContent() {
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold">Dashboard</h1>
           <button
-            onClick={signOut}
+            onClick={handleSignOut}
             className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded"
           >
             Sign Out
@@ -47,8 +55,8 @@ function DashboardContent() {
           <h2 className="text-xl font-semibold mb-4">Welcome, {user.name}!</h2>
           <div className="space-y-2">
             <p><strong>Email:</strong> {user.email}</p>
-            <p><strong>Type:</strong> {user.type}</p>
-            <p><strong>Role:</strong> {user.role}</p>
+            <p><strong>Type:</strong> {(user as any).type || 'user'}</p>
+            <p><strong>Role:</strong> {(user as any).role || 'user'}</p>
           </div>
         </div>
         
@@ -73,10 +81,12 @@ function DashboardContent() {
   )
 }
 
+/**
+ * Simple Dashboard Page
+ * 
+ * Note: This page now uses NextAuth via useUnifiedAuth hook.
+ * CustomAuthContext has been deprecated in favor of NextAuth.
+ */
 export default function SimpleDashboard() {
-  return (
-    <CustomAuthProvider>
-      <DashboardContent />
-    </CustomAuthProvider>
-  )
+  return <DashboardContent />
 }

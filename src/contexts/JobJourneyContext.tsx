@@ -131,7 +131,7 @@ export const JobJourneyProvider: React.FC<JobJourneyProviderProps> = ({ children
   const startJourney = useCallback((jobId: string) => {
     console.log('🔍 JobJourneyContext - startJourney called with jobId:', jobId);
     setState(prev => {
-      const newState = {
+      const newState: JobJourneyState = {
         ...prev,
         isJourneyActive: true,
         currentJobId: jobId,

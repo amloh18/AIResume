@@ -82,16 +82,14 @@ const TopBar: React.FC<TopBarProps> = ({
 
           {/* User Avatar */}
           <UserAvatar 
-            user={{
-              name: userData?.displayName || userData?.username || session?.user?.name || 'User',
-              email: userData?.email || session?.user?.email || '',
-              profilePhoto: userData?.profilePhoto || session?.user?.image,
-              isEmailVerified: userData?.isEmailVerified || false,
-              subscription: {
-                planName: userData?.subscription?.planName || 'Free Plan',
-                status: userData?.subscription?.status || 'active'
-              }
-            }}
+            src={userData?.avatar || session?.user?.image || undefined}
+            name={userData?.firstName && userData?.lastName 
+              ? `${userData.firstName} ${userData.lastName}` 
+              : userData?.username || session?.user?.name || 'User'}
+            alt={userData?.firstName && userData?.lastName 
+              ? `${userData.firstName} ${userData.lastName}` 
+              : userData?.username || session?.user?.name || 'User avatar'}
+            size="sm"
           />
 
         </div>

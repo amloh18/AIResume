@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import { Template } from '@/models';
 import { createErrorResponse } from '@/lib/db-utils';
 import AdminTemplateService from '@/lib/services/adminTemplateService';
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     // Get templates from main database
     let templates;
     try {
-      await connectDB();
+      await getConnection();
       console.log('✅ TEMPLATES API - Connected to main database');
       
       const query: any = {};
@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
     //   );
     // }
 
-    await connectDB();
+    await getConnection();
     console.log('🔍 TEMPLATES API - Database connected');
 
     const body = await request.json();

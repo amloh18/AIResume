@@ -927,8 +927,9 @@ ${indexContent}`;
                 TS
               </button>
               <button
-                onClick={() => handleDeleteTemplate(template.id)}
+                onClick={() => template.id && handleDeleteTemplate(template.id)}
                 className="flex items-center gap-1 px-3 py-2 text-sm bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 transition-all duration-200 shadow-md hover:shadow-lg font-medium"
+                disabled={!template.id}
               >
                 <Trash2 size={14} />
                 Delete
@@ -1276,8 +1277,9 @@ ${indexContent}`;
                         Download TS
                       </button>
                       <button
-                        onClick={() => handleDeleteTemplate(selectedTemplate!.id)}
+                        onClick={() => selectedTemplate?.id && handleDeleteTemplate(selectedTemplate.id)}
                         className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 transition-all duration-200 shadow-md hover:shadow-lg font-medium"
+                        disabled={!selectedTemplate?.id}
                       >
                         <Trash2 size={16} />
                         Delete

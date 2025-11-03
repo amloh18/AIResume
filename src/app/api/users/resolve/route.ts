@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import { User } from '@/models';
 
 /**
@@ -10,7 +10,7 @@ import { User } from '@/models';
  */
 export async function POST(request: NextRequest) {
   try {
-    await connectDB();
+    await getConnection();
     
     const body = await request.json();
     const { authProviderId, authProvider = 'firebase' } = body;

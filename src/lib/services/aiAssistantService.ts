@@ -62,7 +62,7 @@ export class AIAssistantService {
       }
 
       // Extract job requirements
-      const jobText = `${jobData.title || jobData.jobTitle} ${jobData.description} ${jobData.requirements}`;
+      const jobText = `${jobData.title} ${jobData.description || ''} ${jobData.requirements || ''}`;
       console.log('📄 AIAssistantService - Job text length:', jobText.length);
       
       // Simple keyword matching (in a real app, you'd use more sophisticated NLP)
@@ -118,7 +118,7 @@ export class AIAssistantService {
           id: 'content-summary',
           title: 'Enhance Professional Summary',
           content: jobData ? 
-            `Create a compelling summary (${summaryGuidelines.recommendedLength}) that highlights your experience relevant to ${jobData.title || jobData.jobTitle} at ${jobData.company}. Focus on ${summaryGuidelines.keyFocus}.` :
+            `Create a compelling summary (${summaryGuidelines.recommendedLength}) that highlights your experience relevant to ${jobData.title} at ${jobData.company}. Focus on ${summaryGuidelines.keyFocus}.` :
             `Expand your professional summary to ${summaryGuidelines.recommendedLength}. Focus on ${summaryGuidelines.keyFocus}.`,
           type: 'improvement',
           section: 'summary',
@@ -490,10 +490,13 @@ export class AIAssistantService {
         if (skill.skills && Array.isArray(skill.skills)) {
           skills.push(...skill.skills);
         }
-        // Fallback for old structure
-        if (skill.name) skills.push(skill.name);
-        if (skill.keywords && Array.isArray(skill.keywords)) {
-          skills.push(...skill.keywords);
+        // Fallback for old structure (CVDataStructure format)
+        const skillAny = skill as any;
+        if ('name' in skill && skillAny.name && typeof skillAny.name === 'string') {
+          skills.push(skillAny.name);
+        }
+        if ('keywords' in skill && skillAny.keywords && Array.isArray(skillAny.keywords)) {
+          skills.push(...skillAny.keywords);
         }
       });
     }
@@ -516,7 +519,7 @@ export class AIAssistantService {
       });
     }
     
-    return [...new Set(skills)];
+    return Array.from(new Set(skills));
   }
 
   private static generateSuggestions(missingKeywords: string[]): string[] {
@@ -547,9 +550,20 @@ export class AIAssistantService {
     // Add skills
     if (cvData.skills && Array.isArray(cvData.skills)) {
       cvData.skills.forEach(skill => {
-        text += `${skill.name} `;
-        if (skill.keywords && Array.isArray(skill.keywords)) {
-          text += skill.keywords.join(' ');
+        if ('category' in skill) {
+          text += `${skill.category} `;
+          if (skill.skills && Array.isArray(skill.skills)) {
+            text += skill.skills.join(' ');
+          }
+        } else {
+          // Old format fallback - check if it's the old format
+          const skillAny = skill as any;
+          if (skillAny && 'name' in skillAny && typeof skillAny.name === 'string') {
+            text += `${skillAny.name} `;
+            if (skillAny.keywords && Array.isArray(skillAny.keywords)) {
+              text += skillAny.keywords.join(' ');
+            }
+          }
         }
       });
     }
@@ -576,7 +590,7 @@ export class AIAssistantService {
       console.log('🔍 AIAssistantService - Starting comprehensive analysis...');
       console.log('📊 AIAssistantService - Job data:', {
         id: jobData.id,
-        title: jobData.title || jobData.jobTitle,
+        title: jobData.title,
         company: jobData.company
       });
       
@@ -848,7 +862,15 @@ export class AIAssistantService {
   ): Promise<AISuggestion[]> {
     const suggestions: AISuggestion[] = [];
     const skills = cvData.skills || [];
-    const totalKeywords = skills.reduce((acc, skill) => acc + (skill.keywords?.length || 0), 0);
+    const totalKeywords = skills.reduce((acc, skill) => {
+      if ('skills' in skill && Array.isArray(skill.skills)) {
+        return acc + skill.skills.length;
+      }
+      if ('keywords' in skill && Array.isArray(skill.keywords)) {
+        return acc + skill.keywords.length;
+      }
+      return acc;
+    }, 0);
 
     if (totalKeywords < 10) {
       suggestions.push({

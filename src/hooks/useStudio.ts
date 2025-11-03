@@ -14,6 +14,7 @@ import {
   CoverLetterData
 } from '@/types/studio';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { CVDataStructure } from '@/types/cv';
 import { requireAuthContext } from '@/lib/user-resolution';
 
 /**
@@ -115,8 +116,12 @@ export function useStudio(): UseStudioReturn {
         const cvResponse = await fetch(`/api/cvs/${applicationJourney.cvId}`);
         if (cvResponse.ok) {
           currentDocument = await cvResponse.json();
-          documentData = (currentDocument as CVData).cvData;
-          documentTitle = currentDocument.title;
+          if (currentDocument) {
+            documentData = ((currentDocument as CVData).cvData as unknown as UnifiedCVDataStructure);
+            documentTitle = currentDocument.title || 'Untitled CV';
+          } else {
+            throw new Error('Failed to load CV document');
+          }
         } else {
           throw new Error('Linked CV not found');
         }
@@ -133,8 +138,12 @@ export function useStudio(): UseStudioReturn {
         const clResponse = await fetch(`/api/cover-letters/${applicationJourney.coverLetterId}`);
         if (clResponse.ok) {
           currentDocument = await clResponse.json();
-          documentData = (currentDocument as CoverLetterData).content;
-          documentTitle = currentDocument.title;
+          if (currentDocument) {
+            documentData = (currentDocument as CoverLetterData).content;
+            documentTitle = currentDocument.title || 'Untitled Cover Letter';
+          } else {
+            throw new Error('Failed to load cover letter document');
+          }
         } else {
           throw new Error('Linked cover letter not found');
         }
@@ -159,13 +168,13 @@ export function useStudio(): UseStudioReturn {
       applicationJourney,
       linkedJob,
       userId,
-      currentDocument
+      currentDocument: currentDocument ?? undefined
     };
 
     setState(prev => ({
       ...prev,
       sessionContext,
-      documentData,
+      documentData: documentData as UnifiedCVDataStructure | string,
       documentTitle,
       selectedJobId: linkedJob.id,
       availableJobs,
@@ -175,7 +184,7 @@ export function useStudio(): UseStudioReturn {
     }));
 
     // 6. Run initial ATS analysis
-    await runATSAnalysisInternal(documentData, linkedJob.jobDescription || '', params.documentType);
+    await runATSAnalysisInternal(documentData as UnifiedCVDataStructure | string, linkedJob.jobDescription || '', params.documentType);
 
     console.log('✅ Journey mode initialized successfully');
   };
@@ -201,7 +210,9 @@ export function useStudio(): UseStudioReturn {
       }
       
       currentDocument = await response.json();
-      documentData = params.documentType === 'cv' ? (currentDocument as CVData).cvData : (currentDocument as CoverLetterData).content;
+      documentData = params.documentType === 'cv' 
+        ? ((currentDocument as CVData).cvData as unknown as UnifiedCVDataStructure)
+        : (currentDocument as CoverLetterData).content;
       documentTitle = currentDocument.title;
     } else {
       // Create new document
@@ -373,7 +384,7 @@ export function useStudio(): UseStudioReturn {
       setState(prev => ({ ...prev, selectedJobId: jobId }));
       
       // Run ATS analysis with new job
-      await runATSAnalysisInternal(state.documentData, job.jobDescription || '', state.sessionContext.documentType);
+      await runATSAnalysisInternal(state.documentData as UnifiedCVDataStructure | string, job.jobDescription || '', state.sessionContext.documentType);
       
     } catch (error) {
       console.error('❌ Job selection failed:', error);
@@ -392,7 +403,7 @@ export function useStudio(): UseStudioReturn {
     const selectedJob = availableJobs.find(job => job.id === selectedJobId);
     if (!selectedJob?.jobDescription) return;
     
-    await runATSAnalysisInternal(documentData, selectedJob.jobDescription, sessionContext.documentType);
+    await runATSAnalysisInternal(documentData as UnifiedCVDataStructure | string, selectedJob.jobDescription, sessionContext.documentType);
   }, [state]);
 
   /**
@@ -454,7 +465,7 @@ export function useStudio(): UseStudioReturn {
   // Actions object
   const actions: StudioActions = {
     initializeSession,
-    updateDocument,
+    updateDocument: updateDocument as (data: UnifiedCVDataStructure | CVDataStructure | string) => void,
     saveDocument,
     switchTemplate,
     selectJob,

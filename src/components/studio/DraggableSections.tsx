@@ -148,7 +148,7 @@ const DraggableSections: React.FC<DraggableSectionsProps> = ({
       {/* Draggable Sections */}
       <div className="space-y-4">
         {sections.map((section, index) => (
-          <motion.div
+          <div
             key={section.id}
             className={`group relative bg-white/90 dark:bg-[#1a230f] border-2 transition-all duration-300 rounded-xl shadow-lg hover:shadow-xl ${
               draggedSection === section.id 
@@ -160,13 +160,9 @@ const DraggableSections: React.FC<DraggableSectionsProps> = ({
                 : 'border-gray-200 dark:border-gray-700 opacity-60'
             }`}
             draggable
-            onDragStart={(e) => handleDragStart(e, section.id)}
+            onDragStart={(e: React.DragEvent<HTMLDivElement>) => handleDragStart(e, section.id)}
             onDragOver={handleDragOver}
             onDrop={(e) => handleDrop(e, section.id)}
-            layout
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.05 }}
           >
             {/* Section Header */}
             <div className="p-6">
@@ -255,20 +251,14 @@ const DraggableSections: React.FC<DraggableSectionsProps> = ({
             {/* Section Content */}
             <AnimatePresence>
               {section.isExpanded && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.3, ease: 'easeInOut' }}
-                  className="overflow-hidden"
-                >
+                <div className="overflow-hidden">
                   <div className="px-6 pb-6 border-t border-gray-200/60 dark:border-gray-700/60 pt-6 bg-gray-50/50 dark:bg-gray-900/50">
                     {section.component}
                   </div>
-                </motion.div>
+                </div>
               )}
             </AnimatePresence>
-          </motion.div>
+          </div>
         ))}
       </div>
 

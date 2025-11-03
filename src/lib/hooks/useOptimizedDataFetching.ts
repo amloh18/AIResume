@@ -30,7 +30,7 @@ let cleanupInterval: NodeJS.Timeout | null = null;
 
 const cleanupExpiredEntries = () => {
   const now = Date.now();
-  for (const [key, entry] of globalCache.entries()) {
+  for (const [key, entry] of Array.from(globalCache.entries())) {
     if (now > entry.expiresAt) {
       globalCache.delete(key);
     }
@@ -263,7 +263,7 @@ export function useParallelDataFetching<T extends Record<string, any>>(
       }
     } catch (err) {
       if (!abortController.signal.aborted) {
-        setErrors({ general: err as Error });
+        setErrors({ general: err as Error } as Partial<Record<keyof T, Error>>);
       }
     } finally {
       if (!abortController.signal.aborted) {
@@ -310,7 +310,7 @@ export const getCacheStats = () => {
   let totalEntries = 0;
   let expiredEntries = 0;
   
-  for (const entry of globalCache.values()) {
+  for (const entry of Array.from(globalCache.values())) {
     totalEntries++;
     if (now > entry.expiresAt) {
       expiredEntries++;

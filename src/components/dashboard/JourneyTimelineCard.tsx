@@ -219,8 +219,8 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
             const cvs = cvsData.data.cvs || [];
             
             // Debug: Check for duplicate CV IDs
-            const cvIds = cvs.map(cv => cv.id);
-            const duplicateCvIds = cvIds.filter((id, index) => cvIds.indexOf(id) !== index);
+            const cvIds = cvs.map((cv: any) => cv.id);
+            const duplicateCvIds = cvIds.filter((id: any, index: number) => cvIds.indexOf(id) !== index);
             if (duplicateCvIds.length > 0) {
               console.warn('⚠️ JourneyTimelineCard - Found duplicate CV IDs:', duplicateCvIds);
             }
@@ -247,7 +247,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
             // Find and set the linked CV
             if (journey.cvId) {
               console.log('🔍 JourneyTimelineCard - Looking for CV with ID:', journey.cvId);
-              console.log('🔍 JourneyTimelineCard - Available CVs:', cvs.map(cv => ({ id: cv.id, title: cv.title })));
+              console.log('🔍 JourneyTimelineCard - Available CVs:', cvs.map((cv: CV) => ({ id: cv.id, title: cv.title })));
               const linked = cvs.find((cv: CV) => String(cv.id) === String(journey.cvId));
               console.log('🔍 JourneyTimelineCard - Found linked CV:', linked);
               if (linked) {
@@ -272,8 +272,8 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
             const coverLetters = coverLettersData.data.coverLetters || [];
             
             // Debug: Check for duplicate IDs
-            const ids = coverLetters.map(cl => cl.id);
-            const duplicateIds = ids.filter((id, index) => ids.indexOf(id) !== index);
+            const ids = coverLetters.map((cl: any) => cl.id);
+            const duplicateIds = ids.filter((id: any, index: number) => ids.indexOf(id) !== index);
             if (duplicateIds.length > 0) {
               console.warn('⚠️ JourneyTimelineCard - Found duplicate cover letter IDs:', duplicateIds);
             }
@@ -732,7 +732,8 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
               title: duplicatedCVTitle,
               status: 'draft',
               createdAt: new Date().toISOString(),
-              lastModified: new Date().toISOString()
+              lastModified: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
             });
             setCvNotFound(false);
             
@@ -888,7 +889,8 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
               title: duplicatedCVTitle,
               status: 'draft',
               createdAt: new Date().toISOString(),
-              lastModified: new Date().toISOString()
+              lastModified: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
             });
             setCvNotFound(false);
             
@@ -1033,7 +1035,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
             updateCurrentStep(4);
             toast.success(`ATS score calculated: ${score}% - Great match!`);
           } else {
-            updateJourneyStatus('ats-needs-improvement');
+            updateJourneyStatus('ats-checked');
             updateCurrentStep(3);
             toast.success(`ATS score calculated: ${score}% - Consider optimizing for better match`);
           }
@@ -1119,7 +1121,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
               updateCurrentStep(4);
               toast.success(`ATS score calculated: ${score}% - Great match!`);
             } else {
-              updateJourneyStatus('ats-needs-improvement');
+              updateJourneyStatus('ats-checked');
               updateCurrentStep(3);
               toast.success(`ATS score calculated: ${score}% - Consider optimizing for better match`);
             }
@@ -1191,8 +1193,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
         }
         
         // Update the journey object
-        onUpdateJourney?.({
-          ...journey,
+        onUpdateJourney?.(journey.id, {
           cvId: newCvId
         });
         

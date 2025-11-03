@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import User from '@/models/User';
 import AdminUser from '@/models/admin/AdminUser';
-import connectDB from '@/lib/database';
+import getConnection from '@/lib/database';
 // Admin database connection removed - using main database
 
 export interface SyncResult {
@@ -29,7 +29,7 @@ export async function syncUsersToAdmin(): Promise<SyncResult> {
     console.log('🔄 Starting user sync from cvcircle.users to adminusers...');
 
     // Connect to main database
-    await connectDB();
+    await getConnection();
 
     // Get AdminUser model
     const AdminUserModel = AdminUser;
@@ -127,41 +127,45 @@ export async function syncUsersToAdmin(): Promise<SyncResult> {
  */
 export async function syncSingleUser(userId: string): Promise<boolean> {
   try {
-    await connectDB();
+    await getConnection();
 
-    const user = await User.findById(userId).lean();
+    const user = await User.findById(userId).lean().exec();
     if (!user) {
+      throw new Error('User not found');
+    }
+    const userDoc = Array.isArray(user) ? user[0] : user;
+    if (!userDoc) {
       throw new Error('User not found');
     }
 
     const AdminUserModel = AdminUser;
 
     const adminUserData = {
-      mainUserId: user._id,
-      email: user.email,
-      firstName: user.firstName || 'Unknown',
-      lastName: user.lastName || 'User',
-      authProvider: user.authProvider || 'credentials',
-      isEmailVerified: user.isEmailVerified || false,
-      currentPlanKey: user.currentPlanKey || 'free',
-      subscriptionStatus: user.subscription?.status || 'inactive',
-      subscriptionStartDate: user.subscription?.startDate,
-      subscriptionEndDate: user.subscription?.endDate,
+      mainUserId: userDoc._id,
+      email: userDoc.email,
+      firstName: userDoc.firstName || 'Unknown',
+      lastName: userDoc.lastName || 'User',
+      authProvider: userDoc.authProvider || 'credentials',
+      isEmailVerified: userDoc.isEmailVerified || false,
+      currentPlanKey: userDoc.currentPlanKey || 'free',
+      subscriptionStatus: userDoc.subscription?.status || 'inactive',
+      subscriptionStartDate: userDoc.subscription?.startDate,
+      subscriptionEndDate: userDoc.subscription?.endDate,
       usage: {
-        cvJourneyCount: user.usage?.cvJourneyCount || 0,
-        cvCreatedCount: user.usage?.cvCreatedCount || 0,
-        journeysCreated: user.usage?.journeysCreated || 0,
-        exportCount: user.usage?.exportCount || 0,
-        atsCheckCount: user.usage?.atsCheckCount || 0,
+        cvJourneyCount: userDoc.usage?.cvJourneyCount || 0,
+        cvCreatedCount: userDoc.usage?.cvCreatedCount || 0,
+        journeysCreated: userDoc.usage?.journeysCreated || 0,
+        exportCount: userDoc.usage?.exportCount || 0,
+        atsCheckCount: userDoc.usage?.atsCheckCount || 0,
       },
-      lastActiveAt: user.lastActiveAt,
-      registrationDate: user.createdAt || new Date(),
-      isDeleted: user.isDeleted || false,
-      deletedAt: user.deletedAt,
+      lastActiveAt: userDoc.lastActiveAt,
+      registrationDate: userDoc.createdAt || new Date(),
+      isDeleted: userDoc.isDeleted || false,
+      deletedAt: userDoc.deletedAt,
       lastSyncedAt: new Date(),
     };
 
-    const existingUser = await AdminUserModel.findOne({ mainUserId: user._id });
+    const existingUser = await AdminUserModel.findOne({ mainUserId: userDoc._id });
 
     if (existingUser) {
       await AdminUserModel.findByIdAndUpdate(existingUser._id, {
@@ -205,7 +209,7 @@ export async function getTargetedUsers(filters: any): Promise<any[]> {
       return [];
     }
 
-    await connectDB();
+    await getConnection();
 
     const AdminUserModel = AdminUser;
 

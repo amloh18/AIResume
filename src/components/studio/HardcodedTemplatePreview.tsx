@@ -1,5 +1,5 @@
 import React from 'react';
-import { ITemplate } from '@/models/Template';
+import { ITemplate } from '@/types/template';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { CustomTemplates } from '@/lib/templates/hardcoded-templates';
 import TemplateRenderer from '@/lib/templates/template-renderer';
@@ -41,7 +41,7 @@ const HardcodedTemplatePreview: React.FC<HardcodedTemplatePreviewProps> = ({
       >
         <TemplateRenderer
           cvData={cvData}
-          template={template}
+          template={template as any}
           className="template-preview-content"
           customStyles={{
             height: '100%',

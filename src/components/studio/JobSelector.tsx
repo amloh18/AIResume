@@ -207,7 +207,7 @@ const JobSelector: React.FC<JobSelectorProps> = ({
       }
     }
     
-    return [...new Set(requirements)];
+    return Array.from(new Set(requirements));
   };
 
   // Group jobs by status/stage

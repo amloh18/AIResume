@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { razorpay } from '@/lib/payment/razorpay';
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import User from '@/models/User';
 import { getAdminPricingPlan } from '@/models/admin-models';
 import Invoice from '@/models/Invoice';
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     }
 
     const event = JSON.parse(body);
-    await connectDB();
+    await getConnection();
 
     console.log('Razorpay webhook event:', event.event);
 

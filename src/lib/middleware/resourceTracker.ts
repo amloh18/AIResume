@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
-import connectDB from '@/lib/mongodb';
+import getConnection from '@/lib/database';
 import CV from '@/models/CV';
 import CoverLetter from '@/models/CoverLetter';
 import Job from '@/models/Job';
-import CVJourney from '@/models/CVJourney';
+// import CVJourney from '@/models/CVJourney'; // Model not found, commented out
 import User from '@/models/User';
 
 export interface ResourceCounts {
@@ -69,13 +69,14 @@ export function getSubscriptionLimits(plan: string): SubscriptionLimits {
  */
 export async function getUserResourceCounts(userId: string): Promise<ResourceCounts> {
   try {
-    await connectDB();
+    await getConnection();
 
     const [cvCount, coverLetterCount, jobCount, journeyCount] = await Promise.all([
       CV.countDocuments({ userId }),
       CoverLetter.countDocuments({ userId }),
       Job.countDocuments({ userId }),
-      CVJourney.countDocuments({ userId })
+      // CVJourney.countDocuments({ userId }) // Model not found
+      0 // Placeholder for CVJourney count
     ]);
 
     return {
@@ -103,7 +104,7 @@ export async function canCreateResource(
   resourceType: 'cv' | 'coverLetter' | 'job' | 'journey'
 ): Promise<{ allowed: boolean; reason?: string; counts?: ResourceCounts; limits?: SubscriptionLimits }> {
   try {
-    await connectDB();
+    await getConnection();
 
     // Get user's subscription plan
     const user = await User.findById(userId);

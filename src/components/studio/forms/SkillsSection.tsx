@@ -24,10 +24,10 @@ const SkillsSection: React.FC<SkillsSectionProps> = ({
 
   // Update skill item - use functional updates to avoid stale state
   const updateSkill = (index: number, field: string, value: any) => {
-    onUpdate('skills', (prevSkills) => {
+    onUpdate('skills', (prevSkills: Array<{ category: string; skills: string[] }> | Array<{ name: string; level: string; keywords: string[] }>) => {
       const newArray = [...(prevSkills || [])];
       if (!newArray[index]) {
-        newArray[index] = {};
+        newArray[index] = { category: '', skills: [] };
       }
       newArray[index] = { ...newArray[index], [field]: value };
       return newArray;
@@ -42,8 +42,8 @@ const SkillsSection: React.FC<SkillsSectionProps> = ({
             <h4 className="text-lg font-semibold text-white">{skill.category || skill.name || 'Skill Category'}</h4>
             <button
               onClick={() => {
-                onUpdate('skills', (prevSkills) => {
-                  return (prevSkills || []).filter((_, i) => i !== index);
+                onUpdate('skills', (prevSkills: Array<{ category: string; skills: string[] }> | Array<{ name: string; level: string; keywords: string[] }>) => {
+                  return (prevSkills || []).filter((_: any, i: number) => i !== index);
                 });
               }}
               className="text-red-400 hover:text-red-300 transition-colors"

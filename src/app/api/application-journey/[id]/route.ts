@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import { ApplicationJourney } from '@/models';
 import { extractUserIdentifier } from '@/lib/firebase-uid-utils';
 import mongoose from 'mongoose';
@@ -14,7 +14,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await connectDB();
+    await getConnection();
     
     const resolvedParams = await params;
     const journeyId = resolvedParams.id;

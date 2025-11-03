@@ -14,9 +14,9 @@ import {
   TrendingUp
 } from 'lucide-react';
 import AIEnhancedFormField from './AIEnhancedFormField';
-import ATSScoreGauge from '@/components/ui/ATSScoreGauge';
+// import ATSScoreGauge from '@/components/ui/ATSScoreGauge'; // TODO: Create component if needed
 import JobSelector from './JobSelector';
-import CVParserButton from './CVParserButton';
+// import CVParserButton from './CVParserButton'; // TODO: Create component if needed
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { Job } from '@/lib/stores/jobStore';
 import { useUserPlan } from '@/lib/hooks/useUserPlan';
@@ -260,11 +260,8 @@ export const PersonalInfoSection: React.FC<{
             <div className="text-center">
               <h3 className="text-lg font-medium text-gray-900 mb-2">ATS Score</h3>
               <div className="flex items-center justify-center">
-                <ATSScoreGauge 
-                  score={atsScore || 0} 
-                  size="lg" 
-                  showLabel={false}
-                />
+                {/* TODO: Implement ATSScoreGauge component */}
+                <div className="text-2xl font-bold text-blue-600">{atsScore || 0}%</div>
               </div>
               <div className="mt-2 text-sm text-gray-600">
                 {atsScore ? `${atsScore}% Match` : 'No job selected'}
@@ -286,19 +283,8 @@ export const PersonalInfoSection: React.FC<{
             <div className="w-full">
               <h3 className="text-lg font-medium text-gray-900 mb-2">Quick Fill</h3>
               <p className="text-sm text-gray-600 mb-3">Upload your existing CV to auto-fill fields</p>
-              <CVParserButton
-                onDataParsed={(parsedData) => {
-                  // Update personal information fields
-                  if (parsedData.basics) {
-                    Object.keys(parsedData.basics).forEach(key => {
-                      if (parsedData.basics[key]) {
-                        onUpdate(key, parsedData.basics[key]);
-                      }
-                    });
-                  }
-                }}
-                className="w-full"
-              />
+              {/* TODO: Implement CVParserButton component */}
+              <div className="text-sm text-gray-500">CV Parser coming soon</div>
             </div>
           </div>
 

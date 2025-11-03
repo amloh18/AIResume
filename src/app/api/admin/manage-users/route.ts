@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import AdminAuth from '@/models/AdminAuth';
 
 export async function POST(request: NextRequest) {
   try {
-    await connectDB();
+    await getConnection();
 
     // Get the request body
     const { action, users } = await request.json();

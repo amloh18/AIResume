@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import { createErrorResponse } from '@/lib/db-utils';
 
 // Create a simple activity model for this endpoint
