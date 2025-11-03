@@ -1,4 +1,5 @@
-import { ITemplate, ISectionBlueprint } from '@/models/Template';
+import { ITemplate } from '@/types/template';
+import { ISectionBlueprint } from '@/models/Template';
 
 // Default section blueprints for the CV template system
 export const defaultSectionBlueprints: ISectionBlueprint[] = [

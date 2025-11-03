@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { CalendarService } from '@/lib/services/calendarService';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { connectDB } from '@/lib/mongodb';
+import { getConnection } from '@/lib/database';
 import Job from '@/models/Job';
 import { ApplicationJourney } from '@/models/ApplicationJourney';
 
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await connectDB();
+    await getConnection();
     
     // Get user identifier
     const userIdentifier = session.user.firebaseUid 

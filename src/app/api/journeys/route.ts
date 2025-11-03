@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import { JobApplication, CV, CoverLetter, ApplicationJourney } from '@/models';
 import { createErrorResponse } from '@/lib/db-utils';
 
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Establish database connection once
-    dbConnection = await connectDB();
+    dbConnection = await getConnection();
 
     // Build optimized query for CV Journeys
     let journeyQuery: any = { userId };
@@ -180,7 +180,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     console.log('🔍 Journeys API - POST request received');
-    await connectDB();
+    await getConnection();
     
     const body = await request.json();
     const { userId, jobId, cvId, coverLetterId, journeyName } = body;
@@ -320,7 +320,7 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     console.log('🔍 Journeys API - DELETE request received');
-    await connectDB();
+    await getConnection();
     
     const body = await request.json();
     const { journeyId, userId } = body;

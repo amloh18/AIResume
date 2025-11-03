@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authConfig } from '@/lib/auth-config';
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import { User } from '@/models';
 
 /**
@@ -34,7 +34,7 @@ export async function getAuthenticatedUser(request?: NextRequest): Promise<AuthR
       
       // Get full user data from database if needed
       // Note: connectDB is idempotent, safe to call multiple times
-      await connectDB();
+      await getConnection();
       const dbUser = await User.findOne({ email: session.user.email });
       
       if (dbUser) {

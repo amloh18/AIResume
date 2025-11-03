@@ -3,7 +3,7 @@ import Stripe from 'stripe';
 // Only create Stripe instance if API key is available
 const stripe = process.env.STRIPE_SECRET_KEY 
   ? new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: '2024-12-18.acacia',
+      apiVersion: '2025-08-27.basil' as const,
     })
   : null;
 

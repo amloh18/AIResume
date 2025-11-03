@@ -67,12 +67,12 @@ const initialState: OnboardingState = {
   prefilledFromSignup: false,
   error: null,
   steps: [
-    { id: 'role', title: 'Choose Your Role', description: 'Select your professional role', isCompleted: false, isActive: true },
-    { id: 'auth', title: 'Create Account', description: 'Sign up or log in to continue', isCompleted: false, isActive: false },
-    { id: 'basics', title: 'Personal Information', description: 'Tell us about yourself', isCompleted: false, isActive: false },
-    { id: 'experience', title: 'Work Experience', description: 'Add your professional experience', isCompleted: false, isActive: false },
-    { id: 'education', title: 'Education & Skills', description: 'Add your education and skills', isCompleted: false, isActive: false },
-    { id: 'complete', title: 'Complete Setup', description: 'Review and finish setup', isCompleted: false, isActive: false }
+    { id: 'role', title: 'Choose Your Role', description: 'Select your professional role', isCompleted: false, isRequired: true, order: 0 },
+    { id: 'auth', title: 'Create Account', description: 'Sign up or log in to continue', isCompleted: false, isRequired: true, order: 1 },
+    { id: 'basics', title: 'Personal Information', description: 'Tell us about yourself', isCompleted: false, isRequired: true, order: 2 },
+    { id: 'experience', title: 'Work Experience', description: 'Add your professional experience', isCompleted: false, isRequired: true, order: 3 },
+    { id: 'education', title: 'Education & Skills', description: 'Add your education and skills', isCompleted: false, isRequired: true, order: 4 },
+    { id: 'complete', title: 'Complete Setup', description: 'Review and finish setup', isCompleted: false, isRequired: true, order: 5 }
   ]
 };
 

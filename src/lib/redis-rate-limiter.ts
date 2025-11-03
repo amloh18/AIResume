@@ -128,7 +128,7 @@ class RedisRateLimiter {
 
   private cleanupFallbackStore(): void {
     const now = Date.now();
-    for (const [key, value] of this.fallbackStore.entries()) {
+    for (const [key, value] of Array.from(this.fallbackStore.entries())) {
       if (value.resetTime < now) {
         this.fallbackStore.delete(key);
       }

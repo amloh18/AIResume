@@ -67,6 +67,12 @@ export class RazorpayService {
 
   // Create a customer
   static async createCustomer(params: CreateCustomerParams) {
+    if (!razorpay) {
+      return {
+        success: false,
+        error: 'Razorpay is not configured',
+      };
+    }
     try {
       const customer = await razorpay.customers.create({
         name: params.name,
@@ -91,17 +97,23 @@ export class RazorpayService {
 
   // Create a subscription
   static async createSubscription(params: CreateSubscriptionParams) {
+    if (!razorpay) {
+      return {
+        success: false,
+        error: 'Razorpay is not configured',
+      };
+    }
     try {
       const subscription = await razorpay.subscriptions.create({
         plan_id: params.planId,
         customer_notify: 1,
-        notes: params.notes,
-      });
+        notes: params.notes || {},
+      } as any);
 
       return {
         success: true,
-        subscriptionId: subscription.id,
-        subscription: subscription,
+        subscriptionId: (subscription as any).id || '',
+        subscription: subscription as any,
       };
     } catch (error) {
       console.error('Razorpay createSubscription error:', error);
@@ -114,6 +126,12 @@ export class RazorpayService {
 
   // Cancel a subscription
   static async cancelSubscription(subscriptionId: string) {
+    if (!razorpay) {
+      return {
+        success: false,
+        error: 'Razorpay is not configured',
+      };
+    }
     try {
       const subscription = await razorpay.subscriptions.cancel(subscriptionId);
       return {
@@ -131,6 +149,12 @@ export class RazorpayService {
 
   // Get subscription details
   static async getSubscription(subscriptionId: string) {
+    if (!razorpay) {
+      return {
+        success: false,
+        error: 'Razorpay is not configured',
+      };
+    }
     try {
       const subscription = await razorpay.subscriptions.fetch(subscriptionId);
       return {
@@ -158,6 +182,12 @@ export class RazorpayService {
     };
     notes?: Record<string, string>;
   }) {
+    if (!razorpay) {
+      return {
+        success: false,
+        error: 'Razorpay is not configured',
+      };
+    }
     try {
       const plan = await razorpay.plans.create({
         period: params.period,
@@ -244,6 +274,12 @@ export class RazorpayService {
 
   // Get payment details
   static async getPayment(paymentId: string) {
+    if (!razorpay) {
+      return {
+        success: false,
+        error: 'Razorpay is not configured',
+      };
+    }
     try {
       const payment = await razorpay.payments.fetch(paymentId);
       return {
@@ -261,6 +297,12 @@ export class RazorpayService {
 
   // Refund payment
   static async refundPayment(paymentId: string, amount?: number, notes?: Record<string, string>) {
+    if (!razorpay) {
+      return {
+        success: false,
+        error: 'Razorpay is not configured',
+      };
+    }
     try {
       const refund = await razorpay.payments.refund(paymentId, {
         amount: amount ? Math.round(amount * 100) : undefined,

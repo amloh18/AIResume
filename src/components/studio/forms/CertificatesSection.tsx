@@ -65,23 +65,23 @@ const CertificatesSection: React.FC<CertificatesSectionProps> = ({
       url: '',
       description: ''
     };
-    onUpdate('certificates', (prevCertificates) => {
+    onUpdate('certificates', (prevCertificates: Array<{ name: string; date: string; issuer: string; url: string; description: string }>) => {
       return [...(prevCertificates || []), newCertificate];
     });
   };
 
   const removeCertificate = (index: number) => {
-    onUpdate('certificates', (prevCertificates) => {
-      return (prevCertificates || []).filter((_, i) => i !== index);
+    onUpdate('certificates', (prevCertificates: Array<{ name: string; date: string; issuer: string; url: string; description: string }>) => {
+      return (prevCertificates || []).filter((_: any, i: number) => i !== index);
     });
   };
 
   // Update certificate item - use functional updates to avoid stale state
   const updateCertificate = (index: number, field: string, value: any) => {
-    onUpdate('certificates', (prevCertificates) => {
+    onUpdate('certificates', (prevCertificates: Array<{ name: string; date: string; issuer: string; url: string; description: string }>) => {
       const newArray = [...(prevCertificates || [])];
       if (!newArray[index]) {
-        newArray[index] = {};
+        newArray[index] = { name: '', date: '', issuer: '', url: '', description: '' };
       }
       newArray[index] = { ...newArray[index], [field]: value };
       return newArray;

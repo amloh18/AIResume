@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import { ApplicationJourney } from '@/models';
 import { extractUserIdentifier } from '@/lib/firebase-uid-utils';
 
@@ -11,7 +11,7 @@ import { extractUserIdentifier } from '@/lib/firebase-uid-utils';
  */
 export async function POST(request: NextRequest) {
   try {
-    await connectDB();
+    await getConnection();
     
     // Check authentication
     const session = await getServerSession(authOptions);

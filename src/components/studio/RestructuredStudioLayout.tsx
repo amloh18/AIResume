@@ -68,7 +68,7 @@ export default function RestructuredStudioLayout({
     
     // Check structure visibility first (source of truth for new architecture)
     if (cvData.structure?.sections && Array.isArray(cvData.structure.sections)) {
-      const structureSection = cvData.structure.sections.find(s => s.type === sectionId);
+      const structureSection = cvData.structure.sections.find((s: { type: string; id?: string; visible?: boolean }) => s.type === sectionId);
       if (structureSection) {
         // If section exists in structure, use its visibility flag
         return structureSection.visible !== false;
@@ -301,7 +301,7 @@ export default function RestructuredStudioLayout({
                     }
                   }}
                   onRemove={(index) => {
-                    const newEducation = (cvData?.education || []).filter((_, i) => i !== index);
+                    const newEducation = (cvData?.education || []).filter((_: any, i: number) => i !== index);
                     if (onUpdateField) {
                       onUpdateField('education', newEducation);
                     } else {
@@ -359,7 +359,7 @@ export default function RestructuredStudioLayout({
                     }
                   }}
                   onRemove={(index) => {
-                    const newSkills = (cvData?.skills || []).filter((_, i) => i !== index);
+                    const newSkills = (cvData?.skills || []).filter((_: any, i: number) => i !== index);
                     if (onUpdateField) {
                       onUpdateField('skills', newSkills);
                     } else {
@@ -415,7 +415,7 @@ export default function RestructuredStudioLayout({
                     }
                   }}
                   onRemove={(index) => {
-                    const newProjects = (cvData?.projects || []).filter((_, i) => i !== index);
+                    const newProjects = (cvData?.projects || []).filter((_: any, i: number) => i !== index);
                     if (onUpdateField) {
                       onUpdateField('projects', newProjects);
                     } else {
@@ -471,7 +471,7 @@ export default function RestructuredStudioLayout({
                     }
                   }}
                   onRemove={(index) => {
-                    const newCertificates = (cvData?.certificates || []).filter((_, i) => i !== index);
+                    const newCertificates = (cvData?.certificates || []).filter((_: any, i: number) => i !== index);
                     if (onUpdateField) {
                       onUpdateField('certificates', newCertificates);
                     } else {
@@ -527,7 +527,7 @@ export default function RestructuredStudioLayout({
                     }
                   }}
                   onRemove={(index) => {
-                    const newLanguages = (cvData?.languages || []).filter((_, i) => i !== index);
+                    const newLanguages = (cvData?.languages || []).filter((_: any, i: number) => i !== index);
                     if (onUpdateField) {
                       onUpdateField('languages', newLanguages);
                     } else {
@@ -583,7 +583,7 @@ export default function RestructuredStudioLayout({
                     }
                   }}
                   onRemove={(index) => {
-                    const newVolunteer = (cvData?.volunteer || []).filter((_, i) => i !== index);
+                    const newVolunteer = (cvData?.volunteer || []).filter((_: any, i: number) => i !== index);
                     if (onUpdateField) {
                       onUpdateField('volunteer', newVolunteer);
                     } else {
@@ -639,7 +639,7 @@ export default function RestructuredStudioLayout({
                     }
                   }}
                   onRemove={(index) => {
-                    const newAwards = (cvData?.awards || []).filter((_, i) => i !== index);
+                    const newAwards = (cvData?.awards || []).filter((_: any, i: number) => i !== index);
                     if (onUpdateField) {
                       onUpdateField('awards', newAwards);
                     } else {
@@ -695,7 +695,7 @@ export default function RestructuredStudioLayout({
                     }
                   }}
                   onRemove={(index) => {
-                    const newPublications = (cvData?.publications || []).filter((_, i) => i !== index);
+                    const newPublications = (cvData?.publications || []).filter((_: any, i: number) => i !== index);
                     if (onUpdateField) {
                       onUpdateField('publications', newPublications);
                     } else {
@@ -751,7 +751,7 @@ export default function RestructuredStudioLayout({
                     }
                   }}
                   onRemove={(index) => {
-                    const newInterests = (cvData?.interests || []).filter((_, i) => i !== index);
+                    const newInterests = (cvData?.interests || []).filter((_: any, i: number) => i !== index);
                     if (onUpdateField) {
                       onUpdateField('interests', newInterests);
                     } else {
@@ -807,7 +807,7 @@ export default function RestructuredStudioLayout({
                     }
                   }}
                   onRemove={(index) => {
-                    const newReferences = (cvData?.references || []).filter((_, i) => i !== index);
+                    const newReferences = (cvData?.references || []).filter((_: any, i: number) => i !== index);
                     if (onUpdateField) {
                       onUpdateField('references', newReferences);
                     } else {

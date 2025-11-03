@@ -1,4 +1,9 @@
-import AIUsageLog from '@/models/AIUsageLog';
+import { getAIUsageLogModel } from '@/models/AIUsageLog';
+
+// Lazy load the model
+async function getModel() {
+  return await getAIUsageLogModel();
+}
 
 export interface AIUsageData {
   userId: string;
@@ -23,6 +28,7 @@ export class AIUsageLogger {
    */
   static async logUsage(usageData: AIUsageData): Promise<void> {
     try {
+      const AIUsageLog = await getModel();
       await AIUsageLog.create({
         userId: usageData.userId,
         apiEndpoint: usageData.apiEndpoint,
@@ -124,6 +130,7 @@ export class AIUsageLogger {
     startDate?: Date;
     endDate?: Date;
   }): Promise<any> {
+    const AIUsageLog = await getModel();
     return AIUsageLog.getUsageStats({
       userId: userId as any,
       startDate: options?.startDate,
@@ -155,6 +162,7 @@ export class AIUsageLogger {
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
+    const AIUsageLog = await getModel();
     const [dailyStats, monthlyStats] = await Promise.all([
       AIUsageLog.getUsageStats({
         userId: userId as any,

@@ -166,49 +166,60 @@ export interface DatabaseCVData {
  * Convert parsed CV data to unified CV structure
  */
 export function adaptParsedCVToUnified(parsedData: ParsedCVData): UnifiedCVDataStructure {
-  const data = parsedData.personalInfo || parsedData.basics;
+  const personalInfo = parsedData.personalInfo;
+  const basics = parsedData.basics;
+  
+  // Type guard to check if we have personalInfo (old format) or basics (new format)
+  const hasFirstName = personalInfo && 'firstName' in personalInfo;
+  const locationData = personalInfo?.location || basics?.location;
+  const locationIsString = typeof locationData === 'string';
+  const locationIsObject = locationData && typeof locationData === 'object';
   
   return {
     basics: {
-      name: data?.firstName && data?.lastName 
-        ? `${data.firstName} ${data.lastName}`.trim()
-        : data?.name || '',
-      label: data?.professionalTitle || data?.label || '',
+      name: hasFirstName && personalInfo?.firstName && personalInfo?.lastName
+        ? `${personalInfo.firstName} ${personalInfo.lastName}`.trim()
+        : basics?.name || '',
+      label: ((personalInfo && 'professionalTitle' in personalInfo ? (personalInfo.professionalTitle as string) : '') || basics?.label || '') as string,
       image: '',
-      email: data?.email || '',
-      phone: data?.phone || '',
-      url: data?.website || data?.url || '',
-      summary: data?.summary || '',
+      email: personalInfo?.email || basics?.email || '',
+      phone: personalInfo?.phone || basics?.phone || '',
+      url: personalInfo?.website || basics?.url || '',
+      summary: personalInfo?.summary || basics?.summary || '',
       location: {
         address: '',
         postalCode: '',
-        city: data?.location || data?.location?.city || '',
-        countryCode: data?.location?.countryCode || '',
-        region: data?.location?.region || ''
+        city: locationIsString ? locationData : (locationIsObject ? locationData.city : ''),
+        countryCode: locationIsObject ? locationData.countryCode : '',
+        region: locationIsObject ? locationData.region : ''
       },
       profiles: [
-        ...(data?.linkedin ? [{
+        ...(personalInfo?.linkedin ? [{
           network: 'linkedin',
           username: '',
-          url: data.linkedin
+          url: personalInfo.linkedin
         }] : []),
-        ...(data?.github ? [{
+        ...(personalInfo?.github ? [{
           network: 'github',
           username: '',
-          url: data.github
+          url: personalInfo.github
         }] : []),
-        ...(data?.profiles || [])
+        ...(basics?.profiles || [])
       ]
     },
-    work: (parsedData.experience || parsedData.work || []).map(exp => ({
-      name: exp.company || exp.name || '',
-      position: exp.position || exp.jobTitle || '',
-      url: '',
-      startDate: exp.startDate || '',
-      endDate: exp.current ? '' : (exp.endDate || ''),
-      summary: exp.description || exp.summary || '',
-      highlights: exp.achievements || exp.highlights || []
-    })),
+    work: (parsedData.experience || parsedData.work || []).map(exp => {
+      const hasCompany = exp && 'company' in exp;
+      const hasCurrent = exp && 'current' in exp;
+      return {
+        name: hasCompany ? exp.company : (exp.name || ''),
+        position: (typeof exp.position === 'string' ? exp.position : (typeof exp.position === 'object' && exp.position !== null ? String(exp.position) : '')) || ('jobTitle' in exp ? (exp.jobTitle as string) : '') || '',
+        url: '',
+        startDate: exp.startDate || '',
+        endDate: hasCurrent && exp.current ? '' : (exp.endDate || ''),
+        summary: ('description' in exp ? exp.description : '') || ('summary' in exp ? exp.summary : '') || '',
+        highlights: ('achievements' in exp ? exp.achievements : []) || ('highlights' in exp ? exp.highlights : []) || []
+      };
+    }),
     volunteer: [],
     education: (parsedData.education || []).map(edu => ({
       institution: edu.institution || '',
@@ -223,22 +234,49 @@ export function adaptParsedCVToUnified(parsedData: ParsedCVData): UnifiedCVDataS
     awards: [],
     certificates: [],
     publications: [],
-    skills: (parsedData.skills || []).map(skill => ({
-      name: skill.category || '',
-      level: '',
-      keywords: skill.skills || []
-    })),
+    skills: (parsedData.skills || []).map(skill => {
+      // Handle both old format (name/level/keywords) and new format (category/skills)
+      if ('category' in skill && 'skills' in skill) {
+        return {
+          category: skill.category || '',
+          skills: skill.skills || []
+        };
+      } else {
+        // Old format conversion - check what properties exist
+        if ('name' in skill && 'keywords' in skill) {
+          // Old format with name/level/keywords
+          return {
+            category: (skill as any).name || '',
+            skills: Array.isArray((skill as any).keywords) ? (skill as any).keywords : []
+          };
+        } else if ('category' in skill) {
+          return {
+            category: (skill as any).category || '',
+            skills: []
+          };
+        } else {
+          return {
+            category: '',
+            skills: []
+          };
+        }
+      }
+    }),
     languages: [],
     interests: [],
     references: [],
-    projects: (parsedData.projects || []).map(proj => ({
-      name: proj.title || proj.name || '',
-      startDate: proj.startDate || '',
-      endDate: proj.current ? '' : (proj.endDate || ''),
-      description: proj.description || '',
-      highlights: proj.technologies || [],
-      url: proj.url || ''
-    }))
+    projects: (parsedData.projects || []).map(proj => {
+      const hasCurrent = proj && 'current' in proj;
+      return {
+        name: (('title' in proj && typeof proj.title === 'string' ? proj.title : '') || ('name' in proj && typeof proj.name === 'string' ? proj.name : '') || '') as string,
+        startDate: proj.startDate || '',
+        endDate: hasCurrent && proj.current ? '' : (proj.endDate || ''),
+        description: proj.description || '',
+        highlights: ('technologies' in proj ? proj.technologies : []) || [],
+        keywords: [],
+        url: proj.url || ''
+      };
+    })
   };
 }
 
@@ -299,9 +337,8 @@ export function adaptMasterCVToUnified(masterData: MasterCVOnboardingData): Unif
     certificates: [],
     publications: [],
     skills: masterData.skills.map(skill => ({
-      name: skill,
-      level: '',
-      keywords: []
+      category: skill,
+      skills: []
     })),
     languages: masterData.languages.map(lang => ({
       language: lang.language,
@@ -318,6 +355,7 @@ export function adaptMasterCVToUnified(masterData: MasterCVOnboardingData): Unif
       endDate: proj.endDate,
       description: proj.description,
       highlights: proj.technologies.split(',').map(t => t.trim()),
+      keywords: [],
       url: proj.url
     }))
   };

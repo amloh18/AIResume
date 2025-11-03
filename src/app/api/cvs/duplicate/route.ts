@@ -1,21 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { CV } from '@/models';
 import { toObjectId } from '@/lib/db-utils';
-import { isValidObjectId } from '@/lib/firebase-uid-utils';
-import { createWithFirebaseUid } from '@/lib/firebase-uid-utils';
-import mongoose from 'mongoose';
+import { getConnection } from '@/lib/database';
+import { getAuthenticatedUser } from '@/lib/auth-helpers';
 
 export async function POST(request: NextRequest) {
   try {
     console.log('🔍 CV Duplicate API - Starting duplication request');
     
     // Ensure database connection
-    const connectDB = (await import('@/lib/database')).default;
-    await connectDB();
+    await getConnection();
     console.log('✅ CV Duplicate API - Database connected');
     
+    // Use new authentication system
+    const authResult = await getAuthenticatedUser();
+    if (!authResult) {
+      console.log('❌ CV Duplicate API - No valid authentication found');
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+    
+    const userId = authResult.userId;
+    console.log('🔍 CV Duplicate API - Using authenticated user:', authResult.userEmail);
+    
     const body = await request.json();
-    const { sourceCvId, userId, jobId, journeyId, customTitle } = body;
+    const { sourceCvId, jobId, journeyId, customTitle } = body;
 
     console.log('🔍 CV Duplicate API - Request data:', {
       sourceCvId,
@@ -25,15 +36,13 @@ export async function POST(request: NextRequest) {
       customTitle
     });
 
-    if (!sourceCvId || !userId) {
+    if (!sourceCvId) {
       console.error('❌ CV Duplicate API - Missing required fields:', {
         hasSourceCvId: !!sourceCvId,
-        hasUserId: !!userId,
-        sourceCvId,
-        userId
+        sourceCvId
       });
       return NextResponse.json(
-        { error: 'Source CV ID and User ID are required' },
+        { error: 'Source CV ID is required' },
         { status: 400 }
       );
     }
@@ -57,41 +66,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify the CV belongs to the user (handle both MongoDB ObjectId and Firebase UID)
-    const isFirebaseUser = !isValidObjectId(userId);
-    let userOwnsCV = false;
+    // Verify the CV belongs to the user
+    const userOwnsCV = sourceCV.userId?.toString() === userId;
     
     console.log('🔍 CV Duplicate API - User ownership check:', {
       userId,
-      isFirebaseUser,
-      sourceCVUserId: sourceCV.userId,
-      sourceCVFirebaseUid: sourceCV.firebaseUid
+      sourceCVUserId: sourceCV.userId?.toString(),
+      userOwnsCV
     });
-    
-    if (isFirebaseUser) {
-      // For Firebase users, check firebaseUid field
-      userOwnsCV = String(sourceCV.firebaseUid) === String(userId);
-      console.log('🔍 CV Duplicate API - Firebase user check:', {
-        sourceCVFirebaseUid: String(sourceCV.firebaseUid),
-        userId: String(userId),
-        match: userOwnsCV
-      });
-    } else {
-      // For MongoDB users, check userId field
-      userOwnsCV = String(sourceCV.userId) === String(userId);
-      console.log('🔍 CV Duplicate API - MongoDB user check:', {
-        sourceCVUserId: String(sourceCV.userId),
-        userId: String(userId),
-        match: userOwnsCV
-      });
-    }
     
     if (!userOwnsCV) {
       console.error('❌ CV Duplicate API - User does not own CV:', {
         userId,
-        sourceCVUserId: sourceCV.userId,
-        sourceCVFirebaseUid: sourceCV.firebaseUid,
-        isFirebaseUser
+        sourceCVUserId: sourceCV.userId?.toString()
       });
       return NextResponse.json(
         { error: 'Unauthorized access to CV' },
@@ -107,15 +94,16 @@ export async function POST(request: NextRequest) {
     });
 
     // Generate unique title to avoid conflicts
-    const generateUniqueTitle = async (baseTitle: string, userId: string, isFirebaseUser: boolean) => {
+    const generateUniqueTitle = async (baseTitle: string, userId: string) => {
       let finalTitle = baseTitle;
       let counter = 1;
       
       // Check for existing CVs with the same title
       while (true) {
-        const query = isFirebaseUser 
-          ? { firebaseUid: userId, title: finalTitle }
-          : { userId: toObjectId(userId), title: finalTitle };
+        const query = { 
+          userId: toObjectId(userId), 
+          title: finalTitle 
+        };
           
         const existingCV = await CV.findOne(query);
         if (!existingCV) {
@@ -131,74 +119,36 @@ export async function POST(request: NextRequest) {
 
     const uniqueTitle = await generateUniqueTitle(
       customTitle || `${sourceCV.title} (Copy)`,
-      userId,
-      isFirebaseUser
+      userId
     );
 
-    // Create the duplicated CV based on user type
-    let savedCV;
-    
-    if (isFirebaseUser) {
-      // For Firebase users, use createWithFirebaseUid helper
-      const duplicatedCVData = {
-        title: uniqueTitle,
-        cvData: sourceCV.cvData, // Copy the CV data (JSON Resume format)
-        data: sourceCV.data, // Also copy legacy data field for compatibility
-        status: 'draft',
-        isMaster: false, // Duplicated CVs are never master CVs
-        journeyId: journeyId ? toObjectId(journeyId) : null, // Link to journey if provided
-        templateId: sourceCV.templateId,
-        templateName: sourceCV.templateName,
-        templateData: sourceCV.templateData,
-        styling: sourceCV.styling,
-        metadata: {
-          ...sourceCV.metadata,
-          isMaster: false, // Ensure duplicated CVs are never master CVs
-          lastModified: new Date(),
-          createdFrom: sourceCV._id,
-          viewCount: 0,
-          downloadCount: 0
-        }
-      };
-      
-      // Get the MongoDB userId from the source CV
-      const mongoUserId = sourceCV.userId?.toString() || new mongoose.Types.ObjectId().toString();
-      
-      savedCV = await createWithFirebaseUid(
-        CV,
-        duplicatedCVData,
-        mongoUserId,
-        userId // Firebase UID
-      );
-    } else {
-      // For MongoDB users, create directly
-      const duplicatedCV = new CV({
-        userId: toObjectId(userId),
-        title: uniqueTitle,
-        cvData: sourceCV.cvData, // Copy the CV data (JSON Resume format)
-        data: sourceCV.data, // Also copy legacy data field for compatibility
-        status: 'draft',
-        isMaster: false, // Duplicated CVs are never master CVs
-        journeyId: journeyId ? toObjectId(journeyId) : null, // Link to journey if provided
-        templateId: sourceCV.templateId,
-        templateName: sourceCV.templateName,
-        templateData: sourceCV.templateData,
-        styling: sourceCV.styling,
-        metadata: {
-          ...sourceCV.metadata,
-          isMaster: false, // Ensure duplicated CVs are never master CVs
-          lastModified: new Date(),
-          createdFrom: sourceCV._id,
-          viewCount: 0,
-          downloadCount: 0
-        },
-        createdAt: new Date(),
-        updatedAt: new Date()
-      });
+    // Create the duplicated CV
+    const duplicatedCV = new CV({
+      userId: toObjectId(userId),
+      title: uniqueTitle,
+      cvData: sourceCV.cvData, // Copy the CV data (JSON Resume format)
+      data: sourceCV.data, // Also copy legacy data field for compatibility
+      status: 'draft',
+      isMaster: false, // Duplicated CVs are never master CVs
+      journeyId: journeyId ? toObjectId(journeyId) : null, // Link to journey if provided
+      templateId: sourceCV.templateId,
+      templateName: sourceCV.templateName,
+      templateData: sourceCV.templateData,
+      styling: sourceCV.styling,
+      metadata: {
+        ...sourceCV.metadata,
+        isMaster: false, // Ensure duplicated CVs are never master CVs
+        lastModified: new Date(),
+        createdFrom: sourceCV._id,
+        viewCount: 0,
+        downloadCount: 0
+      },
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
 
-      // Save the duplicated CV
-      savedCV = await duplicatedCV.save();
-    }
+    // Save the duplicated CV
+    const savedCV = await duplicatedCV.save();
     console.log('✅ CV Duplicate API - CV duplicated successfully:', {
       newCvId: savedCV._id,
       title: savedCV.title,
@@ -213,17 +163,12 @@ export async function POST(request: NextRequest) {
       try {
         const { ApplicationJourney } = await import('@/models');
         
-        // Build query based on user type
-        let journeyQuery: any = { 
+        // Build query
+        const journeyQuery: any = { 
           _id: toObjectId(journeyId),
-          jobId: toObjectId(jobId)
+          jobId: toObjectId(jobId),
+          userId: toObjectId(userId)
         };
-        
-        if (isFirebaseUser) {
-          journeyQuery.firebaseUid = userId;
-        } else {
-          journeyQuery.userId = toObjectId(userId);
-        }
         
         const updatedJourney = await ApplicationJourney.findOneAndUpdate(
           journeyQuery,

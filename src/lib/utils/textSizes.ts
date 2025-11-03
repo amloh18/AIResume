@@ -111,7 +111,7 @@ export const textElements = {
   pageTitle: textSizes.display['xl'],
   pageSubtitle: textSizes.body.lg,
   navItem: textSizes.body.md,
-  navBrand: textSizes.logo.md,
+  navBrand: textSizes.special.logo.md,
   dashboardTitle: textSizes.heading.lg,
   dashboardSubtitle: textSizes.body.md,
   widgetContent: textSizes.body.sm,
@@ -217,9 +217,7 @@ export const textStyles = {
   widgetContent: `${textElements.widgetContent} ${textWeights.regular} ${textLineHeights.normal}`,
   buttonPrimary: `${textElements.buttonPrimary} ${textWeights.semibold}`,
   buttonSecondary: `${textElements.buttonSecondary} ${textWeights.medium}`,
-  formInput: `${textElements.formInput} ${textWeights.regular}`,
   formHelper: `${textElements.formHelper} ${textWeights.regular}`,
   kpiLabel: `${textElements.kpiLabel} ${textWeights.medium}`,
-  statusText: `${textElements.statusText} ${textWeights.regular}`,
   badgeText: `${textElements.badgeText} ${textWeights.medium}`,
 };

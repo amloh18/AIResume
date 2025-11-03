@@ -278,7 +278,10 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
                       <h5 className="font-semibold text-lg">Skills</h5>
                       <div className="space-y-1">
                         {cvData.skills.map((skill, index) => (
-                          <p key={index}>{skill.name}</p>
+                          <div key={index}>
+                            {skill.category && <p className="font-medium">{skill.category}</p>}
+                            <p>{skill.skills?.join(', ')}</p>
+                          </div>
                         ))}
                       </div>
                     </div>
@@ -539,10 +542,17 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
                     <div className="space-y-2">
                       {cvData.skills.map((skill, index) => (
                         <div key={index} className="flex items-center gap-2">
+                          {skill.category && (
+                            <span className="text-xs font-medium" style={{
+                              color: templateStyles?.secondaryColor || themeClasses.text.secondary
+                            }}>
+                              {skill.category}:
+                            </span>
+                          )}
                           <span className="text-sm" style={{
                             color: templateStyles?.secondaryColor || themeClasses.text.secondary
                           }}>
-                            {skill.name}
+                            {skill.skills?.join(', ')}
                           </span>
                         </div>
                       ))}

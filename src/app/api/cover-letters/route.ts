@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/lib/database';
+import getConnection from '@/lib/database';
 import CoverLetter from '@/models/CoverLetter';
 
 export async function GET(request: NextRequest) {
   try {
-    await connectDB();
+    await getConnection();
     
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    await connectDB();
+    await getConnection();
     
     const body = await request.json();
     const { userId, title, content, targetCompany, targetPosition, keywords, jobId, cvId, status, metadata } = body;
@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    await connectDB();
+    await getConnection();
     
     const body = await request.json();
     const { id, title, content, status, targetCompany, targetPosition, keywords } = body;
@@ -226,7 +226,7 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    await connectDB();
+    await getConnection();
     
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');

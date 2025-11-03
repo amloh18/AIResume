@@ -65,15 +65,26 @@ interface CV {
   id: string;
   title: string;
   lastModified: string;
+  updatedAt: string;
   status: 'draft' | 'published' | 'archived';
   views: number;
   isStarred: boolean;
-  thumbnail: string;
+  thumbnail?: string; // Make optional to match CVCardOverlay
   description?: string;
   cvData?: any; // CV data structure for preview
   // connectedJobs removed - relationships now managed through CVJourney
-
+  journeyId?: string;
+  template?: any;
+  templateId?: string;
+  templateName?: string;
+  isMaster?: boolean; // Legacy support - new format uses metadata.isMaster
+  metadata?: {
+    isMaster?: boolean;
+    [key: string]: any;
+  };
   completionPercentage?: number;
+  // Additional fields that CVCardOverlay might need
+  atsScore?: number;
 }
 
 interface Job {
@@ -92,9 +103,9 @@ interface CoverLetter {
   title: string;
   lastModified: string;
   status: 'draft' | 'final' | 'archived';
-  views: number;
-  isStarred: boolean;
-  thumbnail: string;
+  views?: number; // Optional to match CoverLetterCardOverlay interface
+  isStarred?: boolean;
+  thumbnail?: string;
   description?: string;
   coverLetterData?: any;
   // connectedJobs removed - relationships now managed through CVJourney
@@ -720,18 +731,22 @@ const Canvas: React.FC = () => {
             id: cv.id,
             title: cv.title || 'Untitled CV',
             lastModified: cv.metadata?.lastModified || cv.updatedAt || cv.createdAt,
+            updatedAt: cv.updatedAt || cv.metadata?.lastModified || cv.createdAt || new Date().toISOString(),
             status: cv.status || 'draft',
             views: cv.metadata?.viewCount || 0,
             isStarred: cv.metadata?.starred || false,
-            thumbnail: cv.metadata?.thumbnailUrl,
+            thumbnail: cv.metadata?.thumbnailUrl || '',
             description: cv.description || '',
             cvData: cv.cvData || null, // Include CV data for preview
             template: cv.template || (cv.templateId ? { _id: cv.templateId, name: cv.templateName || 'Default Template' } : null), // Include template data for preview - handle both populated and ID formats
+            templateId: cv.templateId,
+            templateName: cv.templateName,
+            journeyId: cv.journeyId,
             completionPercentage: calculateCompletionPercentage(cv),
             isMaster: cv.metadata?.isMaster || cv.isMaster || false, // Include master flag - handle both formats
             atsScore: cv.metadata?.atsScore, // Include ATS score
             metadata: cv.metadata // Include full metadata
-          };
+          } as CV;
         });
         
         // Separate Master CVs from regular CVs based on isMaster metadata
@@ -743,18 +758,20 @@ const Canvas: React.FC = () => {
         })));
         
         // Filter CVs based on isMaster - handle both old and new formats
-        const masterCVs = enrichedCVs.filter(cv => 
-          cv.isMaster === true || 
-          cv.isMaster === 'true' ||
-          cv.metadata?.isMaster === true ||
-          cv.metadata?.isMaster === 'true'
-        );
-        const regularCVs = enrichedCVs.filter(cv => 
-          !(cv.isMaster === true || 
-            cv.isMaster === 'true' ||
-            cv.metadata?.isMaster === true ||
-            cv.metadata?.isMaster === 'true')
-        );
+        const masterCVs = enrichedCVs.filter(cv => {
+          const isMasterAtRoot = cv.isMaster === true;
+          const metadataIsMaster = cv.metadata?.isMaster;
+          const isMasterInMetadata = metadataIsMaster === true || 
+            (typeof metadataIsMaster === 'string' && metadataIsMaster === 'true');
+          return isMasterAtRoot || isMasterInMetadata;
+        });
+        const regularCVs = enrichedCVs.filter(cv => {
+          const isMasterAtRoot = cv.isMaster === true;
+          const metadataIsMaster = cv.metadata?.isMaster;
+          const isMasterInMetadata = metadataIsMaster === true || 
+            (typeof metadataIsMaster === 'string' && metadataIsMaster === 'true');
+          return !isMasterAtRoot && !isMasterInMetadata;
+        });
         
         console.log('🔍 Canvas - Master CVs:', masterCVs.length);
         console.log('🔍 Canvas - Regular CVs:', regularCVs.length);
@@ -1464,9 +1481,8 @@ const Canvas: React.FC = () => {
       if (!userId) return;
 
       // Use ApplicationPackageService for proper application package management
-      const result = await ApplicationPackageService.createApplicationPackage({
+      const result = await ApplicationPackageService.createNewPackage({
         jobId,
-        cvId,
         userId,
         journeyName: `Application for ${jobId}`
       });
@@ -1475,13 +1491,25 @@ const Canvas: React.FC = () => {
         // Refresh CVs to show updated job links
         loadCVs();
         setLinkingJobCVId(null);
-        showModalDialog('Success', 'Job linked to CV successfully via journey system!', 'success');
+        showModalDialog({
+          title: 'Success',
+          message: 'Job linked to CV successfully via journey system!',
+          type: 'success'
+        });
       } else {
-        showModalDialog('Error', `Failed to link job to CV: ${result.message}`, 'error');
+        showModalDialog({
+          title: 'Error',
+          message: `Failed to link job to CV: ${result.message}`,
+          type: 'error'
+        });
       }
     } catch (error) {
       console.error('Error linking job to CV:', error);
-      showModalDialog('Error', 'Failed to link job to CV', 'error');
+      showModalDialog({
+        title: 'Error',
+        message: 'Failed to link job to CV',
+        type: 'error'
+      });
     }
   };
 
@@ -1637,7 +1665,6 @@ const Canvas: React.FC = () => {
           username: userData?.username || '',
           profilePhoto: getUserAvatar(userData),
           designation: userData?.role || '',
-          role: user?.role,
           subscription: userData?.subscription
         }}
         showSettings={true}
@@ -1774,24 +1801,27 @@ const Canvas: React.FC = () => {
 
         <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {/* Master CV Card - Always First */}
-          {console.log('🔍 Canvas - Rendering CV Grid:', {
-            activeTab,
-            loading,
-            cvsLength: cvs.length,
-            masterCVsLength: masterCVs.length,
-            filteredAndSortedCVsLength: filteredAndSortedCVs.length,
-            mongoDBUserId,
-            userIdFromAPI: getUserIdForAPI(user),
-            masterCVs: masterCVs.map(m => ({ 
-              id: m.id, 
-              title: m.title,
-              hasCvData: !!m.cvData,
-              hasTemplate: !!m.template,
-              templateType: typeof m.template,
-              templateKeys: m.template ? Object.keys(m.template) : []
-            })),
-            filteredCVs: filteredAndSortedCVs.map(cv => ({ id: cv.id, title: cv.title }))
-          })}
+          {(() => {
+            console.log('🔍 Canvas - Rendering CV Grid:', {
+              activeTab,
+              loading,
+              cvsLength: cvs.length,
+              masterCVsLength: masterCVs.length,
+              filteredAndSortedCVsLength: filteredAndSortedCVs.length,
+              mongoDBUserId,
+              userIdFromAPI: getUserIdForAPI(user),
+              masterCVs: masterCVs.map(m => ({ 
+                id: m.id, 
+                title: m.title,
+                hasCvData: !!m.cvData,
+                hasTemplate: !!m.template,
+                templateType: typeof m.template,
+                templateKeys: m.template ? Object.keys(m.template) : []
+              })),
+              filteredCVs: filteredAndSortedCVs.map(cv => ({ id: cv.id, title: cv.title }))
+            });
+            return null;
+          })()}
           <MasterCVCardOverlay
             onEditMasterCV={handleEditMasterCV}
             onDuplicateMasterCV={handleDuplicateMasterCV}
@@ -1836,22 +1866,35 @@ const Canvas: React.FC = () => {
                   <CVCardOverlay
                     key={cv.id || `cv-${index}`}
                     cv={{
-                      ...cv,
-                      thumbnail: cv.thumbnail || ''
+                      id: cv.id,
+                      title: cv.title,
+                      lastModified: cv.lastModified,
+                      status: cv.status,
+                      views: cv.views,
+                      isStarred: cv.isStarred,
+                      thumbnail: cv.thumbnail,
+                      description: cv.description,
+                      cvData: cv.cvData,
+                      template: cv.template,
+                      completionPercentage: cv.completionPercentage,
+                      isMaster: cv.isMaster,
+                      journeyId: cv.journeyId,
+                      atsScore: cv.atsScore,
+                      metadata: cv.metadata
                     }}
-                    onEdit={handleCVClick}
-                    onDownload={handleDownloadCV}
-                    onDelete={handleDeleteCV}
+                    onEdit={(cv) => { handleCVClick(cv as any); }}
+                    onDownload={(cv) => { handleDownloadCV(cv as any); }}
+                    onDelete={(cv) => { handleDeleteCV(cv as any); }}
                     onToggleStar={toggleStar}
                     onRename={(cvId, newTitle) => {
                       setEditingTitle(newTitle);
                       saveTitle(cvId);
                     }}
-                    onEditJourney={handleEditJourney}
+                    onEditJourney={(cv, journey) => { handleEditJourney(cv as any, journey); }}
                     onTitleEdit={(cvId, newTitle) => setEditingTitle(newTitle)}
                     editingCVId={editingCVId}
                     editingTitle={editingTitle}
-                    onStartEditing={startEditing}
+                    onStartEditing={(cv) => startEditing(cv as any)}
                     onSaveTitle={saveTitle}
                     onCancelEditing={cancelEditing}
                   />
@@ -1995,8 +2038,8 @@ const Canvas: React.FC = () => {
                       thumbnail: coverLetter.thumbnail || '',
                       metadata: coverLetter.metadata
                     }}
-                    onEdit={(cl) => window.location.href = `/studio?type=cover_letter&coverLetterId=${cl.id}`}
-                    onDownload={(cl) => window.open(`/api/cover-letters/download/${cl.id}`, '_blank')}
+                    onEdit={(cl) => { window.location.href = `/studio?type=cover_letter&coverLetterId=${cl.id}`; }}
+                    onDownload={(cl) => { window.open(`/api/cover-letters/download/${cl.id}`, '_blank'); }}
                     onDelete={handleDeleteCoverLetter}
                     onToggleStar={toggleCoverLetterStar}
                     onTitleEdit={(id, newTitle) => setEditingCoverLetterTitle(newTitle)}
@@ -2051,7 +2094,7 @@ const Canvas: React.FC = () => {
                     </div>
                     <div>
                       <p className="text-gray-600 dark:text-gray-400 text-xs">Views</p>
-                      <p className="text-lg font-bold text-gray-900 dark:text-white">{coverLetters.reduce((sum, cl) => sum + cl.views, 0)}</p>
+                      <p className="text-lg font-bold text-gray-900 dark:text-white">{coverLetters.reduce((sum, cl) => sum + (cl.views || 0), 0)}</p>
                     </div>
                   </div>
                 </motion.div>

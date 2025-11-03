@@ -1,21 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { CoverLetter } from '@/models';
 import { toObjectId } from '@/lib/db-utils';
-import { isValidObjectId } from '@/lib/firebase-uid-utils';
-import { createWithFirebaseUid } from '@/lib/firebase-uid-utils';
-import mongoose from 'mongoose';
+import { getConnection } from '@/lib/database';
+import { getAuthenticatedUser } from '@/lib/auth-helpers';
 
 export async function POST(request: NextRequest) {
   try {
     console.log('🔍 Cover Letter Duplicate API - Starting duplication request');
     
     // Ensure database connection
-    const connectDB = (await import('@/lib/database')).default;
-    await connectDB();
+    await getConnection();
     console.log('✅ Cover Letter Duplicate API - Database connected');
     
+    // Use new authentication system
+    const authResult = await getAuthenticatedUser();
+    if (!authResult) {
+      console.log('❌ Cover Letter Duplicate API - No valid authentication found');
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+    
+    const userId = authResult.userId;
+    console.log('🔍 Cover Letter Duplicate API - Using authenticated user:', authResult.userEmail);
+    
     const body = await request.json();
-    const { sourceCoverLetterId, userId, jobId, journeyId, customTitle } = body;
+    const { sourceCoverLetterId, jobId, journeyId, customTitle } = body;
 
     console.log('🔍 Cover Letter Duplicate API - Request data:', {
       sourceCoverLetterId,
@@ -25,15 +36,13 @@ export async function POST(request: NextRequest) {
       customTitle
     });
 
-    if (!sourceCoverLetterId || !userId) {
+    if (!sourceCoverLetterId) {
       console.error('❌ Cover Letter Duplicate API - Missing required fields:', {
         hasSourceCoverLetterId: !!sourceCoverLetterId,
-        hasUserId: !!userId,
-        sourceCoverLetterId,
-        userId
+        sourceCoverLetterId
       });
       return NextResponse.json(
-        { error: 'Source Cover Letter ID and User ID are required' },
+        { error: 'Source Cover Letter ID is required' },
         { status: 400 }
       );
     }
@@ -57,30 +66,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify the cover letter belongs to the user (handle both MongoDB ObjectId and Firebase UID)
-    const isFirebaseUser = !isValidObjectId(userId);
-    let userOwnsCoverLetter = false;
+    // Verify the cover letter belongs to the user
+    const userOwnsCoverLetter = sourceCoverLetter.userId?.toString() === userId;
     
     console.log('🔍 Cover Letter Duplicate API - User ownership check:', {
-      isFirebaseUser,
       userId,
-      sourceCoverLetterUserId: sourceCoverLetter.userId,
-      sourceCoverLetterFirebaseUid: sourceCoverLetter.firebaseUid
+      sourceCoverLetterUserId: sourceCoverLetter.userId?.toString(),
+      userOwnsCoverLetter
     });
-
-    if (isFirebaseUser) {
-      // For Firebase users, check firebaseUid
-      userOwnsCoverLetter = sourceCoverLetter.firebaseUid === userId;
-    } else {
-      // For MongoDB users, check userId
-      userOwnsCoverLetter = sourceCoverLetter.userId?.toString() === userId;
-    }
 
     if (!userOwnsCoverLetter) {
       console.error('❌ Cover Letter Duplicate API - User does not own cover letter:', {
         userId,
-        coverLetterUserId: sourceCoverLetter.userId,
-        coverLetterFirebaseUid: sourceCoverLetter.firebaseUid
+        coverLetterUserId: sourceCoverLetter.userId?.toString()
       });
       return NextResponse.json(
         { error: 'Unauthorized: You do not own this cover letter' },
@@ -95,13 +93,10 @@ export async function POST(request: NextRequest) {
     
     // Check for existing cover letters with the same title
     while (true) {
-      let query: Record<string, any> = { title: uniqueTitle };
-      
-      if (isFirebaseUser) {
-        query.firebaseUid = userId;
-      } else {
-        query.userId = toObjectId(userId);
-      }
+      const query: Record<string, any> = { 
+        userId: toObjectId(userId),
+        title: uniqueTitle 
+      };
       
       const existingCoverLetter = await CoverLetter.findOne(query);
       if (!existingCoverLetter) {
@@ -113,54 +108,26 @@ export async function POST(request: NextRequest) {
     }
 
     // Create duplicated cover letter
-    let savedCoverLetter;
-    
-    if (isFirebaseUser) {
-      // For Firebase users, use createWithFirebaseUid
-      // Get MongoDB userId from source cover letter or create a new one
-      const mongoUserId = sourceCoverLetter.userId || new mongoose.Types.ObjectId().toString();
-      savedCoverLetter = await createWithFirebaseUid(
-        CoverLetter,
-        {
-          title: uniqueTitle,
-          content: sourceCoverLetter.content,
-          status: 'draft',
-          jobId: jobId ? toObjectId(jobId) : null,
-          cvId: sourceCoverLetter.cvId,
-          journeyId: journeyId ? toObjectId(journeyId) : null,
-          metadata: {
-            ...sourceCoverLetter.metadata,
-            lastModified: new Date(),
-            createdFrom: sourceCoverLetter._id,
-            version: 1
-          }
-        },
-        mongoUserId, // MongoDB userId
-        userId // Firebase UID
-      );
-    } else {
-      // For MongoDB users, create directly
-      const duplicatedCoverLetter = new CoverLetter({
-        userId: toObjectId(userId),
-        title: uniqueTitle,
-        content: sourceCoverLetter.content,
-        status: 'draft',
-        jobId: jobId ? toObjectId(jobId) : null,
-        cvId: sourceCoverLetter.cvId,
-        journeyId: journeyId ? toObjectId(journeyId) : null,
-        metadata: {
-          ...sourceCoverLetter.metadata,
-          lastModified: new Date(),
-          createdFrom: sourceCoverLetter._id,
-          version: 1
-        },
-        createdAt: new Date(),
-        updatedAt: new Date()
-      });
+    const duplicatedCoverLetter = new CoverLetter({
+      userId: toObjectId(userId),
+      title: uniqueTitle,
+      content: sourceCoverLetter.content,
+      status: 'draft',
+      jobId: jobId ? toObjectId(jobId) : null,
+      cvId: sourceCoverLetter.cvId,
+      journeyId: journeyId ? toObjectId(journeyId) : null,
+      metadata: {
+        ...sourceCoverLetter.metadata,
+        lastModified: new Date(),
+        createdFrom: sourceCoverLetter._id,
+        version: 1
+      },
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
 
-      // Save the duplicated cover letter
-      savedCoverLetter = await duplicatedCoverLetter.save();
-    }
+    // Save the duplicated cover letter
+    const savedCoverLetter = await duplicatedCoverLetter.save();
     
     // If journeyId is provided, update the journey to link to the new cover letter
     if (journeyId && jobId) {
@@ -169,17 +136,12 @@ export async function POST(request: NextRequest) {
         
         const { ApplicationJourney } = await import('@/models');
         
-        // Build query based on user type
-        let journeyQuery: any = { 
+        // Build query
+        const journeyQuery: any = { 
           _id: toObjectId(journeyId),
-          jobId: toObjectId(jobId)
+          jobId: toObjectId(jobId),
+          userId: toObjectId(userId)
         };
-        
-        if (isFirebaseUser) {
-          journeyQuery.firebaseUid = userId;
-        } else {
-          journeyQuery.userId = toObjectId(userId);
-        }
         
         const updatedJourney = await ApplicationJourney.findOneAndUpdate(
           journeyQuery,

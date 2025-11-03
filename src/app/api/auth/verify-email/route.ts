@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import User from '@/models/User';
 import VerificationToken from '@/models/VerificationToken';
 
@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await connectDB();
+    await getConnection();
 
     // Verify token using VerificationToken model
     const tokenResult = await VerificationToken.verifyToken(token, email, 'email');

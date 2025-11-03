@@ -10,14 +10,14 @@ import {
   Loader2
 } from 'lucide-react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
-import { Template } from '@/lib/stores/templateStore';
+import { ITemplate } from '@/types/template';
 import { Job } from '@/lib/stores/jobStore';
 import { downloadAsPDF, downloadAsDOCX, downloadAsImage } from '@/lib/utils/download';
 import { TemplateRenderer } from '@/lib/templates/template-renderer';
 
 interface CVPreviewProps {
   cvData: UnifiedCVDataStructure | null;
-  template: Template | null;
+  template: ITemplate | null;
   jobData: Job | null;
   zoom?: number;
   setZoom?: (zoom: number) => void;
@@ -219,7 +219,7 @@ const CVPreviewComponent: React.FC<CVPreviewProps> = ({
     
     setIsDownloading(true);
     try {
-      await downloadAsDOCX(contentRef.current, `CV-${cvData?.basics?.name || 'Document'}.docx`);
+      await downloadAsDOCX(contentRef.current as any, `CV-${cvData?.basics?.name || 'Document'}.docx`);
     } catch (error) {
       console.error('DOCX download failed:', error);
     } finally {
@@ -310,20 +310,22 @@ const CVPreviewComponent: React.FC<CVPreviewProps> = ({
               )}
 
               {/* Use TemplateRenderer with current page sections */}
-              <TemplateRenderer
-                cvData={cvData}
-                template={template}
-                sectionOrder={sectionOrder}
-                sectionVisibility={sectionVisibility}
-                enabledSections={pageSections}
-                className="template-rendered-content"
+              {template && (
+                <TemplateRenderer
+                  cvData={cvData}
+                  template={template as any}
+                  sectionOrder={sectionOrder}
+                  sectionVisibility={sectionVisibility}
+                  enabledSections={pageSections}
+                  className="template-rendered-content"
                 customStyles={{
                   height: '100%',
                   overflow: 'hidden',
                   pageBreakInside: 'avoid',
                   breakInside: 'avoid'
                 }}
-              />
+                />
+              )}
 
               {/* Custom CSS */}
               {customCSS && (

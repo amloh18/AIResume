@@ -1,7 +1,7 @@
 import { NextAuthOptions } from 'next-auth'
 import GoogleProvider from 'next-auth/providers/google'
 import CredentialsProvider from 'next-auth/providers/credentials'
-import connectDB from '@/lib/database'
+import getConnection from '@/lib/database'
 import User from '@/models/User'
 
 export const authOptionsMinimal: NextAuthOptions = {
@@ -34,7 +34,7 @@ export const authOptionsMinimal: NextAuthOptions = {
         }
 
         try {
-          await connectDB();
+          await getConnection();
           console.log('🔍 Database connected, searching for user:', credentials.email);
           
           const user = await User.findOne({ email: credentials.email }).select('+password');
@@ -82,7 +82,7 @@ export const authOptionsMinimal: NextAuthOptions = {
       // Handle user creation in database after successful OAuth
       if (account?.provider === 'google') {
         try {
-          await connectDB();
+          await getConnection();
           let existingUser = await User.findOne({ email: user.email });
 
           if (!existingUser) {
@@ -181,5 +181,4 @@ export const authOptionsMinimal: NextAuthOptions = {
     },
   },
   useSecureCookies: process.env.NODE_ENV === 'production',
-  debug: true,
 }

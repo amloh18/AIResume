@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import CV from '@/models/CV';
 import { toObjectId } from '@/lib/db-utils';
 
@@ -8,7 +8,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await connectDB();
+    await getConnection();
     
     const { id: cvId } = await params;
     const { userId, title, description, aiAnalysis, lastModified } = await request.json();

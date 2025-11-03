@@ -71,7 +71,7 @@ export class ActivityService {
         return {
           id: 'temp-' + Date.now(),
           ...activity,
-          createdAt: new Date().toISOString()
+          createdAt: new Date()
         };
       }
     } else {
@@ -82,7 +82,7 @@ export class ActivityService {
         return {
           id: 'temp-' + Date.now(),
           ...activity,
-          createdAt: new Date().toISOString()
+          createdAt: new Date()
         };
       } catch (error) {
         console.error('Failed to log activity directly:', error);
@@ -90,7 +90,7 @@ export class ActivityService {
         return {
           id: 'temp-' + Date.now(),
           ...activity,
-          createdAt: new Date().toISOString()
+          createdAt: new Date()
         };
       }
     }

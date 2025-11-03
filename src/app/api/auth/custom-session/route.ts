@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getAuthenticatedUser } from '@/lib/custom-auth'
+import { getServerSession } from 'next-auth'
+import { authConfig } from '@/lib/auth-config'
 
+/**
+ * Session check endpoint using NextAuth
+ * Replaces the old custom-auth session endpoint
+ */
 export async function GET(request: NextRequest) {
   try {
-    const result = await getAuthenticatedUser(request)
+    const session = await getServerSession(authConfig)
 
-    if (!result || !result.success) {
+    if (!session?.user) {
       return NextResponse.json(
         { success: false, error: 'Not authenticated' },
         { status: 401 }
@@ -14,7 +19,14 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      user: result.user
+      user: {
+        id: session.user.id || '',
+        email: session.user.email || '',
+        name: session.user.name || '',
+        image: session.user.image || null,
+        type: (session.user as any).type || 'user',
+        role: (session.user as any).role || 'user',
+      }
     })
   } catch (error) {
     console.error('Session check error:', error)

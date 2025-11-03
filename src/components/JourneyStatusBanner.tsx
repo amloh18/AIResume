@@ -322,7 +322,7 @@ const JourneyStatusBanner: React.FC<JourneyStatusBannerProps> = ({ journey }) =>
           ] : [
             `${jobData ? '✅' : '⭕'} Job tracking`,
             `${cvData ? '✅' : '⭕'} CV creation`,
-            `${(atsScoreState > 0 || cvData?.metadata?.atsScore > 0) ? '✅' : '⭕'} ATS analysis`,
+            `${((atsScoreState && atsScoreState > 0) || (cvData?.metadata?.atsScore && cvData.metadata.atsScore > 0)) ? '✅' : '⭕'} ATS analysis`,
             `${coverLetterData ? '✅' : '⭕'} Cover letter`
           ]
         };

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import User from '@/models/User';
 import CV from '@/models/CV';
 
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    await connectDB();
+    await getConnection();
 
     const user = await User.findById(session.user.id);
     
@@ -68,7 +68,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    await connectDB();
+    await getConnection();
 
     await User.findByIdAndUpdate(
       session.user.id,

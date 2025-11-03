@@ -243,11 +243,9 @@ const JobModal: React.FC<JobModalProps> = ({
       return cvData.basics.name;
     }
     // Fallback to user from auth if available
+    // Note: UnifiedUser uses 'name' property, not firstName/lastName
     if (user?.name) {
       return user.name;
-    }
-    if (user?.firstName || user?.lastName) {
-      return `${user.firstName || ''} ${user.lastName || ''}`.trim();
     }
     return '[Your Name]';
   };

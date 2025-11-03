@@ -197,11 +197,11 @@ export function useDashboardData(userId: string, selectedPeriod: string = 'week'
       
       const jobs = await JobService.getUpcomingInterviews(userId, 'week');
       
-      const interviews = jobs.flatMap(job => 
-        (job.interviews || []).map(interview => ({
+      const interviews = jobs.flatMap((job: any) => 
+        ((job.interviews || []) as any[]).map((interview: any) => ({
           id: `${job.id}-${interview.date}`,
           company: job.company,
-          role: job.jobTitle,
+          role: job.title || job.jobTitle,
           stage: job.status,
           datetime: new Date(interview.date),
           type: interview.type || 'Interview',
@@ -261,7 +261,7 @@ export function useDashboardData(userId: string, selectedPeriod: string = 'week'
         : 'Add your first job to start creating targeted cover letters';
 
       // Generate job tips
-      const jobTips = [];
+      const jobTips: Array<{ tip: string; source: string }> = [];
       if (cvCounts.length === 0) {
         jobTips.push({ tip: 'Create your first CV to get started', source: 'CV Circle' });
       } else if (jobCounts.total === 0) {
@@ -302,7 +302,7 @@ export function useDashboardData(userId: string, selectedPeriod: string = 'week'
         UnifiedCVService.getCVs(userId, { projection: 'summary' }),
         JobService.getJobCounts(userId, 'all'),
         UnifiedCVService.getCVs(userId, { projection: 'summary' }),
-        JobService.getJobs({ userId, status: 'all' })
+        JobService.getJobs({ userId, status: undefined })
       ]);
 
       // Filter out rejected jobs for vault count

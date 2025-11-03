@@ -5,7 +5,7 @@
  */
 
 import { HARDCODED_TEMPLATES } from './hardcoded-templates';
-import { ITemplate } from '@/models/Template';
+import { ITemplate } from '@/types/template';
 
 /**
  * Get template data by ID, checking both hardcoded templates and database

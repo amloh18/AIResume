@@ -1,13 +1,13 @@
 'use client';
 
 import React from 'react';
-import { Template } from '@/lib/stores/templateStore';
+import { ITemplate } from '@/types/template';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
-import EnhancedCVPreview from './EnhancedCVPreview';
+// import EnhancedCVPreview from './EnhancedCVPreview'; // TODO: Create component if needed
 import CVPreviewContent from './CVPreviewContent';
 
 interface TemplatePreviewProps {
-  template: Template;
+  template: ITemplate;
   cvData?: UnifiedCVDataStructure | null;
   scale?: number;
   className?: string;
@@ -20,15 +20,23 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
   className = ''
 }) => {
   // Generate sample CV data if none provided
-  const sampleCVData: UnifiedCVDataStructure = cvData || {
+  const sampleCVData: UnifiedCVDataStructure = (cvData as UnifiedCVDataStructure) || {
     basics: {
       name: 'John Doe',
       label: 'Software Engineer',
       email: 'john.doe@example.com',
       phone: '+1 (555) 123-4567',
-      location: 'San Francisco, CA',
-      website: 'https://johndoe.dev',
-      summary: 'Experienced software engineer with 5+ years of expertise in full-stack development, cloud architecture, and team leadership.'
+      url: 'https://johndoe.dev',
+      image: '',
+      summary: 'Experienced software engineer with 5+ years of expertise in full-stack development, cloud architecture, and team leadership.',
+      location: {
+        address: '',
+        postalCode: '',
+        city: 'San Francisco',
+        countryCode: 'US',
+        region: 'CA'
+      },
+      profiles: []
     },
     work: [
       {
@@ -68,19 +76,16 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
     ],
     skills: [
       {
-        name: 'Programming Languages',
-        level: 'Expert',
-        keywords: ['JavaScript', 'TypeScript', 'Python', 'Java', 'Go']
+        category: 'Programming Languages',
+        skills: ['JavaScript', 'TypeScript', 'Python', 'Java', 'Go']
       },
       {
-        name: 'Frameworks & Libraries',
-        level: 'Advanced',
-        keywords: ['React', 'Node.js', 'Express', 'Next.js', 'Django']
+        category: 'Frameworks & Libraries',
+        skills: ['React', 'Node.js', 'Express', 'Next.js', 'Django']
       },
       {
-        name: 'Cloud & DevOps',
-        level: 'Intermediate',
-        keywords: ['AWS', 'Docker', 'Kubernetes', 'CI/CD', 'Terraform']
+        category: 'Cloud & DevOps',
+        skills: ['AWS', 'Docker', 'Kubernetes', 'CI/CD', 'Terraform']
       }
     ],
     projects: [
@@ -88,6 +93,7 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
         name: 'E-commerce Platform',
         description: 'Full-stack e-commerce solution with payment integration',
         highlights: ['Built with React and Node.js', 'Integrated Stripe payments', 'Deployed on AWS'],
+        keywords: [],
         startDate: '2023-01',
         endDate: '2023-06',
         url: 'https://github.com/johndoe/ecommerce-platform'
@@ -129,45 +135,10 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
         }}
       >
         {/* Use enhanced preview if template has availableSections */}
-        {template.availableSections && template.availableSections.length > 0 ? (
-          <EnhancedCVPreview
-            cvData={sampleCVData}
-            template={template}
-            theme="light"
-            showBadge={false}
-            sectionOrder={['personal_header', 'work_experience', 'education', 'skills', 'projects']}
-            sectionVisibility={{
-              personal_header: true,
-              work_experience: true,
-              education: true,
-              skills: true,
-              projects: true,
-              certificates: false,
-              languages: false
-            }}
-            pagePadding={{ top: 20, bottom: 20 }}
-          />
-        ) : (
-          <CVPreviewContent
-            cvData={sampleCVData}
-            theme="light"
-            showBadge={false}
-            sectionOrder={['personal_header', 'work_experience', 'education', 'skills', 'projects']}
-            sectionVisibility={{
-              personal_header: true,
-              work_experience: true,
-              education: true,
-              skills: true,
-              projects: true,
-              certificates: false,
-              languages: false
-            }}
-            templateStyles={template.globalStyles}
-            customCSS={template.globalStyles?.customCSS}
-            templateName={template.name}
-            pagePadding={{ top: 20, bottom: 20 }}
-          />
-        )}
+        {/* TODO: Implement EnhancedCVPreview component with full props support */}
+        <CVPreviewContent
+          cvData={sampleCVData}
+        />
       </div>
 
       {/* Template Name Overlay */}

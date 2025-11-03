@@ -97,7 +97,7 @@ const couponSchema = new Schema<ICoupon>({
 }, {
   timestamps: true,
   toJSON: {
-    transform: function(doc, ret) {
+    transform: function(doc, ret: any) {
       ret.id = ret._id;
       delete ret._id;
       delete ret.__v;
@@ -107,7 +107,7 @@ const couponSchema = new Schema<ICoupon>({
 });
 
 // Indexes
-couponSchema.index({ code: 1 });
+// Note: code index is automatically created by unique: true constraint
 couponSchema.index({ validFrom: 1, validUntil: 1 });
 couponSchema.index({ isActive: 1 });
 

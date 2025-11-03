@@ -24,22 +24,22 @@ const ReferencesSection: React.FC<ReferencesSectionProps> = ({
       name: '',
       reference: ''
     };
-    onUpdate('references', (prevReferences) => {
+    onUpdate('references', (prevReferences: Array<{ name: string; reference: string }>) => {
       return [...(prevReferences || []), newReference];
     });
   };
 
   const removeReference = (index: number) => {
-    onUpdate('references', (prevReferences) => {
-      return (prevReferences || []).filter((_, i) => i !== index);
+    onUpdate('references', (prevReferences: Array<{ name: string; reference: string }>) => {
+      return (prevReferences || []).filter((_: any, i: number) => i !== index);
     });
   };
 
   const updateReference = (index: number, field: string, value: any) => {
-    onUpdate('references', (prevReferences) => {
+    onUpdate('references', (prevReferences: Array<{ name: string; reference: string }>) => {
       const newArray = [...(prevReferences || [])];
       if (!newArray[index]) {
-        newArray[index] = {};
+        newArray[index] = { name: '', reference: '' };
       }
       newArray[index] = { ...newArray[index], [field]: value };
       return newArray;

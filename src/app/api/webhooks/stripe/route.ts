@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { stripe } from '@/lib/payment/stripe';
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import User from '@/models/User';
 import { getAdminPricingPlan } from '@/models/admin-models';
 import Invoice from '@/models/Invoice';
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }
 
-    await connectDB();
+    await getConnection();
 
     console.log('Stripe webhook event:', event.type);
 

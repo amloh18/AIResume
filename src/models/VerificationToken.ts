@@ -76,7 +76,6 @@ const verificationTokenSchema = new Schema<IVerificationToken>({
     type: String,
     required: false,
     trim: true,
-    index: true,
     validate: {
       validator: function(v: string) {
         // Only validate if code is provided

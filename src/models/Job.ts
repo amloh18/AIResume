@@ -324,7 +324,7 @@ const jobSchema = new Schema<IJob>({
 }, {
   timestamps: true,
   toJSON: {
-    transform: function(doc, ret) {
+    transform: function(doc, ret: any) {
       ret.id = ret._id;
       delete ret._id;
       delete ret.__v;
@@ -372,7 +372,7 @@ jobSchema.post('save', async function(doc) {
       
       // Get user identifier
       const userId = doc.userId?.toString();
-      const firebaseUid = doc.firebaseUid;
+      const firebaseUid = (doc as any).firebaseUid;
       
       if (userId || firebaseUid) {
         // Run sync in background to avoid blocking the save operation

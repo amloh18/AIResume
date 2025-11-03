@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/lib/database';
+import getConnection from '@/lib/database';
 import { CoverLetter } from '@/models';
 
 export async function GET(
@@ -7,7 +7,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await connectDB();
+    await getConnection();
     const { id } = await params;
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
@@ -54,7 +54,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await connectDB();
+    await getConnection();
     const { id } = await params;
     const body = await request.json();
     const { jobId, userId, title, content, status, metadata, targetCompany, targetPosition, keywords, cvId } = body;
@@ -132,7 +132,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await connectDB();
+    await getConnection();
     const { id } = await params;
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');

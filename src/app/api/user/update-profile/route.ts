@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-// Removed - using Clerk now
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import { User, CV } from '@/models';
 
 export async function PUT(request: NextRequest) {
@@ -16,7 +15,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    await connectDB();
+    await getConnection();
 
     const body = await request.json();
     const { jobTitle, location, professionalSummary, allowMessage, allowVideoCall } = body;

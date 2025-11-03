@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import connectDB from '@/lib/database';
+import getConnection from '@/lib/database';
 import { CV, Template } from '@/models';
 import { toObjectId, createErrorResponse } from '@/lib/db-utils';
 import { getCVWithTemplate } from '@/lib/cv-template-utils';
@@ -127,7 +127,7 @@ export async function GET(
       );
     }
 
-    await connectDB();
+    await getConnection();
     console.log('🔍 CV GET API - Database connected');
     
     const { id } = await params;
@@ -222,7 +222,7 @@ export async function PUT(
       );
     }
 
-    await connectDB();
+    await getConnection();
     console.log('🔍 CV UPDATE API - Database connected');
     
     const { id } = await params;
@@ -370,7 +370,7 @@ export async function DELETE(
       );
     }
 
-    await connectDB();
+    await getConnection();
     console.log('🔍 CV DELETE API - Database connected');
     
     const { id } = await params;

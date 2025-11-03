@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import User from '@/models/User';
 
 // This endpoint should be called by a cron job service (e.g., Vercel Cron, GitHub Actions, etc.)
@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    await connectDB();
+    await getConnection();
 
     const now = new Date();
     let expiredCount = 0;
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
 // Also support GET for manual testing
 export async function GET(request: NextRequest) {
   try {
-    await connectDB();
+    await getConnection();
 
     const now = new Date();
     

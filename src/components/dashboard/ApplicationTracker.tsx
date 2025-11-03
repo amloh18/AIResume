@@ -1567,7 +1567,12 @@ const ApplicationTracker: React.FC = () => {
           setEditingJob(null);
         }}
         onJobSaved={handleJobSaved}
-        editingJob={editingJob}
+        editingJob={editingJob ? {
+          ...editingJob,
+          deadline: editingJob.deadline ? (editingJob.deadline instanceof Date ? editingJob.deadline.toISOString() : editingJob.deadline) : undefined,
+          applicationDate: editingJob.applicationDate ? (editingJob.applicationDate instanceof Date ? editingJob.applicationDate.toISOString() : editingJob.applicationDate) : undefined,
+          postedDate: editingJob.postedDate ? (editingJob.postedDate instanceof Date ? editingJob.postedDate.toISOString() : editingJob.postedDate) : undefined
+        } as any : null}
         userId={userId || ''}
       />
     </div>

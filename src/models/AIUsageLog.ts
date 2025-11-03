@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { getLogsConnection } from '@/lib/logs-database-connection';
 
-export interface IAIUsageLog extends Document {
+export interface IAIUsageLog extends Omit<Document, 'model'> {
   userId: mongoose.Types.ObjectId | string;
   firebaseUid?: string; // Firebase UID for user identification
   apiEndpoint: string;
@@ -102,8 +102,42 @@ aiUsageLogSchema.virtual('costPerToken').get(function() {
   return this.tokensUsed.total > 0 ? this.cost / this.tokensUsed.total : 0;
 });
 
+// Define interface for static methods
+interface IAIUsageLogModel extends mongoose.Model<IAIUsageLog> {
+  getUsageStats(options: {
+    userId?: mongoose.Types.ObjectId | string;
+    startDate?: Date;
+    endDate?: Date;
+    apiEndpoint?: string;
+    provider?: string;
+  }): Promise<{
+    totalRequests: number;
+    totalTokens: number;
+    totalCost: number;
+    avgTokensPerRequest: number;
+    avgCostPerRequest: number;
+    successCount: number;
+    errorCount: number;
+  }>;
+  getUsageByEndpoint(options: {
+    startDate?: Date;
+    endDate?: Date;
+    limit?: number;
+  }): Promise<any[]>;
+  getUsageByUser(options: {
+    startDate?: Date;
+    endDate?: Date;
+    limit?: number;
+  }): Promise<any[]>;
+  getDailyUsage(options: {
+    startDate?: Date;
+    endDate?: Date;
+    days?: number;
+  }): Promise<any[]>;
+}
+
 // Static method to get usage statistics
-aiUsageLogSchema.statics.getUsageStats = async function(options: {
+(aiUsageLogSchema.statics as any).getUsageStats = async function(options: {
   userId?: mongoose.Types.ObjectId | string;
   startDate?: Date;
   endDate?: Date;
@@ -274,15 +308,15 @@ aiUsageLogSchema.statics.getDailyUsage = async function(options: {
 };
 
 // Create model using logs database connection
-let AIUsageLog: mongoose.Model<IAIUsageLog> | null = null;
+let AIUsageLog: IAIUsageLogModel | null = null;
 
-export async function getAIUsageLogModel(): Promise<mongoose.Model<IAIUsageLog>> {
+export async function getAIUsageLogModel(): Promise<IAIUsageLogModel> {
   if (AIUsageLog) {
     return AIUsageLog;
   }
 
   const logsConnection = await getLogsConnection();
-  AIUsageLog = logsConnection.model<IAIUsageLog>('AIUsageLog', aiUsageLogSchema);
+  AIUsageLog = logsConnection.model<IAIUsageLog, IAIUsageLogModel>('AIUsageLog', aiUsageLogSchema);
   return AIUsageLog;
 }
 
@@ -290,4 +324,5 @@ export async function getAIUsageLogModel(): Promise<mongoose.Model<IAIUsageLog>>
 export { aiUsageLogSchema };
 
 // For backward compatibility, export a default that uses the logs database
+// Note: This will be null until getAIUsageLogModel() is called
 export default AIUsageLog; 

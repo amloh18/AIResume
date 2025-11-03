@@ -101,9 +101,9 @@ export default function CompletionStep({ onComplete, onBack, isLoading }: Comple
       'hasProjects'
     ];
 
-    essentialCriteria.forEach(criterion => {
+    essentialCriteria.forEach((criterion: string) => {
       maxScore += 20; // 20 points each
-      if (criteria[criterion]) {
+      if (criterion in criteria && (criteria as any)[criterion]) {
         completionScore += 20;
       }
     });
@@ -167,10 +167,12 @@ export default function CompletionStep({ onComplete, onBack, isLoading }: Comple
     if (!skills || skills.length === 0) return 0;
     
     let totalScore = 0;
-    skills.forEach(skill => {
+    skills.forEach((skill: { category?: string; skills?: string[]; name?: string; keywords?: string[] }) => {
       let skillScore = 0;
-      if (skill.name && skill.name.trim()) skillScore += 40;
-      if (skill.keywords && skill.keywords.length > 0) skillScore += 60;
+      const name = skill.name || skill.category;
+      const keywords = skill.keywords || skill.skills;
+      if (name && name.trim()) skillScore += 40;
+      if (keywords && keywords.length > 0) skillScore += 60;
       totalScore += Math.min(skillScore, 100);
     });
     
@@ -274,9 +276,10 @@ export default function CompletionStep({ onComplete, onBack, isLoading }: Comple
     if (state.cvData.skills && state.cvData.skills.length > 0) {
       score += 5; // Has skills
       
-      state.cvData.skills.forEach(skill => {
-        if (skill.keywords && skill.keywords.length >= 3) score += 3;
-        if (skill.keywords && skill.keywords.length >= 5) score += 2;
+      state.cvData.skills.forEach((skill: { category?: string; skills?: string[]; name?: string; keywords?: string[] }) => {
+        const keywords = 'keywords' in skill ? skill.keywords : ('skills' in skill ? skill.skills : []);
+        if (keywords && keywords.length >= 3) score += 3;
+        if (keywords && keywords.length >= 5) score += 2;
       });
     }
     
@@ -495,8 +498,11 @@ export default function CompletionStep({ onComplete, onBack, isLoading }: Comple
                                   <p className="text-lime-400 text-base">
                                     {education.studyType} in {education.area}
                                   </p>
-                                  {education.gpa && (
-                                    <p className="text-white/60 text-sm">GPA: {education.gpa}</p>
+                                  {'gpa' in education && (education as any).gpa && (
+                                    <p className="text-white/60 text-sm">GPA: {(education as any).gpa}</p>
+                                  )}
+                                  {'score' in education && education.score && (
+                                    <p className="text-white/60 text-sm">Score: {education.score}</p>
                                   )}
                                 </div>
                                 <span className="text-white/60 text-sm">
@@ -514,9 +520,9 @@ export default function CompletionStep({ onComplete, onBack, isLoading }: Comple
                       <div className="mb-6">
                         <h5 className="text-xl font-semibold text-white mb-4 border-b border-white/10 pb-1">Skills</h5>
                         <div className="flex flex-wrap gap-2">
-                          {state.cvData.skills.map((skill, index) => (
+                          {state.cvData.skills.map((skill: { category?: string; skills?: string[]; name?: string }, index) => (
                             <div key={index} className="bg-lime-400/20 text-lime-400 px-3 py-2 rounded-full text-sm font-medium">
-                              {skill.name}
+                              {skill.name || skill.category || 'Skills'}
                             </div>
                           ))}
                         </div>
@@ -571,8 +577,11 @@ export default function CompletionStep({ onComplete, onBack, isLoading }: Comple
                                     <p className="text-lime-400 text-base">
                                       {education.studyType} in {education.area}
                                     </p>
-                                    {education.gpa && (
-                                      <p className="text-white/60 text-sm">GPA: {education.gpa}</p>
+                                    {('gpa' in education && (education as any).gpa) && (
+                                      <p className="text-white/60 text-sm">GPA: {(education as any).gpa}</p>
+                                    )}
+                                    {('score' in education && education.score) && (
+                                      <p className="text-white/60 text-sm">Score: {education.score}</p>
                                     )}
                                   </div>
                                   <span className="text-white/60 text-sm">
@@ -590,9 +599,9 @@ export default function CompletionStep({ onComplete, onBack, isLoading }: Comple
                         <div className="mb-6">
                           <h5 className="text-xl font-semibold text-white mb-4 border-b border-white/10 pb-1">Skills</h5>
                           <div className="flex flex-wrap gap-2">
-                            {state.cvData.skills.map((skill, index) => (
+                            {state.cvData.skills.map((skill: { category?: string; skills?: string[]; name?: string }, index) => (
                               <div key={index} className="bg-lime-400/20 text-lime-400 px-3 py-2 rounded-full text-sm font-medium">
-                                {skill.name}
+                                {skill.name || skill.category || 'Skills'}
                               </div>
                             ))}
                           </div>

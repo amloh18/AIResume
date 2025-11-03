@@ -146,7 +146,6 @@ const AdminUserSchema = new Schema<IAdminUser>(
       unsubscribed: {
         type: Boolean,
         default: false,
-        index: true,
       },
       unsubscribedAt: Date,
     },

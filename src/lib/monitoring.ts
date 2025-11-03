@@ -30,7 +30,7 @@ async function initializeSentry() {
         environment: process.env.NODE_ENV,
         tracesSampleRate: 0.1, // 10% of transactions for performance monitoring
         debug: false,
-        beforeSend(event) {
+        beforeSend(event: any) {
           // Filter out non-critical errors
           if (event.exception) {
             const error = event.exception.values?.[0];
@@ -87,7 +87,13 @@ export class ErrorTracker {
     }
     
     // Also log locally
-    logger[level](message, context);
+    if (level === 'error') {
+      logger.error(message, context);
+    } else if (level === 'info') {
+      logger.info(message, context);
+    } else if (level === 'warning') {
+      logger.warn(message, context);
+    }
   }
 
   static setUser(user: { id: string; email?: string; role?: string }) {

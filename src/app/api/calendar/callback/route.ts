@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { connectDB } from '@/lib/mongodb';
+import { getConnection } from '@/lib/database';
 import UserSettings from '@/models/UserSettings';
 import { CalendarService } from '@/lib/services/calendarService';
 
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    await connectDB();
+    await getConnection();
     
     // Exchange code for tokens
     const tokens = await CalendarService.getTokensFromCode(code);

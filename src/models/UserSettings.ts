@@ -651,7 +651,7 @@ const userSettingsSchema = new Schema<IUserSettings>({
 });
 
 // Indexes for better query performance
-userSettingsSchema.index({ userId: 1 });
+// Note: userId index is automatically created by unique: true constraint
 userSettingsSchema.index({ 'security.twoFactorEnabled': 1 });
 userSettingsSchema.index({ 'notifications.email.enabled': 1 });
 userSettingsSchema.index({ 'privacy.profileVisibility': 1 });

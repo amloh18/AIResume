@@ -62,30 +62,57 @@ export default function EducationStep({ onNext, onBack }: EducationStepProps) {
       keywords: ['']
     };
 
+    // Convert to UnifiedCVDataStructure format before saving
     dispatch({
       type: 'UPDATE_CV_DATA',
       payload: {
-        skills: [...state.cvData.skills, newSkill]
+        skills: [...state.cvData.skills.map((s: any) => {
+          if ('category' in s) return s;
+          return { category: s.name || '', skills: s.keywords || [] };
+        }), { category: newSkill.name, skills: newSkill.keywords }]
       }
     });
     setShowAddSkill(false);
   };
 
+  // Helper to convert skills from UnifiedCVDataStructure format to component format
+  const getSkillsInComponentFormat = () => {
+    return state.cvData.skills.map((skill: any) => {
+      if ('name' in skill || 'level' in skill) {
+        return skill;
+      }
+      return {
+        name: skill.category || '',
+        level: 'Intermediate',
+        keywords: skill.skills || ['']
+      };
+    });
+  };
+
+  // Helper to convert skills back to UnifiedCVDataStructure format
+  const convertSkillsToUnifiedFormat = (skills: any[]) => {
+    return skills.map((skill: any) => ({
+      category: skill.name || skill.category || 'Skills',
+      skills: skill.keywords || skill.skills || []
+    }));
+  };
+
   const updateSkill = (index: number, field: string, value: any) => {
-    const updatedSkills = [...state.cvData.skills];
-    updatedSkills[index] = { ...updatedSkills[index], [field]: value };
+    const componentFormatSkills = getSkillsInComponentFormat();
+    componentFormatSkills[index] = { ...componentFormatSkills[index], [field]: value };
     
     dispatch({
       type: 'UPDATE_CV_DATA',
-      payload: { skills: updatedSkills }
+      payload: { skills: convertSkillsToUnifiedFormat(componentFormatSkills) }
     });
   };
 
   const removeSkill = (index: number) => {
-    const updatedSkills = state.cvData.skills.filter((_, i) => i !== index);
+    const componentFormatSkills = getSkillsInComponentFormat();
+    const updatedSkills = componentFormatSkills.filter((_, i) => i !== index);
     dispatch({
       type: 'UPDATE_CV_DATA',
-      payload: { skills: updatedSkills }
+      payload: { skills: convertSkillsToUnifiedFormat(updatedSkills) }
     });
   };
 
@@ -308,7 +335,7 @@ export default function EducationStep({ onNext, onBack }: EducationStepProps) {
         </div>
 
         <AnimatePresence>
-          {state.cvData.skills.map((skill, index) => (
+          {getSkillsInComponentFormat().map((skill: { name?: string; level?: string; keywords?: string[] }, index) => (
             <motion.div
               key={index}
               initial={{ opacity: 0, y: 20 }}
@@ -333,7 +360,7 @@ export default function EducationStep({ onNext, onBack }: EducationStepProps) {
                   </label>
                   <input
                     type="text"
-                    value={skill.name}
+                    value={skill.name || ''}
                     onChange={(e) => updateSkill(index, 'name', e.target.value)}
                     className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
                     placeholder="e.g., Programming Languages"
@@ -345,7 +372,7 @@ export default function EducationStep({ onNext, onBack }: EducationStepProps) {
                     Proficiency Level
                   </label>
                   <select
-                    value={skill.level}
+                    value={skill.level || ''}
                     onChange={(e) => updateSkill(index, 'level', e.target.value)}
                     className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
                   >
@@ -364,8 +391,8 @@ export default function EducationStep({ onNext, onBack }: EducationStepProps) {
                 </label>
                 <input
                   type="text"
-                  value={skill.keywords.join(', ')}
-                  onChange={(e) => updateSkill(index, 'keywords', e.target.value.split(',').map(s => s.trim()).filter(s => s))}
+                  value={(skill.keywords || []).join(', ')}
+                  onChange={(e) => updateSkill(index, 'keywords', e.target.value.split(',').map((s: string) => s.trim()).filter((s: string) => s))}
                   className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
                   placeholder="e.g., JavaScript, React, Node.js"
                 />

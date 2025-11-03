@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import { User } from '@/models';
 import VerificationToken from '@/models/VerificationToken';
 import { validateEmail, validatePassword, createErrorResponse } from '@/lib/db-utils';
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
     
     // Connect to database with error handling
     try {
-      await connectDB();
+      await getConnection();
       console.log('✅ Database connected for registration');
     } catch (dbError: any) {
       console.error('❌ Database connection error during registration:', dbError);

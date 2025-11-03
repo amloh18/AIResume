@@ -122,7 +122,7 @@ async function createPDFDocument(
       subject: 'Curriculum Vitae',
       author: 'Circle CV App',
       creator: 'Circle CV App',
-      producer: 'Circle CV App'
+      // producer: 'Circle CV App' // Not supported in DocumentProperties
     });
   }
 
@@ -406,7 +406,7 @@ async function renderSkillsToPDF(
       
     case 'inline':
       // Render skills inline
-      const skillsText = skillsData.map(skill => skill.name).join(', ');
+      const skillsText = skillsData.map((skill: any) => skill.name).join(', ');
       doc.text(skillsText, x, currentY);
       currentY += 6;
       break;

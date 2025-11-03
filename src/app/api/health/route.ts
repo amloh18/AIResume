@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import { getLogsConnection } from '@/lib/logs-database-connection';
 import { validateEnvironment } from '@/lib/env-validation';
 
@@ -43,7 +43,7 @@ interface HealthCheckResult {
 async function checkDatabase(): Promise<{ status: 'healthy' | 'unhealthy'; responseTime: number; error?: string }> {
   const startTime = Date.now();
   try {
-    const mongoose = await connectDB();
+    const mongoose = await getConnection();
     const responseTime = Date.now() - startTime;
     
     if (mongoose.connection.readyState === 1) {
@@ -253,7 +253,7 @@ export async function GET(request: NextRequest) {
 // Simple health check for load balancers
 export async function HEAD(request: NextRequest) {
   try {
-    const mongoose = await connectDB();
+    const mongoose = await getConnection();
     if (mongoose.connection.readyState === 1) {
       return new NextResponse(null, { status: 200 });
     } else {

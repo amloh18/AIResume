@@ -69,13 +69,16 @@ export async function paginateQuery<T>(
   query: any,
   options: PaginationOptions
 ): Promise<PaginatedResult<T>> {
-  const { page, limit, sortBy, sortOrder } = options;
+  const page = options.page ?? 1;
+  const limit = options.limit ?? 10;
+  const sortBy = options.sortBy ?? 'createdAt';
+  const sortOrder = options.sortOrder ?? 'desc';
   
   // Clone the query for counting
   const countQuery = query.clone();
   
   // Apply sorting
-  const sort: any = {};
+  const sort: Record<string, 1 | -1> = {};
   sort[sortBy] = sortOrder === 'desc' ? -1 : 1;
   
   // Apply pagination

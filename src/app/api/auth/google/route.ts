@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import User from '@/models/User';
 import { createErrorResponse } from '@/lib/db-utils';
 
 export async function POST(request: NextRequest) {
   try {
-    await connectDB();
+    await getConnection();
     
     const body = await request.json();
     const { email, name, image, provider, firebaseUid, authProviderId } = body;
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    await connectDB();
+    await getConnection();
     
     const { searchParams } = new URL(request.url);
     const email = searchParams.get('email');

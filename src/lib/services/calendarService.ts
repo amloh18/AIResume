@@ -206,7 +206,7 @@ export class CalendarService {
 
       // Remove events for jobs that no longer exist
       const currentJobIds = new Set(jobApplications.map(job => job.jobId));
-      for (const [jobId, event] of existingEventMap) {
+      for (const [jobId, event] of Array.from(existingEventMap.entries())) {
         if (!currentJobIds.has(jobId)) {
           await this.deleteJobApplicationEvent(event.id!);
         }

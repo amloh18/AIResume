@@ -28,7 +28,9 @@ interface ApplicationJourneyModalProps {
     journeyId: string;
     status: string;
     currentStep: number;
+    jobId?: string;
     job: {
+      id?: string;
       jobTitle: string;
       company: string;
       deadline?: Date;
@@ -120,7 +122,12 @@ export default function ApplicationJourneyModal({
   // Handle moving job to applied status
   const handleMoveToApplied = async () => {
     try {
-      const response = await fetch(`/api/jobs/${journey.job.id}`, {
+      const jobId = journey.job.id || journey.jobId;
+      if (!jobId) {
+        toast.error('Job ID not found');
+        return;
+      }
+      const response = await fetch(`/api/jobs/${jobId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

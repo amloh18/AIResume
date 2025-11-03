@@ -38,7 +38,7 @@ export async function getLogsConnection(): Promise<mongoose.Connection> {
     });
 
     console.log('✅ Logs database connected successfully');
-    console.log(`📊 Logs Database: ${logsConnection.db.databaseName}`);
+    console.log(`📊 Logs Database: ${logsConnection.db?.databaseName || 'unknown'}`);
     
     return logsConnection;
   } catch (error) {

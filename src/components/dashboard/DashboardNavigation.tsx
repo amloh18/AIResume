@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-// import { useSession  } from 'next-auth/react'; // Removed - using Clerk now
 import { useRouter } from 'next/navigation';
 import { 
   FileText, 
@@ -48,20 +47,19 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
   onClose,
   isBannerVisible = false
 }) => {
-  // const { data: session } = useSession(); // Removed - using Clerk now
-  const session = null; // Temporary - will replace with Clerk user
+  const session: any = null; // Session handling - using unified auth system
   const router = useRouter();
   const [isRefreshing, setIsRefreshing] = React.useState(false);
   const [subscription, setSubscription] = useState<any>(null);
   const [cvJourneyCount, setCvJourneyCount] = useState(0);
   
   // Check if user is admin
-  const isAdmin = (session as any)?.user?.role === 'admin';
+  const isAdmin = session?.user?.role === 'admin';
 
   // Fetch subscription data and CV journey count
   useEffect(() => {
     const fetchUserData = async () => {
-      if (!session?.user?.email || !user?.id) return;
+      if (!user?.email) return;
       
       try {
         // Fetch subscription data
@@ -71,9 +69,9 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
           setSubscription(subscriptionData.subscription);
         }
 
-        // Fetch CV journey count (completed CVs) - only if user.id is stable
-        if (user.id) {
-          const cvsResponse = await fetch(`/api/cvs?userId=${user.id}&type=cv`);
+        // Fetch CV journey count (completed CVs) - using email as identifier
+        if (user.email) {
+          const cvsResponse = await fetch(`/api/cvs?email=${encodeURIComponent(user.email)}&type=cv`);
           if (cvsResponse.ok) {
             const cvsData = await cvsResponse.json();
             setCvJourneyCount(cvsData.cvs?.length || 0);
@@ -84,11 +82,11 @@ const DashboardNavigation: React.FC<DashboardNavigationProps> = ({
       }
     };
 
-    // Only fetch if we have both session and user data
-    if (session?.user?.email && user?.id) {
+    // Only fetch if we have user data
+    if (user?.email) {
       fetchUserData();
     }
-  }, [session?.user?.email, user?.id]); // More specific dependencies
+  }, [user?.email]); // More specific dependencies
 
   const sections = [
     { id: 'analytics', name: 'Analytics', icon: BarChart3, description: 'Progress Tracking' },

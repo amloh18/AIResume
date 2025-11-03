@@ -19,7 +19,7 @@ import {
   Image
 } from 'lucide-react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
-import { Template } from '@/lib/stores/templateStore';
+import { ITemplate } from '@/types/template';
 import { Job } from '@/lib/stores/jobStore';
 import CVPreview from './CVPreview';
 import CoverLetterPreview from './CoverLetterPreview';
@@ -29,7 +29,7 @@ import { generatePageBreakCSS, A4_HEIGHT_PX } from '@/lib/utils/pageBreakHelper'
 
 interface PreviewPanelProps {
   cvData: UnifiedCVDataStructure | null;
-  template: Template | null;
+  template: ITemplate | null;
   jobData: Job | null;
   zoom: number;
   setZoom: (zoom: number) => void;
@@ -191,7 +191,7 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
           theme="light"
           showBadge={false}
           templateStyles={template?.globalStyles}
-          customCSS={template?.customCSS || template?.globalStyles?.customCSS}
+          customCSS={(template as any)?.customCSS || (template as any)?.globalStyles?.customCSS}
           templateName={template?.name}
         />
       </div>

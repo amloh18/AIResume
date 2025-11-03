@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/lib/database';
+import getConnection from '@/lib/database';
 import Job from '@/models/Job';
 import { ApplicationJourney } from '@/models';
 
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    await connectDB();
+    await getConnection();
 
     // Calculate date range
     const now = new Date();

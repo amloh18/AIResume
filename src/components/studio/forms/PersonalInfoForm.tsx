@@ -126,7 +126,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
           userId,
           cvData,
           jobData,
-          personalInfo,
+          personalInfo: safePersonalInfo,
           type: 'professional_summary'
         }),
       });

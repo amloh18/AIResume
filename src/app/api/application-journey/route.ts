@@ -1,27 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
+import { getAuthenticatedUser } from '@/lib/auth-helpers';
 import { ApplicationJourney } from '@/models';
 import type { IApplicationJourney } from '@/models/ApplicationJourney';
 import { createErrorResponse } from '@/lib/db-utils';
-import { extractUserIdentifier, findManyByFirebaseUid, createWithFirebaseUid } from '@/lib/firebase-uid-utils';
 import mongoose from 'mongoose';
-
-// Type for lean user object returned from Mongoose queries
-interface LeanUser {
-  _id: mongoose.Types.ObjectId;
-  firebaseUid?: string;
-  email?: string;
-  [key: string]: any; // Allow for other properties
-}
 
 // Type for journey object returned from Mongoose create operations
 interface LeanJourney {
   _id: mongoose.Types.ObjectId;
   journeyId?: string;
   userId: string;
-  firebaseUid?: string;
   jobId: string;
   cvId?: string;
   coverLetterId?: string;
@@ -65,19 +54,14 @@ async function updateJobDataInJourneys(jobId: string) {
 }
 
 // Utility function to cleanup orphaned journey references
-async function cleanupOrphanedJourneyReferences(userIdentifier: { type: string; id: string }) {
+async function cleanupOrphanedJourneyReferences(userId: string) {
   try {
-    await connectDB();
+    await getConnection();
     
-    console.log('🔍 Cleaning up orphaned journey references for user:', userIdentifier);
+    console.log('🔍 Cleaning up orphaned journey references for user:', userId);
     
-    // Get all journeys for the user based on identifier type
-    let journeys;
-    if (userIdentifier.type === 'firebase') {
-      journeys = await ApplicationJourney.find({ firebaseUid: userIdentifier.id }).lean();
-    } else {
-      journeys = await ApplicationJourney.find({ userId: userIdentifier.id }).lean();
-    }
+    // Get all journeys for the user
+    const journeys = await ApplicationJourney.find({ userId: new mongoose.Types.ObjectId(userId) }).lean();
     
     console.log('🔍 Found journeys:', journeys.length);
     
@@ -130,29 +114,21 @@ async function cleanupOrphanedJourneyReferences(userIdentifier: { type: string; 
 // GET - Get CV journeys for a user
 export async function GET(request: NextRequest) {
   try {
-    await connectDB();
+    await getConnection();
     
-    // Check authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
+    // Use new authentication system
+    const authResult = await getAuthenticatedUser();
+    
+    if (!authResult) {
+      console.log('❌ CV Journey API - No valid authentication found');
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
       );
     }
-
-    // Extract user identifier from request and session
-    const userIdentifier = extractUserIdentifier(request, session);
     
-    if (!userIdentifier.id || !userIdentifier.type) {
-      console.log('❌ CV Journey API - No valid user identifier found');
-      return NextResponse.json(
-        { success: false, error: 'User identification failed' },
-        { status: 401 }
-      );
-    }
-    
-    console.log('🔍 CV Journey API - User identifier:', userIdentifier);
+    const userId = authResult.userId;
+    console.log('🔍 CV Journey API - Using authenticated user:', authResult.userEmail);
     
     const { searchParams } = new URL(request.url);
     const jobId = searchParams.get('jobId');
@@ -163,22 +139,15 @@ export async function GET(request: NextRequest) {
     const cleanup = searchParams.get('cleanup') === 'true';
 
     // Perform cleanup if requested
-    if (cleanup && userIdentifier.id && userIdentifier.type) {
-      const cleanupResult = await cleanupOrphanedJourneyReferences({
-        type: userIdentifier.type,
-        id: userIdentifier.id
-      });
+    if (cleanup) {
+      const cleanupResult = await cleanupOrphanedJourneyReferences(userId);
       console.log('🧹 Cleanup result:', cleanupResult);
     }
 
-    // Build query conditions based on user identifier type
-    let baseQuery: Record<string, any> = {};
-    
-    if (userIdentifier.type === 'firebase' && userIdentifier.id) {
-      baseQuery.firebaseUid = userIdentifier.id;
-    } else if (userIdentifier.type === 'objectid' && userIdentifier.id) {
-      baseQuery.userId = userIdentifier.id;
-    }
+    // Build query conditions
+    const baseQuery: Record<string, any> = {
+      userId: new mongoose.Types.ObjectId(userId)
+    };
 
     console.log('🔍 CV Journey API - Base query:', baseQuery);
 
@@ -217,7 +186,6 @@ export async function GET(request: NextRequest) {
       id: journey._id,
       journeyId: journey.journeyId,
       userId: journey.userId,
-      firebaseUid: journey.firebaseUid,
       jobId: journey.jobId,
       cvId: journey.cvId,
       coverLetterId: journey.coverLetterId,
@@ -260,29 +228,21 @@ export async function GET(request: NextRequest) {
 // POST - Create a new CV journey
 export async function POST(request: NextRequest) {
   try {
-    await connectDB();
+    await getConnection();
     
-    // Check authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
+    // Use new authentication system
+    const authResult = await getAuthenticatedUser();
+    
+    if (!authResult) {
+      console.log('❌ CV Journey POST API - No valid authentication found');
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
       );
     }
-
-    // Extract user identifier from request and session
-    const userIdentifier = extractUserIdentifier(request, session);
     
-    if (!userIdentifier.id || !userIdentifier.type) {
-      console.log('❌ CV Journey POST API - No valid user identifier found');
-      return NextResponse.json(
-        { success: false, error: 'User identification failed' },
-        { status: 401 }
-      );
-    }
-    
-    console.log('🔍 CV Journey POST API - User identifier:', userIdentifier);
+    const userId = authResult.userId;
+    console.log('🔍 CV Journey POST API - Using authenticated user:', authResult.userEmail);
 
     const body = await request.json();
     const {
@@ -304,18 +264,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if journey already exists for this job
-    let existingJourneyQuery: Record<string, any> = { jobId };
-    
-    if (userIdentifier.type === 'firebase' && userIdentifier.id) {
-      existingJourneyQuery.firebaseUid = userIdentifier.id;
-    } else if (userIdentifier.type === 'objectid' && userIdentifier.id) {
-      existingJourneyQuery.userId = userIdentifier.id;
-    } else {
-      return NextResponse.json(
-        { success: false, error: 'Invalid user identifier' },
-        { status: 400 }
-      );
-    }
+    const existingJourneyQuery: Record<string, any> = { 
+      jobId,
+      userId: new mongoose.Types.ObjectId(userId)
+    };
 
     const existingJourney = await ApplicationJourney.findOne(existingJourneyQuery);
     
@@ -409,7 +361,7 @@ export async function POST(request: NextRequest) {
     // Prepare journey data for creation
     const journeyData = {
       journeyId: `journey_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      userId: userIdentifier.type === 'objectid' && userIdentifier.id ? userIdentifier.id : '',
+      userId: new mongoose.Types.ObjectId(userId),
       jobId,
       cvId: cvId || null,
       coverLetterId: coverLetterId || null,
@@ -457,422 +409,25 @@ export async function POST(request: NextRequest) {
         lastAccessedAt: new Date(),
         tags: [],
         notes: ''
-      }
+      },
+      createdAt: new Date(),
+      updatedAt: new Date()
     };
 
     console.log('🚀 CV Journey POST API - Journey data prepared:', {
       jobId,
       jobTitle,
       company,
-      userIdentifier
+      userId
     });
 
-    // Create new journey with proper user identification
-    let newJourney: LeanJourney;
-    
-    if (userIdentifier.type === 'firebase' && userIdentifier.id) {
-      // For Firebase users, we need to get the MongoDB ObjectId from the User collection
-      const { User } = await import('@/models');
-      const user = await User.findOne({ firebaseUid: userIdentifier.id }).lean() as LeanUser | null;
-      
-      if (!user || !user._id) {
-        console.log('❌ CV Journey POST API - Firebase user not found:', userIdentifier.id);
-        console.log('🔍 Attempting to create user from session data...');
-        
-        // Try to create user from session data as fallback
-        const session = await getServerSession(authOptions);
-        console.log('🔍 CV Journey POST API - Session data:', {
-          hasSession: !!session,
-          hasUser: !!session?.user,
-          userEmail: session?.user?.email,
-          userName: session?.user?.name,
-          userFirstName: session?.user?.firstName,
-          userLastName: session?.user?.lastName
-        });
-        
-        if (session?.user?.email) {
-          try {
-            // Extract name from session data
-            let firstName = 'User';
-            let lastName = '';
-            
-            if (session.user.firstName && session.user.lastName) {
-              firstName = session.user.firstName;
-              lastName = session.user.lastName;
-            } else if (session.user.name) {
-              const nameParts = session.user.name.split(' ');
-              firstName = nameParts[0] || 'User';
-              lastName = nameParts.slice(1).join(' ') || '';
-            }
-            
-            console.log('🔍 CV Journey POST API - Creating user with:', {
-              email: session.user.email,
-              firstName,
-              lastName,
-              firebaseUid: userIdentifier.id
-            });
-            
-            const newUser = new User({
-              email: session.user.email,
-              firstName,
-              lastName,
-              firebaseUid: userIdentifier.id || '',
-              authProviderId: userIdentifier.id || '', // Add authProviderId for Firebase users
-              isEmailVerified: true,
-              role: 'user',
-              currentPlanKey: 'free',
-              authProvider: 'nextauth', // Use 'nextauth' instead of 'firebase'
-              monthlyGoal: 20,
-              usage: {
-                cvJourneyCount: 0,
-                cvCreatedCount: 0,
-                journeysCreated: 0,
-                exportCount: 0,
-                atsCheckCount: 0,
-                lastResetDate: new Date(),
-              },
-              subscription: {
-                planKey: 'free',
-                status: 'inactive',
-                startDate: new Date(),
-                provider: 'stripe',
-                interval: 'monthly',
-                seats: 3,
-                storageUsed: 0,
-              },
-              settings: {
-                theme: 'auto',
-                notifications: {
-                  email: true,
-                  push: true,
-                },
-                timezone: 'UTC +07:00 - Asia / Jakarta',
-                languagePreference: 'English',
-              },
-              lastLogin: new Date(),
-            });
-            
-            await newUser.save();
-            console.log('✅ Created missing Firebase user:', newUser._id);
-            
-            if (!newUser._id || !userIdentifier.id) {
-              throw new Error('Failed to create user or invalid Firebase UID');
-            }
-            
-            const userId = newUser._id.toString();
-            const firebaseUid = userIdentifier.id;
-            
-            // Use createWithFirebaseUid for Firebase users
-            newJourney = await createWithFirebaseUid(
-              ApplicationJourney,
-              journeyData,
-              userId,
-              firebaseUid
-            ) as LeanJourney;
-            
-            console.log('✅ CV Journey POST API - Journey saved successfully:', {
-              id: newJourney._id,
-              journeyId: newJourney.journeyId,
-              userId: newJourney.userId,
-              firebaseUid: newJourney.firebaseUid,
-              jobTitle: newJourney.jobTitle,
-              status: newJourney.status
-            });
-
-            // If documents need to be created, trigger async creation
-            if (needsDocuments && newJourney.status === 'processing_documents') {
-              const baseUrl = process.env.NEXTAUTH_URL || process.env.VERCEL_URL || 'http://localhost:3000';
-              const createUrl = `${baseUrl}/api/journey-documents/create`;
-              
-              fetch(createUrl, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  ...(request.headers.get('cookie') && { Cookie: request.headers.get('cookie')! })
-                },
-                body: JSON.stringify({ journeyId: newJourney._id.toString() })
-              }).catch(error => {
-                console.error('❌ CV Journey POST API - Error triggering document creation:', error);
-              });
-              
-              console.log('🚀 CV Journey POST API - Triggered async document creation for journey:', newJourney._id);
-            }
-
-            return NextResponse.json({
-              success: true,
-              message: 'CV journey created successfully',
-              data: {
-                journey: {
-                  id: newJourney._id,
-                  journeyId: newJourney.journeyId,
-                  jobId: newJourney.jobId,
-                  jobTitle: newJourney.jobTitle,
-                  company: newJourney.company,
-                  status: newJourney.status,
-                  currentStep: newJourney.currentStep,
-                  totalSteps: newJourney.totalSteps,
-                  createdAt: newJourney.createdAt
-                }
-              }
-            }, { status: 201 });
-            
-          } catch (createError) {
-            console.error('❌ Failed to create user from session:', createError);
-            
-            // Log specific validation errors
-            if (createError instanceof mongoose.Error.ValidationError) {
-              console.error('❌ User validation errors:', createError.errors);
-              console.error('❌ Validation error details:', JSON.stringify(createError.errors, null, 2));
-            } else if (createError instanceof Error && createError.name === 'ValidationError') {
-              // Type guard for validation errors with errors property
-              interface ValidationErrorWithDetails extends Error {
-                errors?: Record<string, { message: string; kind?: string; path?: string }>;
-              }
-              const errorWithErrors = createError as ValidationErrorWithDetails;
-              if (errorWithErrors.errors) {
-                console.error('❌ User validation errors:', errorWithErrors.errors);
-                console.error('❌ Validation error details:', JSON.stringify(errorWithErrors.errors, null, 2));
-              }
-            }
-            
-            // Try one more fallback - create user with minimal data
-            try {
-              console.log('🔍 CV Journey POST API - Attempting minimal user creation...');
-              
-              // Check if user already exists with this Firebase UID
-              if (!userIdentifier.id) {
-                throw new Error('Firebase UID is required');
-              }
-              const existingUserByFirebase = await User.findOne({ firebaseUid: userIdentifier.id });
-              if (existingUserByFirebase && existingUserByFirebase._id) {
-                console.log('✅ Found existing user by Firebase UID:', existingUserByFirebase._id);
-                
-                // userIdentifier.id is guaranteed to be non-null here due to check above
-                const userId = existingUserByFirebase._id.toString();
-                const firebaseUid = userIdentifier.id;
-                
-                // Use createWithFirebaseUid for Firebase users
-                newJourney = await createWithFirebaseUid(
-                  ApplicationJourney,
-                  journeyData,
-                  userId,
-                  firebaseUid
-                ) as LeanJourney;
-                
-                console.log('✅ CV Journey POST API - Journey saved successfully with existing user:', {
-                  id: newJourney._id,
-                  journeyId: newJourney.journeyId,
-                  userId: newJourney.userId,
-                  firebaseUid: newJourney.firebaseUid,
-                  jobTitle: newJourney.jobTitle
-                });
-
-                return NextResponse.json({
-                  success: true,
-                  message: 'CV journey created successfully',
-                  data: {
-                    journey: {
-                      id: newJourney._id,
-                      journeyId: newJourney.journeyId,
-                      jobId: newJourney.jobId,
-                      jobTitle: newJourney.jobTitle,
-                      company: newJourney.company,
-                      status: newJourney.status,
-                      currentStep: newJourney.currentStep,
-                      totalSteps: newJourney.totalSteps,
-                      createdAt: newJourney.createdAt
-                    }
-                  }
-                }, { status: 201 });
-              }
-              
-              // Generate unique email to avoid conflicts
-              if (!userIdentifier.id) {
-                throw new Error('Firebase UID is required for minimal user creation');
-              }
-              
-              const uniqueEmail = `user-${userIdentifier.id}-${Date.now()}@temp.com`;
-              
-              const minimalUser = new User({
-                email: uniqueEmail,
-                firstName: 'User',
-                lastName: 'User', // Required field, can't be empty
-                firebaseUid: userIdentifier.id,
-                authProviderId: userIdentifier.id, // Add authProviderId for Firebase users
-                isEmailVerified: false,
-                role: 'user',
-                currentPlanKey: 'free',
-                authProvider: 'nextauth', // Use 'nextauth' instead of 'firebase'
-                monthlyGoal: 20,
-                usage: {
-                  cvJourneyCount: 0,
-                  cvCreatedCount: 0,
-                  journeysCreated: 0,
-                  exportCount: 0,
-                  atsCheckCount: 0,
-                  lastResetDate: new Date(),
-                },
-                subscription: {
-                  planKey: 'free',
-                  status: 'inactive',
-                  startDate: new Date(),
-                  provider: 'stripe',
-                  interval: 'monthly',
-                  seats: 3,
-                  storageUsed: 0,
-                },
-                settings: {
-                  theme: 'auto',
-                  notifications: {
-                    email: true,
-                    push: true,
-                  },
-                  timezone: 'UTC +07:00 - Asia / Jakarta',
-                  languagePreference: 'English',
-                },
-                lastLogin: new Date(),
-              });
-              
-              await minimalUser.save();
-              console.log('✅ Created minimal Firebase user:', minimalUser._id);
-              
-              if (!minimalUser._id || !userIdentifier.id) {
-                throw new Error('Failed to create user or invalid Firebase UID');
-              }
-              
-              const userId = minimalUser._id.toString();
-              const firebaseUid = userIdentifier.id;
-              
-              // Use createWithFirebaseUid for Firebase users
-              newJourney = await createWithFirebaseUid(
-                ApplicationJourney,
-                journeyData,
-                userId,
-                firebaseUid
-              ) as LeanJourney;
-              
-              console.log('✅ CV Journey POST API - Journey saved successfully with minimal user:', {
-                id: newJourney._id,
-                journeyId: newJourney.journeyId,
-                userId: newJourney.userId,
-                firebaseUid: newJourney.firebaseUid,
-                jobTitle: newJourney.jobTitle
-              });
-
-              return NextResponse.json({
-                success: true,
-                message: 'CV journey created successfully (user created with minimal data)',
-                data: {
-                  journey: {
-                    id: newJourney._id,
-                    journeyId: newJourney.journeyId,
-                    jobId: newJourney.jobId,
-                    jobTitle: newJourney.jobTitle,
-                    company: newJourney.company,
-                    status: newJourney.status,
-                    currentStep: newJourney.currentStep,
-                    totalSteps: newJourney.totalSteps,
-                    createdAt: newJourney.createdAt
-                  }
-                }
-              }, { status: 201 });
-              
-            } catch (minimalCreateError) {
-              console.error('❌ Failed to create minimal user:', minimalCreateError);
-              
-              // Log specific validation errors
-              if (minimalCreateError instanceof mongoose.Error.ValidationError) {
-                console.error('❌ User validation errors:', minimalCreateError.errors);
-                console.error('❌ Validation error details:', JSON.stringify(minimalCreateError.errors, null, 2));
-                return NextResponse.json(
-                  { 
-                    success: false, 
-                    error: 'User validation failed. Please complete your profile setup first.',
-                    details: Object.keys(minimalCreateError.errors).map(key => ({
-                      field: key,
-                      message: minimalCreateError.errors[key].message
-                    }))
-                  },
-                  { status: 400 }
-                );
-              } else if (minimalCreateError instanceof Error && minimalCreateError.name === 'ValidationError') {
-                // Type guard for validation errors with errors property
-                interface ValidationErrorWithDetails extends Error {
-                  errors?: Record<string, { message: string }>;
-                }
-                const errorWithErrors = minimalCreateError as ValidationErrorWithDetails;
-                if (errorWithErrors.errors) {
-                  console.error('❌ User validation errors:', errorWithErrors.errors);
-                  console.error('❌ Validation error details:', JSON.stringify(errorWithErrors.errors, null, 2));
-                  return NextResponse.json(
-                    { 
-                      success: false, 
-                      error: 'User validation failed. Please complete your profile setup first.',
-                      details: Object.keys(errorWithErrors.errors).map(key => ({
-                        field: key,
-                        message: errorWithErrors.errors![key].message
-                      }))
-                    },
-                    { status: 400 }
-                  );
-                }
-              }
-              
-              return NextResponse.json(
-                { success: false, error: 'User not found in database and could not be created. Please complete your profile setup first.' },
-                { status: 404 }
-              );
-            }
-          }
-        } else {
-          return NextResponse.json(
-            { success: false, error: 'User not found in database. Please complete your profile setup first.' },
-            { status: 404 }
-          );
-        }
-      }
-      
-      // Type guard: ensure user exists and has _id before using it
-      if (!user || !user._id || !userIdentifier.id) {
-        return NextResponse.json(
-          { success: false, error: 'User not found in database. Please complete your profile setup first.' },
-          { status: 404 }
-        );
-      }
-      
-      const userId = user._id.toString();
-      const firebaseUid = userIdentifier.id;
-      
-      
-      // Use createWithFirebaseUid for Firebase users
-      newJourney = await createWithFirebaseUid(
-        ApplicationJourney,
-        journeyData,
-        userId,
-        firebaseUid
-      ) as LeanJourney;
-    } else if (userIdentifier.type === 'objectid' && userIdentifier.id) {
-      // For regular Next.js users, create directly without Firebase UID
-      
-      const documentData = {
-        ...journeyData,
-        userId: userIdentifier.id,
-        firebaseUid: '' // Empty string for non-Firebase users
-      };
-      
-      newJourney = await ApplicationJourney.create(documentData) as LeanJourney;
-    } else {
-      return NextResponse.json(
-        { success: false, error: 'Invalid user identifier type' },
-        { status: 400 }
-      );
-    }
+    // Create new journey directly with MongoDB userId
+    const newJourney = await ApplicationJourney.create(journeyData) as LeanJourney;
 
     console.log('✅ CV Journey POST API - Journey saved successfully:', {
       id: newJourney._id,
       journeyId: newJourney.journeyId,
       userId: newJourney.userId,
-      firebaseUid: newJourney.firebaseUid,
       jobTitle: newJourney.jobTitle,
       status: newJourney.status
     });
@@ -957,27 +512,20 @@ export async function DELETE(request: NextRequest) {
     console.log('🔍 CV Journey DELETE API - Starting deletion request');
     console.log('🔍 CV Journey DELETE API - Request URL:', request.url);
     console.log('🔍 CV Journey DELETE API - Request method:', request.method);
-    await connectDB();
+    await getConnection();
     
-    // Check authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
+    // Use new authentication system
+    const authResult = await getAuthenticatedUser();
+    
+    if (!authResult) {
+      console.log('❌ CV Journey DELETE API - No valid authentication found');
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
       );
     }
-
-    // Extract user identifier from request and session
-    const userIdentifier = extractUserIdentifier(request, session);
     
-    if (!userIdentifier.id || !userIdentifier.type) {
-      console.log('❌ CV Journey DELETE API - No valid user identifier found');
-      return NextResponse.json(
-        { success: false, error: 'User identification failed' },
-        { status: 401 }
-      );
-    }
+    const userId = authResult.userId;
 
     const body = await request.json();
     console.log('🔍 CV Journey DELETE API - Request body:', body);
@@ -994,13 +542,10 @@ export async function DELETE(request: NextRequest) {
     console.log('🔍 CV Journey DELETE API - Deleting journey:', journeyId);
 
     // Find the journey first to get linked documents
-    let journeyQuery: Record<string, any> = { _id: journeyId };
-    
-    if (userIdentifier.type === 'firebase' && userIdentifier.id) {
-      journeyQuery.firebaseUid = userIdentifier.id;
-    } else if (userIdentifier.type === 'objectid' && userIdentifier.id) {
-      journeyQuery.userId = new mongoose.Types.ObjectId(userIdentifier.id);
-    }
+    const journeyQuery: Record<string, any> = { 
+      _id: journeyId,
+      userId: new mongoose.Types.ObjectId(userId)
+    };
 
     const journey = await ApplicationJourney.findOne(journeyQuery);
     

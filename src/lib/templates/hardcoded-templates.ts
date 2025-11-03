@@ -1,4 +1,4 @@
-import { ITemplate } from '@/models/Template';
+import { ITemplate } from '@/types/template';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 
 // Import hardcoded template components
@@ -23,13 +23,8 @@ export const CustomTemplates = {
   TheModernCVTemplate
 };
 
-// Type for template without Mongoose properties
-type HardcodedTemplate = Omit<ITemplate, '$assertPopulated' | '$clearModifiedPaths' | '$clone' | '$createModifiedPathsSnapshot' | '$get' | '$getPopulatedDocs' | '$ignore' | '$inc' | '$init' | '$isDefault' | '$isDeleted' | '$isEmpty' | '$isModified' | '$isNew' | '$markModified' | '$model' | '$ne' | '$op' | '$populate' | '$pull' | '$push' | '$remove' | '$replaceOne' | '$save' | '$set' | '$setDefaults' | '__parentArray' | '__parent' | '__children' | '__getPopulated' | '__setSchema' | 'createdAt' | 'updatedAt' | '__v'> & {
-  _id?: string;
-};
-
-// Hardcoded template definitions
-export const HARDCODED_TEMPLATES: HardcodedTemplate[] = [
+// Hardcoded template definitions - using ITemplate from types
+export const HARDCODED_TEMPLATES: ITemplate[] = [
   {
     id: 'data-driven-pro-template',
     name: 'Data Driven Pro',

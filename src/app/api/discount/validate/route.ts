@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-// Removed - using Clerk now
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import { getAdminDiscountCode, getAdminPricingPlan } from '@/models/admin-models';
 
 export async function POST(request: NextRequest) {
@@ -12,7 +11,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    await connectDB();
+    await getConnection();
 
     const { code, planId, amount } = await request.json();
 

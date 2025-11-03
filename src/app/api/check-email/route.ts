@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import { User } from '@/models';
 
 export async function POST(request: NextRequest) {
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-      await connectDB();
+      await getConnection();
     } catch (dbError: any) {
       console.error('❌ MongoDB connection error in check-email:', dbError);
       return NextResponse.json(

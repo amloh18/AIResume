@@ -25,6 +25,7 @@ interface MasterCV {
   status: string;
   isMaster: boolean;
   cvData?: any;
+  templateId?: string; // Template ID reference
   template?: {
     _id: string;
     name: string;
@@ -207,13 +208,13 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
       });
       console.log('🔍 MasterCVCardOverlay - UnifiedCVService.getCVs result:', allCVs);
       
-      // Filter for master CVs - handle both old format (isMaster at root) and new format (metadata.isMaster)
-      const masterCVs = allCVs.filter(cv => 
-        cv.metadata?.isMaster === true || 
-        cv.metadata?.isMaster === 'true' ||
-        cv.isMaster === true ||
-        cv.isMaster === 'true'
-      );
+      // Filter for master CVs - UnifiedCVDocument uses metadata.isMaster
+      const masterCVs = allCVs.filter(cv => {
+        const isMaster = cv.metadata?.isMaster;
+        if (typeof isMaster === 'boolean') return isMaster === true;
+        if (typeof isMaster === 'string') return isMaster === 'true';
+        return String(isMaster) === 'true';
+      });
       
       console.log('🔍 MasterCVCardOverlay - Unified service response:', masterCVs);
       
@@ -221,41 +222,39 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
         const masterCVData = masterCVs[0];
         console.log('✅ MasterCVCardOverlay - Master CV found:', masterCVData);
         console.log('🔍 MasterCVCardOverlay - Template data:', {
-          hasTemplate: !!masterCVData.template,
-          templateType: typeof masterCVData.template,
-          templateKeys: masterCVData.template ? Object.keys(masterCVData.template) : [],
-          templateId: masterCVData.templateId
+          templateId: masterCVData.templateId,
+          templateName: masterCVData.templateName
         });
         
-        // Fetch full template if only templateId is provided or template is incomplete
-        let template = masterCVData.template;
-        if (!template || typeof template === 'string' || !template.globalStyles) {
-          if (masterCVData.templateId) {
-            try {
-              console.log('🔍 MasterCVCardOverlay - Fetching full template data for:', masterCVData.templateId);
-              const templateResponse = await fetch(`/api/templates/${masterCVData.templateId}`);
-              if (templateResponse.ok) {
-                const templateResult = await templateResponse.json();
-                if (templateResult.success && templateResult.data) {
-                  template = templateResult.data;
-                  console.log('✅ MasterCVCardOverlay - Template fetched successfully');
-                }
+        // Fetch full template if templateId is provided
+        let template = null;
+        if (masterCVData.templateId) {
+          try {
+            console.log('🔍 MasterCVCardOverlay - Fetching full template data for:', masterCVData.templateId);
+            const templateResponse = await fetch(`/api/templates/${masterCVData.templateId}`);
+            if (templateResponse.ok) {
+              const templateResult = await templateResponse.json();
+              if (templateResult.success && templateResult.data) {
+                template = templateResult.data;
+                console.log('✅ MasterCVCardOverlay - Template fetched successfully');
               }
-            } catch (templateError) {
-              console.warn('⚠️ MasterCVCardOverlay - Failed to fetch template:', templateError);
             }
+          } catch (templateError) {
+            console.warn('⚠️ MasterCVCardOverlay - Failed to fetch template:', templateError);
           }
         }
         
-        // Transform to expected format - handle both old and new formats
+        // Transform to expected format - UnifiedCVDocument format
         const transformedMasterCV = {
           id: masterCVData.id,
           title: masterCVData.title,
           lastModified: new Date(masterCVData.metadata?.lastModified || masterCVData.updatedAt).toLocaleDateString(),
           status: masterCVData.status,
-          isMaster: masterCVData.metadata?.isMaster || masterCVData.isMaster || true, // Handle both formats
+          isMaster: masterCVData.metadata?.isMaster || true,
           cvData: masterCVData.cvData,
-          template: template, // Include fetched template
+          template: template, // Include fetched template if available
+          templateId: masterCVData.templateId,
+          templateName: masterCVData.templateName,
           isStarred: masterCVData.metadata?.starred || false,
           thumbnail: masterCVData.metadata?.thumbnailUrl
         };
@@ -268,7 +267,7 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
         });
         
         setMasterCV(transformedMasterCV);
-        setThumbnailUrl(transformedMasterCV.thumbnail);
+        setThumbnailUrl(transformedMasterCV.thumbnail || null);
       } else {
         console.log('❌ MasterCVCardOverlay - No master CV found');
         setError('No master CV found');

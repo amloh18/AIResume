@@ -46,18 +46,18 @@ interface CV {
 
 interface CVCardOverlayProps {
   cv: CV;
-  onEdit: (cv: CV) => void;
-  onDownload: (cv: CV) => void;
-  onDelete: (cv: CV) => void;
+  onEdit: (cv: CV) => void | Promise<void>;
+  onDownload: (cv: CV) => void | Promise<void>;
+  onDelete: (cv: CV) => void | Promise<void>;
   onToggleStar: (cvId: string) => void;
   onRename: (cvId: string, newTitle: string) => void;
   onLinkedJourney?: (cv: CV) => void; // Navigate to application tracker
-  onEditJourney?: (cv: CV, journey: any) => void; // Open JobModal
+  onEditJourney?: (cv: CV, journey: any) => void | Promise<void>; // Open JobModal
   onTitleEdit?: (cvId: string, newTitle: string) => void;
   editingCVId?: string | null;
   editingTitle?: string;
   onStartEditing?: (cv: CV) => void;
-  onSaveTitle?: (cvId: string) => void;
+  onSaveTitle?: (cvId: string) => void | Promise<void>;
   onCancelEditing?: () => void;
 }
 

@@ -2,17 +2,17 @@ import React from 'react';
 import { motion } from 'framer-motion';
 
 // Base shimmer animation
-const shimmerVariants = {
-  initial: { x: '-100%' },
-  animate: { 
-    x: '100%',
-    transition: {
-      repeat: Infinity,
-      duration: 1.5,
-      ease: 'linear'
+  const shimmerVariants: any = {
+    initial: { x: '-100%' },
+    animate: { 
+      x: '100%',
+      transition: { 
+        repeat: Infinity, 
+        duration: 1.5, 
+        ease: 'linear' 
+      }
     }
-  }
-};
+  };
 
 // Base skeleton component with optimized shimmer
 const BaseSkeleton: React.FC<{

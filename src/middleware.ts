@@ -3,8 +3,7 @@ import type { NextRequest } from 'next/server'
 import { verifyToken, isAdmin, isAuthenticated, getUserId, getUserRole } from '@/lib/edge-auth'
 import { log } from '@/lib/edge-logger'
 
-// Explicitly mark as Edge Runtime
-export const runtime = 'experimental-edge'
+// Middleware automatically runs on Edge Runtime - no runtime export needed
 
 const protectedRoutes = [
   '/dashboard',

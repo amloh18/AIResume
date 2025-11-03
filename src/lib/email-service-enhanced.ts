@@ -53,7 +53,7 @@ const getEmailConfig = (): EmailConfig | null => {
 const createTransporter = () => {
   const config = getEmailConfig();
   if (!config) return null;
-  return nodemailer.createTransporter(config);
+  return nodemailer.createTransport(config);
 };
 
 // Get sender email address
@@ -77,14 +77,14 @@ export async function sendEmailVerification(email: string, verificationLink: str
   }
 
   try {
-    const template = getEmailVerificationTemplate(firstName, verificationLink);
+    const template = getEmailVerificationTemplate({ firstName, link: verificationLink });
     const senderEmail = getSenderEmail();
     
     const mailOptions = {
       from: `"CVCircle" <${senderEmail}>`,
       to: email,
-      subject: template.subject,
-      html: template.html,
+      subject: 'Verify Your Email - CVCircle',
+      html: template,
     };
 
     const result = await transporter.sendMail(mailOptions);
@@ -106,14 +106,14 @@ export async function sendPasswordResetEmail(email: string, resetLink: string, f
   }
 
   try {
-    const template = getPasswordResetTemplate(firstName, resetLink);
+    const template = getPasswordResetTemplate({ firstName, link: resetLink });
     const senderEmail = getSenderEmail();
     
     const mailOptions = {
       from: `"CVCircle" <${senderEmail}>`,
       to: email,
-      subject: template.subject,
-      html: template.html,
+      subject: 'Reset Your Password - CVCircle',
+      html: template,
     };
 
     const result = await transporter.sendMail(mailOptions);
@@ -135,14 +135,14 @@ export async function sendWelcomeEmail(email: string, firstName: string) {
   }
 
   try {
-    const template = getWelcomeEmailTemplate(firstName);
+    const template = getWelcomeEmailTemplate({ firstName });
     const senderEmail = getSenderEmail();
     
     const mailOptions = {
       from: `"CVCircle" <${senderEmail}>`,
       to: email,
-      subject: template.subject,
-      html: template.html,
+      subject: 'Welcome to CVCircle',
+      html: template,
     };
 
     const result = await transporter.sendMail(mailOptions);
@@ -164,14 +164,14 @@ export async function sendMembershipReminderEmail(email: string, firstName: stri
   }
 
   try {
-    const template = getMembershipReminderTemplate(firstName, daysLeft);
+    const template = getMembershipReminderTemplate({ firstName, daysLeft });
     const senderEmail = getSenderEmail();
     
     const mailOptions = {
       from: `"CVCircle" <${senderEmail}>`,
       to: email,
-      subject: template.subject,
-      html: template.html,
+      subject: 'Membership Expiring Soon - CVCircle',
+      html: template,
     };
 
     const result = await transporter.sendMail(mailOptions);
@@ -199,8 +199,8 @@ export async function sendTestEmail(email: string) {
     const mailOptions = {
       from: `"CVCircle" <${senderEmail}>`,
       to: email,
-      subject: template.subject,
-      html: template.html,
+      subject: 'Test Email - CVCircle',
+      html: template,
     };
 
     const result = await transporter.sendMail(mailOptions);

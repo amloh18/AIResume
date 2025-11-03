@@ -26,6 +26,8 @@ interface CoverLetter {
   content: string;
   isStarred?: boolean;
   wordCount?: number;
+  views?: number;
+  thumbnail?: string;
   metadata?: {
     targetCompany?: string;
     targetPosition?: string;
@@ -36,16 +38,16 @@ interface CoverLetter {
 
 interface CoverLetterCardOverlayProps {
   coverLetter: CoverLetter;
-  onEdit: (coverLetter: CoverLetter) => void;
-  onDownload: (coverLetter: CoverLetter) => void;
-  onDelete: (coverLetter: CoverLetter) => void;
+  onEdit: (coverLetter: CoverLetter) => void | Promise<void>;
+  onDownload: (coverLetter: CoverLetter) => void | Promise<void>;
+  onDelete: (coverLetter: CoverLetter) => void | Promise<void>;
   onToggleStar: (coverLetterId: string) => void;
-  onEditJourney?: (coverLetter: CoverLetter, journey: any) => void;
+  onEditJourney?: (coverLetter: CoverLetter, journey: any) => void | Promise<void>;
   onTitleEdit?: (coverLetterId: string, newTitle: string) => void;
   editingCoverLetterId?: string | null;
   editingTitle?: string;
   onStartEditing?: (coverLetter: CoverLetter) => void;
-  onSaveTitle?: (coverLetterId: string) => void;
+  onSaveTitle?: (coverLetterId: string) => void | Promise<void>;
   onCancelEditing?: () => void;
 }
 

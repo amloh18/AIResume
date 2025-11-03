@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthenticatedUser } from '@/lib/auth-helpers';
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import { User } from '@/models';
 import { getAdminSubscription, getAdminPricingPlan } from '@/models/admin-models';
 
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    await connectDB();
+    await getConnection();
 
     // Find user and their subscription
     const user = await User.findOne({ email: userEmail })

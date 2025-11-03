@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import { CV } from '@/models';
 import { createErrorResponse } from '@/lib/db-utils';
 import mongoose from 'mongoose';
@@ -20,7 +20,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    await connectDB();
+    await getConnection();
     console.log('🔍 Set Master CV API - Database connected');
     
     const body = await request.json();

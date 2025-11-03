@@ -71,10 +71,8 @@ const MasterCVCard: React.FC<MasterCVCardProps> = ({
       
       // Filter for master CVs - handle both old format (isMaster at root) and new format (metadata.isMaster)
       const masterCVs = allCVs.filter(cv => 
-        cv.metadata?.isMaster === true || 
-        cv.metadata?.isMaster === 'true' ||
-        cv.isMaster === true ||
-        cv.isMaster === 'true'
+        (cv.metadata as any)?.isMaster === true || 
+        (cv.metadata as any)?.isMaster === 'true'
       );
       
       console.log('🔍 MasterCVCard - Unified service response:', masterCVs);
@@ -89,7 +87,7 @@ const MasterCVCard: React.FC<MasterCVCardProps> = ({
           title: masterCVData.title,
           lastModified: new Date(masterCVData.metadata?.lastModified || masterCVData.updatedAt).toLocaleDateString(),
           status: masterCVData.status,
-          isMaster: masterCVData.metadata?.isMaster || masterCVData.isMaster || true, // Handle both formats
+          isMaster: (masterCVData.metadata as any)?.isMaster || (masterCVData as any).isMaster || true, // Handle both formats
           cvData: masterCVData.cvData,
           isStarred: masterCVData.metadata?.starred || false,
           thumbnail: masterCVData.metadata?.thumbnailUrl

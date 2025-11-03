@@ -164,7 +164,8 @@ function hasLegacyData(cvData: UnifiedCVDataStructure, sectionType: string): boo
   } else {
     // For non-list sections like basics, check if key fields exist
     if (dataKey === 'basics') {
-      return !!(data && (data.name || data.email || data.summary));
+      const basicsData = data as any;
+      return !!(basicsData && (basicsData.name || basicsData.email || basicsData.summary));
     }
     return !!data;
   }
@@ -239,7 +240,7 @@ export function migrateLegacyCVToStructureFormat(
       });
 
       if (legacyData) {
-        content[sectionId] = { ...legacyData };
+        content[sectionId] = { ...(legacyData as any) };
       } else {
         content[sectionId] = getDefaultContentForSectionType(sectionType);
       }
@@ -325,7 +326,7 @@ export function initializeCVStructure(
       });
 
       if (existingItem) {
-        content[sectionId] = { ...existingItem };
+        content[sectionId] = { ...(existingItem as any) };
       } else {
         content[sectionId] = getDefaultContentForSectionType(sectionType);
       }

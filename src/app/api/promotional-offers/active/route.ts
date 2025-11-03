@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import PromotionalOffer from '@/models/PromotionalOffer';
 
 export async function GET(request: NextRequest) {
   try {
-    await connectDB();
+    await getConnection();
 
     const { searchParams } = new URL(request.url);
     const userType = searchParams.get('userType') || 'all';

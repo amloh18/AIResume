@@ -13,14 +13,40 @@ export interface ISectionBlueprint {
   minItems?: number;
 }
 
+// Column Layout Configuration
+export interface IColumnLayout {
+  leftColumn?: {
+    width: string;
+    sections: string[];
+  };
+  rightColumn?: {
+    width: string;
+    sections: string[];
+  };
+  main?: {
+    width: string;
+    sections: string[];
+  };
+}
+
+// Section-specific styling configuration
+export interface ISectionStyling {
+  [sectionKey: string]: {
+    [styleProperty: string]: any;
+  };
+}
+
+// Unified template type that works for both Mongoose models and plain objects
 export interface ITemplate {
-  id: string;
+  id?: string;
+  _id?: string;
   name: string;
   description?: string;
   thumbnail?: string;
   category: 'cv' | 'portfolio' | 'cover-letter' | 'resume' | 'custom';
   categories?: string[];
   tier: 'free' | 'premium';
+  layoutType?: 'one-column' | 'two-column' | 'three-column' | 'custom';
   globalStyles: {
     fontFamily: string;
     primaryColor: string;
@@ -29,20 +55,34 @@ export interface ITemplate {
     fontSize: string;
     lineHeight: string;
     spacing: string;
-    borderRadius: string;
-    boxShadow: string;
+    borderRadius?: string;
+    boxShadow?: string;
     customCSS?: string;
   };
+  columnLayout?: IColumnLayout;
+  sectionStyling?: ISectionStyling;
   availableSections: ISectionBlueprint[];
   templateData?: any;
+  customRenderer?: string;
   isActive: boolean;
   isDefault: boolean;
   isPublished: boolean;
   globalAccess: boolean;
   version: number;
   createdBy?: string;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
+  pageSettings?: {
+    format: 'A4' | 'Letter' | 'Legal' | 'custom';
+    orientation: 'portrait' | 'landscape';
+    margins: {
+      top: string;
+      bottom: string;
+      left: string;
+      right: string;
+    };
+    maxHeight?: string;
+  };
 }
 
 // Template preview data interface

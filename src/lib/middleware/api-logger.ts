@@ -211,7 +211,7 @@ export async function getAPIStats(options: {
 }) {
   try {
     const APILog = await getAPILogModel();
-    return await APILog.getStats(options);
+    return await (APILog as any).getStats(options);
   } catch (error) {
     console.error('Error getting API stats:', error);
     return null;
@@ -228,7 +228,7 @@ export async function getTopEndpoints(options: {
 }) {
   try {
     const APILog = await getAPILogModel();
-    return await APILog.getTopEndpoints(options);
+    return await (APILog as any).getTopEndpoints(options);
   } catch (error) {
     console.error('Error getting top endpoints:', error);
     return [];

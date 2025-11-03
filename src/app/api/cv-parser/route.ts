@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/lib/database';
+import getConnection from '@/lib/database';
 import { createErrorResponse } from '@/lib/db-utils';
 
 export async function POST(request: NextRequest) {
   try {
-    await connectDB();
+    await getConnection();
     
     const formData = await request.formData();
     const file = formData.get('file') as File;

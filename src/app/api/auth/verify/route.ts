@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import { User } from '@/models';
 import jwt from 'jsonwebtoken';
 import type { MyJwtPayload } from '@/types/jwt-payload';
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     
     console.log('✅ Token verified for user:', decoded.userId);
     
-    await connectDB();
+    await getConnection();
     
     // Find the user in the database
     const user = await User.findById(decoded.userId);

@@ -64,11 +64,11 @@ interface AuthProviderProps {
  */
 export function AuthProvider({ children }: AuthProviderProps) {
   // Add error boundary for useSession
-  let session, status;
+  let session, status: 'loading' | 'authenticated' | 'unauthenticated';
   try {
     const sessionData = useSession();
     session = sessionData.data;
-    status = sessionData.status;
+    status = sessionData.status as 'loading' | 'authenticated' | 'unauthenticated';
   } catch (error) {
     console.error('useSession error:', error);
     session = null;

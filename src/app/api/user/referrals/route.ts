@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-// Removed - using Clerk now
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import { User } from '@/models';
 
 export async function GET(request: NextRequest) {
@@ -16,7 +15,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    await connectDB();
+    await getConnection();
 
     // Find user
     const user = await User.findOne({ email: session.user.email });

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import { User } from '@/models';
 import jwt from 'jsonwebtoken';
 
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     
     console.log('✅ Valid session found for:', session.user.email);
     
-    await connectDB();
+    await getConnection();
     
     // Find the user in the database
     const user = await User.findOne({ email: session.user.email });
