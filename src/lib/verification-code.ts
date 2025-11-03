@@ -1,4 +1,4 @@
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import VerificationToken from '@/models/VerificationToken';
 
 /**
@@ -15,7 +15,7 @@ export function generateVerificationCode(): string {
  */
 export async function checkCodeRateLimit(email: string): Promise<boolean> {
   try {
-    await connectDB();
+    await getConnection();
     
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
     
@@ -37,7 +37,7 @@ export async function checkCodeRateLimit(email: string): Promise<boolean> {
  */
 export async function checkCodeCooldown(email: string): Promise<boolean> {
   try {
-    await connectDB();
+    await getConnection();
     
     const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
     
@@ -60,7 +60,7 @@ export async function checkCodeCooldown(email: string): Promise<boolean> {
  */
 export async function incrementFailedAttempts(codeId: string): Promise<number> {
   try {
-    await connectDB();
+    await getConnection();
     
     const result = await VerificationToken.findByIdAndUpdate(
       codeId,
@@ -81,7 +81,7 @@ export async function incrementFailedAttempts(codeId: string): Promise<number> {
  */
 export async function cleanupExpiredCodes(): Promise<number> {
   try {
-    await connectDB();
+    await getConnection();
     
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
     
@@ -110,7 +110,7 @@ export function validateCodeFormat(code: string): boolean {
  */
 export async function getRemainingAttempts(codeId: string): Promise<number> {
   try {
-    await connectDB();
+    await getConnection();
     
     const verificationToken = await VerificationToken.findById(codeId);
     if (!verificationToken) return 0;

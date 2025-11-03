@@ -90,22 +90,21 @@ export class AISuggestionApplier {
     if (suggestion.type === 'addition') {
       // Add new skills to existing category or create new category
       const categoryName = suggestion.field || 'Technical Skills';
-      const existingCategory = cvData.skills.find(s => s.name === categoryName);
+      const existingCategory = cvData.skills.find(s => s.category === categoryName);
       
       if (existingCategory) {
         // Extract skills from suggestion content
         const newSkills = this.extractSkillsFromText(suggestion.content);
-        const updatedKeywords = [...existingCategory.keywords, ...newSkills.filter(skill => !existingCategory.keywords.includes(skill))];
-        const categoryIndex = cvData.skills.findIndex(s => s.name === categoryName);
-        onUpdateField(`skills.${categoryIndex}.keywords`, updatedKeywords);
-        updatedFields.push(`skills.${categoryIndex}.keywords`);
+        const updatedSkills = [...existingCategory.skills, ...newSkills.filter(skill => !existingCategory.skills.includes(skill))];
+        const categoryIndex = cvData.skills.findIndex(s => s.category === categoryName);
+        onUpdateField(`skills.${categoryIndex}.skills`, updatedSkills);
+        updatedFields.push(`skills.${categoryIndex}.skills`);
       } else {
         // Create new skills category
         const newSkills = this.extractSkillsFromText(suggestion.content);
         const newCategory = {
-          name: categoryName,
-          level: '',
-          keywords: newSkills
+          category: categoryName,
+          skills: newSkills
         };
         onUpdateField('skills', [...cvData.skills, newCategory]);
         updatedFields.push('skills');
@@ -114,17 +113,16 @@ export class AISuggestionApplier {
       // Replace existing skills with new ones
       const newSkills = this.extractSkillsFromText(suggestion.content);
       const categoryName = suggestion.field || 'Technical Skills';
-      const existingCategoryIndex = cvData.skills.findIndex(s => s.name === categoryName);
+      const existingCategoryIndex = cvData.skills.findIndex(s => s.category === categoryName);
       
       if (existingCategoryIndex !== -1) {
-        onUpdateField(`skills.${existingCategoryIndex}.keywords`, newSkills);
-        updatedFields.push(`skills.${existingCategoryIndex}.keywords`);
+        onUpdateField(`skills.${existingCategoryIndex}.skills`, newSkills);
+        updatedFields.push(`skills.${existingCategoryIndex}.skills`);
       } else {
         // Create new category if it doesn't exist
         const newCategory = {
-          name: categoryName,
-          level: '',
-          keywords: newSkills
+          category: categoryName,
+          skills: newSkills
         };
         onUpdateField('skills', [...cvData.skills, newCategory]);
         updatedFields.push('skills');

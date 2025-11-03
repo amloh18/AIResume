@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import { PricingPlan } from '@/models';
 
 // Fallback pricing plans for when database is empty
@@ -193,7 +193,7 @@ export async function GET(request: NextRequest) {
     let plans = [];
     
     try {
-      await connectDB();
+      await getConnection();
       const dbPlans = await PricingPlan.find(query)
         .sort({ sortOrder: 1, price: 1 })
         .lean();

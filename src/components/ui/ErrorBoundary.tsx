@@ -8,6 +8,7 @@ interface Props {
   children: ReactNode;
   fallback?: ReactNode;
   onError?: (error: Error, errorInfo: ErrorInfo) => void;
+  userId?: string;
 }
 
 interface State {
@@ -57,7 +58,7 @@ class ErrorBoundary extends Component<Props, State> {
         captureException(error, {
           component: 'ErrorBoundary',
           errorInfo: errorInfo?.componentStack,
-          userId: this.props.userId,
+          userId: (this.props as any).userId,
         });
       }).catch(() => {
         // Fallback to console if error tracking fails

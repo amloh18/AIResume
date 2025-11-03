@@ -1,6 +1,7 @@
 import React, { memo, useMemo } from 'react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
-import { ITemplate, ISectionBlueprint } from '@/models/Template';
+import { ITemplate } from '@/types/template';
+import { ISectionBlueprint } from '@/models/Template';
 import { generateTemplateCSS } from './default-template';
 import { convertToTemplateSectionOrder } from '@/lib/section-mapping';
 import * as CustomTemplates from './custom-renderers';

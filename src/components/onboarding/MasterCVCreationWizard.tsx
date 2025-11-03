@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, ArrowRight, CheckCircle, User, Briefcase, GraduationCap, Award, Star, Upload, FileText, X, Trash2, Code } from 'lucide-react';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { adaptMasterCVToUnified, MasterCVOnboardingData } from '@/lib/data-adapters/cv-data-adapter';
+import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 
 interface MasterCVCreationWizardProps {
   onComplete: () => void;
@@ -163,22 +164,22 @@ const MasterCVCreationWizard: React.FC<MasterCVCreationWizardProps> = ({ onCompl
     })) : [];
 
     // Map skills with proper field mapping
-    const skills = Array.isArray(data.skills) ? data.skills.map((s: any) => ({
-      category: sanitizeString(s?.name || 'Skills'),
-      skills: Array.isArray(s?.keywords) ? s.keywords.map(sanitizeString).filter(Boolean) : []
-    })).filter(skill => skill.category && skill.skills.length > 0) : [];
+    const skills = Array.isArray(data.skills) ? data.skills.map((s: { name?: string; keywords?: string[]; category?: string; skills?: string[] }) => ({
+      category: sanitizeString(s?.name || s?.category || 'Skills'),
+      skills: Array.isArray(s?.keywords) ? s.keywords.map((kw: string) => sanitizeString(kw)).filter(Boolean) : (Array.isArray(s?.skills) ? s.skills.map((sk: string) => sanitizeString(sk)).filter(Boolean) : [])
+    })).filter((skill: { category: string; skills: string[] }) => skill.category && skill.skills.length > 0) : [];
 
     // Map projects with proper field mapping
-    const projects = Array.isArray(data.projects) ? data.projects.map((p: any) => ({
+    const projects = Array.isArray(data.projects) ? data.projects.map((p: { name?: string; description?: string; highlights?: string[]; keywords?: string[]; url?: string; startDate?: string; endDate?: string }) => ({
       title: sanitizeString(p?.name || ''),
       description: sanitizeString(p?.description || ''),
-      technologies: Array.isArray(p?.highlights) ? p.highlights.map(sanitizeString).filter(Boolean) : [],
+      technologies: Array.isArray(p?.highlights) ? p.highlights.map((h: string) => sanitizeString(h)).filter(Boolean) : [],
       url: sanitizeString(p?.url || ''),
       github: sanitizeString(''),
       startDate: asMonth(p?.startDate),
       endDate: asMonth(p?.endDate),
       current: !p?.endDate || p?.endDate === ''
-    })).filter(project => project.title) : [];
+    })).filter((project: { title: string }) => project.title) : [];
 
     return {
       personalInfo: {
@@ -251,18 +252,23 @@ const MasterCVCreationWizard: React.FC<MasterCVCreationWizardProps> = ({ onCompl
             work: (cvData.work || cvData.experience || []).map((exp: any) => ({
               name: exp.name || exp.company || '',
               position: exp.position || '',
+              url: exp.url || '',
               startDate: exp.startDate || '',
               endDate: exp.endDate || '',
               summary: exp.summary || exp.description || '',
-              highlights: exp.highlights || exp.achievements || []
+              highlights: exp.highlights || exp.achievements || [],
+              keywords: exp.keywords || []
             })),
             education: (cvData.education || []).map((edu: any) => ({
               institution: edu.institution || '',
+              url: edu.url || '',
               studyType: edu.studyType || edu.degree || '',
               area: edu.area || edu.field || '',
               startDate: edu.startDate || '',
               endDate: edu.endDate || '',
-              score: edu.score || edu.gpa || ''
+              score: edu.score || edu.gpa || '',
+              courses: edu.courses || [],
+              description: edu.description
             })),
             projects: (cvData.projects || []).map((proj: any) => ({
               name: proj.name || proj.title || '',
@@ -270,6 +276,7 @@ const MasterCVCreationWizard: React.FC<MasterCVCreationWizardProps> = ({ onCompl
               startDate: proj.startDate || '',
               endDate: proj.endDate || '',
               highlights: proj.highlights || proj.technologies || [],
+              keywords: proj.keywords || [],
               url: proj.url || ''
             })),
             skills: (cvData.skills || []).map((skill: any) => ({
@@ -367,12 +374,24 @@ const MasterCVCreationWizard: React.FC<MasterCVCreationWizardProps> = ({ onCompl
           courses: []
         }] : state.cvData.education,
         
-        // Add empty skills if none exists
+        // Convert skills from UnifiedCVDataStructure format (category/skills) to component format (name/keywords) 
+        // and add empty skills if none exists
         skills: state.cvData.skills.length === 0 ? [{
           name: '',
           level: '',
           keywords: ['']
-        }] : state.cvData.skills,
+        }] : state.cvData.skills.map((skill: { category?: string; skills?: string[]; name?: string; level?: string; keywords?: string[] }) => {
+          // If already in component format, return as is
+          if ('name' in skill || 'level' in skill) {
+            return skill;
+          }
+          // Convert from UnifiedCVDataStructure format
+          return {
+            name: skill.category || '',
+            level: 'Intermediate',
+            keywords: skill.skills || ['']
+          };
+        }),
         
         // Add empty projects if none exists
         projects: state.cvData.projects.length === 0 ? [{
@@ -381,6 +400,7 @@ const MasterCVCreationWizard: React.FC<MasterCVCreationWizardProps> = ({ onCompl
           endDate: '',
           description: '',
           highlights: [],
+          keywords: [],
           url: ''
         }] : state.cvData.projects,
         
@@ -389,8 +409,12 @@ const MasterCVCreationWizard: React.FC<MasterCVCreationWizardProps> = ({ onCompl
           name: '',
           date: '',
           issuer: '',
-          url: ''
-        }] : state.cvData.certificates,
+          url: '',
+          description: ''
+        }] : state.cvData.certificates.map((cert: any) => ({
+          ...cert,
+          description: cert.description || ''
+        })),
         
         // Add empty languages if none exists
         languages: state.cvData.languages.length === 0 ? [{
@@ -399,21 +423,47 @@ const MasterCVCreationWizard: React.FC<MasterCVCreationWizardProps> = ({ onCompl
         }] : state.cvData.languages
       };
 
-      // Update progress with complete data
+      // Convert skills back to UnifiedCVDataStructure format (category/skills) before saving
+      // Also ensure projects have keywords array
+      const finalCVData: UnifiedCVDataStructure = {
+        ...state.cvData,
+        work: completeCVData.work,
+        education: completeCVData.education,
+        projects: completeCVData.projects.map((p: any) => ({
+          ...p,
+          keywords: p.keywords || []
+        })),
+        certificates: completeCVData.certificates,
+        languages: completeCVData.languages,
+        skills: completeCVData.skills.map((skill: any) => {
+          // If in component format (name/level/keywords), convert to UnifiedCVDataStructure format
+          if ('name' in skill || 'level' in skill) {
+            return {
+              category: skill.name || skill.category || 'Skills',
+              skills: skill.keywords || skill.skills || []
+            };
+          }
+          // Already in correct format
+          return skill;
+        }),
+        basics: state.cvData.basics,
+        volunteer: state.cvData.volunteer || [],
+        awards: state.cvData.awards || [],
+        publications: state.cvData.publications || [],
+        interests: state.cvData.interests || [],
+        references: state.cvData.references || []
+      };
+      
+      // Update progress with complete data (using UPDATE_CV_DATA instead)
       dispatch({
-        type: 'UPDATE_PROGRESS',
-        payload: {
-          skills: completeCVData.skills.length,
-          projects: completeCVData.projects.length,
-          certificates: completeCVData.certificates.length,
-          languages: completeCVData.languages.length
-        }
+        type: 'UPDATE_CV_DATA',
+        payload: finalCVData
       });
       
       // Update CV data with complete structure
       dispatch({ 
         type: 'SET_CV_DATA', 
-        payload: completeCVData
+        payload: finalCVData
       });
       
       onComplete();
@@ -515,9 +565,9 @@ const MasterCVCreationWizard: React.FC<MasterCVCreationWizardProps> = ({ onCompl
                   handleFileSelect={handleFileSelect}
                   fileInputRef={fileInputRef}
                 />
-              ) : (
-                <CurrentStepComponent />
-              )}
+              ) : CurrentStepComponent ? (
+                <CurrentStepComponent {...({} as any)} />
+              ) : null}
             </motion.div>
           </AnimatePresence>
 
@@ -826,12 +876,14 @@ const EducationStep: React.FC = () => {
     if (state.cvData.education.length === 0) {
       const newEducation = {
         institution: '',
+        url: '',
         area: '',
         studyType: '',
         startDate: '',
         endDate: '',
         score: '',
-        courses: []
+        courses: [],
+        description: ''
       };
 
       dispatch({
@@ -847,12 +899,14 @@ const EducationStep: React.FC = () => {
   const addEducation = () => {
     const newEducation = {
       institution: '',
+      url: '',
       area: '',
       studyType: '',
       startDate: '',
       endDate: '',
       score: '',
-      courses: []
+      courses: [],
+      description: ''
     };
 
     dispatch({
@@ -1003,6 +1057,7 @@ const ProjectsStep: React.FC = () => {
         endDate: '',
         description: '',
         highlights: [''],
+        keywords: [],
         url: ''
       };
 
@@ -1023,6 +1078,7 @@ const ProjectsStep: React.FC = () => {
       endDate: '',
       description: '',
       highlights: [''],
+      keywords: [],
       url: ''
     };
 
@@ -1155,81 +1211,182 @@ const SkillsStep: React.FC = () => {
 
   // Initialize with one empty skill category if none exist
   React.useEffect(() => {
-    if (state.cvData.skills.length === 0) {
+    // Convert skills from UnifiedCVDataStructure format if needed
+    const skillsInComponentFormat = state.cvData.skills.length === 0 ? [] : state.cvData.skills.map((skill: any) => {
+      if ('name' in skill || 'level' in skill) {
+        return skill;
+      }
+      return {
+        name: skill.category || '',
+        level: 'Intermediate',
+        keywords: skill.skills || ['']
+      };
+    });
+
+    if (skillsInComponentFormat.length === 0) {
       const newSkill = {
         name: 'Technical Skills',
         level: 'Intermediate',
         keywords: ['']
       };
 
+      // Save in UnifiedCVDataStructure format
       dispatch({
-        type: 'SET_CV_DATA',
+        type: 'UPDATE_CV_DATA',
         payload: {
-          ...state.cvData,
-          skills: [newSkill]
+          skills: [{
+            category: 'Technical Skills',
+            skills: ['']
+          }]
         }
       });
     }
-  }, []);
+  }, [state.cvData.skills.length]);
 
   const addSkill = () => {
+    // Get current skills and add new one
+    const currentSkills = state.cvData.skills.map((skill: any) => {
+      if ('name' in skill || 'level' in skill) {
+        return skill;
+      }
+      return {
+        name: skill.category || '',
+        level: 'Intermediate',
+        keywords: skill.skills || ['']
+      };
+    });
+
     const newSkill = {
       name: '',
       level: 'Intermediate',
       keywords: ['']
     };
 
+    const updatedSkills = [...currentSkills, newSkill];
+
+    // Convert back to UnifiedCVDataStructure format when saving
     dispatch({
-      type: 'SET_CV_DATA',
+      type: 'UPDATE_CV_DATA',
       payload: {
-        ...state.cvData,
-        skills: [...state.cvData.skills, newSkill]
+        skills: updatedSkills.map((skill: any) => ({
+          category: skill.name || skill.category || 'Skills',
+          skills: skill.keywords || skill.skills || []
+        }))
       }
     });
   };
 
   const updateSkill = (index: number, field: string, value: string | string[]) => {
-    const updatedSkills = [...state.cvData.skills];
+    // Get current skills in component format
+    const currentSkills = state.cvData.skills.map((skill: any) => {
+      if ('name' in skill || 'level' in skill) {
+        return skill;
+      }
+      return {
+        name: skill.category || '',
+        level: 'Intermediate',
+        keywords: skill.skills || ['']
+      };
+    });
+
+    const updatedSkills = [...currentSkills];
     updatedSkills[index] = { ...updatedSkills[index], [field]: value };
 
+    // Convert back to UnifiedCVDataStructure format when saving
     dispatch({
-      type: 'SET_CV_DATA',
+      type: 'UPDATE_CV_DATA',
       payload: {
-        ...state.cvData,
-        skills: updatedSkills
+        skills: updatedSkills.map((skill: any) => ({
+          category: skill.name || skill.category || 'Skills',
+          skills: skill.keywords || skill.skills || []
+        }))
       }
     });
   };
 
   const removeSkill = (index: number) => {
-    if (state.cvData.skills.length > 1) {
-      const updatedSkills = state.cvData.skills.filter((_, i) => i !== index);
+    // Get current skills in component format
+    const currentSkills = state.cvData.skills.map((skill: any) => {
+      if ('name' in skill || 'level' in skill) {
+        return skill;
+      }
+      return {
+        name: skill.category || '',
+        level: 'Intermediate',
+        keywords: skill.skills || ['']
+      };
+    });
+
+    if (currentSkills.length > 1) {
+      const updatedSkills = currentSkills.filter((_, i) => i !== index);
+      
+      // Convert back to UnifiedCVDataStructure format when saving
       dispatch({
-        type: 'SET_CV_DATA',
+        type: 'UPDATE_CV_DATA',
         payload: {
-          ...state.cvData,
-          skills: updatedSkills
+          skills: updatedSkills.map((skill: any) => ({
+            category: skill.name || skill.category || 'Skills',
+            skills: skill.keywords || skill.skills || []
+          }))
         }
       });
     }
   };
 
   const addKeywordToSkill = (skillIndex: number) => {
-    const updatedSkills = [...state.cvData.skills];
-    updatedSkills[skillIndex].keywords = [...updatedSkills[skillIndex].keywords, ''];
+    // Get current skills in component format
+    const currentSkills = state.cvData.skills.map((skill: any) => {
+      if ('name' in skill || 'level' in skill) {
+        return skill;
+      }
+      return {
+        name: skill.category || '',
+        level: 'Intermediate',
+        keywords: skill.skills || ['']
+      };
+    });
+
+    const updatedSkills = [...currentSkills];
+    updatedSkills[skillIndex].keywords = [...(updatedSkills[skillIndex].keywords || []), ''];
     updateSkill(skillIndex, 'keywords', updatedSkills[skillIndex].keywords);
   };
 
   const updateKeyword = (skillIndex: number, keywordIndex: number, value: string) => {
-    const updatedSkills = [...state.cvData.skills];
-    updatedSkills[skillIndex].keywords[keywordIndex] = value;
-    updateSkill(skillIndex, 'keywords', updatedSkills[skillIndex].keywords);
+    // Get current skills in component format
+    const currentSkills = state.cvData.skills.map((skill: any) => {
+      if ('name' in skill || 'level' in skill) {
+        return skill;
+      }
+      return {
+        name: skill.category || '',
+        level: 'Intermediate',
+        keywords: skill.skills || ['']
+      };
+    });
+
+    const updatedSkills = [...currentSkills];
+    if (updatedSkills[skillIndex].keywords) {
+      updatedSkills[skillIndex].keywords[keywordIndex] = value;
+      updateSkill(skillIndex, 'keywords', updatedSkills[skillIndex].keywords);
+    }
   };
 
   const removeKeyword = (skillIndex: number, keywordIndex: number) => {
-    const updatedSkills = [...state.cvData.skills];
-    if (updatedSkills[skillIndex].keywords.length > 1) {
-      updatedSkills[skillIndex].keywords = updatedSkills[skillIndex].keywords.filter((_, i) => i !== keywordIndex);
+    // Get current skills in component format
+    const currentSkills = state.cvData.skills.map((skill: any) => {
+      if ('name' in skill || 'level' in skill) {
+        return skill;
+      }
+      return {
+        name: skill.category || '',
+        level: 'Intermediate',
+        keywords: skill.skills || ['']
+      };
+    });
+
+    const updatedSkills = [...currentSkills];
+    if (updatedSkills[skillIndex].keywords && updatedSkills[skillIndex].keywords.length > 1) {
+      updatedSkills[skillIndex].keywords = updatedSkills[skillIndex].keywords.filter((_: any, i: number) => i !== keywordIndex);
       updateSkill(skillIndex, 'keywords', updatedSkills[skillIndex].keywords);
     }
   };
@@ -1241,7 +1398,17 @@ const SkillsStep: React.FC = () => {
         <p className="text-white/60">Highlight your key skills and competencies</p>
       </div>
 
-      {state.cvData.skills.map((skill, index) => (
+      {(state.cvData.skills.map((skill: any) => {
+        // Convert from UnifiedCVDataStructure format if needed
+        if ('name' in skill || 'level' in skill) {
+          return skill;
+        }
+        return {
+          name: skill.category || '',
+          level: 'Intermediate',
+          keywords: skill.skills || ['']
+        };
+      }) as any[]).map((skill, index) => (
         <div key={index} className="bg-white/5 border border-white/10 rounded-lg p-6">
           <div className="flex justify-between items-start mb-4">
             <h3 className="text-lg font-medium text-white">Skill Category {index + 1}</h3>
@@ -1283,7 +1450,7 @@ const SkillsStep: React.FC = () => {
           <div>
             <label className="block text-sm font-medium text-white mb-2">Skills</label>
             <div className="space-y-2">
-              {(skill.keywords || ['']).map((keyword, keywordIndex) => (
+              {(skill.keywords || ['']).map((keyword: string, keywordIndex: number) => (
                 <div key={keywordIndex} className="flex gap-2">
                   <input
                     type="text"

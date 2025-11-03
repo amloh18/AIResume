@@ -128,7 +128,7 @@ export function generateDocumentNameSuggestions(options: DocumentNamingOptions):
   suggestions.push(`${documentType.replace('-', '_')}_${dateStr}`);
 
   // Remove duplicates and return
-  return [...new Set(suggestions)];
+  return Array.from(new Set(suggestions));
 }
 
 /**

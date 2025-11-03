@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import { User, CV, JobApplication } from '@/models';
 
 export async function GET(request: NextRequest) {
   try {
-    await connectDB();
+    await getConnection();
 
     // Get basic metrics
     const [

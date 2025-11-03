@@ -204,7 +204,9 @@ const pricingPlanSchema = new Schema<IPricingPlan>({
     min: [1, 'Day pass duration must be at least 1 hour']
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
 });
 
 // Virtual for checking if promotion is active
@@ -216,7 +218,8 @@ pricingPlanSchema.virtual('isPromotionActive').get(function() {
 
 // Virtual for getting effective price based on promotion
 pricingPlanSchema.virtual('effectivePrice').get(function() {
-  if (this.isPromotionActive) {
+  const isActive = this.get('isPromotionActive');
+  if (isActive) {
     return {
       monthly: this.promotionalPrice_monthly || this.price_monthly,
       quarterly: this.promotionalPrice_quarterly || this.price_quarterly,

@@ -15,7 +15,8 @@ import {
   ArrowRight,
   ArrowLeft,
   Sparkles,
-  Check
+  Check,
+  X
 } from 'lucide-react';
 
 interface WorkExperience {
@@ -36,7 +37,7 @@ interface Education {
   location: string;
   startDate: string;
   endDate: string;
-  isCurrent: boolean;
+  isCurrent?: boolean;
   description: string;
 }
 
@@ -71,7 +72,7 @@ const ExperienceStep: React.FC<ExperienceStepProps> = ({
   const [formData, setFormData] = useState<ExperienceData>(data);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingItem, setEditingItem] = useState<string | null>(null);
-  const [newItem, setNewItem] = useState<any>({});
+  const [newItem, setNewItem] = useState<WorkExperience | Education | Project>({} as WorkExperience | Education | Project);
 
   const generateId = () => Math.random().toString(36).substr(2, 9);
 
@@ -110,39 +111,39 @@ const ExperienceStep: React.FC<ExperienceStepProps> = ({
 
   const handleSaveItem = () => {
     if (activeTab === 'work') {
-      setFormData(prev => ({
+      setFormData((prev: ExperienceData) => ({
         ...prev,
-        workExperience: [...prev.workExperience, newItem]
+        workExperience: [...prev.workExperience, newItem as WorkExperience]
       }));
     } else if (activeTab === 'education') {
-      setFormData(prev => ({
+      setFormData((prev: ExperienceData) => ({
         ...prev,
-        education: [...prev.education, newItem]
+        education: [...prev.education, newItem as Education]
       }));
     } else {
-      setFormData(prev => ({
+      setFormData((prev: ExperienceData) => ({
         ...prev,
-        projects: [...prev.projects, newItem]
+        projects: [...prev.projects, newItem as Project]
       }));
     }
     
     setShowAddForm(false);
-    setNewItem({});
+    setNewItem({} as WorkExperience | Education | Project);
   };
 
   const handleDeleteItem = (id: string) => {
     if (activeTab === 'work') {
-      setFormData(prev => ({
+      setFormData((prev: ExperienceData) => ({
         ...prev,
         workExperience: prev.workExperience.filter(item => item.id !== id)
       }));
     } else if (activeTab === 'education') {
-      setFormData(prev => ({
+      setFormData((prev: ExperienceData) => ({
         ...prev,
         education: prev.education.filter(item => item.id !== id)
       }));
     } else {
-      setFormData(prev => ({
+      setFormData((prev: ExperienceData) => ({
         ...prev,
         projects: prev.projects.filter(item => item.id !== id)
       }));
@@ -162,8 +163,8 @@ const ExperienceStep: React.FC<ExperienceStepProps> = ({
           </label>
           <input
             type="text"
-            value={newItem.jobTitle || ''}
-            onChange={(e) => setNewItem(prev => ({ ...prev, jobTitle: e.target.value }))}
+            value={(newItem as WorkExperience).jobTitle || ''}
+            onChange={(e) => setNewItem((prev) => ({ ...(prev as WorkExperience), jobTitle: e.target.value }) as WorkExperience | Education | Project)}
             className="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
             placeholder="e.g., Senior Software Engineer"
           />
@@ -174,8 +175,8 @@ const ExperienceStep: React.FC<ExperienceStepProps> = ({
           </label>
           <input
             type="text"
-            value={newItem.company || ''}
-            onChange={(e) => setNewItem(prev => ({ ...prev, company: e.target.value }))}
+            value={(newItem as WorkExperience).company || ''}
+            onChange={(e) => setNewItem((prev) => ({ ...(prev as WorkExperience), company: e.target.value }) as WorkExperience | Education | Project)}
             className="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
             placeholder="e.g., Google"
           />
@@ -188,8 +189,8 @@ const ExperienceStep: React.FC<ExperienceStepProps> = ({
         </label>
         <input
           type="text"
-          value={newItem.location || ''}
-          onChange={(e) => setNewItem(prev => ({ ...prev, location: e.target.value }))}
+          value={(newItem as WorkExperience).location || ''}
+          onChange={(e) => setNewItem((prev) => ({ ...(prev as WorkExperience), location: e.target.value }) as WorkExperience | Education | Project)}
           className="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
           placeholder="e.g., San Francisco, CA"
         />
@@ -202,8 +203,8 @@ const ExperienceStep: React.FC<ExperienceStepProps> = ({
           </label>
           <input
             type="date"
-            value={newItem.startDate || ''}
-            onChange={(e) => setNewItem(prev => ({ ...prev, startDate: e.target.value }))}
+            value={(newItem as WorkExperience | Education | Project).startDate || ''}
+            onChange={(e) => setNewItem((prev) => ({ ...(prev as WorkExperience | Education | Project), startDate: e.target.value }) as WorkExperience | Education | Project)}
             className="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
           />
         </div>
@@ -214,20 +215,20 @@ const ExperienceStep: React.FC<ExperienceStepProps> = ({
           <div className="space-y-2">
             <input
               type="date"
-              value={newItem.endDate || ''}
-              onChange={(e) => setNewItem(prev => ({ ...prev, endDate: e.target.value }))}
-              disabled={newItem.isCurrent}
+              value={(newItem as WorkExperience | Education | Project).endDate || ''}
+              onChange={(e) => setNewItem((prev) => ({ ...(prev as WorkExperience | Education | Project), endDate: e.target.value }) as WorkExperience | Education | Project)}
+              disabled={(newItem as WorkExperience | Education).isCurrent}
               className="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             />
             <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
               <input
                 type="checkbox"
-                checked={newItem.isCurrent || false}
-                onChange={(e) => setNewItem(prev => ({ 
-                  ...prev, 
+                checked={((newItem as WorkExperience | Education).isCurrent) || false}
+                onChange={(e) => setNewItem((prev) => ({ 
+                  ...(prev as WorkExperience), 
                   isCurrent: e.target.checked,
-                  endDate: e.target.checked ? '' : prev.endDate
-                }))}
+                  endDate: e.target.checked ? '' : (prev as WorkExperience).endDate
+                }) as WorkExperience | Education | Project)}
                 className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
               I currently work here
@@ -242,8 +243,8 @@ const ExperienceStep: React.FC<ExperienceStepProps> = ({
         </label>
         <div className="relative">
           <textarea
-            value={newItem.description || ''}
-            onChange={(e) => setNewItem(prev => ({ ...prev, description: e.target.value }))}
+            value={(newItem as WorkExperience | Education | Project).description || ''}
+            onChange={(e) => setNewItem((prev) => ({ ...(prev as WorkExperience), description: e.target.value }) as WorkExperience | Education | Project)}
             rows={4}
             className="w-full px-4 py-3 pr-12 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
             placeholder="Describe your key responsibilities and achievements..."
@@ -269,8 +270,8 @@ const ExperienceStep: React.FC<ExperienceStepProps> = ({
           </label>
           <input
             type="text"
-            value={newItem.degree || ''}
-            onChange={(e) => setNewItem(prev => ({ ...prev, degree: e.target.value }))}
+            value={(newItem as Education).degree || ''}
+            onChange={(e) => setNewItem((prev) => ({ ...(prev as Education), degree: e.target.value }) as WorkExperience | Education | Project)}
             className="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
             placeholder="e.g., Bachelor of Science in Computer Science"
           />
@@ -281,8 +282,8 @@ const ExperienceStep: React.FC<ExperienceStepProps> = ({
           </label>
           <input
             type="text"
-            value={newItem.institution || ''}
-            onChange={(e) => setNewItem(prev => ({ ...prev, institution: e.target.value }))}
+            value={(newItem as Education).institution || ''}
+            onChange={(e) => setNewItem((prev) => ({ ...(prev as Education), institution: e.target.value }) as WorkExperience | Education | Project)}
             className="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
             placeholder="e.g., Stanford University"
           />
@@ -295,8 +296,8 @@ const ExperienceStep: React.FC<ExperienceStepProps> = ({
         </label>
         <input
           type="text"
-          value={newItem.location || ''}
-          onChange={(e) => setNewItem(prev => ({ ...prev, location: e.target.value }))}
+          value={(newItem as Education).location || ''}
+          onChange={(e) => setNewItem((prev) => ({ ...(prev as Education), location: e.target.value }) as WorkExperience | Education | Project)}
           className="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
           placeholder="e.g., Stanford, CA"
         />
@@ -309,8 +310,8 @@ const ExperienceStep: React.FC<ExperienceStepProps> = ({
           </label>
           <input
             type="date"
-            value={newItem.startDate || ''}
-            onChange={(e) => setNewItem(prev => ({ ...prev, startDate: e.target.value }))}
+            value={(newItem as WorkExperience | Education | Project).startDate || ''}
+            onChange={(e) => setNewItem((prev) => ({ ...(prev as WorkExperience | Education | Project), startDate: e.target.value }) as WorkExperience | Education | Project)}
             className="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
           />
         </div>
@@ -321,20 +322,20 @@ const ExperienceStep: React.FC<ExperienceStepProps> = ({
           <div className="space-y-2">
             <input
               type="date"
-              value={newItem.endDate || ''}
-              onChange={(e) => setNewItem(prev => ({ ...prev, endDate: e.target.value }))}
-              disabled={newItem.isCurrent}
+              value={(newItem as WorkExperience | Education | Project).endDate || ''}
+              onChange={(e) => setNewItem((prev) => ({ ...(prev as WorkExperience | Education | Project), endDate: e.target.value }) as WorkExperience | Education | Project)}
+              disabled={(newItem as WorkExperience | Education).isCurrent}
               className="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             />
             <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
               <input
                 type="checkbox"
-                checked={newItem.isCurrent || false}
-                onChange={(e) => setNewItem(prev => ({ 
-                  ...prev, 
+                checked={((newItem as WorkExperience | Education).isCurrent) || false}
+                onChange={(e) => setNewItem((prev) => ({ 
+                  ...(prev as Education), 
                   isCurrent: e.target.checked,
-                  endDate: e.target.checked ? '' : prev.endDate
-                }))}
+                  endDate: e.target.checked ? '' : (prev as Education).endDate
+                }) as WorkExperience | Education | Project)}
                 className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
               />
               Currently studying
@@ -348,8 +349,8 @@ const ExperienceStep: React.FC<ExperienceStepProps> = ({
           Description
         </label>
         <textarea
-          value={newItem.description || ''}
-          onChange={(e) => setNewItem(prev => ({ ...prev, description: e.target.value }))}
+          value={(newItem as Education).description || ''}
+          onChange={(e) => setNewItem((prev) => ({ ...(prev as Education), description: e.target.value }) as WorkExperience | Education | Project)}
           rows={3}
           className="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
           placeholder="Relevant coursework, achievements, or activities..."
@@ -364,39 +365,39 @@ const ExperienceStep: React.FC<ExperienceStepProps> = ({
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Project Name *
         </label>
-        <input
-          type="text"
-          value={newItem.name || ''}
-          onChange={(e) => setNewItem(prev => ({ ...prev, name: e.target.value }))}
-          className="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-          placeholder="e.g., E-commerce Platform"
-        />
+          <input
+            type="text"
+            value={(newItem as Project).name || ''}
+            onChange={(e) => setNewItem((prev) => ({ ...(prev as Project), name: e.target.value }) as WorkExperience | Education | Project)}
+            className="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            placeholder="e.g., E-commerce Platform"
+          />
       </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Description *
         </label>
-        <textarea
-          value={newItem.description || ''}
-          onChange={(e) => setNewItem(prev => ({ ...prev, description: e.target.value }))}
-          rows={3}
-          className="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
-          placeholder="Describe what the project does and your role..."
-        />
+          <textarea
+            value={(newItem as WorkExperience | Education | Project).description || ''}
+            onChange={(e) => setNewItem((prev) => ({ ...(prev as Project), description: e.target.value }) as WorkExperience | Education | Project)}
+            rows={3}
+            className="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all resize-none"
+            placeholder="Describe what the project does and your role..."
+          />
       </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Technologies Used
         </label>
-        <input
-          type="text"
-          value={newItem.technologies || ''}
-          onChange={(e) => setNewItem(prev => ({ ...prev, technologies: e.target.value }))}
-          className="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-          placeholder="e.g., React, Node.js, MongoDB"
-        />
+          <input
+            type="text"
+            value={(newItem as Project).technologies || ''}
+            onChange={(e) => setNewItem((prev) => ({ ...(prev as Project), technologies: e.target.value }) as WorkExperience | Education | Project)}
+            className="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            placeholder="e.g., React, Node.js, MongoDB"
+          />
       </div>
 
       <div>
@@ -405,8 +406,8 @@ const ExperienceStep: React.FC<ExperienceStepProps> = ({
         </label>
         <input
           type="url"
-          value={newItem.url || ''}
-          onChange={(e) => setNewItem(prev => ({ ...prev, url: e.target.value }))}
+          value={(newItem as Project).url || ''}
+          onChange={(e) => setNewItem((prev) => ({ ...(prev as Project), url: e.target.value }) as WorkExperience | Education | Project)}
           className="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
           placeholder="https://yourproject.com"
         />
@@ -419,8 +420,8 @@ const ExperienceStep: React.FC<ExperienceStepProps> = ({
           </label>
           <input
             type="date"
-            value={newItem.startDate || ''}
-            onChange={(e) => setNewItem(prev => ({ ...prev, startDate: e.target.value }))}
+            value={(newItem as WorkExperience | Education | Project).startDate || ''}
+            onChange={(e) => setNewItem((prev) => ({ ...(prev as WorkExperience | Education | Project), startDate: e.target.value }) as WorkExperience | Education | Project)}
             className="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
           />
         </div>
@@ -430,8 +431,8 @@ const ExperienceStep: React.FC<ExperienceStepProps> = ({
           </label>
           <input
             type="date"
-            value={newItem.endDate || ''}
-            onChange={(e) => setNewItem(prev => ({ ...prev, endDate: e.target.value }))}
+            value={(newItem as Project).endDate || ''}
+            onChange={(e) => setNewItem((prev) => ({ ...(prev as Project), endDate: e.target.value }) as WorkExperience | Education | Project)}
             className="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
           />
         </div>
@@ -576,7 +577,7 @@ const ExperienceStep: React.FC<ExperienceStepProps> = ({
                 <button
                   onClick={() => {
                     setShowAddForm(false);
-                    setNewItem({});
+                    setNewItem({} as WorkExperience | Education | Project);
                   }}
                   className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                 >
@@ -592,7 +593,7 @@ const ExperienceStep: React.FC<ExperienceStepProps> = ({
                 <button
                   onClick={() => {
                     setShowAddForm(false);
-                    setNewItem({});
+                    setNewItem({} as WorkExperience | Education | Project);
                   }}
                   className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
                 >

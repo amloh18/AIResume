@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import Coupon from '@/models/Coupon';
 import User from '@/models/User';
 
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await connectDB();
+    await getConnection();
 
     const coupon = await Coupon.findOne({ code: code.toUpperCase() });
 

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import TemplateSelector from './TemplateSelector';
-import { ITemplate } from '@/models/Template';
+import { ITemplate } from '@/types/template';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { useTemplateStore } from '@/lib/stores/templateStore';
 

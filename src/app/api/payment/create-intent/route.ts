@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-// Removed - using Clerk now
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import { User } from '@/models';
 import StripeService from '@/lib/payment/stripe';
 import RazorpayService from '@/lib/payment/razorpay';
@@ -18,7 +17,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await connectDB();
+    await getConnection();
 
     const body = await request.json();
     const { planName, amount, currency, paymentMethod, billingCycle } = body;

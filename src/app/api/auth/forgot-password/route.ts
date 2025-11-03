@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import User from '@/models/User';
 import crypto from 'crypto';
 
@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await connectDB();
+    await getConnection();
 
     // Find user by email (case insensitive) - include password field
     const user = await User.findOne({ 

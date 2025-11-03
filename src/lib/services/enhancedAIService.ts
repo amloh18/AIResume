@@ -266,7 +266,15 @@ export class EnhancedAIService {
   private static generateSkillsSuggestions(cvData: UnifiedCVDataStructure, jobData: Job | null): string[] {
     const suggestions: string[] = [];
     const skills = cvData.skills || [];
-    const totalKeywords = skills.reduce((acc, skill) => acc + (skill.keywords?.length || 0), 0);
+    const totalKeywords = skills.reduce((acc, skill) => {
+      if ('skills' in skill && Array.isArray(skill.skills)) {
+        return acc + skill.skills.length;
+      }
+      if ('keywords' in skill && Array.isArray(skill.keywords)) {
+        return acc + skill.keywords.length;
+      }
+      return acc;
+    }, 0);
 
     if (totalKeywords < 10) {
       suggestions.push('Add more skills to reach 15-25 relevant hard skills. Categorize by type (Technical, Soft Skills, Tools).');

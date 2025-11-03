@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { refreshAccessToken, getClientIP } from '@/lib/jwt';
 import { saveSessionToResponse, validateCSRFFromRequest, createSession } from '@/lib/session';
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import { User } from '@/models';
 
 // Rate limiting for refresh attempts
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Get user data for session creation
-    await connectDB();
+    await getConnection();
     
     // Decode the new tokens to get user info
     const { verifyToken } = await import('@/lib/jwt');

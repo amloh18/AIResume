@@ -23,7 +23,7 @@ export class CVSessionService {
       createdAt: new Date(),
       lastModified: new Date(),
       version: 1,
-      cvData,
+      cvData: cvData as any,
       template: {
         id: template.id,
         name: template.name,
@@ -107,6 +107,7 @@ export class CVSessionService {
     const updatedSession: CVSession = {
       ...session,
       ...updates,
+      cvData: (updates.cvData || session.cvData) as any,
       lastModified: new Date(),
       version: session.version + 1,
       isDirty: true
@@ -245,7 +246,7 @@ export class CVSessionService {
   static mergeSessionWithCV(session: CVSession, currentCVData: UnifiedCVDataStructure): CVSession {
     return {
       ...session,
-      cvData: currentCVData,
+      cvData: currentCVData as any,
       lastModified: new Date(),
       version: session.version + 1,
       isDirty: true

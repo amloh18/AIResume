@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronRight, Eye, Star, Crown, Check, Loader2, Palette } from 'lucide-react';
-import { ITemplate } from '@/models/Template';
+import { ITemplate } from '@/types/template';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { generateTemplatePreview } from '@/lib/templates/template-renderer';
 import { HARDCODED_TEMPLATES, generateHardcodedTemplatePreview } from '@/lib/templates/hardcoded-templates';
@@ -69,12 +69,12 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
     }
     
     // Check if this is a hardcoded template
-    if (template.customRenderer) {
+    if (template.customRenderer && template.id) {
       return generateHardcodedTemplatePreview(template.id);
     }
     
     // Use database template preview data
-    return generateTemplatePreview(template);
+    return generateTemplatePreview(template as any);
   };
 
   const getTierIcon = (tier: string) => {
@@ -238,7 +238,7 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
                 {previewTemplate.customRenderer ? (
                   <TemplateRenderer
                     cvData={getPreviewData(previewTemplate)}
-                    template={previewTemplate}
+                    template={previewTemplate as unknown as ITemplate}
                     className="template-preview-content"
                     customStyles={{
                       transform: 'scale(0.8)',
@@ -248,8 +248,7 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
                   />
                 ) : (
                   <CVPreviewContent
-                    cvData={getPreviewData(previewTemplate)}
-                    template={previewTemplate}
+                    cvData={getPreviewData(previewTemplate) || null}
                   />
                 )}
               </div>

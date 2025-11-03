@@ -1,4 +1,4 @@
-import { connectDB } from '@/lib/mongodb';
+import getConnection from '@/lib/database';
 import UserSettings from '@/models/UserSettings';
 import Job from '@/models/Job';
 import { CalendarService } from './calendarService';
@@ -9,7 +9,7 @@ export class AutoSyncService {
    */
   static async syncUserJobApplications(userId: string, firebaseUid?: string): Promise<void> {
     try {
-      await connectDB();
+      await getConnection();
       
       // Get user settings
       const userSettings = await UserSettings.findOne(
@@ -82,7 +82,7 @@ export class AutoSyncService {
    */
   static async syncAllUsersJobApplications(): Promise<void> {
     try {
-      await connectDB();
+      await getConnection();
       
       // Get all users with calendar sync enabled
       const usersWithCalendarSync = await UserSettings.find({
@@ -111,7 +111,7 @@ export class AutoSyncService {
    */
   static async isCalendarSyncEnabled(userId: string, firebaseUid?: string): Promise<boolean> {
     try {
-      await connectDB();
+      await getConnection();
       
       const userSettings = await UserSettings.findOne(
         firebaseUid ? { firebaseUid } : { userId }

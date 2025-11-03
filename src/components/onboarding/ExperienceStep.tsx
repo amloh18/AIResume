@@ -66,6 +66,7 @@ export default function ExperienceStep({ onNext, onBack }: ExperienceStepProps) 
       endDate: '',
       description: '',
       highlights: [''],
+      keywords: [],
       url: ''
     };
 

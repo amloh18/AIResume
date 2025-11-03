@@ -139,10 +139,10 @@ export class CVJourneyLookupService {
    * Get comprehensive journey info for studio initialization
    */
   static async getJourneyInfoForStudio(
+    userId: string,
     cvId?: string | null,
     coverLetterId?: string | null,
-    jobId?: string | null,
-    userId: string
+    jobId?: string | null
   ): Promise<CVJourneyInfo | null> {
     try {
       console.log('🔍 CVJourneyLookupService - Getting journey info for studio:', {

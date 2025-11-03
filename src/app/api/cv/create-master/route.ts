@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-// Removed - using Clerk now
-import { connectToDatabase } from '@/lib/mongodb';
+import getConnection from '@/lib/database';
 import User from '@/models/User';
 import CV from '@/models/CV';
 
@@ -20,7 +19,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'CV data is required' }, { status: 400 });
     }
 
-    await connectToDatabase();
+    await getConnection();
 
     // Find user
     const user = await User.findOne({ email: session.user.email });

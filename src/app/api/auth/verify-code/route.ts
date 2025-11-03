@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import VerificationToken from '@/models/VerificationToken';
 import User from '@/models/User';
 import mongoose from 'mongoose';
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await connectDB();
+    await getConnection();
 
     // Find verification token
     const verificationToken = await VerificationToken.findOne({

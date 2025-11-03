@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 
 export async function GET(request: NextRequest) {
   try {
-    await connectDB();
+    await getConnection();
 
     // Test database connection
     const dbStatus = await testDatabaseConnection();
@@ -70,7 +70,7 @@ async function testDatabaseConnection() {
   try {
     const startTime = Date.now();
     // Simple database ping
-    await connectDB();
+    await getConnection();
     const responseTime = Date.now() - startTime;
     
     return {

@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 
 export async function GET(request: NextRequest) {
   try {
-    await connectDB();
+    await getConnection();
 
     const { searchParams } = new URL(request.url);
     const range = searchParams.get('range') || '30d';

@@ -144,7 +144,7 @@ export class MongooseService<T extends Document> {
   // Bulk operations
   async bulkCreate(data: Partial<T>[]): Promise<T[]> {
     try {
-      return await this.model.insertMany(data);
+      return await this.model.insertMany(data) as unknown as T[];
     } catch (error) {
       throw this.handleError(error);
     }

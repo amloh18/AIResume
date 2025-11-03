@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import AdminAuth from '@/models/AdminAuth';
 
 // Admin authentication using database
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Connect to database
-    await connectDB();
+    await getConnection();
 
     // Find admin user by email
     const adminUser = await AdminAuth.findOne({ email: email.toLowerCase() }).select('+password');

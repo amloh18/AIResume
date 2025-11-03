@@ -47,7 +47,7 @@ export async function resolveUserFromAuthProvider(
     const user = await User.findOne({ 
       authProviderId,
       authProvider 
-    }).lean();
+    }).lean().exec();
 
     if (!user) {
       return {
@@ -56,11 +56,20 @@ export async function resolveUserFromAuthProvider(
       };
     }
 
+    // TypeScript may see this as potentially array, but findOne returns single or null
+    const userDoc = Array.isArray(user) ? user[0] : user;
+    if (!userDoc) {
+      return {
+        success: false,
+        error: 'User not found in database'
+      };
+    }
+
     return {
       success: true,
-      mongoUserId: user._id,
-      authProviderId: user.authProviderId,
-      authProvider: user.authProvider
+      mongoUserId: userDoc._id as any,
+      authProviderId: userDoc.authProviderId,
+      authProvider: userDoc.authProvider
     };
   } catch (error) {
     console.error('Error resolving user from auth provider:', error);
@@ -222,9 +231,11 @@ export async function migrateFirebaseUidToUserId(firebaseUid: string): Promise<m
     const user = await User.findOne({ 
       authProviderId: firebaseUid,
       authProvider: 'firebase'
-    }).lean();
+    }).lean().exec();
     
-    return user?._id || null;
+    if (!user) return null;
+    const userDoc = Array.isArray(user) ? user[0] : user;
+    return (userDoc?._id as any) || null;
   } catch (error) {
     console.error('Error migrating Firebase UID:', error);
     return null;
@@ -257,8 +268,11 @@ export async function resolveUserIdFromMixed(
       const user = await User.findOne({ 
         authProviderId: userIdStr,
         authProvider: 'google'
-      }).lean();
-      return user?._id || null;
+      }).lean().exec();
+      if (!user) return null;
+      const userDoc = Array.isArray(user) ? user[0] : user;
+      if (!userDoc || !userDoc._id) return null;
+      return userDoc._id as mongoose.Types.ObjectId;
     }
     
     return null;

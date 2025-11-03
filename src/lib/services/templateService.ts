@@ -1,7 +1,7 @@
-import { Template } from '@/lib/stores/templateStore';
+import { ITemplate } from '@/types/template';
 
 export class TemplateService {
-  static async getTemplates(): Promise<Template[]> {
+  static async getTemplates(): Promise<ITemplate[]> {
     const response = await fetch('/api/templates');
     if (!response.ok) {
       throw new Error('Failed to fetch templates');
@@ -10,7 +10,7 @@ export class TemplateService {
     return data.templates;
   }
 
-  static async getTemplate(templateId: string): Promise<Template> {
+  static async getTemplate(templateId: string): Promise<ITemplate> {
     const response = await fetch(`/api/templates/${templateId}`);
     if (!response.ok) {
       throw new Error('Failed to fetch template');
@@ -19,7 +19,7 @@ export class TemplateService {
     return data.template;
   }
 
-  static async createTemplate(template: Partial<Template>): Promise<Template> {
+  static async createTemplate(template: Partial<ITemplate>): Promise<ITemplate> {
     const response = await fetch('/api/templates', {
       method: 'POST',
       headers: {
@@ -36,7 +36,7 @@ export class TemplateService {
     return data.template;
   }
 
-  static async updateTemplate(templateId: string, template: Partial<Template>): Promise<Template> {
+  static async updateTemplate(templateId: string, template: Partial<ITemplate>): Promise<ITemplate> {
     const response = await fetch(`/api/templates/${templateId}`, {
       method: 'PUT',
       headers: {

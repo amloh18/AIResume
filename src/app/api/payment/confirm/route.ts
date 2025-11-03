@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-// Removed - using Clerk now
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import { User } from '@/models';
 import { getAdminPricingPlan, getAdminDiscountCode, getAdminSubscription } from '@/models/admin-models';
 import StripeService from '@/lib/payment/stripe';
@@ -16,7 +15,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    await connectDB();
+    await getConnection();
 
     const body = await request.json();
     const {

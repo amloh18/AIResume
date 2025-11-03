@@ -14,8 +14,10 @@ export interface UserData {
   currentPlanKey?: string;
   subscription?: {
     planName: string;
+    planKey?: string;
     status: string;
     credits: number;
+    endDate?: string;
   };
   settings?: any;
   createdAt?: string;

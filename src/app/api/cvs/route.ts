@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import connectDB from '@/lib/database';
-import { CV, Template, User } from '@/models';
+import { getConnection } from '@/lib/database';
+import { CV, Template } from '@/models';
 import { createPaginationOptions, paginateQuery, createErrorResponse } from '@/lib/db-utils';
 import { UnifiedCVAPIResponse, UnifiedCVDocument, UnifiedCVRequest } from '@/types/unified-cv-schema';
 import { getAuthenticatedUser } from '@/lib/auth-helpers';
 import { getTemplateById, isHardcodedTemplate } from '@/lib/templates/template-utils';
-import { extractUserIdentifier, createWithFirebaseUid } from '@/lib/firebase-uid-utils';
 import { HARDCODED_TEMPLATES } from '@/lib/templates/hardcoded-templates';
 import mongoose from 'mongoose';
 
@@ -17,11 +14,11 @@ export async function GET(request: NextRequest) {
     console.log('🔍 CV API - Starting GET request');
 
     // Ensure database is connected first
-    await connectDB();
+    await getConnection();
     console.log('🔍 CV API - Database connected');
 
-    // Check authentication using NextAuth - pass request for proper cookie handling
-    const authResult = await getAuthenticatedUser(request);
+    // Check authentication using NextAuth
+    const authResult = await getAuthenticatedUser();
     console.log('🔍 CV API - Auth check:', { 
       hasAuth: !!authResult,
       email: authResult?.userEmail 
@@ -156,8 +153,7 @@ export async function GET(request: NextRequest) {
         title: cv.title,
         isMaster: cv.metadata?.isMaster,
         status: cv.status,
-        userId: cv.userId,
-        firebaseUid: cv.firebaseUid
+        userId: cv.userId
       });
     });
 
@@ -298,31 +294,22 @@ export async function POST(request: NextRequest) {
   try {
     console.log('🚀 Starting CV creation...');
 
-    // Check authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      console.log('❌ CV POST API - No session found');
+    await getConnection();
+    console.log('🚀 CV POST API - Database connected');
+
+    // Use new authentication system
+    const authResult = await getAuthenticatedUser();
+    
+    if (!authResult) {
+      console.log('❌ CV POST API - No valid authentication found');
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
       );
     }
-
-    await connectDB();
-    console.log('🚀 CV POST API - Database connected');
-
-    // Extract user identifier from request and session
-    const userIdentifier = extractUserIdentifier(request, session);
     
-    if (!userIdentifier.id || !userIdentifier.type) {
-      console.log('❌ CV POST API - No valid user identifier found');
-      return NextResponse.json(
-        { success: false, error: 'User identification failed' },
-        { status: 401 }
-      );
-    }
-    
-    console.log('🔍 CV POST API - User identifier:', userIdentifier);
+    const userId = authResult.userId;
+    console.log('🔍 CV POST API - Using authenticated user:', authResult.userEmail);
 
     const body = await request.json();
     console.log('🚀 CV POST API - Request body received');
@@ -410,41 +397,22 @@ export async function POST(request: NextRequest) {
       title, 
       status: cvDataToCreate.status,
       isMaster: cvDataToCreate.isMaster,
-      userIdentifier
+      userId
     });
 
-    // Get MongoDB userId for Firebase users
-    let userId: mongoose.Types.ObjectId;
-    let firebaseUid: string;
-    
-    if (userIdentifier.type === 'firebase') {
-      // For Firebase users, get the MongoDB ObjectId from the User collection
-      const user = await User.findOne({ firebaseUid: userIdentifier.id }).lean();
-      if (!user) {
-        console.log('❌ CV POST API - Firebase user not found in database');
-        return NextResponse.json(
-          { success: false, error: 'User not found in database' },
-          { status: 404 }
-        );
-      }
-      userId = (user as any)._id;
-      firebaseUid = userIdentifier.id;
-    } else {
-      userId = new mongoose.Types.ObjectId(userIdentifier.id);
-      firebaseUid = ''; // This should not happen in the new schema
-    }
+    // Create CV directly with MongoDB userId
+    const newCV = new CV({
+      userId: new mongoose.Types.ObjectId(userId),
+      ...cvDataToCreate,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
 
-    const newCV = await createWithFirebaseUid(
-      CV,
-      cvDataToCreate,
-      userId,
-      firebaseUid
-    );
+    await newCV.save();
 
     console.log('✅ CV POST API - CV saved successfully:', {
       id: newCV._id,
       userId: newCV.userId,
-      firebaseUid: newCV.firebaseUid,
       title: newCV.title,
       templateId: newCV.templateId
     });

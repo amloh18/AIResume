@@ -26,22 +26,22 @@ const InterestsSection: React.FC<InterestsSectionProps> = ({
       name: '',
       keywords: []
     };
-    onUpdate('interests', (prevInterests) => {
+    onUpdate('interests', (prevInterests: Array<{ name: string; keywords: string[] }>) => {
       return [...(prevInterests || []), newInterest];
     });
   };
 
   const removeInterest = (index: number) => {
-    onUpdate('interests', (prevInterests) => {
-      return (prevInterests || []).filter((_, i) => i !== index);
+    onUpdate('interests', (prevInterests: Array<{ name: string; keywords: string[] }>) => {
+      return (prevInterests || []).filter((_: any, i: number) => i !== index);
     });
   };
 
   const updateInterest = (index: number, field: string, value: any) => {
-    onUpdate('interests', (prevInterests) => {
+    onUpdate('interests', (prevInterests: Array<{ name: string; keywords: string[] }>) => {
       const newArray = [...(prevInterests || [])];
       if (!newArray[index]) {
-        newArray[index] = {};
+        newArray[index] = { name: '', keywords: [] };
       }
       newArray[index] = { ...newArray[index], [field]: value };
       return newArray;
@@ -50,10 +50,10 @@ const InterestsSection: React.FC<InterestsSectionProps> = ({
 
   const addKeyword = (index: number) => {
     if (newKeyword.trim()) {
-      onUpdate('interests', (prevInterests) => {
+      onUpdate('interests', (prevInterests: Array<{ name: string; keywords: string[] }>) => {
         const newArray = [...(prevInterests || [])];
         if (!newArray[index]) {
-          newArray[index] = { keywords: [] };
+          newArray[index] = { name: '', keywords: [] };
         }
         newArray[index] = {
           ...newArray[index],
@@ -66,7 +66,7 @@ const InterestsSection: React.FC<InterestsSectionProps> = ({
   };
 
   const removeKeyword = (index: number, keywordIndex: number) => {
-    onUpdate('interests', (prevInterests) => {
+    onUpdate('interests', (prevInterests: Array<{ name: string; keywords: string[] }>) => {
       const newArray = [...(prevInterests || [])];
       if (newArray[index] && Array.isArray(newArray[index].keywords)) {
         newArray[index] = {

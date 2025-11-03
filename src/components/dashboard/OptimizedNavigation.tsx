@@ -289,7 +289,10 @@ const OptimizedNavigation: React.FC = () => {
                 className="w-full h-full object-cover"
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
-                  e.currentTarget.nextElementSibling.style.display = 'flex';
+                  const nextSibling = e.currentTarget.nextElementSibling;
+                  if (nextSibling && 'style' in nextSibling) {
+                    (nextSibling as HTMLElement).style.display = 'flex';
+                  }
                 }}
               />
             ) : null}

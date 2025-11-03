@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import User from '@/models/User';
 import CV from '@/models/CV';
 import JobApplication from '@/models/JobApplication';
@@ -343,7 +343,7 @@ const mockupJobs = [
 
 export async function POST(request: NextRequest) {
   try {
-    await connectDB();
+    await getConnection();
 
     // Find or create user jamie@gmail.com
     let user = await User.findOne({ email: 'jamie@gmail.com' });

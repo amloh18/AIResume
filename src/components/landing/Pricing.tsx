@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Check, Star, ArrowRight, Brain, Users, Crown, Globe, CreditCard, Shield, Clock, Gift } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 import { LocationService, LocationData, PricingData } from '@/lib/payment/locationService';
 import { getRegionalPricing, isEUCountry, getEUPricing, RegionalPricing } from '@/lib/pricing/regionalPricing';
 import LoadingAnimation from '@/components/ui/LoadingAnimation';
@@ -46,6 +47,7 @@ interface PricingProps {
 }
 
 const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
+  const { data: session, status } = useSession();
   const [selectedCategory, setSelectedCategory] = useState('professional'); // 'essential' or 'professional'
   const [locationData, setLocationData] = useState<LocationData | null>(null);
   const [selectedCurrency, setSelectedCurrency] = useState<string>('GBP');
@@ -217,9 +219,9 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
 
   // Check if plan has promotional pricing
   const hasPromotionalPricing = (plan: DatabasePricingPlan): boolean => {
-    return plan.isPromotionActive && plan.effectivePrice && 
+    return Boolean(plan.isPromotionActive && plan.effectivePrice && 
            ((plan.effectivePrice.oneTime && plan.effectivePrice.oneTime < (plan.price_one_time || 0)) ||
-            (plan.effectivePrice.monthly && plan.effectivePrice.monthly < (plan.price_monthly || 0)));
+            (plan.effectivePrice.monthly && plan.effectivePrice.monthly < (plan.price_monthly || 0))));
   };
 
   // Get plan icon
@@ -237,14 +239,8 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
 
   // Handle plan selection
   const handlePlanSelect = (plan: DatabasePricingPlan) => {
-    // Check if user is authenticated (check multiple possible auth indicators)
-    const isAuthenticated = typeof window !== 'undefined' && (
-      localStorage.getItem('auth-token') ||
-      localStorage.getItem('user') ||
-      localStorage.getItem('next-auth.session-token') ||
-      localStorage.getItem('firebase-token') ||
-      localStorage.getItem('access-token')
-    );
+    // Check if user is authenticated using NextAuth session
+    const isAuthenticated = status === 'authenticated' && !!session?.user;
     
     if (!isAuthenticated) {
       // Route to signin page with plan preselected
@@ -262,10 +258,12 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
       // Extract numeric value from price string (handles commas, dots, currency symbols)
       const priceValue = parseFloat(regionalPriceStr.replace(/[^\d.,]/g, '').replace(',', ''));
       const pricingData: PricingData = {
-        price: priceValue,
-        currency: regionalPricing?.currency || 'GBP',
         originalPrice: plan.price_one_time || plan.price_monthly || 0,
-        originalCurrency: plan.currency
+        originalCurrency: plan.currency,
+        convertedPrice: priceValue,
+        convertedCurrency: regionalPricing?.currency || 'GBP',
+        exchangeRate: priceValue / (plan.price_one_time || plan.price_monthly || 1),
+        paymentPartner: 'stripe' as const
       };
       onPlanSelect(plan, pricingData);
     }
@@ -275,9 +273,9 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
   const filteredPlans = useMemo(() => {
     const filtered = pricingPlans.filter(plan => {
       if (selectedCategory === 'essential') {
-        return plan.category === 'essential' || plan.key === 'free' || plan.key === 'day_pass';
+        return plan.key === 'free' || plan.key === 'day_pass';
       } else {
-        return plan.category === 'professional' || plan.key === 'pro_monthly' || plan.key === 'pro_quarterly' || plan.key === 'pro_yearly';
+        return plan.key === 'pro_monthly' || plan.key === 'pro_quarterly' || plan.key === 'pro_yearly';
       }
     });
     return filtered;
@@ -536,7 +534,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
                           ? 'one-time' 
                           : monthlyEquivalent.showMonthly 
                             ? 'billed as shown above'
-                            : plan.billingCycle || 'one-time'}
+                            : (plan.price_quarterly ? 'quarterly' : plan.price_yearly ? 'yearly' : plan.price_monthly ? 'monthly' : 'one-time')}
                       </div>
                     </div>
                   )}

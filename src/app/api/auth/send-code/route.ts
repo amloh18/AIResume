@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sendVerificationCode } from '@/lib/email-service';
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import VerificationToken from '@/models/VerificationToken';
 import User from '@/models/User';
 import { 
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await connectDB();
+    await getConnection();
 
     // For passwordless-login, check if user exists FIRST before rate limiting
     // This ensures we show "account not registered" instead of "too many requests"

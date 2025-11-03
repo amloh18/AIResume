@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import { User } from '@/models';
 
 // Extend global type for cache
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
       userEmail = session.user.email;
     } else if (firebaseUserId) {
       // Firebase user - get user by Firebase UID
-      dbConnection = await connectDB();
+      dbConnection = await getConnection();
       const firebaseUser = await User.findOne({ firebaseUid: firebaseUserId });
       if (firebaseUser) {
         userEmail = firebaseUser.email;
@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (!dbConnection) {
-      dbConnection = await connectDB();
+      dbConnection = await getConnection();
     }
 
     // Find user with optimized query
@@ -160,7 +160,7 @@ export async function PUT(request: NextRequest) {
       userEmail = session.user.email;
     } else if (firebaseUserId) {
       // Firebase user - get user by Firebase UID
-      await connectDB();
+      await getConnection();
       const firebaseUser = await User.findOne({ firebaseUid: firebaseUserId });
       if (firebaseUser) {
         userEmail = firebaseUser.email;
@@ -174,7 +174,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    await connectDB();
+    await getConnection();
 
     const body = await request.json();
     const { firstName, lastName, username, avatar, phone, location, website, linkedin, github, summary, settings } = body;

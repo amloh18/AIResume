@@ -38,6 +38,10 @@ interface CV {
   lastModified: string;
   isMaster?: boolean;
   journeyId?: string | null;
+  metadata?: {
+    isMaster?: boolean | string;
+    [key: string]: any;
+  };
 }
 
 interface NewJourneyCardProps {

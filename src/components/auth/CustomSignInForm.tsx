@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useCustomAuth } from '@/contexts/CustomAuthContext'
+import { signIn } from 'next-auth/react'
 
 interface SignInFormData {
   email: string
@@ -18,7 +18,6 @@ export default function CustomSignInForm() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   
-  const { signIn } = useCustomAuth()
   const router = useRouter()
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -36,15 +35,26 @@ export default function CustomSignInForm() {
     setSuccess('')
 
     try {
-      const result = await signIn(formData.email, formData.password)
+      console.log('🔐 Attempting credentials sign-in...')
       
-      if (result.success) {
+      // Use NextAuth credentials provider
+      const result = await signIn('credentials', {
+        email: formData.email,
+        password: formData.password,
+        redirect: false,
+      })
+
+      if (result?.error) {
+        console.error('❌ Sign-in failed:', result.error)
+        setError(result.error === 'CredentialsSignin' ? 'Invalid email or password' : result.error)
+      } else if (result?.ok) {
+        console.log('✅ Sign-in successful, redirecting to dashboard...')
         setSuccess('Sign in successful! Redirecting...')
         setTimeout(() => {
           router.push('/dashboard')
         }, 1000)
       } else {
-        setError(result.error || 'Sign in failed')
+        setError('Authentication failed. Please try again.')
       }
     } catch (error) {
       console.error('Sign in error:', error)

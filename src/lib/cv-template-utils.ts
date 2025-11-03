@@ -43,7 +43,9 @@ export async function getCVWithTemplate(cvId: string): Promise<CVWithTemplate | 
     }
 
     // Get templateId as string for comparison
-    const templateIdString = cv.templateId?.toString() || '';
+    // cv might be an array from query result, get first item if array
+    const cvDoc = Array.isArray(cv) ? cv[0] : cv;
+    const templateIdString = cvDoc?.templateId?.toString() || '';
     
     // First check if it's a hardcoded template
     const hardcodedTemplate = HARDCODED_TEMPLATES.find(
@@ -68,12 +70,13 @@ export async function getCVWithTemplate(cvId: string): Promise<CVWithTemplate | 
           .populate('templateId', 'name globalStyles availableSections')
           .lean();
         
-        if (populatedCv?.templateId && typeof populatedCv.templateId === 'object') {
+        const populatedCvDoc = Array.isArray(populatedCv) ? populatedCv[0] : populatedCv;
+        if (populatedCvDoc?.templateId && typeof populatedCvDoc.templateId === 'object') {
           templateData = {
-            _id: (populatedCv.templateId as any)._id.toString(),
-            name: (populatedCv.templateId as any).name,
-            globalStyles: (populatedCv.templateId as any).globalStyles,
-            availableSections: (populatedCv.templateId as any).availableSections
+            _id: (populatedCvDoc.templateId as any)._id.toString(),
+            name: (populatedCvDoc.templateId as any).name,
+            globalStyles: (populatedCvDoc.templateId as any).globalStyles,
+            availableSections: (populatedCvDoc.templateId as any).availableSections
           };
           console.log('✅ getCVWithTemplate - Using database template:', templateData.name);
         } else if (templateIdString) {
@@ -112,11 +115,16 @@ export async function getCVWithTemplate(cvId: string): Promise<CVWithTemplate | 
       }
     }
 
+    const cvDocToReturn = Array.isArray(cv) ? cv[0] : cv;
+    if (!cvDocToReturn) {
+      return null;
+    }
+    
     return {
-      ...cv,
-      _id: cv._id.toString(),
+      ...cvDocToReturn,
+      _id: (cvDocToReturn._id as any).toString(),
       template: templateData
-    } as CVWithTemplate;
+    } as unknown as CVWithTemplate;
   } catch (error) {
     console.error('Error fetching CV with template:', error);
     return null;
@@ -152,7 +160,12 @@ export async function getCVsWithTemplates(
     const cvs = await cvQuery.lean();
 
     return cvs.map(cv => {
-      const templateIdString = cv.templateId?.toString() || '';
+      const cvDoc = Array.isArray(cv) ? cv[0] : cv;
+      if (!cvDoc) {
+        return null as any;
+      }
+      
+      const templateIdString = (cvDoc as any).templateId?.toString() || '';
       
       // Check hardcoded templates first
       const hardcodedTemplate = HARDCODED_TEMPLATES.find(
@@ -168,19 +181,20 @@ export async function getCVsWithTemplates(
           globalStyles: hardcodedTemplate.globalStyles,
           availableSections: hardcodedTemplate.availableSections
         };
-      } else if (cv.templateId && typeof cv.templateId === 'object') {
+      } else if ((cvDoc as any).templateId && typeof (cvDoc as any).templateId === 'object') {
         // Populated from database
+        const templateIdObj = (cvDoc as any).templateId;
         templateData = {
-          _id: cv.templateId._id.toString(),
-          name: cv.templateId.name,
-          globalStyles: cv.templateId.globalStyles,
-          availableSections: cv.templateId.availableSections
+          _id: templateIdObj._id.toString(),
+          name: templateIdObj.name,
+          globalStyles: templateIdObj.globalStyles,
+          availableSections: templateIdObj.availableSections
         };
       }
 
       return {
-        ...cv,
-        _id: cv._id.toString(),
+        ...cvDoc,
+        _id: (cvDoc as any)._id?.toString() || '',
         template: templateData
       };
     }) as CVWithTemplate[];
@@ -264,7 +278,8 @@ export async function createCVWithTemplate(
   }
 
   // Validate template is accessible
-  const isValid = await validateTemplate(template._id.toString());
+  const templateIdString = (template as any)._id?.toString() || '';
+  const isValid = await validateTemplate(templateIdString);
   if (!isValid) {
     throw new Error('Template is not accessible');
   }
@@ -273,7 +288,7 @@ export async function createCVWithTemplate(
   const newCV = new CV({
     userId,
     firebaseUid,
-    templateId: template._id,
+    templateId: (template as any)._id || templateId,
     ...cvData
   });
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import { CV, Template, User } from '@/models';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     const headers = new Headers();
     headers.set('Content-Type', 'application/json');
     
-    await connectDB();
+    await getConnection();
 
     // Try to get auth context from session
     let authContext;

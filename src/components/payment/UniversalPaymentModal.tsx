@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Check, CreditCard, Zap, Star, Shield, Crown, Gift } from 'lucide-react';
-// import { useSession } from 'next-auth/react'; // Removed - using Clerk now
 import { PricingPlan } from '@/types/pricing';
 
 interface UniversalPaymentModalProps {
@@ -40,8 +39,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
   subjectUserId,
   currentUserPlan: propCurrentUserPlan
 }) => {
-  // const { data: session } = useSession(); // Removed - using Clerk now
-  const session = null; // Temporary - will replace with Clerk user
+  const session = null; // Session handling - using unified auth system
   const [step, setStep] = useState(1);
   const [selectedPlan, setSelectedPlan] = useState<PricingPlan | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<'essential' | 'professional'>('professional');
@@ -237,8 +235,8 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
     
     // Use promotional pricing if available
     const promotional = getPromotionalPricing(plan);
-    if (promotional) {
-      return promotional.monthly || promotional.quarterly || promotional.yearly || plan.price_monthly;
+    if (promotional && promotional.pricing) {
+      return promotional.pricing.monthly || promotional.pricing.quarterly || promotional.pricing.yearly || plan.price_monthly;
     }
     
     // Return the appropriate price based on plan type
@@ -476,9 +474,9 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                   {pricingPlans.filter(plan => {
                     if (selectedCategory === 'essential') {
-                      return plan.category === 'essential';
+                      return plan.key === 'free' || plan.key === 'day_pass';
                     } else {
-                      return plan.category === 'professional';
+                      return plan.key === 'pro_monthly' || plan.key === 'pro_quarterly' || plan.key === 'pro_yearly';
                     }
                   }).map((plan) => (
                     <motion.div
@@ -565,7 +563,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                         </div>
 
                         <ul className="text-left space-y-2 mb-6">
-                          {plan.features.map((feature, index) => (
+                          {plan.features.map((feature: string, index: number) => (
                             <li key={index} className="flex items-center text-sm text-gray-600 dark:text-gray-400">
                               <Check className="w-4 h-4 text-green-500 mr-2 flex-shrink-0" />
                               {feature}

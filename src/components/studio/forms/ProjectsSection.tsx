@@ -31,10 +31,10 @@ const ProjectsSection: React.FC<ProjectsSectionProps> = ({
 
   // Update project item - use functional updates to avoid stale state
   const updateProject = (index: number, field: string, value: any) => {
-    onUpdate('projects', (prevProjects) => {
+    onUpdate('projects', (prevProjects: Array<{ name: string; startDate: string; endDate: string; description: string; highlights: string[]; keywords: string[]; url: string }>) => {
       const newArray = [...(prevProjects || [])];
       if (!newArray[index]) {
-        newArray[index] = {};
+        newArray[index] = { name: '', startDate: '', endDate: '', description: '', highlights: [], keywords: [], url: '' };
       }
       newArray[index] = { ...newArray[index], [field]: value };
       return newArray;
@@ -80,8 +80,8 @@ const ProjectsSection: React.FC<ProjectsSectionProps> = ({
             <h4 className="text-lg font-semibold text-white">{project.name || 'Project Name'}</h4>
             <button
               onClick={() => {
-                onUpdate('projects', (prevProjects) => {
-                  return (prevProjects || []).filter((_, i) => i !== index);
+                onUpdate('projects', (prevProjects: Array<{ name: string; startDate: string; endDate: string; description: string; highlights: string[]; keywords: string[]; url: string }>) => {
+                  return (prevProjects || []).filter((_: any, i: number) => i !== index);
                 });
               }}
               className="text-red-400 hover:text-red-300 transition-colors"

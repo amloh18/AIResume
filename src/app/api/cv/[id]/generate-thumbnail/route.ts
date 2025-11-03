@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import CV from '@/models/CV';
 import Template from '@/models/Template';
 
@@ -20,7 +20,7 @@ export async function POST(
 
     console.log('🔍 Thumbnail API - Generating thumbnail for CV:', { cvId, userId });
 
-    await connectDB();
+    await getConnection();
 
     // Find the CV
     const cv = await CV.findOne({ _id: cvId, userId });

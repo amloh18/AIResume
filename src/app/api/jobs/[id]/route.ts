@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import connectDB from '@/lib/database';
-import { JobApplication, User } from '@/models';
-import jwt from 'jsonwebtoken';
+import { getConnection } from '@/lib/database';
 import { getAuthenticatedUser } from '@/lib/auth-helpers';
+import { JobApplication } from '@/models';
+import jwt from 'jsonwebtoken';
 import type { MyJwtPayload } from '@/types/jwt-payload';
 
 export async function GET(
@@ -12,7 +10,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await connectDB();
+    await getConnection();
     
     let userId: string;
     
@@ -45,38 +43,18 @@ export async function GET(
       }
     } else {
       // Web interface request with session
-      const session = await getServerSession(authOptions);
+      const authResult = await getAuthenticatedUser();
       
-      // Check if userId is provided as query parameter (from authenticatedFetchWithUserId)
-      const { searchParams } = new URL(request.url);
-      const queryUserId = searchParams.get('userId');
-      
-      if (queryUserId) {
-        // Use the userId from query parameter
-        userId = queryUserId;
-        console.log('✅ Web request with userId parameter:', userId);
-      } else if (session?.user?.email) {
-        // Fallback to session-based authentication
-        await connectDB();
-        const user = await User.findOne({ email: session.user.email });
-        
-        if (!user) {
-          console.log('❌ User not found in database');
-          return NextResponse.json(
-            { success: false, error: 'User not found' },
-            { status: 404 }
-          );
-        }
-        
-        userId = user._id.toString();
-        console.log('✅ Web session verified for user:', userId);
-      } else {
-        console.log('❌ No valid session or userId parameter for web request');
+      if (!authResult) {
+        console.log('❌ No valid authentication found for web request');
         return NextResponse.json(
-          { success: false, error: 'No authorization token provided' },
+          { success: false, error: 'Unauthorized' },
           { status: 401 }
         );
       }
+      
+      userId = authResult.userId;
+      console.log('✅ Web session verified for user:', userId);
     }
     
     const resolvedParams = await params;
@@ -178,7 +156,7 @@ export async function PUT(
 ) {
   try {
     console.log('🔍 Job Update API - Starting PUT request');
-    await connectDB();
+    await getConnection();
     
     let userId: string;
     
@@ -211,38 +189,18 @@ export async function PUT(
       }
     } else {
       // Web interface request with session
-      const session = await getServerSession(authOptions);
+      const authResult = await getAuthenticatedUser();
       
-      // Check if userId is provided as query parameter (from authenticatedFetchWithUserId)
-      const { searchParams } = new URL(request.url);
-      const queryUserId = searchParams.get('userId');
-      
-      if (queryUserId) {
-        // Use the userId from query parameter
-        userId = queryUserId;
-        console.log('✅ Web request with userId parameter:', userId);
-      } else if (session?.user?.email) {
-        // Fallback to session-based authentication
-        await connectDB();
-        const user = await User.findOne({ email: session.user.email });
-        
-        if (!user) {
-          console.log('❌ User not found in database');
-          return NextResponse.json(
-            { success: false, error: 'User not found' },
-            { status: 404 }
-          );
-        }
-        
-        userId = user._id.toString();
-        console.log('✅ Web session verified for user:', userId);
-      } else {
-        console.log('❌ No valid session or userId parameter for web request');
+      if (!authResult) {
+        console.log('❌ No valid authentication found for web request');
         return NextResponse.json(
-          { success: false, error: 'No authorization token provided' },
+          { success: false, error: 'Unauthorized' },
           { status: 401 }
         );
       }
+      
+      userId = authResult.userId;
+      console.log('✅ Web session verified for user:', userId);
     }
     
     const resolvedParams = await params;
@@ -376,7 +334,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await connectDB();
+    await getConnection();
     
     let userId: string;
     
@@ -409,38 +367,18 @@ export async function DELETE(
       }
     } else {
       // Web interface request with session
-      const session = await getServerSession(authOptions);
+      const authResult = await getAuthenticatedUser();
       
-      // Check if userId is provided as query parameter (from authenticatedFetchWithUserId)
-      const { searchParams } = new URL(request.url);
-      const queryUserId = searchParams.get('userId');
-      
-      if (queryUserId) {
-        // Use the userId from query parameter
-        userId = queryUserId;
-        console.log('✅ Web request with userId parameter:', userId);
-      } else if (session?.user?.email) {
-        // Fallback to session-based authentication
-        await connectDB();
-        const user = await User.findOne({ email: session.user.email });
-        
-        if (!user) {
-          console.log('❌ User not found in database');
-          return NextResponse.json(
-            { success: false, error: 'User not found' },
-            { status: 404 }
-          );
-        }
-        
-        userId = user._id.toString();
-        console.log('✅ Web session verified for user:', userId);
-      } else {
-        console.log('❌ No valid session or userId parameter for web request');
+      if (!authResult) {
+        console.log('❌ No valid authentication found for web request');
         return NextResponse.json(
-          { success: false, error: 'No authorization token provided' },
+          { success: false, error: 'Unauthorized' },
           { status: 401 }
         );
       }
+      
+      userId = authResult.userId;
+      console.log('✅ Web session verified for user:', userId);
     }
     
     const resolvedParams = await params;

@@ -131,7 +131,7 @@ const CVPreviewThumbnail: React.FC<CVPreviewThumbnailProps> = ({
         >
           <TemplateRenderer
             cvData={cvData}
-            template={template}
+            template={template as any}
             className="template-preview-content"
             customStyles={{
               width: `${A4_WIDTH}px`,

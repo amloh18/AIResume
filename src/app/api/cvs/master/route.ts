@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import connectDB from '@/lib/database';
+import { getConnection } from '@/lib/database';
 import { CV, User } from '@/models';
 import { createErrorResponse } from '@/lib/db-utils';
 import { getAuthenticatedUser } from '@/lib/auth-helpers';
@@ -10,7 +8,7 @@ import mongoose from 'mongoose';
 // GET - Get user's master CV
 export async function GET(request: NextRequest) {
   try {
-    await connectDB();
+    await getConnection();
     
     // Check for explicit userId parameter (backward compatibility)
     const { searchParams } = new URL(request.url);
@@ -24,7 +22,7 @@ export async function GET(request: NextRequest) {
       userId = explicitUserId;
     } else {
       // Use new authentication system
-      const authResult = await getAuthenticatedUser(request);
+      const authResult = await getAuthenticatedUser();
       if (!authResult) {
         console.log('❌ Master CV API - No valid authentication found');
         return NextResponse.json(
@@ -119,10 +117,10 @@ export async function GET(request: NextRequest) {
 // POST - Duplicate master CV for a job
 export async function POST(request: NextRequest) {
   try {
-    await connectDB();
+    await getConnection();
     
     // Use new authentication system
-    const authResult = await getAuthenticatedUser(request);
+    const authResult = await getAuthenticatedUser();
     if (!authResult) {
       console.log('❌ Master CV POST API - No valid authentication found');
       return NextResponse.json(

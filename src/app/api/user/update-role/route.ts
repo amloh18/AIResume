@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-// Removed - using Clerk now
-import { connectToDatabase } from '@/lib/mongodb';
+import getConnection from '@/lib/database';
 import User from '@/models/User';
 
 export async function POST(request: NextRequest) {
@@ -19,7 +18,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid user role' }, { status: 400 });
     }
 
-    await connectToDatabase();
+    await getConnection();
 
     const user = await User.findOneAndUpdate(
       { email: session.user.email },
