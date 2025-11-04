@@ -132,13 +132,15 @@ export default function ComprehensiveATSAnalyzer({
           if (response.ok) {
             const result = await response.json();
             
-            // Use the same data structure as journey card
-            const jobData = result.success && result.data ? result.data : result.job || result;
+            // Extract job from nested structure (same as journey card fix)
+            const jobData = result.data?.job || result.job || result.data;
             
-            setLinkedJobData(jobData);
-            // Auto-select the linked job if no job is currently selected
-            if (!selectedJobId && onJobSelection) {
-              onJobSelection(journeyState.currentJobId);
+            if (jobData) {
+              setLinkedJobData(jobData);
+              // Auto-select the linked job if no job is currently selected
+              if (!selectedJobId && onJobSelection) {
+                onJobSelection(journeyState.currentJobId);
+              }
             }
           } else {
             console.error('❌ ATS Analyzer - Failed to load job:', response.status);

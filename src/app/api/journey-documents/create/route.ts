@@ -224,7 +224,7 @@ export async function POST(request: NextRequest) {
             console.log('✅ Journey Documents API - CV found in final check (race condition prevented):', cvId);
           } else {
             // Duplicate master CV
-            const cvTitle = `${journey.jobTitle}-${journey.company}-CV`;
+            const cvTitle = `${journey.company}_${journey.jobTitle} | CV`;
             
             const duplicatedCV = new CV({
               title: cvTitle,

@@ -1,11 +1,11 @@
 'use client';
 
 import React from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Copy } from 'lucide-react';
 
 interface LanguagesSectionProps {
   data: any[];
-  onUpdate: (path: string, value: any) => void;
+  onUpdate: (data: any[]) => void;
   onAdd: () => void;
   onRemove: (index: number) => void;
 }
@@ -19,31 +19,23 @@ const LanguagesSection: React.FC<LanguagesSectionProps> = ({
   // Ensure we have proper data structure
   const safeData = Array.isArray(data) ? data : [];
 
-  const addLanguage = () => {
-    const newLanguage = {
-      language: '',
-      fluency: ''
-    };
-    onUpdate('languages', (prevLanguages: Array<{ language: string; fluency: string }>) => {
-      return [...(prevLanguages || []), newLanguage];
-    });
-  };
-
-  const removeLanguage = (index: number) => {
-    onUpdate('languages', (prevLanguages: Array<{ language: string; fluency: string }>) => {
-      return (prevLanguages || []).filter((_: any, i: number) => i !== index);
-    });
-  };
-
   const updateLanguage = (index: number, field: string, value: any) => {
-    onUpdate('languages', (prevLanguages: Array<{ language: string; fluency: string }>) => {
-      const newArray = [...(prevLanguages || [])];
-      if (!newArray[index]) {
-        newArray[index] = { language: '', fluency: '' };
-      }
-      newArray[index] = { ...newArray[index], [field]: value };
-      return newArray;
-    });
+    const updatedData = [...safeData];
+    if (!updatedData[index]) {
+      updatedData[index] = { language: '', fluency: '' };
+    }
+    updatedData[index] = { ...updatedData[index], [field]: value };
+    onUpdate(updatedData);
+  };
+
+  const duplicateLanguage = (index: number) => {
+    const languageToDuplicate = safeData[index];
+    if (languageToDuplicate) {
+      const duplicated = JSON.parse(JSON.stringify(languageToDuplicate));
+      const updatedData = [...safeData];
+      updatedData.splice(index + 1, 0, duplicated);
+      onUpdate(updatedData);
+    }
   };
 
   const fluencyLevels = [
@@ -59,12 +51,25 @@ const LanguagesSection: React.FC<LanguagesSectionProps> = ({
         <div key={index} className="bg-white/5 rounded-xl p-6 border border-white/10 mb-6">
           <div className="flex items-center justify-between mb-4">
             <h4 className="text-lg font-semibold text-white">{language.language || 'Language'}</h4>
-            <button
-              onClick={() => removeLanguage(index)}
-              className="text-red-400 hover:text-red-300 transition-colors"
-            >
-              <Trash2 size={16} />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => duplicateLanguage(index)}
+                className="text-blue-400 hover:text-blue-300 transition-colors"
+                title="Duplicate this language"
+              >
+                <Copy size={16} />
+              </button>
+              <button
+                onClick={() => {
+                  const updatedData = safeData.filter((_, i) => i !== index);
+                  onUpdate(updatedData);
+                }}
+                className="text-red-400 hover:text-red-300 transition-colors"
+                title="Delete this language"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -99,7 +104,13 @@ const LanguagesSection: React.FC<LanguagesSectionProps> = ({
       ))}
       
       <button
-        onClick={addLanguage}
+        onClick={() => {
+          const newLanguage = {
+            language: '',
+            fluency: ''
+          };
+          onUpdate([...safeData, newLanguage]);
+        }}
         className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/60 hover:text-[#80FF00] rounded-xl transition-colors flex items-center justify-center gap-2"
       >
         <Plus size={20} />

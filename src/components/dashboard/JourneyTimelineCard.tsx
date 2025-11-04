@@ -1553,9 +1553,15 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
       const response = await fetch(`/api/jobs/${jobId}`);
       if (response.ok) {
         const result = await response.json();
-        if (result.success && result.data) {
-          setJobDetails(result.data);
-          console.log('✅ JourneyTimelineCard - Job details loaded:', result.data);
+        if (result.success) {
+          // Handle both nested structure (result.data.job) and flat structure (result.job)
+          const jobData = result.data?.job || result.job || result.data;
+          if (jobData) {
+            setJobDetails(jobData); // Store the job directly, not nested
+            console.log('✅ JourneyTimelineCard - Job details loaded:', jobData);
+          } else {
+            console.warn('⚠️ JourneyTimelineCard - Job details response missing job data:', result);
+          }
         } else {
           console.warn('⚠️ JourneyTimelineCard - Job details response missing data:', result);
         }
@@ -2573,18 +2579,19 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
               <div className="space-y-3">
                 {/* Extract job data from nested structure */}
                 {(() => {
-                  const job = jobDetails.job || jobDetails;
+                  // jobDetails is now the job object directly, not nested
+                  const job = jobDetails?.job || jobDetails;
                   return (
                     <>
                       {/* Quick Stats Row */}
                       <div className="flex flex-wrap items-center gap-3 text-xs text-white/80">
-                        {job.location && (
+                        {job?.location && (
                           <div className="flex items-center gap-1">
                             <MapPin className="h-3 w-3 text-blue-400" />
                             <span>{job.location}</span>
                           </div>
                         )}
-                        {job.salary && (job.salary.min || job.salary.max) && (
+                        {job?.salary && (job.salary.min || job.salary.max) && (
                           <div className="flex items-center gap-1">
                             <DollarSign className="h-3 w-3 text-green-400" />
                             <span>
@@ -2598,7 +2605,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                             </span>
                           </div>
                         )}
-                        {job.priority && (
+                        {job?.priority && (
                           <div className="flex items-center gap-1">
                             <Star className={`h-3 w-3 ${
                               job.priority === 'high' ? 'text-red-400' : 
@@ -2607,13 +2614,13 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                             <span className="capitalize">{job.priority}</span>
                           </div>
                         )}
-                        {job.deadline && (
+                        {job?.deadline && (
                           <div className="flex items-center gap-1">
                             <Calendar className="h-3 w-3 text-purple-400" />
                             <span>{new Date(job.deadline).toLocaleDateString()}</span>
                           </div>
                         )}
-                        {job.status && job.status !== 'created' && (
+                        {job?.status && job.status !== 'created' && (
                           <div className="flex items-center gap-1">
                             <CheckCircle className="h-3 w-3 text-green-400" />
                             <span className="capitalize">{job.status}</span>
@@ -2622,7 +2629,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                       </div>
 
                       {/* Job Description (Compact) */}
-                      {job.jobDescription || job.description ? (
+                      {(job?.jobDescription || job?.description) ? (
                         <div className="relative">
                           <div className="text-xs text-white/60 mb-1">Description:</div>
                           <div className="relative max-h-16 overflow-hidden">
@@ -2636,13 +2643,13 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
 
                       {/* Secondary Info Row */}
                       <div className="flex flex-wrap items-center gap-3 text-xs text-white/60">
-                        {job.type && (
+                        {job?.type && (
                           <div className="flex items-center gap-1">
                             <Briefcase className="h-3 w-3 text-orange-400" />
                             <span className="capitalize">{job.type}</span>
                           </div>
                         )}
-                        {job.remote !== undefined && (
+                        {job?.remote !== undefined && (
                           <div className="flex items-center gap-1">
                             <ExternalLink className="h-3 w-3 text-cyan-400" />
                             <span>{job.remote ? 'Remote' : 'On-site'}</span>

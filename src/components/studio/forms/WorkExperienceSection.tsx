@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Copy } from 'lucide-react';
 import WYSIWYGEditor, { WYSIWYGToolbar } from '@/components/ui/WYSIWYGEditor';
 
 interface WorkExperienceSectionProps {
@@ -53,6 +53,16 @@ const WorkExperienceSection: React.FC<WorkExperienceSectionProps> = ({
     onUpdate(updatedData);
   };
 
+  const duplicateWorkItem = (index: number) => {
+    const workToDuplicate = safeData[index];
+    if (workToDuplicate) {
+      const duplicated = JSON.parse(JSON.stringify(workToDuplicate));
+      const updatedData = [...safeData];
+      updatedData.splice(index + 1, 0, duplicated);
+      onUpdate(updatedData);
+    }
+  };
+
   const generateAIDescription = async (index: number, workItem: any) => {
     if (!userId) return;
     
@@ -90,12 +100,22 @@ const WorkExperienceSection: React.FC<WorkExperienceSectionProps> = ({
         <div key={index} className="bg-white/5 rounded-xl p-6 border border-white/10 mb-6">
           <div className="flex items-center justify-between mb-4">
             <h4 className="text-lg font-semibold text-white">{work.position || 'Job Title'} at {work.name || 'Company'}</h4>
-            <button
-              onClick={() => removeWorkItem(index)}
-              className="text-red-400 hover:text-red-300 transition-colors"
-            >
-              <Trash2 size={16} />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => duplicateWorkItem(index)}
+                className="text-blue-400 hover:text-blue-300 transition-colors"
+                title="Duplicate this work experience"
+              >
+                <Copy size={16} />
+              </button>
+              <button
+                onClick={() => removeWorkItem(index)}
+                className="text-red-400 hover:text-red-300 transition-colors"
+                title="Delete this work experience"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

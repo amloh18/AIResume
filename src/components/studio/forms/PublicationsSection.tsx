@@ -1,12 +1,12 @@
 'use client';
 
 import React from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Copy } from 'lucide-react';
 import WYSIWYGEditor, { WYSIWYGToolbar } from '@/components/ui/WYSIWYGEditor';
 
 interface PublicationsSectionProps {
   data: any[];
-  onUpdate: (path: string, value: any) => void;
+  onUpdate: (data: any[]) => void;
   onAdd: () => void;
   onRemove: (index: number) => void;
 }
@@ -20,34 +20,23 @@ const PublicationsSection: React.FC<PublicationsSectionProps> = ({
   // Ensure we have proper data structure
   const safeData = Array.isArray(data) ? data : [];
 
-  const addPublication = () => {
-    const newPublication = {
-      name: '',
-      publisher: '',
-      releaseDate: '',
-      url: '',
-      summary: ''
-    };
-    onUpdate('publications', (prevPublications: Array<{ name: string; publisher: string; releaseDate: string; url: string; summary: string }>) => {
-      return [...(prevPublications || []), newPublication];
-    });
-  };
-
-  const removePublication = (index: number) => {
-    onUpdate('publications', (prevPublications: Array<{ name: string; publisher: string; releaseDate: string; url: string; summary: string }>) => {
-      return (prevPublications || []).filter((_: any, i: number) => i !== index);
-    });
-  };
-
   const updatePublication = (index: number, field: string, value: any) => {
-    onUpdate('publications', (prevPublications: Array<{ name: string; publisher: string; releaseDate: string; url: string; summary: string }>) => {
-      const newArray = [...(prevPublications || [])];
-      if (!newArray[index]) {
-        newArray[index] = { name: '', publisher: '', releaseDate: '', url: '', summary: '' };
-      }
-      newArray[index] = { ...newArray[index], [field]: value };
-      return newArray;
-    });
+    const updatedData = [...safeData];
+    if (!updatedData[index]) {
+      updatedData[index] = { name: '', publisher: '', releaseDate: '', url: '', summary: '' };
+    }
+    updatedData[index] = { ...updatedData[index], [field]: value };
+    onUpdate(updatedData);
+  };
+
+  const duplicatePublication = (index: number) => {
+    const publicationToDuplicate = safeData[index];
+    if (publicationToDuplicate) {
+      const duplicated = JSON.parse(JSON.stringify(publicationToDuplicate));
+      const updatedData = [...safeData];
+      updatedData.splice(index + 1, 0, duplicated);
+      onUpdate(updatedData);
+    }
   };
 
   return (
@@ -56,12 +45,25 @@ const PublicationsSection: React.FC<PublicationsSectionProps> = ({
         <div key={index} className="bg-white/5 rounded-xl p-6 border border-white/10 mb-6">
           <div className="flex items-center justify-between mb-4">
             <h4 className="text-lg font-semibold text-white">{publication.name || 'Publication Title'}</h4>
-            <button
-              onClick={() => removePublication(index)}
-              className="text-red-400 hover:text-red-300 transition-colors"
-            >
-              <Trash2 size={16} />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => duplicatePublication(index)}
+                className="text-blue-400 hover:text-blue-300 transition-colors"
+                title="Duplicate this publication"
+              >
+                <Copy size={16} />
+              </button>
+              <button
+                onClick={() => {
+                  const updatedData = safeData.filter((_, i) => i !== index);
+                  onUpdate(updatedData);
+                }}
+                className="text-red-400 hover:text-red-300 transition-colors"
+                title="Delete this publication"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -126,7 +128,10 @@ const PublicationsSection: React.FC<PublicationsSectionProps> = ({
       ))}
       
       <button
-        onClick={addPublication}
+        onClick={() => {
+          const newPublication = { name: '', publisher: '', releaseDate: '', url: '', summary: '' };
+          onUpdate([...safeData, newPublication]);
+        }}
         className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/60 hover:text-[#80FF00] rounded-xl transition-colors flex items-center justify-center gap-2"
       >
         <Plus size={20} />

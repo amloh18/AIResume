@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Copy } from 'lucide-react';
 import WYSIWYGEditor, { WYSIWYGToolbar } from '@/components/ui/WYSIWYGEditor';
 
 interface AwardsSectionProps {
@@ -26,18 +26,38 @@ const AwardsSection: React.FC<AwardsSectionProps> = ({
     onUpdate(updatedData);
   };
 
+  const duplicateAward = (index: number) => {
+    const awardToDuplicate = safeData[index];
+    if (awardToDuplicate) {
+      const duplicated = JSON.parse(JSON.stringify(awardToDuplicate));
+      const updatedData = [...safeData];
+      updatedData.splice(index + 1, 0, duplicated);
+      onUpdate(updatedData);
+    }
+  };
+
   return (
     <>
           {safeData.map((award, index) => (
         <div key={index} className="bg-white/5 rounded-xl p-6 border border-white/10 mb-6">
               <div className="flex items-center justify-between mb-4">
             <h4 className="text-lg font-semibold text-white">{award.title || 'Award Title'}</h4>
-                <button
-              onClick={() => onRemove(index)}
-              className="text-red-400 hover:text-red-300 transition-colors"
-                >
-              <Trash2 size={16} />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => duplicateAward(index)}
+                    className="text-blue-400 hover:text-blue-300 transition-colors"
+                    title="Duplicate this award"
+                  >
+                    <Copy size={16} />
+                  </button>
+                  <button
+                    onClick={() => onRemove(index)}
+                    className="text-red-400 hover:text-red-300 transition-colors"
+                    title="Delete this award"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

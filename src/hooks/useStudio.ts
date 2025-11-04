@@ -379,7 +379,13 @@ export function useStudio(): UseStudioReturn {
       const response = await fetch(`/api/jobs/${jobId}`);
       if (!response.ok) throw new Error('Job not found');
       
-      const job: JobData = await response.json();
+      const result = await response.json();
+      // Extract job from nested structure (same as journey card fix)
+      const job = result.data?.job || result.job || result.data || result;
+      
+      if (!job || !job.jobDescription) {
+        throw new Error('Job description not found');
+      }
       
       setState(prev => ({ ...prev, selectedJobId: jobId }));
       
@@ -484,8 +490,12 @@ export function useStudio(): UseStudioReturn {
 
 async function createJourneyCV(journey: ApplicationJourneyData, job: JobData, userId: string): Promise<{ newCV: CVData; newDocumentData: UnifiedCVDataStructure }> {
   // Create CV tailored for this journey
+  const cleanJobTitle = job.jobTitle?.trim() || 'Job';
+  const cleanCompany = job.company?.trim() || 'Company';
+  const cvTitle = `${cleanCompany}_${cleanJobTitle} | CV`;
+  
   const cvData = {
-    title: `CV for ${job.jobTitle} at ${job.company}`,
+    title: cvTitle,
     cvData: {} as UnifiedCVDataStructure, // Empty initial structure
     templateId: 'default-template-id' // Get from templates API
   };

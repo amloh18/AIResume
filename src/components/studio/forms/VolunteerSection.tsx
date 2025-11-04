@@ -1,12 +1,12 @@
 'use client';
 
 import React from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Copy } from 'lucide-react';
 import WYSIWYGEditor, { WYSIWYGToolbar } from '@/components/ui/WYSIWYGEditor';
 
 interface VolunteerSectionProps {
   data: any[];
-  onUpdate: (path: string, value: any) => void;
+  onUpdate: (data: any[]) => void;
   onAdd: () => void;
   onRemove: (index: number) => void;
 }
@@ -20,34 +20,23 @@ const VolunteerSection: React.FC<VolunteerSectionProps> = ({
   // Ensure we have proper data structure
   const safeData = Array.isArray(data) ? data : [];
 
-  const addVolunteer = () => {
-    const newVolunteer = {
-      organization: '',
-      position: '',
-      startDate: '',
-      endDate: '',
-      summary: ''
-    };
-    onUpdate('volunteer', (prevVolunteer: Array<{ organization: string; position: string; url: string; startDate: string; endDate: string; summary: string; highlights: string[] }>) => {
-      return [...(prevVolunteer || []), newVolunteer];
-    });
-  };
-
-  const removeVolunteer = (index: number) => {
-    onUpdate('volunteer', (prevVolunteer: Array<{ organization: string; position: string; url: string; startDate: string; endDate: string; summary: string; highlights: string[] }>) => {
-      return (prevVolunteer || []).filter((_: any, i: number) => i !== index);
-    });
-  };
-
   const updateVolunteer = (index: number, field: string, value: any) => {
-    onUpdate('volunteer', (prevVolunteer: Array<{ organization: string; position: string; url: string; startDate: string; endDate: string; summary: string; highlights: string[] }>) => {
-      const newArray = [...(prevVolunteer || [])];
-      if (!newArray[index]) {
-        newArray[index] = { organization: '', position: '', url: '', startDate: '', endDate: '', summary: '', highlights: [] };
-      }
-      newArray[index] = { ...newArray[index], [field]: value };
-      return newArray;
-    });
+    const updatedData = [...safeData];
+    if (!updatedData[index]) {
+      updatedData[index] = { organization: '', position: '', url: '', startDate: '', endDate: '', summary: '', highlights: [] };
+    }
+    updatedData[index] = { ...updatedData[index], [field]: value };
+    onUpdate(updatedData);
+  };
+
+  const duplicateVolunteer = (index: number) => {
+    const volunteerToDuplicate = safeData[index];
+    if (volunteerToDuplicate) {
+      const duplicated = JSON.parse(JSON.stringify(volunteerToDuplicate));
+      const updatedData = [...safeData];
+      updatedData.splice(index + 1, 0, duplicated);
+      onUpdate(updatedData);
+    }
   };
 
   return (
@@ -56,12 +45,25 @@ const VolunteerSection: React.FC<VolunteerSectionProps> = ({
         <div key={index} className="bg-white/5 rounded-xl p-6 border border-white/10 mb-6">
           <div className="flex items-center justify-between mb-4">
             <h4 className="text-lg font-semibold text-white">{volunteer.organization || 'Organization'}</h4>
-            <button
-              onClick={() => removeVolunteer(index)}
-              className="text-red-400 hover:text-red-300 transition-colors"
-            >
-              <Trash2 size={16} />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => duplicateVolunteer(index)}
+                className="text-blue-400 hover:text-blue-300 transition-colors"
+                title="Duplicate this volunteer experience"
+              >
+                <Copy size={16} />
+              </button>
+              <button
+                onClick={() => {
+                  const updatedData = safeData.filter((_, i) => i !== index);
+                  onUpdate(updatedData);
+                }}
+                className="text-red-400 hover:text-red-300 transition-colors"
+                title="Delete this volunteer experience"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

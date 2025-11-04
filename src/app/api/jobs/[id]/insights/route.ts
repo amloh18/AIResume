@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
-import JobApplication from '@/models/JobApplication';
-import User from '@/models/User';
+import { JobApplication } from '@/models';
 
 /**
  * GET /api/jobs/[id]/insights
@@ -25,12 +24,17 @@ export async function GET(
     }
 
     // Find the job
-    const job = await JobApplication.findById(jobId);
+    const job = await JobApplication.findById(jobId).lean();
     if (!job) {
       return NextResponse.json(
         { success: false, error: 'Job not found' },
         { status: 404 }
       );
+    }
+
+    // Ensure job has required fields
+    if (!job.jobTitle && !job.company) {
+      console.warn('⚠️ Job insights API - Job missing required fields:', { jobId, hasTitle: !!job.jobTitle, hasCompany: !!job.company });
     }
 
     // Calculate dynamic insights
@@ -40,7 +44,7 @@ export async function GET(
       success: true,
       data: {
         insights,
-        jobId: job._id,
+        jobId: job._id?.toString() || jobId,
         lastUpdated: new Date().toISOString()
       }
     });
@@ -195,9 +199,13 @@ async function calculateMarketCompetitiveness(job: any): Promise<string> {
   try {
     if (!job.jobTitle) return 'Unknown';
     
+    // Safely extract first word from job title
+    const firstWord = job.jobTitle.split(' ')[0] || job.jobTitle;
+    if (!firstWord) return 'Unknown';
+    
     // Look for similar job titles in the database
     const similarJobs = await JobApplication.find({
-      jobTitle: { $regex: new RegExp(job.jobTitle.split(' ')[0], 'i') },
+      jobTitle: { $regex: new RegExp(firstWord, 'i') },
       _id: { $ne: job._id }
     }).limit(20);
     
@@ -216,23 +224,31 @@ async function calculateMarketCompetitiveness(job: any): Promise<string> {
  */
 async function generateSalaryInsights(job: any): Promise<any> {
   try {
-    if (!job.salary) return null;
+    if (!job.salary || !job.salary.min || !job.salary.max) return null;
+    
+    // Safely extract first word from job title for search
+    const firstWord = job.jobTitle?.split(' ')[0];
+    if (!firstWord) return null;
     
     // Look for similar jobs with salary data
     const similarJobs = await JobApplication.find({
       'salary.min': { $exists: true },
       'salary.max': { $exists: true },
-      jobTitle: { $regex: new RegExp(job.jobTitle?.split(' ')[0] || '', 'i') },
+      jobTitle: { $regex: new RegExp(firstWord, 'i') },
       _id: { $ne: job._id }
     }).limit(10);
     
     if (similarJobs.length === 0) return null;
     
     // Calculate average salary range
-    const salaries = similarJobs.map(j => ({
-      min: j.salary.min,
-      max: j.salary.max
-    }));
+    const salaries = similarJobs
+      .filter(j => j.salary?.min && j.salary?.max)
+      .map(j => ({
+        min: j.salary.min,
+        max: j.salary.max
+      }));
+    
+    if (salaries.length === 0) return null;
     
     const avgMin = salaries.reduce((sum, s) => sum + s.min, 0) / salaries.length;
     const avgMax = salaries.reduce((sum, s) => sum + s.max, 0) / salaries.length;
@@ -242,7 +258,7 @@ async function generateSalaryInsights(job: any): Promise<any> {
         min: Math.round(avgMin),
         max: Math.round(avgMax)
       },
-      sampleSize: similarJobs.length,
+      sampleSize: salaries.length,
       currency: job.salary.currency || 'USD'
     };
   } catch (error) {

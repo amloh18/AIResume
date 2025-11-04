@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Plus, Trash2, X } from 'lucide-react';
+import { Plus, Trash2, X, Copy } from 'lucide-react';
 
 interface InterestsSectionProps {
   data: any[];
-  onUpdate: (path: string, value: any) => void;
+  onUpdate: (data: any[]) => void;
   onAdd: () => void;
   onRemove: (index: number) => void;
 }
@@ -21,61 +21,49 @@ const InterestsSection: React.FC<InterestsSectionProps> = ({
   // Ensure we have proper data structure
   const safeData = Array.isArray(data) ? data : [];
 
-  const addInterest = () => {
-    const newInterest = {
-      name: '',
-      keywords: []
-    };
-    onUpdate('interests', (prevInterests: Array<{ name: string; keywords: string[] }>) => {
-      return [...(prevInterests || []), newInterest];
-    });
-  };
-
-  const removeInterest = (index: number) => {
-    onUpdate('interests', (prevInterests: Array<{ name: string; keywords: string[] }>) => {
-      return (prevInterests || []).filter((_: any, i: number) => i !== index);
-    });
-  };
-
   const updateInterest = (index: number, field: string, value: any) => {
-    onUpdate('interests', (prevInterests: Array<{ name: string; keywords: string[] }>) => {
-      const newArray = [...(prevInterests || [])];
-      if (!newArray[index]) {
-        newArray[index] = { name: '', keywords: [] };
-      }
-      newArray[index] = { ...newArray[index], [field]: value };
-      return newArray;
-    });
+    const updatedData = [...safeData];
+    if (!updatedData[index]) {
+      updatedData[index] = { name: '', keywords: [] };
+    }
+    updatedData[index] = { ...updatedData[index], [field]: value };
+    onUpdate(updatedData);
+  };
+
+  const duplicateInterest = (index: number) => {
+    const interestToDuplicate = safeData[index];
+    if (interestToDuplicate) {
+      const duplicated = JSON.parse(JSON.stringify(interestToDuplicate));
+      const updatedData = [...safeData];
+      updatedData.splice(index + 1, 0, duplicated);
+      onUpdate(updatedData);
+    }
   };
 
   const addKeyword = (index: number) => {
     if (newKeyword.trim()) {
-      onUpdate('interests', (prevInterests: Array<{ name: string; keywords: string[] }>) => {
-        const newArray = [...(prevInterests || [])];
-        if (!newArray[index]) {
-          newArray[index] = { name: '', keywords: [] };
-        }
-        newArray[index] = {
-          ...newArray[index],
-          keywords: [...(newArray[index].keywords || []), newKeyword.trim()]
-        };
-        return newArray;
-      });
+      const updatedData = [...safeData];
+      if (!updatedData[index]) {
+        updatedData[index] = { name: '', keywords: [] };
+      }
+      updatedData[index] = {
+        ...updatedData[index],
+        keywords: [...(updatedData[index].keywords || []), newKeyword.trim()]
+      };
+      onUpdate(updatedData);
       setNewKeyword('');
     }
   };
 
   const removeKeyword = (index: number, keywordIndex: number) => {
-    onUpdate('interests', (prevInterests: Array<{ name: string; keywords: string[] }>) => {
-      const newArray = [...(prevInterests || [])];
-      if (newArray[index] && Array.isArray(newArray[index].keywords)) {
-        newArray[index] = {
-          ...newArray[index],
-          keywords: newArray[index].keywords.filter((_, i) => i !== keywordIndex)
-        };
-      }
-      return newArray;
-    });
+    const updatedData = [...safeData];
+    if (updatedData[index] && Array.isArray(updatedData[index].keywords)) {
+      updatedData[index] = {
+        ...updatedData[index],
+        keywords: updatedData[index].keywords.filter((_, i) => i !== keywordIndex)
+      };
+      onUpdate(updatedData);
+    }
   };
 
   return (
@@ -84,12 +72,25 @@ const InterestsSection: React.FC<InterestsSectionProps> = ({
         <div key={index} className="bg-white/5 rounded-xl p-6 border border-white/10 mb-6">
           <div className="flex items-center justify-between mb-4">
             <h4 className="text-lg font-semibold text-white">{interest.name || 'Interest Name'}</h4>
-            <button
-              onClick={() => removeInterest(index)}
-              className="text-red-400 hover:text-red-300 transition-colors"
-            >
-              <Trash2 size={16} />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => duplicateInterest(index)}
+                className="text-blue-400 hover:text-blue-300 transition-colors"
+                title="Duplicate this interest"
+              >
+                <Copy size={16} />
+              </button>
+              <button
+                onClick={() => {
+                  const updatedData = safeData.filter((_, i) => i !== index);
+                  onUpdate(updatedData);
+                }}
+                className="text-red-400 hover:text-red-300 transition-colors"
+                title="Delete this interest"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
           </div>
           
           <div className="space-y-4">
@@ -145,7 +146,10 @@ const InterestsSection: React.FC<InterestsSectionProps> = ({
       ))}
       
       <button
-        onClick={addInterest}
+        onClick={() => {
+          const newInterest = { name: '', keywords: [] };
+          onUpdate([...safeData, newInterest]);
+        }}
         className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/60 hover:text-[#80FF00] rounded-xl transition-colors flex items-center justify-center gap-2"
       >
         <Plus size={20} />

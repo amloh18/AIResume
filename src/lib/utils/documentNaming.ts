@@ -28,11 +28,11 @@ export function generateDocumentName(options: DocumentNamingOptions): string {
     
     switch (documentType) {
       case 'cv':
-        return `${cleanJobTitle}-${cleanCompany}-CV`;
+        return `${cleanCompany}_${cleanJobTitle} | CV`;
       case 'cover-letter':
-        return `${cleanJobTitle}-${cleanCompany}-CoverLetter`;
+        return `${cleanCompany}_${cleanJobTitle} | Cover_Letter`;
       default:
-        return `${cleanJobTitle}-${cleanCompany}-Document`;
+        return `${cleanCompany}_${cleanJobTitle} | Document`;
     }
   }
 
@@ -41,11 +41,11 @@ export function generateDocumentName(options: DocumentNamingOptions): string {
     const cleanJobTitle = cleanString(jobTitle);
     switch (documentType) {
       case 'cv':
-        return `${cleanJobTitle}-CV`;
+        return `${cleanJobTitle} | CV`;
       case 'cover-letter':
-        return `${cleanJobTitle}-CoverLetter`;
+        return `${cleanJobTitle} | Cover_Letter`;
       default:
-        return `${cleanJobTitle}-Document`;
+        return `${cleanJobTitle} | Document`;
     }
   }
 
@@ -53,11 +53,11 @@ export function generateDocumentName(options: DocumentNamingOptions): string {
     const cleanCompany = cleanString(company);
     switch (documentType) {
       case 'cv':
-        return `${cleanCompany}-CV`;
+        return `${cleanCompany} | CV`;
       case 'cover-letter':
-        return `${cleanCompany}-CoverLetter`;
+        return `${cleanCompany} | Cover_Letter`;
       default:
-        return `${cleanCompany}-Document`;
+        return `${cleanCompany} | Document`;
     }
   }
 
