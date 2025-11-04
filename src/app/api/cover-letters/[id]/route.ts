@@ -148,6 +148,9 @@ export async function DELETE(
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
 
+    // CRITICAL: Log to stderr to ensure it appears even if stdout is buffered
+    console.error('🔍 DELETE Cover Letter - Request:', JSON.stringify({ id, userId }));
+
     if (!userId) {
       return NextResponse.json(
         { success: false, error: 'User ID is required' },
@@ -157,27 +160,60 @@ export async function DELETE(
 
     // Validate ObjectIds
     if (!mongoose.Types.ObjectId.isValid(id) || !mongoose.Types.ObjectId.isValid(userId)) {
+      console.error('❌ DELETE Cover Letter - Invalid ID format:', JSON.stringify({ id, userId }));
       return NextResponse.json(
         { success: false, error: 'Invalid ID format' },
         { status: 400 }
       );
     }
 
-    // Find and delete the cover letter by ID and user ID
-    // Convert userId to ObjectId for proper MongoDB query
+    // Check if cover letter exists first (for debugging) - try both string and ObjectId
+    const coverLetterId = toObjectId(id);
+    const existingCoverLetter = await CoverLetter.findOne({
+      _id: coverLetterId
+    }).lean();
+    
+    console.error('🔍 DELETE Cover Letter - Found (any user):', JSON.stringify({
+      exists: !!existingCoverLetter,
+      foundUserId: existingCoverLetter?.userId?.toString(),
+      foundUserIdType: typeof existingCoverLetter?.userId,
+      requestedUserId: userId,
+      requestedUserIdType: typeof userId,
+      coverLetterId: coverLetterId.toString(),
+      userIdsMatch: existingCoverLetter?.userId?.toString() === userId
+    }));
+
+    // Match the exact query pattern used in GET /api/cover-letters/route.ts (line 25)
+    // which uses userId as string and Mongoose auto-converts it
+    // This is the same pattern that successfully finds 86 cover letters
     const coverLetter = await CoverLetter.findOneAndDelete({
-      _id: toObjectId(id),
-      userId: toObjectId(userId)
+      _id: coverLetterId,
+      userId: userId  // Use string directly, let Mongoose auto-convert like the GET endpoint does
     });
 
     if (!coverLetter) {
+      console.error('❌ DELETE Cover Letter - Not found:', JSON.stringify({
+        id,
+        coverLetterId: coverLetterId.toString(),
+        userId,
+        existingCoverLetterExists: !!existingCoverLetter,
+        existingCoverLetterUserId: existingCoverLetter?.userId?.toString(),
+        existingCoverLetterUserIdRaw: existingCoverLetter?.userId,
+        userIdComparison: existingCoverLetter?.userId?.toString() === userId,
+        userIdStrictComparison: existingCoverLetter?.userId?.equals?.(toObjectId(userId)),
+        queryUsed: { _id: coverLetterId.toString(), userId: userId }
+      }));
       return NextResponse.json(
         { success: false, error: 'Cover letter not found' },
         { status: 404 }
       );
     }
 
-    console.log('✅ Cover letter deleted successfully:', { coverLetterId: id, userId });
+    console.error('✅ Cover letter deleted successfully:', JSON.stringify({ 
+      coverLetterId: id, 
+      userId,
+      deletedId: coverLetter._id?.toString()
+    }));
 
     return NextResponse.json({
       success: true,
@@ -185,7 +221,8 @@ export async function DELETE(
     });
 
   } catch (error: any) {
-    console.error('Error deleting cover letter:', error);
+    console.error('❌ Error deleting cover letter:', error);
+    console.error('❌ Error stack:', error.stack);
     return NextResponse.json(
       { 
         success: false, 

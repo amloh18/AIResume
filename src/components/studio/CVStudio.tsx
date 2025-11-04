@@ -170,7 +170,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved');
-  const [documentType, setDocumentType] = useState<'cv' | 'cover-letter'>(initialDocumentType);
+  const [documentType, setDocumentType] = useState<'cv' | 'cover-letter'>(initialDocumentType || 'cv');
   const [panelStates, setPanelStates] = useState({
     left: true,
     right: true
@@ -237,11 +237,12 @@ const CVStudio: React.FC<CVStudioProps> = ({
       coverLetterId 
     });
     
-    if (initialDocumentType !== documentType) {
-      console.log('📝 Syncing documentType from URL props:', initialDocumentType);
+    // Only sync if the prop from URL changes (client-side navigation)
+    // This should NOT revert user's UI switch clicks
+    if (initialDocumentType) {
       setDocumentType(initialDocumentType);
     }
-  }, [initialDocumentType]);
+  }, [initialDocumentType]); // <-- CRITICAL: Only depend on the prop, not documentType
 
   // Section management state (legacy - now synced with cvData.structure)
   const [sectionOrder, setSectionOrder] = useState([
