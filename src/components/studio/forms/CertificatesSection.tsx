@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Copy } from 'lucide-react';
 import WYSIWYGEditor, { WYSIWYGToolbar } from '@/components/ui/WYSIWYGEditor';
 
 interface CertificatesSectionProps {
   data: any[];
-  onUpdate: (path: string, value: any) => void;
+  onUpdate: (data: any[]) => void;
   onAdd: () => void;
   onRemove: (index: number) => void;
   jobData?: any;
@@ -25,6 +25,25 @@ const CertificatesSection: React.FC<CertificatesSectionProps> = ({
   
   // Ensure we have proper data structure
   const safeData = Array.isArray(data) ? data : [];
+
+  const updateCertificate = (index: number, field: string, value: any) => {
+    const updatedData = [...safeData];
+    if (!updatedData[index]) {
+      updatedData[index] = { name: '', date: '', issuer: '', url: '', description: '' };
+    }
+    updatedData[index] = { ...updatedData[index], [field]: value };
+    onUpdate(updatedData);
+  };
+
+  const duplicateCertificate = (index: number) => {
+    const certificateToDuplicate = safeData[index];
+    if (certificateToDuplicate) {
+      const duplicated = JSON.parse(JSON.stringify(certificateToDuplicate));
+      const updatedData = [...safeData];
+      updatedData.splice(index + 1, 0, duplicated);
+      onUpdate(updatedData);
+    }
+  };
 
   const generateAIDescription = async (index: number, certificateItem: any) => {
     if (!userId) return;
@@ -57,49 +76,31 @@ const CertificatesSection: React.FC<CertificatesSectionProps> = ({
     }
   };
 
-  const addCertificate = () => {
-    const newCertificate = {
-      name: '',
-      date: '',
-      issuer: '',
-      url: '',
-      description: ''
-    };
-    onUpdate('certificates', (prevCertificates: Array<{ name: string; date: string; issuer: string; url: string; description: string }>) => {
-      return [...(prevCertificates || []), newCertificate];
-    });
-  };
-
-  const removeCertificate = (index: number) => {
-    onUpdate('certificates', (prevCertificates: Array<{ name: string; date: string; issuer: string; url: string; description: string }>) => {
-      return (prevCertificates || []).filter((_: any, i: number) => i !== index);
-    });
-  };
-
-  // Update certificate item - use functional updates to avoid stale state
-  const updateCertificate = (index: number, field: string, value: any) => {
-    onUpdate('certificates', (prevCertificates: Array<{ name: string; date: string; issuer: string; url: string; description: string }>) => {
-      const newArray = [...(prevCertificates || [])];
-      if (!newArray[index]) {
-        newArray[index] = { name: '', date: '', issuer: '', url: '', description: '' };
-      }
-      newArray[index] = { ...newArray[index], [field]: value };
-      return newArray;
-    });
-  };
-
   return (
     <>
       {safeData.map((certificate, index) => (
         <div key={index} className="bg-white/5 rounded-xl p-6 border border-white/10 mb-6">
           <div className="flex items-center justify-between mb-4">
             <h4 className="text-lg font-semibold text-white">{certificate.name || 'Certification Name'}</h4>
-            <button
-              onClick={() => removeCertificate(index)}
-              className="text-red-400 hover:text-red-300 transition-colors"
-            >
-              <Trash2 size={16} />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => duplicateCertificate(index)}
+                className="text-blue-400 hover:text-blue-300 transition-colors"
+                title="Duplicate this certificate"
+              >
+                <Copy size={16} />
+              </button>
+              <button
+                onClick={() => {
+                  const updatedData = safeData.filter((_, i) => i !== index);
+                  onUpdate(updatedData);
+                }}
+                className="text-red-400 hover:text-red-300 transition-colors"
+                title="Delete this certificate"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -164,7 +165,16 @@ const CertificatesSection: React.FC<CertificatesSectionProps> = ({
       ))}
       
       <button
-        onClick={addCertificate}
+        onClick={() => {
+          const newCertificate = {
+            name: '',
+            date: '',
+            issuer: '',
+            url: '',
+            description: ''
+          };
+          onUpdate([...safeData, newCertificate]);
+        }}
         className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/60 hover:text-[#80FF00] rounded-xl transition-colors flex items-center justify-center gap-2"
       >
         <Plus size={20} />

@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Copy } from 'lucide-react';
 import WYSIWYGEditor, { WYSIWYGToolbar } from '@/components/ui/WYSIWYGEditor';
 
 interface ProjectsSectionProps {
   data: any[];
-  onUpdate: (path: string, value: any) => void;
+  onUpdate: (data: any[]) => void;
   onAdd: () => void;
   onRemove: (index: number) => void;
   jobData?: any;
@@ -29,16 +29,24 @@ const ProjectsSection: React.FC<ProjectsSectionProps> = ({
   // Ensure we have proper data structure
   const safeData = Array.isArray(data) ? data : [];
 
-  // Update project item - use functional updates to avoid stale state
+  // Update project item - use direct array updates
   const updateProject = (index: number, field: string, value: any) => {
-    onUpdate('projects', (prevProjects: Array<{ name: string; startDate: string; endDate: string; description: string; highlights: string[]; keywords: string[]; url: string }>) => {
-      const newArray = [...(prevProjects || [])];
-      if (!newArray[index]) {
-        newArray[index] = { name: '', startDate: '', endDate: '', description: '', highlights: [], keywords: [], url: '' };
-      }
-      newArray[index] = { ...newArray[index], [field]: value };
-      return newArray;
-    });
+    const updatedData = [...safeData];
+    if (!updatedData[index]) {
+      updatedData[index] = { name: '', startDate: '', endDate: '', description: '', highlights: [], keywords: [], url: '' };
+    }
+    updatedData[index] = { ...updatedData[index], [field]: value };
+    onUpdate(updatedData);
+  };
+
+  const duplicateProject = (index: number) => {
+    const projectToDuplicate = safeData[index];
+    if (projectToDuplicate) {
+      const duplicated = JSON.parse(JSON.stringify(projectToDuplicate));
+      const updatedData = [...safeData];
+      updatedData.splice(index + 1, 0, duplicated);
+      onUpdate(updatedData);
+    }
   };
 
   const generateAIDescription = async (index: number, projectItem: any) => {
@@ -78,16 +86,25 @@ const ProjectsSection: React.FC<ProjectsSectionProps> = ({
         <div key={index} className="bg-white/5 rounded-xl p-6 border border-white/10 mb-6">
           <div className="flex items-center justify-between mb-4">
             <h4 className="text-lg font-semibold text-white">{project.name || 'Project Name'}</h4>
-            <button
-              onClick={() => {
-                onUpdate('projects', (prevProjects: Array<{ name: string; startDate: string; endDate: string; description: string; highlights: string[]; keywords: string[]; url: string }>) => {
-                  return (prevProjects || []).filter((_: any, i: number) => i !== index);
-                });
-              }}
-              className="text-red-400 hover:text-red-300 transition-colors"
-            >
-              <Trash2 size={16} />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => duplicateProject(index)}
+                className="text-blue-400 hover:text-blue-300 transition-colors"
+                title="Duplicate this project"
+              >
+                <Copy size={16} />
+              </button>
+              <button
+                onClick={() => {
+                  const updatedData = safeData.filter((_, i) => i !== index);
+                  onUpdate(updatedData);
+                }}
+                className="text-red-400 hover:text-red-300 transition-colors"
+                title="Delete this project"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -129,7 +146,10 @@ const ProjectsSection: React.FC<ProjectsSectionProps> = ({
       ))}
       
       <button
-        onClick={onAdd}
+        onClick={() => {
+          const newProject = { name: '', description: '', startDate: '', endDate: '', highlights: [], url: '' };
+          onUpdate([...safeData, newProject]);
+        }}
         className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/60 hover:text-[#80FF00] rounded-xl transition-colors flex items-center justify-center gap-2"
       >
         <Plus size={20} />
