@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import getConnection from '@/lib/database';
 import { CoverLetter } from '@/models';
+import mongoose from 'mongoose';
+import { toObjectId } from '@/lib/db-utils';
 
 export async function GET(
   request: NextRequest,
@@ -19,10 +21,19 @@ export async function GET(
       );
     }
 
+    // Validate ObjectIds
+    if (!mongoose.Types.ObjectId.isValid(id) || !mongoose.Types.ObjectId.isValid(userId)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid ID format' },
+        { status: 400 }
+      );
+    }
+
     // Find the cover letter by ID and user ID
+    // Convert userId to ObjectId for proper MongoDB query
     const coverLetter = await CoverLetter.findOne({
-      _id: id,
-      userId: userId
+      _id: toObjectId(id),
+      userId: toObjectId(userId)
     });
 
     if (!coverLetter) {
@@ -144,10 +155,19 @@ export async function DELETE(
       );
     }
 
+    // Validate ObjectIds
+    if (!mongoose.Types.ObjectId.isValid(id) || !mongoose.Types.ObjectId.isValid(userId)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid ID format' },
+        { status: 400 }
+      );
+    }
+
     // Find and delete the cover letter by ID and user ID
+    // Convert userId to ObjectId for proper MongoDB query
     const coverLetter = await CoverLetter.findOneAndDelete({
-      _id: id,
-      userId: userId
+      _id: toObjectId(id),
+      userId: toObjectId(userId)
     });
 
     if (!coverLetter) {

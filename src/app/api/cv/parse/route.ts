@@ -6,6 +6,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { GoogleGenAI } from '@google/genai';
 import { UnifiedCVDataStructure, DEFAULT_UNIFIED_CV_DATA } from '@/types/unified-cv-schema';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 
 // Static imports for libraries that work without issues
 import mammoth from 'mammoth';
@@ -784,8 +787,12 @@ export async function POST(request: NextRequest) {
   try {
     console.log('CV Parse API called');
     
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
+    
     const formData = await request.formData();
     const file = formData.get('file') as File;
+    const saveDocument = formData.get('saveDocument') === 'true'; // Optional flag to save document to S3
 
     if (!file) {
       console.error('No file provided in request');
@@ -829,6 +836,44 @@ export async function POST(request: NextRequest) {
     
     // Convert file to buffer
     const buffer = Buffer.from(await file.arrayBuffer());
+    
+    // Optionally save document to S3 if user is authenticated and saveDocument flag is true
+    let documentUrl: string | undefined;
+    if (userId && saveDocument) {
+      try {
+        const s3Client = new S3Client({
+          region: process.env.AWS_S3_REGION!,
+          credentials: {
+            accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+          },
+        });
+
+        const timestamp = Date.now();
+        const sanitizedFilename = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const s3Key = `documents/${userId}/${timestamp}-${sanitizedFilename}`;
+
+        const command = new PutObjectCommand({
+          Bucket: process.env.AWS_S3_BUCKET_NAME!,
+          Key: s3Key,
+          ContentType: file.type,
+          Body: buffer,
+          Metadata: {
+            userId: userId,
+            originalFilename: file.name,
+            uploadedAt: new Date().toISOString(),
+            purpose: 'cv-parsing',
+          },
+        });
+
+        await s3Client.send(command);
+        documentUrl = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_S3_REGION}.amazonaws.com/${s3Key}`;
+        console.log('Document saved to S3:', documentUrl);
+      } catch (s3Error) {
+        console.error('Failed to save document to S3:', s3Error);
+        // Continue with parsing even if S3 upload fails
+      }
+    }
     
     // Run the robust parser
     const parseResult = await robustDocumentParser(buffer, file.type);
@@ -876,7 +921,8 @@ export async function POST(request: NextRequest) {
         hasWorkExperience,
         hasEducation,
         hasSkills
-      }
+      },
+      ...(documentUrl && { _documentUrl: documentUrl }) // Include document URL if saved
     };
     
     console.log('Returning parsed data to client');

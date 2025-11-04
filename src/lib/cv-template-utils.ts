@@ -64,11 +64,15 @@ export async function getCVWithTemplate(cvId: string): Promise<CVWithTemplate | 
       };
       console.log('✅ getCVWithTemplate - Using hardcoded template:', hardcodedTemplate.name);
     } else {
-      // Try to populate from database
+      // Try to populate from database only if templateId is a valid ObjectId
+      // String templateIds (hardcoded templates) should have been caught above
       try {
-        const populatedCv = await CV.findById(cvId)
-          .populate('templateId', 'name globalStyles availableSections')
-          .lean();
+        // Only populate if templateId is a valid ObjectId to avoid CastError
+        const query = CV.findById(cvId);
+        if (templateIdString && mongoose.Types.ObjectId.isValid(templateIdString)) {
+          query.populate('templateId', 'name globalStyles availableSections');
+        }
+        const populatedCv = await query.lean();
         
         const populatedCvDoc = Array.isArray(populatedCv) ? populatedCv[0] : populatedCv;
         if (populatedCvDoc?.templateId && typeof populatedCvDoc.templateId === 'object') {

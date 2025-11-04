@@ -255,13 +255,13 @@ const CleanUnlinkedButton: React.FC<CleanUnlinkedButtonProps> = ({
 
   const checkUnlinkedItems = () => {
     // Get all CV/cover letter IDs that are linked to journeys
-    const linkedItemIds = new Set();
+    const linkedItemIds = new Set<string>();
     
     journeys.forEach(journey => {
       if (type === 'cv' && journey.cvId) {
-        linkedItemIds.add(journey.cvId);
+        linkedItemIds.add(String(journey.cvId));
       } else if (type === 'cover-letter' && journey.coverLetterId) {
-        linkedItemIds.add(journey.coverLetterId);
+        linkedItemIds.add(String(journey.coverLetterId));
       }
     });
 
@@ -273,7 +273,8 @@ const CleanUnlinkedButton: React.FC<CleanUnlinkedButtonProps> = ({
       }
       
       // Check if item is linked to any journey
-      return !linkedItemIds.has(item.id);
+      // Convert item.id to string for comparison
+      return !linkedItemIds.has(String(item.id));
     });
     
     setUnlinkedItems(unlinked);
@@ -1252,7 +1253,7 @@ const Canvas: React.FC = () => {
     try {
       const userId = getUserIdForAPI(user);
       if (!userId) {
-        // Removed notification:'error', 'User not authenticated');
+        console.error('User not authenticated for cover letter deletion');
         return;
       }
 
@@ -1261,16 +1262,33 @@ const Canvas: React.FC = () => {
       });
 
       if (response.ok) {
-        setCoverLetters(coverLetters.filter(cl => cl.id !== coverLetter.id));
-        // Removed notification:'success', 'Cover letter deleted successfully');
+        const result = await response.json().catch(() => ({}));
+        if (result.success) {
+          setCoverLetters(coverLetters.filter(cl => cl.id !== coverLetter.id));
+          console.log(`Successfully deleted cover letter: ${coverLetter.title}`);
+        } else {
+          console.error('Delete cover letter error:', {
+            coverLetterId: coverLetter.id,
+            title: coverLetter.title,
+            error: result.error || 'Unknown error'
+          });
+        }
       } else {
-        const errorData = await response.json();
-        console.error('Delete cover letter error:', errorData);
-        // Removed notification:'error', errorData.error || 'Failed to delete cover letter');
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('Delete cover letter error:', {
+          coverLetterId: coverLetter.id,
+          title: coverLetter.title,
+          userId,
+          status: response.status,
+          error: errorData.error || errorData.message || 'Failed to delete cover letter'
+        });
       }
     } catch (error) {
-      console.error('Error deleting cover letter:', error);
-      // Removed notification:'error', 'Error deleting cover letter');
+      console.error('Error deleting cover letter:', {
+        coverLetterId: coverLetter.id,
+        title: coverLetter.title,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   };
 
@@ -1308,27 +1326,102 @@ const Canvas: React.FC = () => {
     try {
       const userId = getUserIdForAPI(user);
       if (!userId) {
-        // Removed notification:'error', 'User not authenticated');
+        console.error('User not authenticated for cover letter deletion');
         return;
       }
 
+      console.log('🔍 handleCleanUnlinkedCoverLetters - Starting deletion', {
+        count: unlinkedCoverLetters.length,
+        userId,
+        coverLetters: unlinkedCoverLetters.map(cl => ({
+          id: cl.id || cl._id,
+          title: cl.title,
+          hasId: !!cl.id,
+          has_id: !!cl._id
+        }))
+      });
+
+      let deletedCount = 0;
+      let failedCount = 0;
+
       // Delete each unlinked cover letter
       for (const coverLetter of unlinkedCoverLetters) {
-        const response = await authenticatedFetch(`/api/cover-letters/${coverLetter.id}?userId=${userId}`, {
-          method: 'DELETE',
-        });
+        try {
+          // Ensure we have a valid ID - check both id and _id fields
+          const coverLetterId = coverLetter.id || coverLetter._id;
+          
+          if (!coverLetterId) {
+            console.error(`Cover letter missing ID: ${coverLetter.title}`, {
+              coverLetter: coverLetter
+            });
+            failedCount++;
+            continue;
+          }
 
-        if (!response.ok) {
-          console.error(`Failed to delete cover letter: ${coverLetter.title}`);
+          // Validate ObjectId format before making request (MongoDB ObjectId is 24 hex characters)
+          const objectIdRegex = /^[0-9a-fA-F]{24}$/;
+          if (!objectIdRegex.test(coverLetterId)) {
+            console.error(`Invalid cover letter ID format: ${coverLetterId}`, {
+              coverLetterTitle: coverLetter.title,
+              coverLetterId: coverLetterId,
+              coverLetter: coverLetter
+            });
+            failedCount++;
+            continue;
+          }
+
+          const response = await authenticatedFetch(`/api/cover-letters/${coverLetterId}?userId=${userId}`, {
+            method: 'DELETE',
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+            console.error(`Failed to delete cover letter: ${coverLetter.title}`, {
+              coverLetterId: coverLetterId,
+              userId,
+              status: response.status,
+              statusText: response.statusText,
+              error: errorData.error || errorData.message || 'Unknown error',
+              responseBody: errorData
+            });
+            failedCount++;
+          } else {
+            const result = await response.json().catch(() => ({}));
+            if (result.success) {
+              deletedCount++;
+              console.log(`Successfully deleted cover letter: ${coverLetter.title}`, {
+                coverLetterId: coverLetterId
+              });
+            } else {
+              console.error(`Failed to delete cover letter: ${coverLetter.title}`, {
+                coverLetterId: coverLetterId,
+                error: result.error || 'Unknown error',
+                responseBody: result
+              });
+              failedCount++;
+            }
+          }
+        } catch (error) {
+          console.error(`Error deleting cover letter ${coverLetter.title}:`, {
+            error: error instanceof Error ? error.message : 'Unknown error',
+            stack: error instanceof Error ? error.stack : undefined,
+            coverLetter: coverLetter
+          });
+          failedCount++;
         }
       }
 
       // Refresh cover letters list
       await loadCoverLetters();
-      // Removed notification:'success', `Successfully deleted ${unlinkedCoverLetters.length} unlinked cover letters`);
+      
+      if (deletedCount > 0) {
+        console.log(`Successfully deleted ${deletedCount} unlinked cover letter(s)`);
+      }
+      if (failedCount > 0) {
+        console.warn(`Failed to delete ${failedCount} cover letter(s)`);
+      }
     } catch (error) {
       console.error('Clean unlinked cover letters error:', error);
-      // Removed notification:'error', 'Failed to clean unlinked cover letters');
     }
   };
 

@@ -13,6 +13,7 @@ import {
 
 import { DocumentType, StudioSessionContext, JobData } from '@/types/studio';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { getVisibleCVSections } from '@/lib/utils/cv-section-selectors';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -407,20 +408,30 @@ function CVStructureSections({
     }
   };
 
-  const sections = [
-    { id: 'personal_header', title: 'Personal Information', icon: '👤' },
-    { id: 'work_experience', title: 'Work Experience', icon: '💼' },
-    { id: 'education', title: 'Education', icon: '🎓' },
-    { id: 'skills', title: 'Skills', icon: '🛠️' },
-    { id: 'projects', title: 'Projects', icon: '🚀' },
-    { id: 'certificates', title: 'Certificates', icon: '📜' },
-    { id: 'languages', title: 'Languages', icon: '🌐' },
-    { id: 'volunteer', title: 'Volunteer Experience', icon: '🤝' },
-    { id: 'awards', title: 'Awards & Recognition', icon: '🏆' },
-    { id: 'publications', title: 'Publications', icon: '📚' },
-    { id: 'interests', title: 'Interests', icon: '🎯' },
-    { id: 'references', title: 'References', icon: '👥' }
-  ];
+  // Use centralized selector to get visible sections
+  const visibleSections = getVisibleCVSections(cvData, 'cv');
+  
+  // Map to section format with emoji icons for this component
+  const sectionIconMap: Record<string, string> = {
+    personal_header: '👤',
+    work_experience: '💼',
+    education: '🎓',
+    skills: '🛠️',
+    projects: '🚀',
+    certificates: '📜',
+    languages: '🌐',
+    volunteer: '🤝',
+    awards: '🏆',
+    publications: '📚',
+    interests: '🎯',
+    references: '👥'
+  };
+
+  const sections = visibleSections.map(section => ({
+    id: section.type,
+    title: section.title,
+    icon: sectionIconMap[section.type] || '📄'
+  }));
 
   return (
     <div className="space-y-2">

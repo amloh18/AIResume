@@ -443,6 +443,25 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
               alt={`Master CV Preview: ${masterCV.title}`}
               className="w-full h-full object-cover rounded-xl"
               loading="lazy"
+              onError={(e) => {
+                // If S3 URL fails, try to get presigned URL
+                const target = e.target as HTMLImageElement;
+                const currentSrc = target.src;
+                if (currentSrc.includes('s3.amazonaws.com') || currentSrc.includes('s3.')) {
+                  // Extract key and fetch presigned URL
+                  fetch(`/api/files/${encodeURIComponent(currentSrc.split('.amazonaws.com/')[1] || '')}`)
+                    .then(res => res.json())
+                    .then(data => {
+                      if (data.url) {
+                        target.src = data.url;
+                      }
+                    })
+                    .catch(() => {
+                      // Fallback: keep original URL or show error
+                      console.error('Failed to fetch presigned URL for thumbnail');
+                    });
+                }
+              }}
             />
           ) : thumbnailLoading ? (
             /* Loading state */

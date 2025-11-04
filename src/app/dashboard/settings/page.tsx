@@ -41,6 +41,7 @@ import ChangePasswordModal from '@/components/auth/ChangePasswordModal';
 import PageHeader from '@/components/dashboard/PageHeader';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
 import CalendarSyncSettings from '@/components/settings/CalendarSyncSettings';
+import { uploadToS3 } from '@/lib/utils/upload';
 
 // --- TYPES ---
 
@@ -170,6 +171,8 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
   });
 
   const [avatar, setAvatar] = useState(user.avatar || user.profilePhoto || '');
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [masterCVData, setMasterCVData] = useState<any>(null);
   const [hasUserModified, setHasUserModified] = useState({
     firstName: false,
@@ -578,28 +581,69 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                 <input
                   type="file"
                   accept="image/jpeg,image/jpg,image/png"
-                  onChange={(e) => {
+                  onChange={async (e) => {
                     const file = e.target.files?.[0];
                     if (file) {
-                      // Convert to base64 for now (in production, upload to cloud storage)
-                      const reader = new FileReader();
-                      reader.onload = (event) => {
-                        const result = event.target?.result as string;
-                        setAvatar(result);
-                      };
-                      reader.readAsDataURL(file);
+                      setIsUploadingAvatar(true);
+                      setUploadProgress(0);
+                      
+                      try {
+                        // Upload to S3
+                        const result = await uploadToS3({
+                          file,
+                          uploadType: 'profile-picture',
+                          onProgress: (progress) => {
+                            setUploadProgress(progress);
+                          },
+                        });
+
+                        if (result.success && result.publicUrl) {
+                          setAvatar(result.publicUrl);
+                        } else {
+                          console.error('Upload failed:', result.error);
+                          // Fallback to base64 preview if upload fails
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            const result = event.target?.result as string;
+                            setAvatar(result);
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      } catch (error) {
+                        console.error('Error uploading avatar:', error);
+                        // Fallback to base64 preview
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          const result = event.target?.result as string;
+                          setAvatar(result);
+                        };
+                        reader.readAsDataURL(file);
+                      } finally {
+                        setIsUploadingAvatar(false);
+                        setUploadProgress(0);
+                      }
                     }
                   }}
                   className="hidden"
                   id="avatar-upload"
+                  disabled={isUploadingAvatar}
                 />
                 <label 
                   htmlFor="avatar-upload"
-                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer text-center"
+                  className={`px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer text-center ${
+                    isUploadingAvatar ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
                 >
-                  Upload Image
+                  {isUploadingAvatar ? (
+                    <div className="flex items-center gap-2">
+                      <Loader2 size={16} className="animate-spin" />
+                      Uploading... {uploadProgress}%
+                    </div>
+                  ) : (
+                    'Upload Image'
+                  )}
                 </label>
-                {avatar && (
+                {avatar && !isUploadingAvatar && (
                   <button 
                     onClick={() => setAvatar('')}
                     className="px-4 py-2 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition-colors border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium"

@@ -58,6 +58,10 @@ class DatabaseConnectionManager {
     if (this.handlersSetup) return;
     this.handlersSetup = true;
 
+    // Increase max listeners to prevent MaxListenersExceededWarning
+    // This is needed because Next.js hot reloading can cause multiple handler setups
+    mongoose.connection.setMaxListeners(20);
+
     mongoose.connection.on('connected', () => {
       console.log('✅ MongoDB connected successfully');
     });

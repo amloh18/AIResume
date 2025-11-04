@@ -187,8 +187,15 @@ export async function POST(request: NextRequest) {
 
       console.log('✅ Master CV created successfully:', newCV._id);
 
-      // Populate template data for response
-      await newCV.populate('templateId');
+      // Populate template data for response (only if templateId is a valid ObjectId)
+      // String templateIds (hardcoded templates) don't need population
+      if (newCV.templateId && mongoose.Types.ObjectId.isValid(newCV.templateId.toString())) {
+        try {
+          await newCV.populate('templateId');
+        } catch (populateError) {
+          console.warn('⚠️ Failed to populate templateId (may be a hardcoded template):', populateError);
+        }
+      }
 
       return NextResponse.json({
         success: true,

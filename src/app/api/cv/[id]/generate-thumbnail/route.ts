@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { getConnection } from '@/lib/database';
 import CV from '@/models/CV';
 import Template from '@/models/Template';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 
 export async function POST(
   request: NextRequest,
@@ -96,20 +97,50 @@ export async function POST(
 
 async function generateCVThumbnail(cv: any, template: any): Promise<string> {
   try {
-    // For now, generate a simple SVG-based thumbnail
-    // This is a practical approach that doesn't require additional dependencies
-    // In production, you might want to use Puppeteer or a similar tool for more accurate rendering
-
+    // Generate SVG-based thumbnail
     const svgContent = generateCVThumbnailSVG(cv, template);
     
-    // Convert SVG to data URL
-    const svgDataUrl = `data:image/svg+xml;base64,${Buffer.from(svgContent).toString('base64')}`;
+    // Initialize S3 client
+    const s3Client = new S3Client({
+      region: process.env.AWS_S3_REGION!,
+      credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+      },
+    });
+
+    // Create S3 key for thumbnail
+    const userId = cv.userId?.toString() || 'unknown';
+    const cvId = cv._id?.toString() || 'unknown';
+    const timestamp = Date.now();
+    const s3Key = `thumbnails/${userId}/${cvId}-${timestamp}.svg`;
+
+    // Upload SVG to S3
+    const command = new PutObjectCommand({
+      Bucket: process.env.AWS_S3_BUCKET_NAME!,
+      Key: s3Key,
+      ContentType: 'image/svg+xml',
+      Body: Buffer.from(svgContent),
+      Metadata: {
+        cvId: cvId,
+        userId: userId,
+        generatedAt: new Date().toISOString(),
+      },
+    });
+
+    await s3Client.send(command);
+
+    // Return public URL
+    const publicUrl = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_S3_REGION}.amazonaws.com/${s3Key}`;
     
-    return svgDataUrl;
+    return publicUrl;
 
   } catch (error) {
     console.error('Error creating CV thumbnail:', error);
-    throw error;
+    // Fallback to data URL if S3 upload fails
+    const svgContent = generateCVThumbnailSVG(cv, template);
+    const svgDataUrl = `data:image/svg+xml;base64,${Buffer.from(svgContent).toString('base64')}`;
+    return svgDataUrl;
   }
 }
 
