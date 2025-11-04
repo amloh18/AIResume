@@ -42,7 +42,8 @@ export async function POST(request: NextRequest) {
       
       return NextResponse.json({
         success: true,
-        exists: !!existingUser
+        exists: !!existingUser,
+        isEmailVerified: existingUser?.isEmailVerified || false
       });
     } catch (queryError: any) {
       console.error('❌ Database query error in check-email:', queryError);
