@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Copy } from 'lucide-react';
 import WYSIWYGEditor, { WYSIWYGToolbar } from '@/components/ui/WYSIWYGEditor';
 
 interface EducationSectionProps {
   data: any[];
-  onUpdate: (path: string, value: any) => void;
+  onUpdate: (data: any[]) => void;
   onAdd: () => void;
   onRemove: (index: number) => void;
   jobData?: any;
@@ -28,6 +28,22 @@ const EducationSection: React.FC<EducationSectionProps> = ({
   
   // Ensure we have proper data structure
   const safeData = Array.isArray(data) ? data : [];
+
+  const updateEducationItem = (index: number, field: string, value: any) => {
+    const updatedData = [...safeData];
+    updatedData[index] = { ...updatedData[index], [field]: value };
+    onUpdate(updatedData);
+  };
+
+  const duplicateEducation = (index: number) => {
+    const educationToDuplicate = safeData[index];
+    if (educationToDuplicate) {
+      const duplicated = JSON.parse(JSON.stringify(educationToDuplicate));
+      const updatedData = [...safeData];
+      updatedData.splice(index + 1, 0, duplicated);
+      onUpdate(updatedData);
+    }
+  };
 
   const generateAIDescription = async (index: number, educationItem: any) => {
     if (!userId) return;
@@ -52,7 +68,7 @@ const EducationSection: React.FC<EducationSectionProps> = ({
       }
 
       const result = await response.json();
-      onUpdate(`education.${index}.description`, result.description);
+      updateEducationItem(index, 'description', result.description);
     } catch (error) {
       console.error('Error generating AI description:', error);
     } finally {
@@ -66,12 +82,25 @@ const EducationSection: React.FC<EducationSectionProps> = ({
         <div key={index} className="bg-white/5 rounded-xl p-6 border border-white/10 mb-6">
           <div className="flex items-center justify-between mb-4">
             <h4 className="text-lg font-semibold text-white">{education.studyType || 'Degree'} in {education.area || 'Field'} at {education.institution || 'University'}</h4>
-            <button
-              onClick={() => onRemove(index)}
-              className="text-red-400 hover:text-red-300 transition-colors"
-            >
-              <Trash2 size={16} />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => duplicateEducation(index)}
+                className="text-blue-400 hover:text-blue-300 transition-colors"
+                title="Duplicate this education"
+              >
+                <Copy size={16} />
+              </button>
+              <button
+                onClick={() => {
+                  const updatedData = safeData.filter((_, i) => i !== index);
+                  onUpdate(updatedData);
+                }}
+                className="text-red-400 hover:text-red-300 transition-colors"
+                title="Delete this education"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -80,7 +109,7 @@ const EducationSection: React.FC<EducationSectionProps> = ({
               <input
                 type="text"
                 value={education.institution || ''}
-                onChange={(e) => onUpdate(`education.${index}.institution`, e.target.value)}
+                onChange={(e) => updateEducationItem(index, 'institution', e.target.value)}
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
                 placeholder="University of California"
               />
@@ -90,7 +119,7 @@ const EducationSection: React.FC<EducationSectionProps> = ({
               <input
                 type="text"
                 value={education.area || ''}
-                onChange={(e) => onUpdate(`education.${index}.area`, e.target.value)}
+                onChange={(e) => updateEducationItem(index, 'area', e.target.value)}
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
                 placeholder="Computer Science"
               />
@@ -103,7 +132,7 @@ const EducationSection: React.FC<EducationSectionProps> = ({
               <input
                 type="text"
                 value={education.studyType || ''}
-                onChange={(e) => onUpdate(`education.${index}.studyType`, e.target.value)}
+                onChange={(e) => updateEducationItem(index, 'studyType', e.target.value)}
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
                 placeholder="Bachelor's Degree"
               />
@@ -113,7 +142,7 @@ const EducationSection: React.FC<EducationSectionProps> = ({
               <input
                 type="text"
                 value={education.startDate || ''}
-                onChange={(e) => onUpdate(`education.${index}.startDate`, e.target.value)}
+                onChange={(e) => updateEducationItem(index, 'startDate', e.target.value)}
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
                 placeholder="Sep 2016"
               />
@@ -123,7 +152,7 @@ const EducationSection: React.FC<EducationSectionProps> = ({
               <input
                 type="text"
                 value={education.endDate || ''}
-                onChange={(e) => onUpdate(`education.${index}.endDate`, e.target.value)}
+                onChange={(e) => updateEducationItem(index, 'endDate', e.target.value)}
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
                 placeholder="May 2020"
               />
@@ -143,7 +172,7 @@ const EducationSection: React.FC<EducationSectionProps> = ({
             </div>
             <WYSIWYGEditor
               value={education.description || ''}
-              onChange={(value) => onUpdate(`education.${index}.description`, value)}
+              onChange={(value) => updateEducationItem(index, 'description', value)}
               rows={3}
               placeholder="Describe your education, achievements, relevant coursework, or academic honors..."
             />
@@ -152,7 +181,19 @@ const EducationSection: React.FC<EducationSectionProps> = ({
       ))}
       
       <button
-        onClick={onAdd}
+        onClick={() => {
+          const newEducation = {
+            institution: '',
+            area: '',
+            studyType: '',
+            startDate: '',
+            endDate: '',
+            score: '',
+            courses: [],
+            description: ''
+          };
+          onUpdate([...safeData, newEducation]);
+        }}
         className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/60 hover:text-[#80FF00] rounded-xl transition-colors flex items-center justify-center gap-2"
       >
         <Plus size={20} />

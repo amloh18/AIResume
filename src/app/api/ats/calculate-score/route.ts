@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
-import { CV } from '@/models';
-import Job from '@/models/Job';
+import { CV, JobApplication } from '@/models';
 import { AIAssistantService } from '@/lib/services/aiAssistantService';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 
@@ -38,16 +37,43 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify user owns the CV (if userId provided)
-    if (userId && cv.userId !== userId) {
-      console.error('❌ ATS Calculate Score API - Unauthorized access attempt');
+    // Convert both to strings for comparison (cv.userId is ObjectId, userId is string)
+    if (userId && cv.userId?.toString() !== userId) {
+      console.error('❌ ATS Calculate Score API - Unauthorized access attempt', {
+        cvUserId: cv.userId?.toString(),
+        requestUserId: userId,
+        match: cv.userId?.toString() === userId
+      });
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 403 }
       );
     }
+    
+    // If no userId provided, try to get from session (optional auth)
+    if (!userId) {
+      try {
+        const { getAuthenticatedUser } = await import('@/lib/auth-helpers');
+        const authResult = await getAuthenticatedUser();
+        if (authResult) {
+          const sessionUserId = authResult.userId;
+          // Verify CV ownership using session user
+          if (cv.userId?.toString() !== sessionUserId) {
+            console.error('❌ ATS Calculate Score API - Session user does not own CV');
+            return NextResponse.json(
+              { success: false, error: 'Unauthorized' },
+              { status: 403 }
+            );
+          }
+        }
+      } catch (authError) {
+        // If auth helper fails, continue without auth check (for backward compatibility)
+        console.warn('⚠️ ATS Calculate Score API - Could not verify auth, continuing without check');
+      }
+    }
 
     // Fetch job data
-    const job = await Job.findOne({ _id: jobId });
+    const job = await JobApplication.findOne({ _id: jobId });
     if (!job) {
       console.error('❌ ATS Calculate Score API - Job not found:', jobId);
       return NextResponse.json(

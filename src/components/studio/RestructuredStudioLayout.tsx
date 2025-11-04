@@ -218,11 +218,11 @@ export default function RestructuredStudioLayout({
               <CollapsibleContent className="px-4 pb-4">
                 <EducationSection
                   data={cvData?.education || []}
-                  onUpdate={(path, value) => {
+                  onUpdate={(data) => {
                     if (onUpdateField) {
-                      onUpdateField(path, value);
+                      onUpdateField('education', data);
                     } else {
-                      onUpdateCV?.({ ...cvData, education: value });
+                      onUpdateCV?.({ ...cvData, education: data });
                     }
                   }}
                   onAdd={() => {
@@ -233,7 +233,8 @@ export default function RestructuredStudioLayout({
                       startDate: '',
                       endDate: '',
                       score: '',
-                      courses: []
+                      courses: [],
+                      description: ''
                     }];
                     if (onUpdateField) {
                       onUpdateField('education', newEducation);
@@ -410,7 +411,7 @@ export default function RestructuredStudioLayout({
                     }
                   }}
                   onAdd={() => {
-                    const newCertificates = [...(cvData?.certificates || []), { name: '', issuer: '', date: '', url: '' }];
+                    const newCertificates = [...(cvData?.certificates || []), { name: '', issuer: '', date: '', url: '', description: '' }];
                     if (onUpdateField) {
                       onUpdateField('certificates', newCertificates);
                     } else {
@@ -425,6 +426,8 @@ export default function RestructuredStudioLayout({
                       onUpdateCV?.({ ...cvData, certificates: newCertificates });
                     }
                   }}
+                  jobData={jobContext}
+                  userId={userId}
                 />
               </CollapsibleContent>
             </div>
