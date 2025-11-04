@@ -1,6 +1,6 @@
 /**
  * Edge Runtime compatible logger for middleware
- * Minimal logging without any external dependencies that might pull in OpenTelemetry
+ * Minimal logging without any external dependencies
  */
 
 export const log = {

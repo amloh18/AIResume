@@ -50,7 +50,7 @@ export default async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
   const method = req.method;
 
-  // CRITICAL: Early return for /studio routes to prevent OpenTelemetry bundling issues
+  // Early return for /studio routes
   // The studio page handles its own authentication via RouteGuard
   if (pathname.startsWith('/studio')) {
     return NextResponse.next()
@@ -170,7 +170,7 @@ export default async function middleware(req: NextRequest) {
 export const config = {
   matcher: [
     // Only run for specific API routes that need authentication
-    // Explicitly exclude /studio and other page routes to prevent OpenTelemetry bundling issues
+        // Explicitly exclude /studio and other page routes from middleware
     '/api/dashboard/(.*)',
     '/api/profile/(.*)',
     '/api/cv/create',
