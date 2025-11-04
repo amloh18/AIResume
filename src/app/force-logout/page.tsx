@@ -26,11 +26,28 @@ export default function ForceLogoutPage() {
           addStatus('⚠️ NextAuth signout error (continuing): ' + error);
         }
 
-        // Step 2: Clear all localStorage
+        // Step 2: Clear all localStorage (preserve cookie consent)
         addStatus('Step 2: Clearing localStorage...');
         try {
+          // Preserve cookie consent before clearing
+          const cookieConsent = localStorage.getItem('cookieConsent');
+          const cookieConsentExpiry = localStorage.getItem('cookieConsentExpiry');
+          const cookiePreferences = localStorage.getItem('cookiePreferences');
+          
           localStorage.clear();
-          addStatus('✅ localStorage cleared');
+          
+          // Restore cookie consent after clearing
+          if (cookieConsent) {
+            localStorage.setItem('cookieConsent', cookieConsent);
+          }
+          if (cookieConsentExpiry) {
+            localStorage.setItem('cookieConsentExpiry', cookieConsentExpiry);
+          }
+          if (cookiePreferences) {
+            localStorage.setItem('cookiePreferences', cookiePreferences);
+          }
+          
+          addStatus('✅ localStorage cleared (cookie consent preserved)');
         } catch (error) {
           addStatus('⚠️ localStorage clear error: ' + error);
         }

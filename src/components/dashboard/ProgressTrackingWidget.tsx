@@ -65,7 +65,14 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
         setData(generateMockData());
       }
     } catch (error) {
-      console.error('ProgressTrackingWidget: Error fetching progress data:', error);
+      // Safely handle error - check if it's an Event object
+      if (error instanceof Error) {
+        console.error('ProgressTrackingWidget: Error fetching progress data:', error.message);
+      } else if (error && typeof error === 'object' && 'target' in error) {
+        console.error('ProgressTrackingWidget: Error fetching progress data: Event object received');
+      } else {
+        console.error('ProgressTrackingWidget: Error fetching progress data:', String(error));
+      }
       setData(generateMockData());
     } finally {
       setLoading(false);
@@ -110,7 +117,9 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const day = date.getDate();
+    const month = date.toLocaleDateString('en-US', { month: 'short' }).substring(0, 3);
+    return `${day} ${month}`;
   };
 
   const renderChart = () => {
@@ -141,9 +150,10 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
             stroke="#6B7280"
             fontSize={12}
             interval={0}
-            angle={-45}
-            textAnchor="end"
-            height={60}
+            angle={timeRange === '90d' ? -45 : 0}
+            textAnchor={timeRange === '90d' ? 'end' : 'middle'}
+            height={timeRange === '90d' ? 60 : 30}
+            tickFormatter={(value) => formatDate(value)}
             domain={['dataMin', 'dataMax']}
           />
           <YAxis 
@@ -159,7 +169,6 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
               color: '#F9FAFB'
             }}
           />
-          <Legend />
           <Area
             type="monotone"
             dataKey="jobs"
@@ -216,7 +225,7 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
   const totals = getTotalStats();
 
   return (
-    <div className="glass-widget-premium rounded-xl p-6">
+    <div className="glass-widget-premium rounded-xl p-6 h-full flex flex-col">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-gradient-to-br from-blue-400/20 to-blue-500/20 rounded-xl flex items-center justify-center">
@@ -256,7 +265,12 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
           {/* Time Range Selector */}
           <select
             value={timeRange}
-            onChange={(e) => setTimeRange(e.target.value as '7d' | '30d' | '90d')}
+            onChange={(e) => {
+              const value = e?.target?.value;
+              if (value) {
+                setTimeRange(value as '7d' | '30d' | '90d');
+              }
+            }}
             className="px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white rounded-lg text-sm focus:ring-2 focus:ring-blue-500/50"
           >
             <option value="7d">Last 7 days</option>
@@ -267,7 +281,22 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
       </div>
 
       {/* Chart */}
-      <div className="h-72 bg-white/5 rounded-lg p-4" style={{ minHeight: '288px', maxHeight: '288px' }}>
+      <div className="h-72 bg-white/5 rounded-lg p-4 relative" style={{ minHeight: '288px', maxHeight: '288px' }}>
+        {/* Labels in upper right corner */}
+        <div className="absolute top-4 right-4 z-10 flex items-center gap-4 text-xs font-medium">
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-full bg-[#EF4444]"></div>
+            <span className="text-gray-700 dark:text-gray-300">CVs</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-full bg-[#10B981]"></div>
+            <span className="text-gray-700 dark:text-gray-300">Cover Letters</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-full bg-[#3B82F6]"></div>
+            <span className="text-gray-700 dark:text-gray-300">Jobs</span>
+          </div>
+        </div>
         {loading ? (
           <div className="flex items-center justify-center h-full">
             <div className="w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>

@@ -34,9 +34,25 @@ export function immediate431Fix() {
     }
   });
   
+  // Preserve cookie consent before clearing
+  const cookieConsent = localStorage.getItem('cookieConsent');
+  const cookieConsentExpiry = localStorage.getItem('cookieConsentExpiry');
+  const cookiePreferences = localStorage.getItem('cookiePreferences');
+  
   // Clear localStorage and sessionStorage
   localStorage.clear();
   sessionStorage.clear();
+  
+  // Restore cookie consent after clearing
+  if (cookieConsent) {
+    localStorage.setItem('cookieConsent', cookieConsent);
+  }
+  if (cookieConsentExpiry) {
+    localStorage.setItem('cookieConsentExpiry', cookieConsentExpiry);
+  }
+  if (cookiePreferences) {
+    localStorage.setItem('cookiePreferences', cookiePreferences);
+  }
   
     // Check result
     setTimeout(()=>{
@@ -56,5 +72,6 @@ if (typeof window !== 'undefined') {
   (window as any).fix431 = immediate431Fix;
 }
 
-// Auto-run if this file is imported
-immediate431Fix();
+// Don't auto-run - let SessionCleanup component call it explicitly
+// This prevents clearing localStorage on every import
+// immediate431Fix();
