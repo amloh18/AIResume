@@ -276,12 +276,14 @@ export const ExecutiveProfessionalLayoutTemplate: React.FC<ExecutiveProfessional
         <div className="section">
           <h2 className="section-title">SKILLS</h2>
           <div className="skills-container">
-            {skills.map((skill, index) => (
-              <div key={index}>
-                <div className="skill-category">{skill.category}:</div>
-                <div className="skill-list">{skill.skills.join(', ')}</div>
-              </div>
-            ))}
+            {skills
+              .filter(skill => skill && skill.skills && Array.isArray(skill.skills) && skill.skills.length > 0)
+              .map((skill, index) => (
+                <div key={index}>
+                  <div className="skill-category">{skill.category}:</div>
+                  <div className="skill-list">{skill.skills.join(', ')}</div>
+                </div>
+              ))}
           </div>
         </div>
       )}

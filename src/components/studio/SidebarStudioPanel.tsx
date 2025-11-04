@@ -195,8 +195,8 @@ const SidebarStudioPanel: React.FC<SidebarStudioPanelProps> = ({
               );
             })}
 
-            {/* Structure Sub-sections (only shown when Structure is active) */}
-            {localActiveSection === 'structure' && cvSections.length > 0 && (
+            {/* Structure Sub-sections (only shown when Structure is active and documentType is cv) */}
+            {localActiveSection === 'structure' && documentType === 'cv' && cvSections.length > 0 && (
               <div className="mt-4 pt-4 border-t border-white/10">
                 <div className="space-y-2">
                   {cvSections.map((section) => {
@@ -226,8 +226,8 @@ const SidebarStudioPanel: React.FC<SidebarStudioPanelProps> = ({
             )}
           </div>
 
-          {/* Add Section Button (only shown when Structure is active) */}
-          {localActiveSection === 'structure' && onAddSection && (
+          {/* Add Section Button (only shown when Structure is active and documentType is cv) */}
+          {localActiveSection === 'structure' && documentType === 'cv' && onAddSection && (
             <div className="p-2 md:p-4 border-t border-white/10">
               <button 
                 onClick={onAddSection}

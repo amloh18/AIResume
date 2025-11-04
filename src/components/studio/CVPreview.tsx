@@ -14,6 +14,7 @@ import { ITemplate } from '@/types/template';
 import { Job } from '@/lib/stores/jobStore';
 import { downloadAsPDF, downloadAsDOCX, downloadAsImage } from '@/lib/utils/download';
 import { TemplateRenderer } from '@/lib/templates/template-renderer';
+import { getVisibleCVSections } from '@/lib/utils/cv-section-selectors';
 
 interface CVPreviewProps {
   cvData: UnifiedCVDataStructure | null;
@@ -73,42 +74,30 @@ const CVPreviewComponent: React.FC<CVPreviewProps> = ({
   // Get current page dimensions
   const currentDimensions = PAGE_DIMENSIONS[paperSize];
 
-  // Check if section has data - memoized to prevent recalculation
-  const hasSectionData = useMemo(() => {
-    return (section: string): boolean => {
-      if (!cvData) return false;
-      
-      switch (section) {
-        case 'personal_header':
-          return !!(cvData.basics?.name || cvData.basics?.email || cvData.basics?.phone);
-        case 'work_experience':
-          return Array.isArray(cvData.work) && cvData.work.length > 0;
-        case 'education':
-          return Array.isArray(cvData.education) && cvData.education.length > 0;
-        case 'skills':
-          return Array.isArray(cvData.skills) && cvData.skills.length > 0;
-        case 'projects':
-          return Array.isArray(cvData.projects) && cvData.projects.length > 0;
-        case 'certificates':
-          return Array.isArray(cvData.certificates) && cvData.certificates.length > 0;
-        case 'languages':
-          return Array.isArray(cvData.languages) && cvData.languages.length > 0;
-        case 'volunteer':
-          return Array.isArray(cvData.volunteer) && cvData.volunteer.length > 0;
-        case 'awards':
-          return Array.isArray(cvData.awards) && cvData.awards.length > 0;
-        case 'publications':
-          return Array.isArray(cvData.publications) && cvData.publications.length > 0;
-        default:
-          return false;
-      }
-    };
-  }, [cvData]);
+  // Get visible sections using centralized selector
+  const visibleSectionsList = useMemo(
+    () => getVisibleCVSections(cvData, documentType || 'cv'),
+    [cvData, documentType]
+  );
+
+  // Create fast lookup Set for section visibility
+  const visibleSectionTypes = useMemo(
+    () => new Set(visibleSectionsList.map(s => s.type)),
+    [visibleSectionsList]
+  );
+
+  // Get section order from selector (maintains structure order) or use prop
+  const effectiveSectionOrder = useMemo(() => {
+    if (visibleSectionsList.length > 0) {
+      return visibleSectionsList.map(s => s.type);
+    }
+    return sectionOrder || ['personal_header', 'work_experience', 'education', 'skills', 'projects', 'certificates', 'languages'];
+  }, [visibleSectionsList, sectionOrder]);
 
   // Estimate section height based on content - memoized for performance
   const getSectionHeight = useMemo(() => {
     return (section: string): number => {
-      if (!cvData || !hasSectionData(section)) return 0;
+      if (!cvData || !visibleSectionTypes.has(section)) return 0;
       
       const baseHeights: { [key: string]: number } = {
         personal_header: 150,
@@ -127,7 +116,7 @@ const CVPreviewComponent: React.FC<CVPreviewProps> = ({
       
       return baseHeights[section] || 100;
     };
-  }, [cvData, hasSectionData]);
+  }, [cvData, visibleSectionTypes]);
 
   // Calculate pages based on content height
   const calculatePages = useMemo(() => {
@@ -141,9 +130,8 @@ const CVPreviewComponent: React.FC<CVPreviewProps> = ({
     // Use full available height with minimal buffer for more efficient page usage
     const maxPageHeight = (currentDimensions.height - pagePadding.top - pagePadding.bottom) * 0.95;
     
-    // Get all sections in order, but filter out sections without data
-    const allSections = sectionOrder || ['personal_header', 'work_experience', 'education', 'skills', 'projects', 'certificates', 'languages'];
-    const sectionsWithData = allSections.filter(section => hasSectionData(section));
+    // Use visible sections from selector (respects structure visibility)
+    const sectionsWithData = effectiveSectionOrder.filter(section => visibleSectionTypes.has(section));
     
     // If no sections have data, return empty first page
     if (sectionsWithData.length === 0) {
@@ -193,7 +181,7 @@ const CVPreviewComponent: React.FC<CVPreviewProps> = ({
     });
 
     return { pages, totalPages: currentPage };
-  }, [cvData, sectionOrder, currentDimensions.height, pagePadding, hasSectionData, getSectionHeight, template]);
+  }, [cvData, effectiveSectionOrder, currentDimensions.height, pagePadding, visibleSectionTypes, getSectionHeight, template]);
 
   // Update total pages when content changes
   useEffect(() => {
@@ -314,7 +302,7 @@ const CVPreviewComponent: React.FC<CVPreviewProps> = ({
                 <TemplateRenderer
                   cvData={cvData}
                   template={template as any}
-                  sectionOrder={sectionOrder}
+                  sectionOrder={effectiveSectionOrder}
                   sectionVisibility={sectionVisibility}
                   enabledSections={pageSections}
                   className="template-rendered-content"
