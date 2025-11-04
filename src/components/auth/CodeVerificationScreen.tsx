@@ -15,6 +15,7 @@ interface CodeVerificationScreenProps {
   success?: string;
   remainingAttempts?: number;
   cooldownSeconds?: number;
+  onBack?: () => void;
 }
 
 export default function CodeVerificationScreen({
@@ -26,7 +27,8 @@ export default function CodeVerificationScreen({
   error,
   success,
   remainingAttempts = 5,
-  cooldownSeconds = 0
+  cooldownSeconds = 0,
+  onBack
 }: CodeVerificationScreenProps) {
   const [code, setCode] = useState('');
   const [cooldown, setCooldown] = useState(cooldownSeconds);
@@ -113,6 +115,13 @@ export default function CodeVerificationScreen({
       <h3 className="text-3xl font-bold text-white mb-6">
         Check your email
       </h3>
+      
+      {/* Email Display */}
+      {email && (
+        <p className="text-[#80FF00] text-base mb-4 font-medium">
+          {email}
+        </p>
+      )}
       
       {/* Instructions */}
       <p className="text-gray-300 text-lg mb-2">

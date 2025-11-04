@@ -228,9 +228,18 @@ const Hero = () => {
                 fill
                 className="object-cover object-top"
                 priority
+                unoptimized
                 style={{
                   transform: `translateY(${Math.min(scrollY * 0.3, 200)}px)`,
                   filter: 'drop-shadow(0 10px 20px rgba(132, 204, 22, 0.2))',
+                }}
+                onError={(e) => {
+                  console.error('Hero banner image failed to load');
+                  // Fallback: try to reload with full URL
+                  const target = e.target as HTMLImageElement;
+                  if (typeof window !== 'undefined' && target.src && !target.src.includes(window.location.origin)) {
+                    target.src = `${window.location.origin}/images/herobanner.png`;
+                  }
                 }}
               />
             </div>
