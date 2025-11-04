@@ -114,6 +114,16 @@ const nextConfig: NextConfig = {
       delete config.resolve.alias['react-dom'];
     }
     
+    // CRITICAL: Force React to resolve to a single instance
+    // This prevents "Cannot read properties of null" errors from multiple React instances
+    if (!isServer) {
+      // For client builds, ensure React resolves to the same instance
+      const reactPath = require.resolve('react');
+      const reactDomPath = require.resolve('react-dom');
+      config.resolve.alias.react = reactPath;
+      config.resolve.alias['react-dom'] = reactDomPath;
+    }
+    
     // Ensure React is never in externals for client builds
     if (config.externals && !isServer) {
       config.externals = config.externals.filter((ext: any) => {
@@ -158,6 +168,19 @@ const nextConfig: NextConfig = {
       }
       if (config.resolve.alias['react-dom'] === false) {
         delete config.resolve.alias['react-dom'];
+      }
+      
+      // For Edge builds, still ensure React resolves correctly
+      if (!isServer) {
+        try {
+          const reactPath = require.resolve('react');
+          const reactDomPath = require.resolve('react-dom');
+          config.resolve.alias.react = reactPath;
+          config.resolve.alias['react-dom'] = reactDomPath;
+        } catch (e) {
+          // If require.resolve fails, don't override
+          console.warn('Could not resolve React paths for Edge build');
+        }
       }
     }
 

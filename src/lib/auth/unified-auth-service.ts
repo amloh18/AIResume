@@ -286,20 +286,20 @@ export class UnifiedAuthService {
           // IMPORTANT: Only store minimal data in session to prevent cookie size issues
           if (token && session?.user && token.id) {
             try {
-              const userData = await UnifiedAuthService.fetchUserData(token.id as string);
+            const userData = await UnifiedAuthService.fetchUserData(token.id as string);
 
-              if (userData) {
+            if (userData) {
                 // Store only essential fields - keep session minimal
-                session.user.id = userData.id;
+              session.user.id = userData.id;
                 session.user.email = userData.email || (token.email as string) || '';
                 session.user.name = userData.name || '';
-                session.user.image = userData.image ?? undefined;
+              session.user.image = userData.image ?? undefined;
                 (session.user as any).role = userData.role || 'user';
-                (session.user as any).type = 'user';
+              (session.user as any).type = 'user';
                 (session.user as any).planKey = userData.planKey || 'free';
                 (session.user as any).subscriptionStatus = userData.subscriptionStatus || 'inactive';
-              } else {
-                // Fallback to token data if user not found
+            } else {
+              // Fallback to token data if user not found
                 session.user.id = (token.id as string) || '';
                 session.user.email = (token.email as string) || '';
                 session.user.name = '';
