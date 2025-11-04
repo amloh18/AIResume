@@ -1,19 +1,20 @@
-# Edge Runtime OpenTelemetry Fix
+# Edge Runtime Fix
 
 ## Problem
-The Edge Function middleware (`src/middleware.ts`) was referencing unsupported modules:
-- `@opentelemetry/api` through a transitive dependency chain
-- This was causing Vercel deployment failures
+The Edge Function middleware (`src/middleware.ts`) was referencing unsupported modules that caused Vercel deployment failures.
 
 ## Root Cause
-The middleware was importing `@/lib/structured-logger`, which has optional dependencies on Sentry (`@sentry/nextjs`), which in turn depends on OpenTelemetry packages. Vercel's Edge Runtime bundler analyzes all dependencies and fails when it encounters Node.js-only modules.
+The middleware was importing `@/lib/structured-logger`, which had optional dependencies that weren't compatible with Edge Runtime. Vercel's Edge Runtime bundler analyzes all dependencies and fails when it encounters Node.js-only modules.
+
+## Solution - OpenTelemetry Removed
+OpenTelemetry has been completely removed from the project to eliminate Edge Runtime compatibility issues.
 
 ## Solution
 
 ### 1. Created Edge-Compatible Logger
 - **File**: `src/lib/edge-logger.ts`
 - Minimal logging implementation using only `console` methods
-- No external dependencies that might pull in OpenTelemetry
+- No external dependencies
 - Drop-in replacement for structured-logger in Edge Runtime
 
 ### 2. Updated Middleware
@@ -25,7 +26,7 @@ The middleware was importing `@/lib/structured-logger`, which has optional depen
 ### 3. Enhanced Vercel Configuration
 - **File**: `vercel.json`
 - Added explicit Edge Runtime configuration for middleware
-- Excluded OpenTelemetry and Sentry packages from Edge builds
+- Excluded Sentry packages from Edge builds
 - Excluded instrumentation files
 
 ### 4. Updated Build Exclusions
@@ -49,7 +50,7 @@ The middleware was importing `@/lib/structured-logger`, which has optional depen
 ## Testing
 After deployment, verify:
 1. Middleware executes successfully on Vercel Edge Runtime
-2. No OpenTelemetry errors in deployment logs
+2. No Edge Runtime errors in deployment logs
 3. Authentication and route protection work correctly
 4. Performance logging functions as expected
 

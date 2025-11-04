@@ -83,37 +83,8 @@ const nextConfig: NextConfig = {
       }
     }
 
-    // Fix OpenTelemetry and Sentry module resolution for Edge Runtime
-    // This is critical for Vercel Edge Functions which don't support these modules
-    const opentelemetryAliases = {
-      '@opentelemetry/api': false,
-      '@opentelemetry/core': false,
-      '@opentelemetry/instrumentation': false,
-      '@opentelemetry/semantic-conventions': false,
-      '@opentelemetry/api-logs': false,
-      '@opentelemetry/context-async-hooks': false,
-      '@opentelemetry/instrumentation-http': false,
-      '@opentelemetry/instrumentation-mongodb': false,
-      '@opentelemetry/instrumentation-mongoose': false,
-      '@opentelemetry/instrumentation-express': false,
-      '@opentelemetry/instrumentation-fastify': false,
-      '@opentelemetry/instrumentation-koa': false,
-      '@opentelemetry/instrumentation-hapi': false,
-      '@opentelemetry/instrumentation-connect': false,
-      '@opentelemetry/instrumentation-graphql': false,
-      '@opentelemetry/instrumentation-nestjs-core': false,
-      '@opentelemetry/instrumentation-ioredis': false,
-      '@opentelemetry/instrumentation-knex': false,
-      '@opentelemetry/instrumentation-mysql': false,
-      '@opentelemetry/instrumentation-mysql2': false,
-      '@opentelemetry/instrumentation-kafkajs': false,
-      '@opentelemetry/instrumentation-dataloader': false,
-      '@opentelemetry/instrumentation-generic-pool': false,
-      '@opentelemetry/instrumentation-lru-memoizer': false,
-      '@opentelemetry/instrumentation-fs': false,
-      '@opentelemetry/redis-common': false,
-      '@opentelemetry/sql-common': false,
-      // Exclude Sentry from Edge Runtime (it depends on OpenTelemetry)
+    // Exclude Sentry from Edge Runtime
+    const sentryAliases = {
       '@sentry/nextjs': false,
       '@sentry/node': false,
       '@sentry/browser': false,
@@ -124,10 +95,10 @@ const nextConfig: NextConfig = {
       '@sentry/tracing': false,
     };
 
-    // Apply OpenTelemetry exclusions to all builds
+    // Apply Sentry exclusions to all builds
     config.resolve.alias = {
       ...config.resolve.alias,
-      ...opentelemetryAliases,
+      ...sentryAliases,
     };
 
     // For Edge Runtime builds (middleware), exclude instrumentation and Sentry completely
@@ -138,7 +109,7 @@ const nextConfig: NextConfig = {
       );
     
     if (isMiddlewareBuild || !isServer) {
-      // Exclude instrumentation from Edge builds to prevent OpenTelemetry analysis
+      // Exclude instrumentation from Edge builds
       config.resolve.alias['./instrumentation'] = false;
       config.resolve.alias['./instrumentation.js'] = false;
       config.resolve.alias['./instrumentation.ts'] = false;
@@ -155,9 +126,6 @@ const nextConfig: NextConfig = {
       config.resolve.alias['./src/lib/structured-logger'] = './src/lib/edge-logger';
     }
 
-    // Note: Edge Runtime bundling is handled separately by Next.js/Vercel
-    // The aliases above should prevent OpenTelemetry from being bundled in Edge Runtime
-
     // Handle optional dependencies for Vercel
     config.externals = config.externals || [];
     if (isServer) {
@@ -167,34 +135,6 @@ const nextConfig: NextConfig = {
         'puppeteer': 'commonjs puppeteer',
         'pdf2pic': 'commonjs pdf2pic',
         'jose': 'commonjs jose',
-        // OpenTelemetry modules should only be available in Node.js runtime
-        '@opentelemetry/api': 'commonjs @opentelemetry/api',
-        '@opentelemetry/core': 'commonjs @opentelemetry/core',
-        '@opentelemetry/instrumentation': 'commonjs @opentelemetry/instrumentation',
-        '@opentelemetry/semantic-conventions': 'commonjs @opentelemetry/semantic-conventions',
-        '@opentelemetry/api-logs': 'commonjs @opentelemetry/api-logs',
-        '@opentelemetry/context-async-hooks': 'commonjs @opentelemetry/context-async-hooks',
-        '@opentelemetry/instrumentation-http': 'commonjs @opentelemetry/instrumentation-http',
-        '@opentelemetry/instrumentation-mongodb': 'commonjs @opentelemetry/instrumentation-mongodb',
-        '@opentelemetry/instrumentation-mongoose': 'commonjs @opentelemetry/instrumentation-mongoose',
-        '@opentelemetry/instrumentation-express': 'commonjs @opentelemetry/instrumentation-express',
-        '@opentelemetry/instrumentation-fastify': 'commonjs @opentelemetry/instrumentation-fastify',
-        '@opentelemetry/instrumentation-koa': 'commonjs @opentelemetry/instrumentation-koa',
-        '@opentelemetry/instrumentation-hapi': 'commonjs @opentelemetry/instrumentation-hapi',
-        '@opentelemetry/instrumentation-connect': 'commonjs @opentelemetry/instrumentation-connect',
-        '@opentelemetry/instrumentation-graphql': 'commonjs @opentelemetry/instrumentation-graphql',
-        '@opentelemetry/instrumentation-nestjs-core': 'commonjs @opentelemetry/instrumentation-nestjs-core',
-        '@opentelemetry/instrumentation-ioredis': 'commonjs @opentelemetry/instrumentation-ioredis',
-        '@opentelemetry/instrumentation-knex': 'commonjs @opentelemetry/instrumentation-knex',
-        '@opentelemetry/instrumentation-mysql': 'commonjs @opentelemetry/instrumentation-mysql',
-        '@opentelemetry/instrumentation-mysql2': 'commonjs @opentelemetry/instrumentation-mysql2',
-        '@opentelemetry/instrumentation-kafkajs': 'commonjs @opentelemetry/instrumentation-kafkajs',
-        '@opentelemetry/instrumentation-dataloader': 'commonjs @opentelemetry/instrumentation-dataloader',
-        '@opentelemetry/instrumentation-generic-pool': 'commonjs @opentelemetry/instrumentation-generic-pool',
-        '@opentelemetry/instrumentation-lru-memoizer': 'commonjs @opentelemetry/instrumentation-lru-memoizer',
-        '@opentelemetry/instrumentation-fs': 'commonjs @opentelemetry/instrumentation-fs',
-        '@opentelemetry/redis-common': 'commonjs @opentelemetry/redis-common',
-        '@opentelemetry/sql-common': 'commonjs @opentelemetry/sql-common',
       });
     }
 
@@ -207,7 +147,7 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizeCss: true,
     optimizePackageImports: ['lucide-react', 'lottie-react'],
-    instrumentationHook: false, // Disable Next.js instrumentation to prevent OpenTelemetry bundling in Edge Runtime
+    instrumentationHook: false, // Disable Next.js instrumentation
   },
   
   // Force dynamic rendering for all pages to prevent SSR issues
@@ -293,18 +233,7 @@ const nextConfig: NextConfig = {
     'next-auth', 
     'openid-client', 
     'pdf2pic',
-    // Exclude OpenTelemetry from Edge Runtime
-    '@opentelemetry/api',
-    '@opentelemetry/core',
-    '@opentelemetry/instrumentation',
-    '@opentelemetry/semantic-conventions',
-    '@opentelemetry/api-logs',
-    '@opentelemetry/context-async-hooks',
-    '@opentelemetry/instrumentation-http',
-    '@opentelemetry/instrumentation-mongodb',
-    '@opentelemetry/instrumentation-mongoose',
-    '@opentelemetry/instrumentation-express',
-    // Exclude Sentry from Edge Runtime (it depends on OpenTelemetry)
+    // Exclude Sentry from Edge Runtime
     '@sentry/nextjs',
     '@sentry/node',
     '@sentry/browser',
