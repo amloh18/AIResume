@@ -13,11 +13,12 @@ function initSessionMonitoring() {
   console.log('🔍 Starting CVCircle session monitoring...');
   isMonitoring = true;
   
-  // Check for existing session immediately
+  // Check for existing session immediately and after a delay
   checkSessionStatus();
+  setTimeout(checkSessionStatus, 2000); // Double-check after 2 seconds
   
-  // Set up periodic session checks
-  sessionCheckInterval = setInterval(checkSessionStatus, 5000); // Check every 5 seconds
+  // Set up more frequent session checks
+  sessionCheckInterval = setInterval(checkSessionStatus, 3000); // Check every 3 seconds
   
   // Listen for storage changes (localStorage/sessionStorage)
   window.addEventListener('storage', handleStorageChange);
@@ -28,31 +29,57 @@ function initSessionMonitoring() {
   // Listen for custom events that might indicate auth state changes
   window.addEventListener('message', handleWindowMessage);
   
+  // Listen for navigation events (user might have navigated to sign-in page)
+  window.addEventListener('popstate', handleNavigation);
+  window.addEventListener('hashchange', handleNavigation);
+  
+  // Listen for custom events that NextAuth might dispatch
+  document.addEventListener('nextauth-session-update', handleCustomAuthEvent);
+  
   console.log('✅ CVCircle session monitoring initialized');
 }
 
-// Check current session status
+// Check current session status with enhanced error handling
 async function checkSessionStatus() {
   try {
     console.log('🔍 Checking session status...');
     
-    // Try to get session from NextAuth
-    const sessionResponse = await fetch('/api/auth/session', {
+    // Determine the correct API base URL based on current domain
+    const currentDomain = window.location.hostname;
+    const isLocalhost = currentDomain.includes('localhost') ||
+                       currentDomain.includes('127.0.0.1') ||
+                       currentDomain.includes('cvcircle.local');
+    
+    const apiBaseUrl = isLocalhost ?
+      (currentDomain.includes('127.0.0.1') ? 'http://127.0.0.1:3000' : 'http://localhost:3000') :
+      'https://www.cvcircle.io';
+    
+    console.log(`🔍 Current domain: ${currentDomain}, API base: ${apiBaseUrl}`);
+    
+    // Try to get session from NextAuth with timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    
+    const sessionResponse = await fetch(`${apiBaseUrl}/api/auth/session`, {
       method: 'GET',
       credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
-      }
+      },
+      signal: controller.signal
     });
+    
+    clearTimeout(timeoutId);
     
     if (sessionResponse.ok) {
       const sessionData = await sessionResponse.json();
       const isAuthenticated = !!sessionData.user;
       
-      console.log('🔍 Session check result:', { 
-        isAuthenticated, 
-        user: sessionData.user ? { id: sessionData.user.id, email: sessionData.user.email } : null 
+      console.log('🔍 Session check result:', {
+        isAuthenticated,
+        user: sessionData.user ? { id: sessionData.user.id, email: sessionData.user.email } : null,
+        environment: isLocalhost ? 'development' : 'production'
       });
       
       // Check if session state has changed
@@ -60,7 +87,10 @@ async function checkSessionStatus() {
         isAuthenticated,
         userId: sessionData.user?.id,
         userEmail: sessionData.user?.email,
-        timestamp: Date.now()
+        userName: sessionData.user?.name || sessionData.user?.email,
+        timestamp: Date.now(),
+        environment: isLocalhost ? 'development' : 'production',
+        domain: currentDomain
       };
       
       if (JSON.stringify(currentSessionState) !== JSON.stringify(lastSessionState)) {
@@ -120,6 +150,18 @@ function handleWindowMessage(event) {
     console.log('🔄 NextAuth session update message received');
     setTimeout(checkSessionStatus, 500);
   }
+}
+
+// Handle navigation events (user might have navigated to sign-in page)
+function handleNavigation() {
+  console.log('🔄 Page navigation detected, checking session...');
+  setTimeout(checkSessionStatus, 1000);
+}
+
+// Handle custom auth events
+function handleCustomAuthEvent(event) {
+  console.log('🔄 Custom auth event received:', event.detail);
+  setTimeout(checkSessionStatus, 500);
 }
 
 // Notify background script of session changes

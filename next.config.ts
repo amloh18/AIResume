@@ -207,6 +207,7 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizeCss: true,
     optimizePackageImports: ['lucide-react', 'lottie-react'],
+    instrumentationHook: false, // Disable Next.js instrumentation to prevent OpenTelemetry bundling in Edge Runtime
   },
   
   // Force dynamic rendering for all pages to prevent SSR issues

@@ -1,179 +1,432 @@
-// CVCircle Job Tracker Extension - Simple Popup Script
-console.log('CVCircle Job Tracker popup loaded');
+// CVCircle Job Tracker Extension - Main App Authentication Design
+console.log('CVCircle Job Tracker popup loaded with main app authentication design');
 
-// State management
+let extensionAuth = null;
 let currentUser = null;
 let currentJob = null;
 let kpis = {};
 
-// DOM elements
-const sections = {
-  loading: document.getElementById('loading-section'),
-  login: document.getElementById('login-section'),
-  dashboard: document.getElementById('dashboard-section')
-};
-
-const elements = {
-  // Login
-  loginBtn: document.getElementById('login-btn'),
-  debugBtn: document.getElementById('debug-btn'),
-  refreshBtn: document.getElementById('refresh-btn'),
-  
-  // User info
-  userName: document.getElementById('user-name'),
-  userEmail: document.getElementById('user-email'),
-  userAvatarImg: document.getElementById('user-avatar-img'),
-  userAvatarInitials: document.getElementById('user-avatar-initials'),
-  
-  // Stats
-  totalJobs: document.getElementById('total-jobs'),
-  appliedJobs: document.getElementById('applied-jobs'),
-  interviewJobs: document.getElementById('interview-jobs'),
-  
-  // Current job
-  currentJobCard: document.getElementById('current-job-card'),
-  noJobState: document.getElementById('no-job-state'),
-  jobTitle: document.getElementById('job-title'),
-  jobCompany: document.getElementById('job-company'),
-  jobLocation: document.getElementById('job-location'),
-  jobCompanyLogo: document.getElementById('job-company-logo'),
-  jobCompanyInitials: document.getElementById('job-company-initials'),
-  jobDescriptionText: document.getElementById('job-description-text'),
-  saveJobBtn: document.getElementById('save-job-btn'),
-  
-  // Footer
-  dashboardLink: document.getElementById('dashboard-link'),
-  helpLink: document.getElementById('help-link')
-};
+// Authentication state
+let authMode = 'signin'; // 'signin', 'verify-code'
+let email = '';
+let verificationType = 'passwordless-login'; // 'passwordless-login', 'password-reset', 'email-verification'
+let remainingAttempts = 5;
+let cooldownSeconds = 0;
+let canResend = true;
 
 // Initialize popup
 document.addEventListener('DOMContentLoaded', async () => {
-  console.log('Initializing popup');
+  console.log('Initializing popup with main app authentication design');
   setupEventListeners();
-  
-  // Add a fallback timeout to prevent infinite loading
-  const fallbackTimeout = setTimeout(() => {
-    console.log('⚠️ Fallback timeout reached, showing login');
-    showView('login');
-  }, 15000); // 15 second fallback
-  
-  try {
-    await initializeApp();
-    clearTimeout(fallbackTimeout);
-    
-    // Start periodic session check if not authenticated
-    if (!currentUser) {
-      startPeriodicSessionCheck();
-    }
-  } catch (error) {
-    console.error('❌ Popup initialization failed:', error);
-    clearTimeout(fallbackTimeout);
-    showView('login');
-  }
+  initializeExtension();
 });
 
-// Periodic session check for when user logs in
-let sessionCheckInterval = null;
-
-function startPeriodicSessionCheck() {
-  if (sessionCheckInterval) {
-    clearInterval(sessionCheckInterval);
+// Safe DOM element getter
+function getElement(id) {
+  const element = document.getElementById(id);
+  if (!element) {
+    console.warn(`⚠️ Element not found: ${id}`);
   }
-  
-  console.log('🔄 Starting periodic session check...');
-  sessionCheckInterval = setInterval(async () => {
-    try {
-      console.log('🔍 Periodic session check...');
-      const sessionResponse = await chrome.runtime.sendMessage({ action: 'getSession' });
-      
-      if (sessionResponse && sessionResponse.success && sessionResponse.isAuthenticated) {
-        console.log('✅ Session detected, stopping periodic check');
-        clearInterval(sessionCheckInterval);
-        sessionCheckInterval = null;
-        
-        currentUser = sessionResponse.user;
-        await loadUserData();
-      }
-    } catch (error) {
-      console.log('⚠️ Periodic session check failed:', error);
-    }
-  }, 3000); // Check every 3 seconds
+  return element;
 }
 
 // Set up event listeners
 function setupEventListeners() {
-  // Login
-  elements.loginBtn.addEventListener('click', handleLogin);
-  elements.debugBtn.addEventListener('click', handleDebug);
-  elements.refreshBtn.addEventListener('click', handleRefresh);
+  console.log('🔧 Setting up event listeners...');
   
-  // Job saving
-  elements.saveJobBtn.addEventListener('click', handleSaveJob);
+  // Authentication forms
+  const signinBtn = getElement('signin-btn');
+  const sendCodeBtn = getElement('send-code-btn');
+  const passwordToggle = getElement('password-toggle');
+  const resendCodeBtn = getElement('resend-code-btn');
+  const resetPasswordLink = getElement('reset-password-link');
+  
+  // Code verification inputs
+  const codeInputs = [
+    getElement('code-input-1'),
+    getElement('code-input-2'),
+    getElement('code-input-3'),
+    getElement('code-input-4')
+  ];
+  
+  // Sign in button
+  if (signinBtn) signinBtn.addEventListener('click', handleSignIn);
+  
+  // Send code button
+  if (sendCodeBtn) sendCodeBtn.addEventListener('click', handleSendCode);
+  
+  // Password toggle
+  if (passwordToggle) passwordToggle.addEventListener('click', togglePasswordVisibility);
+  
+  // Reset password link
+  if (resetPasswordLink) resetPasswordLink.addEventListener('click', () => switchToResetPassword());
+  
+  // Code input handlers
+  codeInputs.forEach((input, index) => {
+    if (input) {
+      input.addEventListener('input', (e) => handleCodeInput(e, index));
+      input.addEventListener('keydown', (e) => handleCodeKeyDown(e, index));
+    }
+  });
+  
+  // Job actions
+  const saveJobBtn = getElement('save-job-btn');
+  const editJobBtn = getElement('edit-job-btn');
+  if (saveJobBtn) saveJobBtn.addEventListener('click', handleSaveJob);
+  if (editJobBtn) editJobBtn.addEventListener('click', handleEditJob);
   
   // Footer links
-  elements.dashboardLink.addEventListener('click', handleDashboardLink);
-  elements.helpLink.addEventListener('click', handleHelpLink);
+  const dashboardLink = getElement('dashboard-link');
+  const helpLink = getElement('help-link');
+  if (dashboardLink) dashboardLink.addEventListener('click', handleDashboardLink);
+  if (helpLink) helpLink.addEventListener('click', handleHelpLink);
+  
+  // Debug
+  const debugBtn = getElement('debug-btn');
+  if (debugBtn) debugBtn.addEventListener('click', handleDebug);
+  
+  console.log('✅ Event listeners set up');
 }
 
-// Initialize app
-async function initializeApp() {
+// Initialize extension authentication
+function initializeExtension() {
+  console.log('🔐 Initializing extension...');
+  
+  // Show loading state first
+  showView('loading');
+  
+  // Check if ExtensionAuth is available
+  if (typeof ExtensionAuth === 'undefined') {
+    console.error('❌ ExtensionAuth class not found');
+    showMessage('Authentication system failed to load. Please refresh.', 'error');
+    showView('login');
+    return;
+  }
+  
   try {
-    showView('loading');
+    extensionAuth = new ExtensionAuth();
+    console.log('✅ ExtensionAuth initialized');
     
-    console.log('🔍 Initializing app...');
-    
-    // First, test cookie access
-    try {
-      const cookieTest = await chrome.runtime.sendMessage({ action: 'testCookies' });
-      console.log('🧪 Cookie test results:', cookieTest);
-    } catch (error) {
-      console.log('⚠️ Cookie test failed:', error);
-    }
-    
-    // Check session with timeout and better error handling
-    let sessionResponse;
-    try {
-      sessionResponse = await Promise.race([
-        chrome.runtime.sendMessage({ action: 'getSession' }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Session check timeout')), 10000)) // Increased timeout
-      ]);
-    } catch (error) {
-      console.log('⚠️ Session check failed:', error.message);
-      // If session check fails, show login after a brief delay
-      setTimeout(() => {
+    // Quick authentication check
+    setTimeout(() => {
+      try {
+        checkAuthState();
+      } catch (error) {
+        console.error('❌ Auth state check failed:', error);
         showView('login');
-      }, 1000);
+      }
+    }, 500);
+    
+  } catch (error) {
+    console.error('❌ Extension initialization failed:', error);
+    showMessage('Extension initialization failed. Please try again.', 'error');
+    showView('login');
+  }
+}
+
+// Check current authentication state
+function checkAuthState() {
+  try {
+    if (extensionAuth && extensionAuth.isLoggedIn()) {
+      console.log('✅ User already authenticated');
+      currentUser = extensionAuth.currentUser;
+      loadUserData();
+    } else {
+      console.log('❌ User not authenticated, showing login');
+      showView('login');
+    }
+  } catch (error) {
+    console.error('❌ Auth state check error:', error);
+    showView('login');
+  }
+}
+
+// Show/hide sections
+function showView(viewName) {
+  try {
+    const sections = {
+      loading: getElement('loading-section'),
+      login: getElement('login-section'),
+      dashboard: getElement('dashboard-section')
+    };
+    
+    // Hide all sections
+    Object.values(sections).forEach(section => {
+      if (section) section.classList.add('hidden');
+    });
+    
+    // Show requested section
+    if (sections[viewName]) {
+      sections[viewName].classList.remove('hidden');
+      console.log(`✅ Showing view: ${viewName}`);
+    } else {
+      console.warn(`⚠️ View not found: ${viewName}`);
+    }
+  } catch (error) {
+    console.error('❌ Error showing view:', error);
+  }
+}
+
+// Switch between authentication forms
+function showAuthForm(formName) {
+  const signinForm = getElement('signin-form');
+  const codeForm = getElement('code-verification-form');
+  
+  if (signinForm) signinForm.classList.add('hidden');
+  if (codeForm) codeForm.classList.add('hidden');
+  
+  if (formName === 'signin' && signinForm) {
+    signinForm.classList.remove('hidden');
+  } else if (formName === 'code' && codeForm) {
+    codeForm.classList.remove('hidden');
+  }
+}
+
+// Show message to user
+function showMessage(message, type = 'info') {
+  const authMessage = getElement('auth-message');
+  if (!authMessage) {
+    console.warn('⚠️ Cannot show message: auth-message element not found');
+    return;
+  }
+  
+  authMessage.textContent = message;
+  authMessage.className = `auth-message ${type}`;
+  authMessage.classList.remove('hidden');
+  
+  console.log(`📢 ${type.toUpperCase()}: ${message}`);
+  
+  // Auto-hide after 5 seconds
+  setTimeout(() => {
+    authMessage.classList.add('hidden');
+  }, 5000);
+}
+
+// Handle Sign In
+async function handleSignIn() {
+  try {
+    const emailInput = getElement('email-input');
+    const passwordInput = getElement('password-input');
+    const signinBtn = getElement('signin-btn');
+    
+    const userEmail = emailInput?.value.trim();
+    const password = passwordInput?.value;
+    
+    if (!userEmail || !userEmail.includes('@')) {
+      showMessage('Please enter a valid email address', 'error');
       return;
     }
     
-    console.log('🔍 Session response:', sessionResponse);
+    if (!password) {
+      showMessage('Please enter your password', 'error');
+      return;
+    }
     
-    if (sessionResponse && sessionResponse.success && sessionResponse.isAuthenticated) {
-      currentUser = sessionResponse.user;
-      console.log('✅ User authenticated:', currentUser);
-      await loadUserData();
-    } else {
-      console.log('❌ Not authenticated, showing login');
-      showView('login');
+    if (signinBtn) {
+      signinBtn.disabled = true;
+      const btnText = signinBtn.querySelector('.btn-text');
+      if (btnText) btnText.textContent = 'Signing in...';
+    }
+    
+    // Use extensionAuth to sign in with credentials
+    const result = await extensionAuth.loginWithPassword(userEmail, password);
+    
+    if (result.success) {
+      currentUser = result.user;
+      showMessage('Successfully signed in!', 'success');
+      
+      // Load user data and show dashboard
+      setTimeout(async () => {
+        await loadUserData();
+      }, 500);
     }
     
   } catch (error) {
-    console.error('❌ Error initializing app:', error);
-    console.log('🔍 Showing login due to error');
-    // Add a small delay before showing login to prevent flickering
-    setTimeout(() => {
-      showView('login');
-    }, 500);
+    console.error('Error with sign in:', error);
+    showMessage(error.message || 'Sign in failed', 'error');
+  } finally {
+    const signinBtn = getElement('signin-btn');
+    if (signinBtn) {
+      signinBtn.disabled = false;
+      const btnText = signinBtn.querySelector('.btn-text');
+      if (btnText) btnText.textContent = 'Sign In';
+    }
+  }
+}
+
+// Handle Send Code (for passwordless login)
+async function handleSendCode() {
+  try {
+    const emailInput = getElement('email-input');
+    const sendCodeBtn = getElement('send-code-btn');
+    
+    const userEmail = emailInput?.value.trim();
+    
+    if (!userEmail || !userEmail.includes('@')) {
+      showMessage('Please enter a valid email address', 'error');
+      return;
+    }
+    
+    if (sendCodeBtn) {
+      sendCodeBtn.disabled = true;
+      const btnText = sendCodeBtn.querySelector('.btn-text');
+      if (btnText) btnText.textContent = 'Sending code...';
+    }
+    
+    // Use extensionAuth to send PIN
+    await extensionAuth.sendPINToEmail(userEmail);
+    
+    // Switch to code verification
+    email = userEmail;
+    verificationType = 'passwordless-login';
+    showAuthForm('code');
+    focusFirstCodeInput();
+    
+    showMessage('4-digit code sent to your email!', 'success');
+    
+  } catch (error) {
+    console.error('Error sending code:', error);
+    showMessage(error.message || 'Failed to send code', 'error');
+  } finally {
+    const sendCodeBtn = getElement('send-code-btn');
+    if (sendCodeBtn) {
+      sendCodeBtn.disabled = false;
+      const btnText = sendCodeBtn.querySelector('.btn-text');
+      if (btnText) btnText.textContent = 'Send me a code';
+    }
+  }
+}
+
+// Handle code input
+function handleCodeInput(event, index) {
+  const input = event.target;
+  const value = input.value.replace(/[^0-9]/g, '');
+  
+  input.value = value;
+  
+  // Auto-focus next input
+  if (value && index < 3) {
+    const nextInput = getElement(`code-input-${index + 2}`);
+    nextInput?.focus();
+  }
+  
+  // Check if all digits are filled
+  const code = getEnteredCode();
+  if (code.length === 4) {
+    handleCodeVerification(code);
+  }
+}
+
+// Handle code key down
+function handleCodeKeyDown(event, index) {
+  if (event.key === 'Backspace') {
+    if (!event.target.value && index > 0) {
+      const prevInput = getElement(`code-input-${index}`);
+      prevInput?.focus();
+    }
+  }
+}
+
+// Get entered code
+function getEnteredCode() {
+  let code = '';
+  for (let i = 1; i <= 4; i++) {
+    const input = getElement(`code-input-${i}`);
+    code += input?.value || '';
+  }
+  return code;
+}
+
+// Focus first code input
+function focusFirstCodeInput() {
+  const firstInput = getElement('code-input-1');
+  firstInput?.focus();
+}
+
+// Handle code verification
+async function handleCodeVerification(code) {
+  try {
+    if (!email) {
+      showMessage('Email not found. Please try again.', 'error');
+      showAuthForm('signin');
+      return;
+    }
+    
+    // Use extensionAuth to verify PIN
+    const result = await extensionAuth.authenticateWithPIN(email, code);
+    
+    if (result.success) {
+      currentUser = result.user;
+      showMessage('Authentication successful!', 'success');
+      
+      // Load user data and show dashboard
+      setTimeout(async () => {
+        await loadUserData();
+      }, 500);
+    } else {
+      remainingAttempts--;
+      if (remainingAttempts <= 0) {
+        showMessage('Too many attempts. Please request a new code.', 'error');
+        showAuthForm('signin');
+        resetCodeInputs();
+      } else {
+        showMessage(`Invalid code. ${remainingAttempts} attempts remaining.`, 'error');
+        resetCodeInputs();
+      }
+    }
+    
+  } catch (error) {
+    console.error('Error verifying code:', error);
+    showMessage(error.message || 'Code verification failed', 'error');
+    resetCodeInputs();
+  }
+}
+
+// Reset code inputs
+function resetCodeInputs() {
+  for (let i = 1; i <= 4; i++) {
+    const input = getElement(`code-input-${i}`);
+    if (input) input.value = '';
+  }
+  focusFirstCodeInput();
+}
+
+// Switch to reset password
+function switchToResetPassword() {
+  showMessage('Password reset functionality coming soon!', 'info');
+}
+
+// Toggle password visibility
+function togglePasswordVisibility() {
+  const passwordInput = getElement('password-input');
+  const eyeIcon = document.querySelector('.eye-icon');
+  
+  if (passwordInput && eyeIcon) {
+    if (passwordInput.type === 'password') {
+      passwordInput.type = 'text';
+      eyeIcon.innerHTML = `
+        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      `;
+    } else {
+      passwordInput.type = 'password';
+      eyeIcon.innerHTML = `
+        <path d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      `;
+    }
   }
 }
 
 // Load user data and stats
 async function loadUserData() {
   try {
+    showView('loading');
+    
     // Load jobs and KPIs
     const jobsResponse = await chrome.runtime.sendMessage({ action: 'fetchJobs' });
     
-    if (jobsResponse.success) {
+    if (jobsResponse && jobsResponse.success) {
       kpis = jobsResponse.kpis || {};
       updateUserInfo();
       updateStats();
@@ -194,27 +447,38 @@ async function loadUserData() {
 function updateUserInfo() {
   if (!currentUser) return;
   
-  elements.userName.textContent = currentUser.name || 'User';
-  elements.userEmail.textContent = currentUser.email || '';
+  const userName = getElement('user-name');
+  const userEmail = getElement('user-email');
+  const userAvatarImg = getElement('user-avatar-img');
+  const userAvatarInitials = getElement('user-avatar-initials');
+  
+  if (userName) userName.textContent = currentUser.name || 'User';
+  if (userEmail) userEmail.textContent = currentUser.email || '';
   
   // Set avatar
-  if (currentUser.image) {
-    elements.userAvatarImg.src = currentUser.image;
-    elements.userAvatarImg.style.display = 'block';
-    elements.userAvatarInitials.style.display = 'none';
+  if (userAvatarImg && currentUser.image) {
+    userAvatarImg.src = currentUser.image;
+    userAvatarImg.style.display = 'block';
+    if (userAvatarInitials) userAvatarInitials.style.display = 'none';
   } else {
     const initials = getInitials(currentUser.name || currentUser.email);
-    elements.userAvatarInitials.textContent = initials;
-    elements.userAvatarInitials.style.display = 'flex';
-    elements.userAvatarImg.style.display = 'none';
+    if (userAvatarInitials) {
+      userAvatarInitials.textContent = initials;
+      userAvatarInitials.style.display = 'flex';
+    }
+    if (userAvatarImg) userAvatarImg.style.display = 'none';
   }
 }
 
 // Update stats display
 function updateStats() {
-  elements.totalJobs.textContent = kpis.totalJobs || 0;
-  elements.appliedJobs.textContent = kpis.appliedJobs || 0;
-  elements.interviewJobs.textContent = kpis.interviewJobs || 0;
+  const totalJobs = getElement('total-jobs');
+  const appliedJobs = getElement('applied-jobs');
+  const interviewJobs = getElement('interview-jobs');
+  
+  if (totalJobs) totalJobs.textContent = kpis.totalJobs || 0;
+  if (appliedJobs) appliedJobs.textContent = kpis.appliedJobs || 0;
+  if (interviewJobs) interviewJobs.textContent = kpis.interviewJobs || 0;
 }
 
 // Load current job from active tab
@@ -411,151 +675,139 @@ function extractJobData() {
 
 // Show current job
 function showCurrentJob(jobData) {
-  elements.jobTitle.textContent = jobData.title;
-  elements.jobCompany.textContent = jobData.company;
-  elements.jobLocation.textContent = jobData.location || 'Not specified';
+  const jobTitle = getElement('job-title');
+  const jobCompany = getElement('job-company');
+  const jobLocation = getElement('job-location');
+  const jobSource = getElement('job-source');
+  const jobCompanyLogo = getElement('job-company-logo');
+  const jobCompanyInitials = getElement('job-company-initials');
+  const jobDescriptionText = getElement('job-description-text');
+  
+  if (jobTitle) jobTitle.textContent = jobData.title;
+  if (jobCompany) jobCompany.textContent = jobData.company;
+  if (jobLocation) jobLocation.textContent = jobData.location || 'Not specified';
+  if (jobSource) jobSource.textContent = jobData.source || 'Unknown';
   
   const companyInitials = getCompanyInitials(jobData.company);
   const logoClass = getCompanyLogoClass(jobData.company);
-  elements.jobCompanyInitials.textContent = companyInitials;
-  elements.jobCompanyLogo.className = `company-logo ${logoClass}`;
+  if (jobCompanyInitials) jobCompanyInitials.textContent = companyInitials;
+  if (jobCompanyLogo) jobCompanyLogo.className = `company-logo ${logoClass}`;
   
-  elements.jobDescriptionText.textContent = jobData.description || 'No description available.';
+  if (jobDescriptionText) jobDescriptionText.textContent = jobData.description || 'No description available.';
   
-  elements.currentJobCard.classList.remove('hidden');
-  elements.noJobState.classList.add('hidden');
+  // Update captured fields
+  updateCapturedFields(jobData);
+  
+  // Update missing fields checklist
+  updateMissingFieldsList(jobData);
+  
+  const currentJobCard = getElement('current-job-card');
+  const noJobState = getElement('no-job-state');
+  
+  if (currentJobCard) currentJobCard.classList.remove('hidden');
+  if (noJobState) noJobState.classList.add('hidden');
+}
+
+// Update captured fields display
+function updateCapturedFields(jobData) {
+  const jobSalary = getElement('job-salary');
+  const jobType = getElement('job-type');
+  const jobRemote = getElement('job-remote');
+  const jobSponsorship = getElement('job-sponsorship');
+  
+  // Salary information (often missing from job sites)
+  if (jobSalary) {
+    if (jobData.salary) {
+      jobSalary.textContent = jobData.salary;
+      jobSalary.classList.remove('missing-field');
+    } else {
+      jobSalary.textContent = 'Not captured';
+      jobSalary.classList.add('missing-field');
+    }
+  }
+  
+  // Job type
+  if (jobType) {
+    if (jobData.type) {
+      jobType.textContent = jobData.type;
+      jobType.classList.remove('missing-field');
+    } else {
+      jobType.textContent = 'Not captured';
+      jobType.classList.add('missing-field');
+    }
+  }
+  
+  // Remote work
+  if (jobRemote) {
+    if (jobData.remote !== undefined) {
+      jobRemote.textContent = jobData.remote ? 'Yes' : 'No';
+      jobRemote.classList.remove('missing-field');
+    } else {
+      jobRemote.textContent = 'Not captured';
+      jobRemote.classList.add('missing-field');
+    }
+  }
+  
+  // Sponsorship (often not explicitly stated)
+  if (jobSponsorship) {
+    if (jobData.sponsorship) {
+      jobSponsorship.textContent = jobData.sponsorship;
+      jobSponsorship.classList.remove('missing-field');
+    } else {
+      jobSponsorship.textContent = 'Unknown';
+      jobSponsorship.classList.add('missing-field');
+    }
+  }
+}
+
+// Update missing fields checklist
+function updateMissingFieldsList(jobData) {
+  const missingFieldsList = getElement('missing-fields-list');
+  if (!missingFieldsList) return;
+  
+  const missingFields = [];
+  
+  // Check what information is missing
+  if (!jobData.salary) missingFields.push('salary');
+  if (!jobData.type) missingFields.push('job-type');
+  if (jobData.remote === undefined) missingFields.push('remote');
+  if (!jobData.sponsorship) missingFields.push('sponsorship');
+  
+  // Add other common missing fields
+  missingFields.push('priority', 'notes', 'contacts', 'deadline', 'interview-dates');
+  
+  // Update the list
+  const missingItems = missingFieldsList.querySelectorAll('.missing-item');
+  missingItems.forEach(item => {
+    const field = item.getAttribute('data-field');
+    if (missingFields.includes(field)) {
+      item.style.display = 'flex';
+    } else {
+      item.style.display = 'none';
+    }
+  });
 }
 
 // Show no job state
 function showNoJobState() {
-  elements.currentJobCard.classList.add('hidden');
-  elements.noJobState.classList.remove('hidden');
-}
-
-// Show different views
-function showView(viewName) {
-  Object.values(sections).forEach(section => {
-    section.classList.add('hidden');
-  });
+  const currentJobCard = getElement('current-job-card');
+  const noJobState = getElement('no-job-state');
   
-  if (sections[viewName]) {
-    sections[viewName].classList.remove('hidden');
-  }
+  if (currentJobCard) currentJobCard.classList.add('hidden');
+  if (noJobState) noJobState.classList.remove('hidden');
 }
 
 // Event handlers
-function handleLogin() {
-  chrome.tabs.create({ url: 'https://www.cvcircle.io/sign-in' });
-  window.close();
-}
-
-async function handleRefresh() {
-  try {
-    console.log('🔄 Refreshing session...');
-    elements.refreshBtn.disabled = true;
-    elements.refreshBtn.innerHTML = 'Refreshing...';
-    
-    // Force reinitialize the app
-    await initializeApp();
-    
-  } catch (error) {
-    console.error('❌ Error refreshing session:', error);
-    elements.refreshBtn.innerHTML = 'Error';
-    setTimeout(() => {
-      elements.refreshBtn.disabled = false;
-      elements.refreshBtn.innerHTML = `
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M21 3v5h-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M3 21v-5h5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        Refresh Session
-      `;
-    }, 2000);
-  }
-}
-
-async function handleDebug() {
-  try {
-    console.log('🔍 Running debug...');
-    
-    const debugResults = {
-      timestamp: new Date().toISOString(),
-      popupLoaded: true,
-      currentUser: currentUser,
-      currentJob: currentJob,
-      kpis: kpis
-    };
-    
-    // Test cookie access
-    try {
-      const cookieTest = await chrome.runtime.sendMessage({ action: 'testCookies' });
-      debugResults.cookieTest = cookieTest;
-      console.log('🧪 Cookie test results:', cookieTest);
-    } catch (error) {
-      debugResults.cookieTestError = error.message;
-      console.log('⚠️ Cookie test failed:', error);
-    }
-    
-    // Test session
-    try {
-      const sessionTest = await chrome.runtime.sendMessage({ action: 'getSession' });
-      debugResults.sessionTest = sessionTest;
-      console.log('🔍 Session test results:', sessionTest);
-    } catch (error) {
-      debugResults.sessionTestError = error.message;
-      console.log('⚠️ Session test failed:', error);
-    }
-    
-    // Test environment
-    try {
-      const envTest = await chrome.runtime.sendMessage({ action: 'getEnvironment' });
-      debugResults.environmentTest = envTest;
-      console.log('🌍 Environment test results:', envTest);
-    } catch (error) {
-      debugResults.environmentTestError = error.message;
-      console.log('⚠️ Environment test failed:', error);
-    }
-    
-    // Show results in alert
-    const debugInfo = `
-CVCircle Extension Debug Results:
-================================
-
-Timestamp: ${debugResults.timestamp}
-Popup Loaded: ${debugResults.popupLoaded}
-Current User: ${debugResults.currentUser ? 'Yes' : 'No'}
-Current Job: ${debugResults.currentJob ? 'Yes' : 'No'}
-
-Cookie Test: ${debugResults.cookieTest ? 'Success' : 'Failed'}
-${debugResults.cookieTestError ? `Error: ${debugResults.cookieTestError}` : ''}
-
-Session Test: ${debugResults.sessionTest ? 'Success' : 'Failed'}
-${debugResults.sessionTestError ? `Error: ${debugResults.sessionTestError}` : ''}
-
-Environment Test: ${debugResults.environmentTest ? 'Success' : 'Failed'}
-${debugResults.environmentTestError ? `Error: ${debugResults.environmentTestError}` : ''}
-
-Full Results:
-${JSON.stringify(debugResults, null, 2)}
-    `;
-    
-    alert(debugInfo);
-    
-  } catch (error) {
-    console.error('❌ Debug error:', error);
-    alert(`Debug Error: ${error.message}`);
-  }
-}
-
 async function handleSaveJob() {
   if (!currentJob) return;
   
   try {
-    elements.saveJobBtn.disabled = true;
-    elements.saveJobBtn.classList.add('loading');
-    elements.saveJobBtn.innerHTML = 'Saving...';
+    const saveJobBtn = getElement('save-job-btn');
+    if (saveJobBtn) {
+      saveJobBtn.disabled = true;
+      saveJobBtn.classList.add('loading');
+      saveJobBtn.innerHTML = 'Saving...';
+    }
     
     const response = await chrome.runtime.sendMessage({
       action: 'saveJob',
@@ -563,15 +815,11 @@ async function handleSaveJob() {
     });
     
     if (response.success) {
-      elements.saveJobBtn.classList.remove('loading');
-      elements.saveJobBtn.classList.add('success');
-      elements.saveJobBtn.innerHTML = `
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M22 11.08V12C21.9988 14.1564 21.3005 16.2547 20.0093 17.9818C18.7182 19.7088 16.9033 20.9725 14.8354 21.5839C12.7674 22.1953 10.5573 22.1219 8.53447 21.3746C6.51168 20.6273 4.78465 19.2461 3.61096 17.4371C2.43727 15.628 1.87979 13.4881 2.02168 11.3363C2.16356 9.18455 2.99721 7.13631 4.39828 5.49706C5.79935 3.85781 7.69279 2.71537 9.79619 2.24013C11.8996 1.7649 14.1003 1.98232 16.07 2.85999" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M22 4L12 14.01L9 11.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        Saved!
-      `;
+      if (saveJobBtn) {
+        saveJobBtn.classList.remove('loading');
+        saveJobBtn.classList.add('success');
+        saveJobBtn.innerHTML = 'Saved!';
+      }
       
       // Update stats
       await loadUserData();
@@ -582,17 +830,15 @@ async function handleSaveJob() {
     
   } catch (error) {
     console.error('Error saving job:', error);
-    elements.saveJobBtn.classList.remove('loading');
-    elements.saveJobBtn.classList.add('error');
-    elements.saveJobBtn.innerHTML = `
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-        <path d="M15 9L9 15M9 9L15 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-      Error
-    `;
+    const saveJobBtn = getElement('save-job-btn');
+    if (saveJobBtn) {
+      saveJobBtn.classList.remove('loading');
+      saveJobBtn.classList.add('error');
+      saveJobBtn.innerHTML = 'Error';
+    }
   } finally {
-    elements.saveJobBtn.disabled = false;
+    const saveJobBtn = getElement('save-job-btn');
+    if (saveJobBtn) saveJobBtn.disabled = false;
   }
 }
 
@@ -610,6 +856,105 @@ function handleHelpLink(e) {
   chrome.tabs.create({ url: 'https://www.cvcircle.io/help' });
   window.close();
 }
+
+function handleEditJob() {
+  chrome.runtime.sendMessage({ action: 'getEnvironment' }).then(env => {
+    const baseUrl = env.apiBaseUrl;
+    chrome.tabs.create({ url: `${baseUrl}/dashboard?section=jobs&action=create&jobTitle=${encodeURIComponent(currentJob.title)}&company=${encodeURIComponent(currentJob.company)}` });
+    window.close();
+  });
+}
+
+async function handleDebug() {
+  try {
+    console.log('🔍 Running debug...');
+    
+    const debugResults = {
+      timestamp: new Date().toISOString(),
+      popupLoaded: true,
+      extensionAuthLoaded: typeof ExtensionAuth !== 'undefined',
+      currentUser: currentUser,
+      currentJob: currentJob,
+      kpis: kpis,
+      authMode: authMode,
+      email: email,
+      verificationType: verificationType
+    };
+    
+    // Test environment
+    try {
+      const envTest = await chrome.runtime.sendMessage({ action: 'getEnvironment' });
+      debugResults.environmentTest = envTest;
+      console.log('🌍 Environment test results:', envTest);
+    } catch (error) {
+      debugResults.environmentTestError = error.message;
+      console.log('⚠️ Environment test failed:', error);
+    }
+    
+    // Test DOM elements
+    const elementTests = {};
+    const testElements = ['email-input', 'password-input', 'signin-btn', 'send-code-btn', 'code-input-1'];
+    testElements.forEach(id => {
+      elementTests[id] = !!getElement(id);
+    });
+    debugResults.elementTests = elementTests;
+    
+    // Show results in alert
+    const debugInfo = `
+CVCircle Extension Debug Results:
+================================
+
+Timestamp: ${debugResults.timestamp}
+Popup Loaded: ${debugResults.popupLoaded}
+Extension Auth Loaded: ${debugResults.extensionAuthLoaded}
+Current User: ${debugResults.currentUser ? 'Yes' : 'No'}
+Current Job: ${debugResults.currentJob ? 'Yes' : 'No'}
+Auth Mode: ${debugResults.authMode}
+Email: ${debugResults.email || 'Not set'}
+Verification Type: ${debugResults.verificationType}
+
+Environment Test: ${debugResults.environmentTest ? 'Success' : 'Failed'}
+${debugResults.environmentTestError ? `Error: ${debugResults.environmentTestError}` : ''}
+
+Element Tests:
+${Object.entries(elementTests).map(([key, value]) => `${key}: ${value ? '✅' : '❌'}`).join('\n')}
+
+Full Results:
+${JSON.stringify(debugResults, null, 2)}
+    `;
+    
+    alert(debugInfo);
+    
+  } catch (error) {
+    console.error('❌ Debug error:', error);
+    alert(`Debug Error: ${error.message}`);
+  }
+}
+
+// Handle messages from background script
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  console.log('Popup received message:', request);
+  
+  switch (request.action) {
+    case 'jobSaved':
+      if (currentUser) {
+        loadUserData();
+      }
+      break;
+      
+    case 'authStateChanged':
+    case 'broadcastSessionUpdate':
+      console.log('🔄 Auth state update received:', request);
+      if (request.isAuthenticated && request.user) {
+        currentUser = request.user;
+        loadUserData();
+      } else {
+        currentUser = null;
+        showView('login');
+      }
+      break;
+  }
+});
 
 // Utility functions
 function getInitials(name) {
@@ -647,31 +992,4 @@ function getCompanyLogoClass(companyName) {
   return 'default';
 }
 
-// Handle messages from background script
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  console.log('Popup received message:', request);
-  
-  switch (request.action) {
-    case 'jobSaved':
-      // Refresh data when a job is saved
-      if (currentUser) {
-        loadUserData();
-      }
-      break;
-      
-    case 'sessionUpdated':
-      // Handle session updates
-      if (request.isAuthenticated) {
-        currentUser = request.user;
-        loadUserData();
-      } else {
-        currentUser = null;
-        showView('login');
-      }
-      break;
-  }
-});
-
-console.log('CVCircle Job Tracker popup script loaded');
-
-
+console.log('CVCircle Job Tracker popup script loaded with main app authentication design');

@@ -557,6 +557,12 @@ function extractJobData() {
     company: '',
     location: '',
     description: '',
+    salary: '',
+    type: '',
+    remote: undefined,
+    sponsorship: '',
+    postedDate: '',
+    experienceLevel: '',
     url: window.location.href,
     source: currentSite.name,
     extractedAt: new Date().toISOString()
@@ -585,7 +591,142 @@ function extractJobData() {
     }
   }
   
+  // Extract additional job metadata
+  extractAdditionalJobMetadata(data);
+  
   return data;
+}
+
+// Extract additional job metadata like salary, type, remote work, etc.
+function extractAdditionalJobMetadata(data) {
+  // Try to extract salary information
+  const salaryText = document.body.textContent || document.body.innerText || '';
+  const salaryPatterns = [
+    /\$[\d,]+(?:\.\d{2})?\s*-\s*\$?[\d,]+(?:\.\d{2})?/g, // $50,000 - $70,000
+    /\$[\d,]+(?:\.\d{2})?\s*(?:per|\/)\s*(?:year|month|hour|hr)/gi, // $50,000 per year
+    /[\d,]+(?:\.\d{2})?\s*-\s*[\d,]+(?:\.\d{2})?\s*(?:USD|\$)/g, // 50000-70000 USD
+    /Salary Range:\s*([^\n\r]+)/gi,
+    /Compensation:\s*([^\n\r]+)/gi
+  ];
+  
+  for (const pattern of salaryPatterns) {
+    const match = salaryText.match(pattern);
+    if (match && match[0]) {
+      data.salary = match[0].trim();
+      break;
+    }
+  }
+  
+  // Try to extract job type
+  const typePatterns = [
+    /(?:full[-\s]?time|part[-\s]?time|contract|freelance|temporary|internship)/gi,
+    /(?:employment type|job type|work type):\s*([^\n\r]+)/gi
+  ];
+  
+  for (const pattern of typePatterns) {
+    const match = salaryText.match(pattern);
+    if (match && match[0]) {
+      const typeText = match[0].toLowerCase();
+      if (typeText.includes('full')) data.type = 'full-time';
+      else if (typeText.includes('part')) data.type = 'part-time';
+      else if (typeText.includes('contract')) data.type = 'contract';
+      else if (typeText.includes('freelance')) data.type = 'freelance';
+      else if (typeText.includes('temporary')) data.type = 'temporary';
+      else if (typeText.includes('intern')) data.type = 'internship';
+      else data.type = match[0].trim();
+      break;
+    }
+  }
+  
+  // Try to detect remote work options
+  const remotePatterns = [
+    /(?:remote|work from home|wfh|home based|telecommute)/gi,
+    /(?:remote work allowed|remote position|work remotely)/gi
+  ];
+  
+  for (const pattern of remotePatterns) {
+    const match = salaryText.match(pattern);
+    if (match && match[0]) {
+      data.remote = true;
+      break;
+    }
+  }
+  
+  // Try to detect if remote work is NOT available
+  if (data.remote === undefined) {
+    const onsitePatterns = [
+      /(?:onsite|on-site|office based|in-office|need to be in office)/gi,
+      /(?:must work from office|office required)/gi
+    ];
+    
+    for (const pattern of onsitePatterns) {
+      const match = salaryText.match(pattern);
+      if (match && match[0]) {
+        data.remote = false;
+        break;
+      }
+    }
+  }
+  
+  // Try to extract experience level
+  const experiencePatterns = [
+    /(?:experience required|years of experience|minimum experience):\s*([^\n\r]+)/gi,
+    /(?:entry level|junior|mid level|senior|lead|principal)/gi
+  ];
+  
+  for (const pattern of experiencePatterns) {
+    const match = salaryText.match(pattern);
+    if (match && match[0]) {
+      const expText = match[0].toLowerCase();
+      if (expText.includes('entry')) data.experienceLevel = 'entry-level';
+      else if (expText.includes('junior')) data.experienceLevel = 'junior';
+      else if (expText.includes('mid')) data.experienceLevel = 'mid-level';
+      else if (expText.includes('senior')) data.experienceLevel = 'senior';
+      else if (expText.includes('lead')) data.experienceLevel = 'lead';
+      else if (expText.includes('principal')) data.experienceLevel = 'principal';
+      else data.experienceLevel = match[0].trim();
+      break;
+    }
+  }
+  
+  // Try to detect visa sponsorship
+  const sponsorshipPatterns = [
+    /(?:visa sponsorship|sponsorship provided|h1b|green card|work authorization)/gi,
+    /(?:no visa sponsorship|unable to sponsor|does not sponsor)/gi
+  ];
+  
+  for (const pattern of sponsorshipPatterns) {
+    const match = salaryText.match(pattern);
+    if (match && match[0]) {
+      const sponsorText = match[0].toLowerCase();
+      if (sponsorText.includes('no') || sponsorText.includes('unable')) {
+        data.sponsorship = 'no';
+      } else {
+        data.sponsorship = 'yes';
+      }
+      break;
+    }
+  }
+  
+  // Try to extract posted date
+  const datePatterns = [
+    /(?:posted|published|date posted):\s*([^\n\r]+)/gi,
+    /(\d{1,2}\/\d{1,2}\/\d{4})/g, // MM/DD/YYYY
+    /(\d{4}-\d{2}-\d{2})/g // YYYY-MM-DD
+  ];
+  
+  for (const pattern of datePatterns) {
+    const match = salaryText.match(pattern);
+    if (match && match[0]) {
+      data.postedDate = match[0].trim();
+      break;
+    }
+  }
+  
+  // Clean up description if it's too long
+  if (data.description && data.description.length > 2000) {
+    data.description = data.description.substring(0, 1997) + '...';
+  }
 }
 
 // Fallback extraction methods

@@ -16,21 +16,40 @@ async function detectEnvironment() {
   try {
     console.log('🔍 Detecting environment...');
     
-    // Check for localhost cookies (development)
+    // Check for localhost cookies (development) - multiple variants
+    const devDomains = ['localhost', '127.0.0.1'];
+    
+    for (const domain of devDomains) {
+      try {
+        const devCookies = await chrome.cookies.getAll({
+          domain: domain
+        });
+        console.log(`🔍 ${domain} cookies found:`, devCookies.length);
+        
+        if (devCookies.length > 0) {
+          API_BASE_URL = domain === '127.0.0.1' ? 'http://127.0.0.1:3000' : 'http://localhost:3000';
+          IS_DEVELOPMENT = true;
+          console.log(`✅ Development environment detected (${domain})`);
+          return;
+        }
+      } catch (error) {
+        console.log(`⚠️ Error checking ${domain} cookies:`, error);
+      }
+    }
+    
+    // Also check for .local domains
     try {
       const localCookies = await chrome.cookies.getAll({
-        domain: 'localhost'
+        domain: 'cvcircle.local'
       });
-      console.log('🔍 Localhost cookies found:', localCookies.length);
-      
       if (localCookies.length > 0) {
-        API_BASE_URL = 'http://localhost:3000';
+        API_BASE_URL = 'http://cvcircle.local:3000';
         IS_DEVELOPMENT = true;
-        console.log('✅ Development environment detected');
+        console.log('✅ Development environment detected (cvcircle.local)');
         return;
       }
     } catch (error) {
-      console.log('⚠️ Error checking localhost cookies:', error);
+      console.log('⚠️ Error checking cvcircle.local cookies:', error);
     }
     
     // Default to production
@@ -76,6 +95,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       safeHandler(() => handleGetSession(sendResponse));
       return true;
       
+    case 'forceSessionCheck':
+      safeHandler(() => handleForceSessionCheck(sendResponse));
+      return true;
+      
     case 'sessionUpdate':
       safeHandler(() => handleSessionUpdate(request, sendResponse));
       return true;
@@ -85,10 +108,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       return true;
       
     case 'getEnvironment':
-      sendResponse({ 
-        success: true, 
-        apiBaseUrl: API_BASE_URL, 
-        isDevelopment: IS_DEVELOPMENT 
+      sendResponse({
+        success: true,
+        apiBaseUrl: API_BASE_URL,
+        isDevelopment: IS_DEVELOPMENT
       });
       return false;
       
@@ -96,21 +119,106 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       safeHandler(() => handleTestCookies(sendResponse));
       return true;
       
+    case 'broadcastSessionUpdate':
+      // Handle broadcast to other extension components
+      console.log('📢 Broadcasting session update:', request.sessionData);
+      return false; // No response needed for broadcast
+      
     default:
       sendResponse({ success: false, message: 'Unknown action' });
       return false;
   }
 });
 
-// Get session from cookies
+/**
+ * Force a session check with improved error handling and retry logic
+ */
+async function handleForceSessionCheck(sendResponse) {
+  try {
+    console.log('🔄 Force session check initiated...');
+    
+    // Clear any existing session data first
+    await chrome.storage.local.remove(['userData', 'isAuthenticated', 'lastSessionCheck']);
+    
+    // Try to get session from cookies
+    const session = await getSessionFromCookiesWithRetry(3);
+    
+    if (session && session.isAuthenticated) {
+      // Store user data locally
+      await chrome.storage.local.set({
+        userData: session.user,
+        isAuthenticated: true,
+        lastSessionCheck: Date.now(),
+        sessionSource: 'extension-check'
+      });
+      
+      console.log('✅ Force session check successful - user authenticated');
+      sendResponse({
+        success: true,
+        user: session.user,
+        isAuthenticated: true,
+        message: 'Session verified successfully'
+      });
+    } else {
+      console.log('❌ Force session check failed - no valid session');
+      sendResponse({
+        success: false,
+        message: 'No valid session found',
+        isAuthenticated: false
+      });
+    }
+  } catch (error) {
+    console.error('❌ Force session check error:', error);
+    sendResponse({
+      success: false,
+      message: 'Session check failed',
+      error: error.message,
+      isAuthenticated: false
+    });
+  }
+}
+
+// Enhanced session retrieval with retry logic
+async function getSessionFromCookiesWithRetry(maxRetries = 3) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`🔍 Session check attempt ${attempt}/${maxRetries}`);
+      
+      const result = await getSessionFromCookies();
+      if (result) {
+        return result;
+      }
+      
+      if (attempt < maxRetries) {
+        console.log(`⏳ Waiting before retry ${attempt + 1}...`);
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt)); // Exponential backoff
+      }
+    } catch (error) {
+      console.log(`❌ Session check attempt ${attempt} failed:`, error);
+      if (attempt === maxRetries) {
+        throw error;
+      }
+    }
+  }
+  
+  return null;
+}
+
+// Get session from cookies (original function with improvements)
 async function getSessionFromCookies() {
   try {
     console.log('🔍 Checking for session cookies...');
     console.log('🔍 Current API_BASE_URL:', API_BASE_URL);
     console.log('🔍 IS_DEVELOPMENT:', IS_DEVELOPMENT);
     
-    // Check both domains for cookies
-    const domains = IS_DEVELOPMENT ? ['localhost', '127.0.0.1'] : ['www.cvcircle.io', 'cvcircle.io'];
+    // Check both domains for cookies - include all development variants
+    let domains;
+    if (IS_DEVELOPMENT) {
+      domains = ['localhost', '127.0.0.1', 'cvcircle.local'];
+    } else {
+      domains = ['www.cvcircle.io', 'cvcircle.io'];
+    }
+    
     let allCookies = [];
     
     for (const domain of domains) {
@@ -128,7 +236,7 @@ async function getSessionFromCookies() {
     console.log('🔍 All cookie names:', allCookies.map(c => c.name));
     
     // Look for NextAuth session cookies (prioritize secure cookies for production)
-    const sessionCookie = allCookies.find(cookie => 
+    const sessionCookie = allCookies.find(cookie =>
       cookie.name === '__Secure-next-auth.session-token' ||
       cookie.name === 'next-auth.session-token' ||
       cookie.name === '__Secure-next-auth.csrf-token' ||
@@ -146,36 +254,33 @@ async function getSessionFromCookies() {
     
     console.log('✅ Found session cookie:', sessionCookie.name, 'from domain:', sessionCookie.domain);
     
+    // Determine correct API URL based on cookie domain
+    let apiBaseUrl = API_BASE_URL;
+    if (sessionCookie.domain.includes('localhost') ||
+        sessionCookie.domain.includes('127.0.0.1') ||
+        sessionCookie.domain.includes('cvcircle.local')) {
+      apiBaseUrl = sessionCookie.domain.includes('127.0.0.1') ?
+        'http://127.0.0.1:3000' :
+        sessionCookie.domain.includes('cvcircle.local') ?
+        'http://cvcircle.local:3000' :
+        'http://localhost:3000';
+      console.log(`🔍 Using API URL based on cookie domain: ${apiBaseUrl}`);
+    }
+    
     // Try to verify session with API
     try {
       console.log('🔍 Attempting to verify session with API...');
-      console.log('🔍 Using cookie:', sessionCookie.name, 'from domain:', sessionCookie.domain);
       
-      // Build cookie string with all relevant cookies
-      const cookieString = allCookies
-        .filter(cookie => 
-          cookie.name.includes('next-auth') || 
-          cookie.name.includes('session') || 
-          cookie.name.includes('auth') ||
-          cookie.domain === sessionCookie.domain
-        )
-        .map(cookie => `${cookie.name}=${cookie.value}`)
-        .join('; ');
-      
-      console.log('🔍 Cookie string being sent:', cookieString);
-      
-      const response = await fetch(`${API_BASE_URL}/api/auth/session`, {
+      const response = await fetch(`${apiBaseUrl}/api/auth/session`, {
         method: 'GET',
         credentials: 'include',
         headers: {
-          'Cookie': cookieString,
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         }
       });
       
       console.log('🔍 Session API response status:', response.status);
-      console.log('🔍 Session API response headers:', Object.fromEntries(response.headers.entries()));
       
       if (response.ok) {
         const sessionData = await response.json();
@@ -183,17 +288,13 @@ async function getSessionFromCookies() {
         return {
           cookie: sessionCookie,
           user: sessionData.user,
-          isAuthenticated: !!sessionData.user
+          isAuthenticated: !!sessionData.user,
+          apiBaseUrl: apiBaseUrl
         };
       } else {
         console.log('❌ Session API failed:', response.status, response.statusText);
-        // Try to get response text for debugging
-        try {
-          const errorText = await response.text();
-          console.log('❌ Error response:', errorText);
-        } catch (e) {
-          console.log('❌ Could not read error response');
-        }
+        const errorText = await response.text();
+        console.log('❌ Error response:', errorText);
       }
     } catch (apiError) {
       console.log('❌ Session API error:', apiError);
@@ -259,35 +360,71 @@ async function handleSessionUpdate(request, sendResponse) {
         userData: {
           id: sessionData.userId,
           email: sessionData.userEmail,
-          name: sessionData.userEmail // Fallback, will be updated from API
+          name: sessionData.userEmail || 'User', // Fallback
         },
         isAuthenticated: true,
         lastSessionCheck: Date.now(),
-        sessionSource: 'cvcircle-website'
+        sessionSource: 'cvcircle-website',
+        sessionTimestamp: sessionData.timestamp
       });
       
       console.log('✅ Session updated from website, user authenticated');
-      sendResponse({ 
-        success: true, 
+      
+      // Notify all extension views (popup, content scripts) about the session update
+      try {
+        await chrome.runtime.sendMessage({
+          action: 'broadcastSessionUpdate',
+          sessionData: {
+            isAuthenticated: true,
+            user: {
+              id: sessionData.userId,
+              email: sessionData.userEmail,
+              name: sessionData.userEmail || 'User'
+            }
+          }
+        });
+      } catch (broadcastError) {
+        console.log('⚠️ Could not broadcast session update:', broadcastError);
+      }
+      
+      sendResponse({
+        success: true,
         message: 'Session updated from website',
-        isAuthenticated: true 
+        isAuthenticated: true
       });
     } else {
       // Clear stored data on logout
-      await chrome.storage.local.remove(['userData', 'isAuthenticated', 'sessionSource']);
+      await chrome.storage.local.remove([
+        'userData',
+        'isAuthenticated',
+        'sessionSource',
+        'sessionTimestamp',
+        'authToken'
+      ]);
       console.log('🔄 User logged out on website, clearing extension session');
-      sendResponse({ 
-        success: true, 
+      
+      // Notify all extension views about logout
+      try {
+        await chrome.runtime.sendMessage({
+          action: 'broadcastSessionUpdate',
+          sessionData: { isAuthenticated: false }
+        });
+      } catch (broadcastError) {
+        console.log('⚠️ Could not broadcast logout:', broadcastError);
+      }
+      
+      sendResponse({
+        success: true,
         message: 'Session cleared due to website logout',
-        isAuthenticated: false 
+        isAuthenticated: false
       });
     }
   } catch (error) {
     console.error('❌ Error handling session update:', error);
-    sendResponse({ 
-      success: false, 
+    sendResponse({
+      success: false,
       message: 'Session update failed',
-      isAuthenticated: false 
+      isAuthenticated: false
     });
   }
 }

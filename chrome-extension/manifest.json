@@ -27,7 +27,9 @@
     "https://boards.greenhouse.io/*",
     "https://jobs.smartrecruiters.com/*",
     "https://www.workday.com/*",
-    "https://localhost:3000/*",
+    "http://localhost:3000/*",
+    "http://127.0.0.1:3000/*",
+    "http://cvcircle.local:3000/*",
     "https://www.cvcircle.io/*",
     "https://cvcircle.io/*"
   ],
@@ -61,7 +63,10 @@
     {
       "matches": [
         "https://www.cvcircle.io/*",
-        "https://cvcircle.io/*"
+        "https://cvcircle.io/*",
+        "http://localhost:3000/*",
+        "http://127.0.0.1:3000/*",
+        "http://cvcircle.local:3000/*"
       ],
       "js": ["content-cvcircle.js"],
       "run_at": "document_end"
@@ -76,6 +81,9 @@
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     }
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
   },
   "icons": {
     "16": "icons/icon16.png",

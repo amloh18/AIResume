@@ -130,6 +130,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
   const [mongoDBUserId, setMongoDBUserId] = React.useState<string | null>(null);
   const [showCVSelector, setShowCVSelector] = React.useState(false);
   const [isRetryingDocuments, setIsRetryingDocuments] = React.useState(false);
+  const [isCreatingCoverLetter, setIsCreatingCoverLetter] = React.useState(false);
   const pollingIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
   
   // New state for Step 5 functionality
@@ -1147,8 +1148,56 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
   };
 
 
-  const handleCreateCoverLetter = () => {
-    router.push(`/studio?journeyId=${journey.id}&jobId=${journey.jobId}&mode=cover-letter-tailoring`);
+  const handleCreateCoverLetter = async () => {
+    if (isCreatingCoverLetter) return;
+    
+    setIsCreatingCoverLetter(true);
+    try {
+      console.log('🔍 JourneyTimelineCard - Creating cover letter for journey:', journey.id);
+      
+      // Call the same API endpoint used when journey is created
+      // This will automatically create and link the cover letter to the journey
+      const response = await fetch('/api/journey-documents/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ journeyId: journey.id })
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        toast.success('Cover letter created and linked successfully!');
+        console.log('✅ JourneyTimelineCard - Cover letter created:', result.data);
+        
+        // Refresh journey data to show the new cover letter
+        // The useEffect will automatically reload when journey.coverLetterId changes
+        if (onRefresh) {
+          setTimeout(() => {
+            onRefresh();
+          }, 1000);
+        }
+        
+        // Update local state if cover letter ID is returned
+        if (result.data?.coverLetterId) {
+          updateCoverLetterId(result.data.coverLetterId);
+          // Update journey in parent component
+          if (onUpdateJourney) {
+            onUpdateJourney(journey.id, {
+              coverLetterId: result.data.coverLetterId,
+              status: 'in-progress'
+            });
+          }
+        }
+      } else {
+        console.error('❌ JourneyTimelineCard - Failed to create cover letter:', result);
+        toast.error(result.error || result.message || 'Failed to create cover letter');
+      }
+    } catch (error) {
+      console.error('❌ JourneyTimelineCard - Error creating cover letter:', error);
+      toast.error('Failed to create cover letter. Please try again.');
+    } finally {
+      setIsCreatingCoverLetter(false);
+    }
   };
 
   const handleSelectCoverLetter = (coverLetterId: string) => {
@@ -2243,12 +2292,22 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                           </p>
                           <motion.button
                             onClick={handleCreateCoverLetter}
-                            className="mt-1 text-xs text-lime-400 hover:text-lime-300 flex items-center gap-1"
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
+                            disabled={isCreatingCoverLetter}
+                            className="mt-1 text-xs text-lime-400 hover:text-lime-300 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                            whileHover={{ scale: isCreatingCoverLetter ? 1 : 1.05 }}
+                            whileTap={{ scale: isCreatingCoverLetter ? 1 : 0.95 }}
                           >
-                            <Plus className="h-3 w-3" />
-                            Create New Cover Letter
+                            {isCreatingCoverLetter ? (
+                              <>
+                                <RefreshCw className="h-3 w-3 animate-spin" />
+                                Creating...
+                              </>
+                            ) : (
+                              <>
+                                <Plus className="h-3 w-3" />
+                                Create New Cover Letter
+                              </>
+                            )}
                           </motion.button>
                         </div>
                       ) : (

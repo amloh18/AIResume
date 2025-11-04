@@ -1,11 +1,8 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import './globals.css'
 import ClientProviders from '@/components/providers/ClientProviders'
-
-const inter = Inter({ subsets: ['latin'] })
 
 // Force dynamic rendering for all pages
 export const dynamic = 'force-dynamic'
@@ -106,7 +103,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body>
         <ClientProviders>
           {children}
         </ClientProviders>
