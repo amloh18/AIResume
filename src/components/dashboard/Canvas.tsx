@@ -2126,6 +2126,17 @@ const Canvas: React.FC = () => {
                   />
                 );
               })
+            ) : searchQuery ? (
+              // Only show empty state if there's a search query (filtered out all results)
+              <div className="col-span-full flex flex-col items-center justify-center py-12 px-4">
+                <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 max-w-md w-full text-center">
+                  <FileText className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No CVs Found</h3>
+                  <p className="text-gray-600 dark:text-gray-400">
+                    No CVs match your search criteria.
+                  </p>
+                </div>
+              </div>
             ) : null
           )}
         </div>
@@ -2249,34 +2260,51 @@ const Canvas: React.FC = () => {
             {/* Cover Letter Grid */}
             <div className="space-y-6">
 
-              <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
-                {filteredAndSortedCoverLetters.map((coverLetter) => (
-                  <CoverLetterCardOverlay
-                    key={coverLetter.id}
-                    coverLetter={{
-                      id: coverLetter.id,
-                      title: coverLetter.title,
-                      lastModified: coverLetter.lastModified,
-                      status: coverLetter.status,
-                      content: coverLetter.content || '',
-                      isStarred: coverLetter.isStarred,
-                      views: coverLetter.views || 0,
-                      thumbnail: coverLetter.thumbnail || '',
-                      metadata: coverLetter.metadata
-                    }}
-                    onEdit={(cl) => { window.location.href = `/studio?type=cover_letter&coverLetterId=${cl.id}`; }}
-                    onDownload={handleDownloadCoverLetter}
-                    onDelete={handleDeleteCoverLetter}
-                    onToggleStar={toggleCoverLetterStar}
-                    onTitleEdit={(id, newTitle) => setEditingCoverLetterTitle(newTitle)}
-                    editingCoverLetterId={editingCoverLetterId}
-                    editingTitle={editingCoverLetterTitle}
-                    onStartEditing={startEditingCoverLetter}
-                    onSaveTitle={saveCoverLetterTitle}
-                    onCancelEditing={cancelEditingCoverLetter}
-                  />
-                ))}
-              </div>
+              {filteredAndSortedCoverLetters.length > 0 ? (
+                <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+                  {filteredAndSortedCoverLetters.map((coverLetter) => (
+                    <CoverLetterCardOverlay
+                      key={coverLetter.id}
+                      coverLetter={{
+                        id: coverLetter.id,
+                        title: coverLetter.title,
+                        lastModified: coverLetter.lastModified,
+                        status: coverLetter.status,
+                        content: coverLetter.content || '',
+                        isStarred: coverLetter.isStarred,
+                        views: coverLetter.views || 0,
+                        thumbnail: coverLetter.thumbnail || '',
+                        metadata: coverLetter.metadata
+                      }}
+                      onEdit={(cl) => { window.location.href = `/studio?type=cover_letter&coverLetterId=${cl.id}`; }}
+                      onDownload={handleDownloadCoverLetter}
+                      onDelete={handleDeleteCoverLetter}
+                      onToggleStar={toggleCoverLetterStar}
+                      onTitleEdit={(id, newTitle) => setEditingCoverLetterTitle(newTitle)}
+                      editingCoverLetterId={editingCoverLetterId}
+                      editingTitle={editingCoverLetterTitle}
+                      onStartEditing={startEditingCoverLetter}
+                      onSaveTitle={saveCoverLetterTitle}
+                      onCancelEditing={cancelEditingCoverLetter}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 px-4">
+                  <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 max-w-md w-full text-center">
+                    <MessageSquare className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No Cover Letters Found</h3>
+                    <p className="text-gray-600 dark:text-gray-400 mb-6">
+                      {searchQuery ? 'No cover letters match your search criteria.' : 'Create your first cover letter to get started.'}
+                    </p>
+                    {!searchQuery && (
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Cover letters are typically created when you start a job application journey.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

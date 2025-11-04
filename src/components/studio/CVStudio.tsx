@@ -2617,6 +2617,11 @@ const CVStudio: React.FC<CVStudioProps> = ({
   };
 
   const handleDocumentTypeChange = async (newType: 'cv' | 'cover-letter') => {
+    // Initialize variables that might be needed in error handler
+    const currentJourneyId = journeyId || journeyInfo?.journeyId;
+    const currentJobId = journeyInfo?.jobId || selectedJobId;
+    let newParams = new URLSearchParams();
+    
     try {
       console.log('🔄 ================================================');
       console.log('🔄 HANDLE DOCUMENT TYPE CHANGE CALLED');
@@ -2637,11 +2642,12 @@ const CVStudio: React.FC<CVStudioProps> = ({
       // Continue anyway
     }
     
-    // CRITICAL: Load fresh journey data from database before switching
-    const currentJourneyId = journeyId || journeyInfo?.journeyId;
-    let freshJourneyData = journeyInfo;
-    
-    if (currentJourneyId && userId) {
+    // Wrap the rest of the function in try-catch for error handling
+    try {
+      // CRITICAL: Load fresh journey data from database before switching
+      let freshJourneyData = journeyInfo;
+      
+      if (currentJourneyId && userId) {
       try {
         console.log('🔄 Loading fresh journey data from database:', currentJourneyId);
         const journeyResponse = await fetch(`/api/application-journey/${currentJourneyId}?userId=${userId}`);
@@ -2717,227 +2723,252 @@ const CVStudio: React.FC<CVStudioProps> = ({
       } catch (error) {
         console.error('❌ Failed to reload job data:', error);
       }
-    }
-    
-    // Build the new URL params object
-    const newParams = new URLSearchParams();
-    
-    // Always preserve journeyId as the primary context identifier
-    if (currentJourneyId) {
-      newParams.set('journeyId', currentJourneyId);
-      console.log('✅ Preserving journeyId in URL:', currentJourneyId);
-    }
-    
-    // Keep jobId for backwards compatibility
-    if (currentJobId) {
-      newParams.set('jobId', currentJobId);
-    }
-    
-    if (newType === 'cover-letter') {
-      // Switch to cover letter mode
-      console.log('🔄 Setting cover letter mode parameters');
-      newParams.set('type', 'cover_letter');
-      newParams.set('mode', 'cover-letter');  // Set mode to match document type
-      newParams.delete('cvId'); // Ensure cvId is not in params for cover letter mode
-      
-      // CRITICAL: Ensure CV data is loaded for AI generation in cover letters
-      const existingCvId = freshJourneyData?.cvId || originalCvId || cvId;
-      if (existingCvId && !cvData) {
-        console.log('🔄 Loading CV data for cover letter context:', existingCvId);
-        await reloadCVData(existingCvId);
       }
       
-      // Find existing cover letter ID from multiple sources
-      const existingCoverLetterId = freshJourneyData?.coverLetterId ||
-                                   journeyInfo?.coverLetterId ||
-                                   originalCoverLetterId ||
-                                   coverLetterId;
+      // Build the new URL params object (reuse the one declared at top of function)
+      newParams = new URLSearchParams();
       
-      console.log('🔄 Switching to cover letter - Checking for existing cover letter:', {
-        freshJourneyDataCoverLetterId: freshJourneyData?.coverLetterId,
-        journeyInfoCoverLetterId: journeyInfo?.coverLetterId,
-        originalCoverLetterId,
-        coverLetterId,
-        finalExistingId: existingCoverLetterId
-      });
+      // Always preserve journeyId as the primary context identifier
+      if (currentJourneyId) {
+        newParams.set('journeyId', currentJourneyId);
+        console.log('✅ Preserving journeyId in URL:', currentJourneyId);
+      }
       
-      // Determine final cover letter ID to use
-      let finalCoverLetterId: string | null = existingCoverLetterId || null;
-      
-      if (existingCoverLetterId) {
-        console.log('✅ Using existing cover letter ID:', existingCoverLetterId);
+      // Keep jobId for backwards compatibility
+      const finalJobId = freshJourneyData?.jobId || selectedJobId;
+      if (finalJobId) {
+        newParams.set('jobId', finalJobId);
+      }
+    
+      if (newType === 'cover-letter') {
+        // Switch to cover letter mode
+        console.log('🔄 Setting cover letter mode parameters');
+        newParams.set('type', 'cover_letter');
+        newParams.set('mode', 'cover-letter');  // Set mode to match document type
+        newParams.delete('cvId'); // Ensure cvId is not in params for cover letter mode
         
-        // Update state to ensure we track this coverLetterId
-        setOriginalCoverLetterId(existingCoverLetterId);
-        
-        // Reload cover letter data
-        try {
-          await reloadCoverLetterData(existingCoverLetterId);
-          console.log('✅ Cover letter data reloaded');
-        } catch (error) {
-          console.error('❌ Error reloading cover letter:', error);
+        // CRITICAL: Ensure CV data is loaded for AI generation in cover letters
+        const existingCvId = freshJourneyData?.cvId || originalCvId || cvId;
+        if (existingCvId && !cvData) {
+          console.log('🔄 Loading CV data for cover letter context:', existingCvId);
+          await reloadCVData(existingCvId);
         }
-      } else {
-        // No existing cover letter found - need to create one
-        console.log('🔍 No existing cover letter found, creating new one');
         
-        // Final safety check: Query the journey to make sure no cover letter exists
-        if (currentJourneyId && userId) {
+        // Find existing cover letter ID from multiple sources
+        const existingCoverLetterId = freshJourneyData?.coverLetterId ||
+                                     journeyInfo?.coverLetterId ||
+                                     originalCoverLetterId ||
+                                     coverLetterId;
+        
+        console.log('🔄 Switching to cover letter - Checking for existing cover letter:', {
+          freshJourneyDataCoverLetterId: freshJourneyData?.coverLetterId,
+          journeyInfoCoverLetterId: journeyInfo?.coverLetterId,
+          originalCoverLetterId,
+          coverLetterId,
+          finalExistingId: existingCoverLetterId
+        });
+        
+        // Determine final cover letter ID to use
+        let finalCoverLetterId: string | null = existingCoverLetterId || null;
+        
+        if (existingCoverLetterId) {
+          console.log('✅ Using existing cover letter ID:', existingCoverLetterId);
+          
+          // Update state to ensure we track this coverLetterId
+          setOriginalCoverLetterId(existingCoverLetterId);
+          
+          // Reload cover letter data
           try {
-            console.log('🔍 Safety check - Querying journey for cover letter...');
-            const safetyCheckResponse = await fetch(`/api/application-journey/${currentJourneyId}?userId=${userId}`);
-            
-            if (safetyCheckResponse.ok) {
-              const safetyCheckResult = await safetyCheckResponse.json();
-              const safetyCoverLetterId = safetyCheckResult.data?.journey?.coverLetterId;
+            await reloadCoverLetterData(existingCoverLetterId);
+            console.log('✅ Cover letter data reloaded');
+          } catch (error) {
+            console.error('❌ Error reloading cover letter:', error);
+          }
+        } else {
+          // No existing cover letter found - need to create one
+          console.log('🔍 No existing cover letter found, creating new one');
+          
+          // Final safety check: Query the journey to make sure no cover letter exists
+          if (currentJourneyId && userId) {
+            try {
+              console.log('🔍 Safety check - Querying journey for cover letter...');
+              const safetyCheckResponse = await fetch(`/api/application-journey/${currentJourneyId}?userId=${userId}`);
               
-              if (safetyCoverLetterId) {
-                console.log('✅ Found cover letter in safety check:', safetyCoverLetterId);
-                finalCoverLetterId = safetyCoverLetterId;
-                setOriginalCoverLetterId(safetyCoverLetterId);
+              if (safetyCheckResponse.ok) {
+                const safetyCheckResult = await safetyCheckResponse.json();
+                const safetyCoverLetterId = safetyCheckResult.data?.journey?.coverLetterId;
                 
-                // Update local journey info
-                setJourneyInfo(prev => prev ? {
-                  ...prev,
-                  coverLetterId: safetyCoverLetterId
-                } : null);
-                
-                // Reload the cover letter data
-                try {
-                  await reloadCoverLetterData(safetyCoverLetterId);
-                } catch (error) {
-                  console.error('❌ Error reloading cover letter:', error);
-                }
-              } else {
-                // No cover letter exists - create new one via duplication
-                console.log('🔍 Creating new cover letter via duplication');
-                try {
-                  const { defaultCoverLetterService } = await import('@/lib/services/defaultCoverLetterService');
-                  const defaultCoverLetterId = await defaultCoverLetterService.ensureDefaultCoverLetter(userId);
+                if (safetyCoverLetterId) {
+                  console.log('✅ Found cover letter in safety check:', safetyCoverLetterId);
+                  finalCoverLetterId = safetyCoverLetterId;
+                  setOriginalCoverLetterId(safetyCoverLetterId);
                   
-                  const newCoverLetterTitle = `${journeyInfo?.company || currentJob?.company || 'Company'}_${journeyInfo?.jobTitle || currentJob?.title || 'Position'} | Cover_Letter`;
+                  // Update local journey info
+                  setJourneyInfo(prev => prev ? {
+                    ...prev,
+                    coverLetterId: safetyCoverLetterId
+                  } : null);
                   
-                  const duplicateResponse = await fetch('/api/cover-letters/duplicate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      sourceCoverLetterId: defaultCoverLetterId,
-                      userId,
-                      customTitle: newCoverLetterTitle,
-                      jobId: currentJobId,
-                      journeyId: currentJourneyId
-                    })
-                  });
-                  
-                  if (duplicateResponse.ok) {
-                    const duplicateResult = await duplicateResponse.json();
-                    const newCoverLetterData = duplicateResult.data?.coverLetter || duplicateResult.coverLetter;
-                    
-                    if (newCoverLetterData) {
-                      const newCoverLetterId = newCoverLetterData.id || newCoverLetterData._id;
-                      finalCoverLetterId = newCoverLetterId;
-                      
-                      // Update state
-                      setOriginalCoverLetterId(newCoverLetterId);
-                      setCoverLetterData(newCoverLetterData);
-                      setCoverLetterTitle(newCoverLetterData.title || newCoverLetterTitle);
-                      
-                      // Update journey
-                      if (currentJourneyId) {
-                        await updateJourneyWithDocument(newCoverLetterId, 'cover-letter');
-                        setJourneyInfo(prev => prev ? {
-                          ...prev,
-                          coverLetterId: newCoverLetterId
-                        } : null);
-                      }
-                      
-                      console.log('✅ Created new cover letter:', newCoverLetterId);
-                    }
-                  } else {
-                    console.error('❌ Duplication failed:', await duplicateResponse.text());
+                  // Reload the cover letter data
+                  try {
+                    await reloadCoverLetterData(safetyCoverLetterId);
+                  } catch (error) {
+                    console.error('❌ Error reloading cover letter:', error);
                   }
-                } catch (error) {
-                  console.error('❌ Error creating cover letter:', error);
+                } else {
+                  // No cover letter exists - create new one via duplication
+                  console.log('🔍 Creating new cover letter via duplication');
+                  try {
+                    const { defaultCoverLetterService } = await import('@/lib/services/defaultCoverLetterService');
+                    const defaultCoverLetterId = await defaultCoverLetterService.ensureDefaultCoverLetter(userId);
+                    
+                    const newCoverLetterTitle = `${journeyInfo?.company || currentJob?.company || 'Company'}_${journeyInfo?.jobTitle || currentJob?.title || 'Position'} | Cover_Letter`;
+                    
+                    const duplicateResponse = await fetch('/api/cover-letters/duplicate', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        sourceCoverLetterId: defaultCoverLetterId,
+                        userId,
+                        customTitle: newCoverLetterTitle,
+                        jobId: currentJobId,
+                        journeyId: currentJourneyId
+                      })
+                    });
+                    
+                    if (duplicateResponse.ok) {
+                      const duplicateResult = await duplicateResponse.json();
+                      const newCoverLetterData = duplicateResult.data?.coverLetter || duplicateResult.coverLetter;
+                      
+                      if (newCoverLetterData) {
+                        const newCoverLetterId = newCoverLetterData.id || newCoverLetterData._id;
+                        finalCoverLetterId = newCoverLetterId;
+                        
+                        // Update state
+                        setOriginalCoverLetterId(newCoverLetterId);
+                        setCoverLetterData(newCoverLetterData);
+                        setCoverLetterTitle(newCoverLetterData.title || newCoverLetterTitle);
+                        
+                        // Update journey
+                        if (currentJourneyId) {
+                          await updateJourneyWithDocument(newCoverLetterId, 'cover-letter');
+                          setJourneyInfo(prev => prev ? {
+                            ...prev,
+                            coverLetterId: newCoverLetterId
+                          } : null);
+                        }
+                        
+                        console.log('✅ Created new cover letter:', newCoverLetterId);
+                      }
+                    } else {
+                      console.error('❌ Duplication failed:', await duplicateResponse.text());
+                    }
+                  } catch (error) {
+                    console.error('❌ Error creating cover letter:', error);
+                  }
                 }
               }
+            } catch (error) {
+              console.error('❌ Safety check failed:', error);
             }
-          } catch (error) {
-            console.error('❌ Safety check failed:', error);
           }
         }
-      }
-      
-      // CRITICAL: Always set coverLetterId in URL if we have one
-      if (finalCoverLetterId) {
-        newParams.set('coverLetterId', finalCoverLetterId);
-        newParams.delete('cvId');
-        console.log('✅ Final cover letter ID set in URL:', finalCoverLetterId);
-      } else {
-        console.warn('⚠️ No cover letter ID available for URL');
-      }
-    } else {
-      // Switch to CV mode
-      newParams.set('type', 'cv');
-      newParams.set('mode', 'cv');  // Set mode to match document type
-      
-      // Find existing CV ID from fresh journey data FIRST
-      const existingCvId = freshJourneyData?.cvId || originalCvId || cvId;
-      console.log('🔄 Switching to CV - Found from journey:', existingCvId);
-      
-      if (existingCvId) {
-        newParams.set('cvId', existingCvId);
-        // Remove coverLetterId param when in CV mode
-        newParams.delete('coverLetterId');
         
-        // Update state to ensure we track this cvId
-        setOriginalCvId(existingCvId);
-        
-        // Reload CV data
-        try {
-          await reloadCVData(existingCvId);
-        } catch (error) {
-          console.error('❌ Error reloading CV, but continuing:', error);
-        }
-      } else if (journeyInfo?.cvId) {
-        // Use CV from journey
-        newParams.set('cvId', journeyInfo.cvId);
-        // Remove coverLetterId param when in CV mode
-        newParams.delete('coverLetterId');
-        setOriginalCvId(journeyInfo.cvId);
-        try {
-          await reloadCVData(journeyInfo.cvId);
-        } catch (error) {
-          console.error('❌ Error reloading CV, but continuing:', error);
+        // CRITICAL: Always set coverLetterId in URL if we have one
+        // This must happen AFTER all async operations complete
+        if (finalCoverLetterId) {
+          newParams.set('coverLetterId', finalCoverLetterId);
+          newParams.delete('cvId');
+          console.log('✅ Final cover letter ID set in URL:', finalCoverLetterId);
+        } else {
+          console.warn('⚠️ No cover letter ID available for URL');
+          // If no cover letter ID was found or created, we still navigate
+          // The studio will handle creating one on load if needed
         }
       } else {
-        console.warn('⚠️ No CV found in any context');
-        setError('No existing CV found. Please ensure you have a CV linked to this journey.');
+        // Switch to CV mode
+        newParams.set('type', 'cv');
+        newParams.set('mode', 'cv');  // Set mode to match document type
+        
+        // Find existing CV ID from fresh journey data FIRST
+        const existingCvId = freshJourneyData?.cvId || originalCvId || cvId;
+        console.log('🔄 Switching to CV - Found from journey:', existingCvId);
+        
+        if (existingCvId) {
+          newParams.set('cvId', existingCvId);
+          // Remove coverLetterId param when in CV mode
+          newParams.delete('coverLetterId');
+          
+          // Update state to ensure we track this cvId
+          setOriginalCvId(existingCvId);
+          
+          // Reload CV data
+          try {
+            await reloadCVData(existingCvId);
+          } catch (error) {
+            console.error('❌ Error reloading CV, but continuing:', error);
+          }
+        } else if (journeyInfo?.cvId) {
+          // Use CV from journey
+          newParams.set('cvId', journeyInfo.cvId);
+          // Remove coverLetterId param when in CV mode
+          newParams.delete('coverLetterId');
+          setOriginalCvId(journeyInfo.cvId);
+          try {
+            await reloadCVData(journeyInfo.cvId);
+          } catch (error) {
+            console.error('❌ Error reloading CV, but continuing:', error);
+          }
+        } else {
+          console.warn('⚠️ No CV found in any context');
+          setError('No existing CV found. Please ensure you have a CV linked to this journey.');
+        }
       }
+      
+      // Use Next.js router to update URL - this will trigger proper re-render with new props
+      const newUrl = `/studio?${newParams.toString()}`;
+      console.log('🔗 ============================================');
+      console.log('🔗 FINAL URL NAVIGATION');
+      console.log('🔗 ============================================');
+      console.log('🔗 New document type:', newType);
+      console.log('🔗 Final URL params:', {
+        type: newParams.get('type'),
+        mode: newParams.get('mode'),
+        cvId: newParams.get('cvId'),
+        coverLetterId: newParams.get('coverLetterId'),
+        journeyId: newParams.get('journeyId'),
+        jobId: newParams.get('jobId')
+      });
+      console.log('🔗 Full URL:', newUrl);
+      console.log('🔗 About to call router.push()...');
+      console.log('🔗 ============================================');
+      
+      // Use push to trigger full navigation and re-render
+      router.push(newUrl);
+      
+      console.log('🔗 router.push() called successfully');
+  } catch (error) {
+    console.error('❌ Error in handleDocumentTypeChange:', error);
+    setError('Failed to switch document type. Please try again.');
+    // Still try to navigate even if there was an error, but without coverLetterId
+    try {
+      const fallbackParams = new URLSearchParams();
+      if (currentJourneyId) fallbackParams.set('journeyId', currentJourneyId);
+      const finalJobId = journeyInfo?.jobId || selectedJobId;
+      if (finalJobId) fallbackParams.set('jobId', finalJobId);
+      if (newType === 'cover-letter') {
+        fallbackParams.set('type', 'cover_letter');
+        fallbackParams.set('mode', 'cover-letter');
+      } else {
+        fallbackParams.set('type', 'cv');
+        fallbackParams.set('mode', 'cv');
+      }
+      router.push(`/studio?${fallbackParams.toString()}`);
+    } catch (navError) {
+      console.error('❌ Failed to navigate on error:', navError);
     }
-    
-    // Use Next.js router to update URL - this will trigger proper re-render with new props
-    const newUrl = `/studio?${newParams.toString()}`;
-    console.log('🔗 ============================================');
-    console.log('🔗 FINAL URL NAVIGATION');
-    console.log('🔗 ============================================');
-    console.log('🔗 New document type:', newType);
-    console.log('🔗 Final URL params:', {
-      type: newParams.get('type'),
-      mode: newParams.get('mode'),
-      cvId: newParams.get('cvId'),
-      coverLetterId: newParams.get('coverLetterId'),
-      journeyId: newParams.get('journeyId'),
-      jobId: newParams.get('jobId')
-    });
-    console.log('🔗 Full URL:', newUrl);
-    console.log('🔗 About to call router.push()...');
-    console.log('🔗 ============================================');
-    
-    // Use push to trigger full navigation and re-render
-    router.push(newUrl);
-    
-    console.log('🔗 router.push() called successfully');
-  };
+  }
+};
 
 
 

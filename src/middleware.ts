@@ -50,6 +50,12 @@ export default async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
   const method = req.method;
 
+  // CRITICAL: Early return for /studio routes to prevent OpenTelemetry bundling issues
+  // The studio page handles its own authentication via RouteGuard
+  if (pathname.startsWith('/studio')) {
+    return NextResponse.next()
+  }
+
   // Allow public routes
   if (isPublicRoute(req)) {
     log.debug('Public route accessed', { pathname, method });
@@ -163,9 +169,8 @@ export default async function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    // Temporarily disable middleware to fix OpenTelemetry issue
-    // '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|zip|webmanifest)).*)',
     // Only run for specific API routes that need authentication
+    // Explicitly exclude /studio and other page routes to prevent OpenTelemetry bundling issues
     '/api/dashboard/(.*)',
     '/api/profile/(.*)',
     '/api/cv/create',
