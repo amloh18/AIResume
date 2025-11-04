@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Scoped styles to prevent conflicts with host page */
+#root,
+#cvcircle-sidebar-container,
+#cvcircle-sidebar-iframe {
+  all: initial;
+  font-family: 'Cabinet Grotesk', system-ui, sans-serif;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #0a0a0a;

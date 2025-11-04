@@ -3,6 +3,7 @@ import { Mail, Lock, Loader2 } from 'lucide-react';
 import { useExtensionAuth } from '../hooks/useExtensionAuth';
 import { authService } from '../lib/auth';
 import { useNavigate } from 'react-router-dom';
+import Logo from './Logo';
 
 const AuthPage: React.FC = () => {
   const [mode, setMode] = useState<'signin' | 'code'>('signin');
@@ -86,11 +87,10 @@ const AuthPage: React.FC = () => {
   return (
     <div className="p-6 space-y-6">
       <div className="text-center">
-        <h1 className="text-2xl font-bold mb-2">
-          <span className="text-lime-500">CV</span>
-          <span className="text-gray-900 dark:text-white">CIRCLE</span>
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400">
+        <div className="mb-6">
+          <Logo size="lg" className="justify-center" />
+        </div>
+        <p className="text-gray-600 dark:text-gray-400 mb-6">
           Sign in to save jobs to your dashboard
         </p>
       </div>

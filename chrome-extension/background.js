@@ -5,10 +5,113 @@ const EXTENSION_ID = chrome.runtime.id;
 let API_BASE_URL = 'https://www.cvcircle.io';
 let IS_DEVELOPMENT = false;
 
+// Constants for session API
+const TARGET_DOMAIN = "cvcircle.io";
+const SESSION_API_PATHS = [
+  "/api/auth/session",
+  "/api/auth/custom-session"
+];
+
 // Initialize extension
 chrome.runtime.onInstalled.addListener(() => {
   console.log('CVCircle Job Saver Extension installed');
   detectEnvironment();
+  setupWebRequestHandler();
+});
+
+// Helper functions for cookie management (used directly in fetch requests)
+// Note: In MV3, blocking webRequest listeners require special permissions that aren't available
+// So we'll manually inject cookies when making fetch requests from the background script
+
+// Helper: get all cookies for a domain (including HttpOnly)
+async function getAllCookiesForDomain(domain) {
+  return new Promise((resolve) => {
+    chrome.cookies.getAll({ domain: domain }, (cookies) => {
+      resolve(cookies || []);
+    });
+  });
+}
+
+// Build Cookie header string from chrome.cookies array
+function buildCookieHeader(cookies) {
+  return cookies.map(c => `${c.name}=${c.value}`).join('; ');
+}
+
+// Get cookies for URL (more reliable for cross-subdomain scenarios)
+async function getAllCookiesForUrl(url) {
+  return new Promise((resolve) => {
+    chrome.cookies.getAll({ url: url }, (cookies) => {
+      resolve(cookies || []);
+    });
+  });
+}
+
+// Get cookies for a given URL - tries multiple methods
+async function getCookiesForRequest(url) {
+  try {
+    // Try URL-based first (more reliable)
+    let cookies = await getAllCookiesForUrl(url);
+    
+    if (cookies && cookies.length > 0) {
+      return cookies;
+    }
+    
+    // If URL-based didn't work, try domain-based
+    const urlObj = new URL(url);
+    const domain = urlObj.hostname.replace(/^www\./, '');
+    cookies = await getAllCookiesForDomain(domain);
+    
+    if (cookies && cookies.length > 0) {
+      return cookies;
+    }
+    
+    // Also try with leading dot
+    cookies = await getAllCookiesForDomain(`.${domain}`);
+    
+    return cookies || [];
+  } catch (error) {
+    console.error('❌ Error getting cookies for URL:', url, error);
+    return [];
+  }
+}
+
+// Setup webRequest handler (non-blocking, for monitoring only)
+function setupWebRequestHandler() {
+  // In MV3, we can't use blocking listeners without special permissions
+  // Instead, we'll manually inject cookies in fetch requests
+  // This listener is kept for potential future use or monitoring
+  console.log('✅ Cookie helper functions configured (using manual injection)');
+}
+
+// Handle extension icon click
+chrome.action.onClicked.addListener(async (tab) => {
+  try {
+    // Try to send message to content script
+    chrome.tabs.sendMessage(tab.id, {
+      action: 'toggleSidebar',
+      show: true
+    }).catch(async error => {
+      console.log('⚠️ Could not send message to tab, injecting content script:', error);
+      // Tab might not have content script, try to inject
+      try {
+        await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          files: ['content-sidebar.js']
+        });
+        // Wait a bit for script to initialize, then toggle sidebar
+        setTimeout(() => {
+          chrome.tabs.sendMessage(tab.id, {
+            action: 'toggleSidebar',
+            show: true
+          }).catch(err => console.log('Still could not toggle:', err));
+        }, 500);
+      } catch (injectError) {
+        console.error('❌ Could not inject content script:', injectError);
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error handling icon click:', error);
+  }
 });
 
 // Detect environment and set API base URL
@@ -92,10 +195,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       return true;
       
     case 'getSession':
+    case 'GET_SESSION':
       safeHandler(() => handleGetSession(sendResponse));
       return true;
       
     case 'forceSessionCheck':
+    case 'REFRESH_SESSION':
       safeHandler(() => handleForceSessionCheck(sendResponse));
       return true;
       
@@ -122,7 +227,57 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     case 'broadcastSessionUpdate':
       // Handle broadcast to other extension components
       console.log('📢 Broadcasting session update:', request.sessionData);
+      safeHandler(async () => {
+        await broadcastSessionUpdate(request.sessionData);
+      });
       return false; // No response needed for broadcast
+      
+    case 'generateJWT':
+      safeHandler(() => handleGenerateJWT(request.userId, sendResponse));
+      return true;
+      
+    case 'toggleSidebar':
+      safeHandler(() => handleToggleSidebar(request, sendResponse));
+      return true;
+      
+    case 'openSidePanel':
+      safeHandler(async () => {
+        try {
+          // Try to open side panel for current window
+          const windows = await chrome.windows.getAll({ populate: false });
+          const currentWindow = windows.find(w => w.focused) || windows[0];
+          
+          if (currentWindow && chrome.sidePanel && chrome.sidePanel.open) {
+            await chrome.sidePanel.open({ windowId: currentWindow.id });
+            sendResponse({ success: true });
+          } else {
+            // Fallback: send message to content script to show fallback UI
+            const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+            if (tabs[0]) {
+              chrome.tabs.sendMessage(tabs[0].id, {
+                action: 'showFallbackPanel'
+              }).catch(() => {});
+            }
+            sendResponse({ success: false, message: 'Side panel API not available' });
+          }
+        } catch (error) {
+          console.error('Error opening side panel:', error);
+          sendResponse({ success: false, message: error.message });
+        }
+      });
+      return true;
+      
+    case 'loginWithPassword':
+      safeHandler(() => handleLoginWithPassword(request, sendResponse));
+      return true;
+      
+    case 'loginWithCode':
+      safeHandler(() => handleLoginWithCode(request, sendResponse));
+      return true;
+      
+    case 'sendCode':
+      safeHandler(() => handleSendCode(request, sendResponse));
+      return true;
       
     default:
       sendResponse({ success: false, message: 'Unknown action' });
@@ -138,10 +293,10 @@ async function handleForceSessionCheck(sendResponse) {
     console.log('🔄 Force session check initiated...');
     
     // Clear any existing session data first
-    await chrome.storage.local.remove(['userData', 'isAuthenticated', 'lastSessionCheck']);
+    await chrome.storage.local.remove(['userData', 'isAuthenticated', 'lastSessionCheck', 'session', 'sessionRetrievedAt']);
     
-    // Try to get session from cookies
-    const session = await getSessionFromCookiesWithRetry(3);
+    // Try to get session from server using webRequest-injected cookies (with retry)
+    const session = await fetchWithBackoff(5);
     
     if (session && session.isAuthenticated) {
       // Store user data locally
@@ -152,6 +307,9 @@ async function handleForceSessionCheck(sendResponse) {
         sessionSource: 'extension-check'
       });
       
+      // Broadcast update to all tabs
+      await broadcastSessionUpdate(session);
+      
       console.log('✅ Force session check successful - user authenticated');
       sendResponse({
         success: true,
@@ -161,6 +319,10 @@ async function handleForceSessionCheck(sendResponse) {
       });
     } else {
       console.log('❌ Force session check failed - no valid session');
+      
+      // Broadcast logout to all tabs
+      await broadcastSessionUpdate({ isAuthenticated: false });
+      
       sendResponse({
         success: false,
         message: 'No valid session found',
@@ -178,11 +340,36 @@ async function handleForceSessionCheck(sendResponse) {
   }
 }
 
-// Enhanced session retrieval with retry logic
+// Enhanced session retrieval with retry logic and exponential backoff
+async function fetchWithBackoff(attempts = 5) {
+  let delay = 500; // ms
+  for (let i = 0; i < attempts; i++) {
+    console.log(`🔍 Session fetch attempt ${i + 1}/${attempts}`);
+    const session = await getSessionFromServer();
+    if (session) {
+      return session;
+    }
+    if (i < attempts - 1) {
+      console.log(`⏳ Waiting ${delay}ms before retry...`);
+      await new Promise(res => setTimeout(res, delay));
+      delay *= 2; // Exponential backoff
+    }
+  }
+  return null;
+}
+
+// Enhanced session retrieval with retry logic (kept for compatibility)
 async function getSessionFromCookiesWithRetry(maxRetries = 3) {
+  // First try the new webRequest-based method
+  const session = await fetchWithBackoff(maxRetries);
+  if (session) {
+    return session;
+  }
+  
+  // Fallback to old method
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`🔍 Session check attempt ${attempt}/${maxRetries}`);
+      console.log(`🔍 Session check attempt ${attempt}/${maxRetries} (fallback)`);
       
       const result = await getSessionFromCookies();
       if (result) {
@@ -204,100 +391,181 @@ async function getSessionFromCookiesWithRetry(maxRetries = 3) {
   return null;
 }
 
-// Get session from cookies (original function with improvements)
+// Get session from server using manually injected cookies
+// In MV3, we can't use blocking webRequest, so we manually get cookies and inject them
+async function getSessionFromServer() {
+  try {
+    // Determine API base URL
+    const apiBaseUrl = API_BASE_URL;
+    const sessionUrl = `${apiBaseUrl}/api/auth/session`;
+    
+    console.log('🔍 Fetching session from server:', sessionUrl);
+    
+    // Get cookies for this URL
+    const cookies = await getCookiesForRequest(sessionUrl);
+    
+    if (!cookies || cookies.length === 0) {
+      console.log('⚠️ No cookies found for session URL');
+      // Still try the request without cookies (might work if session is in URL params or headers)
+    }
+    
+    // Build Cookie header
+    const cookieHeader = cookies && cookies.length > 0 ? buildCookieHeader(cookies) : '';
+    
+    // Prepare headers
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    };
+    
+    // Add Cookie header if we have cookies
+    if (cookieHeader) {
+      headers['Cookie'] = cookieHeader;
+      console.log('🔍 Injecting cookies into request (length:', cookieHeader.length, ')');
+    }
+    
+    // Fetch with manually injected cookies
+    const resp = await fetch(sessionUrl, {
+      method: 'GET',
+      credentials: 'include', // Still include for same-origin requests
+      mode: 'cors',
+      headers: headers
+    });
+    
+    if (!resp.ok) {
+      console.warn('⚠️ Session API returned non-OK', resp.status);
+      return null;
+    }
+    
+    const json = await resp.json();
+    console.log('✅ Session data received from server:', json);
+    
+    // Save session to storage for quick lookup
+    await chrome.storage.local.set({ 
+      session: json, 
+      sessionRetrievedAt: Date.now() 
+    });
+    
+    return {
+      user: json.user,
+      isAuthenticated: !!json.user,
+      apiBaseUrl: apiBaseUrl
+    };
+  } catch (err) {
+    console.error('❌ getSessionFromServer error:', err);
+    return null;
+  }
+}
+
+// Get session from cookies (fallback method - kept for compatibility)
 async function getSessionFromCookies() {
   try {
-    console.log('🔍 Checking for session cookies...');
+    console.log('🔍 Checking for session cookies (fallback method)...');
     console.log('🔍 Current API_BASE_URL:', API_BASE_URL);
     console.log('🔍 IS_DEVELOPMENT:', IS_DEVELOPMENT);
     
-    // Check both domains for cookies - include all development variants
-    let domains;
-    if (IS_DEVELOPMENT) {
-      domains = ['localhost', '127.0.0.1', 'cvcircle.local'];
-    } else {
-      domains = ['www.cvcircle.io', 'cvcircle.io'];
-    }
+    // Use URL-based cookie retrieval which is more reliable
+    // Try multiple URLs to catch all possible cookie storage scenarios
+    const urls = IS_DEVELOPMENT ? [
+      'http://localhost:3000',
+      'http://127.0.0.1:3000',
+      'http://cvcircle.local:3000'
+    ] : [
+      'https://cvcircle.io',
+      'https://www.cvcircle.io',
+      'https://cvcircle.io/dashboard',
+      'https://www.cvcircle.io/dashboard'
+    ];
     
     let allCookies = [];
+    
+    // Method 1: Get cookies by URL (more reliable)
+    for (const url of urls) {
+      try {
+        const cookies = await chrome.cookies.getAll({ url });
+        console.log(`🔍 Cookies for URL ${url}:`, cookies.length);
+        if (cookies.length > 0) {
+          console.log(`🔍 Cookie names for ${url}:`, cookies.map(c => c.name));
+        }
+        allCookies = allCookies.concat(cookies);
+      } catch (error) {
+        console.log(`⚠️ Error getting cookies for URL ${url}:`, error.message);
+      }
+    }
+    
+    // Method 2: Also try domain-based retrieval (fallback)
+    const domains = IS_DEVELOPMENT 
+      ? ['localhost', '127.0.0.1', 'cvcircle.local', '.localhost', '.127.0.0.1']
+      : ['cvcircle.io', '.cvcircle.io', 'www.cvcircle.io', '.www.cvcircle.io'];
     
     for (const domain of domains) {
       try {
         const cookies = await chrome.cookies.getAll({ domain });
-        console.log(`🔍 Cookies for ${domain}:`, cookies.length);
-        console.log(`🔍 Cookie names for ${domain}:`, cookies.map(c => c.name));
-        allCookies = allCookies.concat(cookies);
+        if (cookies.length > 0) {
+          console.log(`🔍 Cookies for domain ${domain}:`, cookies.length);
+          console.log(`🔍 Cookie names for ${domain}:`, cookies.map(c => c.name));
+          allCookies = allCookies.concat(cookies);
+        }
       } catch (error) {
-        console.log(`⚠️ Error getting cookies for ${domain}:`, error);
+        console.log(`⚠️ Error getting cookies for domain ${domain}:`, error.message);
       }
     }
     
-    console.log('🔍 Total cookies found:', allCookies.length);
-    console.log('🔍 All cookie names:', allCookies.map(c => c.name));
+    // Remove duplicates based on name and domain
+    const uniqueCookies = [];
+    const seen = new Set();
+    for (const cookie of allCookies) {
+      const key = `${cookie.name}::${cookie.domain}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniqueCookies.push(cookie);
+      }
+    }
     
-    // Look for NextAuth session cookies (prioritize secure cookies for production)
-    const sessionCookie = allCookies.find(cookie =>
+    console.log('🔍 Total unique cookies found:', uniqueCookies.length);
+    
+    // Look for NextAuth session cookies
+    const sessionCookie = uniqueCookies.find(cookie =>
       cookie.name === '__Secure-next-auth.session-token' ||
       cookie.name === 'next-auth.session-token' ||
       cookie.name === '__Secure-next-auth.csrf-token' ||
       cookie.name === 'next-auth.csrf-token' ||
-      cookie.name.includes('next-auth') ||
-      cookie.name.includes('session') ||
-      cookie.name.includes('auth')
+      cookie.name.includes('next-auth.session') ||
+      cookie.name.includes('next-auth.csrf')
     );
     
     if (!sessionCookie) {
-      console.log('❌ No session cookie found');
-      console.log('🔍 Available cookies:', allCookies.map(c => ({ name: c.name, domain: c.domain, secure: c.secure })));
+      console.log('❌ No NextAuth session cookie found');
       return null;
     }
     
-    console.log('✅ Found session cookie:', sessionCookie.name, 'from domain:', sessionCookie.domain);
+    console.log('✅ Found session cookie:', sessionCookie.name);
     
     // Determine correct API URL based on cookie domain
     let apiBaseUrl = API_BASE_URL;
-    if (sessionCookie.domain.includes('localhost') ||
-        sessionCookie.domain.includes('127.0.0.1') ||
-        sessionCookie.domain.includes('cvcircle.local')) {
-      apiBaseUrl = sessionCookie.domain.includes('127.0.0.1') ?
+    const cookieDomain = sessionCookie.domain.replace(/^\./, '');
+    
+    if (cookieDomain.includes('localhost') ||
+        cookieDomain.includes('127.0.0.1') ||
+        cookieDomain.includes('cvcircle.local')) {
+      apiBaseUrl = cookieDomain.includes('127.0.0.1') ?
         'http://127.0.0.1:3000' :
-        sessionCookie.domain.includes('cvcircle.local') ?
+        cookieDomain.includes('cvcircle.local') ?
         'http://cvcircle.local:3000' :
         'http://localhost:3000';
-      console.log(`🔍 Using API URL based on cookie domain: ${apiBaseUrl}`);
+    } else {
+      apiBaseUrl = cookieDomain.includes('www.') ? 
+        'https://www.cvcircle.io' : 
+        'https://cvcircle.io';
     }
     
-    // Try to verify session with API
-    try {
-      console.log('🔍 Attempting to verify session with API...');
-      
-      const response = await fetch(`${apiBaseUrl}/api/auth/session`, {
-        method: 'GET',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
-      });
-      
-      console.log('🔍 Session API response status:', response.status);
-      
-      if (response.ok) {
-        const sessionData = await response.json();
-        console.log('✅ Session data received:', sessionData);
-        return {
-          cookie: sessionCookie,
-          user: sessionData.user,
-          isAuthenticated: !!sessionData.user,
-          apiBaseUrl: apiBaseUrl
-        };
-      } else {
-        console.log('❌ Session API failed:', response.status, response.statusText);
-        const errorText = await response.text();
-        console.log('❌ Error response:', errorText);
-      }
-    } catch (apiError) {
-      console.log('❌ Session API error:', apiError);
+    // Try to verify session with API (webRequest will inject cookies)
+    const session = await getSessionFromServer();
+    if (session) {
+      return {
+        ...session,
+        cookie: sessionCookie
+      };
     }
     
     return null;
@@ -311,7 +579,27 @@ async function getSessionFromCookies() {
 async function handleGetSession(sendResponse) {
   try {
     console.log('🔍 Handling session request...');
-    const session = await getSessionFromCookies();
+    
+    // Try return cached session first (if fresh)
+    const store = await chrome.storage.local.get(['session', 'sessionRetrievedAt']);
+    if (store.session && ((Date.now() - (store.sessionRetrievedAt || 0)) < 5 * 60 * 1000)) {
+      console.log('✅ Returning cached session');
+      const session = store.session;
+      sendResponse({ 
+        success: true, 
+        session: {
+          user: session.user,
+          isAuthenticated: !!session.user
+        },
+        user: session.user,
+        isAuthenticated: !!session.user,
+        cached: true
+      });
+      return;
+    }
+    
+    // Otherwise fetch from server
+    const session = await getSessionFromServer();
     
     if (session && session.isAuthenticated) {
       // Store user data locally
@@ -324,26 +612,80 @@ async function handleGetSession(sendResponse) {
       console.log('✅ Session found, user authenticated');
       sendResponse({ 
         success: true, 
+        session: {
+          user: session.user,
+          isAuthenticated: true
+        },
         user: session.user,
-        isAuthenticated: true 
+        isAuthenticated: true,
+        cached: false
       });
     } else {
+      // Check if we have stored auth data as fallback
+      const stored = await chrome.storage.local.get(['isAuthenticated', 'userData']);
+      if (stored.isAuthenticated && stored.userData) {
+        console.log('✅ Using stored auth data');
+        sendResponse({ 
+          success: true, 
+          session: {
+            user: stored.userData,
+            isAuthenticated: true
+          },
+          user: stored.userData,
+          isAuthenticated: true,
+          cached: true
+        });
+        return;
+      }
+      
       // Clear stored data
-      await chrome.storage.local.remove(['userData', 'isAuthenticated']);
+      await chrome.storage.local.remove(['userData', 'isAuthenticated', 'session']);
       console.log('❌ No valid session found');
       sendResponse({ 
         success: false, 
+        session: null,
         message: 'No valid session found',
-        isAuthenticated: false 
+        isAuthenticated: false,
+        cached: false
       });
     }
   } catch (error) {
     console.error('❌ Error handling session:', error);
     sendResponse({ 
       success: false, 
+      session: null,
       message: 'Session check failed',
-      isAuthenticated: false 
+      isAuthenticated: false,
+      cached: false
     });
+  }
+}
+
+// Broadcast session update to all open tabs
+async function broadcastSessionUpdate(session) {
+  try {
+    console.log('📢 Broadcasting session update to all tabs...');
+    const tabs = await chrome.tabs.query({});
+    
+    for (const tab of tabs) {
+      try {
+        chrome.tabs.sendMessage(tab.id, {
+          type: 'SESSION_UPDATED',
+          session: session
+        }).catch(err => {
+          // Ignore errors for tabs that don't have content scripts
+          if (!err.message?.includes('Could not establish connection')) {
+            console.warn(`⚠️ Could not send to tab ${tab.id}:`, err.message);
+          }
+        });
+      } catch (error) {
+        // Tab might not accept messages, ignore
+      }
+    }
+    
+    console.log('✅ Session update broadcasted to', tabs.length, 'tabs');
+  } catch (error) {
+    console.error('❌ Error broadcasting session update:', error);
   }
 }
 
@@ -370,22 +712,15 @@ async function handleSessionUpdate(request, sendResponse) {
       
       console.log('✅ Session updated from website, user authenticated');
       
-      // Notify all extension views (popup, content scripts) about the session update
-      try {
-        await chrome.runtime.sendMessage({
-          action: 'broadcastSessionUpdate',
-          sessionData: {
-            isAuthenticated: true,
-            user: {
-              id: sessionData.userId,
-              email: sessionData.userEmail,
-              name: sessionData.userEmail || 'User'
-            }
-          }
-        });
-      } catch (broadcastError) {
-        console.log('⚠️ Could not broadcast session update:', broadcastError);
-      }
+      // Broadcast to all tabs
+      await broadcastSessionUpdate({
+        user: {
+          id: sessionData.userId,
+          email: sessionData.userEmail,
+          name: sessionData.userEmail || 'User'
+        },
+        isAuthenticated: true
+      });
       
       sendResponse({
         success: true,
@@ -399,19 +734,14 @@ async function handleSessionUpdate(request, sendResponse) {
         'isAuthenticated',
         'sessionSource',
         'sessionTimestamp',
-        'authToken'
+        'authToken',
+        'session',
+        'sessionRetrievedAt'
       ]);
       console.log('🔄 User logged out on website, clearing extension session');
       
-      // Notify all extension views about logout
-      try {
-        await chrome.runtime.sendMessage({
-          action: 'broadcastSessionUpdate',
-          sessionData: { isAuthenticated: false }
-        });
-      } catch (broadcastError) {
-        console.log('⚠️ Could not broadcast logout:', broadcastError);
-      }
+      // Broadcast logout to all tabs
+      await broadcastSessionUpdate({ isAuthenticated: false });
       
       sendResponse({
         success: true,
@@ -490,13 +820,24 @@ async function handleFetchJobs(sendResponse) {
       return;
     }
     
+    // Get cookies for API request
+    const apiUrl = `${API_BASE_URL}/api/jobs?userId=${userId}`;
+    const cookies = await getCookiesForRequest(apiUrl);
+    const cookieHeader = cookies && cookies.length > 0 ? buildCookieHeader(cookies) : '';
+    
+    // Prepare headers
+    const headers = {};
+    
+    // Add Cookie header if we have cookies
+    if (cookieHeader) {
+      headers['Cookie'] = cookieHeader;
+    }
+    
     // Fetch jobs from API
-    const response = await fetch(`${API_BASE_URL}/api/jobs?userId=${userId}`, {
+    const response = await fetch(apiUrl, {
       method: 'GET',
       credentials: 'include',
-      headers: {
-        'Cookie': `${session.cookie.name}=${session.cookie.value}`
-      }
+      headers: headers
     });
     
     if (response.ok) {
@@ -574,13 +915,25 @@ async function handleSaveJob(jobData, sendResponse) {
       tags: ['extension-saved']
     };
     
+    // Get cookies for API request
+    const apiUrl = `${API_BASE_URL}/api/jobs`;
+    const cookies = await getCookiesForRequest(apiUrl);
+    const cookieHeader = cookies && cookies.length > 0 ? buildCookieHeader(cookies) : '';
+    
+    // Prepare headers
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+    
+    // Add Cookie header if we have cookies
+    if (cookieHeader) {
+      headers['Cookie'] = cookieHeader;
+    }
+    
     // Save to API
-    const response = await fetch(`${API_BASE_URL}/api/jobs`, {
+    const response = await fetch(apiUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Cookie': `${session.cookie.name}=${session.cookie.value}`
-      },
+      headers: headers,
       body: JSON.stringify(apiJobData)
     });
     
@@ -688,9 +1041,432 @@ async function clearAuthData() {
   }
 }
 
-// Export functions for popup use
-window.backgroundAPI = {
-  storeAuthToken,
-  clearAuthData,
-  getStoredAuthToken
-};
+// Generate JWT token (returns a promise, doesn't use sendResponse)
+async function generateJWTToken(userId) {
+  try {
+    console.log('🔐 Generating JWT token for user:', userId);
+    
+    // Get user data from storage
+    const result = await chrome.storage.local.get(['userData', 'authToken']);
+    
+    if (result.authToken) {
+      // Token already exists, return it
+      return {
+        success: true,
+        token: result.authToken
+      };
+    }
+    
+    // Get cookies for API request
+    const apiUrl = `${API_BASE_URL}/api/auth/extension-token`;
+    const cookies = await getCookiesForRequest(apiUrl);
+    const cookieHeader = cookies && cookies.length > 0 ? buildCookieHeader(cookies) : '';
+    
+    // Prepare headers
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+    
+    // Add Cookie header if we have cookies
+    if (cookieHeader) {
+      headers['Cookie'] = cookieHeader;
+    }
+    
+    // Call API to generate extension token
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify({ userId }),
+      credentials: 'include'
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      if (data.success && data.token) {
+        // Store token
+        await chrome.storage.local.set({
+          authToken: data.token,
+          userData: data.user
+        });
+        
+        return {
+          success: true,
+          token: data.token,
+          user: data.user
+        };
+      } else {
+        throw new Error(data.error || 'Failed to generate token');
+      }
+    } else {
+      throw new Error(`API request failed: ${response.status}`);
+    }
+  } catch (error) {
+    console.error('Error generating JWT:', error);
+    return {
+      success: false,
+      error: error.message || 'Failed to generate token'
+    };
+  }
+}
+
+// Handle JWT token generation (for message handler)
+async function handleGenerateJWT(userId, sendResponse) {
+  const result = await generateJWTToken(userId);
+  sendResponse(result);
+}
+
+// Handle sidebar toggle
+async function handleToggleSidebar(request, sendResponse) {
+  try {
+    // Send message to content script to toggle sidebar
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tabs[0]) {
+      chrome.tabs.sendMessage(tabs[0].id, {
+        action: 'toggleSidebar',
+        show: request.show !== false
+      });
+      sendResponse({ success: true });
+    } else {
+      sendResponse({ success: false, error: 'No active tab' });
+    }
+  } catch (error) {
+    console.error('Error toggling sidebar:', error);
+    sendResponse({ success: false, error: error.message });
+  }
+}
+
+// Handle login with password
+async function handleLoginWithPassword(request, sendResponse) {
+  try {
+    const { email, password } = request;
+    
+    if (!email || !password) {
+      sendResponse({ success: false, error: 'Email and password are required' });
+      return;
+    }
+    
+    console.log('🔐 Handling login with password for:', email);
+    
+    // Get cookies for API request
+    const apiUrl = `${API_BASE_URL}/api/auth/verify-and-signin`;
+    const cookies = await getCookiesForRequest(apiUrl);
+    const cookieHeader = cookies && cookies.length > 0 ? buildCookieHeader(cookies) : '';
+    
+    // Prepare headers
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+    
+    // Add Cookie header if we have cookies
+    if (cookieHeader) {
+      headers['Cookie'] = cookieHeader;
+    }
+    
+    // First, get CSRF token from NextAuth
+    const csrfUrl = `${API_BASE_URL}/api/auth/csrf`;
+    let csrfToken = '';
+    
+    try {
+      const csrfResponse = await fetch(csrfUrl, {
+        method: 'GET',
+        headers: cookieHeader ? { 'Cookie': cookieHeader } : {},
+        credentials: 'include'
+      });
+      
+      if (csrfResponse.ok) {
+        const csrfData = await csrfResponse.json();
+        csrfToken = csrfData.csrfToken || '';
+      }
+    } catch (e) {
+      console.warn('Could not get CSRF token, continuing without it');
+    }
+    
+    // Use NextAuth signin endpoint with credentials
+    // NextAuth credentials provider uses /api/auth/callback/credentials
+    const signinUrl = `${API_BASE_URL}/api/auth/callback/credentials`;
+    
+    // Create form data for NextAuth credentials
+    const formData = new URLSearchParams();
+    formData.append('email', email);
+    formData.append('password', password);
+    formData.append('redirect', 'false');
+    formData.append('json', 'true');
+    formData.append('csrfToken', csrfToken);
+    
+    // Update headers for form data
+    const formHeaders = {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    };
+    if (cookieHeader) {
+      formHeaders['Cookie'] = cookieHeader;
+    }
+    
+    const signinResponse = await fetch(signinUrl, {
+      method: 'POST',
+      headers: formHeaders,
+      credentials: 'include',
+      body: formData.toString(),
+    });
+    
+    let userId = null;
+    let userEmail = email;
+    let userName = email;
+    
+    // Check response
+    if (signinResponse.ok) {
+      const result = await signinResponse.json();
+      // NextAuth returns different formats, check for user
+      if (result.user && result.user.id) {
+        userId = result.user.id;
+        userEmail = result.user.email || email;
+        userName = result.user.name || email;
+      } else if (result.id) {
+        userId = result.id;
+        userEmail = result.email || email;
+        userName = result.name || email;
+      } else if (result.ok) {
+        // NextAuth might return { ok: true } on success, check session
+        // Try to get session to get user ID
+        const sessionUrl = `${API_BASE_URL}/api/auth/session`;
+        const sessionCookies = await getCookiesForRequest(sessionUrl);
+        const sessionCookieHeader = sessionCookies && sessionCookies.length > 0 ? buildCookieHeader(sessionCookies) : '';
+        
+        const sessionHeaders = {};
+        if (sessionCookieHeader) {
+          sessionHeaders['Cookie'] = sessionCookieHeader;
+        }
+        
+        const sessionResponse = await fetch(sessionUrl, {
+          method: 'GET',
+          headers: sessionHeaders,
+          credentials: 'include'
+        });
+        
+        if (sessionResponse.ok) {
+          const sessionData = await sessionResponse.json();
+          if (sessionData.user && sessionData.user.id) {
+            userId = sessionData.user.id;
+            userEmail = sessionData.user.email || email;
+            userName = sessionData.user.name || email;
+          }
+        }
+      }
+    }
+    
+    // If NextAuth signin didn't work, return error
+    if (!userId) {
+      // Try to get error details from response
+      let errorMsg = 'Invalid credentials. Please check your email and password.';
+      try {
+        const errorText = await signinResponse.text();
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMsg = errorData.error || errorData.message || errorMsg;
+        } catch (e) {
+          // Not JSON, use default
+        }
+      } catch (e) {
+        // Use default error message
+      }
+      sendResponse({ 
+        success: false, 
+        error: errorMsg
+      });
+      return;
+    }
+    
+    // We have a user ID, generate extension token
+    if (userId) {
+      // Generate extension token
+      const tokenResult = await generateJWTToken(userId);
+      
+      if (tokenResult && tokenResult.success) {
+        // Store auth data
+        await chrome.storage.local.set({
+          isAuthenticated: true,
+          userData: {
+            id: userId,
+            email: userEmail,
+            name: userName,
+          },
+          authToken: tokenResult.token
+        });
+        
+        // Broadcast session update
+        await broadcastSessionUpdate({
+          user: {
+            id: userId,
+            email: userEmail,
+            name: userName,
+          },
+          isAuthenticated: true
+        });
+        
+        sendResponse({
+          success: true,
+          user: {
+            id: userId,
+            email: userEmail,
+            name: userName,
+          },
+          token: tokenResult.token
+        });
+      } else {
+        sendResponse({ success: false, error: tokenResult?.error || 'Failed to generate token' });
+      }
+    } else {
+      // Try to get error details from response
+      let errorMsg = 'Invalid credentials. Please check your email and password.';
+      try {
+        const errorData = await signinResponse.json();
+        errorMsg = errorData.error || errorData.message || errorMsg;
+      } catch (e) {
+        // Use default error message
+      }
+      sendResponse({ success: false, error: errorMsg });
+    }
+  } catch (error) {
+    console.error('❌ Login error:', error);
+    sendResponse({ success: false, error: error.message || 'Login failed' });
+  }
+}
+
+// Handle login with code
+async function handleLoginWithCode(request, sendResponse) {
+  try {
+    const { email, code } = request;
+    
+    if (!email || !code) {
+      sendResponse({ success: false, error: 'Email and code are required' });
+      return;
+    }
+    
+    console.log('🔐 Handling login with code for:', email);
+    
+    // Get cookies for API request
+    const apiUrl = `${API_BASE_URL}/api/auth/verify-and-signin`;
+    const cookies = await getCookiesForRequest(apiUrl);
+    const cookieHeader = cookies && cookies.length > 0 ? buildCookieHeader(cookies) : '';
+    
+    // Prepare headers
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+    
+    // Add Cookie header if we have cookies
+    if (cookieHeader) {
+      headers['Cookie'] = cookieHeader;
+    }
+    
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify({
+        email,
+        code,
+        type: 'passwordless-login',
+      }),
+    });
+    
+    const data = await response.json();
+    
+    if (data.success && data.userId) {
+      // Get user data and generate extension token
+      const userId = data.userId;
+      const tokenResult = await generateJWTToken(userId);
+      
+      if (tokenResult && tokenResult.success) {
+        // Store auth data
+        await chrome.storage.local.set({
+          isAuthenticated: true,
+          userData: {
+            id: userId,
+            email: data.email || email,
+            name: data.name || email,
+          },
+          authToken: tokenResult.token
+        });
+        
+        // Broadcast session update
+        await broadcastSessionUpdate({
+          user: {
+            id: userId,
+            email: data.email || email,
+            name: data.name || email,
+          },
+          isAuthenticated: true
+        });
+        
+        sendResponse({
+          success: true,
+          user: {
+            id: userId,
+            email: data.email || email,
+            name: data.name || email,
+          },
+          token: tokenResult.token
+        });
+      } else {
+        sendResponse({ success: false, error: 'Failed to generate token' });
+      }
+    } else {
+      sendResponse({ success: false, error: data.message || data.error || 'Invalid code' });
+    }
+  } catch (error) {
+    console.error('❌ Login with code error:', error);
+    sendResponse({ success: false, error: error.message || 'Verification failed' });
+  }
+}
+
+// Handle send code
+async function handleSendCode(request, sendResponse) {
+  try {
+    const { email, type } = request;
+    
+    if (!email || !type) {
+      sendResponse({ success: false, error: 'Email and type are required' });
+      return;
+    }
+    
+    console.log('📧 Sending code to:', email);
+    
+    // Get cookies for API request
+    const apiUrl = `${API_BASE_URL}/api/auth/send-code`;
+    const cookies = await getCookiesForRequest(apiUrl);
+    const cookieHeader = cookies && cookies.length > 0 ? buildCookieHeader(cookies) : '';
+    
+    // Prepare headers
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+    
+    // Add Cookie header if we have cookies
+    if (cookieHeader) {
+      headers['Cookie'] = cookieHeader;
+    }
+    
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify({
+        email,
+        type: type || 'passwordless-login',
+      }),
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      sendResponse({ success: true });
+    } else {
+      sendResponse({ success: false, error: data.message || data.error || 'Failed to send code' });
+    }
+  } catch (error) {
+    console.error('❌ Send code error:', error);
+    sendResponse({ success: false, error: error.message || 'Failed to send code' });
+  }
+}
+
+// Note: Service workers don't have window object
+// Functions are available via chrome.runtime.sendMessage
+// If needed for popup, expose via chrome.runtime.getBackgroundPage() or use messaging

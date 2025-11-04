@@ -37,30 +37,29 @@ export function useExtensionAuth() {
     }
   }, []);
 
-  const checkAuthStatus = async () => {
+  const checkAuthStatus = () => {
     try {
       if (typeof chrome !== 'undefined' && chrome.storage) {
-        const result = await chrome.storage.local.get([
-          'isAuthenticated',
-          'userData',
-          'authToken',
-        ]);
-
-        if (result.isAuthenticated && result.userData && result.authToken) {
-          setAuthState({
-            isAuthenticated: true,
-            isLoading: false,
-            user: result.userData,
-            token: result.authToken,
-          });
-        } else {
-          setAuthState({
-            isAuthenticated: false,
-            isLoading: false,
-            user: null,
-            token: null,
-          });
-        }
+        chrome.storage.local.get(
+          ['isAuthenticated', 'userData', 'authToken'],
+          (result: { isAuthenticated?: boolean; userData?: any; authToken?: string }) => {
+            if (result.isAuthenticated && result.userData && result.authToken) {
+              setAuthState({
+                isAuthenticated: true,
+                isLoading: false,
+                user: result.userData,
+                token: result.authToken,
+              });
+            } else {
+              setAuthState({
+                isAuthenticated: false,
+                isLoading: false,
+                user: null,
+                token: null,
+              });
+            }
+          }
+        );
       } else {
         setAuthState({
           isAuthenticated: false,
@@ -80,35 +79,39 @@ export function useExtensionAuth() {
     }
   };
 
-  const login = async (userData: any, token: string) => {
+  const login = (userData: any, token: string) => {
     if (typeof chrome !== 'undefined' && chrome.storage) {
-      await chrome.storage.local.set({
-        isAuthenticated: true,
-        userData,
-        authToken: token,
-      });
-      setAuthState({
-        isAuthenticated: true,
-        isLoading: false,
-        user: userData,
-        token,
-      });
+      chrome.storage.local.set(
+        {
+          isAuthenticated: true,
+          userData,
+          authToken: token,
+        },
+        () => {
+          setAuthState({
+            isAuthenticated: true,
+            isLoading: false,
+            user: userData,
+            token,
+          });
+        }
+      );
     }
   };
 
-  const logout = async () => {
+  const logout = () => {
     if (typeof chrome !== 'undefined' && chrome.storage) {
-      await chrome.storage.local.remove([
-        'isAuthenticated',
-        'userData',
-        'authToken',
-      ]);
-      setAuthState({
-        isAuthenticated: false,
-        isLoading: false,
-        user: null,
-        token: null,
-      });
+      chrome.storage.local.remove(
+        ['isAuthenticated', 'userData', 'authToken'],
+        () => {
+          setAuthState({
+            isAuthenticated: false,
+            isLoading: false,
+            user: null,
+            token: null,
+          });
+        }
+      );
     }
   };
 

@@ -1,10 +1,11 @@
 const sharp = require('sharp');
 
-// CVCircle brand colors
-const CV_COLOR = '#84cc16'; // Lime green for "CV"
-const CIRCLE_COLOR = '#a3a3a3'; // Gray for "CIRCLE"
-const BACKGROUND_COLOR = '#0f0f0f'; // Dark background
-const BORDER_COLOR = '#404040'; // Border color
+// CVCircle brand colors - matching logo design
+const LIME_GREEN = '#80FF00'; // Primary lime green
+const SHIELD_GREEN = '#68C02A'; // Slightly darker for shield fill
+const DARK_BG = '#2E3230'; // Dark charcoal gray background
+const WHITE = '#FFFFFF';
+const DOC_TEXT = '#1a230f'; // Dark text on document
 
 // Icon sizes
 const sizes = [16, 32, 48, 128];
@@ -15,43 +16,31 @@ async function createIcon(size) {
       width: size,
       height: size,
       channels: 4,
-      background: { r: 15, g: 15, b: 15, alpha: 1 } // #0f0f0f
+      background: { r: 46, g: 50, b: 48, alpha: 1 } // #2E3230
     }
   });
 
-  // Create SVG for the icon
+  // Create SVG for the icon - matching CVCircle logo design
   const svg = `
     <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style="stop-color:#0f0f0f;stop-opacity:1" />
-          <stop offset="100%" style="stop-color:#1a1a1a;stop-opacity:1" />
-        </linearGradient>
-        <filter id="glow">
-          <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
-          <feMerge> 
-            <feMergeNode in="coloredBlur"/>
-            <feMergeNode in="SourceGraphic"/>
-          </feMerge>
-        </filter>
-      </defs>
+      <!-- Lime green square background -->
+      <rect x="2" y="2" width="${size - 4}" height="${size - 4}" rx="${size * 0.15}" fill="${LIME_GREEN}"/>
       
-      <!-- Background circle -->
-      <circle cx="${size/2}" cy="${size/2}" r="${size/2 - 2}" fill="url(#bg)" stroke="${BORDER_COLOR}" stroke-width="1"/>
-      
-      <!-- Document icon -->
-      <g transform="translate(${size/2 - size/4}, ${size/2 - size/4}) scale(${size/32})">
-        <path d="M19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H16L21 8V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21Z" 
-              stroke="${CV_COLOR}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" filter="url(#glow)"/>
-        <path d="M17 21V13H7V21" stroke="${CV_COLOR}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-        <path d="M7 3V8H15" stroke="${CV_COLOR}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      <!-- Shield with document icon -->
+      <g transform="translate(${size * 0.15}, ${size * 0.15}) scale(${size / 32})">
+        <!-- Shield shape -->
+        <path d="M12 2L8 4V6C8 7.1 8.9 8 10 8H14C15.1 8 16 7.1 16 6V4L12 2Z" fill="${SHIELD_GREEN}" opacity="0.95"/>
+        <rect x="6" y="6" width="12" height="14" rx="2" fill="${WHITE}" opacity="0.98"/>
+        
+        <!-- Document lines -->
+        <line x1="9" y1="10" x2="15" y2="10" stroke="${DOC_TEXT}" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="9" y1="13" x2="15" y2="13" stroke="${DOC_TEXT}" stroke-width="1.5" stroke-linecap="round"/>
+        <line x1="9" y1="16" x2="13" y2="16" stroke="${DOC_TEXT}" stroke-width="1.5" stroke-linecap="round"/>
+        
+        <!-- Folded corner -->
+        <path d="M16 6L18 8H16V6Z" fill="${WHITE}" opacity="0.9"/>
+        <line x1="16" y1="6" x2="18" y2="8" stroke="${DOC_TEXT}" stroke-width="1" opacity="0.3"/>
       </g>
-      
-      <!-- CV text -->
-      <text x="${size/2 - size/8}" y="${size/2 + size/6}" font-family="Arial, sans-serif" font-size="${size/6}" font-weight="900" fill="${CV_COLOR}" text-anchor="middle">CV</text>
-      
-      <!-- CIRCLE text -->
-      <text x="${size/2 + size/8}" y="${size/2 + size/6}" font-family="Arial, sans-serif" font-size="${size/8}" font-weight="600" fill="${CIRCLE_COLOR}" text-anchor="middle">CIRCLE</text>
     </svg>
   `;
 
@@ -66,12 +55,15 @@ async function createIcon(size) {
 }
 
 async function createAllIcons() {
-  console.log('🎨 Creating CVCircle extension icons...');
+  console.log('🎨 Creating CVCircle extension icons with logo design...');
   
   // Create icons directory if it doesn't exist
   const fs = require('fs');
-  if (!fs.existsSync('icons')) {
-    fs.mkdirSync('icons');
+  const path = require('path');
+  const iconsDir = path.join(__dirname, 'icons');
+  
+  if (!fs.existsSync(iconsDir)) {
+    fs.mkdirSync(iconsDir, { recursive: true });
   }
 
   for (const size of sizes) {
@@ -84,6 +76,8 @@ async function createAllIcons() {
   }
   
   console.log('🎉 All CVCircle icons created successfully!');
+  console.log('📝 Icons saved to: chrome-extension/icons/');
+  console.log('🔄 Reload the extension in Chrome to see the new icons.');
 }
 
 // Run the icon creation

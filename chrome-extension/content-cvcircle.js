@@ -44,84 +44,184 @@ async function checkSessionStatus() {
   try {
     console.log('🔍 Checking session status...');
     
-    // Determine the correct API base URL based on current domain
+    // Use the current page's origin to avoid CORS issues
+    // This ensures we're making a same-origin request
+    const apiBaseUrl = window.location.origin;
     const currentDomain = window.location.hostname;
-    const isLocalhost = currentDomain.includes('localhost') ||
-                       currentDomain.includes('127.0.0.1') ||
-                       currentDomain.includes('cvcircle.local');
     
-    const apiBaseUrl = isLocalhost ?
-      (currentDomain.includes('127.0.0.1') ? 'http://127.0.0.1:3000' : 'http://localhost:3000') :
-      'https://www.cvcircle.io';
+    // Verify we're on a CVCircle domain
+    const isCvCircleDomain = currentDomain.includes('cvcircle.io') || 
+                             currentDomain.includes('localhost') ||
+                             currentDomain.includes('127.0.0.1') ||
+                             currentDomain.includes('cvcircle.local');
+    
+    if (!isCvCircleDomain) {
+      console.log('⚠️ Not on CVCircle domain, skipping session check');
+      return;
+    }
     
     console.log(`🔍 Current domain: ${currentDomain}, API base: ${apiBaseUrl}`);
     
-    // Try to get session from NextAuth with timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-    
-    const sessionResponse = await fetch(`${apiBaseUrl}/api/auth/session`, {
-      method: 'GET',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      signal: controller.signal
-    });
-    
-    clearTimeout(timeoutId);
-    
-    if (sessionResponse.ok) {
-      const sessionData = await sessionResponse.json();
-      const isAuthenticated = !!sessionData.user;
-      
-      console.log('🔍 Session check result:', {
-        isAuthenticated,
-        user: sessionData.user ? { id: sessionData.user.id, email: sessionData.user.email } : null,
-        environment: isLocalhost ? 'development' : 'production'
-      });
-      
-      // Check if session state has changed
-      const currentSessionState = {
-        isAuthenticated,
-        userId: sessionData.user?.id,
-        userEmail: sessionData.user?.email,
-        userName: sessionData.user?.name || sessionData.user?.email,
-        timestamp: Date.now(),
-        environment: isLocalhost ? 'development' : 'production',
-        domain: currentDomain
-      };
-      
-      if (JSON.stringify(currentSessionState) !== JSON.stringify(lastSessionState)) {
-        console.log('🔄 Session state changed, notifying extension...');
-        lastSessionState = currentSessionState;
-        
-        // Notify background script
-        await notifyBackgroundScript({
-          action: 'sessionUpdate',
-          sessionData: currentSessionState,
-          source: 'cvcircle-website'
+    // Use background script to get session (avoids CORS issues)
+    // This is the recommended approach for extensions
+    if (isExtensionContextValid()) {
+      try {
+        // Wrap in Promise to properly handle both callback and Promise-based APIs
+        const bgResponse = await new Promise((resolve, reject) => {
+          try {
+            chrome.runtime.sendMessage({
+              type: 'GET_SESSION',
+              action: 'getSession', // Support both formats
+              source: 'cvcircle-website'
+            }, (response) => {
+              // Check for runtime errors
+              if (chrome.runtime.lastError) {
+                const errorMessage = chrome.runtime.lastError.message;
+                
+                // If context is invalidated, don't throw - just return null
+                if (errorMessage.includes('Extension context invalidated') || 
+                    errorMessage.includes('message port closed') ||
+                    errorMessage.includes('Could not establish connection')) {
+                  console.warn('⚠️ Extension context invalidated');
+                  resolve(null);
+                  return;
+                }
+                
+                reject(new Error(errorMessage));
+                return;
+              }
+              
+              resolve(response);
+            });
+          } catch (error) {
+            reject(error);
+          }
         });
-      }
-    } else {
-      console.log('❌ Session check failed:', sessionResponse.status);
-      
-      // If we had a session before but now we don't, notify logout
-      if (lastSessionState && lastSessionState.isAuthenticated) {
-        console.log('🔄 User logged out, notifying extension...');
-        lastSessionState = { isAuthenticated: false, timestamp: Date.now() };
         
-        await notifyBackgroundScript({
-          action: 'sessionUpdate',
-          sessionData: lastSessionState,
-          source: 'cvcircle-website'
-        });
+        if (!bgResponse) {
+          // Context invalidated, skip this check
+          return;
+        }
+        
+        if (bgResponse && bgResponse.success && bgResponse.session) {
+          const sessionData = bgResponse.session;
+          const isAuthenticated = !!sessionData.user;
+          
+          const isLocalhost = currentDomain.includes('localhost') ||
+                             currentDomain.includes('127.0.0.1') ||
+                             currentDomain.includes('cvcircle.local');
+          
+          const currentSessionState = {
+            isAuthenticated,
+            userId: sessionData.user?.id,
+            userEmail: sessionData.user?.email,
+            userName: sessionData.user?.name || sessionData.user?.email,
+            timestamp: Date.now(),
+            environment: isLocalhost ? 'development' : 'production',
+            domain: currentDomain
+          };
+          
+          if (JSON.stringify(currentSessionState) !== JSON.stringify(lastSessionState)) {
+            console.log('🔄 Session state changed (from background), notifying extension...');
+            lastSessionState = currentSessionState;
+            
+            await notifyBackgroundScript({
+              action: 'sessionUpdate',
+              sessionData: currentSessionState,
+              source: 'cvcircle-website'
+            });
+          }
+          
+          return; // Successfully got session from background
+        } else if (bgResponse && !bgResponse.success) {
+          // No valid session
+          if (lastSessionState && lastSessionState.isAuthenticated) {
+            console.log('🔄 User logged out, notifying extension...');
+            lastSessionState = { isAuthenticated: false, timestamp: Date.now() };
+            
+            await notifyBackgroundScript({
+              action: 'sessionUpdate',
+              sessionData: lastSessionState,
+              source: 'cvcircle-website'
+            });
+          }
+          return;
+        }
+      } catch (bgError) {
+        console.warn('⚠️ Background script failed:', bgError);
+        // Fallback to direct fetch only if on same origin
+        if (window.location.origin === apiBaseUrl) {
+          try {
+            const sessionResponse = await fetch(`${apiBaseUrl}/api/auth/session`, {
+              method: 'GET',
+              credentials: 'include',
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+              }
+            });
+            
+            if (sessionResponse.ok) {
+              const sessionData = await sessionResponse.json();
+              const isAuthenticated = !!sessionData.user;
+              
+              const isLocalhost = currentDomain.includes('localhost') ||
+                                 currentDomain.includes('127.0.0.1') ||
+                                 currentDomain.includes('cvcircle.local');
+              
+              const currentSessionState = {
+                isAuthenticated,
+                userId: sessionData.user?.id,
+                userEmail: sessionData.user?.email,
+                userName: sessionData.user?.name || sessionData.user?.email,
+                timestamp: Date.now(),
+                environment: isLocalhost ? 'development' : 'production',
+                domain: currentDomain
+              };
+              
+              if (JSON.stringify(currentSessionState) !== JSON.stringify(lastSessionState)) {
+                console.log('🔄 Session state changed, notifying extension...');
+                lastSessionState = currentSessionState;
+                
+                await notifyBackgroundScript({
+                  action: 'sessionUpdate',
+                  sessionData: currentSessionState,
+                  source: 'cvcircle-website'
+                });
+              }
+            }
+          } catch (fetchError) {
+            console.warn('⚠️ Direct fetch also failed:', fetchError);
+          }
+        }
       }
     }
     
   } catch (error) {
-    console.error('❌ Error checking session status:', error);
+    // Handle different types of errors gracefully
+    if (error.name === 'AbortError') {
+      console.warn('⏱️ Session check timed out after 10 seconds');
+    } else if (error.message?.includes('Failed to fetch')) {
+      // This usually means CORS or network issue
+      // Check if we're on the correct domain
+      const currentDomain = window.location.hostname;
+      const isCvCircleDomain = currentDomain.includes('cvcircle.io') || 
+                               currentDomain.includes('localhost') ||
+                               currentDomain.includes('127.0.0.1');
+      
+      if (!isCvCircleDomain) {
+        console.warn('⚠️ Not on CVCircle domain, skipping session check');
+        return; // Don't log as error if we're not on the right domain
+      }
+      
+      console.error('❌ Failed to fetch session (CORS or network issue):', error.message);
+      console.log('💡 Tip: Make sure you\'re on the correct CVCircle domain');
+    } else {
+      console.error('❌ Error checking session status:', error);
+    }
+    
+    // Don't throw or break execution - just log and continue
+    // The extension will retry on the next interval
   }
 }
 
@@ -165,18 +265,103 @@ function handleCustomAuthEvent(event) {
 }
 
 // Notify background script of session changes
-async function notifyBackgroundScript(message) {
+// Check if extension context is still valid
+function isExtensionContextValid() {
   try {
-    const response = await chrome.runtime.sendMessage(message);
-    console.log('✅ Background script notified:', response);
+    // Try to access chrome.runtime.id - if it throws, context is invalid
+    return chrome.runtime && chrome.runtime.id !== undefined;
   } catch (error) {
-    console.error('❌ Error notifying background script:', error);
+    return false;
+  }
+}
+
+async function notifyBackgroundScript(message) {
+  // Check if extension context is valid before sending
+  if (!isExtensionContextValid()) {
+    console.warn('⚠️ Extension context invalidated, skipping notification');
+    return null;
+  }
+
+  try {
+    // Wrap in Promise to properly handle both callback and Promise-based APIs
+    const response = await new Promise((resolve, reject) => {
+      try {
+        chrome.runtime.sendMessage(message, (response) => {
+          // Check for runtime errors
+          if (chrome.runtime.lastError) {
+            const errorMessage = chrome.runtime.lastError.message;
+            
+            // If context is invalidated, stop trying and clean up
+            if (errorMessage.includes('Extension context invalidated') || 
+                errorMessage.includes('message port closed') ||
+                errorMessage.includes('Could not establish connection')) {
+              console.warn('⚠️ Extension context invalidated, stopping session monitoring');
+              stopSessionMonitoring();
+              resolve(null);
+              return;
+            }
+            
+            // Log other errors but don't throw
+            console.warn('⚠️ Runtime error:', errorMessage);
+            resolve(null);
+            return;
+          }
+          
+          resolve(response);
+        });
+      } catch (error) {
+        reject(error);
+      }
+    });
+    
+    if (response) {
+      console.log('✅ Background script notified:', response);
+    }
+    return response;
+  } catch (error) {
+    // Only log if it's not a context invalidation error (we already handled that)
+    if (!error.message?.includes('Extension context invalidated') &&
+        !error.message?.includes('message port closed') &&
+        !error.message?.includes('Could not establish connection')) {
+      console.error('❌ Error notifying background script:', error);
+    }
+    return null;
   }
 }
 
 // Handle messages from background script
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log('CVCircle content script received message:', request);
+  
+  // Handle session update broadcasts
+  if (request.type === 'SESSION_UPDATED' || request.action === 'SESSION_UPDATED') {
+    console.log('🔄 Received session update from background:', request.session);
+    const session = request.session || request.sessionData;
+    
+    if (session) {
+      const currentDomain = window.location.hostname;
+      const isLocalhost = currentDomain.includes('localhost') ||
+                         currentDomain.includes('127.0.0.1') ||
+                         currentDomain.includes('cvcircle.local');
+      
+      const currentSessionState = {
+        isAuthenticated: session.isAuthenticated || false,
+        userId: session.user?.id,
+        userEmail: session.user?.email,
+        userName: session.user?.name || session.user?.email,
+        timestamp: Date.now(),
+        environment: isLocalhost ? 'development' : 'production',
+        domain: currentDomain
+      };
+      
+      if (JSON.stringify(currentSessionState) !== JSON.stringify(lastSessionState)) {
+        console.log('🔄 Session state updated from broadcast');
+        lastSessionState = currentSessionState;
+      }
+    }
+    sendResponse({ success: true });
+    return false;
+  }
   
   switch (request.action) {
     case 'checkSession':

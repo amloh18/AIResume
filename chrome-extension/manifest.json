@@ -8,7 +8,8 @@
     "storage",
     "cookies",
     "identity",
-    "scripting"
+    "scripting",
+    "sidePanel"
   ],
   "host_permissions": [
     "https://www.linkedin.com/*",
@@ -56,25 +57,24 @@
         "https://jobs.smartrecruiters.com/*",
         "https://www.workday.com/*"
       ],
-      "js": ["content.js"],
+      "js": ["content.js", "content-sidebar.js"],
       "css": ["content.css"],
       "run_at": "document_end"
     },
-    {
-      "matches": [
-        "https://www.cvcircle.io/*",
-        "https://cvcircle.io/*",
-        "http://localhost:3000/*",
-        "http://127.0.0.1:3000/*",
-        "http://cvcircle.local:3000/*"
-      ],
-      "js": ["content-cvcircle.js"],
-      "run_at": "document_end"
-    }
+        {
+          "matches": [
+            "https://www.cvcircle.io/*",
+            "https://cvcircle.io/*",
+            "http://localhost:3000/*",
+            "http://127.0.0.1:3000/*",
+            "http://cvcircle.local:3000/*"
+          ],
+          "js": ["content-cvcircle.js", "content-sidebar.js"],
+          "run_at": "document_end"
+        }
   ],
   "action": {
-    "default_popup": "popup.html",
-    "default_title": "CVCircle Job Saver",
+    "default_title": "CVCircle Job Saver - Click to open sidebar",
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png",
@@ -94,7 +94,53 @@
   "web_accessible_resources": [
     {
       "resources": ["content.css"],
-      "matches": ["<all_urls>"]
-    }
-  ]
+      "matches": [
+        "https://www.linkedin.com/*",
+        "https://www.indeed.com/*",
+        "https://www.glassdoor.com/*",
+        "https://www.ziprecruiter.com/*",
+        "https://www.monster.com/*",
+        "https://www.careerbuilder.com/*",
+        "https://www.simplyhired.com/*",
+        "https://www.flexjobs.com/*",
+        "https://www.dice.com/*",
+        "https://www.angel.co/*",
+        "https://www.wellfound.com/*",
+        "https://jobs.lever.co/*",
+        "https://jobs.greenhouse.io/*",
+        "https://boards.greenhouse.io/*",
+        "https://jobs.smartrecruiters.com/*",
+        "https://www.workday.com/*"
+      ]
+    },
+        {
+          "resources": ["sidebar.html", "sidebar-loader.js", "sidebar/dist/*"],
+          "matches": [
+            "https://www.linkedin.com/*",
+            "https://www.indeed.com/*",
+            "https://www.glassdoor.com/*",
+            "https://www.ziprecruiter.com/*",
+            "https://www.monster.com/*",
+            "https://www.careerbuilder.com/*",
+            "https://www.simplyhired.com/*",
+            "https://www.flexjobs.com/*",
+            "https://www.dice.com/*",
+            "https://www.angel.co/*",
+            "https://www.wellfound.com/*",
+            "https://jobs.lever.co/*",
+            "https://jobs.greenhouse.io/*",
+            "https://boards.greenhouse.io/*",
+            "https://jobs.smartrecruiters.com/*",
+            "https://www.workday.com/*",
+            "https://www.cvcircle.io/*",
+            "https://cvcircle.io/*",
+            "http://localhost:3000/*",
+            "http://127.0.0.1:3000/*",
+            "http://cvcircle.local:3000/*"
+          ]
+        }
+  ],
+  "side_panel": {
+    "default_path": "sidebar.html"
+  }
 }

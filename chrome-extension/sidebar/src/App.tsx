@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import SidebarContainer from './components/SidebarContainer';
 import AuthPage from './components/AuthPage';
 import JobDashboardSidebar from './components/JobDashboardSidebar';
@@ -10,6 +10,11 @@ import { useExtensionAuth } from './hooks/useExtensionAuth';
 
 function App() {
   const { isAuthenticated, isLoading } = useExtensionAuth();
+  
+  // Log for debugging
+  if (typeof window !== 'undefined') {
+    console.log('✅ CVCircle Sidebar App loaded', { isAuthenticated, isLoading });
+  }
 
   if (isLoading) {
     return (
@@ -20,7 +25,7 @@ function App() {
   }
 
   return (
-    <BrowserRouter>
+    <HashRouter>
       <SidebarContainer>
         <Routes>
           <Route 
@@ -53,7 +58,7 @@ function App() {
           />
         </Routes>
       </SidebarContainer>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
 

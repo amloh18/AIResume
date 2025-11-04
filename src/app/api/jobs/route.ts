@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { getAuthenticatedUser } from '@/lib/auth-helpers';
-import { JobApplication } from '@/models';
+import { JobApplication, ApplicationJourney } from '@/models';
 import jwt from 'jsonwebtoken';
 import type { MyJwtPayload } from '@/types/jwt-payload';
+import mongoose from 'mongoose';
 
 export async function POST(request: NextRequest) {
   try {
@@ -113,6 +114,72 @@ export async function POST(request: NextRequest) {
     await jobApplication.save();
     
     console.log('✅ Job application created successfully in application tracker:', jobApplication._id);
+    
+    // Create ApplicationJourney for this job
+    try {
+      const journeyData = {
+        journeyId: `journey_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        userId: new mongoose.Types.ObjectId(userId),
+        jobId: jobApplication._id.toString(),
+        cvId: null,
+        coverLetterId: null,
+        status: 'in-progress',
+        currentStep: 1,
+        totalSteps: 5,
+        jobTitle: jobApplication.jobTitle,
+        company: jobApplication.company,
+        journeyType: 'standard',
+        steps: [
+          {
+            stepId: 1,
+            name: 'Job Saved',
+            status: 'completed',
+            completedAt: new Date(),
+            data: {}
+          },
+          {
+            stepId: 2,
+            name: 'CV Tailoring',
+            status: 'pending',
+            data: {}
+          },
+          {
+            stepId: 3,
+            name: 'Cover Letter',
+            status: 'pending',
+            data: {}
+          },
+          {
+            stepId: 4,
+            name: 'ATS Check',
+            status: 'pending',
+            data: {}
+          },
+          {
+            stepId: 5,
+            name: 'Application Ready',
+            status: 'pending',
+            data: {}
+          }
+        ],
+        lastWorkedOn: new Date(),
+        atsScoreHistory: [],
+        downloadHistory: [],
+        metadata: {
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          lastAccessedAt: new Date(),
+          tags: source === 'extension' ? ['extension-saved'] : [],
+          notes: ''
+        }
+      };
+      
+      const newJourney = await ApplicationJourney.create(journeyData);
+      console.log('✅ ApplicationJourney created successfully:', newJourney._id);
+    } catch (journeyError) {
+      console.error('⚠️ Failed to create ApplicationJourney (non-critical):', journeyError);
+      // Don't fail the request if journey creation fails
+    }
     
     return NextResponse.json({
       success: true,

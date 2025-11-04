@@ -46,6 +46,7 @@ export default {
         lime: {
           400: '#99FF00',
           500: '#88e600',
+          brand: '#80FF00',
         },
         dark: {
           bg: '#1a230f',

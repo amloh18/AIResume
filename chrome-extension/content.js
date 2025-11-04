@@ -351,10 +351,24 @@ async function handleSaveClick() {
     }
     
     // Send to background script
-    const response = await chrome.runtime.sendMessage({
-      action: 'saveJob',
-      jobData: jobData
-    });
+    let response;
+    try {
+      response = await chrome.runtime.sendMessage({
+        action: 'saveJob',
+        jobData: jobData
+      });
+      
+      // Check for runtime errors (context invalidation)
+      if (chrome.runtime.lastError) {
+        const errorMessage = chrome.runtime.lastError.message;
+        if (errorMessage.includes('Extension context invalidated')) {
+          throw new Error('Extension context invalidated. Please reload the extension and try again.');
+        }
+        throw new Error(errorMessage);
+      }
+    } catch (error) {
+      throw error;
+    }
     
     if (response.success) {
       updateButtonState('success');

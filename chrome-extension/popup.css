@@ -73,6 +73,20 @@ body {
 
 .logo {
   margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-icon {
+  width: 48px;
+  height: 48px;
+  background: #80FF00;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
 }
 
 .logo svg {
@@ -86,11 +100,13 @@ body {
 }
 
 .cv-text {
-  color: #84cc16;
+  color: #80FF00;
+  font-weight: 700;
 }
 
 .circle-text {
-  color: #666666;
+  color: #333333;
+  font-weight: 700;
 }
 
 .login-container p {
