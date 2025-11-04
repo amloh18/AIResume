@@ -116,13 +116,17 @@ const nextConfig: NextConfig = {
     
     // CRITICAL: Force React to resolve to a single instance
     // This prevents "Cannot read properties of null" errors from multiple React instances
-    if (!isServer) {
-      // For client builds, ensure React resolves to the same instance
-      const reactPath = require.resolve('react');
-      const reactDomPath = require.resolve('react-dom');
-      config.resolve.alias.react = reactPath;
-      config.resolve.alias['react-dom'] = reactDomPath;
-    }
+    // BUT: We must preserve subpath exports (like react/jsx-runtime) by not aliasing the main package
+    // Instead, we'll use resolve.alias only if there are duplicate React instances
+    // For Next.js 15, we should let Next.js handle React resolution naturally
+    // Only alias if we detect multiple React instances (which shouldn't happen in Next.js 15)
+    // if (!isServer) {
+    //   // Commented out: Let Next.js handle React resolution to preserve subpath exports
+    //   // const reactPath = require.resolve('react');
+    //   // const reactDomPath = require.resolve('react-dom');
+    //   // config.resolve.alias.react = reactPath;
+    //   // config.resolve.alias['react-dom'] = reactDomPath;
+    // }
     
     // Ensure React is never in externals for client builds
     if (config.externals && !isServer) {
@@ -170,18 +174,12 @@ const nextConfig: NextConfig = {
         delete config.resolve.alias['react-dom'];
       }
       
-      // For Edge builds, still ensure React resolves correctly
-      if (!isServer) {
-        try {
-          const reactPath = require.resolve('react');
-          const reactDomPath = require.resolve('react-dom');
-          config.resolve.alias.react = reactPath;
-          config.resolve.alias['react-dom'] = reactDomPath;
-        } catch (e) {
-          // If require.resolve fails, don't override
-          console.warn('Could not resolve React paths for Edge build');
-        }
-      }
+      // For Edge builds, let Next.js handle React resolution naturally
+      // Don't alias React to preserve subpath exports (react/jsx-runtime, etc.)
+      // if (!isServer) {
+      //   // Commented out: Let Next.js handle React resolution to preserve subpath exports
+      //   // React subpaths like react/jsx-runtime need to resolve through package.json exports
+      // }
     }
 
     // Handle optional dependencies for Vercel
