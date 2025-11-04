@@ -48,7 +48,9 @@ import { UnifiedCVService } from '@/lib/services/unified-cv-service';
 import { safeSessionStorageParse, safeSessionStorageSet } from '@/lib/utils/safeJsonParse';
 import { JobService } from '@/lib/services/jobService';
 import { debounce } from 'lodash';
-import { getVisibleCVSections, hasSectionData } from '@/lib/utils/cv-section-selectors';
+import { getVisibleCVSections, getAddableCVSections } from '@/lib/selectors/cv-section-selectors';
+import { hasSectionData } from '@/lib/utils/cv-data-validation';
+import { migrateLegacyCV } from '@/lib/migrations/cv-structure-migration';
 import { Skeleton } from '@/components/ui/SkeletonLoader';
 import { generateCVName, generateCVDescription, getCVMetadata } from '@/lib/utils/cvNamingUtils';
 import { generateDocumentName } from '@/lib/utils/documentNaming';
@@ -285,19 +287,11 @@ const CVStudio: React.FC<CVStudioProps> = ({
   ): Promise<UnifiedCVDataStructure> => {
     // Migrate legacy CV data to structure format if needed
     if (!hasStructure(data)) {
-      console.log('🔄 Migrating legacy CV data to structure format...');
+      console.log('🔄 Migrating legacy CV data using new Harmony migration...');
       try {
-        // Try to get template for migration
-        let template: any = null;
-        if (templateId) {
-          try {
-            template = await TemplateService.getTemplate(templateId);
-          } catch (e) {
-            console.warn('⚠️ Could not fetch template for migration, using defaults');
-          }
-        }
-        data = migrateLegacyCVToStructureFormat(data, template);
-        console.log('✅ CV data migrated to structure format');
+        // Use new simplified migration (no template parameter needed)
+        data = migrateLegacyCV(data);
+        console.log('✅ CV data migrated to structure format using Harmony architecture');
       } catch (error) {
         console.error('❌ Migration error:', error);
         // Continue with original data if migration fails
@@ -3283,11 +3277,11 @@ const CVStudio: React.FC<CVStudioProps> = ({
 
     // Map to sidebar format (maintains compatibility with existing sidebar component)
     return visibleSections.map(section => ({
-      id: section.id,
-      title: section.title,
-      icon: section.icon,
+      id: section.type, // Use type as id for compatibility
+      title: section.label, // Use label from selector
+      icon: getSectionIcon(section.type), // Map icon name to component
       visible: true, // All sections from selector are visible
-      hasData: section.hasData // Include data status for UI indicators
+      hasData: hasSectionData(cvData, section.type) // Compute data status
     }));
   };
 
@@ -3322,27 +3316,18 @@ const CVStudio: React.FC<CVStudioProps> = ({
     // This will be handled by FloatingStudioLayout animation
   };
 
-  // Get available sections that can be added (ones that don't have data yet)
+  // Get available sections that can be added using centralized selector
   const getAvailableSectionsToAdd = () => {
-    const allSectionIds = ['skills', 'projects', 'certificates', 'languages', 'volunteer', 'awards', 'publications', 'interests', 'references'];
-    const sectionTitles: Record<string, string> = {
-      skills: 'Skills',
-      projects: 'Projects',
-      certificates: 'Certificates',
-      languages: 'Languages',
-      volunteer: 'Volunteer Experience',
-      awards: 'Awards & Recognition',
-      publications: 'Publications',
-      interests: 'Interests',
-      references: 'References'
-    };
+    // Use the "Palette" selector - single source of truth for addable sections
+    const addableSections = getAddableCVSections(cvData);
     
-    return allSectionIds
-      .filter(sectionId => !hasSectionData(cvData, sectionId))
-      .map(sectionId => ({
-        id: sectionId,
-        title: sectionTitles[sectionId],
-        icon: getSectionIcon(sectionId)
+    // Map to format expected by modal (convert icon names to components)
+    return addableSections.map(section => ({
+      id: section.id,
+      title: section.label,
+      icon: getSectionIcon(section.id), // Map icon name to component
+      category: section.category,
+      description: section.description
       }));
   };
 
@@ -3358,6 +3343,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
       
       const updatedData = { ...prev };
 
+      // Update CV data with default item
       switch (sectionId) {
         case 'skills': {
           const defaultSkill = getDefaultItemForSection('skills') as { category: string; skills: string[] };
@@ -3408,11 +3394,167 @@ const CVStudio: React.FC<CVStudioProps> = ({
           return prev;
       }
 
+      // CRITICAL: Update structure to mark section as visible
+      // Only run migration if structure doesn't exist at all
+      // If structure exists, preserve it and just add/update the section
+      if (!updatedData.structure) {
+        // Structure doesn't exist - run migration to create complete structure
+        const migratedData = migrateLegacyCV(updatedData);
+        updatedData.structure = migratedData.structure;
+      } else {
+        // Structure exists - preserve it and just update/add the section
+        // Ensure sections array exists
+        if (!updatedData.structure.sections) {
+          updatedData.structure.sections = [];
+        }
+        
+        // Clone structure to avoid mutations
+        updatedData.structure = {
+          ...updatedData.structure,
+          sections: [...updatedData.structure.sections]
+        };
+        
+        // Find or create the section in structure
+        let sectionExists = false;
+        updatedData.structure.sections = updatedData.structure.sections.map(section => {
+          if (section.type === sectionId) {
+            sectionExists = true;
+            // Mark as visible since it now has data
+            return { ...section, visible: true };
+          }
+          return section;
+        });
+        
+        // If section doesn't exist in structure, add it
+        if (!sectionExists) {
+          const sectionIdForStructure = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 
+            `section-${Date.now()}-${Math.random()}`;
+          updatedData.structure.sections.push({
+            id: sectionIdForStructure,
+            type: sectionId,
+            visible: true // Mark as visible since it now has data
+          });
+        }
+      }
+
       return updatedData;
     });
     
     setShowAddSectionModal(false);
     setActiveStructureSection(sectionId);
+  };
+
+  // Delete a section - marks as invisible and clears data
+  const deleteSection = (sectionId: string) => {
+    // Don't allow deleting personal_header
+    if (sectionId === 'personal_header') {
+      return;
+    }
+
+    setCvData(prev => {
+      if (!prev) return prev;
+      
+      const updatedData = { ...prev };
+
+      // Clear section data
+      const sectionTypeMap: Record<string, keyof UnifiedCVDataStructure> = {
+        'work_experience': 'work',
+        'education': 'education',
+        'skills': 'skills',
+        'projects': 'projects',
+        'certificates': 'certificates',
+        'languages': 'languages',
+        'volunteer': 'volunteer',
+        'awards': 'awards',
+        'publications': 'publications',
+        'interests': 'interests',
+        'references': 'references'
+      };
+
+      const dataKey = sectionTypeMap[sectionId] || sectionId;
+      
+      // Clear the section data (set to empty array for list sections)
+      if (dataKey === 'work' || dataKey === 'education' || dataKey === 'skills' || 
+          dataKey === 'projects' || dataKey === 'certificates' || dataKey === 'languages' ||
+          dataKey === 'volunteer' || dataKey === 'awards' || dataKey === 'publications' ||
+          dataKey === 'interests' || dataKey === 'references') {
+        updatedData[dataKey] = [] as any;
+      }
+
+      // Update structure to mark section as invisible
+      if (updatedData.structure?.sections) {
+        updatedData.structure = {
+          ...updatedData.structure,
+          sections: updatedData.structure.sections.map(section => {
+            if (section.type === sectionId) {
+              return { ...section, visible: false };
+            }
+            return section;
+          })
+        };
+      }
+
+      return updatedData;
+    });
+
+    // If this was the active section, clear it
+    if (activeStructureSection === sectionId) {
+      setActiveStructureSection(null);
+    }
+  };
+
+  // Handle section reordering from sidebar
+  const handleSidebarSectionReorder = (sectionIds: string[]) => {
+    setCvData(prev => {
+      if (!prev || !prev.structure?.sections) return prev;
+
+      const updatedData = { ...prev };
+      
+      // Ensure personal_header is always first
+      const personalHeaderIndex = sectionIds.indexOf('personal_header');
+      if (personalHeaderIndex > 0) {
+        sectionIds.splice(personalHeaderIndex, 1);
+        sectionIds.unshift('personal_header');
+      } else if (personalHeaderIndex === -1) {
+        // If personal_header is missing, add it at the beginning
+        sectionIds.unshift('personal_header');
+      }
+
+      // Create a map of existing sections by type
+      const sectionMap = new Map(
+        updatedData.structure.sections.map(s => [s.type, s])
+      );
+
+      // Reorder sections based on new order
+      const reorderedSections = sectionIds
+        .map(type => {
+          const existing = sectionMap.get(type);
+          if (existing) {
+            return existing;
+          }
+          // If section doesn't exist in structure, create it
+          return {
+            id: type,
+            type: type,
+            visible: false
+          };
+        })
+        .filter(Boolean);
+
+      // Add any sections that weren't in the reorder list (shouldn't happen, but safety)
+      updatedData.structure.sections.forEach(section => {
+        if (!sectionIds.includes(section.type)) {
+          reorderedSections.push(section);
+        }
+      });
+
+      updatedData.structure = {
+        ...updatedData.structure,
+        sections: reorderedSections
+      };
+
+      return updatedData;
+    });
   };
 
   return (
@@ -3431,6 +3573,8 @@ const CVStudio: React.FC<CVStudioProps> = ({
             activeStructureSection={activeStructureSection || undefined}
             onStructureSectionClick={handleStructureSectionClick}
             onAddSection={handleAddSection}
+            onDeleteSection={deleteSection}
+            onSectionReorder={handleSidebarSectionReorder}
             previousStructureSectionIndex={previousStructureSectionIndex}
             documentType={documentType}
             structureContent={
@@ -3663,25 +3807,19 @@ const CVStudio: React.FC<CVStudioProps> = ({
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     {getAvailableSectionsToAdd().map((section) => {
                       const IconComponent = section.icon;
-                const isAlreadyAdded = hasSectionData(cvData, section.id);
                 
                       return (
                         <motion.button
                           key={section.id}
-                    onClick={() => !isAlreadyAdded && addNewSection(section.id)}
-                    className={`w-full aspect-square flex flex-col items-center justify-center gap-3 p-4 rounded-xl transition-all duration-200 ${
-                      isAlreadyAdded
-                        ? 'bg-white/5 text-white/30 cursor-not-allowed'
-                        : 'bg-white/10 hover:bg-white/20 text-white hover:scale-105'
-                    }`}
-                    whileHover={!isAlreadyAdded ? { scale: 1.05 } : {}}
-                    whileTap={!isAlreadyAdded ? { scale: 0.95 } : {}}
-                    disabled={isAlreadyAdded}
+                    onClick={() => addNewSection(section.id)}
+                    className="w-full aspect-square flex flex-col items-center justify-center gap-3 p-4 rounded-xl transition-all duration-200 bg-white/10 hover:bg-white/20 text-white hover:scale-105"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                         >
                     {React.createElement(IconComponent, { size: 32 })}
                     <span className="font-medium text-sm text-center">{section.title}</span>
-                    {isAlreadyAdded && (
-                      <span className="text-xs text-white/50">Already Added</span>
+                    {section.description && (
+                      <span className="text-xs text-white/60 text-center">{section.description}</span>
                     )}
                         </motion.button>
                       );

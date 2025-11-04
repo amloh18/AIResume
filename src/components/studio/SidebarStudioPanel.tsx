@@ -3,6 +3,25 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  DragStartEvent,
+  DragOverlay,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import {
   Layout,
   Palette,
   BarChart3,
@@ -49,6 +68,8 @@ interface SidebarStudioPanelProps {
   activeStructureSection?: string;
   onStructureSectionClick?: (sectionId: string) => void;
   onAddSection?: () => void;
+  onDeleteSection?: (sectionId: string) => void;
+  onSectionReorder?: (sectionIds: string[]) => void;
   
   // Active main section
   activeSection?: 'template' | 'design' | 'ai-report' | 'structure';
@@ -61,6 +82,119 @@ interface SidebarStudioPanelProps {
   documentType?: 'cv' | 'cover-letter';
 }
 
+// Sortable section item component
+function SortableSectionItem({
+  section,
+  isActive,
+  isPersonalHeader,
+  onStructureSectionClick,
+  onDeleteSection,
+  getSectionIcon,
+  getSectionTitle,
+  confirmingDelete,
+  setConfirmingDelete,
+}: {
+  section: CVSection;
+  isActive: boolean;
+  isPersonalHeader: boolean;
+  onStructureSectionClick: (sectionId: string) => void;
+  onDeleteSection?: (sectionId: string) => void;
+  getSectionIcon: (sectionId: string) => React.ComponentType<any>;
+  getSectionTitle: (sectionId: string) => string;
+  confirmingDelete: string | null;
+  setConfirmingDelete: (sectionId: string | null) => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: section.id,
+    disabled: isPersonalHeader, // Disable dragging for personal_header
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  const IconComponent = getSectionIcon(section.id);
+  const isConfirming = confirmingDelete === section.id;
+
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isConfirming && onDeleteSection) {
+      onDeleteSection(section.id);
+      setConfirmingDelete(null);
+    } else {
+      setConfirmingDelete(section.id);
+    }
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex items-center gap-1"
+    >
+      <motion.button
+        {...(!isPersonalHeader ? { ...attributes, ...listeners } : {})}
+        onClick={() => onStructureSectionClick(section.id)}
+        className={`flex-1 flex items-center justify-center md:justify-start gap-2 md:gap-3 px-2 md:px-3 py-2 rounded-lg transition-all duration-200 text-sm ${
+          isActive
+            ? 'bg-[#80FF00]/20 text-[#80FF00]'
+            : isPersonalHeader
+            ? 'text-white/60 hover:text-white hover:bg-white/5'
+            : 'text-white/60 hover:text-white hover:bg-blue-500/20 cursor-move'
+        }`}
+        whileHover={!isPersonalHeader ? { scale: 1.02 } : {}}
+        whileTap={{ scale: 0.98 }}
+        title={getSectionTitle(section.id)}
+      >
+        {React.createElement(IconComponent, { size: 16 })}
+        <span className="font-medium text-xs hidden md:block">
+          {isConfirming ? 'Confirm' : getSectionTitle(section.id)}
+        </span>
+      </motion.button>
+      
+      {/* Delete button - always visible, except for personal_header */}
+      {!isPersonalHeader && onDeleteSection && (
+        <div className="relative overflow-hidden">
+          <button
+            onClick={handleDeleteClick}
+            className={`relative p-1.5 rounded transition-all duration-300 overflow-hidden ${
+              isConfirming
+                ? 'bg-red-500/30 text-red-400'
+                : 'hover:bg-red-500/20 text-white/40 hover:text-red-400'
+            }`}
+            title={isConfirming ? 'Click again to confirm deletion' : 'Delete section'}
+          >
+            {/* Red hover animation from left to right */}
+            {isConfirming && (
+              <motion.div
+                className="absolute inset-0 bg-red-500/40"
+                initial={{ x: '-100%' }}
+                animate={{ x: '100%' }}
+                transition={{
+                  duration: 0.5,
+                  ease: 'easeInOut',
+                  repeat: Infinity,
+                  repeatDelay: 0.3,
+                }}
+              />
+            )}
+            <X size={14} className="relative z-10" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 const SidebarStudioPanel: React.FC<SidebarStudioPanelProps> = ({
   templateContent,
   designContent,
@@ -70,6 +204,8 @@ const SidebarStudioPanel: React.FC<SidebarStudioPanelProps> = ({
   activeStructureSection,
   onStructureSectionClick,
   onAddSection,
+  onDeleteSection,
+  onSectionReorder,
   activeSection = 'structure',
   onSectionChange,
   previousStructureSectionIndex = -1,
@@ -77,10 +213,50 @@ const SidebarStudioPanel: React.FC<SidebarStudioPanelProps> = ({
 }) => {
   const [isHovered, setIsHovered] = useState(false);
   const [localActiveSection, setLocalActiveSection] = useState<'template' | 'design' | 'ai-report' | 'structure'>(activeSection);
+  const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const confirmationTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   useEffect(() => {
     setLocalActiveSection(activeSection);
   }, [activeSection]);
+
+  // Clear confirmation timeout on unmount or when confirmingDelete changes
+  useEffect(() => {
+    if (confirmationTimeoutRef.current) {
+      clearTimeout(confirmationTimeoutRef.current);
+    }
+    
+    if (confirmingDelete) {
+      confirmationTimeoutRef.current = setTimeout(() => {
+        setConfirmingDelete(null);
+      }, 3000);
+    }
+    
+    return () => {
+      if (confirmationTimeoutRef.current) {
+        clearTimeout(confirmationTimeoutRef.current);
+      }
+    };
+  }, [confirmingDelete]);
+
+  // Reset confirmation when clicking on a section
+  const handleStructureSubSectionClick = (sectionId: string) => {
+    if (confirmingDelete) {
+      setConfirmingDelete(null);
+      if (confirmationTimeoutRef.current) {
+        clearTimeout(confirmationTimeoutRef.current);
+      }
+    }
+    onStructureSectionClick?.(sectionId);
+  };
 
   // Filter out AI Report for cover letter mode
   const mainSections: SidebarSection[] = [
@@ -129,10 +305,13 @@ const SidebarStudioPanel: React.FC<SidebarStudioPanelProps> = ({
   const handleSectionClick = (sectionId: 'template' | 'design' | 'ai-report' | 'structure') => {
     setLocalActiveSection(sectionId);
     onSectionChange?.(sectionId);
-  };
-
-  const handleStructureSubSectionClick = (sectionId: string) => {
-    onStructureSectionClick?.(sectionId);
+    // Reset confirmation when switching main sections
+    if (confirmingDelete) {
+      setConfirmingDelete(null);
+      if (confirmationTimeoutRef.current) {
+        clearTimeout(confirmationTimeoutRef.current);
+      }
+    }
   };
 
   // Get animation direction for structure section changes
@@ -198,30 +377,65 @@ const SidebarStudioPanel: React.FC<SidebarStudioPanelProps> = ({
             {/* Structure Sub-sections (only shown when Structure is active and documentType is cv) */}
             {localActiveSection === 'structure' && documentType === 'cv' && cvSections.length > 0 && (
               <div className="mt-4 pt-4 border-t border-white/10">
-                <div className="space-y-2">
-                  {cvSections.map((section) => {
-                    const IconComponent = getSectionIcon(section.id);
-                    const isActive = activeStructureSection === section.id;
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragStart={(event: DragStartEvent) => {
+                    setActiveId(event.active.id as string);
+                  }}
+                  onDragEnd={(event: DragEndEvent) => {
+                    const { active, over } = event;
+                    setActiveId(null);
 
-                    return (
-                      <motion.button
-                        key={section.id}
-                        onClick={() => handleStructureSubSectionClick(section.id)}
-                        className={`w-full flex items-center justify-center md:justify-start gap-2 md:gap-3 px-2 md:px-3 py-2 rounded-lg transition-all duration-200 text-sm ${
-                          isActive
-                            ? 'bg-[#80FF00]/20 text-[#80FF00]'
-                            : 'text-white/60 hover:text-white hover:bg-white/5'
-                        }`}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        title={getSectionTitle(section.id)}
-                      >
-                        {React.createElement(IconComponent, { size: 16 })}
-                        <span className="font-medium text-xs hidden md:block">{getSectionTitle(section.id)}</span>
-                      </motion.button>
-                    );
-                  })}
-                </div>
+                    if (over && active.id !== over.id && onSectionReorder) {
+                      const oldIndex = cvSections.findIndex((s) => s.id === active.id);
+                      const newIndex = cvSections.findIndex((s) => s.id === over.id);
+                      
+                      const newSections = arrayMove(cvSections, oldIndex, newIndex);
+                      const newSectionIds = newSections.map((s) => s.id);
+                      onSectionReorder(newSectionIds);
+                    }
+                  }}
+                >
+                  <SortableContext
+                    items={cvSections.map((s) => s.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="space-y-2">
+                      {cvSections.map((section) => {
+                        const isActive = activeStructureSection === section.id;
+                        const isPersonalHeader = section.id === 'personal_header';
+
+                        return (
+                          <SortableSectionItem
+                            key={section.id}
+                            section={section}
+                            isActive={isActive}
+                            isPersonalHeader={isPersonalHeader}
+                            onStructureSectionClick={handleStructureSubSectionClick}
+                            onDeleteSection={onDeleteSection}
+                            getSectionIcon={getSectionIcon}
+                            getSectionTitle={getSectionTitle}
+                            confirmingDelete={confirmingDelete}
+                            setConfirmingDelete={setConfirmingDelete}
+                          />
+                        );
+                      })}
+                    </div>
+                  </SortableContext>
+                  <DragOverlay>
+                    {activeId ? (
+                      <div className="flex items-center gap-1 opacity-50">
+                        <div className="flex-1 flex items-center justify-center md:justify-start gap-2 md:gap-3 px-2 md:px-3 py-2 rounded-lg bg-[#80FF00]/20 text-[#80FF00]">
+                          {React.createElement(getSectionIcon(activeId), { size: 16 })}
+                          <span className="font-medium text-xs hidden md:block">
+                            {getSectionTitle(activeId)}
+                          </span>
+                        </div>
+                      </div>
+                    ) : null}
+                  </DragOverlay>
+                </DndContext>
               </div>
             )}
           </div>

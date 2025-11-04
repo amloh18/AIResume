@@ -13,7 +13,7 @@ import {
 
 import { DocumentType, StudioSessionContext, JobData } from '@/types/studio';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
-import { getVisibleCVSections } from '@/lib/utils/cv-section-selectors';
+import { getVisibleCVSections } from '@/lib/selectors/cv-section-selectors';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -429,7 +429,7 @@ function CVStructureSections({
 
   const sections = visibleSections.map(section => ({
     id: section.type,
-    title: section.title,
+    title: section.label, // Use label from selector
     icon: sectionIconMap[section.type] || '📄'
   }));
 
