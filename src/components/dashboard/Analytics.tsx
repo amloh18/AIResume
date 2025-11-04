@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { 
   FileText, Briefcase, PenTool, TrendingUp, Target, Sparkles, Zap, 
   Lightbulb, Plus, Edit, Eye, Trash2, Calendar, CheckCircle, Heart,
-  MessageSquare, User, BarChart3
+  MessageSquare, User, BarChart3, SearchX
 } from 'lucide-react';
 import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
 import { useCreateCV } from '@/lib/utils/cvCreationUtils';
@@ -387,209 +387,109 @@ const CVManagementSection: React.FC<{
   );
 };
 
-// 2. The "Application Hub" - Enhanced with Application Analytics and Trends
-const ApplicationHub: React.FC<{ 
-  drafts: any[];
+// 2. Application Calendar Widget (3 Weeks)
+const ApplicationCalendarWidget: React.FC<{ 
   jobs: any[];
-  onResumeDraft: (draftId: string) => void;
-  onPreviewDraft: (draftId: string) => void;
-  onDiscardDraft: (draftId: string) => void;
-}> = ({ drafts, jobs, onResumeDraft, onPreviewDraft, onDiscardDraft }) => {
-
-  const getApplicationStats = () => {
-    const now = new Date();
-    const thisWeekJobs = jobs.filter(job => {
-      const jobDate = new Date(job.createdAt);
-      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      return jobDate >= weekAgo;
-    });
-
-    const thisMonthJobs = jobs.filter(job => {
-      const jobDate = new Date(job.createdAt);
-      return jobDate.getMonth() === now.getMonth() && jobDate.getFullYear() === now.getFullYear();
-    });
-
-    const lastMonthJobs = jobs.filter(job => {
-      const jobDate = new Date(job.createdAt);
-      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      return jobDate >= lastMonth && jobDate < thisMonth;
-    });
-
-    const responsiveJobs = jobs.filter(job => job.status !== 'created' && job.status !== 'applied');
-    const averageResponseTime = responsiveJobs.length > 0 ? 
-      Math.round(responsiveJobs.reduce((sum, job) => {
-        const applicationDate = new Date(job.applicationDate || job.createdAt);
-        const responseDate = new Date(job.lastStatusUpdate || job.updatedAt);
-        return sum + Math.abs(responseDate.getTime() - applicationDate.getTime()) / (1000 * 60 * 60 * 24);
-      }, 0) / responsiveJobs.length) : 0;
-
-    const statusDistribution = jobs.reduce((acc, job) => {
-      acc[job.status] = (acc[job.status] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    return {
-      applicationsThisWeek: thisWeekJobs.length,
-      applicationsThisMonth: thisMonthJobs.length,
-      lastMonthApplications: lastMonthJobs.length,
-      monthlyGrowth: lastMonthJobs.length > 0 ? 
-        Math.round(((thisMonthJobs.length - lastMonthJobs.length) / lastMonthJobs.length) * 100) : 
-        thisMonthJobs.length > 0 ? 100 : 0,
-      successRate: jobs.length > 0 ? Math.round((jobs.filter(job => job.status === 'interview' || job.status === 'offer' || job.status === 'accepted').length / jobs.length) * 100) : 0,
-      responseRate: jobs.length > 0 ? Math.round((responsiveJobs.length / jobs.length) * 100) : 0,
-      averageResponseTime,
-      statusDistribution,
-      upcomingFollowUps: jobs.filter(job => {
-        if (!job.followUpDate) return false;
-        const followUpDate = new Date(job.followUpDate);
-        const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
-        return followUpDate <= threeDaysFromNow && followUpDate >= now;
-      }).length
-    };
-  };
-
-  const getWeeklyTrend = () => {
-    const weeks = [];
-    const now = new Date();
-    for (let i = 6; i >= 0; i--) {
-      const weekStart = new Date(now.getTime() - i * 7 * 24 * 60 * 60 * 1000);
-      const weekEnd = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
-      const weekJobs = jobs.filter(job => {
-        const jobDate = new Date(job.createdAt);
-        return jobDate >= weekStart && jobDate < weekEnd;
-      });
-      weeks.push({
-        week: `Week ${i === 0 ? 'Current' : `-${i}`}`,
-        applications: weekJobs.length,
-        responses: weekJobs.filter(job => job.status !== 'created' && job.status !== 'applied').length
-      });
-    }
-    return weeks;
-  };
-
-  const stats = getApplicationStats();
-  const weeklyTrend = getWeeklyTrend();
-
+}> = ({ jobs }) => {
   return (
-    <div className="glass-widget-premium rounded-xl p-6">
+    <div className="glass-widget-premium rounded-xl p-6 h-full flex flex-col w-full">
+      {/* Header */}
+      <div className="mb-4">
+        <h2 className="text-lg font-bold text-gray-900 dark:text-white">Application Calendar (3 Weeks)</h2>
+      </div>
       
-        <div className="space-y-4">
-          {/* Key Metrics */}
-
-          {/* 3-Week Calendar View */}
-          <div className="glass-card-premium rounded-lg p-4">
-            <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-4">Application Calendar (3 Weeks)</h3>
-            <div className="grid grid-cols-7 gap-1">
-              {/* Day headers */}
-              {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
-                <div key={day} className="text-center text-xs font-medium text-gray-600 dark:text-white/60 py-1">
-                  {day}
-                </div>
-              ))}
+      {/* Calendar */}
+      <div className="flex-1 flex flex-col">
+        <div className="grid grid-cols-7 gap-1">
+          {/* Day headers */}
+          {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
+            <div key={day} className="text-center text-xs font-medium text-gray-600 dark:text-white/60 py-1">
+              {day}
+            </div>
+          ))}
+          
+          {/* Calendar days */}
+          {(() => {
+            const today = new Date();
+            const startDate = new Date(today);
+            // Go back to start of previous week (Monday)
+            // Adjust for Monday start: getDay() returns 0 for Sunday, so we need to adjust
+            const dayOfWeek = today.getDay();
+            const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Monday = 1, Sunday = 0
+            startDate.setDate(today.getDate() + mondayOffset - 7);
+            
+            const calendarDays = [];
+            for (let i = 0; i < 21; i++) { // 3 weeks * 7 days
+              const currentDate = new Date(startDate);
+              currentDate.setDate(startDate.getDate() + i);
               
-              {/* Calendar days */}
-              {(() => {
-                const today = new Date();
-                const startDate = new Date(today);
-                // Go back to start of previous week (Monday)
-                // Adjust for Monday start: getDay() returns 0 for Sunday, so we need to adjust
-                const dayOfWeek = today.getDay();
-                const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Monday = 1, Sunday = 0
-                startDate.setDate(today.getDate() + mondayOffset - 7);
-                
-                const calendarDays = [];
-                for (let i = 0; i < 21; i++) { // 3 weeks * 7 days
-                  const currentDate = new Date(startDate);
-                  currentDate.setDate(startDate.getDate() + i);
-                  
-                  // Count applications for this date
-                  const dayApplications = jobs.filter(job => {
-                    const jobDate = new Date(job.createdAt);
-                    return jobDate.toDateString() === currentDate.toDateString();
-                  }).length;
-                  
-                  // Count deadlines for this date
-                  const dayDeadlines = jobs.filter(job => {
-                    if (!job.deadline) return false;
-                    const deadlineDate = new Date(job.deadline);
-                    return deadlineDate.toDateString() === currentDate.toDateString();
-                  }).length;
-                  
-                  const isToday = currentDate.toDateString() === today.toDateString();
-                  const isPast = currentDate < today;
-                  const isFuture = currentDate > today;
-                  
-                  // Determine if this is a deadline day
-                  const isDeadlineDay = dayDeadlines > 0;
-                  
-                  calendarDays.push(
-                    <div 
-                      key={i} 
-                      className={`
-                        aspect-square flex flex-col items-center justify-center text-xs rounded transition-all duration-200
-                        ${isToday ? 'bg-blue-400/20 dark:bg-blue-400/20 text-blue-400 font-medium' : 
-                          isPast ? 'text-gray-600 dark:text-white/60' : 
-                          'text-gray-400 dark:text-white/40'}
-                        ${dayApplications > 0 ? 'bg-green-400/20 dark:bg-green-400/20 text-green-400' : ''}
-                        ${isDeadlineDay ? 'bg-red-400/20 dark:bg-red-400/20 text-red-400' : ''}
-                        hover:bg-gray-100 dark:hover:bg-white/5 cursor-pointer
-                      `}
-                    >
-                      <div className="font-medium text-xs">{currentDate.getDate()}</div>
-                      <div className="flex gap-0.5 mt-0.5">
-                        {dayApplications > 0 && (
-                          <div className="w-1 h-1 bg-green-400 rounded-full"></div>
-                        )}
-                        {isDeadlineDay && (
-                          <div className="w-1 h-1 bg-red-400 rounded-full"></div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                }
-                return calendarDays;
-              })()}
+              // Count applications for this date
+              const dayApplications = jobs.filter(job => {
+                const jobDate = new Date(job.createdAt);
+                return jobDate.toDateString() === currentDate.toDateString();
+              }).length;
+              
+              // Count deadlines for this date
+              const dayDeadlines = jobs.filter(job => {
+                if (!job.deadline) return false;
+                const deadlineDate = new Date(job.deadline);
+                return deadlineDate.toDateString() === currentDate.toDateString();
+              }).length;
+              
+              const isToday = currentDate.toDateString() === today.toDateString();
+              const isPast = currentDate < today;
+              const isFuture = currentDate > today;
+              
+              // Determine if this is a deadline day
+              const isDeadlineDay = dayDeadlines > 0;
+              
+              calendarDays.push(
+                <div 
+                  key={i} 
+                  className={`
+                    aspect-square flex flex-col items-center justify-center text-xs rounded transition-all duration-200
+                    ${isToday ? 'bg-blue-400/20 dark:bg-blue-400/20 text-blue-400 font-medium' : 
+                      isPast ? 'text-gray-600 dark:text-white/60' : 
+                      'text-gray-400 dark:text-white/40'}
+                    ${dayApplications > 0 ? 'bg-green-400/20 dark:bg-green-400/20 text-green-400' : ''}
+                    ${isDeadlineDay ? 'bg-red-400/20 dark:bg-red-400/20 text-red-400' : ''}
+                    hover:bg-gray-100 dark:hover:bg-white/5 cursor-pointer
+                  `}
+                >
+                  <div className="font-medium text-xs">{currentDate.getDate()}</div>
+                  <div className="flex gap-0.5 mt-0.5">
+                    {dayApplications > 0 && (
+                      <div className="w-1 h-1 bg-green-400 rounded-full"></div>
+                    )}
+                    {isDeadlineDay && (
+                      <div className="w-1 h-1 bg-red-400 rounded-full"></div>
+                    )}
+                  </div>
+                </div>
+              );
+            }
+            return calendarDays;
+          })()}
+        </div>
+
+        {/* Legend */}
+        <div className="flex items-center justify-center gap-4 mt-4 text-xs text-gray-600 dark:text-white/60">
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+            <span>Applications</span>
           </div>
-
-            {/* Legend */}
-            <div className="flex items-center justify-center gap-4 mt-4 text-xs text-gray-600 dark:text-white/60">
-              <div className="flex items-center gap-1">
-                <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                <span>Applications</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-2 h-2 bg-red-400 rounded-full"></div>
-                <span>Deadlines</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                <span>Today</span>
-              </div>
-            </div>
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 bg-red-400 rounded-full"></div>
+            <span>Deadlines</span>
           </div>
-
-
-          {/* Action Items */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-gray-700 dark:text-white/80 text-sm">
-              <span>Follow-ups Due (Next 3 Days)</span>
-              <span className={`font-medium ${stats.upcomingFollowUps > 0 ? 'text-orange-400' : 'text-green-400'}`}>
-                {stats.upcomingFollowUps || 'None'}
-              </span>
-            </div>
-            {stats.averageResponseTime > 0 && (
-              <div className="flex items-center justify-between text-gray-700 dark:text-white/80 text-sm">
-                <span>Response Performance</span>
-                <span className={`font-medium ${stats.averageResponseTime <= 7 ? 'text-green-400' : stats.averageResponseTime <= 14 ? 'text-yellow-400' : 'text-orange-400'}`}>
-                  {stats.averageResponseTime <= 7 ? 'Excellent' : stats.averageResponseTime <= 14 ? 'Good' : 'Needs Improvement'}
-                </span>
-              </div>
-            )}
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+            <span>Today</span>
           </div>
         </div>
-  </div>
-);
+      </div>
+    </div>
+  );
 };
 
 // 3. The "Intelligence Dashboard" - Enhanced Market Intelligence + AI Insights
@@ -1055,122 +955,112 @@ const PerformanceInsights: React.FC<{
   );
 };
 
-// 5. The "Recent Jobs" Widget - Enhanced with Application Timeline and Status Distribution
+// 5. The "Recent Jobs" Widget - Matching image design
 const RecentJobsWidget: React.FC<{ 
   jobs: any[];
   onViewJob: (jobId: string) => void;
   onCreateJob?: () => void;
   analyticsData?: any;
 }> = ({ jobs, onViewJob, onCreateJob, analyticsData }) => {
-  const [activeView, setActiveView] = useState<'timeline' | 'status'>('timeline');
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'applied': return 'text-blue-400';
-      case 'screening': return 'text-orange-400';
-      case 'interview': return 'text-purple-400';
-      case 'offer': return 'text-green-400';
-      case 'rejected': return 'text-red-400';
-      case 'accepted': return 'text-emerald-400';
-      case 'withdrawn': return 'text-gray-400';
-      case 'created': return 'text-yellow-400';
-      default: return 'text-white/60';
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'applied': return '📝';
-      case 'screening': return '🔍';
-      case 'interview': return '🎯';
-      case 'offer': return '🎉';
-      case 'rejected': return '❌';
-      case 'accepted': return '✅';
-      case 'withdrawn': return '↩️';
-      case 'created': return '📋';
-      default: return '📄';
-    }
-  };
-
-  const formatDate = (date: string | Date) => {
-    const d = new Date(date);
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - d.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 0) return 'Today';
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 7) return `${diffDays} days ago`;
-    return d.toLocaleDateString();
-  };
-
   const lastJobs = jobs
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .sort((a, b) => new Date(b.createdAt || b.created_at || 0).getTime() - new Date(a.createdAt || a.created_at || 0).getTime())
     .slice(0, 3);
 
-  const statusDistribution = jobs.reduce((acc, job) => {
-    acc[job.status] = (acc[job.status] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+  const getStatusStyle = (status: string) => {
+    const normalizedStatus = status?.toLowerCase() || 'created';
+    switch (normalizedStatus) {
+      case 'applied':
+        return 'bg-blue-500 text-white';
+      case 'interview':
+      case 'interviewing':
+        return 'bg-purple-500 text-white';
+      case 'created':
+      default:
+        return 'text-gray-600 dark:text-gray-400';
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    const normalizedStatus = status?.toLowerCase() || 'created';
+    switch (normalizedStatus) {
+      case 'applied':
+        return 'Applied';
+      case 'interview':
+      case 'interviewing':
+        return 'Interview';
+      case 'created':
+      default:
+        return 'Created';
+    }
+  };
 
   return (
     <div className="glass-widget-premium rounded-xl p-6 h-full flex flex-col w-full">
       {/* Header */}
-      <div className="mb-6">
+      <div className="mb-4">
         <h2 className="text-lg font-bold text-gray-900 dark:text-white">Recent Jobs</h2>
       </div>
       
-      {/* Job Applications List */}
-      <div className="space-y-2">
-        {lastJobs.length === 0 ? (
-          <div className="text-center py-8">
-            <div className="text-gray-400 dark:text-white/60 mb-3">
-              <Briefcase className="w-12 h-12 mx-auto mb-3 text-gray-400 dark:text-white/40" />
-              <p className="text-sm font-medium text-gray-600 dark:text-white/80 mb-1">No jobs added yet</p>
-              <p className="text-xs text-gray-500 dark:text-white/60 mb-4">Start tracking your job applications</p>
-            </div>
-            {onCreateJob && (
-              <motion.button
-                onClick={onCreateJob}
-                className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-lime-400 to-lime-500 text-black rounded-lg font-semibold hover:from-lime-300 hover:to-lime-400 transition-all duration-200 mx-auto"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Plus size={16} />
-                Add Job to Start Tracking
-              </motion.button>
-            )}
-          </div>
-        ) : (
-          lastJobs.map((job, index) => (
-            <motion.div
-              key={job.id || job._id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="flex items-center justify-between p-4 rounded-lg hover:bg-white/5 transition-all duration-300 cursor-pointer"
-              onClick={() => onViewJob(job.id || job._id)}
+      {/* Content */}
+      {lastJobs.length === 0 ? (
+        // Empty State
+        <div className="flex-1 flex flex-col items-center justify-center py-8">
+          <SearchX className="w-16 h-16 text-gray-300 dark:text-gray-500 mb-4" />
+          <p className="text-base font-semibold text-gray-900 dark:text-white mb-1">No Recent Jobs</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">You haven't saved any jobs yet.</p>
+          {onCreateJob && (
+            <button
+              onClick={onCreateJob}
+              className="px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors duration-200"
             >
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-1">
-                  <h3 className="font-medium text-sm text-gray-900 dark:text-white truncate">{job.jobTitle || job.title}</h3>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    job.status === 'applied' ? 'bg-green-600 dark:bg-green-600 text-green-300' :
-                    job.status === 'interview' ? 'bg-yellow-600 dark:bg-yellow-600 text-yellow-300' :
-                    job.status === 'offer' ? 'bg-green-600 dark:bg-green-600 text-green-300' :
-                    'bg-gray-600 dark:bg-gray-600 text-gray-300'
-                  }`}>
-                    {job.status === 'applied' ? 'Applied' :
-                     job.status === 'interview' ? 'Interviewing' :
-                     job.status === 'offer' ? 'Offer' :
-                     job.status.charAt(0).toUpperCase() + job.status.slice(1)}
-                  </span>
+              Add a Job
+            </button>
+          )}
+        </div>
+      ) : (
+        // Populated State
+        <div className="flex-1 flex flex-col">
+          <div className="space-y-4 flex-1">
+            {lastJobs.map((job, index) => (
+              <div
+                key={job.id || job._id || index}
+                className="flex items-start gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+                onClick={() => onViewJob(job.id || job._id)}
+              >
+                {/* Briefcase Icon */}
+                <div className="flex-shrink-0 mt-0.5">
+                  <Briefcase className="w-5 h-5 text-red-500" />
                 </div>
-                <p className="text-xs text-gray-600 dark:text-gray-400">{job.companyName || job.company}</p>
+                
+                {/* Job Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <h3 className="text-base font-semibold text-gray-900 dark:text-white truncate">
+                      {job.jobTitle || job.title || 'Untitled Job'}
+                    </h3>
+                    <span className={`px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap flex-shrink-0 ${getStatusStyle(job.status)}`}>
+                      {getStatusLabel(job.status)}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-500">
+                    {job.companyName || job.company || 'Unknown Company'}
+                  </p>
+                </div>
               </div>
-            </motion.div>
-          ))
-        )}
-      </div>
+            ))}
+          </div>
+          
+          {/* View All Link */}
+          <div className="mt-6 text-center">
+            <button
+              onClick={() => window.location.href = '/dashboard/application-tracker'}
+              className="text-red-500 hover:text-red-600 text-sm font-medium transition-colors"
+            >
+              View All
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -1446,8 +1336,8 @@ const Analytics: React.FC = () => {
         isMobileMenuOpen={isMobileMenuOpen}
       />
 
-      {/* First Row: CV Management and Recent Applications */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* First Row: CV Management, Recent Jobs, and Application Calendar */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="flex w-full min-h-[320px]">
           <CVManagementSection
             cvHealthScore={cvHealthScore}
@@ -1483,30 +1373,27 @@ const Analytics: React.FC = () => {
             analyticsData={analyticsData}
           />
         </div>
+        <div className="flex w-full min-h-[320px]">
+          <ApplicationCalendarWidget jobs={jobs} />
+        </div>
       </div>
 
-      {/* Second Row: Progress Tracking and Intelligence Dashboard */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 min-h-[360px]">
+      {/* Second Row: Progress Tracking and Application Stats */}
+      <div className="grid grid-cols-1 lg:grid-cols-10 gap-4">
+        <div className="lg:col-span-7 min-h-[360px] h-full">
           {/* Always render widget; it will use mock data until userId is ready */}
           <ProgressTrackingWidget userId={userId || ''} />
         </div>
-        <div className="lg:col-span-1">
-          <ApplicationHub
-            drafts={drafts}
-            jobs={jobs}
-            onResumeDraft={(draftId) => window.location.href = `/studio?draft=${draftId}`}
-            onPreviewDraft={(draftId) => window.location.href = `/preview?draft=${draftId}`}
-            onDiscardDraft={(draftId) => {
-              // TODO: Implement discard draft functionality
-            }}
-          />
+        <div className="lg:col-span-3 min-h-[360px] h-full">
+          {/* Always render widget; it will show mock/fallback if needed */}
+          <ApplicationStatsWidget userId={userId || ''} />
         </div>
       </div>
 
-      {/* Third Row: CV Journeys and Application Stats */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 min-h-[400px]">
+      {/* Third Row: Journey Widget and Performance Insights Container */}
+      <div className="flex flex-col gap-4 min-h-[400px]">
+        {/* Journey Widget - Full Width, Expandable */}
+        <div className="flex-1 h-full">
           <AnalyticsJourneyWidget
             onResumeJourney={(journey) => {
               // Navigate to Application Journey page and resume the specific journey
@@ -1521,22 +1408,16 @@ const Analytics: React.FC = () => {
             }}
           />
         </div>
-        <div className="lg:col-span-1 min-h-[400px] flex">
-          {/* Always render widget; it will show mock/fallback if needed */}
-          <div className="flex-1">
-            <ApplicationStatsWidget userId={userId || ''} />
-          </div>
-        </div>
+        
+        {/* Performance Insights - Full Width */}
+        <PerformanceInsights
+          analyticsData={analyticsData}
+          jobs={jobs}
+          cvs={cvs}
+          selectedPeriod={selectedPeriod}
+          onPeriodChange={setSelectedPeriod}
+        />
       </div>
-
-      {/* Fourth Row: Performance Insights - Full Width */}
-          <PerformanceInsights
-            analyticsData={analyticsData}
-            jobs={jobs}
-            cvs={cvs}
-            selectedPeriod={selectedPeriod}
-            onPeriodChange={setSelectedPeriod}
-      />
 
       {/* Enhanced Payment Modal */}
       <UniversalPaymentModal

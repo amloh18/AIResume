@@ -2347,8 +2347,11 @@ const CVStudio: React.FC<CVStudioProps> = ({
     loadInitialData();
   }, [cvId, coverLetterId, userId, documentType, journeyId, setTemplates, setSelectedTemplate, setCurrentJob]);
 
-  const handleExport = async (format: 'pdf' | 'docx' | 'json' = 'pdf') => {
-    if (!cvData) {
+  // Ref to store preview element for downloads
+  const previewRef = useRef<HTMLDivElement | null>(null);
+
+  const handleDownload = async (documentType: import('@/components/ui/DownloadModal').DocumentType, format: import('@/components/ui/DownloadModal').FormatType) => {
+    if (!cvData && documentType !== 'coverLetter') {
       console.error('No CV data to export');
       return;
     }
@@ -2356,44 +2359,117 @@ const CVStudio: React.FC<CVStudioProps> = ({
     try {
       setSaveStatus('saving');
 
-      const exportData = {
-        cvData,
-        template: selectedTemplate,
-        format,
-        userId,
-        cvId,
-        jobId: selectedJobId || journeyInfo?.jobId || undefined
-      };
-
-      const response = await fetch('/api/cv/export', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(exportData),
-      });
-
-      if (!response.ok) {
-        throw new Error('Export failed');
+      // Get the preview element from the preview panel
+      // The previewRef wraps the PreviewPanel, so we need to find the actual preview content
+      let previewElement: HTMLElement | null = null;
+      
+      if (previewRef.current) {
+        // Find the preview content inside the wrapper
+        previewElement = previewRef.current.querySelector('.cv-preview-container') as HTMLElement ||
+                         previewRef.current.querySelector('[class*="cv-preview"]') as HTMLElement ||
+                         previewRef.current;
+      }
+      
+      // Fallback: try to find the preview container in the DOM
+      if (!previewElement && documentType !== 'all') {
+        previewElement = document.querySelector('.cv-preview-container') as HTMLElement ||
+                         document.querySelector('[class*="cv-preview"]') as HTMLElement;
+        
+        if (!previewElement) {
+          throw new Error('Preview element not found');
+        }
       }
 
-      // Handle file download
+      // Import download utilities
+      const { downloadAsPDF, downloadAsDOCX } = await import('@/lib/utils/download');
+
+      let filename = '';
+      const baseName = cvData?.basics?.name?.toLowerCase().replace(/\s+/g, '-') || cvTitle?.toLowerCase().replace(/\s+/g, '-') || 'document';
+
+      if (documentType === 'all') {
+        // For journey downloads, use the API
+        if (journeyId) {
+          const response = await fetch(`/api/application-journey/${journeyId}/download?type=all`);
+          if (!response.ok) throw new Error('Download failed');
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.style.display = 'none';
       a.href = url;
-      a.download = `${cvTitle || 'CV'}.${format}`;
+          a.download = `${baseName}-application-files.zip`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
+        } else {
+          throw new Error('Journey ID required for full download');
+        }
+      } else if (documentType === 'cvAndCoverLetter') {
+        // Download both as separate files
+        if (!previewElement) throw new Error('Preview element not found');
+        
+        // Download CV
+        if (cvData && previewElement) {
+          await downloadAsPDF(previewElement, `${baseName}-cv.${format}`);
+        }
+        
+        // Download Cover Letter (if available)
+        if (coverLetterId && coverLetterData) {
+          // Switch to cover letter view temporarily
+          const originalDocType = documentType;
+          // Note: We'd need to switch document type and get cover letter preview
+          // For now, use API approach
+          const response = await fetch(`/api/cvs/${coverLetterId}/download?format=${format}`);
+          if (response.ok) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${baseName}-cover-letter.${format}`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+          }
+        }
+      } else if (documentType === 'cv') {
+        // Download CV only
+        if (!previewElement) throw new Error('Preview element not found');
+        
+        if (format === 'pdf') {
+          await downloadAsPDF(previewElement, `${baseName}-cv.pdf`);
+        } else if (format === 'docx') {
+          if (cvData) {
+            await downloadAsDOCX(cvData, `${baseName}-cv.docx`);
+          }
+        } else if (format === 'doc') {
+          // DOC format - convert DOCX or use API
+          if (cvData) {
+            await downloadAsDOCX(cvData, `${baseName}-cv.doc`);
+          }
+        }
+      } else if (documentType === 'coverLetter') {
+        // Download Cover Letter only
+        if (coverLetterId) {
+          const response = await fetch(`/api/cvs/${coverLetterId}/download?format=${format}`);
+          if (!response.ok) throw new Error('Cover letter download failed');
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${baseName}-cover-letter.${format}`;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+        }
+      }
 
       setSaveStatus('saved');
-      console.log(`Successfully exported as ${format}`);
+      console.log(`Successfully downloaded ${documentType} as ${format}`);
     } catch (err) {
-      console.error('Error exporting:', err);
+      console.error('Error downloading:', err);
       setSaveStatus('error');
+      throw err;
     }
   };
 
@@ -3564,7 +3640,9 @@ const CVStudio: React.FC<CVStudioProps> = ({
         onTitleUpdate={documentType === 'cover-letter' ? setCoverLetterTitle : handleTitleUpdate}
         saveStatus={saveStatus}
         onSave={manualSave}
-        onDownload={() => handleExport('pdf')}
+        onDownload={handleDownload}
+        hasCV={!!cvData && documentType === 'cv'}
+        hasCoverLetter={!!coverLetterData && documentType === 'cover-letter'}
         leftPanel={
           <SidebarStudioPanel
             activeSection={activeSidebarSection}
@@ -3755,6 +3833,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
             </div>
           ) : (
             <PreviewPanel
+              ref={previewRef}
               cvData={debouncedCvData}
               template={selectedTemplate}
               jobData={currentJob}

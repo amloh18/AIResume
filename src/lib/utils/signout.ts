@@ -23,13 +23,16 @@ export const comprehensiveSignOut = async (): Promise<void> => {
       console.error('❌ Error signing out from NextAuth:', error);
     }
     
+    // Preserve cookie consent (not user-specific, should persist across sessions)
+    const cookieConsent = localStorage.getItem('cookieConsent');
+    const cookieConsentExpiry = localStorage.getItem('cookieConsentExpiry');
+    const cookiePreferences = localStorage.getItem('cookiePreferences');
+    
     // Clear additional localStorage items (application-specific data)
     const additionalKeys = [
       'cv-app-notifications',
       'onboarding-completed',
       'temp_password',
-      'cookieConsent',
-      'cookiePreferences',
       'jobJourneyState',
       'needsCVSetup'
     ];
@@ -42,6 +45,29 @@ export const comprehensiveSignOut = async (): Promise<void> => {
       }
     });
     
+    // Restore cookie consent after clearing
+    if (cookieConsent) {
+      try {
+        localStorage.setItem('cookieConsent', cookieConsent);
+      } catch (e) {
+        console.warn('⚠️ Could not restore cookieConsent');
+      }
+    }
+    if (cookieConsentExpiry) {
+      try {
+        localStorage.setItem('cookieConsentExpiry', cookieConsentExpiry);
+      } catch (e) {
+        console.warn('⚠️ Could not restore cookieConsentExpiry');
+      }
+    }
+    if (cookiePreferences) {
+      try {
+        localStorage.setItem('cookiePreferences', cookiePreferences);
+      } catch (e) {
+        console.warn('⚠️ Could not restore cookiePreferences');
+      }
+    }
+    
     console.log('✅ Cleared all storage');
     
     // Force redirect with cache busting
@@ -51,9 +77,25 @@ export const comprehensiveSignOut = async (): Promise<void> => {
   } catch (error) {
     console.error('❌ Error during signout:', error);
     // Fallback - clear everything and force redirect
+    // Preserve cookie consent even in fallback
+    const cookieConsent = localStorage.getItem('cookieConsent');
+    const cookieConsentExpiry = localStorage.getItem('cookieConsentExpiry');
+    const cookiePreferences = localStorage.getItem('cookiePreferences');
+    
     try {
       localStorage.clear();
       sessionStorage.clear();
+      
+      // Restore cookie consent after clearing
+      if (cookieConsent) {
+        localStorage.setItem('cookieConsent', cookieConsent);
+      }
+      if (cookieConsentExpiry) {
+        localStorage.setItem('cookieConsentExpiry', cookieConsentExpiry);
+      }
+      if (cookiePreferences) {
+        localStorage.setItem('cookiePreferences', cookiePreferences);
+      }
       
       // Force redirect with cache busting
       const timestamp = Date.now();

@@ -201,9 +201,25 @@ export function emergencyCleanup431Error() {
   // Use nuclear cleanup first
   nuclearCleanupAllNonEssentialCookies();
   
+  // Preserve cookie consent before clearing
+  const cookieConsent = localStorage.getItem('cookieConsent');
+  const cookieConsentExpiry = localStorage.getItem('cookieConsentExpiry');
+  const cookiePreferences = localStorage.getItem('cookiePreferences');
+  
   // Clear any blocking localStorage
   localStorage.clear();
   sessionStorage.clear();
+  
+  // Restore cookie consent after clearing
+  if (cookieConsent) {
+    localStorage.setItem('cookieConsent', cookieConsent);
+  }
+  if (cookieConsentExpiry) {
+    localStorage.setItem('cookieConsentExpiry', cookieConsentExpiry);
+  }
+  if (cookiePreferences) {
+    localStorage.setItem('cookiePreferences', cookiePreferences);
+  }
   
   // Force reload after a brief delay
   setTimeout(() => {

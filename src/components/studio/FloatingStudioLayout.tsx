@@ -18,6 +18,7 @@ import { useRouter } from 'next/navigation';
 import { getStudioLayoutClasses } from '@/lib/utils/themeUtils';
 import { useSession } from 'next-auth/react';
 import UserAvatarDropdown from '@/components/ui/UserAvatarDropdown';
+import DownloadModal, { DocumentType, FormatType } from '@/components/ui/DownloadModal';
 
 
 interface FloatingStudioLayoutProps {
@@ -26,10 +27,12 @@ interface FloatingStudioLayoutProps {
   headerContent?: React.ReactNode;
   onSave?: () => void;
   onPreview?: () => void;
-  onDownload?: () => void;
+  onDownload?: (documentType: DocumentType, format: FormatType) => void;
   saveStatus?: 'idle' | 'saving' | 'saved' | 'error';
   documentTitle?: string;
   onTitleUpdate?: (title: string) => void;
+  hasCV?: boolean;
+  hasCoverLetter?: boolean;
 }
 
 const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
@@ -41,7 +44,9 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
   onDownload,
   saveStatus = 'idle',
   documentTitle = 'Untitled Document',
-  onTitleUpdate
+  onTitleUpdate,
+  hasCV = true,
+  hasCoverLetter = false
 }) => {
   const router = useRouter();
   const { data: session } = useSession();
@@ -52,6 +57,8 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
   const [isMobile, setIsMobile] = useState(false);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
+  const [downloadModalOpen, setDownloadModalOpen] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const layoutClasses = getStudioLayoutClasses();
 
   // Handle responsive behavior
@@ -366,109 +373,17 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
                   </button>
                 )}
 
-                {/* Export Menu - Expanding Inline Towards Left on Hover */}
+                {/* Download Button */}
                   {onDownload && (
-                  <div className="relative group" data-export-menu>
-                    <motion.div
-                      className="flex items-center bg-green-500 hover:bg-green-600 text-white rounded-full overflow-hidden transition-all duration-300"
+                  <motion.button
+                    onClick={() => setDownloadModalOpen(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                      onMouseEnter={() => setExportMenuOpen(true)}
-                      onMouseLeave={() => setExportMenuOpen(false)}
-                    >
-                      {/* Main Export Button */}
-                      <motion.button
-                        className="flex items-center gap-2 px-4 py-2 hover:bg-green-600 transition-colors"
                     >
                       <Download size={16} />
-                      <span className="hidden sm:inline">Export</span>
-                    </motion.button>
-                      
-                      {/* Expanded Options */}
-                      <AnimatePresence>
-                        {exportMenuOpen && (
-                          <>
-                            {/* Divider */}
-                            <motion.div 
-                              className="w-px h-6 bg-green-400/50"
-                              initial={{ opacity: 0, scaleX: 0 }}
-                              animate={{ opacity: 1, scaleX: 1 }}
-                              exit={{ opacity: 0, scaleX: 0 }}
-                              transition={{ duration: 0.2 }}
-                            />
-                            
-                            {/* PDF Export */}
-                            <motion.button
-                              onClick={() => {
-                                onDownload();
-                                setExportMenuOpen(false);
-                              }}
-                              className="flex items-center gap-2 px-4 py-2 hover:bg-green-600 transition-colors"
-                              initial={{ opacity: 0, x: -20, scale: 0.8 }}
-                              animate={{ opacity: 1, x: 0, scale: 1 }}
-                              exit={{ opacity: 0, x: -20, scale: 0.8 }}
-                              transition={{ duration: 0.3, ease: "easeOut" }}
-                              title="Export as PDF"
-                            >
-                              <FileText size={16} />
-                              <span className="hidden sm:inline">PDF</span>
+                    <span className="hidden sm:inline">Download</span>
                             </motion.button>
-                            
-                            {/* Divider */}
-                            <motion.div 
-                              className="w-px h-6 bg-green-400/50"
-                              initial={{ opacity: 0, scaleX: 0 }}
-                              animate={{ opacity: 1, scaleX: 1 }}
-                              exit={{ opacity: 0, scaleX: 0 }}
-                              transition={{ duration: 0.2, delay: 0.1 }}
-                            />
-                            
-                            {/* DOCX Export */}
-                            <motion.button
-                              onClick={() => {
-                                console.log('DOCX export clicked');
-                                setExportMenuOpen(false);
-                              }}
-                              className="flex items-center gap-2 px-4 py-2 hover:bg-green-600 transition-colors"
-                              initial={{ opacity: 0, x: -20, scale: 0.8 }}
-                              animate={{ opacity: 1, x: 0, scale: 1 }}
-                              exit={{ opacity: 0, x: -20, scale: 0.8 }}
-                              transition={{ duration: 0.3, delay: 0.1, ease: "easeOut" }}
-                              title="Export as DOCX"
-                            >
-                              <File size={16} />
-                              <span className="hidden sm:inline">DOCX</span>
-                            </motion.button>
-                            
-                            {/* Divider */}
-                            <motion.div 
-                              className="w-px h-6 bg-green-400/50"
-                              initial={{ opacity: 0, scaleX: 0 }}
-                              animate={{ opacity: 1, scaleX: 1 }}
-                              exit={{ opacity: 0, scaleX: 0 }}
-                              transition={{ duration: 0.2, delay: 0.2 }}
-                            />
-                            
-                            {/* Full Journey Download */}
-                            <motion.button
-                              onClick={() => {
-                                setExportMenuOpen(false);
-                              }}
-                              className="flex items-center gap-2 px-4 py-2 hover:bg-green-600 transition-colors"
-                              initial={{ opacity: 0, x: -20, scale: 0.8 }}
-                              animate={{ opacity: 1, x: 0, scale: 1 }}
-                              exit={{ opacity: 0, x: -20, scale: 0.8 }}
-                              transition={{ duration: 0.3, delay: 0.2, ease: "easeOut" }}
-                              title="Download complete journey (CV and cover letter as PDF)"
-                            >
-                              <Download size={16} />
-                              <span className="hidden sm:inline">Full Journey</span>
-                            </motion.button>
-                          </>
-                        )}
-                      </AnimatePresence>
-                    </motion.div>
-                  </div>
                 )}
 
                 {/* User Avatar */}
@@ -583,53 +498,45 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
                 </button>
 
                 {onDownload && (
-                  <div className="space-y-2">
-                    <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Export Options</div>
-                    
                   <button
                     onClick={() => {
-                      onDownload();
+                      setDownloadModalOpen(true);
                       setMobileMenuOpen(false);
                     }}
                     className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                      title="Export as PDF"
+                    title="Download Documents"
                     >
-                      <FileText size={18} className="text-red-500" />
-                      <span>Export as PDF</span>
-                    </button>
-                    
-                    <button
-                      onClick={() => {
-                        // Handle DOCX export
-                        console.log('DOCX export clicked');
-                        setMobileMenuOpen(false);
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                      title="Export as DOCX"
-                    >
-                      <File size={18} className="text-blue-500" />
-                      <span>Export as DOCX</span>
-                    </button>
-                    
-                    <button
-                      onClick={() => {
-                        // Handle full journey download
-                        console.log('Full journey download clicked');
-                        setMobileMenuOpen(false);
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                      title="Download complete journey (CV and cover letter as PDF)"
-                    >
-                      <Download size={18} className="text-green-500" />
-                      <span>Full Journey Download</span>
+                    <Download size={18} className="text-red-500" />
+                    <span>Download</span>
                   </button>
-                  </div>
                 )}
               </div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Download Modal */}
+      {onDownload && (
+        <DownloadModal
+          isOpen={downloadModalOpen}
+          onClose={() => setDownloadModalOpen(false)}
+          onDownload={async (documentType, format) => {
+            setIsDownloading(true);
+            try {
+              await onDownload(documentType, format);
+              setDownloadModalOpen(false);
+            } catch (error) {
+              console.error('Download error:', error);
+            } finally {
+              setIsDownloading(false);
+            }
+          }}
+          hasCV={hasCV}
+          hasCoverLetter={hasCoverLetter}
+          isDownloading={isDownloading}
+        />
+      )}
     </div>
   );
 };

@@ -60,6 +60,8 @@ import JobModal from './JobModal';
 import { useOptimizedDataFetching } from '@/lib/hooks/useOptimizedDataFetching';
 import { CanvasSkeleton } from '@/components/ui/OptimizedSkeletons';
 import { formatCardTime } from '@/lib/utils/timeUtils';
+import DownloadModal, { DocumentType, FormatType } from '@/components/ui/DownloadModal';
+import { CVJourneyLookupService } from '@/lib/services/cvJourneyLookupService';
 
 interface CV {
   id: string;
@@ -568,12 +570,111 @@ const Canvas: React.FC = () => {
     }
   };
 
+  const [downloadModalOpen, setDownloadModalOpen] = useState(false);
+  const [selectedCVForDownload, setSelectedCVForDownload] = useState<CV | null>(null);
+  const [selectedCoverLetterForDownload, setSelectedCoverLetterForDownload] = useState<any | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+
   const handleDownloadCV = async (cv: CV) => {
+    setSelectedCVForDownload(cv);
+    setSelectedCoverLetterForDownload(null);
+    setDownloadModalOpen(true);
+  };
+
+  const handleDownloadCoverLetter = async (coverLetter: any) => {
+    setSelectedCoverLetterForDownload(coverLetter);
+    setSelectedCVForDownload(null);
+    setDownloadModalOpen(true);
+  };
+
+  const handleDownload = async (documentType: DocumentType, format: FormatType) => {
+    if (!selectedCVForDownload && !selectedCoverLetterForDownload) return;
+
+    setIsDownloading(true);
     try {
-      // Open download URL in new tab
-      window.open(`/api/cvs/download/${cv.id}`, '_blank');
+      const userId = getUserIdForAPI(user) || getUserIdFromLocalStorage();
+      
+      if (selectedCVForDownload) {
+        // CV download
+        if (documentType === 'cv') {
+          if (format === 'pdf') {
+            window.open(`/api/cvs/download/${selectedCVForDownload.id}?format=pdf`, '_blank');
+          } else {
+            const response = await fetch(`/api/cvs/${selectedCVForDownload.id}/export?format=${format}`);
+            if (response.ok) {
+              const blob = await response.blob();
+              const url = window.URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `${selectedCVForDownload.title || 'CV'}.${format}`;
+              document.body.appendChild(a);
+              a.click();
+              window.URL.revokeObjectURL(url);
+              document.body.removeChild(a);
+            }
+          }
+        } else if (documentType === 'cvAndCoverLetter') {
+          // Download CV first, then cover letter
+          const journey = await CVJourneyLookupService.findJourneyByCVId(selectedCVForDownload.id, userId || '');
+          if (journey?.coverLetterId) {
+            // Download CV
+            if (format === 'pdf') {
+              window.open(`/api/cvs/download/${selectedCVForDownload.id}?format=pdf`, '_blank');
+            }
+            // Wait a bit then download cover letter
+            setTimeout(() => {
+              window.open(`/api/cover-letters/download/${journey.coverLetterId}?format=${format}`, '_blank');
+            }, 500);
+          }
+        } else if (documentType === 'all') {
+          // Try to find journey for CV to download all documents
+          const journey = await CVJourneyLookupService.findJourneyByCVId(selectedCVForDownload.id, userId || '');
+          if (journey?.journeyId) {
+            window.open(`/api/application-journey/${journey.journeyId}/download?type=all`, '_blank');
+          } else {
+            // No journey, just download CV
+            window.open(`/api/cvs/download/${selectedCVForDownload.id}`, '_blank');
+          }
+        }
+      } else if (selectedCoverLetterForDownload) {
+        // Cover Letter download
+        if (documentType === 'coverLetter') {
+          if (format === 'pdf') {
+            window.open(`/api/cover-letters/download/${selectedCoverLetterForDownload.id}?format=pdf`, '_blank');
+          } else {
+            // For DOCX/DOC, might need to check if there's an export endpoint
+            window.open(`/api/cover-letters/download/${selectedCoverLetterForDownload.id}?format=${format}`, '_blank');
+          }
+        } else if (documentType === 'cvAndCoverLetter') {
+          // Download cover letter first, then CV
+          const journey = await CVJourneyLookupService.findJourneyByCoverLetterId(selectedCoverLetterForDownload.id, userId || '');
+          if (journey?.cvId) {
+            // Download cover letter
+            if (format === 'pdf') {
+              window.open(`/api/cover-letters/download/${selectedCoverLetterForDownload.id}?format=pdf`, '_blank');
+            }
+            // Wait a bit then download CV
+            setTimeout(() => {
+              window.open(`/api/cvs/download/${journey.cvId}?format=${format}`, '_blank');
+            }, 500);
+          }
+        } else if (documentType === 'all') {
+          // Try to find journey for cover letter to download all documents
+          const journey = await CVJourneyLookupService.findJourneyByCoverLetterId(selectedCoverLetterForDownload.id, userId || '');
+          if (journey?.journeyId) {
+            window.open(`/api/application-journey/${journey.journeyId}/download?type=all`, '_blank');
+          } else {
+            // No journey, just download cover letter
+            window.open(`/api/cover-letters/download/${selectedCoverLetterForDownload.id}`, '_blank');
+          }
+        }
+      }
+      
+      setDownloadModalOpen(false);
     } catch (error) {
-      // Removed notification:'error', 'Failed to download CV');
+      console.error('Download error:', error);
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -1350,9 +1451,14 @@ const Canvas: React.FC = () => {
           // Ensure we have a valid ID - check both id and _id fields
           const coverLetterId = coverLetter.id || coverLetter._id;
           
+          const coverLetterTitle = coverLetter.title || coverLetter.name || 'Unknown Cover Letter';
+          
           if (!coverLetterId) {
-            console.error(`Cover letter missing ID: ${coverLetter.title}`, {
-              coverLetter: coverLetter
+            console.error(`Cover letter missing ID: ${coverLetterTitle}`, {
+              hasTitle: !!coverLetter.title,
+              hasName: !!coverLetter.name,
+              hasId: !!coverLetter.id,
+              has_id: !!coverLetter._id
             });
             failedCount++;
             continue;
@@ -1362,9 +1468,8 @@ const Canvas: React.FC = () => {
           const objectIdRegex = /^[0-9a-fA-F]{24}$/;
           if (!objectIdRegex.test(coverLetterId)) {
             console.error(`Invalid cover letter ID format: ${coverLetterId}`, {
-              coverLetterTitle: coverLetter.title,
-              coverLetterId: coverLetterId,
-              coverLetter: coverLetter
+              coverLetterTitle: coverLetterTitle,
+              coverLetterId: coverLetterId
             });
             failedCount++;
             continue;
@@ -1376,37 +1481,65 @@ const Canvas: React.FC = () => {
 
           if (!response.ok) {
             const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-            console.error(`Failed to delete cover letter: ${coverLetter.title}`, {
+            // Build error object without empty objects
+            const errorInfo: any = {
               coverLetterId: coverLetterId,
               userId,
               status: response.status,
               statusText: response.statusText,
-              error: errorData.error || errorData.message || 'Unknown error',
-              responseBody: errorData
-            });
+              error: errorData.error || errorData.message || 'Unknown error'
+            };
+            // Only include responseBody if it has meaningful content
+            if (errorData && typeof errorData === 'object' && Object.keys(errorData).length > 0) {
+              const hasContent = Object.keys(errorData).some(key => {
+                const value = errorData[key];
+                return value !== null && value !== undefined && value !== '';
+              });
+              if (hasContent) {
+                errorInfo.responseBody = errorData;
+              }
+            }
+            console.error(`Failed to delete cover letter: ${coverLetterTitle}`, errorInfo);
             failedCount++;
           } else {
-            const result = await response.json().catch(() => ({}));
+            const result = await response.json().catch(() => ({ success: false }));
             if (result.success) {
               deletedCount++;
-              console.log(`Successfully deleted cover letter: ${coverLetter.title}`, {
+              console.log(`Successfully deleted cover letter: ${coverLetterTitle}`, {
                 coverLetterId: coverLetterId
               });
             } else {
-              console.error(`Failed to delete cover letter: ${coverLetter.title}`, {
+              // Build error object without empty objects
+              const errorInfo: any = {
                 coverLetterId: coverLetterId,
-                error: result.error || 'Unknown error',
-                responseBody: result
-              });
+                error: result.error || 'Unknown error'
+              };
+              // Only include responseBody if it has meaningful content
+              if (result && typeof result === 'object' && Object.keys(result).length > 0) {
+                const hasContent = Object.keys(result).some(key => {
+                  const value = result[key];
+                  return value !== null && value !== undefined && value !== '' && key !== 'success';
+                });
+                if (hasContent) {
+                  errorInfo.responseBody = result;
+                }
+              }
+              console.error(`Failed to delete cover letter: ${coverLetterTitle}`, errorInfo);
               failedCount++;
             }
           }
         } catch (error) {
-          console.error(`Error deleting cover letter ${coverLetter.title}:`, {
-            error: error instanceof Error ? error.message : 'Unknown error',
-            stack: error instanceof Error ? error.stack : undefined,
-            coverLetter: coverLetter
-          });
+          const coverLetterTitle = coverLetter.title || coverLetter.name || 'Unknown Cover Letter';
+          const errorInfo: any = {
+            error: error instanceof Error ? error.message : 'Unknown error'
+          };
+          if (error instanceof Error && error.stack) {
+            errorInfo.stack = error.stack;
+          }
+          if (coverLetterId) {
+            errorInfo.coverLetterId = coverLetterId;
+          }
+          console.error(`Error deleting cover letter ${coverLetterTitle}:`, errorInfo);
           failedCount++;
         }
       }
@@ -2132,7 +2265,7 @@ const Canvas: React.FC = () => {
                       metadata: coverLetter.metadata
                     }}
                     onEdit={(cl) => { window.location.href = `/studio?type=cover_letter&coverLetterId=${cl.id}`; }}
-                    onDownload={(cl) => { window.open(`/api/cover-letters/download/${cl.id}`, '_blank'); }}
+                    onDownload={handleDownloadCoverLetter}
                     onDelete={handleDeleteCoverLetter}
                     onToggleStar={toggleCoverLetterStar}
                     onTitleEdit={(id, newTitle) => setEditingCoverLetterTitle(newTitle)}
@@ -2267,6 +2400,18 @@ const Canvas: React.FC = () => {
         cancelText={modalConfig.cancelText}
       />
 
+      {/* Download Modal */}
+      <DownloadModal
+        isOpen={downloadModalOpen}
+        onClose={() => {
+          setDownloadModalOpen(false);
+          setSelectedCVForDownload(null);
+        }}
+        onDownload={handleDownload}
+        hasCV={!!selectedCVForDownload}
+        hasCoverLetter={false}
+        isDownloading={isDownloading}
+      />
 
       {/* JobModal */}
       {showJourneyModal && selectedJobForJourney && (

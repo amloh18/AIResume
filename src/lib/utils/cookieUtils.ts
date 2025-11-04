@@ -24,8 +24,17 @@ export const DEFAULT_COOKIE_PREFERENCES: CookiePreferences = {
 export function getCookieConsentStatus(): CookieConsentStatus {
   if (typeof window === 'undefined') return null;
   
+  try {
   const status = localStorage.getItem('cookieConsent');
+    // Validate that the status is a valid value
+    if (status === 'accepted' || status === 'declined') {
   return status as CookieConsentStatus;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error reading cookie consent:', error);
+    return null;
+  }
 }
 
 /**
@@ -34,10 +43,19 @@ export function getCookieConsentStatus(): CookieConsentStatus {
 export function setCookieConsentStatus(status: CookieConsentStatus): void {
   if (typeof window === 'undefined') return;
   
-  if (status) {
-    localStorage.setItem('cookieConsent', status);
-  } else {
-    localStorage.removeItem('cookieConsent');
+  try {
+    if (status && (status === 'accepted' || status === 'declined')) {
+      localStorage.setItem('cookieConsent', status);
+      // Also set an expiry date (1 year from now) to ensure persistence
+      const expiryDate = new Date();
+      expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+      localStorage.setItem('cookieConsentExpiry', expiryDate.toISOString());
+    } else {
+      localStorage.removeItem('cookieConsent');
+      localStorage.removeItem('cookieConsentExpiry');
+    }
+  } catch (error) {
+    console.error('Error setting cookie consent:', error);
   }
 }
 

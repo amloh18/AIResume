@@ -40,6 +40,7 @@ import MoveToAppliedModal from '@/components/modals/MoveToAppliedModal';
 // CelebrationModal removed - simplified UX
 import { JourneyAnalyticsService } from '@/lib/utils/journeyAnalytics';
 import { defaultCoverLetterService } from '@/lib/services/defaultCoverLetterService';
+import DownloadModal, { DocumentType, FormatType } from '@/components/ui/DownloadModal';
 
 interface Journey {
   id: string;
@@ -144,6 +145,8 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
   const [showKeyboardShortcuts, setShowKeyboardShortcuts] = React.useState(false);
   // Celebration modal removed - using toast notifications instead
   const [showDownloadDropdown, setShowDownloadDropdown] = React.useState(false);
+  const [downloadModalOpen, setDownloadModalOpen] = React.useState(false);
+  const [isDownloading, setIsDownloading] = React.useState(false);
   
   // Job details state
   const [jobDetails, setJobDetails] = React.useState<any | null>(null);
@@ -2371,66 +2374,15 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                               <span className="truncate">Move to Applied</span>
                             </motion.button>
                         
-                        <div className="relative flex-1 min-w-0">
                           <motion.button
-                            onClick={() => setShowDownloadDropdown(!showDownloadDropdown)}
-                            className="download-button w-full px-2 py-2 bg-lime-600 hover:bg-lime-700 text-white text-xs rounded transition-colors flex items-center gap-1 justify-center min-w-0"
+                          onClick={() => setDownloadModalOpen(true)}
+                          className="flex-1 px-2 py-2 bg-lime-600 hover:bg-lime-700 text-white text-xs rounded transition-colors flex items-center gap-1 justify-center min-w-0"
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                           >
                             <Download className="h-3 w-3 flex-shrink-0" />
                             <span className="truncate">Download</span>
-                            <ChevronDown className={`h-3 w-3 ml-1 transition-transform flex-shrink-0 ${showDownloadDropdown ? 'rotate-180' : ''}`} />
                           </motion.button>
-                          
-                          {/* Download Dropdown */}
-                          {showDownloadDropdown && (
-                            <div className="download-dropdown absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-xl z-50 min-w-48 animate-in slide-in-from-top-2 duration-200">
-                            <div className="py-1">
-                              <button
-                                onClick={() => {
-                                  setShowDownloadDropdown(false);
-                                  handleDownloadFiles('all');
-                                }}
-                                className="w-full px-3 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 text-xs flex items-center gap-2"
-                              >
-                                <Download className="h-3 w-3" />
-                                Download All (ZIP)
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setShowDownloadDropdown(false);
-                                  handleDownloadFiles('cv');
-                                }}
-                                className="w-full px-3 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 text-xs flex items-center gap-2"
-                              >
-                                <FileText className="h-3 w-3" />
-                                CV Only (PDF)
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setShowDownloadDropdown(false);
-                                  handleDownloadFiles('coverLetter');
-                                }}
-                                className="w-full px-3 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 text-xs flex items-center gap-2"
-                              >
-                                <Mail className="h-3 w-3" />
-                                Cover Letter Only (PDF)
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setShowDownloadDropdown(false);
-                                  handleDownloadFiles('jobDescription');
-                                }}
-                                className="w-full px-3 py-2 text-left text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 text-xs flex items-center gap-2"
-                              >
-                                <Briefcase className="h-3 w-3" />
-                                Job Description (PDF)
-                              </button>
-                            </div>
-                          </div>
-                          )}
-                        </div>
                       </div>
                         ) : (
                           /* Conditions not met - Show message */
@@ -3038,6 +2990,43 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
 
         {/* Celebration Modal - Removed for simplified UX */}
 
+      {/* Download Modal */}
+      <DownloadModal
+        isOpen={downloadModalOpen}
+        onClose={() => setDownloadModalOpen(false)}
+        onDownload={async (documentType: DocumentType, format: FormatType) => {
+          setIsDownloading(true);
+          try {
+            // Map modal document types to API types
+            let apiType: 'all' | 'cv' | 'coverLetter' | 'jobDescription' = 'all';
+            if (documentType === 'cv') {
+              apiType = 'cv';
+            } else if (documentType === 'coverLetter') {
+              apiType = 'coverLetter';
+            } else if (documentType === 'cvAndCoverLetter') {
+              // For separate files, download both
+              await handleDownloadFiles('cv');
+              await new Promise(resolve => setTimeout(resolve, 500)); // Small delay between downloads
+              await handleDownloadFiles('coverLetter');
+              setDownloadModalOpen(false);
+              setIsDownloading(false);
+              return;
+            } else if (documentType === 'all') {
+              apiType = 'all';
+            }
+
+            await handleDownloadFiles(apiType);
+            setDownloadModalOpen(false);
+          } catch (error) {
+            console.error('Download error:', error);
+          } finally {
+            setIsDownloading(false);
+          }
+        }}
+        hasCV={!!journey.cvId && !cvNotFound}
+        hasCoverLetter={!!journey.coverLetterId && !coverLetterNotFound}
+        isDownloading={isDownloading}
+      />
     </motion.div>
   );
 };

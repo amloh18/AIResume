@@ -149,7 +149,12 @@ const OptimizedNavigation: React.FC = () => {
             >
               <Icon className="w-5 h-5 flex-shrink-0" />
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium truncate">{section.name}</div>
+                <div className="text-sm font-medium truncate flex items-baseline gap-1">
+                  {section.name}
+                  {section.id === 'career-report' && (
+                    <span className="text-[10px] font-normal text-gray-500 dark:text-gray-400 leading-none align-super">(beta)</span>
+                  )}
+                </div>
                 <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
                   {section.description}
                 </div>

@@ -19,6 +19,7 @@ import { useAICareerReport } from '@/contexts/AICareerReportContext';
 import { useSession } from 'next-auth/react';
 import CVPreviewModal from './CVPreviewModal';
 import SignInModal from './SignInModal';
+import CareerTrajectoryGraph from '@/components/career-report/CareerTrajectoryGraph';
 
 interface AICareerReportStepProps {
   onComplete: () => void;
@@ -607,76 +608,11 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
             Analysis of your career progression, job duration patterns, and trajectory coherence.
           </p>
           
-          <div className="space-y-6">
-            {/* Coherence Score */}
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-gray-900">Career Coherence Score</h3>
-                <div className="text-3xl font-bold text-[#80FF00]">{careerCoherence?.score ?? 85}%</div>
-              </div>
-              <p className="text-gray-600 mb-4">
-                {(careerCoherence?.score ?? 85) >= 80 ?
-                  "Your career path shows strong alignment with consistent progression." :
-                  (careerCoherence?.score ?? 85) >= 60 ?
-                  "Your career path shows moderate alignment with some areas for improvement." :
-                  "Your career path could benefit from more focused progression and consistency."
-                }
-              </p>
-              {careerCoherence?.strengths && careerCoherence.strengths.length > 0 && (
-                <div className="bg-green-500/20 border border-green-500/30 rounded-lg p-3">
-                  <p className="text-green-400 text-sm">✅ <strong>Strengths:</strong> {careerCoherence.strengths.join(', ')}</p>
-                </div>
-              )}
-            </div>
-
-            {/* Red Flags */}
-            {careerCoherence?.redFlags && careerCoherence.redFlags.length > 0 ? (
-              <div className="bg-gray-50 rounded-lg p-6 border border-red-200">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">⚠️ Potential Red Flags Detected</h3>
-                <div className="space-y-3">
-                  {careerCoherence.redFlags.map((redFlag: any, index: number) => (
-                    <div key={index} className="flex items-start gap-3">
-                      <div className="w-2 h-2 bg-red-400 rounded-full mt-2 flex-shrink-0"></div>
-                      <div>
-                        <p className="text-gray-600 text-sm">
-                          <strong>{redFlag.issue}</strong>
-                        </p>
-                        <p className="text-gray-600 text-xs mt-1">{redFlag.impact}</p>
-                        {redFlag.action && (
-                          <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-3">
-                            <p className="text-red-400 text-sm"><strong>Action Required:</strong> {redFlag.action}</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-6">
-                <h3 className="text-lg font-bold text-green-400 mb-2">✅ No Red Flags Detected</h3>
-                <p className="text-gray-600 text-sm">Your career progression looks consistent and well-structured.</p>
-              </div>
-            )}
-
-            {/* Next Steps */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {careerPath ? [
-                { title: careerPath.step1?.title || 'Next Role', description: careerPath.step1?.reasoning || 'Natural progression in your career' },
-                { title: careerPath.step2?.title || 'Future Role', description: careerPath.step2?.reasoning || 'Building on your current experience' },
-                { title: careerPath.step3?.title || 'Long-term Goal', description: careerPath.step3?.reasoning || 'Strategic career advancement' }
-              ].map(({ title, description }, index) => (
-                <div key={index} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                  <h4 className="text-gray-900 font-semibold mb-2">{title}</h4>
-                  <p className="text-gray-900/70 text-sm">{description}</p>
-                </div>
-              )) : (
-                <div className="col-span-3 text-center py-8">
-                  <p className="text-gray-600 dark:text-gray-900/60">Career path analysis not available</p>
-                </div>
-              )}
-            </div>
-          </div>
+          <CareerTrajectoryGraph
+            careerPath={careerPath}
+            careerCoherence={careerCoherence}
+            experienceLevel={experienceLevel?.level}
+          />
         </motion.div>
 
         {/* CV Reading Time Optimization */}

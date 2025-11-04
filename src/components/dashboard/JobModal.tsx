@@ -685,16 +685,16 @@ ${userName}`
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
-          className="bg-[#1A201A] rounded-2xl shadow-2xl border border-white/10 w-full max-w-6xl max-h-[90vh] overflow-hidden mx-4 sm:mx-0 flex flex-col"
+          className="bg-white dark:bg-[#1A201A] rounded-2xl shadow-2xl border border-gray-200 dark:border-white/10 w-full max-w-6xl max-h-[90vh] overflow-hidden mx-4 sm:mx-0 flex flex-col"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-white/10 flex-shrink-0">
-            <h2 className="text-xl font-semibold text-white">Job Application Details</h2>
+          <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-white/10 flex-shrink-0">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Job Application Details</h2>
             <div className="flex items-center gap-3">
               <motion.button
                 onClick={handleOpenEditModal}
-                className="flex items-center gap-2 px-3 py-2 bg-[#80FF00]/20 hover:bg-[#80FF00]/30 border border-[#80FF00]/30 text-[#80FF00] rounded-full transition-colors"
+                className="flex items-center gap-2 px-3 py-2 bg-lime-100 dark:bg-[#80FF00]/20 hover:bg-lime-200 dark:hover:bg-[#80FF00]/30 border border-lime-300 dark:border-[#80FF00]/30 text-lime-700 dark:text-[#80FF00] rounded-full transition-colors"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
@@ -703,11 +703,11 @@ ${userName}`
               </motion.button>
               <motion.button
                 onClick={onClose}
-                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
-                <X size={20} className="text-white/60" />
+                <X size={20} className="text-gray-600 dark:text-white/60" />
               </motion.button>
             </div>
           </div>
@@ -716,13 +716,13 @@ ${userName}`
           <div className="flex-1 overflow-y-auto">
             {/* Job Title and Company */}
             <div className="px-6 py-4">
-              <h1 className="text-2xl font-bold text-white mb-2">{job.jobTitle}</h1>
-              <p className="text-white/70 text-lg">at {job.company}</p>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{job.jobTitle}</h1>
+              <p className="text-gray-600 dark:text-white/70 text-lg">at {job.company}</p>
             </div>
 
             {/* CV Journeys Section */}
             <div className="px-6 py-4">
-            <h3 className="text-lg font-semibold text-white mb-4">🎯 CV Journeys for this Job</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">🎯 CV Journeys for this Job</h3>
             
             {journeys.length > 0 ? (
               <div className="space-y-4">
@@ -764,9 +764,9 @@ ${userName}`
               </div>
             ) : (
               <div className="text-center py-8">
-                <Target size={32} className="text-white/40 mx-auto mb-3" />
-                <h4 className="text-sm font-medium text-white mb-1">No CV Journeys Started</h4>
-                <p className="text-white/70 text-xs mb-3">
+                <Target size={32} className="text-gray-400 dark:text-white/40 mx-auto mb-3" />
+                <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-1">No CV Journeys Started</h4>
+                <p className="text-gray-600 dark:text-white/70 text-xs mb-3">
                   Create your first CV journey to start preparing for this job application.
                 </p>
                 <motion.button
@@ -789,8 +789,8 @@ ${userName}`
               <div className="space-y-2">
                 {/* Job Description */}
                 <div className="p-4">
-                  <h3 className="text-lg font-semibold text-white mb-3">Job Description</h3>
-                  <div className="text-gray-300 text-sm space-y-3 max-h-48 overflow-y-auto scrollbar-hide">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Job Description</h3>
+                  <div className="text-gray-700 dark:text-gray-300 text-sm space-y-3 max-h-48 overflow-y-auto scrollbar-hide">
                     {job.jobDescription ? (
                       <div className="whitespace-pre-wrap">
                         {job.jobDescription}
@@ -811,18 +811,18 @@ ${userName}`
 
                 {/* Core Details */}
                 <div className="p-4">
-                  <h3 className="text-lg font-semibold text-white mb-3">Core Details</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Core Details</h3>
                   <div className="space-y-3">
                     {/* First Row */}
-                    <div className="border-t border-lime-500/20 pt-3">
+                    <div className="border-t border-lime-500/20 dark:border-lime-500/20 pt-3">
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div className="flex items-center gap-2">
-                          <MapPin size={16} className="text-gray-400" />
-                          <span className="text-gray-300">{job.location || fallbacks.defaultLocation}</span>
+                          <MapPin size={16} className="text-gray-500 dark:text-gray-400" />
+                          <span className="text-gray-700 dark:text-gray-300">{job.location || fallbacks.defaultLocation}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Calendar size={16} className="text-gray-400" />
-                          <span className="text-gray-300">
+                          <Calendar size={16} className="text-gray-500 dark:text-gray-400" />
+                          <span className="text-gray-700 dark:text-gray-300">
                             Applied on {formatJobDate(job.applicationDate, fallbacks.defaultApplicationDate)}
                           </span>
                         </div>
@@ -830,17 +830,17 @@ ${userName}`
                     </div>
                     
                     {/* Second Row */}
-                    <div className="border-t border-lime-500/20 pt-3">
+                    <div className="border-t border-lime-500/20 dark:border-lime-500/20 pt-3">
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div className="flex items-center gap-2">
-                          <ExternalLink size={16} className="text-gray-400" />
-                          <a href={job.jobUrl} target="_blank" rel="noopener noreferrer" className="text-lime-400 hover:underline">
+                          <ExternalLink size={16} className="text-gray-500 dark:text-gray-400" />
+                          <a href={job.jobUrl} target="_blank" rel="noopener noreferrer" className="text-lime-600 dark:text-lime-400 hover:underline">
                             {formatJobUrl(job.jobUrl, fallbacks.defaultJobUrl)}
                           </a>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Clock size={16} className="text-gray-400" />
-                          <span className="text-gray-300">
+                          <Clock size={16} className="text-gray-500 dark:text-gray-400" />
+                          <span className="text-gray-700 dark:text-gray-300">
                             Deadline: {formatJobDate(job.deadline, fallbacks.defaultDeadline)}
                           </span>
                         </div>
@@ -848,17 +848,17 @@ ${userName}`
                     </div>
                     
                     {/* Third Row - Contact Details */}
-                    <div className="border-t border-lime-500/20 pt-3">
+                    <div className="border-t border-lime-500/20 dark:border-lime-500/20 pt-3">
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div className="flex items-center gap-2">
-                          <User size={16} className="text-gray-400" />
-                          <span className="text-gray-300">
+                          <User size={16} className="text-gray-500 dark:text-gray-400" />
+                          <span className="text-gray-700 dark:text-gray-300">
                             Contact: {job.contactDetails?.name || fallbacks.defaultContactName}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Mail size={16} className="text-gray-400" />
-                          <span className="text-gray-300">
+                          <Mail size={16} className="text-gray-500 dark:text-gray-400" />
+                          <span className="text-gray-700 dark:text-gray-300">
                             {job.contactDetails?.email || fallbacks.defaultContactEmail}
                           </span>
                         </div>
@@ -869,12 +869,12 @@ ${userName}`
 
                 {/* Notes Section */}
                 <div className="p-4">
-                  <h3 className="text-lg font-semibold text-white mb-3">Notes</h3>
-                  <div className="bg-[#232f1c] border border-lime-500/20 rounded-2xl p-3">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Notes</h3>
+                  <div className="bg-gray-50 dark:bg-[#232f1c] border border-lime-500/20 dark:border-lime-500/20 rounded-2xl p-3">
                     {job.notes ? (
-                      <p className="text-gray-300 text-sm">{job.notes}</p>
+                      <p className="text-gray-700 dark:text-gray-300 text-sm">{job.notes}</p>
                     ) : (
-                      <p className="text-gray-500 text-sm italic">No notes added yet</p>
+                      <p className="text-gray-500 dark:text-gray-500 text-sm italic">No notes added yet</p>
                     )}
                   </div>
                 </div>
@@ -886,10 +886,10 @@ ${userName}`
             <div className="w-80 p-6 overflow-y-auto">
               <div className="space-y-6">
                 {/* Application Status */}
-                <div className="bg-[#232f1c] border border-lime-500/20 rounded-2xl p-4">
+                <div className="bg-gray-50 dark:bg-[#232f1c] border border-gray-200 dark:border-lime-500/20 rounded-2xl p-4">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <span className="text-white/60">Status</span>
+                      <span className="text-gray-600 dark:text-white/60">Status</span>
                       <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                         job.status === 'applied' ? 'bg-lime-500 text-white' :
                         job.status === 'interview' ? 'bg-blue-500 text-white' :
@@ -906,7 +906,7 @@ ${userName}`
                     </div>
                     
                     <div className="flex items-center justify-between">
-                      <span className="text-white/60">Priority</span>
+                      <span className="text-gray-600 dark:text-white/60">Priority</span>
                       <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                         job.priority === 'high' ? 'bg-red-500 text-white' :
                         job.priority === 'medium' ? 'bg-yellow-500 text-white' :
@@ -917,8 +917,8 @@ ${userName}`
                     </div>
                     
                     <div className="flex items-center justify-between">
-                      <span className="text-white/60">Sponsorship</span>
-                      <span className="text-white/80">
+                      <span className="text-gray-600 dark:text-white/60">Sponsorship</span>
+                      <span className="text-gray-900 dark:text-white/80">
                         {job.sponsorship === 'yes' ? 'Required' : 
                          job.sponsorship === 'no' ? 'Not Required' : 
                          'Unknown'}
@@ -926,18 +926,18 @@ ${userName}`
                     </div>
                     
                     <div className="flex items-center justify-between">
-                      <span className="text-white/60">Salary</span>
-                      <span className="text-white/80 text-xs">
+                      <span className="text-gray-600 dark:text-white/60">Salary</span>
+                      <span className="text-gray-900 dark:text-white/80 text-xs">
                         {formatJobSalary(job.salary, fallbacks.defaultSalary)}
                       </span>
                     </div>
                     
                     {job.tags && job.tags.length > 0 && (
                       <div>
-                        <span className="text-white/60 block mb-2">Tags</span>
+                        <span className="text-gray-600 dark:text-white/60 block mb-2">Tags</span>
                         <div className="flex flex-wrap gap-2">
                           {job.tags.map((tag, index) => (
-                            <span key={index} className="px-2 py-1 bg-white/10 text-white/80 rounded text-xs">
+                            <span key={index} className="px-2 py-1 bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-white/80 rounded text-xs">
                               {tag}
                             </span>
                           ))}
@@ -948,37 +948,37 @@ ${userName}`
                 </div>
 
                 {/* Job Insights */}
-                <div className="bg-[#232f1c] border border-lime-500/20 rounded-2xl p-4">
+                <div className="bg-gray-50 dark:bg-[#232f1c] border border-gray-200 dark:border-lime-500/20 rounded-2xl p-4">
                   <div className="flex items-center gap-2 mb-4">
-                    <Star size={16} className="text-[#80FF00]" />
-                    <h3 className="text-lg font-semibold text-white">Job Insights</h3>
+                    <Star size={16} className="text-lime-600 dark:text-[#80FF00]" />
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Job Insights</h3>
                   </div>
                   
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-white/60">Keyword Match Score</span>
-                      <span className="text-[#80FF00] font-semibold">
+                      <span className="text-gray-600 dark:text-white/60">Keyword Match Score</span>
+                      <span className="text-lime-600 dark:text-[#80FF00] font-semibold">
                         {insightsLoading ? '...' : `${insights?.keywordMatchScore || 0}%`}
                       </span>
                     </div>
                     
                     <div className="flex items-center justify-between">
-                      <span className="text-white/60">Company Hiring Trend</span>
-                      <span className="text-white">
+                      <span className="text-gray-600 dark:text-white/60">Company Hiring Trend</span>
+                      <span className="text-gray-900 dark:text-white">
                         {insightsLoading ? '...' : insights?.companyHiringTrend || 'Unknown'}
                       </span>
                     </div>
                     
                     <div className="flex items-center justify-between">
-                      <span className="text-white/60">Skills Gap</span>
-                      <span className="text-white">
+                      <span className="text-gray-600 dark:text-white/60">Skills Gap</span>
+                      <span className="text-gray-900 dark:text-white">
                         {insightsLoading ? '...' : insights?.skillsGap || 'Unable to analyze'}
                       </span>
                     </div>
                     
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-400">Market Competition</span>
-                      <span className="text-white">
+                      <span className="text-gray-500 dark:text-gray-400">Market Competition</span>
+                      <span className="text-gray-900 dark:text-white">
                         {insightsLoading ? '...' : insights?.marketCompetitiveness || 'Unknown'}
                       </span>
                     </div>
@@ -987,20 +987,20 @@ ${userName}`
 
                 {/* Follow-up & Templates Section */}
                 {(isFollowUpNeeded(job) || job.status === 'applied' || job.status === 'screening' || job.status === 'interview' || job.status === 'offer' || job.status === 'accepted' || job.status === 'rejected') && (
-                  <div className="bg-[#232f1c] border border-lime-500/20 rounded-2xl p-4">
+                  <div className="bg-gray-50 dark:bg-[#232f1c] border border-gray-200 dark:border-lime-500/20 rounded-2xl p-4">
                     <div className="flex items-center gap-2 mb-4">
-                      <Mail size={16} className="text-[#80FF00]" />
-                      <h3 className="text-lg font-semibold text-white">Follow-up & Templates</h3>
+                      <Mail size={16} className="text-lime-600 dark:text-[#80FF00]" />
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Follow-up & Templates</h3>
                     </div>
                     
                     <div className="space-y-4">
                       {/* Follow-up Suggestion */}
                       {isFollowUpNeeded(job) && (
-                        <div className="bg-lime-500/10 border border-lime-500/30 rounded-lg p-3">
+                        <div className="bg-lime-50 dark:bg-lime-500/10 border border-lime-200 dark:border-lime-500/30 rounded-lg p-3">
                           <div className="flex items-start gap-2">
-                            <AlertCircle size={16} className="text-lime-400 mt-0.5 flex-shrink-0" />
+                            <AlertCircle size={16} className="text-lime-600 dark:text-lime-400 mt-0.5 flex-shrink-0" />
                             <div className="flex-1">
-                              <p className="text-lime-200 text-sm">
+                              <p className="text-lime-700 dark:text-lime-200 text-sm">
                                 {getFollowUpSuggestion(job, getDaysSinceLastUpdate(job))}
                               </p>
                             </div>
@@ -1012,10 +1012,10 @@ ${userName}`
                       {getEmailTemplate(job) && (
                         <div className="space-y-3">
                           <div className="flex items-center justify-between">
-                            <h4 className="text-sm font-medium text-white/80">Email Template</h4>
+                            <h4 className="text-sm font-medium text-gray-700 dark:text-white/80">Email Template</h4>
                             <button
                               onClick={() => setShowEmailTemplate(!showEmailTemplate)}
-                              className="text-xs text-[#80FF00] hover:text-[#80FF00]/80 transition-colors flex items-center gap-1"
+                              className="text-xs text-lime-600 dark:text-[#80FF00] hover:text-lime-700 dark:hover:text-[#80FF00]/80 transition-colors flex items-center gap-1"
                             >
                               {showEmailTemplate ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                               {showEmailTemplate ? 'Hide' : 'Show'}
@@ -1025,50 +1025,50 @@ ${userName}`
                           {showEmailTemplate && (
                             <div className="space-y-3">
                               {/* Subject Line */}
-                              <div className="bg-[#1A201A] rounded-lg p-3 border border-white/10">
+                              <div className="bg-white dark:bg-[#1A201A] rounded-lg p-3 border border-gray-200 dark:border-white/10">
                                 <div className="flex items-center justify-between mb-2">
-                                  <span className="text-xs text-white/60">Subject</span>
+                                  <span className="text-xs text-gray-600 dark:text-white/60">Subject</span>
                                   <motion.button
                                     onClick={() => handleCopyToClipboard(getEmailSubject(job), 'subject')}
-                                    className="p-1.5 hover:bg-white/10 rounded transition-colors"
+                                    className="p-1.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded transition-colors"
                                     whileHover={{ scale: 1.05 }}
                                     whileTap={{ scale: 0.95 }}
                                   >
                                     {copiedField === 'subject' ? (
-                                      <CheckCircle size={14} className="text-lime-400" />
+                                      <CheckCircle size={14} className="text-lime-600 dark:text-lime-400" />
                                     ) : (
-                                      <Copy size={14} className="text-white/60" />
+                                      <Copy size={14} className="text-gray-500 dark:text-white/60" />
                                     )}
                                   </motion.button>
                                 </div>
-                                <p className="text-white text-sm">{getEmailSubject(job)}</p>
+                                <p className="text-gray-900 dark:text-white text-sm">{getEmailSubject(job)}</p>
                               </div>
 
                               {/* Email Body */}
-                              <div className="bg-[#1A201A] rounded-lg p-3 border border-white/10">
+                              <div className="bg-white dark:bg-[#1A201A] rounded-lg p-3 border border-gray-200 dark:border-white/10">
                                 <div className="flex items-center justify-between mb-2">
-                                  <span className="text-xs text-white/60">Email Body</span>
+                                  <span className="text-xs text-gray-600 dark:text-white/60">Email Body</span>
                                   <motion.button
                                     onClick={() => handleCopyToClipboard(getEmailTemplate(job), 'body')}
-                                    className="p-1.5 hover:bg-white/10 rounded transition-colors"
+                                    className="p-1.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded transition-colors"
                                     whileHover={{ scale: 1.05 }}
                                     whileTap={{ scale: 0.95 }}
                                   >
                                     {copiedField === 'body' ? (
-                                      <CheckCircle size={14} className="text-lime-400" />
+                                      <CheckCircle size={14} className="text-lime-600 dark:text-lime-400" />
                                     ) : (
-                                      <Copy size={14} className="text-white/60" />
+                                      <Copy size={14} className="text-gray-500 dark:text-white/60" />
                                     )}
                                   </motion.button>
                                 </div>
-                                <pre className="text-white text-xs whitespace-pre-wrap font-sans max-h-48 overflow-y-auto">
+                                <pre className="text-gray-900 dark:text-white text-xs whitespace-pre-wrap font-sans max-h-48 overflow-y-auto">
                                   {getEmailTemplate(job)}
                                 </pre>
                               </div>
 
                               {/* Contact Email (if available) */}
                               {job.contactDetails?.email && (
-                                <div className="flex items-center gap-2 text-xs text-white/60">
+                                <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-white/60">
                                   <Mail size={12} />
                                   <span>Send to: {job.contactDetails.email}</span>
                                 </div>
@@ -1081,18 +1081,18 @@ ${userName}`
                       {/* Follow-up Timeline */}
                       {getFollowUpTimeline(job).length > 0 && (
                         <div className="space-y-2">
-                          <h4 className="text-sm font-medium text-white/80">Follow-up Timeline</h4>
+                          <h4 className="text-sm font-medium text-gray-700 dark:text-white/80">Follow-up Timeline</h4>
                           <div className="space-y-2">
                             {getFollowUpTimeline(job).map((item, index) => (
                               <div key={index} className="flex items-start gap-3 text-xs">
                                 <div className="flex-shrink-0 mt-1">
-                                  <div className="w-6 h-6 rounded-full bg-[#80FF00]/20 flex items-center justify-center border border-[#80FF00]/30">
-                                    <span className="text-[#80FF00] font-semibold">{index + 1}</span>
+                                  <div className="w-6 h-6 rounded-full bg-lime-100 dark:bg-[#80FF00]/20 flex items-center justify-center border border-lime-300 dark:border-[#80FF00]/30">
+                                    <span className="text-lime-600 dark:text-[#80FF00] font-semibold">{index + 1}</span>
                                   </div>
                                 </div>
                                 <div className="flex-1 pt-0.5">
-                                  <p className="text-white/80 font-medium">{item.day}</p>
-                                  <p className="text-white/60">{item.action}</p>
+                                  <p className="text-gray-700 dark:text-white/80 font-medium">{item.day}</p>
+                                  <p className="text-gray-600 dark:text-white/60">{item.action}</p>
                                 </div>
                               </div>
                             ))}
