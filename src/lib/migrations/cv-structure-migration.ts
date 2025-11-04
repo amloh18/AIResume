@@ -1,347 +1,113 @@
 /**
  * CV Structure Migration Utility
- * 
- * Migrates legacy CV data format to the new structure/content map format.
- * This enables section order and visibility to be stored in the database.
+ *
+ * Migrates legacy CV data format to the new structure-based format.
+ * This is the NON-DESTRUCTIVE in-memory migration that runs when the editor loads.
+ *
+ * Key Features:
+ * - Runs in-memory only (no database changes)
+ * - Uses robust validation to determine section visibility
+ * - Respects DEFAULT_SECTION_ORDER from the registry
+ * - Returns new cvData object with structure property added
  */
 
-import { UnifiedCVDataStructure, CVStructure, CVContentMap, CVSectionStructure } from '@/types/unified-cv-schema';
+import { UnifiedCVDataStructure, CVStructure, CVSectionStructure } from '@/types/unified-cv-schema';
 import { ITemplate, ISectionBlueprint } from '@/models/Template';
-import { SECTION_MAPPING } from '@/lib/section-mapping';
+import { SECTION_REGISTRY, DEFAULT_SECTION_ORDER } from '@/lib/constants/cv-sections';
+import { hasSectionData } from '@/lib/utils/cv-data-validation';
 
-/**
- * Default section order if template is not available
- */
-const DEFAULT_SECTION_ORDER = [
-  'personal_header',
-  'work_experience',
-  'education',
-  'skills',
-  'projects',
-  'certificates',
-  'languages',
-  'volunteer',
-  'awards',
-  'publications'
-];
 
 /**
  * Check if CV data has already been migrated to structure format
  */
 export function hasStructure(cvData: UnifiedCVDataStructure): boolean {
-  return !!(cvData.structure && cvData.content && Array.isArray(cvData.structure.sections));
+  return !!(cvData.structure && Array.isArray(cvData.structure.sections) && cvData.structure.sections.length > 0);
 }
 
 /**
- * Generate UUID for section (client-safe, uses crypto.randomUUID or fallback)
+ * THE GREAT MIGRATION
+ *
+ * Migrates legacy CV data to structure-based format.
+ * This is a NON-DESTRUCTIVE operation that creates a new cvData object
+ * with the structure property added.
+ *
+ * Logic:
+ * 1. Check if cvData.structure.sections already exists. If yes, return unmodified.
+ * 2. If not, create new structure.sections array
+ * 3. Loop through DEFAULT_SECTION_ORDER
+ * 4. For each sectionId:
+ *    - Call hasSectionData(cvData[sectionId]) using our robust validator
+ *    - If true, add { id: sectionId, type: sectionId, visible: true }
+ *    - If false, add { id: sectionId, type: sectionId, visible: false }
+ * 5. Return new cvData object with structure property added
+ *
+ * @param cvData - Original CV data (may or may not have structure)
+ * @returns New cvData object with structure property (guaranteed)
  */
-function generateUUID(): string {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-  // Fallback for Node.js environments
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0;
-    const v = c === 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
-}
-
-/**
- * Get default empty content for a section type
- */
-function getDefaultContentForSectionType(sectionType: string): any {
-  const mapping = SECTION_MAPPING[sectionType];
-  if (!mapping) return {};
-
-  switch (sectionType) {
-    case 'personal_header':
-      return {
-        name: '',
-        label: '',
-        image: '',
-        email: '',
-        phone: '',
-        url: '',
-        summary: '',
-        location: {
-          address: '',
-          postalCode: '',
-          city: '',
-          countryCode: '',
-          region: ''
-        },
-        profiles: []
-      };
-    case 'work_experience':
-      return {
-        name: '',
-        position: '',
-        url: '',
-        startDate: '',
-        endDate: '',
-        summary: '',
-        highlights: []
-      };
-    case 'education':
-      return {
-        institution: '',
-        url: '',
-        area: '',
-        studyType: '',
-        startDate: '',
-        endDate: '',
-        score: '',
-        courses: []
-      };
-    case 'skills':
-      return [];
-    case 'projects':
-      return {
-        name: '',
-        startDate: '',
-        endDate: '',
-        description: '',
-        highlights: [],
-        keywords: [],
-        url: ''
-      };
-    case 'certificates':
-      return {
-        name: '',
-        date: '',
-        issuer: '',
-        url: '',
-        description: ''
-      };
-    case 'languages':
-      return {
-        language: '',
-        fluency: ''
-      };
-    case 'volunteer':
-      return {
-        organization: '',
-        position: '',
-        url: '',
-        startDate: '',
-        endDate: '',
-        summary: '',
-        highlights: []
-      };
-    case 'awards':
-      return {
-        title: '',
-        date: '',
-        awarder: '',
-        summary: ''
-      };
-    case 'publications':
-      return {
-        name: '',
-        publisher: '',
-        releaseDate: '',
-        url: '',
-        summary: ''
-      };
-    default:
-      return {};
-  }
-}
-
-/**
- * Check if a section has data in legacy format
- */
-function hasLegacyData(cvData: UnifiedCVDataStructure, sectionType: string): boolean {
-  const mapping = SECTION_MAPPING[sectionType];
-  if (!mapping) return false;
-
-  const dataKey = mapping.dataKey;
-  const data = cvData[dataKey];
-
-  if (mapping.isList) {
-    return Array.isArray(data) && data.length > 0;
-  } else {
-    // For non-list sections like basics, check if key fields exist
-    if (dataKey === 'basics') {
-      const basicsData = data as any;
-      return !!(basicsData && (basicsData.name || basicsData.email || basicsData.summary));
-    }
-    return !!data;
-  }
-}
-
-/**
- * Migrate legacy CV data to structure/content map format
- * 
- * @param cvData - Legacy CV data structure
- * @param template - Optional template to determine section order and availability
- * @returns Migrated CV data with structure and content map
- */
-export function migrateLegacyCVToStructureFormat(
-  cvData: UnifiedCVDataStructure,
-  template?: ITemplate | { availableSections?: ISectionBlueprint[] }
+export function migrateLegacyCV(
+  cvData: UnifiedCVDataStructure
 ): UnifiedCVDataStructure {
-  // If already migrated, return as-is
+  // Step 1: Check if already migrated
   if (hasStructure(cvData)) {
     return cvData;
   }
 
-  const structure: CVSectionStructure[] = [];
-  const content: CVContentMap = {};
+  // Step 2: Create new structure.sections array
+  const sections: CVSectionStructure[] = [];
 
-  // Determine section order from template or use default
-  let sectionOrder: string[] = DEFAULT_SECTION_ORDER;
-  if (template?.availableSections && Array.isArray(template.availableSections)) {
-    sectionOrder = template.availableSections
-      .map(section => section.key)
-      .filter(key => SECTION_MAPPING[key] !== undefined);
-  }
+  // Step 3: Loop through DEFAULT_SECTION_ORDER
+  // IMPORTANT: Always add ALL sections to structure, even if empty
+  // This ensures the structure is complete and the selector always has sections to work with
+  for (const sectionId of DEFAULT_SECTION_ORDER) {
+    // Verify this section exists in registry
+    const registryEntry = SECTION_REGISTRY[sectionId];
+    if (!registryEntry) continue;
 
-  // Migrate each section type
-  for (const sectionType of sectionOrder) {
-    const mapping = SECTION_MAPPING[sectionType];
-    if (!mapping) continue;
+    // Step 4: Check if section has data using robust validation
+    const hasData = hasSectionData(cvData, sectionId);
 
-    const dataKey = mapping.dataKey;
-    const legacyData = cvData[dataKey];
-
-    if (mapping.isList) {
-      // Array sections: create one structure entry per item
-      if (Array.isArray(legacyData)) {
-        for (const item of legacyData) {
-          const sectionId = generateUUID();
-          structure.push({
-            id: sectionId,
-            type: sectionType,
-            visible: true
-          });
-          content[sectionId] = { ...item };
-        }
-      } else {
-        // If array is empty, still create a structure entry with empty content
-        const sectionId = generateUUID();
-        structure.push({
-          id: sectionId,
-          type: sectionType,
-          visible: false // Hide empty sections by default
-        });
-        content[sectionId] = getDefaultContentForSectionType(sectionType);
-      }
+    // Step 5: Determine visibility
+    // - personal_header is always visible (users need to fill it)
+    // - Other sections are visible ONLY if they have actual data
+    // - DO NOT mark sections as visible just because arrays exist (empty arrays should be hidden)
+    // - Empty sections should appear in "Add Section" modal, not in the sidebar
+    let visible = false;
+    
+    if (sectionId === 'personal_header') {
+      // Personal header is always visible (users need to fill it)
+      visible = true;
     } else {
-      // Non-array sections (like basics): create single entry
-      const sectionId = generateUUID();
-      const hasData = hasLegacyData(cvData, sectionType);
-      
-      structure.push({
-        id: sectionId,
-        type: sectionType,
-        visible: hasData // Show if has data, hide if empty
-      });
-
-      if (legacyData) {
-        content[sectionId] = { ...(legacyData as any) };
-      } else {
-        content[sectionId] = getDefaultContentForSectionType(sectionType);
-      }
+      // For other sections, ONLY mark as visible if they have actual data
+      // Empty arrays should NOT be visible - they should appear in "Add Section" modal
+      visible = hasData; // Only use hasData, NOT isInitialized
     }
+
+    // Always add section to structure (even if not visible initially)
+    // This ensures the structure is complete and the selector can work with it
+    sections.push({
+      id: sectionId,
+      type: sectionId,
+      visible: visible
+    });
   }
 
-  // Ensure personal_header is always first
-  const personalHeaderIndex = structure.findIndex(s => s.type === 'personal_header');
-  if (personalHeaderIndex > 0) {
-    const personalHeader = structure.splice(personalHeaderIndex, 1)[0];
-    structure.unshift(personalHeader);
-  }
-
-  // Return migrated data (preserve legacy arrays for backward compatibility)
+  // Step 5: Return new cvData with structure added (preserves all legacy data)
   return {
     ...cvData,
     structure: {
-      sections: structure
-    },
-    content
+      sections
+    }
   };
 }
 
 /**
- * Initialize CV structure from template (for new CVs)
+ * Convenience alias for backward compatibility
  */
-export function initializeCVStructure(
-  template?: ITemplate | { availableSections?: ISectionBlueprint[] },
-  existingData?: Partial<UnifiedCVDataStructure>
-): { structure: CVStructure; content: CVContentMap } {
-  const structure: CVSectionStructure[] = [];
-  const content: CVContentMap = {};
-
-  // Determine section order from template or use default
-  let sectionOrder: string[] = DEFAULT_SECTION_ORDER;
-  if (template?.availableSections && Array.isArray(template.availableSections)) {
-    sectionOrder = template.availableSections
-      .map(section => section.key)
-      .filter(key => SECTION_MAPPING[key] !== undefined);
-  }
-
-  // Initialize each section
-  for (const sectionType of sectionOrder) {
-    const mapping = SECTION_MAPPING[sectionType];
-    if (!mapping) continue;
-
-    if (mapping.isList) {
-      // For list sections, check if existing data has items
-      const dataKey = mapping.dataKey;
-      const existingItems = existingData?.[dataKey];
-      
-      if (Array.isArray(existingItems) && existingItems.length > 0) {
-        // Create one entry per existing item
-        for (const item of existingItems) {
-          const sectionId = generateUUID();
-          structure.push({
-            id: sectionId,
-            type: sectionType,
-            visible: true
-          });
-          content[sectionId] = { ...item };
-        }
-      } else {
-        // Create single empty entry
-        const sectionId = generateUUID();
-        structure.push({
-          id: sectionId,
-          type: sectionType,
-          visible: false
-        });
-        content[sectionId] = getDefaultContentForSectionType(sectionType);
-      }
-    } else {
-      // Non-array sections: create single entry
-      const sectionId = generateUUID();
-      const dataKey = mapping.dataKey;
-      const existingItem = existingData?.[dataKey];
-
-      structure.push({
-        id: sectionId,
-        type: sectionType,
-        visible: !!existingItem || sectionType === 'personal_header' // Always show personal_header
-      });
-
-      if (existingItem) {
-        content[sectionId] = { ...(existingItem as any) };
-      } else {
-        content[sectionId] = getDefaultContentForSectionType(sectionType);
-      }
-    }
-  }
-
-  // Ensure personal_header is always first
-  const personalHeaderIndex = structure.findIndex(s => s.type === 'personal_header');
-  if (personalHeaderIndex > 0) {
-    const personalHeader = structure.splice(personalHeaderIndex, 1)[0];
-    structure.unshift(personalHeader);
-  }
-
-  return {
-    structure: { sections: structure },
-    content
-  };
+export function migrateLegacyCVToStructureFormat(
+  cvData: UnifiedCVDataStructure,
+  _template?: ITemplate | { availableSections?: ISectionBlueprint[] }
+): UnifiedCVDataStructure {
+  // Template parameter is ignored in the new simplified approach
+  // The structure is determined by DEFAULT_SECTION_ORDER and data presence
+  return migrateLegacyCV(cvData);
 }

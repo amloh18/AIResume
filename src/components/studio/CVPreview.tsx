@@ -14,7 +14,7 @@ import { ITemplate } from '@/types/template';
 import { Job } from '@/lib/stores/jobStore';
 import { downloadAsPDF, downloadAsDOCX, downloadAsImage } from '@/lib/utils/download';
 import { TemplateRenderer } from '@/lib/templates/template-renderer';
-import { getVisibleCVSections } from '@/lib/utils/cv-section-selectors';
+import { getVisibleCVSections } from '@/lib/selectors/cv-section-selectors';
 
 interface CVPreviewProps {
   cvData: UnifiedCVDataStructure | null;

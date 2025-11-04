@@ -27,7 +27,7 @@ import AwardsSection from './forms/AwardsSection';
 import PublicationsSection from './forms/PublicationsSection';
 import InterestsSection from './forms/InterestsSection';
 import ReferencesSection from './forms/ReferencesSection';
-import { getVisibleCVSections } from '@/lib/utils/cv-section-selectors';
+import { getVisibleCVSections } from '@/lib/selectors/cv-section-selectors';
 
 interface RestructuredStudioLayoutProps {
   // Job Section Props
@@ -107,7 +107,9 @@ export default function RestructuredStudioLayout({
               <CollapsibleTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="w-full justify-between p-4 h-auto hover:bg-[#2D332D] text-white"
+                  className={`w-full justify-between p-4 h-auto hover:bg-[#2D332D] text-white rounded-t-2xl ${
+                    expandedCVSections.has('personal_header') ? '' : 'rounded-b-2xl'
+                  }`}
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-lg">👤</span>
@@ -154,7 +156,9 @@ export default function RestructuredStudioLayout({
               <CollapsibleTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="w-full justify-between p-4 h-auto hover:bg-[#2D332D] text-white"
+                  className={`w-full justify-between p-4 h-auto hover:bg-[#2D332D] text-white rounded-t-xl ${
+                    expandedCVSections.has('work_experience') ? '' : 'rounded-b-xl'
+                  }`}
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-lg">💼</span>
@@ -196,7 +200,9 @@ export default function RestructuredStudioLayout({
               <CollapsibleTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="w-full justify-between p-4 h-auto hover:bg-[#2D332D] text-white"
+                  className={`w-full justify-between p-4 h-auto hover:bg-[#2D332D] text-white rounded-t-xl ${
+                    expandedCVSections.has('education') ? '' : 'rounded-b-xl'
+                  }`}
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-lg">🎓</span>
@@ -262,7 +268,9 @@ export default function RestructuredStudioLayout({
               <CollapsibleTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="w-full justify-between p-4 h-auto hover:bg-[#2D332D] text-white"
+                  className={`w-full justify-between p-4 h-auto hover:bg-[#2D332D] text-white rounded-t-xl ${
+                    expandedCVSections.has('skills') ? '' : 'rounded-b-xl'
+                  }`}
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-lg">🛠️</span>
@@ -318,7 +326,9 @@ export default function RestructuredStudioLayout({
               <CollapsibleTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="w-full justify-between p-4 h-auto hover:bg-[#2D332D] text-white"
+                  className={`w-full justify-between p-4 h-auto hover:bg-[#2D332D] text-white rounded-t-xl ${
+                    expandedCVSections.has('projects') ? '' : 'rounded-b-xl'
+                  }`}
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-lg">🚀</span>
@@ -374,7 +384,9 @@ export default function RestructuredStudioLayout({
               <CollapsibleTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="w-full justify-between p-4 h-auto hover:bg-[#2D332D] text-white"
+                  className={`w-full justify-between p-4 h-auto hover:bg-[#2D332D] text-white rounded-t-xl ${
+                    expandedCVSections.has('certificates') ? '' : 'rounded-b-xl'
+                  }`}
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-lg">📜</span>
@@ -430,7 +442,9 @@ export default function RestructuredStudioLayout({
               <CollapsibleTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="w-full justify-between p-4 h-auto hover:bg-[#2D332D] text-white"
+                  className={`w-full justify-between p-4 h-auto hover:bg-[#2D332D] text-white rounded-t-xl ${
+                    expandedCVSections.has('languages') ? '' : 'rounded-b-xl'
+                  }`}
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-lg">🌐</span>
@@ -486,7 +500,9 @@ export default function RestructuredStudioLayout({
               <CollapsibleTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="w-full justify-between p-4 h-auto hover:bg-[#2D332D] text-white"
+                  className={`w-full justify-between p-4 h-auto hover:bg-[#2D332D] text-white rounded-t-xl ${
+                    expandedCVSections.has('volunteer') ? '' : 'rounded-b-xl'
+                  }`}
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-lg">🤝</span>
@@ -542,7 +558,9 @@ export default function RestructuredStudioLayout({
               <CollapsibleTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="w-full justify-between p-4 h-auto hover:bg-[#2D332D] text-white"
+                  className={`w-full justify-between p-4 h-auto hover:bg-[#2D332D] text-white rounded-t-xl ${
+                    expandedCVSections.has('awards') ? '' : 'rounded-b-xl'
+                  }`}
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-lg">🏆</span>
@@ -598,7 +616,9 @@ export default function RestructuredStudioLayout({
               <CollapsibleTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="w-full justify-between p-4 h-auto hover:bg-[#2D332D] text-white"
+                  className={`w-full justify-between p-4 h-auto hover:bg-[#2D332D] text-white rounded-t-xl ${
+                    expandedCVSections.has('publications') ? '' : 'rounded-b-xl'
+                  }`}
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-lg">📚</span>
@@ -654,7 +674,9 @@ export default function RestructuredStudioLayout({
               <CollapsibleTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="w-full justify-between p-4 h-auto hover:bg-[#2D332D] text-white"
+                  className={`w-full justify-between p-4 h-auto hover:bg-[#2D332D] text-white rounded-t-xl ${
+                    expandedCVSections.has('interests') ? '' : 'rounded-b-xl'
+                  }`}
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-lg">🎯</span>
@@ -710,7 +732,9 @@ export default function RestructuredStudioLayout({
               <CollapsibleTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="w-full justify-between p-4 h-auto hover:bg-[#2D332D] text-white"
+                  className={`w-full justify-between p-4 h-auto hover:bg-[#2D332D] text-white rounded-t-xl ${
+                    expandedCVSections.has('references') ? '' : 'rounded-b-xl'
+                  }`}
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-lg">👥</span>
@@ -759,6 +783,31 @@ export default function RestructuredStudioLayout({
         return null;
     }
   };
+
+  // Show loading state if cvData is not available yet
+  if (!cvData) {
+    return (
+      <div className="h-full w-full bg-[#1A201A] flex items-center justify-center">
+        <div className="text-center text-white/60">
+          <p>Loading CV data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show message if no sections are visible (shouldn't happen, but handle gracefully)
+  if (visibleSections.length === 0) {
+    return (
+      <div className="h-full w-full bg-[#1A201A]">
+        <div className="pt-6 px-6 pb-6">
+          <div className="text-center text-white/60 py-8">
+            <p className="mb-2">No sections available</p>
+            <p className="text-sm">Add sections to your CV to get started.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full w-full bg-[#1A201A]">

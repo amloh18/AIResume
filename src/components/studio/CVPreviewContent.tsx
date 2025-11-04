@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Eye } from 'lucide-react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { DesignSettings, SectionConfig } from '@/types/design-settings';
-import { getVisibleCVSections } from '@/lib/utils/cv-section-selectors';
+import { getVisibleCVSections } from '@/lib/selectors/cv-section-selectors';
 
 interface CVPreviewContentProps {
   cvData: UnifiedCVDataStructure | null;
