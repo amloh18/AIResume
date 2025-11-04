@@ -56,11 +56,17 @@ export async function GET(request: NextRequest) {
     const starred = searchParams.get('starred');
     const published = searchParams.get('published');
     const searchTerm = searchParams.get('search');
+    const journeyId = searchParams.get('journeyId'); // Filter by journeyId
 
     // Build query conditions
     let baseQuery: Record<string, any> = {
       userId: new mongoose.Types.ObjectId(userId)
     };
+    
+    // Add journeyId filter if provided
+    if (journeyId && mongoose.Types.ObjectId.isValid(journeyId)) {
+      baseQuery.journeyId = new mongoose.Types.ObjectId(journeyId);
+    }
 
     console.log('🔍 CV API - Base query:', baseQuery);
 
@@ -117,14 +123,43 @@ export async function GET(request: NextRequest) {
     // Apply projection for list view (minimal fields)
     if (projection === 'list') {
       query = query.select('id title status metadata.starred metadata.lastModified metadata.viewCount metadata.downloadCount createdAt updatedAt');
-    } else if (projection === 'summary') {
-      // For summary projection, include template data for preview generation
-      query = query.populate('templateId', 'name globalStyles availableSections');
     }
+    // Note: For summary projection, we'll populate templateId after query execution
+    // to avoid CastError when templateId is a string (hardcoded templates)
 
     // Execute query
     console.log('🔍 CV API - Executing database query');
     const cvs = await query.lean();
+    
+    // For summary projection, populate ObjectId templateIds only
+    if (projection === 'summary') {
+      // Separate CVs with ObjectId templateIds from those with string templateIds
+      const objectIdTemplateIds = cvs
+        .filter(cv => cv.templateId && mongoose.Types.ObjectId.isValid(cv.templateId))
+        .map(cv => new mongoose.Types.ObjectId(cv.templateId));
+      
+      if (objectIdTemplateIds.length > 0) {
+        // Fetch templates for ObjectId templateIds
+        const templates = await Template.find({
+          _id: { $in: objectIdTemplateIds }
+        }).select('name globalStyles availableSections').lean();
+        
+        // Create a map for quick lookup
+        const templateMap = new Map(
+          templates.map(t => [t._id.toString(), t])
+        );
+        
+        // Populate templateId in CVs that have ObjectId templateIds
+        cvs.forEach(cv => {
+          if (cv.templateId && mongoose.Types.ObjectId.isValid(cv.templateId)) {
+            const templateIdStr = cv.templateId.toString();
+            if (templateMap.has(templateIdStr)) {
+              cv.templateId = templateMap.get(templateIdStr);
+            }
+          }
+        });
+      }
+    }
     console.log('🔍 CV API - Query executed, found CVs:', cvs.length);
     
     // Trigger async thumbnail generation for CVs missing thumbnails
@@ -321,6 +356,7 @@ export async function POST(request: NextRequest) {
       cvData, 
       status, 
       isMaster,
+      journeyId,
       metadata
     } = body;
 
@@ -376,6 +412,30 @@ export async function POST(request: NextRequest) {
       console.log('✅ CV POST API - Using hardcoded template:', hardcodedTemplate.name);
     }
 
+    // Check if CV already exists for this journey to prevent duplicates
+    if (journeyId) {
+      const existingCV = await CV.findOne({
+        journeyId: journeyId,
+        userId: new mongoose.Types.ObjectId(userId)
+      });
+      
+      if (existingCV) {
+        console.log('✅ CV POST API - Found existing CV for journey:', existingCV._id);
+        return NextResponse.json({
+          success: true,
+          cv: {
+            id: existingCV._id,
+            title: existingCV.title,
+            status: existingCV.status,
+            templateId: existingCV.templateId,
+            journeyId: existingCV.journeyId,
+            createdAt: existingCV.createdAt,
+            updatedAt: existingCV.updatedAt
+          }
+        }, { status: 200 });
+      }
+    }
+
     // Prepare CV data for creation (clean schema - no styling data)
     const cvDataToCreate = {
       title,
@@ -383,6 +443,7 @@ export async function POST(request: NextRequest) {
       cvData,
       status: status || 'draft',
       isMaster: isMaster || false,
+      journeyId: journeyId || undefined, // Store journeyId if provided
       metadata: {
         lastModified: new Date(),
         tags: metadata?.tags || [],
@@ -397,7 +458,8 @@ export async function POST(request: NextRequest) {
       title, 
       status: cvDataToCreate.status,
       isMaster: cvDataToCreate.isMaster,
-      userId
+      userId,
+      journeyId: cvDataToCreate.journeyId
     });
 
     // Create CV directly with MongoDB userId

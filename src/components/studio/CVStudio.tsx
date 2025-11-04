@@ -48,6 +48,7 @@ import { UnifiedCVService } from '@/lib/services/unified-cv-service';
 import { safeSessionStorageParse, safeSessionStorageSet } from '@/lib/utils/safeJsonParse';
 import { JobService } from '@/lib/services/jobService';
 import { debounce } from 'lodash';
+import { getVisibleCVSections, hasSectionData } from '@/lib/utils/cv-section-selectors';
 import { Skeleton } from '@/components/ui/SkeletonLoader';
 import { generateCVName, generateCVDescription, getCVMetadata } from '@/lib/utils/cvNamingUtils';
 import { generateDocumentName } from '@/lib/utils/documentNaming';
@@ -573,6 +574,28 @@ const CVStudio: React.FC<CVStudioProps> = ({
               return;
             }
 
+            // CRITICAL: Check if a cover letter already exists for this journey before creating
+            // This prevents duplicate creation when the API is called multiple times
+            if (journeyId || journeyInfo?.journeyId) {
+              const checkResponse = await fetch(`/api/cover-letters?userId=${userId}&journeyId=${journeyId || journeyInfo?.journeyId}`);
+              if (checkResponse.ok) {
+                const checkResult = await checkResponse.json();
+                const existingCoverLetter = checkResult.data?.coverLetters?.find((cl: any) => 
+                  cl.journeyId === (journeyId || journeyInfo?.journeyId)
+                );
+                
+                if (existingCoverLetter) {
+                  console.log('✅ Studio - Cover letter already exists for journey, using existing:', existingCoverLetter.id);
+                  setOriginalCoverLetterId(existingCoverLetter.id);
+                  setJustCreated(true);
+                  setTimeout(() => setJustCreated(false), 2000);
+                  clearTimeout(saveTimeout);
+                  setSaveStatus('saved');
+                  return;
+                }
+              }
+            }
+
             const response = await fetch('/api/cover-letters', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -582,6 +605,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
                 content: coverLetterData?.content || '',
                 cvId: cvId,
                 jobId: journeyInfo?.jobId || selectedJobId,
+                journeyId: journeyId || journeyInfo?.journeyId,
                 targetCompany: '',
                 targetPosition: '',
                 keywords: []
@@ -686,11 +710,40 @@ const CVStudio: React.FC<CVStudioProps> = ({
               return;
             }
 
+            // CRITICAL: Check if a CV already exists for this journey before creating
+            // This prevents duplicate creation when the API is called multiple times
+            if (journeyId || journeyInfo?.journeyId) {
+              const checkResponse = await fetch(`/api/cvs?userId=${userId}&journeyId=${journeyId || journeyInfo?.journeyId}`);
+              if (checkResponse.ok) {
+                const checkResult = await checkResponse.json();
+                // The API returns data.cvs array
+                const existingCV = checkResult.data?.cvs?.find((cv: any) => {
+                  const cvJourneyId = cv.journeyId || cv.templateId?.journeyId;
+                  const targetJourneyId = journeyId || journeyInfo?.journeyId;
+                  return cvJourneyId && (
+                    String(cvJourneyId) === String(targetJourneyId) ||
+                    cvJourneyId === targetJourneyId
+                  );
+                });
+                
+                if (existingCV) {
+                  console.log('✅ Studio - CV already exists for journey, using existing:', existingCV.id);
+                  setCvId(existingCV.id);
+                  setJustCreated(true);
+                  setTimeout(() => setJustCreated(false), 2000);
+                  clearTimeout(saveTimeout);
+                  setSaveStatus('saved');
+                  return;
+                }
+              }
+            }
+
             // Create new CV
             const newCV = await CVService.createCV({
               title: cvTitle || 'Untitled CV',
               cvData: data,
               templateId: selectedTemplate?._id?.toString() || selectedTemplate?.id?.toString() || '',
+              journeyId: journeyId || journeyInfo?.journeyId,
               metadata: {
                 isMaster: isMasterCV
               }
@@ -1519,6 +1572,12 @@ const CVStudio: React.FC<CVStudioProps> = ({
     }
   };
 
+  // Use refs to track previous values and prevent infinite loops
+  const prevCvIdRef = useRef<string | null>(null);
+  const prevModeRef = useRef<string | null>(null);
+  const prevJourneyCvIdRef = useRef<string | null>(null);
+  const prevAtsScoreRef = useRef<number | null>(null);
+
   // Handle journey mode and initialization
   useEffect(() => {
     // NEW APPROACH: Initialize journey using journeyId for reliable Application Package context
@@ -1528,13 +1587,19 @@ const CVStudio: React.FC<CVStudioProps> = ({
       // Journey context will be loaded in initializeCVJourney()
     }
 
-    // Update journey status based on current state
-    if (cvId && journeyState.cvId !== cvId) {
+    // Update journey status based on current state - only if cvId actually changed
+    const currentJourneyCvId = journeyState.cvId;
+    if (cvId && cvId !== prevCvIdRef.current && currentJourneyCvId !== cvId) {
+      prevCvIdRef.current = cvId;
+      prevJourneyCvIdRef.current = currentJourneyCvId;
       updateCVId(cvId);
       updateJourneyStatus('cv-created');
+      return; // Exit early to prevent multiple updates
     }
 
-    if (mode) {
+    // Handle mode changes - only if mode actually changed
+    if (mode && mode !== prevModeRef.current) {
+      prevModeRef.current = mode;
 
       switch (mode) {
         case 'cv-onboarding':
@@ -1550,25 +1615,31 @@ const CVStudio: React.FC<CVStudioProps> = ({
           updateJourneyStatus('cv-created');
           break;
         case 'cover-letter-edit':
-          // Check if CV has satisfactory ATS score
-          if (journeyState.atsScore && journeyState.atsScore < 80) {
-            setActionBlockerConfig({
-              title: 'ATS Score Required',
-              message: 'Please achieve a satisfactory ATS score before creating your cover letter.',
-              actionRequired: 'Improve your CV to get an ATS score above 80%',
-              onAction: () => {
-                // Navigate to ATS editing mode
-                router.push(`/studio?mode=ats-edit`);
-              }
-            });
-            setShowActionBlocker(true);
-          } else {
-            updateJourneyStatus('ats-checked');
+          // Check if CV has satisfactory ATS score - only check once per score change
+          const currentAtsScore = journeyState.atsScore;
+          if (currentAtsScore !== prevAtsScoreRef.current) {
+            prevAtsScoreRef.current = currentAtsScore;
+            
+            if (currentAtsScore && currentAtsScore < 80) {
+              setActionBlockerConfig({
+                title: 'ATS Score Required',
+                message: 'Please achieve a satisfactory ATS score before creating your cover letter.',
+                actionRequired: 'Improve your CV to get an ATS score above 80%',
+                onAction: () => {
+                  // Navigate to ATS editing mode
+                  router.push(`/studio?mode=ats-edit`);
+                }
+              });
+              setShowActionBlocker(true);
+            } else if (currentAtsScore && currentAtsScore >= 80) {
+              updateJourneyStatus('ats-checked');
+            }
           }
           break;
       }
     }
-  }, [mode, journeyState, cvId, router, updateJourneyStatus, updateCVId, updateCurrentJobId, startJourney]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, cvId, router, updateJourneyStatus, updateCVId, cvData]);
 
   // Load initial data
   useEffect(() => {
@@ -3121,39 +3192,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
       references: 'References'
     };
 
-    // Function to check if a section has data
-    const hasSectionData = (sectionId: string): boolean => {
-      if (!cvData) return false;
-      
-      switch (sectionId) {
-        case 'personal_header':
-          return !!(cvData.basics?.name || cvData.basics?.email || cvData.basics?.phone);
-        case 'work_experience':
-          return Array.isArray(cvData.work) && cvData.work.length > 0;
-        case 'education':
-          return Array.isArray(cvData.education) && cvData.education.length > 0;
-        case 'skills':
-          return Array.isArray(cvData.skills) && cvData.skills.length > 0;
-        case 'projects':
-          return Array.isArray(cvData.projects) && cvData.projects.length > 0;
-        case 'certificates':
-          return Array.isArray(cvData.certificates) && cvData.certificates.length > 0;
-        case 'languages':
-          return Array.isArray(cvData.languages) && cvData.languages.length > 0;
-        case 'volunteer':
-          return Array.isArray(cvData.volunteer) && cvData.volunteer.length > 0;
-        case 'awards':
-          return Array.isArray(cvData.awards) && cvData.awards.length > 0;
-        case 'publications':
-          return Array.isArray(cvData.publications) && cvData.publications.length > 0;
-        case 'interests':
-          return Array.isArray(cvData.interests) && cvData.interests.length > 0;
-        case 'references':
-          return Array.isArray(cvData.references) && cvData.references.length > 0;
-        default:
-          return false;
-      }
-    };
+    // Use centralized hasSectionData function
 
     // Build sections - use structure if available, otherwise use section type as ID
     const sectionsList: Array<{ id: string; type: string }> = [];
@@ -3200,7 +3239,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
 
     return sectionsList.map(section => {
       const sectionId = section.type; // Use type for lookup
-      const hasData = hasSectionData(sectionId);
+      const hasData = hasSectionData(cvData, sectionId);
       const isDisabled = !hasData;
       
       return {
@@ -3235,54 +3274,20 @@ const CVStudio: React.FC<CVStudioProps> = ({
     return icons[sectionId] || User;
   };
 
-  // Shared function to check if section has data - same logic as RestructuredStudioLayout
-  const hasSectionData = (sectionId: string): boolean => {
-    if (!cvData) return false;
-    
-    switch (sectionId) {
-      case 'personal_header':
-        // Always show personal information section
-        return true;
-      case 'work_experience':
-        return Array.isArray(cvData.work) && cvData.work.length > 0;
-      case 'education':
-        return Array.isArray(cvData.education) && cvData.education.length > 0;
-      case 'skills':
-        return Array.isArray(cvData.skills) && cvData.skills.length > 0;
-      case 'projects':
-        return Array.isArray(cvData.projects) && cvData.projects.length > 0;
-      case 'certificates':
-        return Array.isArray(cvData.certificates) && cvData.certificates.length > 0;
-      case 'languages':
-        return Array.isArray(cvData.languages) && cvData.languages.length > 0;
-      case 'volunteer':
-        return Array.isArray(cvData.volunteer) && cvData.volunteer.length > 0;
-      case 'awards':
-        return Array.isArray(cvData.awards) && cvData.awards.length > 0;
-      case 'publications':
-        return Array.isArray(cvData.publications) && cvData.publications.length > 0;
-      case 'interests':
-        return Array.isArray(cvData.interests) && cvData.interests.length > 0;
-      case 'references':
-        return Array.isArray(cvData.references) && cvData.references.length > 0;
-      default:
-        return false;
-    }
-  };
-
-  // Get CV sections for sidebar - synced with structure sections
+  // Get CV sections for sidebar - uses centralized selector
   const getCVSectionsForSidebar = () => {
     if (!cvData) return [];
 
-    const allSectionIds = ['personal_header', 'work_experience', 'education', 'skills', 'projects', 'certificates', 'languages', 'volunteer', 'awards', 'publications', 'interests', 'references'];
+    // Use centralized selector - single source of truth for section visibility
+    const visibleSections = getVisibleCVSections(cvData, documentType);
 
-    // Show all sections in sidebar, not just those with data - users need to see sections they can edit
-    return allSectionIds.map(sectionId => ({
-      id: sectionId,
-      title: getSectionTitle(sectionId),
-      icon: getSectionIcon(sectionId),
-      visible: sectionVisibility[sectionId] !== false,
-      hasData: hasSectionData(sectionId) // Include data status for UI indicators
+    // Map to sidebar format (maintains compatibility with existing sidebar component)
+    return visibleSections.map(section => ({
+      id: section.id,
+      title: section.title,
+      icon: section.icon,
+      visible: true, // All sections from selector are visible
+      hasData: section.hasData // Include data status for UI indicators
     }));
   };
 
@@ -3333,7 +3338,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
     };
     
     return allSectionIds
-      .filter(sectionId => !hasSectionData(sectionId))
+      .filter(sectionId => !hasSectionData(cvData, sectionId))
       .map(sectionId => ({
         id: sectionId,
         title: sectionTitles[sectionId],
@@ -3658,7 +3663,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     {getAvailableSectionsToAdd().map((section) => {
                       const IconComponent = section.icon;
-                const isAlreadyAdded = hasSectionData(section.id);
+                const isAlreadyAdded = hasSectionData(cvData, section.id);
                 
                       return (
                         <motion.button

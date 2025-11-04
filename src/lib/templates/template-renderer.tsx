@@ -156,8 +156,13 @@ const TemplateRendererComponent: React.FC<TemplateRendererProps> = ({
   }
   
   // Determine which sections to render
+  // Ensure availableSections is an array before passing
+  const availableSectionsArray = Array.isArray(template?.availableSections) 
+    ? template.availableSections 
+    : [];
+  
   let sectionsToRender = getSectionsToRender(
-    template.availableSections,
+    availableSectionsArray,
     finalSectionOrder,
     finalSectionVisibility,
     enabledSections
@@ -316,7 +321,9 @@ function getSectionsToRender(
   sectionVisibility?: Record<string, boolean>,
   enabledSections?: string[]
 ): ISectionBlueprint[] {
-  let sectionsToRender = [...availableSections];
+  // Ensure availableSections is an array
+  const sections = Array.isArray(availableSections) ? availableSections : [];
+  let sectionsToRender = [...sections];
 
   // Filter by enabled sections if provided - THIS IS THE KEY FILTER FOR PAGE SPLITTING
   if (enabledSections && enabledSections.length > 0) {

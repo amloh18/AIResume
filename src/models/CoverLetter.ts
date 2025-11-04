@@ -7,6 +7,7 @@ export interface ICoverLetter extends Document {
   status?: string; // draft, published, archived
   jobId?: mongoose.Types.ObjectId; // Optional link to a job
   cvId?: mongoose.Types.ObjectId; // Optional link to a CV
+  journeyId?: mongoose.Types.ObjectId; // Optional link to an application journey
   createdAt: Date;
   updatedAt: Date;
   metadata: {
@@ -58,6 +59,11 @@ const coverLetterSchema = new Schema<ICoverLetter>({
   cvId: {
     type: Schema.Types.ObjectId,
     ref: 'CV',
+    required: false
+  },
+  journeyId: {
+    type: Schema.Types.ObjectId,
+    ref: 'ApplicationJourney',
     required: false
   },
   metadata: {
@@ -139,6 +145,7 @@ const coverLetterSchema = new Schema<ICoverLetter>({
 
 // Indexes for efficient queries
 coverLetterSchema.index({ userId: 1, createdAt: -1 }); // User's cover letters by date
+coverLetterSchema.index({ journeyId: 1, userId: 1 }); // Unique cover letter per journey (prevents duplicates)
 coverLetterSchema.index({ 'metadata.tags': 1 }); // Tag-based searches
 coverLetterSchema.index({ 'metadata.isPublic': 1, 'metadata.lastModified': -1 }); // Public cover letters
 

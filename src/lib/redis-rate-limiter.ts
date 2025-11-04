@@ -22,6 +22,7 @@ class RedisRateLimiter {
   private redis: any = null;
   private fallbackStore: Map<string, { count: number; resetTime: number }> = new Map();
   private isRedisAvailable: boolean = false;
+  private static hasWarnedAboutRedis: boolean = false; // Track if we've already warned
 
   constructor() {
     this.initializeRedis();
@@ -49,11 +50,28 @@ class RedisRateLimiter {
         
         await this.redis.connect();
       } else {
-        console.warn('⚠️ REDIS_URL not set, using in-memory rate limiting');
+        // Only warn once to avoid console spam
+        if (!RedisRateLimiter.hasWarnedAboutRedis) {
+          RedisRateLimiter.hasWarnedAboutRedis = true;
+          // Use info-level log in development, warn in production
+          if (process.env.NODE_ENV === 'development') {
+            console.log('ℹ️  Redis not configured (REDIS_URL not set), using in-memory rate limiting');
+          } else {
+            console.warn('⚠️ REDIS_URL not set, using in-memory rate limiting');
+          }
+        }
         this.isRedisAvailable = false;
       }
     } catch (error) {
-      console.warn('⚠️ Redis not available, using in-memory rate limiting:', error);
+      // Only warn once to avoid console spam
+      if (!RedisRateLimiter.hasWarnedAboutRedis) {
+        RedisRateLimiter.hasWarnedAboutRedis = true;
+        if (process.env.NODE_ENV === 'development') {
+          console.log('ℹ️  Redis not available, using in-memory rate limiting');
+        } else {
+          console.warn('⚠️ Redis not available, using in-memory rate limiting:', error);
+        }
+      }
       this.isRedisAvailable = false;
     }
   }

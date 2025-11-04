@@ -8,6 +8,8 @@
 import getConnection from '@/lib/database';
 import Template from '@/models/Template';
 import { ITemplate } from '@/models/Template';
+import mongoose from 'mongoose';
+import { isHardcodedTemplate, getTemplateById as getHardcodedTemplateById } from '@/lib/templates/template-utils';
 
 export class AdminTemplateService {
   /**
@@ -69,12 +71,28 @@ export class AdminTemplateService {
         return fallbackTemplates[0] || null;
       }
       
+      // First check if it's a hardcoded template (string ID)
+      if (isHardcodedTemplate(templateId)) {
+        const hardcodedTemplate = getHardcodedTemplateById(templateId);
+        if (hardcodedTemplate) {
+          console.log(`📋 Retrieved hardcoded template: ${hardcodedTemplate.name}`);
+          return hardcodedTemplate;
+        }
+      }
+      
+      // Only query database if templateId is a valid ObjectId
+      if (!mongoose.Types.ObjectId.isValid(templateId)) {
+        console.log(`📋 Template ID "${templateId}" is not a valid ObjectId and not found in hardcoded templates, using fallback`);
+        const fallbackTemplates = this.getFallbackTemplates();
+        return fallbackTemplates[0] || null;
+      }
+      
       const template = await Template.findById(templateId)
         .lean()
         .exec();
       
       if (!template) {
-        console.log('📋 Template not found, using fallback');
+        console.log('📋 Template not found in database, using fallback');
         const fallbackTemplates = this.getFallbackTemplates();
         return fallbackTemplates[0] || null;
       }

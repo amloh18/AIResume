@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import getConnection from '@/lib/database';
 import CoverLetter from '@/models/CoverLetter';
+import { toObjectId } from '@/lib/db-utils';
 
 export async function GET(request: NextRequest) {
   try {
@@ -106,7 +107,7 @@ export async function POST(request: NextRequest) {
     await getConnection();
     
     const body = await request.json();
-    const { userId, title, content, targetCompany, targetPosition, keywords, jobId, cvId, status, metadata } = body;
+    const { userId, title, content, targetCompany, targetPosition, keywords, jobId, cvId, journeyId, status, metadata } = body;
 
     if (!userId || !title || !content) {
       return NextResponse.json(
@@ -126,6 +127,35 @@ export async function POST(request: NextRequest) {
       ...(metadata || {}) // Merge any additional metadata fields
     };
 
+    // Check if cover letter already exists for this journey to prevent duplicates
+    if (journeyId) {
+      const existingCoverLetter = await CoverLetter.findOne({
+        journeyId: journeyId,
+        userId: toObjectId(userId)
+      });
+      
+      if (existingCoverLetter) {
+        console.log('✅ Cover Letter API - Found existing cover letter for journey:', existingCoverLetter._id);
+        return NextResponse.json({
+          success: true,
+          data: {
+            id: existingCoverLetter._id,
+            title: existingCoverLetter.title,
+            content: existingCoverLetter.content,
+            status: existingCoverLetter.status,
+            jobId: existingCoverLetter.jobId,
+            cvId: existingCoverLetter.cvId,
+            journeyId: existingCoverLetter.journeyId,
+            userId: existingCoverLetter.userId,
+            lastModified: existingCoverLetter.metadata.lastModified,
+            createdAt: existingCoverLetter.createdAt,
+            updatedAt: existingCoverLetter.updatedAt,
+            metadata: existingCoverLetter.metadata
+          }
+        });
+      }
+    }
+    
     const coverLetter = new CoverLetter({
       userId,
       title,
@@ -133,6 +163,7 @@ export async function POST(request: NextRequest) {
       status: status || 'draft',
       jobId,
       cvId,
+      journeyId: journeyId || undefined, // Store journeyId if provided
       metadata: coverLetterMetadata
     });
 

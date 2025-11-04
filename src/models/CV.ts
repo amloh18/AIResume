@@ -6,6 +6,7 @@ export interface ICV extends Document {
   title: string;
   cvData: UnifiedCVDataStructure; // Using unified schema
   templateId: mongoose.Types.ObjectId; // Reference to Template collection
+  journeyId?: mongoose.Types.ObjectId; // Optional link to an application journey
   status: 'draft' | 'published' | 'archived';
   version: number;
   createdAt: Date;
@@ -44,6 +45,11 @@ const cvSchema = new Schema<ICV>({
     type: Schema.Types.Mixed, // Allow both ObjectId and String for hardcoded templates
     ref: 'Template',
     required: true
+  },
+  journeyId: {
+    type: Schema.Types.ObjectId,
+    ref: 'ApplicationJourney',
+    required: false
   },
   status: {
     type: String,
@@ -196,6 +202,7 @@ const cvSchema = new Schema<ICV>({
 // Indexes for better query performance
 cvSchema.index({ userId: 1, createdAt: -1 }); // User's CVs by date
 cvSchema.index({ userId: 1, 'metadata.isMaster': 1 }); // Index for master CV queries
+cvSchema.index({ journeyId: 1, userId: 1 }); // Unique CV per journey (prevents duplicates)
 cvSchema.index({ templateId: 1 }); // Index for template-based queries
 cvSchema.index({ 'metadata.tags': 1 }); // Tag-based searches
 cvSchema.index({ 'metadata.isPublic': 1, 'metadata.lastModified': -1 }); // Public CVs

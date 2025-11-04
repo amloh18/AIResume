@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Eye } from 'lucide-react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { DesignSettings, SectionConfig } from '@/types/design-settings';
+import { getVisibleCVSections } from '@/lib/utils/cv-section-selectors';
 
 interface CVPreviewContentProps {
   cvData: UnifiedCVDataStructure | null;
@@ -34,9 +35,27 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
 }) => {
   const isDark = theme === 'dark';
   
+  // Get visible sections using centralized selector (respects structure visibility)
+  const visibleSectionsList = useMemo(
+    () => getVisibleCVSections(cvData, 'cv'),
+    [cvData]
+  );
+
+  // Create fast lookup Set for section visibility
+  const visibleSectionTypes = useMemo(
+    () => new Set(visibleSectionsList.map(s => s.type)),
+    [visibleSectionsList]
+  );
+  
   // Helper function to check if a section should be visible
+  // Use centralized selector when structure exists, fallback to prop for legacy CVs
   const isSectionVisible = (sectionName: string) => {
-    // If sectionVisibility is provided, use it; otherwise default to true
+    // If CV has structure, use centralized selector (source of truth)
+    if (cvData?.structure?.sections && Array.isArray(cvData.structure.sections) && cvData.structure.sections.length > 0) {
+      return visibleSectionTypes.has(sectionName);
+    }
+    
+    // Fallback: use sectionVisibility prop for legacy CVs without structure
     if (Object.keys(sectionVisibility).length === 0) {
       return true; // Default to visible if no visibility settings provided
     }

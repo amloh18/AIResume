@@ -104,21 +104,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if documents already exist
-    if (journey.cvId && journey.coverLetterId) {
+    // Check if documents already exist - refresh journey from DB to get latest state
+    // This prevents race conditions where multiple requests check simultaneously
+    const freshJourney = await ApplicationJourney.findById(journey._id);
+    if (freshJourney && freshJourney.cvId && freshJourney.coverLetterId) {
       // Documents already created, update status to ready
-      journey.status = 'ready';
-      journey.metadata.updatedAt = new Date();
-      await journey.save();
+      freshJourney.status = 'ready';
+      freshJourney.metadata.updatedAt = new Date();
+      await freshJourney.save();
       
       return NextResponse.json({
         success: true,
         message: 'Documents already exist',
         data: {
-          cvId: journey.cvId,
-          coverLetterId: journey.coverLetterId
+          cvId: freshJourney.cvId,
+          coverLetterId: freshJourney.coverLetterId
         }
       });
+    }
+    
+    // Update journey reference to use fresh data
+    if (freshJourney) {
+      journey = freshJourney;
     }
 
     // Get job details
@@ -172,6 +179,22 @@ export async function POST(request: NextRequest) {
 
     try {
       // Create CV if not exists
+      // First check if a CV already exists for this journey (atomic check)
+      if (!cvId) {
+        const { CV } = await import('@/models');
+        
+        // CRITICAL: Check if a CV already exists for this journey to prevent duplicates
+        const existingJourneyCV = await CV.findOne({
+          journeyId: journey._id.toString(),
+          userId: new mongoose.Types.ObjectId(userId)
+        });
+        
+        if (existingJourneyCV) {
+          cvId = existingJourneyCV._id.toString();
+          console.log('✅ Journey Documents API - Found existing CV for journey:', cvId);
+        }
+      }
+      
       if (!cvId) {
         const { CV } = await import('@/models');
         
@@ -190,35 +213,46 @@ export async function POST(request: NextRequest) {
         const masterCV = await CV.findOne(masterCVQuery);
         
         if (masterCV) {
-          // Duplicate master CV
-          const cvTitle = `${journey.jobTitle}-${journey.company}-CV`;
-          
-          const duplicatedCV = new CV({
-            title: cvTitle,
-            cvData: masterCV.cvData,
-            data: masterCV.data,
-            status: 'draft',
-            isMaster: false,
+          // Double-check one more time before creating (race condition protection)
+          const finalCheck = await CV.findOne({
             journeyId: journey._id.toString(),
-            templateId: masterCV.templateId,
-            templateName: masterCV.templateName,
-            templateData: masterCV.templateData,
-            styling: masterCV.styling,
-            userId: new mongoose.Types.ObjectId(userId),
-            metadata: {
-              ...masterCV.metadata,
-              isMaster: false,
-              lastModified: new Date(),
-              createdFrom: masterCV._id,
-              viewCount: 0,
-              downloadCount: 0
-            }
+            userId: new mongoose.Types.ObjectId(userId)
           });
           
-          const savedCV = await duplicatedCV.save();
-          cvId = savedCV._id.toString();
-          
-          console.log('✅ Journey Documents API - CV created:', cvId);
+          if (finalCheck) {
+            cvId = finalCheck._id.toString();
+            console.log('✅ Journey Documents API - CV found in final check (race condition prevented):', cvId);
+          } else {
+            // Duplicate master CV
+            const cvTitle = `${journey.jobTitle}-${journey.company}-CV`;
+            
+            const duplicatedCV = new CV({
+              title: cvTitle,
+              cvData: masterCV.cvData,
+              data: masterCV.data,
+              status: 'draft',
+              isMaster: false,
+              journeyId: journey._id.toString(),
+              templateId: masterCV.templateId,
+              templateName: masterCV.templateName,
+              templateData: masterCV.templateData,
+              styling: masterCV.styling,
+              userId: new mongoose.Types.ObjectId(userId),
+              metadata: {
+                ...masterCV.metadata,
+                isMaster: false,
+                lastModified: new Date(),
+                createdFrom: masterCV._id,
+                viewCount: 0,
+                downloadCount: 0
+              }
+            });
+            
+            const savedCV = await duplicatedCV.save();
+            cvId = savedCV._id.toString();
+            
+            console.log('✅ Journey Documents API - CV created:', cvId);
+          }
         } else {
           console.error('❌ Journey Documents API - Master CV not found');
           throw new Error('Master CV not found');
@@ -226,6 +260,22 @@ export async function POST(request: NextRequest) {
       }
 
       // Create Cover Letter if not exists
+      // First check if a cover letter already exists for this journey (atomic check)
+      if (!coverLetterId) {
+        const { CoverLetter } = await import('@/models');
+        
+        // CRITICAL: Check if a cover letter already exists for this journey to prevent duplicates
+        const existingJourneyCoverLetter = await CoverLetter.findOne({
+          journeyId: journey._id.toString(),
+          userId: new mongoose.Types.ObjectId(userId)
+        });
+        
+        if (existingJourneyCoverLetter) {
+          coverLetterId = existingJourneyCoverLetter._id.toString();
+          console.log('✅ Journey Documents API - Found existing cover letter for journey:', coverLetterId);
+        }
+      }
+      
       if (!coverLetterId) {
         const { CoverLetter } = await import('@/models');
         
@@ -260,26 +310,37 @@ Sincerely,
         const coverLetterTitle = `${journey.company}_${journey.jobTitle} | Cover_Letter`;
         
         try {
-          const duplicatedCoverLetter = new CoverLetter({
-            title: coverLetterTitle,
-            content: sourceContent || '',
-            status: 'draft',
-            userId: new mongoose.Types.ObjectId(userId),
-            jobId: journey.jobId,
+          // Double-check one more time before creating (race condition protection)
+          const finalCheck = await CoverLetter.findOne({
             journeyId: journey._id.toString(),
-            metadata: {
-              ...sourceMetadata,
-              lastModified: new Date(),
-              createdFrom: existingCoverLetter?._id || null,
-              viewCount: 0,
-              downloadCount: 0
-            }
+            userId: new mongoose.Types.ObjectId(userId)
           });
           
-          const savedCoverLetter = await duplicatedCoverLetter.save();
-          coverLetterId = savedCoverLetter._id.toString();
-          
-          console.log('✅ Journey Documents API - Cover letter created:', coverLetterId);
+          if (finalCheck) {
+            coverLetterId = finalCheck._id.toString();
+            console.log('✅ Journey Documents API - Cover letter found in final check (race condition prevented):', coverLetterId);
+          } else {
+            const duplicatedCoverLetter = new CoverLetter({
+              title: coverLetterTitle,
+              content: sourceContent || '',
+              status: 'draft',
+              userId: new mongoose.Types.ObjectId(userId),
+              jobId: journey.jobId,
+              journeyId: journey._id.toString(),
+              metadata: {
+                ...sourceMetadata,
+                lastModified: new Date(),
+                createdFrom: existingCoverLetter?._id || null,
+                viewCount: 0,
+                downloadCount: 0
+              }
+            });
+            
+            const savedCoverLetter = await duplicatedCoverLetter.save();
+            coverLetterId = savedCoverLetter._id.toString();
+            
+            console.log('✅ Journey Documents API - Cover letter created:', coverLetterId);
+          }
         } catch (coverLetterError: any) {
           console.error('❌ Journey Documents API - Error creating cover letter:', coverLetterError);
           console.error('❌ Journey Documents API - Cover letter error details:', {

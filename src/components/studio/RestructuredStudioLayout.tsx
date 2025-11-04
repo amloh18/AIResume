@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Briefcase, 
@@ -27,6 +27,7 @@ import AwardsSection from './forms/AwardsSection';
 import PublicationsSection from './forms/PublicationsSection';
 import InterestsSection from './forms/InterestsSection';
 import ReferencesSection from './forms/ReferencesSection';
+import { getVisibleCVSections } from '@/lib/utils/cv-section-selectors';
 
 interface RestructuredStudioLayoutProps {
   // Job Section Props
@@ -62,84 +63,21 @@ export default function RestructuredStudioLayout({
 }: RestructuredStudioLayoutProps) {
   const [expandedCVSections, setExpandedCVSections] = useState<Set<string>>(new Set(['personal_header']));
 
-  // Function to check if a section should be visible based on structure OR legacy data
-  const isSectionVisible = (sectionId: string): boolean => {
-    if (!cvData) return false;
-    
-    // Check structure visibility first (source of truth for new architecture)
-    if (cvData.structure?.sections && Array.isArray(cvData.structure.sections)) {
-      const structureSection = cvData.structure.sections.find((s: { type: string; id?: string; visible?: boolean }) => s.type === sectionId);
-      if (structureSection) {
-        // If section exists in structure, use its visibility flag
-        return structureSection.visible !== false;
-      }
-    }
-    
-    // Fallback: check legacy data for backward compatibility
-    // Personal header is always visible
-    if (sectionId === 'personal_header') return true;
-    
-    // For other sections, check if they have been initialized (array exists, even if empty)
-    switch (sectionId) {
-      case 'work_experience':
-        return Array.isArray(cvData.work);
-      case 'education':
-        return Array.isArray(cvData.education);
-      case 'skills':
-        return Array.isArray(cvData.skills);
-      case 'projects':
-        return Array.isArray(cvData.projects);
-      case 'certificates':
-        return Array.isArray(cvData.certificates);
-      case 'languages':
-        return Array.isArray(cvData.languages);
-      case 'volunteer':
-        return Array.isArray(cvData.volunteer);
-      case 'awards':
-        return Array.isArray(cvData.awards);
-      case 'publications':
-        return Array.isArray(cvData.publications);
-      case 'interests':
-        return Array.isArray(cvData.interests);
-      case 'references':
-        return Array.isArray(cvData.references);
-      default:
-        return false;
-    }
-  };
+  // Get visible sections using centralized selector - computed once
+  const visibleSectionsList = useMemo(
+    () => getVisibleCVSections(cvData, 'cv'),
+    [cvData]
+  );
 
-  // Helper function to check if section has actual data (for UI indicators)
-  const hasSectionData = (sectionId: string): boolean => {
-    if (!cvData) return false;
-    
-    switch (sectionId) {
-      case 'personal_header':
-        return !!(cvData.basics?.name || cvData.basics?.email || cvData.basics?.phone);
-      case 'work_experience':
-        return Array.isArray(cvData.work) && cvData.work.length > 0;
-      case 'education':
-        return Array.isArray(cvData.education) && cvData.education.length > 0;
-      case 'skills':
-        return Array.isArray(cvData.skills) && cvData.skills.length > 0;
-      case 'projects':
-        return Array.isArray(cvData.projects) && cvData.projects.length > 0;
-      case 'certificates':
-        return Array.isArray(cvData.certificates) && cvData.certificates.length > 0;
-      case 'languages':
-        return Array.isArray(cvData.languages) && cvData.languages.length > 0;
-      case 'volunteer':
-        return Array.isArray(cvData.volunteer) && cvData.volunteer.length > 0;
-      case 'awards':
-        return Array.isArray(cvData.awards) && cvData.awards.length > 0;
-      case 'publications':
-        return Array.isArray(cvData.publications) && cvData.publications.length > 0;
-      case 'interests':
-        return Array.isArray(cvData.interests) && cvData.interests.length > 0;
-      case 'references':
-        return Array.isArray(cvData.references) && cvData.references.length > 0;
-      default:
-        return false;
-    }
+  // Create fast lookup Set for O(1) visibility checks
+  const visibleSectionIds = useMemo(
+    () => new Set(visibleSectionsList.map(s => s.type)),
+    [visibleSectionsList]
+  );
+
+  // Simple visibility check using pre-computed Set
+  const isSectionVisible = (sectionId: string): boolean => {
+    return visibleSectionIds.has(sectionId);
   };
 
   const toggleCVSection = (sectionId: string) => {
@@ -152,11 +90,8 @@ export default function RestructuredStudioLayout({
     setExpandedCVSections(newExpanded);
   };
 
-  // Define all possible sections
-  const allSectionIds = ['personal_header', 'work_experience', 'education', 'skills', 'projects', 'certificates', 'languages', 'volunteer', 'awards', 'publications', 'interests', 'references'];
-  
-  // Show sections based on structure visibility OR legacy data initialization
-  const visibleSections = allSectionIds.filter(id => isSectionVisible(id));
+  // Use visible sections from selector (maintains order from structure)
+  const visibleSections = visibleSectionsList.map(s => s.type);
 
   // Helper function to render section based on ID
   const renderSection = (sectionId: string) => {

@@ -13,6 +13,7 @@ class RedisClientManager {
   private client: RedisClientType | null = null;
   private isConnecting: boolean = false;
   private connectionPromise: Promise<RedisClientType | null> | null = null;
+  private static hasWarnedAboutRedis: boolean = false; // Track if we've already warned
 
   private constructor() {}
 
@@ -55,7 +56,16 @@ class RedisClientManager {
       const redisUrl = process.env.REDIS_URL;
 
       if (!redisUrl) {
-        console.warn('⚠️ REDIS_URL not set, cache will use in-memory fallback');
+        // Only warn once to avoid console spam
+        if (!RedisClientManager.hasWarnedAboutRedis) {
+          RedisClientManager.hasWarnedAboutRedis = true;
+          // Use info-level log in development, warn in production
+          if (process.env.NODE_ENV === 'development') {
+            console.log('ℹ️  Redis not configured (REDIS_URL not set), using in-memory cache fallback');
+          } else {
+            console.warn('⚠️ REDIS_URL not set, cache will use in-memory fallback');
+          }
+        }
         this.isConnecting = false;
         return null;
       }
