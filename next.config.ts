@@ -95,11 +95,37 @@ const nextConfig: NextConfig = {
       '@sentry/tracing': false,
     };
 
-    // Apply Sentry exclusions to all builds
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      ...sentryAliases,
-    };
+    // CRITICAL: Ensure React resolves correctly and is not excluded
+    // Fix for "Cannot read properties of null (reading 'useState')" errors
+    if (!config.resolve.alias) {
+      config.resolve.alias = {};
+    }
+    
+    // Apply Sentry exclusions (but ensure React/React-DOM are NEVER excluded)
+    // React must always be available for client components
+    Object.assign(config.resolve.alias, sentryAliases);
+    
+    // Explicitly ensure React is never aliased to false or excluded
+    // This is critical - React must always be available
+    if (config.resolve.alias.react === false) {
+      delete config.resolve.alias.react;
+    }
+    if (config.resolve.alias['react-dom'] === false) {
+      delete config.resolve.alias['react-dom'];
+    }
+    
+    // Ensure React is never in externals for client builds
+    if (config.externals && !isServer) {
+      config.externals = config.externals.filter((ext: any) => {
+        if (typeof ext === 'string') {
+          return ext !== 'react' && ext !== 'react-dom';
+        }
+        if (typeof ext === 'object' && ext !== null) {
+          return ext !== 'react' && ext !== 'react-dom';
+        }
+        return true;
+      });
+    }
 
     // For Edge Runtime builds (middleware), exclude instrumentation and Sentry completely
     // Vercel's Edge bundler analyzes all files, so we need to be aggressive
@@ -124,6 +150,15 @@ const nextConfig: NextConfig = {
       config.resolve.alias['./src/lib/error-tracking'] = false;
       config.resolve.alias['@/lib/structured-logger'] = '@/lib/edge-logger';
       config.resolve.alias['./src/lib/structured-logger'] = './src/lib/edge-logger';
+      
+      // CRITICAL: Ensure React is NEVER excluded, even in Edge builds
+      // React must always be available for client components
+      if (config.resolve.alias.react === false) {
+        delete config.resolve.alias.react;
+      }
+      if (config.resolve.alias['react-dom'] === false) {
+        delete config.resolve.alias['react-dom'];
+      }
     }
 
     // Handle optional dependencies for Vercel
@@ -147,7 +182,6 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizeCss: true,
     optimizePackageImports: ['lucide-react', 'lottie-react'],
-    instrumentationHook: false, // Disable Next.js instrumentation
   },
   
   // Force dynamic rendering for all pages to prevent SSR issues

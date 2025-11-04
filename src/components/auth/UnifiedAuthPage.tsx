@@ -34,6 +34,8 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
   const [emailExists, setEmailExists] = useState<boolean | null>(null);
   const [checkingEmail, setCheckingEmail] = useState(false);
   const [showSendCodeButton, setShowSendCodeButton] = useState(false);
+  const [showPasswordResetForm, setShowPasswordResetForm] = useState(false);
+  const [resetToken, setResetToken] = useState<string | null>(null);
 
   // Check if user is already signed in
   useEffect(() => {
@@ -80,6 +82,25 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
   const handleSignIn = async (formData: Record<string, string>) => {
     try {
       console.log('🔐 Attempting sign in with credentials...');
+      
+      // First check if user exists and is verified
+      const checkUserResponse = await fetch('/api/check-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email }),
+      });
+      
+      const checkUserResult = await checkUserResponse.json();
+      
+      // If user exists but is not verified, route to verification
+      if (checkUserResult.exists && !checkUserResult.isEmailVerified) {
+        setEmail(formData.email);
+        setVerificationType('email-verification');
+        // Send verification code
+        await handleSendCode(formData.email, 'email-verification');
+        setSuccess('Account not verified. Please enter the verification code sent to your email.');
+        return;
+      }
       
       // Add timeout to prevent hanging
       const signInPromise = signIn('credentials', {
@@ -206,11 +227,22 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
       switch (verificationType) {
         case 'passwordless-login': {
           try {
-            const signInResult = await signIn('passwordless', {
-              email,
-              verificationCode: code,
-              redirect: false
-            } as any);
+            // For passwordless login, verify code and sign in directly with NextAuth
+            // The passwordless provider will handle verification and user creation
+            console.log('🔐 Attempting passwordless sign-in with code for:', email);
+            
+            const signInResult = await Promise.race([
+              signIn('passwordless', {
+                email,
+                verificationCode: code,
+                redirect: false
+              } as any),
+              new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Sign-in request timed out after 10 seconds')), 10000)
+              )
+            ]) as any;
+            
+            console.log('🔐 Passwordless sign-in result:', signInResult);
 
             if ((signInResult as any)?.ok) {
               setSuccess('Authentication successful, redirecting...');
@@ -218,19 +250,86 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
                 router.push('/dashboard');
               }, 800);
             } else {
-              setError('Invalid or expired code. Please request a new one.');
+              // If sign-in fails, try to verify via API to get better error message
+              try {
+                const verifyResponse = await fetch('/api/auth/verify-and-signin', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    email,
+                    code,
+                    type: 'passwordless-login'
+                  }),
+                });
+
+                if (!verifyResponse.ok) {
+                  throw new Error(`HTTP error! status: ${verifyResponse.status}`);
+                }
+
+                const verifyResult = await verifyResponse.json();
+
+                if (!verifyResult.success) {
+                  setError(verifyResult.message || 'Invalid or expired code. Please request a new one.');
+                  setRemainingAttempts(verifyResult.remainingAttempts || 0);
+                } else {
+                  // Code is valid but NextAuth sign-in failed - the code was already consumed
+                  setError('Code was verified but sign-in failed. The code may have been used. Please request a new code and try again.');
+                }
+              } catch (fetchError: any) {
+                console.error('Failed to fetch verification status:', fetchError);
+                // If the fetch fails, check if it's a network error
+                if (fetchError instanceof TypeError && fetchError.message.includes('Failed to fetch')) {
+                  setError('Network error: Unable to connect to the server. Please check your internet connection and try again.');
+                } else {
+                  setError((signInResult as any)?.error || 'Failed to sign you in. Please try again.');
+                }
+              }
             }
-          } catch (err) {
+          } catch (err: any) {
             console.error('Passwordless NextAuth sign-in failed:', err);
-            setError('Failed to sign you in with the code. Please try again.');
+            
+            // Check if it's a network error
+            if (err instanceof TypeError && err.message.includes('Failed to fetch')) {
+              setError('Network error: Unable to connect to the server. Please check your internet connection and try again.');
+            } else if (err.message) {
+              setError(err.message);
+            } else {
+              setError('Failed to sign you in with the code. Please try again.');
+            }
           } finally {
             setIsLoading(false);
           }
           return;
         }
 
+        case 'password-reset': {
+          // Handle password reset verification
+          const response = await fetch('/api/auth/verify-and-signin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email,
+              code,
+              type: verificationType
+            }),
+          });
+
+          const result = await response.json();
+
+          if (result.success) {
+            // Store reset token and show password reset form
+            setResetToken(result.resetToken);
+            setShowPasswordResetForm(true);
+            setSuccess('');
+          } else {
+            setError(result.message || 'Invalid verification code.');
+            setRemainingAttempts(result.remainingAttempts || 0);
+          }
+          return;
+        }
+
         default: {
-          // Handle other verification types (email-verification, password-reset)
+          // Handle other verification types (email-verification)
           const response = await fetch('/api/auth/verify-and-signin', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -255,10 +354,6 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
                 setError('');
                 setEmail('');
               }, 2000);
-            } else if (verificationType === 'password-reset') {
-              // Password reset - show success message
-              setSuccess('Code verified! You can now set a new password.');
-              // In a real implementation, you would redirect to a password reset form
             }
           } else {
             setError(result.message || 'Invalid verification code.');
@@ -276,6 +371,51 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
 
   const handleResendCode = async () => {
     await handleSendCode(email, verificationType);
+  };
+
+  const handlePasswordResetSubmit = async (formData: Record<string, string>) => {
+    setIsLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      if (!resetToken) {
+        setError('Reset token is missing. Please request a new code.');
+        setIsLoading(false);
+        return;
+      }
+
+      const response = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          token: resetToken,
+          password: formData.password
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && !result.error) {
+        setSuccess('Password reset successfully! Redirecting to sign in...');
+        setTimeout(() => {
+          setMode('signin');
+          setShowPasswordResetForm(false);
+          setResetToken(null);
+          setEmail('');
+          setSuccess('');
+          setError('');
+        }, 2000);
+      } else {
+        setError(result.error || 'Failed to reset password. Please try again.');
+      }
+    } catch (error: any) {
+      console.error('Password reset error:', error);
+      setError('Failed to reset password. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const checkEmailAvailability = useCallback(async (email: string) => {
@@ -640,12 +780,60 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
     />
   ) : null;
 
+  // Show password reset form after code verification
+  if (mode === 'verify-code' && showPasswordResetForm && verificationType === 'password-reset') {
+    return (
+      <UnifiedAuthLayout
+        title="Set New Password"
+        subtitle="Enter your new password"
+        showBackButton={true}
+        backHref="/sign-in"
+        backText="Back to Sign In"
+      >
+        <UnifiedAuthForm
+          fields={[
+            {
+              name: 'password',
+              type: 'password',
+              label: 'New Password',
+              placeholder: 'Enter your new password',
+              required: true,
+              autoComplete: 'new-password',
+              icon: <Lock className="w-4 h-4" />,
+              validation: passwordValidation,
+              showPasswordToggle: true
+            },
+            {
+              name: 'confirmPassword',
+              type: 'password',
+              label: 'Confirm Password',
+              placeholder: 'Confirm your new password',
+              required: true,
+              autoComplete: 'new-password',
+              icon: <Lock className="w-4 h-4" />,
+              validation: (value: string, password?: string) => confirmPasswordValidation(value, password || ''),
+              showPasswordToggle: true
+            }
+          ]}
+          onSubmit={handlePasswordResetSubmit}
+          submitText="Reset Password"
+          isLoading={isLoading}
+          error={error}
+          success={success}
+        />
+      </UnifiedAuthLayout>
+    );
+  }
+
   // Show code verification screen
   if (mode === 'verify-code') {
     return (
       <UnifiedAuthLayout
         title="Verify Your Code"
         subtitle="Enter the 4-digit code sent to your email"
+        showBackButton={true}
+        backHref="/sign-in"
+        backText="Back to Sign In"
       >
         <CodeVerificationScreen
           email={email}
@@ -657,6 +845,12 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
           success={success}
           remainingAttempts={remainingAttempts}
           cooldownSeconds={cooldownSeconds}
+          onBack={() => {
+            setMode('signin');
+            setEmail('');
+            setError('');
+            setSuccess('');
+          }}
         />
       </UnifiedAuthLayout>
     );

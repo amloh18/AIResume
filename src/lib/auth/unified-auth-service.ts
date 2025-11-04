@@ -106,22 +106,18 @@ export class UnifiedAuthService {
           },
           async authorize(credentials) {
             if (!credentials?.email || !credentials?.verificationCode) {
+              console.error('❌ Passwordless login: Missing credentials', {
+                hasEmail: !!credentials?.email,
+                hasCode: !!credentials?.verificationCode
+              });
               return null;
             }
 
             try {
+              console.log('🔐 Passwordless login: Starting authorization for', credentials.email);
               await getConnection();
 
-              const user = await User.findOne({
-                email: credentials.email.toLowerCase(),
-              }).lean().exec();
-
-              if (!user) return null;
-              const userDoc = Array.isArray(user) ? user[0] : user;
-              if (!userDoc || !userDoc.isEmailVerified) {
-                return null;
-              }
-
+              // Verify the code first
               const verificationResult = await VerificationToken.verifyCode(
                 credentials.verificationCode,
                 credentials.email.toLowerCase(),
@@ -129,19 +125,90 @@ export class UnifiedAuthService {
               );
 
               if (!verificationResult.valid) {
+                console.error('❌ Passwordless login: Code verification failed:', verificationResult.message);
                 return null;
               }
 
+              console.log('✅ Passwordless login: Code verified successfully');
+
+              // Find or create user
+              let user = await User.findOne({
+                email: credentials.email.toLowerCase(),
+              }).lean().exec();
+
+              let userDoc = Array.isArray(user) ? user[0] : user;
+
+              if (!userDoc) {
+                // Create new user for passwordless login
+                const newUser = new User({
+                  authProviderId: `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                  authProvider: 'local',
+                  email: credentials.email.toLowerCase(),
+                  password: null,
+                  firstName: 'User',
+                  lastName: 'User',
+                  isEmailVerified: true, // Verified via code
+                  role: 'user',
+                  currentPlanKey: 'free',
+                  monthlyGoal: 20,
+                  usage: {
+                    cvJourneyCount: 0,
+                    cvCreatedCount: 0,
+                    journeysCreated: 0,
+                    exportCount: 0,
+                    atsCheckCount: 0,
+                    lastResetDate: new Date(),
+                  },
+                  subscription: {
+                    planKey: 'free',
+                    status: 'inactive',
+                    startDate: new Date(),
+                    provider: 'stripe',
+                    interval: 'monthly',
+                    seats: 3,
+                    storageUsed: 0
+                  },
+                  settings: {
+                    theme: 'auto',
+                    notifications: {
+                      email: true,
+                      push: true
+                    },
+                    timezone: 'UTC',
+                    languagePreference: 'en'
+                  }
+                });
+                
+                await newUser.save();
+                userDoc = newUser.toObject();
+                console.log('✅ New user created for passwordless login:', newUser._id.toString());
+              } else if (!userDoc.isEmailVerified) {
+                // Update existing user to be verified
+                await User.findByIdAndUpdate((userDoc._id as any).toString(), { 
+                  isEmailVerified: true,
+                  emailVerifiedAt: new Date()
+                });
+                userDoc.isEmailVerified = true;
+              }
+
+              // Update last login
               await User.findByIdAndUpdate((userDoc._id as any).toString(), { lastLogin: new Date() });
 
-              return {
+              const userData = {
                 id: (userDoc._id as any).toString(),
                 email: userDoc.email,
-                name: `${userDoc.firstName} ${userDoc.lastName}`,
+                name: `${userDoc.firstName || ''} ${userDoc.lastName || ''}`.trim() || 'User',
                 image: userDoc.avatar || null,
               };
+
+              console.log('✅ Passwordless login: Authorization successful for user', userData.id);
+              return userData;
             } catch (error: any) {
-              console.error('❌ Passwordless login error:', error);
+              console.error('❌ Passwordless login error:', {
+                message: error.message,
+                stack: error.stack,
+                name: error.name
+              });
               return null;
             }
           },
@@ -216,27 +283,63 @@ export class UnifiedAuthService {
 
         async session({ session, token }) {
           // Fetch fresh user data from cache or DB on each session check
+          // IMPORTANT: Only store minimal data in session to prevent cookie size issues
           if (token && session?.user && token.id) {
-            const userData = await UnifiedAuthService.fetchUserData(token.id as string);
+            try {
+              const userData = await UnifiedAuthService.fetchUserData(token.id as string);
 
-            if (userData) {
-              session.user.id = userData.id;
-              session.user.email = userData.email;
-              session.user.name = userData.name;
-              session.user.image = userData.image ?? undefined;
-              (session.user as any).role = userData.role;
-              (session.user as any).type = 'user';
-              (session.user as any).planKey = userData.planKey;
-              (session.user as any).subscriptionStatus =
-                userData.subscriptionStatus;
-            } else {
-              // Fallback to token data if user not found
+              if (userData) {
+                // Store only essential fields - keep session minimal
+                session.user.id = userData.id;
+                session.user.email = userData.email || (token.email as string) || '';
+                session.user.name = userData.name || '';
+                session.user.image = userData.image ?? undefined;
+                (session.user as any).role = userData.role || 'user';
+                (session.user as any).type = 'user';
+                (session.user as any).planKey = userData.planKey || 'free';
+                (session.user as any).subscriptionStatus = userData.subscriptionStatus || 'inactive';
+              } else {
+                // Fallback to token data if user not found
+                session.user.id = (token.id as string) || '';
+                session.user.email = (token.email as string) || '';
+                session.user.name = '';
+                (session.user as any).role = 'user';
+                (session.user as any).type = 'user';
+                (session.user as any).planKey = 'free';
+                (session.user as any).subscriptionStatus = 'inactive';
+              }
+            } catch (error) {
+              console.error('❌ Error in session callback:', error);
+              // Fallback to minimal token data on error
               session.user.id = (token.id as string) || '';
               session.user.email = (token.email as string) || '';
+              session.user.name = '';
             }
           }
 
-          return session;
+          // Ensure we're not accidentally including large objects
+          // Create a minimal session object with only primitive values
+          const cleanedSession = {
+            user: {
+              id: String(session.user?.id || ''),
+              email: String(session.user?.email || ''),
+              name: String(session.user?.name || ''),
+              image: session.user?.image ? String(session.user.image).substring(0, 500) : undefined, // Limit image URL length
+              role: String((session.user as any)?.role || 'user'),
+              type: String((session.user as any)?.type || 'user'),
+              planKey: String((session.user as any)?.planKey || 'free'),
+              subscriptionStatus: String((session.user as any)?.subscriptionStatus || 'inactive'),
+            },
+            expires: session.expires
+          };
+
+          // Log if session is getting too large (for debugging)
+          const sessionSize = JSON.stringify(cleanedSession).length;
+          if (sessionSize > 10000) { // 10KB threshold
+            console.warn(`⚠️ Session size is ${sessionSize} bytes - may cause cookie issues`);
+          }
+
+          return cleanedSession as any;
         },
       },
 
@@ -278,9 +381,12 @@ export class UnifiedAuthService {
         return cached;
       }
 
-      // Fetch from database
+      // Fetch from database - only select fields we need to prevent large payloads
       await getConnection();
-      const user = await User.findById(userId).lean().exec();
+      const user = await User.findById(userId)
+        .select('_id email firstName lastName avatar role currentPlanKey subscription.status')
+        .lean()
+        .exec();
 
       if (!user) {
         return null;
@@ -290,14 +396,27 @@ export class UnifiedAuthService {
         return null;
       }
 
+      // Create minimal user data object - only include what we need
+      // Ensure image is a URL string, not a large base64 or buffer
+      let avatarUrl: string | null = null;
+      if (userDoc.avatar) {
+        if (typeof userDoc.avatar === 'string' && userDoc.avatar.length < 1000) {
+          // Only include if it's a reasonable length (likely a URL)
+          avatarUrl = userDoc.avatar;
+        } else if (typeof userDoc.avatar === 'object') {
+          // If it's an object, try to extract URL
+          avatarUrl = (userDoc.avatar as any).url || null;
+        }
+      }
+
       const userData: AuthenticatedUser = {
         id: (userDoc._id as any).toString(),
-        email: userDoc.email,
-        name: `${userDoc.firstName} ${userDoc.lastName}`,
-        image: userDoc.avatar || null,
+        email: userDoc.email || '',
+        name: `${userDoc.firstName || ''} ${userDoc.lastName || ''}`.trim() || 'User',
+        image: avatarUrl,
         role: userDoc.role || 'user',
         planKey: userDoc.currentPlanKey || 'free',
-        subscriptionStatus: userDoc.subscription?.status || 'inactive',
+        subscriptionStatus: (userDoc as any).subscription?.status || 'inactive',
       };
 
       // Cache for 5 minutes

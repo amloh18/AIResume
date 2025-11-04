@@ -269,11 +269,19 @@ const PremiumTemplates = () => {
                             </div>
                           ) : (
                             <Image
-                              src={template.thumbnail}
+                              src={encodeURI(template.thumbnail)}
                               alt={template.name}
                               fill
                               className="object-cover transition-transform duration-300 group-hover:scale-110"
                               unoptimized
+                              onError={(e) => {
+                                console.error('Template thumbnail failed to load:', template.thumbnail);
+                                const target = e.target as HTMLImageElement;
+                                // Try original path without encoding
+                                if (target.src !== template.thumbnail) {
+                                  target.src = template.thumbnail;
+                                }
+                              }}
                             />
                           )}
                         </div>
@@ -315,13 +323,21 @@ const PremiumTemplates = () => {
                     transition={{ duration: 0.5 }}
                   >
                     <Image
-                      src={selectedTemplate.preview}
+                      src={encodeURI(selectedTemplate.preview)}
                       alt={selectedTemplate.name}
                       fill
                       className="object-contain"
                       priority
                       unoptimized
                       onLoad={() => setIsLoading(false)}
+                      onError={(e) => {
+                        console.error('Template preview failed to load:', selectedTemplate.preview);
+                        const target = e.target as HTMLImageElement;
+                        // Try original path without encoding
+                        if (target.src !== selectedTemplate.preview) {
+                          target.src = selectedTemplate.preview;
+                        }
+                      }}
                       sizes="(max-width: 1024px) 0vw, 50vw"
                     />
                   </motion.div>

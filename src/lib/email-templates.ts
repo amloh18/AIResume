@@ -1,5 +1,5 @@
 // Email Templates with Custom Color Scheme
-// Accent: #78c708, Background: #141810, Card: #1a230f
+// Background: rgb(20, 24, 16), Card: #222b22, Inner boxes: #313a28, Accent: rgb(129, 255, 0), Button Background: rgb(26, 26, 26)
 
 export interface EmailTemplateData {
   firstName?: string;
@@ -15,78 +15,85 @@ export interface EmailTemplateData {
   daysLeft?: number;
 }
 
-// Base email template with consistent styling
+// Base email template with consistent styling - Table-based for email client compatibility
 const getBaseTemplate = (title: string, content: string, footerText?: string) => `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="x-apple-disable-message-reformatting">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <title>${title}</title>
   <style>
+    /* Reset styles for email clients */
+    body, table, td, p, a, li, blockquote {
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
+    }
+    table, td {
+      mso-table-lspace: 0pt;
+      mso-table-rspace: 0pt;
+    }
+    img {
+      -ms-interpolation-mode: bicubic;
+      border: 0;
+      outline: none;
+      text-decoration: none;
+    }
+    
     body { 
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; 
       margin: 0; 
       padding: 0; 
-      background-color: #141810; 
-      min-height: 100vh;
-    }
-    .container { 
-      max-width: 600px; 
-      margin: 0 auto; 
-      background-color: #141810; 
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      padding: 20px;
-    }
-    .card { 
-      background-color: #1a230f; 
-      border-radius: 16px; 
-      padding: 40px; 
-      text-align: center; 
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-      border: 1px solid #2a3a22;
-      max-width: 500px;
-      width: 100%;
+      background-color: rgb(20, 24, 16) !important;
+      width: 100% !important;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
     .header { 
       margin-bottom: 30px; 
     }
     .header h1 { 
-      color: #78c708; 
+      color: rgb(129, 255, 0) !important; 
       margin: 0; 
       font-size: 28px; 
       font-weight: 700; 
+      line-height: 1.2;
     }
     .header p { 
-      color: #a0a0a0; 
+      color: rgba(255, 255, 255, 0.6) !important; 
       margin: 5px 0 0 0; 
       font-size: 14px;
+      line-height: 1.4;
     }
     .title { 
-      color: #ffffff; 
+      color: #ffffff !important; 
       margin: 0 0 15px 0; 
       font-size: 24px; 
       font-weight: 700; 
+      line-height: 1.3;
     }
     .subtitle { 
-      color: #a0a0a0; 
+      color: rgba(255, 255, 255, 0.7) !important; 
       font-size: 16px; 
       margin: 0 0 30px 0; 
       line-height: 1.5;
     }
     .content { 
-      color: #e0e0e0; 
+      color: rgba(255, 255, 255, 0.9) !important; 
       font-size: 16px; 
       line-height: 1.6; 
       margin: 0 0 30px 0;
     }
+    .content p {
+      margin: 0 0 15px 0;
+      word-wrap: break-word;
+      color: rgba(255, 255, 255, 0.9) !important;
+    }
     .button { 
-      background: linear-gradient(135deg, #78c708, #6bb806); 
-      color: #141810; 
+      background-color: rgb(26, 26, 26) !important;
+      color: #ffffff !important; 
       padding: 14px 32px; 
       text-decoration: none; 
       border-radius: 8px; 
@@ -95,65 +102,75 @@ const getBaseTemplate = (title: string, content: string, footerText?: string) =>
       font-size: 16px;
       margin: 20px 0;
       transition: all 0.3s ease;
+      min-width: 200px;
+      box-sizing: border-box;
     }
     .button:hover { 
-      background: linear-gradient(135deg, #6bb806, #5aa005); 
+      background-color: rgb(40, 40, 40) !important;
       transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(129, 255, 0, 0.3);
     }
     .code-container { 
       display: flex; 
       justify-content: center; 
       gap: 12px; 
       margin: 30px 0; 
+      flex-wrap: wrap;
     }
     .code-digit { 
       width: 60px; 
       height: 60px; 
-      background-color: #141810; 
-      border: 2px solid #78c708; 
+      background-color: #313a28 !important; 
+      border: 1px solid rgba(255, 255, 255, 0.1) !important; 
       border-radius: 8px; 
-      display: flex; 
+      display: inline-flex; 
       align-items: center; 
       justify-content: center; 
       font-size: 24px; 
       font-weight: 700; 
-      color: #78c708; 
+      color: rgb(129, 255, 0) !important; 
       font-family: 'Courier New', monospace;
+      box-sizing: border-box;
+      flex-shrink: 0;
     }
     .highlight { 
-      background-color: #2a3a22; 
-      border: 1px solid #78c708; 
+      background-color: #313a28 !important; 
+      border: 1px solid rgba(255, 255, 255, 0.1) !important; 
       border-radius: 8px; 
       padding: 20px; 
       margin: 20px 0; 
+      box-sizing: border-box;
     }
     .highlight-text { 
-      color: #78c708; 
+      color: rgb(129, 255, 0) !important; 
       font-weight: 700; 
       font-size: 18px;
+      margin: 0 0 10px 0;
     }
     .warning { 
-      background-color: #2a3a22; 
-      border: 1px solid #ff6b6b; 
+      background-color: #313a28 !important; 
+      border: 1px solid rgba(255, 107, 107, 0.3) !important; 
       border-radius: 8px; 
       padding: 16px; 
       margin: 20px 0; 
+      box-sizing: border-box;
     }
     .warning-text { 
-      color: #ff6b6b; 
+      color: #ff6b6b !important; 
       font-size: 14px; 
       margin: 0; 
       line-height: 1.5;
     }
     .info { 
-      background-color: #2a3a22; 
-      border: 1px solid #4a90e2; 
+      background-color: #313a28 !important; 
+      border: 1px solid rgba(74, 144, 226, 0.3) !important; 
       border-radius: 8px; 
       padding: 16px; 
       margin: 20px 0; 
+      box-sizing: border-box;
     }
     .info-text { 
-      color: #4a90e2; 
+      color: #4a90e2 !important; 
       font-size: 14px; 
       margin: 0; 
       line-height: 1.5;
@@ -161,61 +178,165 @@ const getBaseTemplate = (title: string, content: string, footerText?: string) =>
     .footer { 
       margin-top: 40px; 
       text-align: center; 
-      color: #a0a0a0; 
+      color: rgba(255, 255, 255, 0.5) !important; 
       font-size: 12px; 
       line-height: 1.4;
     }
+    .footer p {
+      margin: 5px 0;
+      color: rgba(255, 255, 255, 0.5) !important;
+    }
     .coupon-code { 
-      background-color: #141810; 
-      border: 2px dashed #78c708; 
+      background-color: #313a28 !important; 
+      border: 1px solid rgba(255, 255, 255, 0.1) !important; 
       border-radius: 8px; 
       padding: 20px; 
       margin: 20px 0; 
+      box-sizing: border-box;
     }
     .coupon-text { 
-      color: #78c708; 
+      color: rgb(129, 255, 0) !important; 
       font-size: 24px; 
       font-weight: 700; 
       font-family: 'Courier New', monospace;
       letter-spacing: 2px;
+      margin: 10px 0;
+      word-break: break-all;
     }
     .stats { 
       display: flex; 
       justify-content: space-around; 
       margin: 20px 0; 
+      flex-wrap: wrap;
+      gap: 15px;
     }
     .stat { 
       text-align: center; 
+      flex: 1;
+      min-width: 80px;
     }
     .stat-number { 
-      color: #78c708; 
+      color: rgb(129, 255, 0) !important; 
       font-size: 24px; 
       font-weight: 700; 
+      line-height: 1.2;
     }
     .stat-label { 
-      color: #a0a0a0; 
+      color: rgba(255, 255, 255, 0.6) !important; 
       font-size: 12px; 
       margin-top: 5px; 
+      line-height: 1.3;
+    }
+    .link-text {
+      color: rgb(129, 255, 0) !important;
+      word-break: break-all;
+      text-decoration: underline;
+    }
+    
+    /* Responsive styles for mobile */
+    @media only screen and (max-width: 600px) {
+      .container {
+        padding: 15px;
+      }
+      .card {
+        padding: 24px;
+        border-radius: 12px;
+      }
+      .header h1 {
+        font-size: 24px;
+      }
+      .title {
+        font-size: 20px;
+      }
+      .subtitle {
+        font-size: 14px;
+      }
+      .content {
+        font-size: 14px;
+      }
+      .button {
+        padding: 12px 24px;
+        font-size: 14px;
+        width: 100%;
+        min-width: auto;
+        display: block;
+        margin: 20px 0;
+      }
+      .code-container {
+        gap: 8px;
+      }
+      .code-digit {
+        width: 50px;
+        height: 50px;
+        font-size: 20px;
+      }
+      .stats {
+        flex-direction: column;
+        gap: 20px;
+      }
+      .stat {
+        min-width: 100%;
+      }
+      .coupon-text {
+        font-size: 20px;
+      }
+      .highlight, .warning, .info {
+        padding: 16px;
+      }
+    }
+    
+    @media only screen and (max-width: 480px) {
+      .card {
+        padding: 20px;
+      }
+      .code-digit {
+        width: 45px;
+        height: 45px;
+        font-size: 18px;
+      }
+      .header h1 {
+        font-size: 22px;
+      }
+      .title {
+        font-size: 18px;
+      }
     }
   </style>
 </head>
-<body>
-  <div class="container">
-    <div class="card">
-      <div class="header">
-        <h1>CVCircle</h1>
-        <p>Professional CV Builder</p>
-      </div>
-      
-      ${content}
-      
-      <div class="footer">
-        <p>©2024 CVCircle. All rights reserved.</p>
-        <p>www.cvcircle.io</p>
-        ${footerText ? `<p>${footerText}</p>` : ''}
-      </div>
-    </div>
-  </div>
+<body style="margin: 0; padding: 0; background-color: rgb(20, 24, 16); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <!-- Outer table wrapper for background -->
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: rgb(20, 24, 16); margin: 0; padding: 20px;">
+    <tr>
+      <td align="center" style="padding: 0;">
+        <!-- Main card container -->
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 500px; background-color: #222b22; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; overflow: hidden;">
+          <tr>
+            <td style="padding: 40px; text-align: center; background-color: #222b22;">
+              <!-- Header -->
+              <div style="margin-bottom: 30px;">
+                <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 10px;">
+                  <img src="https://www.cvcircle.io/images/Logo.png" alt="CVCircle Logo" width="40" height="40" style="display: block; max-width: 40px; height: auto;">
+                  <h1 style="margin: 0; font-size: 28px; font-weight: 700; line-height: 1.2;">
+                    <span style="color: rgb(129, 255, 0);">CV</span><span style="color: #ffffff;">Circle</span>
+                  </h1>
+                </div>
+                <p style="color: rgba(255, 255, 255, 0.6); margin: 5px 0 0 0; font-size: 14px; line-height: 1.4;">Professional CV Builder</p>
+              </div>
+              
+              ${content}
+              
+              <!-- Footer -->
+              <div style="margin-top: 40px; text-align: center; color: rgba(255, 255, 255, 0.5); font-size: 12px; line-height: 1.4; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 20px;">
+                <p style="margin: 5px 0; color: rgba(255, 255, 255, 0.5); font-size: 12px;">©2024 CVCircle. All rights reserved.</p>
+                <p style="margin: 5px 0; color: rgba(255, 255, 255, 0.5); font-size: 12px;">www.cvcircle.io</p>
+                ${footerText ? `<p style="margin: 5px 0; color: rgba(255, 255, 255, 0.5); font-size: 12px;">${footerText}</p>` : ''}
+              </div>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>
 `;
@@ -223,7 +344,11 @@ const getBaseTemplate = (title: string, content: string, footerText?: string) =>
 // 1. New User Welcome Email
 export function getNewUserTemplate(data: EmailTemplateData) {
   const content = `
-    <h2 class="title">Welcome to CVCircle, ${data.firstName}!</h2>
+    <div style="margin-bottom: 20px;">
+      <img src="https://www.cvcircle.io/images/one_click_career_kit.png" alt="One-Click Career Kit" width="200" height="auto" style="display: block; margin: 0 auto; max-width: 200px; height: auto; border-radius: 8px;">
+    </div>
+    <h2 class="title">One-Click Career Kit</h2>
+    <h2 class="title" style="margin-top: 0;">Welcome to CVCircle, ${data.firstName}!</h2>
     <p class="subtitle">Your journey to creating the perfect CV starts here.</p>
     
     <div class="content">
@@ -231,7 +356,7 @@ export function getNewUserTemplate(data: EmailTemplateData) {
       
       <div class="highlight">
         <p class="highlight-text">🎉 Your account is ready to use!</p>
-        <p style="color: #e0e0e0; margin: 10px 0 0 0;">Start building your professional CV in just a few minutes.</p>
+        <p style="color: rgba(255, 255, 255, 0.9); margin: 10px 0 0 0;">Start building your professional CV in just a few minutes.</p>
       </div>
       
       <div class="stats">
@@ -269,7 +394,11 @@ export function getNewUserTemplate(data: EmailTemplateData) {
 // 2. Limit Exhausted (Upgrade) Email
 export function getLimitExhaustedTemplate(data: EmailTemplateData) {
   const content = `
-    <h2 class="title">You've Reached Your Limit</h2>
+    <div style="margin-bottom: 20px;">
+      <img src="https://www.cvcircle.io/images/onboarding/extension-tracker.svg" alt="Never Miss a Role" width="180" height="auto" style="display: block; margin: 0 auto; max-width: 180px; height: auto; border-radius: 8px; filter: brightness(0) invert(1);">
+    </div>
+    <h2 class="title">Never Miss a Role</h2>
+    <h2 class="title" style="margin-top: 0;">You've Reached Your Limit</h2>
     <p class="subtitle">Don't let limits hold back your career success.</p>
     
     <div class="content">
@@ -292,7 +421,7 @@ export function getLimitExhaustedTemplate(data: EmailTemplateData) {
       
       <div class="highlight">
         <p class="highlight-text">🚀 Upgrade to Pro and get:</p>
-        <ul style="color: #e0e0e0; text-align: left; margin: 15px 0;">
+        <ul style="color: rgba(255, 255, 255, 0.9); text-align: left; margin: 15px 0;">
           <li>Unlimited CV creation</li>
           <li>Premium templates</li>
           <li>Advanced ATS optimization</li>
@@ -317,21 +446,25 @@ export function getLimitExhaustedTemplate(data: EmailTemplateData) {
 // 3. Special Offers (Coupon Code) Email
 export function getSpecialOffersTemplate(data: EmailTemplateData) {
   const content = `
-    <h2 class="title">🎉 Special Offer Just for You!</h2>
+    <div style="margin-bottom: 20px;">
+      <img src="https://www.cvcircle.io/images/gain_your_edge.png" alt="Gain Your Edge" width="200" height="auto" style="display: block; margin: 0 auto; max-width: 200px; height: auto; border-radius: 8px;">
+    </div>
+    <h2 class="title">Gain Your Edge</h2>
+    <h2 class="title" style="margin-top: 0;">🎉 Special Offer Just for You!</h2>
     <p class="subtitle">Exclusive discount on your CVCircle Pro subscription.</p>
     
     <div class="content">
       <p>We've prepared something special for you, ${data.firstName}! As a valued member of our community, you deserve the best deal on professional CV building tools.</p>
       
       <div class="coupon-code">
-        <p style="color: #a0a0a0; margin: 0 0 10px 0; font-size: 14px;">Use this code at checkout:</p>
+        <p style="color: rgba(255, 255, 255, 0.6); margin: 0 0 10px 0; font-size: 14px;">Use this code at checkout:</p>
         <div class="coupon-text">${data.couponCode}</div>
-        <p style="color: #a0a0a0; margin: 10px 0 0 0; font-size: 12px;">Valid until ${data.expirationDate}</p>
+        <p style="color: rgba(255, 255, 255, 0.6); margin: 10px 0 0 0; font-size: 12px;">Valid until ${data.expirationDate}</p>
       </div>
       
       <div class="highlight">
         <p class="highlight-text">💰 Save 30% on Pro Plan</p>
-        <p style="color: #e0e0e0; margin: 10px 0 0 0;">Get unlimited CVs, premium templates, and advanced features.</p>
+        <p style="color: rgba(255, 255, 255, 0.9); margin: 10px 0 0 0;">Get unlimited CVs, premium templates, and advanced features.</p>
       </div>
       
       <a href="https://www.cvcircle.io/dashboard?coupon=${data.couponCode}" class="button">Claim Your Discount</a>
@@ -347,7 +480,7 @@ export function getSpecialOffersTemplate(data: EmailTemplateData) {
         </p>
       </div>
       
-      <p style="color: #a0a0a0; font-size: 14px; margin: 30px 0 0 0;">
+      <p style="color: rgba(255, 255, 255, 0.6); font-size: 14px; margin: 30px 0 0 0;">
         This offer is exclusively for you and expires soon. Don't miss out on building your dream career!
       </p>
     </div>
@@ -359,22 +492,26 @@ export function getSpecialOffersTemplate(data: EmailTemplateData) {
 // 4. 4-Digit Verification Code Email
 export function getVerificationCodeTemplate(data: EmailTemplateData) {
   const content = `
-    <h2 class="title">Your Verification Code</h2>
-    <p class="subtitle">Enter this code to complete your sign-in.</p>
+    <h2 style="color: #ffffff; margin: 0 0 15px 0; font-size: 24px; font-weight: 700; line-height: 1.3;">Your Verification Code</h2>
+    <p style="color: rgba(255, 255, 255, 0.7); font-size: 16px; margin: 0 0 30px 0; line-height: 1.5;">Enter this code to complete your sign-in.</p>
     
-    <div class="code-container">
-      ${data.code?.split('').map(digit => `<div class="code-digit">${digit}</div>`).join('')}
+    <div style="display: flex; justify-content: center; gap: 12px; margin: 30px 0; flex-wrap: wrap;">
+      ${data.code?.split('').map(digit => `
+        <div style="width: 60px; height: 60px; background-color: #313a28; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700; color: rgb(129, 255, 0); font-family: 'Courier New', monospace; box-sizing: border-box;">
+          ${digit}
+        </div>
+      `).join('')}
     </div>
     
-    <div class="warning">
-      <p class="warning-text">
-        This code will expire in <strong>10 minutes</strong>. Do not share this code with anyone.
+    <div style="background-color: #313a28; border: 1px solid rgba(255, 107, 107, 0.3); border-radius: 8px; padding: 16px; margin: 20px 0; box-sizing: border-box;">
+      <p style="color: #ff6b6b; font-size: 14px; margin: 0; line-height: 1.5;">
+        This code will expire in <strong style="color: #ff6b6b;">10 minutes</strong>. Do not share this code with anyone.
       </p>
     </div>
     
-    <div class="info">
-      <p class="info-text">
-        <strong>Security Note:</strong> If you didn't request this code, please ignore this email or contact our support team.
+    <div style="background-color: #313a28; border: 1px solid rgba(74, 144, 226, 0.3); border-radius: 8px; padding: 16px; margin: 20px 0; box-sizing: border-box;">
+      <p style="color: #4a90e2; font-size: 14px; margin: 0; line-height: 1.5;">
+        <strong style="color: #4a90e2;">Security Note:</strong> If you didn't request this code, please ignore this email or contact our support team.
       </p>
     </div>
   `;
@@ -393,7 +530,7 @@ export function getAccountDeletionTemplate(data: EmailTemplateData) {
       
       <div class="highlight">
         <p class="highlight-text">✅ Account Deleted Successfully</p>
-        <p style="color: #e0e0e0; margin: 10px 0 0 0;">All your personal data has been permanently removed.</p>
+        <p style="color: rgba(255, 255, 255, 0.9); margin: 10px 0 0 0;">All your personal data has been permanently removed.</p>
       </div>
       
       <div class="info">
@@ -406,7 +543,7 @@ export function getAccountDeletionTemplate(data: EmailTemplateData) {
         </p>
       </div>
       
-      <p style="color: #a0a0a0; font-size: 14px; margin: 30px 0 0 0;">
+      <p style="color: rgba(255, 255, 255, 0.6); font-size: 14px; margin: 30px 0 0 0;">
         If you change your mind, you can always create a new account at any time. We'd love to have you back!
       </p>
       
@@ -435,9 +572,9 @@ export function getEmailVerificationTemplate(data: EmailTemplateData) {
         </p>
       </div>
       
-      <p style="color: #a0a0a0; font-size: 14px; margin: 30px 0 0 0;">
+      <p style="color: rgba(255, 255, 255, 0.6); font-size: 14px; margin: 30px 0 0 0;">
         If the button doesn't work, copy and paste this link into your browser:<br>
-        <a href="${data.link}" style="color: #78c708; word-break: break-all;">${data.link}</a>
+        <a href="${data.link}" class="link-text">${data.link}</a>
       </p>
     </div>
   `;
@@ -462,9 +599,9 @@ export function getPasswordResetTemplate(data: EmailTemplateData) {
         </p>
       </div>
 
-      <p style="color: #a0a0a0; font-size: 14px; margin: 30px 0 0 0;">
+      <p style="color: rgba(255, 255, 255, 0.6); font-size: 14px; margin: 30px 0 0 0;">
         If the button doesn't work, copy and paste this link into your browser:<br>
-        <a href="${data.link}" style="color: #78c708; word-break: break-all;">${data.link}</a>
+        <a href="${data.link}" class="link-text">${data.link}</a>
       </p>
     </div>
   `;
@@ -489,7 +626,7 @@ export function getMembershipReminderTemplate(data: EmailTemplateData) {
 
       <div class="highlight">
         <p class="highlight-text">🎯 What you'll lose without membership:</p>
-        <ul style="color: #e0e0e0; text-align: left; margin: 15px 0;">
+        <ul style="color: rgba(255, 255, 255, 0.9); text-align: left; margin: 15px 0;">
           <li>Unlimited CV creation</li>
           <li>Premium templates</li>
           <li>Advanced ATS optimization</li>
@@ -537,7 +674,7 @@ export function getTestEmailTemplate() {
 
       <div class="highlight">
         <p class="highlight-text">✅ Email service is operational</p>
-        <p style="color: #e0e0e0; margin: 10px 0 0 0;">If you received this email, your email configuration is working properly.</p>
+        <p style="color: rgba(255, 255, 255, 0.9); margin: 10px 0 0 0;">If you received this email, your email configuration is working properly.</p>
       </div>
 
       <div class="info">
@@ -547,7 +684,7 @@ export function getTestEmailTemplate() {
         </p>
       </div>
 
-      <p style="color: #a0a0a0; font-size: 14px; margin: 30px 0 0 0;">
+      <p style="color: rgba(255, 255, 255, 0.6); font-size: 14px; margin: 30px 0 0 0;">
         This is an automated test message. No action is required.
       </p>
     </div>
