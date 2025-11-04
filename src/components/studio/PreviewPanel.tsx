@@ -45,7 +45,7 @@ interface PreviewPanelProps {
   coverLetterData?: any;
 }
 
-const PreviewPanel: React.FC<PreviewPanelProps> = ({
+const PreviewPanel = React.forwardRef<HTMLDivElement, PreviewPanelProps>(({
   cvData,
   template,
   jobData,
@@ -61,16 +61,25 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
   onDocumentTypeChange,
   isMasterCV = false,
   coverLetterData
-}) => {
+}, ref) => {
   // Removed console log to prevent toast notifications
   
   const { theme } = useTheme();
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [isDownloading, setIsDownloading] = useState(false);
-  const previewRef = useRef<HTMLDivElement>(null);
+  const internalRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  
+  // Combine refs: use forwarded ref if provided, otherwise use internal ref
+  React.useEffect(() => {
+    if (typeof ref === 'function') {
+      ref(internalRef.current);
+    } else if (ref) {
+      (ref as React.MutableRefObject<HTMLDivElement | null>).current = internalRef.current;
+    }
+  }, [ref]);
 
   // Paper dimensions in pixels (assuming 96 DPI)
   const paperDimensions = {
@@ -349,12 +358,14 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
           paddingBottom: '1rem'
         }}
       >
-        <div ref={previewRef} className="flex items-start justify-center w-full">
+        <div ref={internalRef} className="flex items-start justify-center w-full">
           {documentType === 'cv' ? renderCVPreview() : renderCoverLetterPreview()}
         </div>
       </div>
     </div>
   );
-};
+});
+
+PreviewPanel.displayName = 'PreviewPanel';
 
 export default PreviewPanel;

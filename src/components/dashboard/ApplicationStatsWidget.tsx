@@ -49,7 +49,14 @@ const ApplicationStatsWidget: React.FC<ApplicationStatsWidgetProps> = ({ userId 
         setStats(generateMockStats());
       }
     } catch (error) {
-      console.error('Error fetching application stats:', error);
+      // Safely handle error - check if it's an Event object
+      if (error instanceof Error) {
+        console.error('Error fetching application stats:', error.message);
+      } else if (error && typeof error === 'object' && 'target' in error) {
+        console.error('Error fetching application stats: Event object received');
+      } else {
+        console.error('Error fetching application stats:', String(error));
+      }
       setStats(generateMockStats());
     } finally {
       setLoading(false);
@@ -79,7 +86,7 @@ const ApplicationStatsWidget: React.FC<ApplicationStatsWidgetProps> = ({ userId 
   };
 
   const renderPieChart = () => {
-    const radius = 35;
+    const radius = 28;
     const circumference = 2 * Math.PI * radius;
     
     // Calculate created vs applied ratio
@@ -134,8 +141,8 @@ const ApplicationStatsWidget: React.FC<ApplicationStatsWidgetProps> = ({ userId 
 
 
   return (
-    <div className="glass-widget-premium rounded-xl p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="glass-widget-premium rounded-xl p-6 h-full flex flex-col">
+      <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-gradient-to-br from-purple-400/20 to-purple-500/20 rounded-xl flex items-center justify-center">
             <Target className="h-5 w-5 text-purple-400" />
@@ -149,7 +156,12 @@ const ApplicationStatsWidget: React.FC<ApplicationStatsWidgetProps> = ({ userId 
         <div className="flex items-center gap-2">
           <select
             value={timeRange}
-            onChange={(e) => setTimeRange(e.target.value as '7d' | '30d' | '90d')}
+            onChange={(e) => {
+              const value = e?.target?.value;
+              if (value) {
+                setTimeRange(value as '7d' | '30d' | '90d');
+              }
+            }}
             className="px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white rounded-lg text-sm focus:ring-2 focus:ring-purple-500/50"
           >
             <option value="7d">Last 7 days</option>
@@ -160,15 +172,17 @@ const ApplicationStatsWidget: React.FC<ApplicationStatsWidgetProps> = ({ userId 
       </div>
 
       {/* Pie Chart */}
-      <div className="bg-white/5 rounded-lg">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4 text-center p-4 pb-0">Created vs Applied</h3>
-        <div className="h-60" style={{ height: '240px', minHeight: '240px', maxHeight: '240px' }}>
+      <div className="bg-white/5 rounded-lg flex flex-col">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 text-center p-3 pb-0">Created vs Applied</h3>
+        <div className="flex items-center justify-center" style={{ height: '180px', minHeight: '180px', maxHeight: '180px' }}>
           {loading ? (
             <div className="flex items-center justify-center h-full">
               <div className="w-8 h-8 border-2 border-purple-400 border-t-transparent rounded-full animate-spin"></div>
             </div>
           ) : (
-            renderPieChart()
+            <div className="w-full h-full flex items-center justify-center">
+              {renderPieChart()}
+            </div>
           )}
         </div>
       </div>

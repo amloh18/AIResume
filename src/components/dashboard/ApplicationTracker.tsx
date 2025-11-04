@@ -1426,18 +1426,18 @@ const ApplicationTracker: React.FC = () => {
         ))
         ) : (
           /* List View */
-          <div className="bg-[#141810] rounded-xl overflow-hidden border border-white/10">
+          <div className="bg-white dark:bg-[#141810] rounded-xl overflow-hidden border border-gray-200 dark:border-white/10">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-[#141810]">
+                <thead className="bg-gray-50 dark:bg-[#141810]">
                   <tr>
-                    <th className="px-6 py-4 text-left text-white font-semibold text-sm uppercase tracking-wide">Company Name</th>
-                    <th className="px-6 py-4 text-left text-white font-semibold text-sm uppercase tracking-wide">Job Title</th>
-                    <th className="px-6 py-4 text-left text-white font-semibold text-sm uppercase tracking-wide">Application Date</th>
-                    <th className="px-6 py-4 text-left text-white font-semibold text-sm uppercase tracking-wide">Status</th>
-                    <th className="px-6 py-4 text-left text-white font-semibold text-sm uppercase tracking-wide">Priority</th>
-                    <th className="px-6 py-4 text-left text-white font-semibold text-sm uppercase tracking-wide">Application Journey</th>
-                    <th className="px-6 py-4 text-left text-white font-semibold text-sm uppercase tracking-wide">Actions</th>
+                    <th className="px-6 py-4 text-left text-gray-900 dark:text-white font-semibold text-sm uppercase tracking-wide">Company Name</th>
+                    <th className="px-6 py-4 text-left text-gray-900 dark:text-white font-semibold text-sm uppercase tracking-wide">Job Title</th>
+                    <th className="px-6 py-4 text-left text-gray-900 dark:text-white font-semibold text-sm uppercase tracking-wide">Application Date</th>
+                    <th className="px-6 py-4 text-left text-gray-900 dark:text-white font-semibold text-sm uppercase tracking-wide">Status</th>
+                    <th className="px-6 py-4 text-left text-gray-900 dark:text-white font-semibold text-sm uppercase tracking-wide">Priority</th>
+                    <th className="px-6 py-4 text-left text-gray-900 dark:text-white font-semibold text-sm uppercase tracking-wide">Application Journey</th>
+                    <th className="px-6 py-4 text-left text-gray-900 dark:text-white font-semibold text-sm uppercase tracking-wide">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1451,22 +1451,22 @@ const ApplicationTracker: React.FC = () => {
                     return (
                       <motion.tr
                         key={job.id}
-                        className="border-b border-white/10 hover:bg-white/5 transition-colors cursor-pointer"
+                        className="border-b border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
                         onClick={() => handleJobClick(job)}
-                        whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }}
+                        whileHover={{ backgroundColor: undefined }}
                       >
-                        <td className="px-6 py-4 text-white font-medium">{job.company || 'Unknown Company'}</td>
-                        <td className="px-6 py-4 text-white">{job.jobTitle || 'Untitled Job'}</td>
-                        <td className="px-6 py-4 text-white">
+                        <td className="px-6 py-4 text-gray-900 dark:text-white font-medium">{job.company || 'Unknown Company'}</td>
+                        <td className="px-6 py-4 text-gray-900 dark:text-white">{job.jobTitle || 'Untitled Job'}</td>
+                        <td className="px-6 py-4 text-gray-700 dark:text-white">
                           {job.applicationDate ? new Date(job.applicationDate).toISOString().split('T')[0] : 
                            job.createdAt ? new Date(job.createdAt).toISOString().split('T')[0] : '-'}
                         </td>
                         <td className="px-6 py-4">
                           <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                            job.status === 'applied' ? 'bg-gray-600 text-white' :
-                            job.status === 'interview' ? 'bg-blue-600 text-white' :
-                            job.status === 'offer' ? 'bg-green-600 text-white' :
-                            'bg-gray-600 text-white'
+                            job.status === 'applied' ? 'bg-blue-100 dark:bg-blue-600 text-blue-700 dark:text-white' :
+                            job.status === 'interview' ? 'bg-purple-100 dark:bg-purple-600 text-purple-700 dark:text-white' :
+                            job.status === 'offer' ? 'bg-green-100 dark:bg-green-600 text-green-700 dark:text-white' :
+                            'bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-white'
                           }`}>
                             {job.status === 'applied' ? 'Applied' :
                              job.status === 'interview' ? 'Interviewing' :
@@ -1476,13 +1476,13 @@ const ApplicationTracker: React.FC = () => {
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2">
-                            {job.priority === 'high' && <Zap className="w-4 h-4 text-orange-400" />}
-                            {job.priority === 'medium' && <CheckCircle className="w-4 h-4 text-yellow-400" />}
-                            {job.priority === 'low' && <Clock className="w-4 h-4 text-gray-400" />}
+                            {job.priority === 'high' && <Zap className="w-4 h-4 text-orange-500 dark:text-orange-400" />}
+                            {job.priority === 'medium' && <CheckCircle className="w-4 h-4 text-yellow-500 dark:text-yellow-400" />}
+                            {job.priority === 'low' && <Clock className="w-4 h-4 text-gray-500 dark:text-gray-400" />}
                             <span className={`text-sm font-medium ${
-                              job.priority === 'high' ? 'text-orange-400' :
-                              job.priority === 'medium' ? 'text-yellow-400' :
-                              'text-gray-400'
+                              job.priority === 'high' ? 'text-orange-600 dark:text-orange-400' :
+                              job.priority === 'medium' ? 'text-yellow-600 dark:text-yellow-400' :
+                              'text-gray-600 dark:text-gray-400'
                             }`}>
                               {job.priority ? job.priority.charAt(0).toUpperCase() + job.priority.slice(1) : 'Medium'}
                             </span>
@@ -1492,23 +1492,23 @@ const ApplicationTracker: React.FC = () => {
                           <div className="flex items-center justify-center">
                             {jobJourneys.length > 0 ? (
                               <div className="flex items-center gap-2">
-                                <div className="w-16 bg-white/20 rounded-full h-2 overflow-hidden">
+                                <div className="w-16 bg-gray-200 dark:bg-white/20 rounded-full h-2 overflow-hidden">
                                   <motion.div 
                                     className={`h-2 rounded-full transition-all duration-500 ${
-                                      avgProgress >= 80 ? 'bg-green-400' :
-                                      avgProgress >= 60 ? 'bg-blue-400' :
-                                      avgProgress >= 40 ? 'bg-orange-400' :
-                                      'bg-red-400'
+                                      avgProgress >= 80 ? 'bg-green-500 dark:bg-green-400' :
+                                      avgProgress >= 60 ? 'bg-blue-500 dark:bg-blue-400' :
+                                      avgProgress >= 40 ? 'bg-orange-500 dark:bg-orange-400' :
+                                      'bg-red-500 dark:bg-red-400'
                                     }`}
                                     initial={{ width: 0 }}
                                     animate={{ width: `${avgProgress}%` }}
                                     transition={{ duration: 0.8, ease: "easeOut" }}
                                   />
                                 </div>
-                                <span className="text-white text-xs font-medium">{avgProgress}%</span>
+                                <span className="text-gray-900 dark:text-white text-xs font-medium">{avgProgress}%</span>
                               </div>
                             ) : (
-                              <span className="text-white/40 text-sm">-</span>
+                              <span className="text-gray-400 dark:text-white/40 text-sm">-</span>
                             )}
                           </div>
                         </td>
@@ -1519,7 +1519,7 @@ const ApplicationTracker: React.FC = () => {
                                 e.stopPropagation();
                                 handleEditJob(job);
                               }}
-                              className="text-green-400 hover:text-green-300 text-sm font-medium transition-colors"
+                              className="text-green-600 hover:text-green-700 dark:text-green-400 dark:hover:text-green-300 text-sm font-medium transition-colors"
                               whileHover={{ scale: 1.05 }}
                               whileTap={{ scale: 0.95 }}
                             >
@@ -1530,7 +1530,7 @@ const ApplicationTracker: React.FC = () => {
                                 e.stopPropagation();
                                 // Add delete functionality here if needed
                               }}
-                              className="text-red-400 hover:text-red-300 text-sm font-medium transition-colors"
+                              className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm font-medium transition-colors"
                               whileHover={{ scale: 1.05 }}
                               whileTap={{ scale: 0.95 }}
                             >

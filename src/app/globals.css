@@ -130,8 +130,12 @@ body.dark {
 
 /* Main dashboard background - theme aware */
 .dashboard-page {
-  background: var(--bg-primary);
+  background: #f9fafb; /* Matches bg-gray-50 from layout */
   min-height: 100vh;
+}
+
+.dark .dashboard-page {
+  background: #1a230f; /* Matches dark:bg-[#1a230f] from layout */
 }
 
 /* Dashboard text colors to match design - Dark theme only */
@@ -1167,7 +1171,7 @@ nav {
 
 /* Dashboard widget cards - matching image design */
 .glass-card-premium {
-  background: #f8fafc;
+  background: #f9fafb; /* Matches bg-gray-50 */
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 12px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -1175,7 +1179,7 @@ nav {
 }
 
 .glass-widget-premium {
-  background: #f8fafc;
+  background: #f9fafb; /* Matches bg-gray-50 */
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 12px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);

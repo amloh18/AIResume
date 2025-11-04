@@ -22,12 +22,35 @@ const CookieConsent: React.FC<CookieConsentProps> = ({
   useEffect(() => {
     // Check if user has already made a choice
     const cookieConsent = getCookieConsentStatus();
-    if (!cookieConsent) {
+    
+    // Check for expiry date and clear if expired
+    if (typeof window !== 'undefined') {
+      try {
+        const expiryStr = localStorage.getItem('cookieConsentExpiry');
+        if (expiryStr) {
+          const expiryDate = new Date(expiryStr);
+          if (new Date() > expiryDate) {
+            // Consent has expired, clear it
+            localStorage.removeItem('cookieConsent');
+            localStorage.removeItem('cookieConsentExpiry');
+          }
+        }
+      } catch (error) {
+        console.error('Error checking cookie consent expiry:', error);
+      }
+    }
+    
+    // Only show if no valid consent exists
+    const currentConsent = getCookieConsentStatus();
+    if (!currentConsent) {
       // Show banner after a short delay for better UX
       const timer = setTimeout(() => {
         setIsVisible(true);
       }, 1000);
       return () => clearTimeout(timer);
+    } else {
+      // User has already made a choice, don't show
+      setIsVisible(false);
     }
   }, []);
 
@@ -77,11 +100,12 @@ const CookieConsent: React.FC<CookieConsentProps> = ({
           ease: [0.4, 0, 0.2, 1],
           opacity: { duration: 0.3 }
         }}
-        className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 border-t border-white/10 backdrop-blur-xl"
+        className="fixed bottom-0 left-0 right-0 z-[99999] bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 border-t border-white/10 backdrop-blur-xl"
         style={{
           background: 'rgba(17, 24, 39, 0.95)',
           backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)'
+          WebkitBackdropFilter: 'blur(20px)',
+          zIndex: 99999
         }}
       >
         {/* Glow effect */}
