@@ -233,9 +233,9 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
             
             const signInResult = await Promise.race([
               signIn('passwordless', {
-                email,
-                verificationCode: code,
-                redirect: false
+              email,
+              verificationCode: code,
+              redirect: false
               } as any),
               new Promise((_, reject) => 
                 setTimeout(() => reject(new Error('Sign-in request timed out after 10 seconds')), 10000)
@@ -274,7 +274,7 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
                 } else {
                   // Code is valid but NextAuth sign-in failed - the code was already consumed
                   setError('Code was verified but sign-in failed. The code may have been used. Please request a new code and try again.');
-                }
+            }
               } catch (fetchError: any) {
                 console.error('Failed to fetch verification status:', fetchError);
                 // If the fetch fails, check if it's a network error
@@ -294,7 +294,7 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
             } else if (err.message) {
               setError(err.message);
             } else {
-              setError('Failed to sign you in with the code. Please try again.');
+            setError('Failed to sign you in with the code. Please try again.');
             }
           } finally {
             setIsLoading(false);
