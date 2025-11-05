@@ -82,7 +82,6 @@ export function getCategorizedSkills(skills: (CategorySkill | LegacySkill)[]): C
  */
 export function templateSupportsCategorizedSkills(templateId: string): boolean {
   const categorySupportingTemplates = [
-    'professional-extended',
     'executive-professional',
     'data-driven-pro',
     'elegant-timeline'

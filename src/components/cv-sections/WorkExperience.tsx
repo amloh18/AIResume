@@ -2,7 +2,7 @@ import React from 'react';
 import { Calendar, MapPin, ExternalLink } from 'lucide-react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ISectionBlueprint, ITemplate } from '@/models/Template';
-import { parseFormattedText, formatDate, formatDateRange } from '@/lib/utils/textFormatting';
+import { renderFormattedText, formatDate, formatDateRange } from '@/lib/utils/textFormatting';
 
 interface WorkExperienceProps {
   data: UnifiedCVDataStructure['work'];
@@ -70,14 +70,14 @@ const WorkExperience: React.FC<WorkExperienceProps> = ({
             {job.summary && (
               <div 
                 className="item-summary"
-                dangerouslySetInnerHTML={{ __html: parseFormattedText(job.summary) }}
+                dangerouslySetInnerHTML={{ __html: renderFormattedText(job.summary) }}
               />
             )}
 
             {job.highlights && job.highlights.length > 0 && (
               <ul className="highlight-list">
                 {job.highlights.map((highlight, highlightIndex) => (
-                  <li key={highlightIndex} dangerouslySetInnerHTML={{ __html: parseFormattedText(highlight) }} />
+                  <li key={highlightIndex} dangerouslySetInnerHTML={{ __html: renderFormattedText(highlight) }} />
                 ))}
               </ul>
             )}

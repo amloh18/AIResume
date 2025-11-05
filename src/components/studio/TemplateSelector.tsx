@@ -3,7 +3,7 @@ import { ChevronRight, Eye, Star, Crown, Check, Loader2, Palette } from 'lucide-
 import { ITemplate } from '@/types/template';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { generateTemplatePreview } from '@/lib/templates/template-renderer';
-import { HARDCODED_TEMPLATES, generateHardcodedTemplatePreview } from '@/lib/templates/hardcoded-templates';
+import { HARDCODED_TEMPLATES, generateHardcodedTemplatePreview, resolveTemplateThumbnails } from '@/lib/templates/hardcoded-templates';
 import CVPreviewContent from './CVPreviewContent';
 import TemplateRenderer from '@/lib/templates/template-renderer';
 import { useTemplateStore } from '@/lib/stores/templateStore';
@@ -34,7 +34,9 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
         setLoading(true);
         
         // Only use hardcoded templates - skip database fetch
-        setTemplates(HARDCODED_TEMPLATES);
+        // Resolve thumbnails at runtime to ensure S3 URLs are properly set
+        const resolvedTemplates = resolveTemplateThumbnails(HARDCODED_TEMPLATES);
+        setTemplates(resolvedTemplates);
         setLoading(false);
       } catch (err) {
         console.error('Error loading templates:', err);
@@ -174,6 +176,27 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
                   src={template.thumbnail}
                   alt={`${template.name} preview`}
                   className="template-thumbnail"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    const currentSrc = target.src;
+                    
+                    // Only try S3 fallback if currently loading from local path
+                    if (!currentSrc.includes('s3.') && !currentSrc.includes('amazonaws.com')) {
+                      // Extract filename from template thumbnail
+                      const filename = template.thumbnail.split('/').pop() || '';
+                      
+                      // Try S3 fallback
+                      const s3BaseUrl = process.env.NEXT_PUBLIC_S3_BASE_URL;
+                      if (s3BaseUrl) {
+                        const s3Url = `${s3BaseUrl}/${encodeURIComponent(filename)}`;
+                        console.log('Template thumbnail falling back to S3:', s3Url);
+                        target.src = s3Url;
+                      } else {
+                        // No S3 URL configured - no fallback available
+                        console.error('Template thumbnail failed to load and no S3 fallback available:', template.thumbnail);
+                      }
+                    }
+                  }}
                 />
               ) : (
                 <div className={`template-placeholder bg-gradient-to-br ${getCategoryColor(template.categories)}`}>

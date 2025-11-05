@@ -100,7 +100,7 @@ const jobSchema = new Schema<IJob>({
   jobDescription: {
     type: String,
     trim: true,
-    maxlength: [10000, 'Job description cannot exceed 10000 characters']
+    maxlength: [50000, 'Job description cannot exceed 50000 characters']
   },
   location: {
     type: String,

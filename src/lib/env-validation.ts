@@ -58,6 +58,12 @@ interface EnvConfig {
   // File Upload
   UPLOAD_DIR: string;
   
+  // AWS S3 (Required for file storage)
+  AWS_ACCESS_KEY_ID: string;
+  AWS_SECRET_ACCESS_KEY: string;
+  AWS_S3_REGION: string;
+  AWS_S3_BUCKET_NAME: string;
+  
   // Optional Services
   SENDGRID_API_KEY?: string;
   SENDGRID_FROM_EMAIL?: string;
@@ -66,10 +72,8 @@ interface EnvConfig {
   AWS_SES_ACCESS_KEY_ID?: string;
   AWS_SES_SECRET_ACCESS_KEY?: string;
   AWS_SES_REGION?: string;
-  AWS_ACCESS_KEY_ID?: string;
-  AWS_SECRET_ACCESS_KEY?: string;
-  AWS_REGION?: string;
-  AWS_S3_BUCKET?: string;
+  NEXT_PUBLIC_HERO_BANNER_S3_URL?: string;
+  NEXT_PUBLIC_S3_BASE_URL?: string;
 }
 
 const REQUIRED_VARS: (keyof EnvConfig)[] = [
@@ -102,7 +106,11 @@ const REQUIRED_VARS: (keyof EnvConfig)[] = [
   'FIREBASE_PROJECT_ID',
   'FIREBASE_CLIENT_EMAIL',
   'FIREBASE_PRIVATE_KEY',
-  'UPLOAD_DIR'
+  'UPLOAD_DIR',
+  'AWS_ACCESS_KEY_ID',
+  'AWS_SECRET_ACCESS_KEY',
+  'AWS_S3_REGION',
+  'AWS_S3_BUCKET_NAME'
 ];
 
 const PRODUCTION_VARS: (keyof EnvConfig)[] = [

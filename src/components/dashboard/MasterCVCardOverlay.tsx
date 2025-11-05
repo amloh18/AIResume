@@ -103,6 +103,8 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
         cvData: masterCVData.cvData ? 'Present' : 'Missing'
       });
       setMasterCV(masterCVData);
+      // Initialize thumbnail from masterCVData.thumbnail or metadata.thumbnailUrl
+      setThumbnailUrl(masterCVData.thumbnail || masterCVData.metadata?.thumbnailUrl || null);
       setLoading(false);
       setError(null);
     } else if (userId) {
@@ -267,7 +269,8 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
         });
         
         setMasterCV(transformedMasterCV);
-        setThumbnailUrl(transformedMasterCV.thumbnail || null);
+        // Initialize thumbnail from thumbnail or metadata.thumbnailUrl
+        setThumbnailUrl(transformedMasterCV.thumbnail || transformedMasterCV.metadata?.thumbnailUrl || null);
       } else {
         console.log('❌ MasterCVCardOverlay - No master CV found');
         setError('No master CV found');
@@ -430,21 +433,15 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
              style={{
                backgroundImage: thumbnailUrl ? `url(${thumbnailUrl})` : 'none'
              }}>
-          {/* Master CV Preview */}
-          {masterCV?.cvData && masterCV?.template && masterCV.template.globalStyles ? (
-            <CVPreviewThumbnail 
-              cvData={masterCV.cvData}
-              template={masterCV.template}
-              className="rounded-xl"
-            />
-          ) : thumbnailUrl ? (
+          {/* Master CV Preview - Prioritize S3 thumbnail for performance */}
+          {thumbnailUrl ? (
             <img
               src={thumbnailUrl}
               alt={`Master CV Preview: ${masterCV.title}`}
               className="w-full h-full object-cover rounded-xl"
               loading="lazy"
               onError={(e) => {
-                // If S3 URL fails, try to get presigned URL
+                // If S3 URL fails, try to get presigned URL first
                 const target = e.target as HTMLImageElement;
                 const currentSrc = target.src;
                 if (currentSrc.includes('s3.amazonaws.com') || currentSrc.includes('s3.')) {
@@ -454,14 +451,28 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
                     .then(data => {
                       if (data.url) {
                         target.src = data.url;
+                      } else {
+                        // If presigned URL fails, fallback to live rendering
+                        setThumbnailUrl(null);
                       }
                     })
                     .catch(() => {
-                      // Fallback: keep original URL or show error
-                      console.error('Failed to fetch presigned URL for thumbnail');
+                      // If all S3 attempts fail, fallback to live rendering
+                      console.error('Failed to fetch presigned URL for thumbnail, falling back to live rendering');
+                      setThumbnailUrl(null);
                     });
+                } else {
+                  // For non-S3 URLs, if they fail, try live rendering
+                  setThumbnailUrl(null);
                 }
               }}
+            />
+          ) : masterCV?.cvData && masterCV?.template && masterCV.template.globalStyles ? (
+            // Fallback to live rendering if thumbnail is not available
+            <CVPreviewThumbnail 
+              cvData={masterCV.cvData}
+              template={masterCV.template}
+              className="rounded-xl"
             />
           ) : thumbnailLoading ? (
             /* Loading state */

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { renderFormattedText } from '@/lib/utils/textFormatting';
 
 interface ProfessionalExtendedTemplateProps {
   cvData: UnifiedCVDataStructure;
@@ -395,13 +396,19 @@ export const ProfessionalExtendedTemplate: React.FC<ProfessionalExtendedTemplate
                     </div>
                   </div>
                   {job.summary && (
-                    <div className="job-description">{job.summary}</div>
+                    <div 
+                      className="job-description"
+                      dangerouslySetInnerHTML={{ __html: renderFormattedText(job.summary) }}
+                    />
                   )}
                   {job.highlights && job.highlights.length > 0 && (
                     <div className="job-description">
                       <ul>
                         {job.highlights.map((highlight, highlightIndex) => (
-                          <li key={highlightIndex}>{highlight}</li>
+                          <li 
+                            key={highlightIndex}
+                            dangerouslySetInnerHTML={{ __html: renderFormattedText(highlight) }}
+                          />
                         ))}
                       </ul>
                     </div>

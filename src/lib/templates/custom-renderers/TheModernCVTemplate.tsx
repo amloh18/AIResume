@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { renderFormattedText } from '@/lib/utils/textFormatting';
 
 interface TheModernCVTemplateProps {
   cvData: UnifiedCVDataStructure;
@@ -350,7 +351,12 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
                     <h4 className="job-title">{job.position}</h4>
                     <p className="company-info">{job.name} | {job.startDate} – {job.endDate}</p>
                     <ul className="bullet-list">
-                      {job.highlights?.map((hl, idx) => <li key={idx}>{hl}</li>)}
+                      {job.highlights?.map((hl, idx) => (
+                        <li 
+                          key={idx}
+                          dangerouslySetInnerHTML={{ __html: renderFormattedText(hl) }}
+                        />
+                      ))}
                     </ul>
                   </div>
                 ))}

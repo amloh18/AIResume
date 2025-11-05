@@ -144,14 +144,23 @@ const WYSIWYGEditor: React.FC<WYSIWYGEditorProps> = ({
         [contenteditable] li {
           margin: 0.25rem 0;
         }
-        [contenteditable] strong {
-          font-weight: bold;
+        /* Ensure bold shows actual bold text, not markdown */
+        [contenteditable] strong,
+        [contenteditable] b {
+          font-weight: bold !important;
         }
-        [contenteditable] em {
-          font-style: italic;
+        /* Ensure italic shows actual italic text, not markdown */
+        [contenteditable] em,
+        [contenteditable] i {
+          font-style: italic !important;
         }
+        /* Ensure underline shows actual underline */
         [contenteditable] u {
-          text-decoration: underline;
+          text-decoration: underline !important;
+        }
+        /* Ensure formatting is visible and not stripped */
+        [contenteditable] p {
+          margin: 0.5rem 0;
         }
       `}</style>
     </div>

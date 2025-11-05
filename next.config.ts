@@ -198,10 +198,21 @@ const nextConfig: NextConfig = {
   },
   images: {
     domains: ['ui-avatars.com', 'placehold.co', 'lh3.googleusercontent.com', 'logo.clearbit.com'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '*.s3.*.amazonaws.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.s3.amazonaws.com',
+      },
+    ],
   },
   // Performance optimizations
   experimental: {
-    optimizeCss: true,
+    // Disable aggressive CSS optimization to prevent preload warnings
+    optimizeCss: false,
     optimizePackageImports: ['lucide-react', 'lottie-react'],
   },
   

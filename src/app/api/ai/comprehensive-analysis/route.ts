@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
-// Initialize Gemini AI
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+import { callAIWithFallback, hasAIApiKeys } from '@/lib/utils/ai-api-helper';
 
 export async function POST(request: NextRequest) {
   let cvData: any;
@@ -20,6 +17,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Normalize job description field (handle both jobDescription and description)
+    const jobDescription = jobData?.jobDescription || jobData?.description || '';
+    const jobTitle = jobData?.title || jobData?.jobTitle || 'Position';
+    const company = jobData?.company || jobData?.companyName || 'Company';
+    
+    console.log('📊 Comprehensive Analysis - Job data:', {
+      hasJobData: !!jobData,
+      jobTitle,
+      company,
+      hasDescription: !!jobDescription,
+      descriptionLength: jobDescription.length
+    });
+
     // Create comprehensive analysis prompt
     const analysisPrompt = `
 You are an expert CV/resume analyst and career coach. Please provide a comprehensive analysis of this CV against the job requirements.
@@ -27,8 +37,19 @@ You are an expert CV/resume analyst and career coach. Please provide a comprehen
 CV Data:
 ${JSON.stringify(cvData, null, 2)}
 
-Job Data:
-${jobData ? JSON.stringify(jobData, null, 2) : 'No specific job data provided'}
+${jobData ? `
+TARGET JOB INFORMATION:
+Job Title: ${jobTitle}
+Company: ${company}
+Job Description:
+${jobDescription || 'No job description provided'}
+
+IMPORTANT: Analyze the CV specifically against the job description above. Focus on:
+- Matching skills and keywords from the job description
+- Identifying gaps between CV and job requirements
+- Providing job-specific recommendations
+- Tailoring suggestions to align with the job description
+` : 'No specific job data provided - provide general CV analysis'}
 
 Please provide a detailed analysis in the following JSON format:
 
@@ -87,12 +108,23 @@ Guidelines:
 7. Make suggestions job-specific when job data is available
 `;
 
-    // Generate analysis using Gemini
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    // Check if AI API keys are available
+    if (!hasAIApiKeys()) {
+      return NextResponse.json(
+        { success: false, error: 'AI API keys not configured (ChatGPT_API_KEY or PERPLEXITY_API_KEY)' },
+        { status: 500 }
+      );
+    }
+
+    // Generate analysis using AI API
+    const aiResponse = await callAIWithFallback({
+      prompt: analysisPrompt,
+      systemPrompt: 'You are an expert CV/resume analyst and career coach. Provide detailed analysis in JSON format.',
+      temperature: 0.7,
+      maxTokens: 4096
+    });
     
-    const result = await model.generateContent(analysisPrompt);
-    const response = await result.response;
-    const content = response.text();
+    const content = aiResponse.content;
 
     if (!content) {
       return NextResponse.json(
@@ -124,7 +156,31 @@ Guidelines:
     });
 
   } catch (error) {
-    console.error('Comprehensive analysis error:', error);
+    // Safely extract error message (handle Event objects)
+    let errorMessage = 'Unknown error';
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    } else if (error && typeof error === 'object') {
+      // Check if it's an Event object
+      if (error instanceof Event || ('target' in error && 'preventDefault' in error)) {
+        errorMessage = 'Resource loading error occurred';
+        console.error('Comprehensive analysis error: Event object caught:', {
+          type: (error as Event).type,
+          target: (error as Event).target
+        });
+      } else {
+        // Try to stringify safely
+        try {
+          errorMessage = JSON.stringify(error);
+        } catch {
+          errorMessage = String(error);
+        }
+      }
+    } else {
+      errorMessage = String(error);
+    }
+    
+    console.error('Comprehensive analysis error:', errorMessage);
     
     // Return fallback analysis
     const fallbackAnalysis = generateFallbackAnalysis(cvData, jobData);
@@ -133,15 +189,19 @@ Guidelines:
       success: true,
       data: fallbackAnalysis,
       timestamp: new Date().toISOString(),
-      note: 'Using fallback analysis due to AI service unavailability'
+      note: 'Using fallback analysis due to AI service unavailability',
+      error: errorMessage
     });
   }
 }
 
 function generateFallbackAnalysis(cvData: any, jobData: any) {
+  // Normalize job description field
+  const jobDescription = jobData?.jobDescription || jobData?.description || '';
+  
   // Extract basic information from CV
   const cvText = JSON.stringify(cvData).toLowerCase();
-  const jobText = jobData ? JSON.stringify(jobData).toLowerCase() : '';
+  const jobText = jobDescription.toLowerCase() || (jobData ? JSON.stringify(jobData).toLowerCase() : '');
   
   // Simple keyword matching
   const commonKeywords = ['javascript', 'react', 'node', 'python', 'java', 'aws', 'docker', 'git', 'agile', 'leadership', 'communication', 'project management'];
