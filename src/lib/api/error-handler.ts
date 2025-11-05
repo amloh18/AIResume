@@ -75,6 +75,25 @@ interface ErrorResponse {
  * Convert any error to standard API error response
  */
 export function handleAPIError(error: unknown): ErrorResponse {
+  // Check for Event objects first (common cause of [object Event] errors)
+  if (error && typeof error === 'object') {
+    if (error instanceof Event || ('target' in error && 'preventDefault' in error)) {
+      console.error('Event object caught in API error handler:', {
+        type: (error as Event).type,
+        target: (error as Event).target
+      });
+      return {
+        success: false,
+        error: {
+          message: 'Resource loading error occurred',
+          code: 'RESOURCE_ERROR',
+          details: 'An error occurred while loading a resource'
+        },
+        statusCode: 500,
+      };
+    }
+  }
+  
   // Zod validation errors
   if (error instanceof ZodError) {
     return {
@@ -164,11 +183,27 @@ export function handleAPIError(error: unknown): ErrorResponse {
     };
   }
 
-  // Unknown errors
+  // Unknown errors - safely handle any type
+  let errorMessage = 'An unknown error occurred';
+  if (error && typeof error === 'object') {
+    // Try to extract meaningful information
+    try {
+      if ('message' in error && typeof error.message === 'string') {
+        errorMessage = error.message;
+      } else {
+        errorMessage = JSON.stringify(error);
+      }
+    } catch {
+      errorMessage = String(error);
+    }
+  } else {
+    errorMessage = String(error);
+  }
+  
   return {
     success: false,
     error: {
-      message: 'An unknown error occurred',
+      message: errorMessage,
       code: 'UNKNOWN_ERROR',
     },
     statusCode: 500,
@@ -179,7 +214,16 @@ export function handleAPIError(error: unknown): ErrorResponse {
  * Create NextResponse from error
  */
 export function createErrorResponse(error: unknown): NextResponse {
-  const errorResponse = handleAPIError(error);
+  // Safely handle Event objects before processing
+  let safeError = error;
+  if (error && typeof error === 'object') {
+    if (error instanceof Event || ('target' in error && 'preventDefault' in error)) {
+      // Convert Event object to Error
+      safeError = new Error('Resource loading error occurred');
+    }
+  }
+  
+  const errorResponse = handleAPIError(safeError);
   
   return NextResponse.json(
     {

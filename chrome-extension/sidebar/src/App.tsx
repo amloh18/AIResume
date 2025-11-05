@@ -1,28 +1,32 @@
+import { useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import SidebarContainer from './components/SidebarContainer';
 import AuthPage from './components/AuthPage';
 import JobDashboardSidebar from './components/JobDashboardSidebar';
-import JobModalSidebar from './components/JobModalSidebar';
 import EditJobModalSidebar from './components/EditJobModalSidebar';
 import ManualCaptureModalSidebar from './components/ManualCaptureModalSidebar';
 import ExtensionSettings from './components/ExtensionSettings';
 import { useExtensionAuth } from './hooks/useExtensionAuth';
 
 function App() {
-  const { isAuthenticated, isLoading } = useExtensionAuth();
+  const { isAuthenticated, isLoading, refreshAuth } = useExtensionAuth();
   
-  // Log for debugging
-  if (typeof window !== 'undefined') {
-    console.log('✅ CVCircle Sidebar App loaded', { isAuthenticated, isLoading });
-  }
+  // Refresh auth when app loads
+  useEffect(() => {
+    console.log('🔄 App mounted, checking authentication...');
+    refreshAuth();
+  }, [refreshAuth]);
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-lime-500"></div>
+      <div className="flex flex-col items-center justify-center h-screen bg-dark-bg">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-lime-500 mb-4"></div>
+        <p className="text-sm text-white/70">Checking authentication...</p>
       </div>
     );
   }
+
+  console.log('✅ CVCircle Sidebar App ready', { isAuthenticated });
 
   return (
     <HashRouter>
@@ -36,9 +40,9 @@ function App() {
             path="/extension/dashboard" 
             element={isAuthenticated ? <JobDashboardSidebar /> : <Navigate to="/extension/auth" replace />} 
           />
-          <Route 
-            path="/extension/job/new" 
-            element={isAuthenticated ? <JobModalSidebar /> : <Navigate to="/extension/auth" replace />} 
+          <Route
+            path="/extension/job/new"
+            element={isAuthenticated ? <EditJobModalSidebar isNewJob={true} /> : <Navigate to="/extension/auth" replace />}
           />
           <Route 
             path="/extension/job/:id" 

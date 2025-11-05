@@ -10,74 +10,6 @@ interface AuthResult {
 }
 
 class AuthService {
-  private async getApiBaseUrl(): Promise<string> {
-    return new Promise((resolve) => {
-      if (typeof chrome !== 'undefined' && chrome.runtime) {
-        try {
-          chrome.runtime.sendMessage(
-            { action: 'getEnvironment' },
-            (response: any) => {
-              // Check for runtime errors (context invalidation)
-              if (chrome.runtime.lastError) {
-                const errorMessage = chrome.runtime.lastError.message;
-                if (errorMessage?.includes('Extension context invalidated')) {
-                  console.warn('⚠️ Extension context invalidated, using default API URL');
-                  resolve('https://www.cvcircle.io');
-                  return;
-                }
-              }
-              
-              if (response && response.apiBaseUrl) {
-                resolve(response.apiBaseUrl);
-              } else {
-                resolve('https://www.cvcircle.io');
-              }
-            }
-          );
-        } catch (error: any) {
-          console.warn('⚠️ Error getting API URL, using default:', error);
-          resolve('https://www.cvcircle.io');
-        }
-      } else {
-        resolve('http://localhost:3000');
-      }
-    });
-  }
-
-  private async getAuthToken(userId: string): Promise<string> {
-    return new Promise((resolve, reject) => {
-      if (typeof chrome !== 'undefined' && chrome.runtime) {
-        try {
-          chrome.runtime.sendMessage(
-            { action: 'generateJWT', userId },
-            (response: any) => {
-              // Check for runtime errors (context invalidation)
-              if (chrome.runtime.lastError) {
-                const errorMessage = chrome.runtime.lastError.message;
-                if (errorMessage?.includes('Extension context invalidated')) {
-                  reject(new Error('Extension context invalidated. Please reload the extension.'));
-                  return;
-                }
-                reject(new Error(errorMessage || 'Unknown error'));
-                return;
-              }
-              
-              if (response?.success && response?.token) {
-                resolve(response.token);
-              } else {
-                reject(new Error(response?.error || 'Failed to generate token'));
-              }
-            }
-          );
-        } catch (error: any) {
-          reject(new Error(error.message || 'Failed to send message to background script'));
-        }
-      } else {
-        reject(new Error('Chrome runtime not available'));
-      }
-    });
-  }
-
   async loginWithPassword(email: string, password: string): Promise<AuthResult> {
     try {
       // Route through background script to handle cookies properly
@@ -123,11 +55,6 @@ class AuthService {
       console.error('Login error:', error);
       return { success: false, error: error.message || 'An error occurred' };
     }
-  }
-
-  private async loginWithCredentials(email: string, password: string): Promise<AuthResult> {
-    // This is now handled by loginWithPassword via background script
-    return this.loginWithPassword(email, password);
   }
 
   async sendCode(email: string): Promise<AuthResult> {

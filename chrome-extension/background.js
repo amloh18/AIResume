@@ -438,7 +438,7 @@ async function getSessionFromServer() {
     }
     
     const json = await resp.json();
-    console.log('✅ Session data received from server:', json);
+    console.log('✅ Session data received from server:', JSON.stringify(json).substring(0, 200));
     
     // Save session to storage for quick lookup
     await chrome.storage.local.set({ 
@@ -578,15 +578,29 @@ async function getSessionFromCookies() {
 // Handle session retrieval
 async function handleGetSession(sendResponse) {
   try {
-    console.log('🔍 Handling session request...');
-    
     // Try return cached session first (if fresh)
-    const store = await chrome.storage.local.get(['session', 'sessionRetrievedAt']);
-    if (store.session && ((Date.now() - (store.sessionRetrievedAt || 0)) < 5 * 60 * 1000)) {
-      console.log('✅ Returning cached session');
+    const store = await chrome.storage.local.get(['session', 'sessionRetrievedAt', 'isAuthenticated', 'userData']);
+    
+    // If we have stored auth from extension login, return it
+    if (store.isAuthenticated && store.userData && store.userData.id) {
+      sendResponse({
+        success: true,
+        session: {
+          user: store.userData,
+          isAuthenticated: true
+        },
+        user: store.userData,
+        isAuthenticated: true,
+        cached: true
+      });
+      return;
+    }
+    
+    // Check cached server session (if fresh)
+    if (store.session && store.session.user && ((Date.now() - (store.sessionRetrievedAt || 0)) < 5 * 60 * 1000)) {
       const session = store.session;
-      sendResponse({ 
-        success: true, 
+      sendResponse({
+        success: true,
         session: {
           user: session.user,
           isAuthenticated: !!session.user
@@ -598,10 +612,10 @@ async function handleGetSession(sendResponse) {
       return;
     }
     
-    // Otherwise fetch from server
+    // Otherwise fetch from server (website session)
     const session = await getSessionFromServer();
     
-    if (session && session.isAuthenticated) {
+    if (session && session.isAuthenticated && session.user) {
       // Store user data locally
       await chrome.storage.local.set({
         userData: session.user,
@@ -609,9 +623,8 @@ async function handleGetSession(sendResponse) {
         lastSessionCheck: Date.now()
       });
       
-      console.log('✅ Session found, user authenticated');
-      sendResponse({ 
-        success: true, 
+      sendResponse({
+        success: true,
         session: {
           user: session.user,
           isAuthenticated: true
@@ -621,38 +634,20 @@ async function handleGetSession(sendResponse) {
         cached: false
       });
     } else {
-      // Check if we have stored auth data as fallback
-      const stored = await chrome.storage.local.get(['isAuthenticated', 'userData']);
-      if (stored.isAuthenticated && stored.userData) {
-        console.log('✅ Using stored auth data');
-        sendResponse({ 
-          success: true, 
-          session: {
-            user: stored.userData,
-            isAuthenticated: true
-          },
-          user: stored.userData,
-          isAuthenticated: true,
-          cached: true
-        });
-        return;
-      }
-      
-      // Clear stored data
-      await chrome.storage.local.remove(['userData', 'isAuthenticated', 'session']);
-      console.log('❌ No valid session found');
-      sendResponse({ 
-        success: false, 
+      // No session found - this is normal for logged-out users
+      // Don't spam the console
+      sendResponse({
+        success: false,
         session: null,
-        message: 'No valid session found',
+        message: 'Not authenticated',
         isAuthenticated: false,
         cached: false
       });
     }
   } catch (error) {
     console.error('❌ Error handling session:', error);
-    sendResponse({ 
-      success: false, 
+    sendResponse({
+      success: false,
       session: null,
       message: 'Session check failed',
       isAuthenticated: false,
@@ -1141,144 +1136,41 @@ async function handleLoginWithPassword(request, sendResponse) {
     const { email, password } = request;
     
     if (!email || !password) {
+      console.error('❌ Missing email or password');
       sendResponse({ success: false, error: 'Email and password are required' });
       return;
     }
     
-    console.log('🔐 Handling login with password for:', email);
+    console.log('🔐 Extension login attempt for:', email);
+    console.log('🔐 Using API URL:', API_BASE_URL);
     
-    // Get cookies for API request
-    const apiUrl = `${API_BASE_URL}/api/auth/verify-and-signin`;
-    const cookies = await getCookiesForRequest(apiUrl);
-    const cookieHeader = cookies && cookies.length > 0 ? buildCookieHeader(cookies) : '';
-    
-    // Prepare headers
-    const headers = {
-      'Content-Type': 'application/json'
-    };
-    
-    // Add Cookie header if we have cookies
-    if (cookieHeader) {
-      headers['Cookie'] = cookieHeader;
-    }
-    
-    // First, get CSRF token from NextAuth
-    const csrfUrl = `${API_BASE_URL}/api/auth/csrf`;
-    let csrfToken = '';
-    
-    try {
-      const csrfResponse = await fetch(csrfUrl, {
-        method: 'GET',
-        headers: cookieHeader ? { 'Cookie': cookieHeader } : {},
-        credentials: 'include'
-      });
-      
-      if (csrfResponse.ok) {
-        const csrfData = await csrfResponse.json();
-        csrfToken = csrfData.csrfToken || '';
-      }
-    } catch (e) {
-      console.warn('Could not get CSRF token, continuing without it');
-    }
-    
-    // Use NextAuth signin endpoint with credentials
-    // NextAuth credentials provider uses /api/auth/callback/credentials
-    const signinUrl = `${API_BASE_URL}/api/auth/callback/credentials`;
-    
-    // Create form data for NextAuth credentials
-    const formData = new URLSearchParams();
-    formData.append('email', email);
-    formData.append('password', password);
-    formData.append('redirect', 'false');
-    formData.append('json', 'true');
-    formData.append('csrfToken', csrfToken);
-    
-    // Update headers for form data
-    const formHeaders = {
-      'Content-Type': 'application/x-www-form-urlencoded'
-    };
-    if (cookieHeader) {
-      formHeaders['Cookie'] = cookieHeader;
-    }
+    // Use the new extension-signin endpoint
+    const signinUrl = `${API_BASE_URL}/api/auth/extension-signin`;
+    console.log('🔐 Signin URL:', signinUrl);
     
     const signinResponse = await fetch(signinUrl, {
       method: 'POST',
-      headers: formHeaders,
-      credentials: 'include',
-      body: formData.toString(),
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ email, password }),
     });
     
-    let userId = null;
-    let userEmail = email;
-    let userName = email;
+    console.log('🔐 Signin response status:', signinResponse.status);
     
-    // Check response
-    if (signinResponse.ok) {
-      const result = await signinResponse.json();
-      // NextAuth returns different formats, check for user
-      if (result.user && result.user.id) {
-        userId = result.user.id;
-        userEmail = result.user.email || email;
-        userName = result.user.name || email;
-      } else if (result.id) {
-        userId = result.id;
-        userEmail = result.email || email;
-        userName = result.name || email;
-      } else if (result.ok) {
-        // NextAuth might return { ok: true } on success, check session
-        // Try to get session to get user ID
-        const sessionUrl = `${API_BASE_URL}/api/auth/session`;
-        const sessionCookies = await getCookiesForRequest(sessionUrl);
-        const sessionCookieHeader = sessionCookies && sessionCookies.length > 0 ? buildCookieHeader(sessionCookies) : '';
-        
-        const sessionHeaders = {};
-        if (sessionCookieHeader) {
-          sessionHeaders['Cookie'] = sessionCookieHeader;
-        }
-        
-        const sessionResponse = await fetch(sessionUrl, {
-          method: 'GET',
-          headers: sessionHeaders,
-          credentials: 'include'
-        });
-        
-        if (sessionResponse.ok) {
-          const sessionData = await sessionResponse.json();
-          if (sessionData.user && sessionData.user.id) {
-            userId = sessionData.user.id;
-            userEmail = sessionData.user.email || email;
-            userName = sessionData.user.name || email;
-          }
-        }
-      }
-    }
+    const result = await signinResponse.json();
+    console.log('🔐 Signin response data:', result);
     
-    // If NextAuth signin didn't work, return error
-    if (!userId) {
-      // Try to get error details from response
-      let errorMsg = 'Invalid credentials. Please check your email and password.';
-      try {
-        const errorText = await signinResponse.text();
-        try {
-          const errorData = JSON.parse(errorText);
-          errorMsg = errorData.error || errorData.message || errorMsg;
-        } catch (e) {
-          // Not JSON, use default
-        }
-      } catch (e) {
-        // Use default error message
-      }
-      sendResponse({ 
-        success: false, 
-        error: errorMsg
-      });
-      return;
-    }
-    
-    // We have a user ID, generate extension token
-    if (userId) {
+    if (result.success && result.user) {
+      const userId = result.user.id;
+      const userEmail = result.user.email;
+      const userName = result.user.name;
+      
+      console.log('✅ User authenticated, generating token for:', userId);
+      
       // Generate extension token
       const tokenResult = await generateJWTToken(userId);
+      console.log('🔐 Token generation result:', tokenResult?.success ? 'SUCCESS' : 'FAILED');
       
       if (tokenResult && tokenResult.success) {
         // Store auth data
@@ -1292,6 +1184,8 @@ async function handleLoginWithPassword(request, sendResponse) {
           authToken: tokenResult.token
         });
         
+        console.log('✅ Auth data stored in chrome.storage');
+        
         // Broadcast session update
         await broadcastSessionUpdate({
           user: {
@@ -1301,6 +1195,8 @@ async function handleLoginWithPassword(request, sendResponse) {
           },
           isAuthenticated: true
         });
+        
+        console.log('✅ Extension login successful - broadcasting to tabs');
         
         sendResponse({
           success: true,
@@ -1312,22 +1208,16 @@ async function handleLoginWithPassword(request, sendResponse) {
           token: tokenResult.token
         });
       } else {
-        sendResponse({ success: false, error: tokenResult?.error || 'Failed to generate token' });
+        console.error('❌ Failed to generate token:', tokenResult?.error);
+        sendResponse({ success: false, error: tokenResult?.error || 'Failed to generate authentication token' });
       }
     } else {
-      // Try to get error details from response
-      let errorMsg = 'Invalid credentials. Please check your email and password.';
-      try {
-        const errorData = await signinResponse.json();
-        errorMsg = errorData.error || errorData.message || errorMsg;
-      } catch (e) {
-        // Use default error message
-      }
-      sendResponse({ success: false, error: errorMsg });
+      console.error('❌ Login failed - API returned:', result);
+      sendResponse({ success: false, error: result.error || 'Invalid credentials. Please check your email and password.' });
     }
   } catch (error) {
-    console.error('❌ Login error:', error);
-    sendResponse({ success: false, error: error.message || 'Login failed' });
+    console.error('❌ Login exception:', error);
+    sendResponse({ success: false, error: error.message || 'Login failed. Please check your internet connection and try again.' });
   }
 }
 

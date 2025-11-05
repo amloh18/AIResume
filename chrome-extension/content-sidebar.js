@@ -462,65 +462,237 @@ function handleIframeMessage(event) {
   if (event.data.type === 'EXTENSION_SIDEBAR_CLOSE') {
     toggleSidebar(false);
   } else if (event.data.type === 'REQUEST_JOB_DATA') {
+    // Force fresh extraction when forceRefresh is true
+    const forceRefresh = event.data.forceRefresh === true;
+    console.log(forceRefresh ? '🔄 Force refreshing job data...' : '📊 Extracting job data...');
+    
     extractJobData().then(data => {
       if (sidebarIframe && sidebarIframe.contentWindow) {
         sidebarIframe.contentWindow.postMessage({
           type: 'JOB_DATA_EXTRACTED',
-          jobData: data
+          jobData: data,
+          forceRefresh: forceRefresh
+        }, '*');
+      }
+    }).catch(error => {
+      console.error('❌ Error extracting job data:', error);
+      if (sidebarIframe && sidebarIframe.contentWindow) {
+        sidebarIframe.contentWindow.postMessage({
+          type: 'JOB_DATA_EXTRACTED',
+          jobData: null,
+          error: error.message
         }, '*');
       }
     });
   }
 }
 
-// Extract job data from current page
+// Extract job data from current page with enhanced selectors
 async function extractJobData() {
   const hostname = window.location.hostname.toLowerCase();
   const data = {
     title: '',
+    jobTitle: '',
     company: '',
     location: '',
     description: '',
+    jobDescription: '',
     url: window.location.href,
+    jobUrl: window.location.href,
     source: hostname,
+    extractedAt: new Date().toISOString(),
   };
 
-  // LinkedIn
+  // Helper function to try multiple selectors
+  const trySelectors = (selectors) => {
+    for (const selector of selectors) {
+      try {
+        const el = document.querySelector(selector);
+        if (el && el.textContent && el.textContent.trim()) {
+          return el.textContent.trim();
+        }
+      } catch (e) {
+        // Selector might be invalid, continue
+      }
+    }
+    return '';
+  };
+
+  // LinkedIn - Most comprehensive selectors
   if (hostname.includes('linkedin')) {
-    const titleEl = document.querySelector('h1[data-test-id="job-title"], .jobs-unified-top-card__job-title, .job-details-jobs-unified-top-card__job-title');
-    const companyEl = document.querySelector('.jobs-unified-top-card__company-name, .job-details-jobs-unified-top-card__company-name');
-    const locationEl = document.querySelector('.jobs-unified-top-card__bullet, .job-details-jobs-unified-top-card__bullet');
-    const descEl = document.querySelector('.jobs-description-content__text, .jobs-description, .jobs-box__html-content');
+    const titleSelectors = [
+      'h1.job-details-jobs-unified-top-card__job-title',
+      '.jobs-unified-top-card__job-title',
+      'h1[data-test-id="job-title"]',
+      '.job-details-jobs-unified-top-card__job-title',
+      '.jobs-unified-top-card__job-title-link',
+      'h1.t-24',
+      'h2.t-24'
+    ];
+    
+    const companySelectors = [
+      '.job-details-jobs-unified-top-card__company-name',
+      '.jobs-unified-top-card__company-name',
+      '.jobs-unified-top-card__company-name a',
+      'a.job-details-jobs-unified-top-card__company-name',
+      '.topcard__org-name-link',
+      '.topcard__flavor--black-link'
+    ];
+    
+    const locationSelectors = [
+      '.job-details-jobs-unified-top-card__bullet',
+      '.jobs-unified-top-card__bullet',
+      '.jobs-unified-top-card__subtitle-item',
+      '.topcard__flavor--bullet',
+      'span.topcard__flavor'
+    ];
+    
+    const descriptionSelectors = [
+      '.jobs-description-content__text',
+      '.jobs-description',
+      '.jobs-box__html-content',
+      '#job-details',
+      '.description__text'
+    ];
 
-    if (titleEl) data.title = titleEl.textContent?.trim() || '';
-    if (companyEl) data.company = companyEl.textContent?.trim() || '';
-    if (locationEl) data.location = locationEl.textContent?.trim() || '';
-    if (descEl) data.description = descEl.textContent?.trim() || '';
+    data.title = trySelectors(titleSelectors);
+    data.jobTitle = data.title;
+    data.company = trySelectors(companySelectors);
+    data.location = trySelectors(locationSelectors);
+    data.description = trySelectors(descriptionSelectors);
+    data.jobDescription = data.description;
   }
-  // Indeed
+  // Indeed - Updated selectors for current Indeed structure
   else if (hostname.includes('indeed')) {
-    const titleEl = document.querySelector('h1[data-testid="job-title"]');
-    const companyEl = document.querySelector('[data-testid="company-name"]');
-    const locationEl = document.querySelector('[data-testid="job-location"]');
-    const descEl = document.querySelector('[data-testid="job-description"]');
+    const titleSelectors = [
+      'h1.jobsearch-JobInfoHeader-title',
+      'h1[class*="jobsearch-JobInfoHeader"]',
+      'h2.jobsearch-JobInfoHeader-title',
+      'h1[data-testid="job-title"]',
+      '.jobsearch-JobInfoHeader-title span',
+      'h1.icl-u-xs-mb--xs'
+    ];
+    
+    const companySelectors = [
+      '[data-company-name="true"]',
+      '[data-testid="company-name"]',
+      '.jobsearch-InlineCompanyRating div',
+      '.jobsearch-CompanyReview--heading',
+      'div[data-testid="inlineHeader-companyName"]',
+      'a[data-tn-element="companyName"]'
+    ];
+    
+    const locationSelectors = [
+      '[data-testid="job-location"]',
+      '[data-testid="inlineHeader-companyLocation"]',
+      '.jobsearch-JobInfoHeader-subtitle div',
+      '.jobsearch-DesktopStickyContainer-subtitle div',
+      'div[class*="JobInfoHeader"] div[class*="location"]'
+    ];
+    
+    const descriptionSelectors = [
+      '#jobDescriptionText',
+      '[data-testid="job-description"]',
+      '.jobsearch-jobDescriptionText',
+      '#job-description',
+      '.jobsearch-JobComponent-description'
+    ];
 
-    if (titleEl) data.title = titleEl.textContent?.trim() || '';
-    if (companyEl) data.company = companyEl.textContent?.trim() || '';
-    if (locationEl) data.location = locationEl.textContent?.trim() || '';
-    if (descEl) data.description = descEl.textContent?.trim() || '';
+    data.title = trySelectors(titleSelectors);
+    data.jobTitle = data.title;
+    data.company = trySelectors(companySelectors);
+    data.location = trySelectors(locationSelectors);
+    data.description = trySelectors(descriptionSelectors);
+    data.jobDescription = data.description;
   }
-  // Generic fallback
+  // Glassdoor
+  else if (hostname.includes('glassdoor')) {
+    const titleSelectors = [
+      '[data-test="job-title"]',
+      'h1[data-test="job-title"]',
+      '.JobDetails_jobTitle__Rw_gn',
+      'h1.heading_Heading__BqX5J'
+    ];
+    
+    const companySelectors = [
+      '[data-test="employer-name"]',
+      '[data-test="company-name"]',
+      '.EmployerProfile_employerName__Xemli',
+      'span.EmployerProfile_compactEmployerName__LE'
+    ];
+    
+    const locationSelectors = [
+      '[data-test="location"]',
+      '[data-test="job-location"]',
+      '.JobDetails_location__mSg5h',
+      'span[class*="location"]'
+    ];
+    
+    const descriptionSelectors = [
+      '[data-test="job-description"]',
+      '#JobDescriptionContainer',
+      '.JobDetails_jobDescription__uW_fK',
+      'div[class*="description"]'
+    ];
+
+    data.title = trySelectors(titleSelectors);
+    data.jobTitle = data.title;
+    data.company = trySelectors(companySelectors);
+    data.location = trySelectors(locationSelectors);
+    data.description = trySelectors(descriptionSelectors);
+    data.jobDescription = data.description;
+  }
+  // Generic fallback for other job boards
   else {
-    const titleEl = document.querySelector('h1, [data-testid="job-title"], [data-test="job-title"]');
-    const companyEl = document.querySelector('[data-testid="company-name"], [data-test="company-name"]');
-    const locationEl = document.querySelector('[data-testid="job-location"], [data-test="job-location"]');
-    const descEl = document.querySelector('[data-testid="job-description"], [data-test="job-description"]');
+    const titleSelectors = [
+      'h1',
+      '[data-testid="job-title"]',
+      '[data-test="job-title"]',
+      '.job-title',
+      'h1[class*="title"]',
+      'h2[class*="title"]'
+    ];
+    
+    const companySelectors = [
+      '[data-testid="company-name"]',
+      '[data-test="company-name"]',
+      '.company-name',
+      '[class*="company"]',
+      'a[class*="company"]'
+    ];
+    
+    const locationSelectors = [
+      '[data-testid="job-location"]',
+      '[data-test="job-location"]',
+      '.job-location',
+      '[class*="location"]'
+    ];
+    
+    const descriptionSelectors = [
+      '[data-testid="job-description"]',
+      '[data-test="job-description"]',
+      '.job-description',
+      '[class*="description"]',
+      '#job-description'
+    ];
 
-    if (titleEl) data.title = titleEl.textContent?.trim() || '';
-    if (companyEl) data.company = companyEl.textContent?.trim() || '';
-    if (locationEl) data.location = locationEl.textContent?.trim() || '';
-    if (descEl) data.description = descEl.textContent?.trim() || '';
+    data.title = trySelectors(titleSelectors);
+    data.jobTitle = data.title;
+    data.company = trySelectors(companySelectors);
+    data.location = trySelectors(locationSelectors);
+    data.description = trySelectors(descriptionSelectors);
+    data.jobDescription = data.description;
   }
+
+  // No truncation - allow full description to be saved
+
+  console.log('📊 Extracted job data:', {
+    title: data.title,
+    company: data.company,
+    location: data.location,
+    descriptionLength: data.description ? data.description.length : 0,
+    source: data.source
+  });
 
   return data;
 }

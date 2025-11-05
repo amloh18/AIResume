@@ -1,7 +1,7 @@
 {
-  "name": "CVCircle - AI-Powered CV Builder",
+  "name": "CVCircle - CV Builder with Advanced AI Tools",
   "short_name": "CVCircle",
-  "description": "Create stunning CVs with AI assistance. Professional templates, ATS optimization, and real-time analytics.",
+  "description": "CV builder with Advanced Application Tracking and AI-powered tools.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

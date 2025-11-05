@@ -98,7 +98,7 @@ const jobApplicationSchema = new Schema<IJobApplication>({
   jobDescription: {
     type: String,
     trim: true,
-    maxlength: [5000, 'Job description cannot exceed 5000 characters']
+    maxlength: [50000, 'Job description cannot exceed 50000 characters']
   },
   sponsorship: {
     type: String,

@@ -52,5 +52,30 @@ declare namespace chrome {
 
     const local: StorageArea;
   }
+
+  namespace tabs {
+    interface Tab {
+      id?: number;
+      url?: string;
+      active?: boolean;
+      currentWindow?: boolean;
+    }
+
+    interface QueryInfo {
+      active?: boolean;
+      currentWindow?: boolean;
+    }
+
+    function query(
+      queryInfo: QueryInfo,
+      callback: (tabs: Tab[]) => void
+    ): void;
+
+    function sendMessage(
+      tabId: number,
+      message: any,
+      responseCallback?: (response: any) => void
+    ): void;
+  }
 }
 

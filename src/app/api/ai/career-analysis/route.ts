@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { callAIWithFallback, hasAIApiKeys } from '@/lib/utils/ai-api-helper';
 
 // Force dynamic rendering to prevent caching issues
 export const dynamic = 'force-dynamic';
-
-// Initialize Gemini AI
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,23 +29,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Normalize job description field (handle both jobDescription and description)
+    const jobDescription = jobData?.jobDescription || jobData?.description || '';
+    
     console.log('📊 Job data provided:', {
       hasJobData: !!jobData,
       jobId: jobId,
       jobTitle: jobData?.title || jobData?.jobTitle,
-      hasDescription: !!jobData?.jobDescription
+      hasDescription: !!jobDescription,
+      descriptionLength: jobDescription.length
     });
 
-    // Check if API key is available
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      console.log('⚠️ No GEMINI_API_KEY found, using fallback analysis');
+    // Check if AI API keys are available
+    if (!hasAIApiKeys()) {
+      console.log('⚠️ No AI API keys found (ChatGPT_API_KEY or PERPLEXITY_API_KEY), using fallback analysis');
       const fallbackAnalysis = generateFallbackAnalysis();
       return NextResponse.json({
         success: true,
         analysis: fallbackAnalysis,
         timestamp: new Date().toISOString(),
-        note: 'Using fallback analysis - GEMINI_API_KEY not configured'
+        note: 'Using fallback analysis - AI API keys not configured'
       }, { headers });
     }
 
@@ -65,8 +65,6 @@ export async function POST(request: NextRequest) {
 
     console.log('📊 CV text extracted, length:', cvText.length);
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-
     // Run all analyses in parallel for better performance
     console.log('🤖 Running AI analysis...');
     const [
@@ -80,15 +78,15 @@ export async function POST(request: NextRequest) {
       seniorTranslationResult,
       industrySpecializationResult
     ] = await Promise.all([
-      analyzeExperienceLevel(model, cvText, jobData),
-      analyzeCareerPath(model, cvText, jobData),
-      analyzeStrategicSuggestions(model, cvText, jobData),
-      analyzeImpactScore(model, cvText, jobData),
-      analyzeCareerCoherence(model, cvText, jobData),
-      analyzeCVOptimization(model, cvText, jobData),
-      analyzeSkillsGap(model, cvText, jobData),
-      analyzeSeniorTranslation(model, cvText, jobData),
-      analyzeIndustrySpecialization(model, cvText, jobData)
+      analyzeExperienceLevel(cvText, jobData),
+      analyzeCareerPath(cvText, jobData),
+      analyzeStrategicSuggestions(cvText, jobData),
+      analyzeImpactScore(cvText, jobData),
+      analyzeCareerCoherence(cvText, jobData),
+      analyzeCVOptimization(cvText, jobData),
+      analyzeSkillsGap(cvText, jobData),
+      analyzeSeniorTranslation(cvText, jobData),
+      analyzeIndustrySpecialization(cvText, jobData)
     ]);
 
     const analysis = {
@@ -112,7 +110,31 @@ export async function POST(request: NextRequest) {
     }, { headers });
 
   } catch (error) {
-    console.error('❌ Career analysis error:', error);
+    // Safely extract error message (handle Event objects)
+    let errorMessage = 'Unknown error';
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    } else if (error && typeof error === 'object') {
+      // Check if it's an Event object
+      if (error instanceof Event || ('target' in error && 'preventDefault' in error)) {
+        errorMessage = 'Resource loading error occurred';
+        console.error('❌ Career analysis error: Event object caught:', {
+          type: (error as Event).type,
+          target: (error as Event).target
+        });
+      } else {
+        // Try to stringify safely
+        try {
+          errorMessage = JSON.stringify(error);
+        } catch {
+          errorMessage = String(error);
+        }
+      }
+    } else {
+      errorMessage = String(error);
+    }
+    
+    console.error('❌ Career analysis error:', errorMessage);
     
     // Fallback analysis if AI fails
     console.log('🔄 Using fallback analysis due to error');
@@ -123,7 +145,7 @@ export async function POST(request: NextRequest) {
       analysis: fallbackAnalysis,
       timestamp: new Date().toISOString(),
       note: 'Using fallback analysis due to AI service unavailability',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: errorMessage
     }, { headers: new Headers({
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -202,11 +224,14 @@ function extractCVText(cvData: UnifiedCVDataStructure): string {
   return sections.join('\n');
 }
 
-async function analyzeExperienceLevel(model: any, cvText: string, jobData?: any) {
+async function analyzeExperienceLevel(cvText: string, jobData?: any) {
+  // Normalize job description field
+  const jobDescription = jobData?.jobDescription || jobData?.description || '';
+  
   const jobContext = jobData ? `
 Target Job: ${jobData.title || jobData.jobTitle || 'Position'}
 Company: ${jobData.company || jobData.companyName || 'Company'}
-Job Description: ${jobData.jobDescription || 'No description available'}
+Job Description: ${jobDescription || 'No description available'}
 
 ` : '';
 
@@ -229,12 +254,15 @@ Respond in JSON format:
 }`;
 
   try {
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const content = response.text();
+    const aiResponse = await callAIWithFallback({
+      prompt,
+      systemPrompt: 'You are an expert career analyst. Analyze CVs and provide insights in JSON format.',
+      temperature: 0.7,
+      maxTokens: 1024
+    });
     
     // Try to parse JSON response
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    const jsonMatch = aiResponse.content.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       return JSON.parse(jsonMatch[0]);
     }
@@ -253,11 +281,14 @@ Respond in JSON format:
   }
 }
 
-async function analyzeCareerPath(model: any, cvText: string, jobData?: any) {
+async function analyzeCareerPath(cvText: string, jobData?: any) {
+  // Normalize job description field
+  const jobDescription = jobData?.jobDescription || jobData?.description || '';
+  
   const jobContext = jobData ? `
 Target Job: ${jobData.title || jobData.jobTitle || 'Position'}
 Company: ${jobData.company || jobData.companyName || 'Company'}
-Job Description: ${jobData.jobDescription || 'No description available'}
+Job Description: ${jobDescription || 'No description available'}
 
 ` : '';
 
@@ -279,12 +310,15 @@ Respond in JSON format:
 }`;
 
   try {
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const content = response.text();
+    const aiResponse = await callAIWithFallback({
+      prompt,
+      systemPrompt: 'You are an expert career analyst. Analyze CVs and provide insights in JSON format.',
+      temperature: 0.7,
+      maxTokens: 1024
+    });
     
     // Try to parse JSON response
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    const jsonMatch = aiResponse.content.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       return JSON.parse(jsonMatch[0]);
     }
@@ -305,11 +339,14 @@ Respond in JSON format:
   }
 }
 
-async function analyzeStrategicSuggestions(model: any, cvText: string, jobData?: any) {
+async function analyzeStrategicSuggestions(cvText: string, jobData?: any) {
+  // Normalize job description field
+  const jobDescription = jobData?.jobDescription || jobData?.description || '';
+  
   const jobContext = jobData ? `
 Target Job: ${jobData.title || jobData.jobTitle || 'Position'}
 Company: ${jobData.company || jobData.companyName || 'Company'}
-Job Description: ${jobData.jobDescription || 'No description available'}
+Job Description: ${jobDescription || 'No description available'}
 
 ` : '';
 
@@ -334,12 +371,15 @@ Respond in JSON format:
 }`;
 
   try {
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const content = response.text();
+    const aiResponse = await callAIWithFallback({
+      prompt,
+      systemPrompt: 'You are an expert career analyst. Analyze CVs and provide insights in JSON format.',
+      temperature: 0.7,
+      maxTokens: 1024
+    });
     
     // Try to parse JSON response
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    const jsonMatch = aiResponse.content.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       return JSON.parse(jsonMatch[0]);
     }
@@ -368,10 +408,13 @@ Respond in JSON format:
   }
 }
 
-async function analyzeImpactScore(model: any, cvText: string, jobData?: any) {
+async function analyzeImpactScore(cvText: string, jobData?: any) {
+  // Normalize job description field
+  const jobDescription = jobData?.jobDescription || jobData?.description || '';
+  
   const jobContext = jobData ? `
 Target Job: ${jobData.title || jobData.jobTitle || 'Position'}
-Job Description: ${jobData.jobDescription || 'No description available'}
+Job Description: ${jobDescription || 'No description available'}
 
 ` : '';
 
@@ -400,11 +443,14 @@ Count:
 Respond in JSON format only.`;
 
   try {
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const content = response.text();
+    const aiResponse = await callAIWithFallback({
+      prompt,
+      systemPrompt: 'You are an expert career analyst. Analyze CVs and provide insights in JSON format.',
+      temperature: 0.7,
+      maxTokens: 1024
+    });
     
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    const jsonMatch = aiResponse.content.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       return JSON.parse(jsonMatch[0]);
     }
@@ -432,9 +478,13 @@ Respond in JSON format only.`;
   }
 }
 
-async function analyzeCareerCoherence(model: any, cvText: string, jobData?: any) {
+async function analyzeCareerCoherence(cvText: string, jobData?: any) {
+  // Normalize job description field
+  const jobDescription = jobData?.jobDescription || jobData?.description || '';
+  
   const jobContext = jobData ? `
 Target Job: ${jobData.title || jobData.jobTitle || 'Position'}
+Job Description: ${jobDescription || 'No description available'}
 
 ` : '';
 
@@ -464,11 +514,14 @@ Consider:
 Respond in JSON format only.`;
 
   try {
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const content = response.text();
+    const aiResponse = await callAIWithFallback({
+      prompt,
+      systemPrompt: 'You are an expert career analyst. Analyze CVs and provide insights in JSON format.',
+      temperature: 0.7,
+      maxTokens: 1024
+    });
     
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    const jsonMatch = aiResponse.content.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       return JSON.parse(jsonMatch[0]);
     }
@@ -494,10 +547,20 @@ Respond in JSON format only.`;
   }
 }
 
-async function analyzeCVOptimization(model: any, cvText: string, jobData?: any) {
-  const prompt = `Analyze CV structure and optimization for recruiter scanning.
+async function analyzeCVOptimization(cvText: string, jobData?: any) {
+  // Normalize job description field
+  const jobDescription = jobData?.jobDescription || jobData?.description || '';
+  
+  const jobContext = jobData ? `
+Target Job: ${jobData.title || jobData.jobTitle || 'Position'}
+Job Description: ${jobDescription || 'No description available'}
 
-CV Data: ${cvText}
+` : '';
+  
+  const prompt = `Analyze CV structure and optimization for recruiter scanning.
+${jobData ? 'Consider how the CV structure aligns with the target job requirements.' : ''}
+
+${jobContext}CV Data: ${cvText}
 
 Provide analysis in JSON format:
 {
@@ -523,11 +586,14 @@ Consider:
 Respond in JSON format only.`;
 
   try {
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const content = response.text();
+    const aiResponse = await callAIWithFallback({
+      prompt,
+      systemPrompt: 'You are an expert career analyst. Analyze CVs and provide insights in JSON format.',
+      temperature: 0.7,
+      maxTokens: 1024
+    });
     
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    const jsonMatch = aiResponse.content.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       return JSON.parse(jsonMatch[0]);
     }
@@ -556,10 +622,13 @@ Respond in JSON format only.`;
   }
 }
 
-async function analyzeSkillsGap(model: any, cvText: string, jobData?: any) {
+async function analyzeSkillsGap(cvText: string, jobData?: any) {
+  // Normalize job description field
+  const jobDescription = jobData?.jobDescription || jobData?.description || '';
+  
   const jobContext = jobData ? `
 Target Job: ${jobData.title || jobData.jobTitle || 'Position'}
-Job Requirements: ${jobData.jobDescription || 'No description available'}
+Job Requirements: ${jobDescription || 'No description available'}
 
 ` : '';
 
@@ -601,11 +670,14 @@ Analyze:
 Respond in JSON format only.`;
 
   try {
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const content = response.text();
+    const aiResponse = await callAIWithFallback({
+      prompt,
+      systemPrompt: 'You are an expert career analyst. Analyze CVs and provide insights in JSON format.',
+      temperature: 0.7,
+      maxTokens: 1024
+    });
     
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    const jsonMatch = aiResponse.content.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       return JSON.parse(jsonMatch[0]);
     }
@@ -635,10 +707,20 @@ Respond in JSON format only.`;
   }
 }
 
-async function analyzeSeniorTranslation(model: any, cvText: string, jobData?: any) {
-  const prompt = `Analyze and provide senior-level translations for mid-level experience statements.
+async function analyzeSeniorTranslation(cvText: string, jobData?: any) {
+  // Normalize job description field
+  const jobDescription = jobData?.jobDescription || jobData?.description || '';
+  
+  const jobContext = jobData ? `
+Target Job: ${jobData.title || jobData.jobTitle || 'Position'}
+Job Description: ${jobDescription || 'No description available'}
 
-CV Data: ${cvText}
+` : '';
+  
+  const prompt = `Analyze and provide senior-level translations for mid-level experience statements.
+${jobData ? 'Focus on translating experience to align with the target job requirements.' : ''}
+
+${jobContext}CV Data: ${cvText}
 
 Provide analysis in JSON format:
 {
@@ -665,11 +747,14 @@ Transform mid-level language to senior-level by:
 Respond in JSON format only.`;
 
   try {
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const content = response.text();
+    const aiResponse = await callAIWithFallback({
+      prompt,
+      systemPrompt: 'You are an expert career analyst. Analyze CVs and provide insights in JSON format.',
+      temperature: 0.7,
+      maxTokens: 1024
+    });
     
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    const jsonMatch = aiResponse.content.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       return JSON.parse(jsonMatch[0]);
     }
@@ -702,10 +787,20 @@ Respond in JSON format only.`;
   }
 }
 
-async function analyzeIndustrySpecialization(model: any, cvText: string, jobData?: any) {
-  const prompt = `Analyze industry specialization and identify critical keywords for this CV.
+async function analyzeIndustrySpecialization(cvText: string, jobData?: any) {
+  // Normalize job description field
+  const jobDescription = jobData?.jobDescription || jobData?.description || '';
+  
+  const jobContext = jobData ? `
+Target Job: ${jobData.title || jobData.jobTitle || 'Position'}
+Job Description: ${jobDescription || 'No description available'}
 
-CV Data: ${cvText}
+` : '';
+  
+  const prompt = `Analyze industry specialization and identify critical keywords for this CV.
+${jobData ? 'Prioritize keywords that match the target job requirements.' : ''}
+
+${jobContext}CV Data: ${cvText}
 
 Provide analysis in JSON format:
 {
@@ -732,11 +827,14 @@ Analyze:
 Respond in JSON format only.`;
 
   try {
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const content = response.text();
+    const aiResponse = await callAIWithFallback({
+      prompt,
+      systemPrompt: 'You are an expert career analyst. Analyze CVs and provide insights in JSON format.',
+      temperature: 0.7,
+      maxTokens: 1024
+    });
     
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    const jsonMatch = aiResponse.content.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       return JSON.parse(jsonMatch[0]);
     }

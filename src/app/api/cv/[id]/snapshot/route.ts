@@ -3,7 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import CV from '@/models/CV';
 import { authenticatedFetch } from '@/lib/utils/apiUtils';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { PutObjectCommand } from '@aws-sdk/client-s3';
+import { getS3Client, getS3PublicUrl } from '@/lib/s3-client';
 
 export async function POST(
   request: NextRequest,
@@ -70,14 +71,8 @@ async function generateCVSnapshot(cv: any): Promise<string> {
     // Generate SVG-based thumbnail
     const svgContent = generateCVThumbnailSVG(cv);
     
-    // Initialize S3 client
-    const s3Client = new S3Client({
-      region: process.env.AWS_S3_REGION!,
-      credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-      },
-    });
+    // Get S3 client
+    const s3Client = getS3Client();
 
     // Create S3 key for thumbnail
     const userId = cv.userId?.toString() || 'unknown';
@@ -101,10 +96,8 @@ async function generateCVSnapshot(cv: any): Promise<string> {
 
     await s3Client.send(command);
 
-    // Return public URL
-    const publicUrl = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_S3_REGION}.amazonaws.com/${s3Key}`;
-    
-    return publicUrl;
+    // Return public URL using centralized utility
+    return getS3PublicUrl(s3Key);
 
   } catch (error) {
     console.error('Error creating CV snapshot:', error);

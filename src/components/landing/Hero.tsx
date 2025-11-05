@@ -223,7 +223,7 @@ const Hero = () => {
           >
             <div className="relative w-full h-[600px] rounded-2xl overflow-hidden">
               <Image
-                src="/images/herobanner.png"
+                src={process.env.NEXT_PUBLIC_HERO_BANNER_S3_URL || '/images/herobanner.png'}
                 alt="CV Circle Dashboard"
                 fill
                 className="object-cover object-top"
@@ -235,10 +235,12 @@ const Hero = () => {
                 }}
                 onError={(e) => {
                   console.error('Hero banner image failed to load');
-                  // Fallback: try to reload with full URL
+                  // Fallback: try local path if S3 URL fails
                   const target = e.target as HTMLImageElement;
-                  if (typeof window !== 'undefined' && target.src && !target.src.includes(window.location.origin)) {
-                    target.src = `${window.location.origin}/images/herobanner.png`;
+                  const currentSrc = target.src;
+                  const localPath = '/images/herobanner.png';
+                  if (typeof window !== 'undefined' && !currentSrc.includes(localPath)) {
+                    target.src = `${window.location.origin}${localPath}`;
                   }
                 }}
               />

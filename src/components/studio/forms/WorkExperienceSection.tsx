@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Plus, Trash2, Copy } from 'lucide-react';
-import WYSIWYGEditor, { WYSIWYGToolbar } from '@/components/ui/WYSIWYGEditor';
+import WYSIWYGEditor, { useWYSIWYGToolbarProps } from '@/components/ui/WYSIWYGEditor';
 
 interface WorkExperienceSectionProps {
   data: any[];
@@ -94,6 +94,38 @@ const WorkExperienceSection: React.FC<WorkExperienceSectionProps> = ({
     }
   };
 
+  // Component to properly connect toolbar and editor using shared hook instance
+  const WorkExperienceEditor: React.FC<{
+    value: string;
+    onChange: (value: string) => void;
+    onAIGenerate: () => void;
+    isGenerating: boolean;
+  }> = ({ value, onChange, onAIGenerate, isGenerating }) => {
+    const { toolbar } = useWYSIWYGToolbarProps(
+      value,
+      onChange,
+      true, // showAIButton
+      'experience',
+      onAIGenerate,
+      isGenerating
+    );
+
+    return (
+      <div className="mt-4">
+        <div className="flex items-center justify-between mb-2">
+          <label className="block text-white/80 text-sm font-medium">Description</label>
+          {toolbar}
+        </div>
+        <WYSIWYGEditor
+          value={value}
+          onChange={onChange}
+          rows={4}
+          placeholder="Describe your key responsibilities and achievements..."
+        />
+      </div>
+    );
+  };
+
   return (
     <>
       {safeData.map((work, index) => (
@@ -161,23 +193,13 @@ const WorkExperienceSection: React.FC<WorkExperienceSectionProps> = ({
             </div>
           </div>
 
-          <div className="mt-4">
-            <div className="flex items-center justify-between mb-2">
-              <label className="block text-white/80 text-sm font-medium">Description</label>
-              <WYSIWYGToolbar
-                showAIButton={true}
-                fieldType="experience"
-                onAIGenerate={() => generateAIDescription(index, work)}
-                isGenerating={generatingIndex === index}
-              />
-            </div>
-            <WYSIWYGEditor
-              value={work.summary || ''}
-              onChange={(value) => updateWorkItem(index, 'summary', value)}
-              rows={4}
-              placeholder="Describe your key responsibilities and achievements..."
-            />
-          </div>
+          <WorkExperienceEditor
+            key={`work-editor-${index}`}
+            value={work.summary || ''}
+            onChange={(value) => updateWorkItem(index, 'summary', value)}
+            onAIGenerate={() => generateAIDescription(index, work)}
+            isGenerating={generatingIndex === index}
+          />
         </div>
       ))}
       

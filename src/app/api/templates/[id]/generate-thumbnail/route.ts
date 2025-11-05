@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { getConnection } from '@/lib/database';
-import { Template } from '@/models';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { PutObjectCommand } from '@aws-sdk/client-s3';
+import { getS3Client, getS3PublicUrl } from '@/lib/s3-client';
+import { getTemplateById } from '@/lib/templates/template-utils';
 
 export async function POST(
   request: NextRequest,
@@ -19,25 +19,19 @@ export async function POST(
 
     console.log('🔍 Template Thumbnail API - Generating thumbnail for template:', { templateId });
 
-    await getConnection();
-
-    // Find the template
-    const template = await Template.findById(templateId);
+    // Only hardcoded templates are supported
+    const template = getTemplateById(templateId);
+    
     if (!template) {
       console.log('🔍 Template Thumbnail API - Template not found:', { templateId });
-      return NextResponse.json({ success: false, error: 'Template not found' }, { status: 404 });
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Template not found. Only hardcoded templates are supported.' 
+      }, { status: 404 });
     }
 
-    // Check if thumbnail is recent (less than 30 days old)
-    const now = new Date();
-    const thumbnailAge = template.metadata?.thumbnailGeneratedAt 
-      ? now.getTime() - new Date(template.metadata.thumbnailGeneratedAt).getTime()
-      : Infinity;
-    
-    const isThumbnailRecent = thumbnailAge < 30 * 24 * 60 * 60 * 1000; // 30 days
-
-    if (template.thumbnail && isThumbnailRecent && template.thumbnail.includes('s3.amazonaws.com')) {
-      // Return existing thumbnail if it's recent and already in S3
+    // Hardcoded templates already have thumbnails, return them
+    if (template.thumbnail) {
       return NextResponse.json({
         success: true,
         thumbnailUrl: template.thumbnail,
@@ -45,16 +39,10 @@ export async function POST(
       });
     }
 
-    // Generate new thumbnail
+    // Generate new thumbnail for hardcoded template (if needed)
     console.log('🔍 Template Thumbnail API - Generating thumbnail...');
     const thumbnailUrl = await generateTemplateThumbnail(template);
     console.log('🔍 Template Thumbnail API - Thumbnail generated:', thumbnailUrl ? 'Success' : 'Failed');
-
-    // Update template with new thumbnail
-    await Template.findByIdAndUpdate(templateId, {
-      thumbnail: thumbnailUrl,
-      'metadata.thumbnailGeneratedAt': now
-    });
 
     return NextResponse.json({
       success: true,
@@ -76,20 +64,14 @@ async function generateTemplateThumbnail(template: any): Promise<string> {
     // Generate SVG-based thumbnail
     const svgContent = generateTemplateThumbnailSVG(template);
     
-    // Initialize S3 client
-    const s3Client = new S3Client({
-      region: process.env.AWS_S3_REGION!,
-      credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-      },
-    });
+    // Get S3 client
+    const s3Client = getS3Client();
 
-    // Create S3 key for thumbnail
-    const templateId = template._id?.toString() || 'unknown';
+    // Create S3 key for thumbnail (hardcoded templates use their ID)
+    const templateIdStr = template.id || template._id?.toString() || 'unknown';
     const timestamp = Date.now();
     const sanitizedName = template.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const s3Key = `thumbnails/templates/${sanitizedName}-${templateId}-${timestamp}.svg`;
+    const s3Key = `thumbnails/templates/${sanitizedName}-${templateIdStr}-${timestamp}.svg`;
 
     // Upload SVG to S3
     const command = new PutObjectCommand({
@@ -98,7 +80,7 @@ async function generateTemplateThumbnail(template: any): Promise<string> {
       ContentType: 'image/svg+xml',
       Body: Buffer.from(svgContent),
       Metadata: {
-        templateId: templateId,
+        templateId: templateIdStr,
         templateName: template.name,
         generatedAt: new Date().toISOString(),
         type: 'template-thumbnail',
@@ -109,10 +91,8 @@ async function generateTemplateThumbnail(template: any): Promise<string> {
 
     await s3Client.send(command);
 
-    // Return public URL
-    const publicUrl = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_S3_REGION}.amazonaws.com/${s3Key}`;
-    
-    return publicUrl;
+    // Return public URL using centralized utility
+    return getS3PublicUrl(s3Key);
 
   } catch (error) {
     console.error('Error creating template thumbnail:', error);

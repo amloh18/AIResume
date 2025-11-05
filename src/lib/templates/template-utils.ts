@@ -4,7 +4,7 @@
  * Utility functions for working with templates, including hardcoded templates
  */
 
-import { HARDCODED_TEMPLATES } from './hardcoded-templates';
+import { HARDCODED_TEMPLATES, resolveTemplateThumbnail } from './hardcoded-templates';
 import { ITemplate } from '@/types/template';
 
 /**
@@ -21,7 +21,8 @@ export function getTemplateById(templateId: string): ITemplate | null {
   );
 
   if (hardcodedTemplate) {
-    return hardcodedTemplate;
+    // Resolve thumbnail URL at runtime to ensure S3 URLs are properly set
+    return resolveTemplateThumbnail(hardcodedTemplate);
   }
 
   // If not found in hardcoded templates, return null
@@ -31,9 +32,10 @@ export function getTemplateById(templateId: string): ITemplate | null {
 
 /**
  * Get all available templates (hardcoded + database)
+ * Templates are returned with resolved thumbnail URLs
  */
 export function getAllTemplates(): ITemplate[] {
-  return HARDCODED_TEMPLATES;
+  return HARDCODED_TEMPLATES.map(template => resolveTemplateThumbnail(template));
 }
 
 /**

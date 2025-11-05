@@ -4,7 +4,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { GoogleGenAI } from '@google/genai';
 import { UnifiedCVDataStructure, DEFAULT_UNIFIED_CV_DATA } from '@/types/unified-cv-schema';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -395,19 +394,14 @@ async function extractTextFromFile(fileBuffer: Buffer, mimeType: string): Promis
  * This is your "Method 3: AI". (Example with Gemini)
  */
 async function structureTextWithAI(rawText: string): Promise<any> {
-  // Get all 4 Gemini API keys from environment
-  const apiKeys = [
-    { name: 'GEMINI_API_KEY', key: process.env.GEMINI_API_KEY },
-    { name: 'GEMINI2_API_KEY', key: process.env.GEMINI2_API_KEY },
-    { name: 'GEMINI3_API_KEY', key: process.env.GEMINI3_API_KEY },
-    { name: 'GEMINI4_API-KEY', key: process.env['GEMINI4_API-KEY'] }, // Note: has dash in name
-  ].filter(k => k.key); // Filter out undefined/null keys
+  // Import AI API helper
+  const { callAIWithFallback, hasAIApiKeys } = await import('@/lib/utils/ai-api-helper');
 
-  if (apiKeys.length === 0) {
-    throw new Error('No Gemini API keys configured. AI parsing is unavailable.');
+  if (!hasAIApiKeys()) {
+    throw new Error('No AI API keys configured (ChatGPT_API_KEY or PERPLEXITY_API_KEY). AI parsing is unavailable.');
   }
 
-  console.log(`🔑 Found ${apiKeys.length} Gemini API keys to try:`, apiKeys.map(k => k.name).join(', '));
+  console.log(`🔑 Using AI API helper with ChatGPT_API_KEY and PERPLEXITY_API_KEY fallback`);
   
   // Create a simplified schema for the AI prompt to save tokens
   const simpleSchema = `{
@@ -440,162 +434,71 @@ from the resume text and return **only** a valid JSON object.
 
   const prompt = `Here is the resume text:\n\n${rawText}`;
 
-  // Try each API key in sequence
-  let lastError: Error | null = null;
-  
-  for (let i = 0; i < apiKeys.length; i++) {
-    const { name, key } = apiKeys[i];
-    const keyPreview = key ? `${key.substring(0, 10)}...` : 'undefined';
+  try {
+    console.log('📡 Calling AI API for text structuring...');
+    
+    // Use AI API helper with fallback
+    const aiResponse = await callAIWithFallback({
+      prompt: `${systemInstruction}\n\n${prompt}`,
+      systemPrompt: systemInstruction,
+      temperature: 0.2,
+      maxTokens: 4096
+    });
+
+    console.log(`✅ AI API call successful with ${aiResponse.provider}!`);
+    console.log(`📥 Response received (length): ${aiResponse.content.length} characters`);
+    console.log(`📥 Response preview (first 200 chars):`, aiResponse.content.substring(0, 200));
+    
+    // Cleanup logic to remove markdown wrappers
+    let responseText = aiResponse.content;
+    const jsonMatch = responseText.match(/```json([\s\S]*?)```|```([\s\S]*?)```|([\s\S]*)/);
+    if (jsonMatch && (jsonMatch[1] || jsonMatch[2] || jsonMatch[3])) {
+      responseText = (jsonMatch[1] || jsonMatch[2] || jsonMatch[3]).trim();
+    } else {
+      // Fallback: just trim the response
+      responseText = responseText.trim();
+    }
+    
+    // Additional cleanup: remove leading/trailing whitespace and any remaining markdown artifacts
+    responseText = responseText
+      .replace(/^```json\s*/i, '')
+      .replace(/^```\s*/i, '')
+      .replace(/\s*```$/i, '')
+      .replace(/^[\s]*\{/m, '{')
+      .replace(/\}[\s]*$/m, '}')
+      .replace(/,\s*([}\]])/g, '$1')
+      .trim();
+    
+    // Parse the cleaned JSON
+    let parsedJson: any;
+    try {
+      parsedJson = JSON.parse(responseText);
+      console.log(`✅ JSON parsed successfully`);
+    } catch (parseError) {
+      console.error(`❌ Failed to parse AI response as JSON`);
+      console.error('❌ Cleaned response (first 500 chars):', responseText.substring(0, 500));
+      if (parseError instanceof SyntaxError) {
+        throw new Error(`AI model returned invalid JSON: ${parseError.message}`);
+      }
+      throw new Error(`Failed to parse AI response: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+    }
     
     console.log(`\n═══════════════════════════════════════════════════════`);
-    console.log(`🔑 Attempt ${i + 1}/${apiKeys.length}: Trying ${name}`);
-    console.log(`   Key preview: ${keyPreview}`);
-    console.log(`═══════════════════════════════════════════════════════`);
-
-    try {
-      console.log('📡 Initializing Google GenAI SDK...');
-      
-      // Initialize Google GenAI SDK with current key
-      const ai = new GoogleGenAI({
-        apiKey: key!,
-      });
-
-      // Configure the model
-      const config = {
-        temperature: 0.2,
-        maxOutputTokens: 4096,
-      };
-
-      const model = 'gemini-1.0-pro';
-      
-      console.log(`📝 Model: ${model}`);
-      console.log(`📝 Config: temperature=${config.temperature}, maxOutputTokens=${config.maxOutputTokens}`);
-      
-      const contents = [
-        {
-          role: 'user' as const,
-          parts: [
-            {
-              text: `${systemInstruction}\n\n${prompt}`,
-            },
-          ],
-        },
-      ];
-
-      console.log(`📡 Calling Gemini API (${name}) for text structuring...`);
-      
-      // Generate content using the SDK
-      const response = await ai.models.generateContent({
-        model,
-        config,
-        contents,
-      });
-
-      console.log(`✅ API call successful with ${name}!`);
-      console.log(`📥 Response structure keys:`, Object.keys(response || {}));
-
-      // Extract text from response
-      let responseText = '';
-      
-      // Handle different response structures from the SDK
-      if (response.text) {
-        // Direct text property
-        responseText = response.text;
-        console.log(`✅ Found response.text property`);
-      } else if (response.candidates && response.candidates[0]?.content?.parts) {
-        // Extract text from parts array
-        console.log(`✅ Found response.candidates[0].content.parts array`);
-        for (const part of response.candidates[0].content.parts) {
-          if (part.text) {
-            responseText += part.text;
-          }
-        }
-      } else if (response.candidates?.[0]?.content?.parts) {
-        // Alternative structure
-        console.log(`✅ Found alternative response.candidates structure`);
-        const textParts = response.candidates[0].content.parts.filter((p: any) => p.text);
-        responseText = textParts.map((p: any) => p.text).join('');
-      } else {
-        // Try to extract from any available structure
-        console.warn('⚠️ Unexpected response structure. Available keys:', Object.keys(response || {}));
-        console.warn('⚠️ Response preview:', JSON.stringify(response).substring(0, 500));
-        throw new Error('Unexpected response structure from Gemini API');
-      }
-      
-      if (!responseText || responseText.trim().length === 0) {
-        console.error('❌ Empty response from Gemini API');
-        console.error('❌ Full response:', JSON.stringify(response).substring(0, 500));
-        throw new Error('Gemini API returned empty response');
-      }
-
-      console.log(`\n🎉 SUCCESS! Working API Key: ${name}`);
-      console.log(`📥 Gemini API response received (length): ${responseText.length} characters`);
-      console.log(`📥 Response preview (first 200 chars):`, responseText.substring(0, 200));
-      
-      // Cleanup logic to remove markdown wrappers
-      const jsonMatch = responseText.match(/```json([\s\S]*?)```|```([\s\S]*?)```|([\s\S]*)/);
-      if (jsonMatch && (jsonMatch[1] || jsonMatch[2] || jsonMatch[3])) {
-        responseText = (jsonMatch[1] || jsonMatch[2] || jsonMatch[3]).trim();
-      } else {
-        // Fallback: just trim the response
-        responseText = responseText.trim();
-      }
-      
-      // Additional cleanup: remove leading/trailing whitespace and any remaining markdown artifacts
-      responseText = responseText
-        .replace(/^```json\s*/i, '')
-        .replace(/^```\s*/i, '')
-        .replace(/\s*```$/i, '')
-        .replace(/^[\s]*\{/m, '{')
-        .replace(/\}[\s]*$/m, '}')
-        .replace(/,\s*([}\]])/g, '$1')
-        .trim();
-      
-      // Parse the cleaned JSON
-      let parsedJson: any;
-      try {
-        parsedJson = JSON.parse(responseText);
-        console.log(`✅ JSON parsed successfully from ${name}`);
-      } catch (parseError) {
-        console.error(`❌ Failed to parse AI response as JSON (from ${name})`);
-        console.error('❌ Cleaned response (first 500 chars):', responseText.substring(0, 500));
-        if (parseError instanceof SyntaxError) {
-          throw new Error(`AI model returned invalid JSON: ${parseError.message}`);
-        }
-        throw new Error(`Failed to parse AI response: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
-      }
-      
-      console.log(`\n═══════════════════════════════════════════════════════`);
-      console.log(`✅ AI structuring successful with ${name}!`);
-      console.log(`═══════════════════════════════════════════════════════\n`);
-      return parsedJson;
-      
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error(`❌ ${name} failed:`, errorMessage);
-      console.error(`❌ Error details:`, error instanceof Error ? {
-        name: error.name,
-        message: error.message,
-        stack: error.stack?.substring(0, 300)
-      } : error);
-      
-      lastError = error instanceof Error ? error : new Error(String(error));
-      
-      // If this is the last key, throw the error
-      if (i === apiKeys.length - 1) {
-        console.error(`\n═══════════════════════════════════════════════════════`);
-        console.error(`❌ All ${apiKeys.length} API keys failed!`);
-        console.error(`═══════════════════════════════════════════════════════`);
-        throw new Error(`All Gemini API keys failed. Last error (${name}): ${errorMessage}`);
-      }
-      
-      // Otherwise, continue to next key
-      console.log(`⏭️  Continuing to next API key...\n`);
-    }
+    console.log(`✅ AI structuring successful with ${aiResponse.provider}!`);
+    console.log(`═══════════════════════════════════════════════════════\n`);
+    return parsedJson;
+    
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error(`❌ AI API call failed:`, errorMessage);
+    console.error(`❌ Error details:`, error instanceof Error ? {
+      name: error.name,
+      message: error.message,
+      stack: error.stack?.substring(0, 300)
+    } : error);
+    
+    throw new Error(`AI API call failed: ${errorMessage}`);
   }
-  
-  // This should never be reached, but TypeScript requires it
-  throw lastError || new Error('Failed to process with any API key');
 }
 
 // ============================================================================
@@ -841,13 +744,8 @@ export async function POST(request: NextRequest) {
     let documentUrl: string | undefined;
     if (userId && saveDocument) {
       try {
-        const s3Client = new S3Client({
-          region: process.env.AWS_S3_REGION!,
-          credentials: {
-            accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-          },
-        });
+        const { getS3Client, getS3PublicUrl } = await import('@/lib/s3-client');
+        const s3Client = getS3Client();
 
         const timestamp = Date.now();
         const sanitizedFilename = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
@@ -867,7 +765,7 @@ export async function POST(request: NextRequest) {
         });
 
         await s3Client.send(command);
-        documentUrl = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_S3_REGION}.amazonaws.com/${s3Key}`;
+        documentUrl = getS3PublicUrl(s3Key);
         console.log('Document saved to S3:', documentUrl);
       } catch (s3Error) {
         console.error('Failed to save document to S3:', s3Error);

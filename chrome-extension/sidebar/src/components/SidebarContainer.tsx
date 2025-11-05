@@ -1,6 +1,6 @@
 import React from 'react';
 import { X } from 'lucide-react';
-import Logo from './Logo';
+import ExtensionIcon from './ExtensionIcon';
 
 interface SidebarContainerProps {
   children: React.ReactNode;
@@ -15,15 +15,15 @@ const SidebarContainer: React.FC<SidebarContainerProps> = ({ children }) => {
   };
 
   return (
-    <div className="extension-sidebar dark:bg-dark-bg bg-white">
-      <div className="sticky top-0 z-10 flex items-center justify-between p-4 border-b border-gray-200 dark:border-white/10 bg-white dark:bg-dark-card">
-        <Logo size="md" />
+    <div className="extension-sidebar dark bg-dark-bg">
+      <div className="sticky top-0 z-10 flex items-center justify-between p-4 border-b border-white/10 bg-dark-card">
+        <ExtensionIcon size="md" iconFile="icon48" />
         <button
           onClick={handleClose}
-          className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors"
+          className="p-2 hover:bg-dark-tertiary rounded-lg transition-colors"
           aria-label="Close sidebar"
         >
-          <X size={20} className="text-gray-600 dark:text-white/60" />
+          <X size={20} className="text-white/70" />
         </button>
       </div>
       <div className="flex-1 overflow-y-auto">
