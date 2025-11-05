@@ -65,7 +65,68 @@ export class AIAssistantService {
       const jobText = `${jobData.title} ${jobData.description || ''} ${jobData.requirements || ''}`;
       console.log('📄 AIAssistantService - Job text length:', jobText.length);
       
-      // Simple keyword matching (in a real app, you'd use more sophisticated NLP)
+      // Try to use AI API for ATS analysis
+      try {
+        const { callAIWithFallback } = await import('@/lib/utils/ai-api-helper');
+        
+        const systemPrompt = `You are an expert ATS (Applicant Tracking System) analyst. Analyze CVs against job descriptions and provide accurate ATS scores, missing keywords, and improvement suggestions.`;
+        
+        const prompt = `Analyze this CV against the job description and provide an ATS score analysis.
+
+CV Content:
+${cvText.substring(0, 4000)}
+
+Job Description:
+${jobText.substring(0, 2000)}
+
+Please provide a JSON response with this exact structure:
+{
+  "score": number (0-100),
+  "missingKeywords": ["keyword1", "keyword2", ...],
+  "strengths": ["strength1", "strength2", ...],
+  "suggestions": ["suggestion1", "suggestion2", ...]
+}
+
+Consider:
+- Keyword matching between CV and job description
+- Skills alignment
+- Experience relevance
+- Education requirements
+- Overall ATS optimization
+
+Respond ONLY with valid JSON, no other text.`;
+
+        const aiResponse = await callAIWithFallback({
+          prompt,
+          systemPrompt,
+          temperature: 0.3,
+          maxTokens: 1024
+        });
+        
+        console.log('✅ AIAssistantService - AI API call successful');
+        
+        // Try to parse JSON from response
+        const jsonMatch = aiResponse.content.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          
+          // Validate and return AI analysis
+          if (parsed.score !== undefined && parsed.missingKeywords && parsed.strengths && parsed.suggestions) {
+            return {
+              score: Math.max(0, Math.min(100, parsed.score)),
+              missingKeywords: Array.isArray(parsed.missingKeywords) ? parsed.missingKeywords.slice(0, 10) : [],
+              strengths: Array.isArray(parsed.strengths) ? parsed.strengths.slice(0, 5) : [],
+              suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : this.generateSuggestions(parsed.missingKeywords || [])
+            };
+          }
+        }
+        
+        console.warn('⚠️ AIAssistantService - AI response format invalid, falling back to keyword matching');
+      } catch (aiError) {
+        console.warn('⚠️ AIAssistantService - AI API call failed, falling back to keyword matching:', aiError);
+      }
+      
+      // Fallback to keyword matching if AI fails
       const cvKeywords = this.extractKeywords(cvText);
       const jobKeywords = this.extractKeywords(jobText);
       
@@ -588,10 +649,14 @@ export class AIAssistantService {
   static async performComprehensiveAnalysis(cvData: UnifiedCVDataStructure, jobData: Job): Promise<any> {
     try {
       console.log('🔍 AIAssistantService - Starting comprehensive analysis...');
+      // Normalize job description field
+      const jobDescription = jobData?.jobDescription || jobData?.description || '';
       console.log('📊 AIAssistantService - Job data:', {
         id: jobData.id,
         title: jobData.title,
-        company: jobData.company
+        company: jobData.company,
+        hasDescription: !!jobDescription,
+        descriptionLength: jobDescription.length
       });
       
       // Try the new comprehensive ATS analysis API first

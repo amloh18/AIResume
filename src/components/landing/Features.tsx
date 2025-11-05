@@ -16,7 +16,7 @@ const Features = () => {
       bgColor: 'from-lime-400/10 to-lime-500/10',
       cta: 'Download Extension',
       ctaLink: '/chrome-extension',
-      image: '/images/onboarding/extension-tracker.svg'
+      image: '/images/never_miss_a_role.png'
     },
     {
       id: 'gain-your-edge',
@@ -163,7 +163,7 @@ const Features = () => {
                         fill
                         className={
                           feature.id === 'never-miss-role' 
-                            ? 'object-contain brightness-0 invert' :
+                            ? 'object-contain' :
                           feature.id === 'gain-your-edge' 
                             ? 'object-contain' :
                           feature.id === 'one-click-career-kit' 

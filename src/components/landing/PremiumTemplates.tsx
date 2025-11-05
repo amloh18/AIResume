@@ -12,30 +12,62 @@ interface Template {
   preview: string;
 }
 
+/**
+ * Helper function to get S3 fallback URL for template images
+ * This is used when local images fail to load
+ */
+const getTemplateImageS3Url = (filename: string): string | null => {
+  // Only access process.env on client side
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  
+  // Next.js exposes NEXT_PUBLIC_ vars at build time
+  const s3BaseUrl = process.env.NEXT_PUBLIC_S3_BASE_URL;
+  
+  if (s3BaseUrl) {
+    // Ensure proper URL encoding for S3
+    return `${s3BaseUrl}/${encodeURIComponent(filename)}`;
+  }
+  
+  return null;
+};
+
+/**
+ * Helper function to get template image URL (local first, S3 as fallback)
+ * Primary: public/templates/ folder
+ * Fallback: Amazon S3 bucket (via error handlers)
+ */
+const getTemplateImageUrl = (filename: string): string => {
+  // Always return local path first from public/templates/
+  // Error handlers in Image components will automatically fallback to S3 if local fails
+  return `/templates/${filename}`;
+};
+
 const templates: Template[] = [
   {
     id: 'the-creative',
     name: 'The Creative',
-    thumbnail: '/CV templates/Contemporary-Skills-Rating.png',
-    preview: '/CV templates/Contemporary-Skills-Rating.png'
+    thumbnail: getTemplateImageUrl('Contemporary-Skills-Rating.png'),
+    preview: getTemplateImageUrl('Contemporary-Skills-Rating.png')
   },
   {
     id: 'the-executive',
     name: 'The Executive',
-    thumbnail: '/CV templates/Executive-Professional-Layout.png',
-    preview: '/CV templates/Executive-Professional-Layout.png'
+    thumbnail: getTemplateImageUrl('Executive-Professional-Layout.png'),
+    preview: getTemplateImageUrl('Executive-Professional-Layout.png')
   },
   {
     id: 'the-minimalist',
     name: 'The Minimalist',
-    thumbnail: '/CV templates/Classic-Black-White-Minimalist.png',
-    preview: '/CV templates/Classic-Black-White-Minimalist.png'
+    thumbnail: getTemplateImageUrl('Classic-Black-White-Minimalist.png'),
+    preview: getTemplateImageUrl('Classic-Black-White-Minimalist.png')
   },
   {
     id: 'the-professional',
     name: 'The Professional',
-    thumbnail: '/CV templates/Modern-Professional-Single-Column.png',
-    preview: '/CV templates/Modern-Professional-Single-Column.png'
+    thumbnail: getTemplateImageUrl('Modern-Professional-Single-Column.png'),
+    preview: getTemplateImageUrl('Modern-Professional-Single-Column.png')
   }
 ];
 
@@ -275,11 +307,30 @@ const PremiumTemplates = () => {
                               className="object-cover transition-transform duration-300 group-hover:scale-110"
                               unoptimized
                               onError={(e) => {
-                                console.error('Template thumbnail failed to load:', template.thumbnail);
                                 const target = e.target as HTMLImageElement;
-                                // Try original path without encoding
-                                if (target.src !== template.thumbnail) {
-                                  target.src = template.thumbnail;
+                                const currentSrc = target.src;
+                                
+                                // Prevent infinite loops - if we've already tried this source, stop
+                                if (target.dataset.triedFallback === 'true') {
+                                  console.error('All template thumbnail fallbacks exhausted for:', template.thumbnail);
+                                  return;
+                                }
+                                
+                                // Extract filename from template thumbnail (e.g., "/templates/file.png" -> "file.png")
+                                const filename = template.thumbnail.split('/').pop() || '';
+                                
+                                // Mark that we've tried the fallback to prevent infinite loops
+                                target.dataset.triedFallback = 'true';
+                                
+                                // Primary: Try public/templates/ (already tried, failed)
+                                // Fallback: Try Amazon S3 bucket
+                                const s3Url = getTemplateImageS3Url(filename);
+                                if (s3Url && !currentSrc.includes('s3.') && !currentSrc.includes('amazonaws.com')) {
+                                  console.log('Template thumbnail falling back to S3:', s3Url);
+                                  target.src = s3Url;
+                                } else {
+                                  // No S3 URL configured or already tried - no more fallbacks available
+                                  console.error('Template thumbnail failed to load and no S3 fallback available:', template.thumbnail);
                                 }
                               }}
                             />
@@ -331,11 +382,30 @@ const PremiumTemplates = () => {
                       unoptimized
                       onLoad={() => setIsLoading(false)}
                       onError={(e) => {
-                        console.error('Template preview failed to load:', selectedTemplate.preview);
                         const target = e.target as HTMLImageElement;
-                        // Try original path without encoding
-                        if (target.src !== selectedTemplate.preview) {
-                          target.src = selectedTemplate.preview;
+                        const currentSrc = target.src;
+                        
+                        // Prevent infinite loops - if we've already tried this source, stop
+                        if (target.dataset.triedFallback === 'true') {
+                          console.error('All template preview fallbacks exhausted for:', selectedTemplate.preview);
+                          return;
+                        }
+                        
+                        // Extract filename from template preview (e.g., "/templates/file.png" -> "file.png")
+                        const filename = selectedTemplate.preview.split('/').pop() || '';
+                        
+                        // Mark that we've tried the fallback to prevent infinite loops
+                        target.dataset.triedFallback = 'true';
+                        
+                        // Primary: Try public/templates/ (already tried, failed)
+                        // Fallback: Try Amazon S3 bucket
+                        const s3Url = getTemplateImageS3Url(filename);
+                        if (s3Url && !currentSrc.includes('s3.') && !currentSrc.includes('amazonaws.com')) {
+                          console.log('Template preview falling back to S3:', s3Url);
+                          target.src = s3Url;
+                        } else {
+                          // No S3 URL configured or already tried - no more fallbacks available
+                          console.error('Template preview failed to load and no S3 fallback available:', selectedTemplate.preview);
                         }
                       }}
                       sizes="(max-width: 1024px) 0vw, 50vw"

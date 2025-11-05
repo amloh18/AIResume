@@ -33,18 +33,19 @@ export async function GET(
     }
 
     // Ensure job has required fields
-    if (!job.jobTitle && !job.company) {
-      console.warn('⚠️ Job insights API - Job missing required fields:', { jobId, hasTitle: !!job.jobTitle, hasCompany: !!job.company });
+    const jobData = job as any;
+    if (!jobData.jobTitle && !jobData.company) {
+      console.warn('⚠️ Job insights API - Job missing required fields:', { jobId, hasTitle: !!jobData.jobTitle, hasCompany: !!jobData.company });
     }
 
     // Calculate dynamic insights
-    const insights = await calculateJobInsights(job);
+    const insights = await calculateJobInsights(jobData);
     
     return NextResponse.json({
       success: true,
       data: {
         insights,
-        jobId: job._id?.toString() || jobId,
+        jobId: jobData._id?.toString() || jobId,
         lastUpdated: new Date().toISOString()
       }
     });

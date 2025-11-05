@@ -3,7 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getConnection } from '@/lib/database';
 import CoverLetter from '@/models/CoverLetter';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { PutObjectCommand } from '@aws-sdk/client-s3';
+import { getS3Client, getS3PublicUrl } from '@/lib/s3-client';
 
 export async function POST(
   request: NextRequest,
@@ -77,14 +78,8 @@ async function generateCoverLetterThumbnail(coverLetter: any, userId: string): P
     // Generate SVG-based thumbnail
     const svgContent = generateCoverLetterThumbnailSVG(coverLetter);
     
-    // Initialize S3 client
-    const s3Client = new S3Client({
-      region: process.env.AWS_S3_REGION!,
-      credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-      },
-    });
+    // Get S3 client
+    const s3Client = getS3Client();
 
     // Create S3 key for thumbnail
     const coverLetterId = coverLetter._id?.toString() || 'unknown';
@@ -107,10 +102,8 @@ async function generateCoverLetterThumbnail(coverLetter: any, userId: string): P
 
     await s3Client.send(command);
 
-    // Return public URL
-    const publicUrl = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_S3_REGION}.amazonaws.com/${s3Key}`;
-    
-    return publicUrl;
+    // Return public URL using centralized utility
+    return getS3PublicUrl(s3Key);
 
   } catch (error) {
     console.error('Error creating cover letter thumbnail:', error);
@@ -136,7 +129,7 @@ function generateCoverLetterThumbnailSVG(coverLetter: any): string {
   const targetPosition = coverLetter.metadata?.targetPosition || '';
   
   // Extract first few lines of content
-  const lines = content.split('\n').filter(line => line.trim()).slice(0, 8);
+  const lines = content.split('\n').filter((line: string) => line.trim()).slice(0, 8);
   
   return `
     <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
@@ -175,7 +168,7 @@ function generateCoverLetterThumbnailSVG(coverLetter: any): string {
       
       <!-- Content Preview -->
       <g transform="translate(20, 150)">
-        ${lines.map((line, index) => `
+        ${lines.map((line: string, index: number) => `
           <text x="0" y="${index * 20}" font-family="Arial, sans-serif" font-size="10" fill="#4b5563">
             ${line.substring(0, 40)}${line.length > 40 ? '...' : ''}
           </text>

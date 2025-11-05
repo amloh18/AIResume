@@ -8,7 +8,6 @@ export { ExecutiveProfessionalLayoutTemplate } from './ExecutiveProfessionalLayo
 export { ExecutiveStandardTemplate } from './ExecutiveStandardTemplate';
 export { ElegantTimelineTemplate } from './ElegantTimelineTemplate';
 export { TheModernCVTemplate } from './TheModernCVTemplate';
-export { ProfessionalExtendedTemplate } from './ProfessionalExtendedTemplate';
 
 // Template mapping for easy reference
 export const CUSTOM_TEMPLATES = {
@@ -18,8 +17,7 @@ export const CUSTOM_TEMPLATES = {
   'executive-professional-layout': 'ExecutiveProfessionalLayoutTemplate',
   'executive-standard': 'ExecutiveStandardTemplate',
   'elegant-timeline': 'ElegantTimelineTemplate',
-  'the-modern-cv': 'TheModernCVTemplate',
-  'professional-extended': 'ProfessionalExtendedTemplate'
+  'the-modern-cv': 'TheModernCVTemplate'
 } as const;
 
 export type CustomTemplateKey = keyof typeof CUSTOM_TEMPLATES;

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { renderFormattedText } from '@/lib/utils/textFormatting';
 
 interface ExecutiveStandardTemplateProps {
   cvData: UnifiedCVDataStructure;
@@ -219,7 +220,11 @@ export const ExecutiveStandardTemplate: React.FC<ExecutiveStandardTemplateProps>
             </div>
             <div className="experience-description">
               {job.highlights?.map((highlight, idx) => (
-                <div key={idx} className="bullet-point">{highlight}</div>
+                <div 
+                  key={idx} 
+                  className="bullet-point"
+                  dangerouslySetInnerHTML={{ __html: renderFormattedText(highlight) }}
+                />
               ))}
             </div>
           </div>

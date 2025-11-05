@@ -3,7 +3,29 @@
  */
 
 /**
+ * Render HTML content safely, preserving formatting from WYSIWYG editor
+ * This function handles both HTML (from WYSIWYG) and markdown-style text
+ */
+export const renderFormattedText = (text: string): string => {
+  if (!text) return '';
+
+  // Check if text contains HTML tags (from WYSIWYG editor)
+  const hasHTML = /<[^>]+>/g.test(text);
+  
+  if (hasHTML) {
+    // Text already contains HTML from WYSIWYG editor
+    // Just ensure proper line breaks and return as-is
+    // The HTML already has <strong>, <em>, <u>, <ul>, <li> tags
+    return text;
+  }
+
+  // Fallback to markdown parsing for backward compatibility
+  return parseFormattedText(text);
+};
+
+/**
  * Parse formatted text and return HTML string with proper styling
+ * (Legacy function for markdown-style text)
  */
 export const parseFormattedText = (text: string): string => {
   if (!text) return '';

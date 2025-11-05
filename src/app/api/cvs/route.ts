@@ -146,7 +146,7 @@ export async function GET(request: NextRequest) {
         
         // Create a map for quick lookup
         const templateMap = new Map(
-          templates.map(t => [t._id.toString(), t])
+          templates.map((t: any) => [t._id.toString(), t])
         );
         
         // Populate templateId in CVs that have ObjectId templateIds

@@ -82,7 +82,10 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [linkedJourney, setLinkedJourney] = useState<any>(null);
   const [checkingJourney, setCheckingJourney] = useState(false);
-  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(cv.thumbnail || null);
+  // Initialize thumbnail from cv.thumbnail or cv.metadata.thumbnailUrl
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(
+    cv.thumbnail || cv.metadata?.thumbnailUrl || null
+  );
   const [thumbnailLoading, setThumbnailLoading] = useState(false);
 
   // Generate random background color based on CV ID for consistency
@@ -220,21 +223,15 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
              style={{
                backgroundImage: thumbnailUrl ? `url(${thumbnailUrl})` : 'none'
              }}>
-          {/* CV Preview */}
-          {cv.cvData && cv.template ? (
-            <CVPreviewThumbnail 
-              cvData={cv.cvData}
-              template={cv.template}
-              className="rounded-xl"
-            />
-          ) : thumbnailUrl ? (
+          {/* CV Preview - Prioritize S3 thumbnail for performance */}
+          {thumbnailUrl ? (
             <img
               src={thumbnailUrl}
               alt={`CV Preview: ${cv.title}`}
               className="w-full h-full object-cover rounded-xl"
               loading="lazy"
               onError={(e) => {
-                // If S3 URL fails, try to get presigned URL
+                // If S3 URL fails, try to get presigned URL first
                 const target = e.target as HTMLImageElement;
                 const currentSrc = target.src;
                 if (currentSrc.includes('s3.amazonaws.com') || currentSrc.includes('s3.')) {
@@ -244,14 +241,28 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
                     .then(data => {
                       if (data.url) {
                         target.src = data.url;
+                      } else {
+                        // If presigned URL fails, fallback to live rendering
+                        setThumbnailUrl(null);
                       }
                     })
                     .catch(() => {
-                      // Fallback: keep original URL or show error
-                      console.error('Failed to fetch presigned URL for thumbnail');
+                      // If all S3 attempts fail, fallback to live rendering
+                      console.error('Failed to fetch presigned URL for thumbnail, falling back to live rendering');
+                      setThumbnailUrl(null);
                     });
+                } else {
+                  // For non-S3 URLs, if they fail, try live rendering
+                  setThumbnailUrl(null);
                 }
               }}
+            />
+          ) : cv.cvData && cv.template ? (
+            // Fallback to live rendering if thumbnail is not available
+            <CVPreviewThumbnail 
+              cvData={cv.cvData}
+              template={cv.template}
+              className="rounded-xl"
             />
           ) : thumbnailLoading ? (
             /* Loading state */

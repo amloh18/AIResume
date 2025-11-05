@@ -1,17 +1,9 @@
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-
-// Initialize the S3 client
-const s3Client = new S3Client({
-  region: process.env.AWS_S3_REGION!,
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-  },
-});
+import { getS3Client } from "@/lib/s3-client";
 
 /**
  * Generate a presigned URL for uploading files to S3
@@ -76,6 +68,9 @@ export async function POST(request: NextRequest) {
         break;
     }
 
+    // Get S3 client
+    const s3Client = getS3Client();
+    
     // Create a command for the S3 client
     const command = new PutObjectCommand({
       Bucket: process.env.AWS_S3_BUCKET_NAME!,
@@ -96,7 +91,8 @@ export async function POST(request: NextRequest) {
     });
 
     // Return the upload URL and the S3 key (which can be used to construct the public URL)
-    const publicUrl = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_S3_REGION}.amazonaws.com/${s3Key}`;
+    const { getS3PublicUrl } = await import('@/lib/s3-client');
+    const publicUrl = getS3PublicUrl(s3Key);
 
     return NextResponse.json({
       uploadUrl,

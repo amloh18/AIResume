@@ -171,7 +171,7 @@ export async function DELETE(
     const coverLetterId = toObjectId(id);
     const existingCoverLetter = await CoverLetter.findOne({
       _id: coverLetterId
-    }).lean();
+    }).lean() as any;
     
     console.error('🔍 DELETE Cover Letter - Found (any user):', JSON.stringify({
       exists: !!existingCoverLetter,

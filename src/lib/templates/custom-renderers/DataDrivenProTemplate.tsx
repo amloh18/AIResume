@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { renderFormattedText } from '@/lib/utils/textFormatting';
 
 interface DataDrivenProTemplateProps {
   cvData: UnifiedCVDataStructure;
@@ -417,7 +418,11 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
                     Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
                   </p>
                   {job.highlights?.map((highlight, idx) => (
-                    <div key={idx} className="bullet-point">{highlight}</div>
+                    <div 
+                      key={idx} 
+                      className="bullet-point"
+                      dangerouslySetInnerHTML={{ __html: renderFormattedText(highlight) }}
+                    />
                   ))}
                   {(!job.highlights || job.highlights.length === 0) && (
                     <>
