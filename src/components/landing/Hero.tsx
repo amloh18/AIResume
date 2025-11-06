@@ -152,7 +152,7 @@ const Hero = () => {
         >
           <motion.a
             href="/sign-up"
-            className="group relative inline-block bg-gradient-to-r from-lime-400 to-lime-500 text-black px-5 py-2.5 sm:px-8 sm:py-4 lg:px-10 lg:py-5 rounded-full font-semibold text-sm sm:text-base lg:text-lg shadow-2xl hover:shadow-lime-400/50 transition-all overflow-hidden btn-hover"
+            className="group relative inline-block bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black px-5 py-2.5 sm:px-8 sm:py-4 lg:px-10 lg:py-5 rounded-full font-semibold text-sm sm:text-base lg:text-lg shadow-2xl hover:shadow-[rgb(129,255,0)]/50 transition-all overflow-hidden btn-hover"
             whileHover={{ 
               scale: 1.02,
               boxShadow: "0 15px 30px -5px rgba(132, 204, 22, 0.3)"

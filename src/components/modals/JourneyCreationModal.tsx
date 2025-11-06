@@ -409,7 +409,7 @@ const JourneyCreationModal: React.FC<JourneyCreationModalProps> = ({
                 <motion.button
                   onClick={handleNext}
                   disabled={!selectedJob || (currentStep === 2 && !selectedCV)}
-                  className="flex items-center gap-2 px-6 py-2 bg-lime-500 hover:bg-lime-600 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed text-black font-medium rounded-lg transition-colors"
+                  className="flex items-center gap-2 px-6 py-2 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] disabled:bg-gray-300 disabled:cursor-not-allowed text-black font-medium rounded-lg transition-colors"
                   whileHover={{ scale: selectedJob && (currentStep === 1 || selectedCV) ? 1.02 : 1 }}
                   whileTap={{ scale: selectedJob && (currentStep === 1 || selectedCV) ? 0.98 : 1 }}
                 >
@@ -420,7 +420,7 @@ const JourneyCreationModal: React.FC<JourneyCreationModalProps> = ({
                 <motion.button
                   onClick={handleCreateJourney}
                   disabled={isLoading}
-                  className="flex items-center gap-2 px-6 py-2 bg-lime-500 hover:bg-lime-600 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed text-black font-medium rounded-lg transition-colors"
+                  className="flex items-center gap-2 px-6 py-2 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] disabled:bg-gray-300 disabled:cursor-not-allowed text-black font-medium rounded-lg transition-colors"
                   whileHover={{ scale: !isLoading ? 1.02 : 1 }}
                   whileTap={{ scale: !isLoading ? 0.98 : 1 }}
                 >

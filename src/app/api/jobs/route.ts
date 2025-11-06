@@ -259,6 +259,84 @@ export async function GET(request: NextRequest) {
     
     // Get query parameters
     const { searchParams } = new URL(request.url);
+    const jobId = searchParams.get('id');
+    
+    // If jobId is provided, return single job
+    if (jobId) {
+      try {
+        const job = await JobApplication.findOne({ 
+          _id: new mongoose.Types.ObjectId(jobId),
+          userId: new mongoose.Types.ObjectId(userId)
+        }).lean();
+        
+        if (!job) {
+          return NextResponse.json(
+            { success: false, error: 'Job not found' },
+            { status: 404 }
+          );
+        }
+        
+        // Helper to convert Date to ISO string for frontend
+        const dateToISO = (date: Date | undefined | null): string | undefined => {
+          if (!date) return undefined;
+          if (date instanceof Date) {
+            return date.toISOString().split('T')[0];
+          }
+          return undefined;
+        };
+        
+        return NextResponse.json({
+          success: true,
+          data: {
+            job: {
+              id: job._id.toString(),
+              userId: job.userId.toString(),
+              jobTitle: job.jobTitle,
+              company: job.company,
+              location: job.location,
+              jobUrl: job.jobUrl,
+              jobDescription: job.jobDescription,
+              source: job.source,
+              status: job.status,
+              priority: job.priority,
+              notes: job.notes,
+              sponsorship: job.sponsorship,
+              tags: job.tags || [],
+              contactDetails: job.contactDetails ? {
+                name: job.contactDetails.name || '',
+                email: job.contactDetails.email || '',
+                phone: job.contactDetails.phone || '',
+                role: job.contactDetails.role || ''
+              } : { name: '', email: '', phone: '', role: '' },
+              salary: job.salary,
+              deadline: dateToISO(job.deadline),
+              applicationDate: dateToISO(job.applicationDate),
+              interviews: (job.interviews || []).map((iv: any) => ({
+                ...iv.toObject ? iv.toObject() : iv,
+                date: iv.date instanceof Date ? dateToISO(iv.date) : iv.date
+              })),
+              followUps: (job.followUps || []).map((fu: any) => ({
+                ...fu.toObject ? fu.toObject() : fu,
+                date: fu.date instanceof Date ? dateToISO(fu.date) : fu.date
+              })),
+              attachments: (job.attachments || []).map((att: any) => att.toObject ? att.toObject() : att),
+              sourceUrl: job.sourceUrl,
+              atsScore: job.atsScore,
+              isArchived: job.isArchived || false,
+              createdAt: job.createdAt,
+              updatedAt: job.updatedAt
+            }
+          }
+        });
+      } catch (error: any) {
+        console.error('Error fetching single job:', error);
+        return NextResponse.json(
+          { success: false, error: 'Failed to fetch job' },
+          { status: 500 }
+        );
+      }
+    }
+    
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const status = searchParams.get('status');

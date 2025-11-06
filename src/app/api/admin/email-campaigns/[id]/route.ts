@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { getAdminEmailCampaign } from '@/models/admin-models';
 import { getTargetedUsers } from '@/lib/services/userSyncService';
+import { ActivityLogService } from '@/lib/services/activityLogService';
+import { getAdminContext } from '@/lib/utils/adminAuth';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -108,6 +110,24 @@ export async function PUT(
       { new: true }
     ).lean();
 
+    // Log admin action
+    const adminContext = await getAdminContext();
+    if (adminContext) {
+      await ActivityLogService.logAdminAction({
+        adminUserId: adminContext.adminUserId!,
+        adminEmail: adminContext.adminEmail,
+        action: 'updated_campaign',
+        actionType: 'campaign_management',
+        resourceType: 'campaign',
+        resourceId: id,
+        status: 'success',
+        metadata: {
+          campaignName: body.name || campaign.name,
+          status: body.status || campaign.status
+        }
+      });
+    }
+
     return NextResponse.json({
       success: true,
       campaign: updatedCampaign,
@@ -158,6 +178,23 @@ export async function DELETE(
     }
 
     await EmailCampaign.findByIdAndDelete(id);
+
+    // Log admin action
+    const adminContext = await getAdminContext();
+    if (adminContext) {
+      await ActivityLogService.logAdminAction({
+        adminUserId: adminContext.adminUserId!,
+        adminEmail: adminContext.adminEmail,
+        action: 'deleted_campaign',
+        actionType: 'campaign_management',
+        resourceType: 'campaign',
+        resourceId: id,
+        status: 'success',
+        metadata: {
+          campaignName: campaign.name
+        }
+      });
+    }
 
     return NextResponse.json({
       success: true,

@@ -66,7 +66,7 @@ const DiscountCodeManager: React.FC = () => {
     description: '',
     discountType: 'percentage',
     discountValue: 0,
-    currency: 'EUR',
+    currency: 'EUR', // Will be updated from config
     maxUses: 100,
     validFrom: new Date().toISOString().split('T')[0],
     validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -74,6 +74,25 @@ const DiscountCodeManager: React.FC = () => {
     minimumOrderValue: 0,
     isActive: true
   });
+  const [availableCurrencies, setAvailableCurrencies] = useState<string[]>(['EUR', 'USD', 'INR']);
+
+  useEffect(() => {
+    fetchStatusConfig();
+  }, []);
+
+  const fetchStatusConfig = async () => {
+    try {
+      const response = await fetch('/api/admin/config/statuses');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.currencies) {
+          setAvailableCurrencies(data.currencies);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching status config:', error);
+    }
+  };
 
   useEffect(() => {
     fetchDiscountCodes();
@@ -94,13 +113,16 @@ const DiscountCodeManager: React.FC = () => {
 
   const fetchPricingPlans = async () => {
     try {
-      const response = await fetch('/api/admin/pricing-plans');
+      const response = await fetch('/api/pricing-plans?includeInactive=true');
       if (response.ok) {
         const data = await response.json();
-        setPricingPlans(data);
+        // Extract plans from response - API returns { plans: [...], region: {...} }
+        const plans = Array.isArray(data) ? data : (data?.plans || []);
+        setPricingPlans(Array.isArray(plans) ? plans : []);
       }
     } catch (error) {
       console.error('Error fetching pricing plans:', error);
+      setPricingPlans([]); // Set empty array on error
     } finally {
       setLoading(false);
     }
@@ -399,9 +421,11 @@ const DiscountCodeManager: React.FC = () => {
                       onChange={(e) => setFormData(prev => ({ ...prev, currency: e.target.value }))}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                     >
-                      <option value="EUR">EUR</option>
-                      <option value="USD">USD</option>
-                      <option value="INR">INR</option>
+                      {availableCurrencies.map((currency) => (
+                        <option key={currency} value={currency}>
+                          {currency}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 </div>

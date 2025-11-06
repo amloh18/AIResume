@@ -4,6 +4,11 @@ export async function POST(request: NextRequest) {
   try {
     const { email, url, provider } = await request.json();
 
+    // Get base URL for email images (absolute URLs required for emails)
+    const baseUrl = process.env.NEXTAUTH_URL || 'https://www.cvcircle.io';
+    const cleanBaseUrl = baseUrl.replace(/\/$/, '');
+    const logoUrl = `${cleanBaseUrl}/images/logo.png`;
+
     // Custom email template for magic links - matches auth page dark theme
     const emailHtml = `
       <!DOCTYPE html>
@@ -180,7 +185,7 @@ export async function POST(request: NextRequest) {
             <div class="container">
               <div class="header" style="margin-bottom: 30px;">
                 <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 10px;">
-                  <img src="https://www.cvcircle.io/images/Logo.png" alt="CVCircle Logo" width="40" height="40" style="display: block; max-width: 40px; height: auto;">
+                  <img src="${logoUrl}" alt="CVCircle Logo" width="40" height="40" style="display: block; max-width: 40px; height: auto;">
                   <div class="logo" style="font-size: 28px; font-weight: 700; margin: 0; line-height: 1.2;">
                     <span class="logo-cv" style="color: rgb(129, 255, 0);">CV</span><span class="logo-circle" style="color: #ffffff;">Circle</span>
                   </div>

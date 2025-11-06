@@ -745,38 +745,23 @@ const ApplicationTracker: React.FC = () => {
       <div className="space-y-4">
         {/* Top Row */}
         <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
-          <div className="flex flex-col sm:flex-row gap-3 flex-1">
+          <div className="flex flex-row items-center gap-2 w-full lg:w-auto lg:flex-1">
             <motion.button
               onClick={handleAddJob}
-              className="px-4 py-2 bg-gradient-to-r from-lime-500 to-lime-600 hover:from-lime-600 hover:to-lime-700 text-white rounded-full font-medium transition-all duration-200 flex items-center gap-2 shadow-md hover:shadow-lg"
+              className="px-4 py-2 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 shadow-md hover:shadow-lg flex-shrink-0"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
               <Plus size={16} />
-              Add Job
+              <span className="hidden sm:inline">Add Job</span>
             </motion.button>
             
-            <div className="relative flex-1 max-w-md">
-              <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white" />
-              <input
-                type="text"
-                placeholder="Search by company, role..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 rounded-full bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
-                aria-label="Search jobs"
-                role="searchbox"
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
             {/* View Mode Toggle */}
-            <div className="flex items-center bg-gray-100 dark:bg-[#232f1c] rounded-lg p-1">
+            <div className="flex items-center bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 rounded-lg p-1 flex-shrink-0">
               <motion.button
                 onClick={() => handleViewModeChange('kanban')}
                 disabled={isLoadingViewMode}
-                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                   viewMode === 'kanban' 
                     ? 'bg-gray-200 dark:bg-[#2a3a1f] text-gray-900 dark:text-white shadow-sm' 
                     : 'text-gray-600 dark:text-white/60 hover:text-gray-900 dark:text-white/80'
@@ -789,7 +774,7 @@ const ApplicationTracker: React.FC = () => {
               <motion.button
                 onClick={() => handleViewModeChange('list')}
                 disabled={isLoadingViewMode}
-                className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                   viewMode === 'list' 
                     ? 'bg-gray-200 dark:bg-[#2a3a1f] text-gray-900 dark:text-white shadow-sm' 
                     : 'text-gray-600 dark:text-white/60 hover:text-gray-900 dark:text-white/80'
@@ -804,13 +789,13 @@ const ApplicationTracker: React.FC = () => {
             {/* Consolidated Sort Button */}
             <motion.button
               onClick={() => setShowFilters(!showFilters)}
-              className="px-4 py-2 rounded-full bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-[#2a3a1f] transition-all duration-200 flex items-center gap-2"
+              className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-[#2a3a1f] transition-all duration-200 flex items-center gap-2 flex-shrink-0 ml-auto lg:ml-0"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
               <Filter size={16} />
-              Sort & Filter
-              <ChevronDown size={16} />
+              <span className="hidden sm:inline">Sort & Filter</span>
+              <ChevronDown size={16} className="hidden sm:block" />
             </motion.button>
           </div>
         </div>
@@ -990,12 +975,12 @@ const ApplicationTracker: React.FC = () => {
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
           transition={{ duration: 0.3 }}
-          className={`grid gap-4 ${
+          className={`${
             viewMode === 'kanban' 
               ? zoomedStage 
-                ? 'grid-cols-1' 
-                : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5'
-              : 'grid-cols-1'
+                ? 'grid grid-cols-1 gap-4' 
+                : 'flex flex-row overflow-x-auto gap-4 pb-4 scrollbar-hide md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5'
+              : 'grid grid-cols-1 gap-4'
           }`}
         >
           {viewMode === 'kanban' ? (
@@ -1017,7 +1002,7 @@ const ApplicationTracker: React.FC = () => {
                 { status: 'rejected', title: 'Rejected', color: 'bg-red-100 dark:bg-red-500/20 border-red-300 dark:border-red-500/30 text-red-800 dark:text-white' }
               ]
           ).map((stage) => (
-          <div key={stage.status} className="space-y-4">
+          <div key={stage.status} className={`space-y-4 ${viewMode === 'kanban' && !zoomedStage ? 'min-w-[280px] flex-shrink-0 md:min-w-0' : ''}`}>
             {/* Stage Header */}
             <div 
               className={`p-3 rounded-xl border-2 ${stage.status === 'created' ? 'border-solid' : 'border-dashed'} ${stage.color} min-h-[60px] flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity duration-200`}

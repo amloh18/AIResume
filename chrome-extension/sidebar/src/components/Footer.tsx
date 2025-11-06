@@ -8,7 +8,7 @@ const Footer: React.FC = () => {
       </div>
       <div className="flex items-center justify-center gap-2 text-white/70 text-sm">
         <a 
-          href="https://cvcircle.io/privacy-policy" 
+          href="https://cvcircle.io/legal#privacy" 
           target="_blank" 
           rel="noopener noreferrer"
           className="hover:text-lime-500 transition-colors"
@@ -17,7 +17,7 @@ const Footer: React.FC = () => {
         </a>
         <span>•</span>
         <a 
-          href="https://cvcircle.io/cookie-policy" 
+          href="https://cvcircle.io/legal#cookies" 
           target="_blank" 
           rel="noopener noreferrer"
           className="hover:text-lime-500 transition-colors"
@@ -26,12 +26,21 @@ const Footer: React.FC = () => {
         </a>
         <span>•</span>
         <a 
-          href="https://cvcircle.io/terms" 
+          href="https://cvcircle.io/legal#terms" 
           target="_blank" 
           rel="noopener noreferrer"
           className="hover:text-lime-500 transition-colors"
         >
           Terms & Conditions
+        </a>
+        <span>•</span>
+        <a 
+          href="https://cvcircle.io/legal#support" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="hover:text-lime-500 transition-colors"
+        >
+          Support
         </a>
       </div>
     </footer>

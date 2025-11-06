@@ -496,7 +496,7 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
                 {canProceedToStep2 && (
                   <motion.button
                     onClick={() => setCurrentStep(2)}
-                    className="w-full mt-4 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                    className="w-full mt-4 px-4 py-2 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     initial={{ opacity: 0, y: 10 }}
@@ -621,7 +621,7 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
                   {canProceedToStep3 && (
                     <motion.button
                       onClick={() => setCurrentStep(3)}
-                      className="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                      className="flex-1 px-4 py-2 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       initial={{ opacity: 0, y: 10 }}
@@ -690,7 +690,7 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
                   <motion.button
                     onClick={handleCreateJourney}
                     disabled={!canCreateJourney || loading}
-                    className="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-500/50 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                    className="flex-1 px-4 py-2 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] disabled:bg-gray-300 disabled:cursor-not-allowed text-black font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
                     whileHover={{ scale: canCreateJourney && !loading ? 1.02 : 1 }}
                     whileTap={{ scale: canCreateJourney && !loading ? 0.98 : 1 }}
                   >

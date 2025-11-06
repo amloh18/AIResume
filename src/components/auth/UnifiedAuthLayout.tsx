@@ -49,7 +49,7 @@ export default function UnifiedAuthLayout({
           <div className="mb-8">
             <div className="flex items-center justify-center gap-3 mb-6">
               <img 
-                src="/images/Logo.png" 
+                src="/images/logo.png" 
                 alt="CVCircle Logo" 
                 className="w-10 h-10 object-contain"
               />

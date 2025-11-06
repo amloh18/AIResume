@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { PricingPlan } from '@/models';
+import { detectUserRegion, getPricingForRegion } from '@/lib/services/regionDetectionService';
+import { getAdminPricingPlan } from '@/models/admin-models';
 
 // Fallback pricing plans for when database is empty
 const fallbackPlans = [
@@ -174,6 +176,22 @@ export async function GET(request: NextRequest) {
     const includeInactive = searchParams.get('includeInactive') === 'true';
     const publicOnly = searchParams.get('public') === 'true';
 
+    // Detect user region from IP
+    const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined;
+    let regionInfo;
+    try {
+      regionInfo = await detectUserRegion(ip);
+    } catch (error) {
+      console.warn('Region detection failed, using default:', error);
+      regionInfo = {
+        countryCode: 'US',
+        countryName: 'United States',
+        currency: 'USD',
+        currencySymbol: '$',
+        paymentPartner: 'stripe'
+      };
+    }
+
     let query: any = {};
     
     if (!includeInactive) {
@@ -194,8 +212,9 @@ export async function GET(request: NextRequest) {
     
     try {
       await getConnection();
-      const dbPlans = await PricingPlan.find(query)
-        .sort({ sortOrder: 1, price: 1 })
+      const PricingPlanModel = await getAdminPricingPlan();
+      const dbPlans = await PricingPlanModel.find(query)
+        .sort({ sortOrder: 1 })
         .lean();
       
       if (dbPlans && dbPlans.length > 0) {
@@ -210,28 +229,67 @@ export async function GET(request: NextRequest) {
       plans = fallbackPlans;
     }
 
-    // Add promotional pricing and computed fields
+    // Add promotional pricing, regional pricing, and computed fields
     const now = new Date();
     const enhancedPlans = plans.map(plan => {
+      // Get regional pricing for this plan
+      const regionalPricing = getPricingForRegion(plan, regionInfo.countryCode);
+      
       // Check if promotion is active
       const isPromotionActive = (plan as any).promotionValidFrom && (plan as any).promotionValidUntil &&
         new Date((plan as any).promotionValidFrom) <= now && new Date((plan as any).promotionValidUntil) >= now;
 
-      // Calculate effective prices
+      // Calculate effective prices (use regional if available, otherwise use plan defaults)
+      const basePrice = {
+        monthly: regionalPricing?.price || plan.price_monthly,
+        quarterly: regionalPricing?.price || plan.price_quarterly,
+        yearly: regionalPricing?.price || plan.price_yearly,
+        oneTime: regionalPricing?.price || plan.price_one_time
+      };
+
       const effectivePrice = {
         monthly: isPromotionActive && (plan as any).promotionalPrice_monthly 
           ? (plan as any).promotionalPrice_monthly 
-          : plan.price_monthly,
+          : basePrice.monthly,
         quarterly: isPromotionActive && (plan as any).promotionalPrice_quarterly 
           ? (plan as any).promotionalPrice_quarterly 
-          : plan.price_quarterly,
+          : basePrice.quarterly,
         yearly: isPromotionActive && (plan as any).promotionalPrice_yearly 
           ? (plan as any).promotionalPrice_yearly 
-          : plan.price_yearly,
+          : basePrice.yearly,
         oneTime: isPromotionActive && (plan as any).promotionalPrice_one_time 
           ? (plan as any).promotionalPrice_one_time 
-          : plan.price_one_time
+          : basePrice.oneTime
       };
+
+      // Calculate time-based duration
+      let durationInfo = null;
+      if (plan.key === 'day_pass') {
+        durationInfo = {
+          durationInDays: 1,
+          durationType: 'hour',
+          durationHours: (plan as any).dayPassDuration || 24,
+          displayText: `${(plan as any).dayPassDuration || 24} hours`
+        };
+      } else if (plan.key === 'pro_monthly') {
+        durationInfo = {
+          durationInDays: 30,
+          durationType: 'month',
+          displayText: '1 month'
+        };
+      } else if (plan.key === 'pro_quarterly') {
+        durationInfo = {
+          durationInDays: 90,
+          durationType: 'month',
+          displayText: '3 months'
+        };
+      } else if (plan.key === 'pro_yearly') {
+        durationInfo = {
+          durationInDays: 365,
+          durationType: 'year',
+          displayText: '1 year'
+        };
+      }
 
       return {
         ...plan,
@@ -243,6 +301,16 @@ export async function GET(request: NextRequest) {
         // Add computed fields for backward compatibility
         price: plan.price_monthly || plan.price_one_time || 0,
         billingCycle: plan.billingCycle,
+        // Regional pricing info
+        regionalPricing: {
+          ...regionalPricing,
+          region: regionInfo.countryCode,
+          regionName: regionInfo.countryName,
+          currency: regionalPricing?.currency || regionInfo.currency,
+          currencySymbol: regionInfo.currencySymbol
+        },
+        // Time-based metadata
+        durationInfo,
         // Add promotional fields
         isPromotionActive,
         effectivePrice,
@@ -253,7 +321,16 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    return NextResponse.json(enhancedPlans);
+    return NextResponse.json({
+      plans: enhancedPlans,
+      region: {
+        countryCode: regionInfo.countryCode,
+        countryName: regionInfo.countryName,
+        currency: regionInfo.currency,
+        currencySymbol: regionInfo.currencySymbol,
+        paymentPartner: regionInfo.paymentPartner
+      }
+    });
   } catch (error) {
     console.error('Error fetching pricing plans:', error);
     // Return fallback plans even on error

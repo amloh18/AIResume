@@ -1,46 +1,13 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Check, Star, ArrowRight, Brain, Users, Crown, Globe, CreditCard, Shield, Clock, Gift } from 'lucide-react';
 import { useSession } from 'next-auth/react';
-import { LocationService, LocationData, PricingData } from '@/lib/payment/locationService';
-import { getRegionalPricing, isEUCountry, getEUPricing, RegionalPricing } from '@/lib/pricing/regionalPricing';
+import { PricingData } from '@/lib/payment/locationService';
 import LoadingAnimation from '@/components/ui/LoadingAnimation';
 import UniversalPaymentModal from '@/components/payment/UniversalPaymentModal';
-
-interface DatabasePricingPlan {
-  _id: string;
-  key: string;
-  name: string;
-  description: string;
-  price_monthly?: number;
-  price_quarterly?: number;
-  price_yearly?: number;
-  price_one_time?: number;
-  currency: string;
-  features: string[];
-  notIncludedFeatures: string[];
-  isPopular: boolean;
-  isBestValue: boolean;
-  displayOnLanding: boolean;
-  targetAudience: string;
-  // Promotional pricing
-  promotionalPrice_monthly?: number;
-  promotionalPrice_quarterly?: number;
-  promotionalPrice_yearly?: number;
-  promotionalPrice_one_time?: number;
-  promotionValidFrom?: string;
-  promotionValidUntil?: string;
-  promotionDescription?: string;
-  isPromotionActive?: boolean;
-  effectivePrice?: {
-    monthly?: number;
-    quarterly?: number;
-    yearly?: number;
-    oneTime?: number;
-  };
-}
+import { usePricingPlans, DatabasePricingPlan } from '@/lib/hooks/usePricingPlans';
 
 interface PricingProps {
   onPlanSelect?: (plan: DatabasePricingPlan, pricingData: PricingData) => void;
@@ -49,180 +16,24 @@ interface PricingProps {
 const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
   const { data: session, status } = useSession();
   const [selectedCategory, setSelectedCategory] = useState('professional'); // 'essential' or 'professional'
-  const [locationData, setLocationData] = useState<LocationData | null>(null);
-  const [selectedCurrency, setSelectedCurrency] = useState<string>('GBP');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [pricingPlans, setPricingPlans] = useState<DatabasePricingPlan[]>([]);
-  const [promotionalOffers, setPromotionalOffers] = useState<any[]>([]);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<DatabasePricingPlan | null>(null);
-  const [regionalPricing, setRegionalPricing] = useState<RegionalPricing | null>(null);
 
-  // Fetch location and set regional pricing
-  useEffect(() => {
-    const detectLocation = async () => {
-      try {
-        console.log('Detecting user location...');
-        const location = await LocationService.getLocationData();
-        console.log('Location detected:', location);
-        
-        setLocationData(location);
-        setSelectedCurrency(location.currency);
-        
-        // Get regional pricing based on country
-        let pricing: RegionalPricing;
-        if (isEUCountry(location.countryCode)) {
-          pricing = getEUPricing();
-        } else {
-          pricing = getRegionalPricing(location.countryCode);
-        }
-        
-        console.log('Regional pricing set:', pricing);
-        setRegionalPricing(pricing);
-      } catch (error) {
-        console.error('Error detecting location:', error);
-        // Fallback to India pricing if error (more likely in development)
-        const fallbackPricing = getRegionalPricing('IN');
-        console.log('Using fallback pricing (India):', fallbackPricing);
-        setRegionalPricing(fallbackPricing);
-        setSelectedCurrency('INR');
-      }
-    };
-
-    detectLocation();
-  }, []);
-
-  // Fetch pricing plans and promotional offers
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [plansResponse, offersResponse] = await Promise.all([
-          fetch('/api/pricing-plans?public=true'),
-          fetch('/api/promotional-offers/active?userType=all')
-        ]);
-
-        if (plansResponse.ok) {
-          const plans = await plansResponse.json();
-          // Filter plans that should be displayed on landing page
-          const landingPlans = plans.filter((plan: DatabasePricingPlan) => 
-            plan.displayOnLanding && plan.targetAudience === 'all'
-          );
-          setPricingPlans(landingPlans);
-        } else {
-          console.error('Error fetching pricing plans:', plansResponse.status);
-          setError('Failed to load pricing plans');
-        }
-
-        if (offersResponse.ok) {
-          const offersData = await offersResponse.json();
-          if (offersData.success) {
-            setPromotionalOffers(offersData.offers);
-          }
-        } else {
-          console.error('Error fetching promotional offers:', offersResponse.status);
-        }
-      } catch (error) {
-        console.error('Error fetching pricing data:', error);
-        setError('Failed to load pricing plans');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  // Get regional price for a plan (returns price string with currency symbol)
-  const getRegionalPrice = (plan: DatabasePricingPlan): string => {
-    if (!regionalPricing) {
-      // Fallback to default prices if regional pricing not loaded yet
-      const fallbackPrice = plan.price_one_time || plan.price_monthly || 0;
-      return `${plan.currency || 'GBP'} ${fallbackPrice}`;
-    }
-
-    // Map plan keys to regional pricing
-    switch (plan.key) {
-      case 'day_pass':
-        return regionalPricing.dayPass;
-      case 'pro_monthly':
-        return regionalPricing.monthly;
-      case 'pro_quarterly':
-        return regionalPricing.quarterly;
-      case 'pro_yearly':
-        return regionalPricing.yearly;
-      default:
-        const fallbackPrice = plan.price_one_time || plan.price_monthly || 0;
-        return `${regionalPricing.currencySymbol}${fallbackPrice}`;
-    }
-  };
-
-  // Get monthly equivalent price for quarterly and yearly plans
-  const getMonthlyEquivalent = (plan: DatabasePricingPlan): { price: string; showMonthly: boolean } => {
-    if (!regionalPricing) {
-      return { price: '', showMonthly: false };
-    }
-
-    // Helper function to extract numeric value from price string
-    const extractNumericValue = (priceString: string): number => {
-      // Remove all non-numeric characters except dots and commas
-      let cleaned = priceString.replace(/[^\d.,]/g, '');
-      // Handle comma as thousands separator (e.g., 1,999 -> 1999)
-      cleaned = cleaned.replace(/,/g, '');
-      return parseFloat(cleaned) || 0;
-    };
-
-    // Helper function to format price nicely
-    const formatMonthlyPrice = (num: number): string => {
-      // Round to nearest whole number
-      const rounded = Math.round(num);
-      return rounded.toString();
-    };
-
-    if (plan.key === 'pro_quarterly') {
-      // Extract numeric value from quarterly price
-      const quarterlyNum = extractNumericValue(regionalPricing.quarterly);
-      const monthlyNum = quarterlyNum / 3;
-      const formattedMonthly = formatMonthlyPrice(monthlyNum);
-      return {
-        price: `${regionalPricing.currencySymbol}${formattedMonthly}/month`,
-        showMonthly: true
-      };
-    }
-
-    if (plan.key === 'pro_yearly') {
-      // Extract numeric value from yearly price
-      const yearlyNum = extractNumericValue(regionalPricing.yearly);
-      const monthlyNum = yearlyNum / 12;
-      const formattedMonthly = formatMonthlyPrice(monthlyNum);
-      return {
-        price: `${regionalPricing.currencySymbol}${formattedMonthly}/month`,
-        showMonthly: true
-      };
-    }
-
-    return { price: '', showMonthly: false };
-  };
-
-  // Get currency symbol for display
-  const getCurrencySymbol = (): string => {
-    return regionalPricing?.currencySymbol || '£';
-  };
-
-  // Get effective price (promotional or regular)
-  const getEffectivePrice = (plan: DatabasePricingPlan): number => {
-    if (plan.isPromotionActive && plan.effectivePrice) {
-      return plan.effectivePrice.oneTime || plan.effectivePrice.monthly || plan.price_one_time || plan.price_monthly || 0;
-    }
-    return plan.price_one_time || plan.price_monthly || 0;
-  };
-
-  // Check if plan has promotional pricing
-  const hasPromotionalPricing = (plan: DatabasePricingPlan): boolean => {
-    return Boolean(plan.isPromotionActive && plan.effectivePrice && 
-           ((plan.effectivePrice.oneTime && plan.effectivePrice.oneTime < (plan.price_one_time || 0)) ||
-            (plan.effectivePrice.monthly && plan.effectivePrice.monthly < (plan.price_monthly || 0))));
-  };
+  // Use the shared pricing hook
+  const {
+    plans: pricingPlans,
+    promotionalOffers,
+    locationData,
+    regionalPricing,
+    selectedCurrency,
+    loading,
+    error,
+    getRegionalPrice,
+    getMonthlyEquivalent,
+    getCurrencySymbol,
+    getEffectivePrice,
+    hasPromotionalPricing
+  } = usePricingPlans({ publicOnly: true });
 
   // Get plan icon
   const getPlanIcon = (planKey: string) => {
@@ -252,7 +63,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
     setSelectedPlan(plan);
     setShowPaymentModal(true);
     
-    if (onPlanSelect) {
+    if (onPlanSelect && locationData && regionalPricing) {
       // Create pricing data from regional pricing
       const regionalPriceStr = getRegionalPrice(plan);
       // Extract numeric value from price string (handles commas, dots, currency symbols)
@@ -261,9 +72,9 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
         originalPrice: plan.price_one_time || plan.price_monthly || 0,
         originalCurrency: plan.currency,
         convertedPrice: priceValue,
-        convertedCurrency: regionalPricing?.currency || 'GBP',
+        convertedCurrency: regionalPricing.currency,
         exchangeRate: priceValue / (plan.price_one_time || plan.price_monthly || 1),
-        paymentPartner: 'stripe' as const
+        paymentPartner: locationData.paymentPartner
       };
       onPlanSelect(plan, pricingData);
     }
@@ -271,7 +82,9 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
 
   // Filter plans by category
   const filteredPlans = useMemo(() => {
-    const filtered = pricingPlans.filter(plan => {
+    // Ensure pricingPlans is always an array
+    const safePlans = Array.isArray(pricingPlans) ? pricingPlans : [];
+    const filtered = safePlans.filter(plan => {
       if (selectedCategory === 'essential') {
         return plan.key === 'free' || plan.key === 'day_pass';
       } else {
@@ -577,7 +390,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
                 {/* CTA Button */}
                 <motion.button
                   onClick={() => handlePlanSelect(plan)}
-                  className="w-full py-3 px-4 bg-gradient-to-r from-lime-400 to-lime-500 text-black font-semibold rounded-lg hover:from-lime-500 hover:to-lime-600 transition-all duration-300 transform hover:scale-105 shadow-lg relative z-10"
+                  className="w-full py-3 px-4 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg relative z-10"
                   whileHover={{ 
                     scale: 1.05,
                     boxShadow: "0 20px 40px -12px rgba(132, 204, 22, 0.5)"
