@@ -2,12 +2,13 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Settings, User, Menu, X } from 'lucide-react';
+import { Settings, Menu, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { getTopBarClasses } from '@/lib/utils/themeUtils';
 import UserAvatar from '@/components/ui/UserAvatar';
 import { useUserData } from '@/lib/hooks/useUserData';
 import { useSession } from 'next-auth/react';
+import GlobalSearchBar from './GlobalSearchBar';
 
 interface TopBarProps {
   onMenuToggle?: () => void;
@@ -52,7 +53,7 @@ const TopBar: React.FC<TopBarProps> = ({
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center">
               <img 
-                src="/images/Logo.png" 
+                src="/images/logo.png" 
                 alt="CVCircle Logo" 
                 className="w-8 h-8 object-contain"
               />
@@ -70,6 +71,9 @@ const TopBar: React.FC<TopBarProps> = ({
 
         {/* Right Section */}
         <div className="flex items-center gap-2">
+          {/* Search Bar */}
+          <GlobalSearchBar />
+
           {/* Settings */}
           <motion.button
             onClick={handleSettingsClick}

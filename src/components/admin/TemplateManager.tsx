@@ -840,7 +840,7 @@ ${indexContent}`;
       <div className="flex flex-wrap gap-2 mb-6">
         <button
           onClick={() => setSelectedSortCategory('all')}
-          className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
             selectedSortCategory === 'all'
               ? 'bg-blue-600 text-white shadow-lg'
               : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
@@ -852,7 +852,7 @@ ${indexContent}`;
           <button
             key={category}
             onClick={() => setSelectedSortCategory(category)}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
               selectedSortCategory === category
                 ? 'bg-blue-600 text-white shadow-lg'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'

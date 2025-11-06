@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic';
 import React, { useState, Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
+import { usePricingPlans } from '@/lib/hooks/usePricingPlans';
 import {
   User,
   Trash2,
@@ -38,10 +39,11 @@ import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import AddPaymentMethodModal from '@/components/payment/AddPaymentMethodModal';
 import ChangePasswordModal from '@/components/auth/ChangePasswordModal';
 // TwoFactorModal removed - 2FA not implemented yet
-import PageHeader from '@/components/dashboard/PageHeader';
-import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
 import CalendarSyncSettings from '@/components/settings/CalendarSyncSettings';
 import { uploadToS3 } from '@/lib/utils/upload';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import PageHeader from '@/components/dashboard/PageHeader';
+import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
 
 // --- TYPES ---
 
@@ -669,7 +671,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                 className="flex items-center gap-2 px-3 py-2 text-sm bg-lime-100 dark:bg-lime-400/20 text-lime-700 dark:text-lime-400 border border-lime-300 dark:border-lime-400/30 rounded-lg hover:bg-lime-200 dark:hover:bg-lime-400/30 transition-colors"
               >
                 <RefreshCw size={14} />
-                Sync with Master CV
+                Sync from Master CV
               </button>
             )}
           </div>
@@ -704,38 +706,32 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                 Email
               </label>
               <div className="space-y-2">
-                <input
-                  type="email"
-                  value={formData.email}
-                  readOnly
-                  disabled
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-lime-500/20 rounded-lg bg-gray-100 dark:bg-[#232f1c]/50 text-gray-500 dark:text-gray-400 cursor-not-allowed"
-                />
+                <div className="relative">
+                  <input
+                    type="email"
+                    value={formData.email}
+                    readOnly
+                    disabled
+                    className="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-lime-500/20 rounded-lg bg-gray-100 dark:bg-[#232f1c]/50 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                  />
+                  {user.isEmailVerified && (
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                      <CheckCircle className="h-4 w-4 text-green-500" />
+                    </div>
+                  )}
+                </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
                   Email cannot be changed. Contact support if you need to update your email address.
                 </p>
                 
-                {/* Email Verification Status */}
-                <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    {user.isEmailVerified ? (
-                      <>
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                        <span className="text-sm text-green-600 dark:text-green-400 font-medium">
-                          Email Verified
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <XCircle className="h-4 w-4 text-orange-500" />
-                        <span className="text-sm text-orange-600 dark:text-orange-400 font-medium">
-                          Email Not Verified
-                        </span>
-                      </>
-                    )}
-                  </div>
-                  
-                  {!user.isEmailVerified && (
+                {!user.isEmailVerified && (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <XCircle className="h-4 w-4 text-orange-500" />
+                      <span className="text-sm text-orange-600 dark:text-orange-400 font-medium">
+                        Email Not Verified
+                      </span>
+                    </div>
                     <button
                       onClick={handleSendVerification}
                       disabled={isSendingVerification}
@@ -748,8 +744,8 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                       )}
                       {isSendingVerification ? 'Sending...' : 'Verify Email'}
                     </button>
-                  )}
-                </div>
+                  </div>
+                )}
                 
                 {verificationMessage && (
                   <div className={`text-sm px-3 py-2 rounded-md ${
@@ -904,7 +900,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
             <textarea
               value={formData.summary}
               onChange={(e) => handleInputChange('summary', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white/80 dark:bg-gray-800/80 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-none"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-500 focus:border-transparent resize-none"
               rows={4}
               placeholder="Tell us about your background, experience, and career goals..."
             />
@@ -953,23 +949,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
       </div>
 
       {/* Action Buttons */}
-      <div className="flex justify-between items-center mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
-        <div className="flex gap-3">
-          <button 
-            onClick={refreshFromMasterCV}
-            disabled={!masterCVData}
-            className={`px-4 py-2 rounded-lg transition-all duration-300 flex items-center gap-2 ${
-              masterCVData 
-                ? 'bg-blue-500 text-white hover:bg-blue-600' 
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            }`}
-            title={masterCVData ? "Sync profile data from your Master CV" : "No Master CV found"}
-          >
-            <RefreshCw className="w-4 h-4" />
-            Sync from Master CV
-          </button>
-        </div>
-        
+      <div className="flex justify-end items-center mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
         <div className="flex gap-3">
           <button className="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
             Cancel
@@ -1140,8 +1120,10 @@ const MembershipBilling = ({ user }: { user: User }) => {
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [subscription, setSubscription] = useState<any>(null);
-  const [availablePlans, setAvailablePlans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Use the shared pricing hook
+  const { plans: availablePlans, loading: plansLoading, error: plansError } = usePricingPlans({ excludeFree: true });
   const [isMembershipModalOpen, setIsMembershipModalOpen] = useState(false);
   const [isAddPaymentModalOpen, setIsAddPaymentModalOpen] = useState(false);
   
@@ -1151,7 +1133,6 @@ const MembershipBilling = ({ user }: { user: User }) => {
   const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
   const [paymentMethodsError, setPaymentMethodsError] = useState<string | null>(null);
   const [invoicesError, setInvoicesError] = useState<string | null>(null);
-  const [plansError, setPlansError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchPaymentData();
@@ -1175,7 +1156,7 @@ const MembershipBilling = ({ user }: { user: User }) => {
       setSubscriptionError(null);
       setPaymentMethodsError(null);
       setInvoicesError(null);
-      setPlansError(null);
+      // plansError is now managed by usePricingPlans hook
       
       // Fetch subscription data
       try {
@@ -1251,23 +1232,8 @@ const MembershipBilling = ({ user }: { user: User }) => {
         setInvoicesError('Network error loading invoices');
       }
 
-      // Fetch available plans (excluding free plan)
-      try {
-        const plansResponse = await fetch('/api/pricing-plans');
-        if (plansResponse.ok) {
-          const plansData = await plansResponse.json();
-          // Filter out free plan and inactive plans
-          const filteredPlans = plansData.filter((plan: any) => 
-            plan.key !== 'free' && plan.status === 'active'
-          );
-          setAvailablePlans(filteredPlans);
-        } else {
-          setPlansError('Failed to load pricing plans');
-        }
-      } catch (error) {
-        console.error('Error fetching pricing plans:', error);
-        setPlansError('Network error loading pricing plans');
-      }
+      // Plans are now loaded via usePricingPlans hook (handled outside this function)
+      // No need to fetch here - the hook handles it
     } catch (error) {
       console.error('Error fetching payment data:', error);
       showToastNotification('error', 'Failed to load billing information');
@@ -1309,18 +1275,6 @@ const MembershipBilling = ({ user }: { user: User }) => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-2xl shadow-lg border border-gray-200/50 dark:border-gray-700/50 p-8 h-full">
-        <div className="space-y-8">
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-lime-500"></div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="p-8 h-full overflow-y-auto">
       <div className="space-y-8">
@@ -1331,7 +1285,26 @@ const MembershipBilling = ({ user }: { user: User }) => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Current Plan Card */}
-            <div className="bg-gradient-to-r from-lime-50 to-lime-100 dark:from-lime-400/10 dark:to-lime-500/10 border border-lime-200 dark:border-lime-400/20 rounded-xl p-6 relative">
+            {loading ? (
+              <div className="bg-gradient-to-r from-lime-50 to-lime-100 dark:from-lime-400/10 dark:to-lime-500/10 border border-lime-200 dark:border-lime-400/20 rounded-xl p-6 relative animate-pulse">
+                <div className="absolute top-4 right-4">
+                  <div className="h-6 w-20 bg-lime-300 dark:bg-lime-600 rounded-full"></div>
+                </div>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 bg-lime-300 dark:bg-lime-600 rounded-lg"></div>
+                  <div className="flex-1">
+                    <div className="h-6 w-32 bg-lime-200 dark:bg-lime-700 rounded mb-2"></div>
+                    <div className="h-4 w-24 bg-lime-200 dark:bg-lime-700 rounded"></div>
+                  </div>
+                </div>
+                <div className="h-4 w-40 bg-lime-200 dark:bg-lime-700 rounded mb-2"></div>
+                <div className="space-y-2">
+                  <div className="h-4 w-32 bg-lime-200 dark:bg-lime-700 rounded"></div>
+                  <div className="h-4 w-36 bg-lime-200 dark:bg-lime-700 rounded"></div>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-gradient-to-r from-lime-50 to-lime-100 dark:from-lime-400/10 dark:to-lime-500/10 border border-lime-200 dark:border-lime-400/20 rounded-xl p-6 relative">
               <div className="absolute top-4 right-4">
                 <span className="px-3 py-1 bg-lime-500 text-white text-xs font-medium rounded-full">
                   Current Plan
@@ -1363,13 +1336,29 @@ const MembershipBilling = ({ user }: { user: User }) => {
                   <p>Exports: {subscription.planDetails.features.maxExports === -1 ? 'Unlimited' : subscription.planDetails.features.maxExports}</p>
                 </div>
               )}
-            </div>
+              </div>
+            )}
 
             {/* Change Plan Card */}
-            <div 
-              className="bg-white/50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl p-6 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              onClick={() => setIsMembershipModalOpen(true)}
-            >
+            {loading ? (
+              <div className="bg-white/50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl p-6 animate-pulse">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 bg-gray-200 dark:bg-gray-600 rounded-lg"></div>
+                  <div className="flex-1">
+                    <div className="h-6 w-28 bg-gray-200 dark:bg-gray-600 rounded mb-2"></div>
+                    <div className="h-4 w-48 bg-gray-200 dark:bg-gray-600 rounded"></div>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="h-4 w-32 bg-gray-200 dark:bg-gray-600 rounded"></div>
+                  <div className="h-5 w-5 bg-gray-200 dark:bg-gray-600 rounded"></div>
+                </div>
+              </div>
+            ) : (
+              <div 
+                className="bg-white/50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl p-6 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                onClick={() => setIsMembershipModalOpen(true)}
+              >
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
                   <Settings className="w-6 h-6 text-gray-600 dark:text-gray-300" />
@@ -1391,7 +1380,8 @@ const MembershipBilling = ({ user }: { user: User }) => {
                   </svg>
                 </div>
               </div>
-            </div>
+              </div>
+            )}
           </div>
 
         </div>
@@ -1402,13 +1392,27 @@ const MembershipBilling = ({ user }: { user: User }) => {
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
               Payment Methods
             </h3>
-            <button 
-              className="px-4 py-2 bg-lime-500 hover:bg-lime-600 text-white rounded-lg transition-colors"
-              onClick={() => setIsAddPaymentModalOpen(true)}
-            >
-              Add Payment Method
-            </button>
+            {!loading && (
+              <button 
+                className="px-4 py-2 bg-lime-500 hover:bg-lime-600 text-white rounded-lg transition-colors"
+                onClick={() => setIsAddPaymentModalOpen(true)}
+              >
+                Add Payment Method
+              </button>
+            )}
           </div>
+          
+          {/* Loading State for Payment Methods */}
+          {loading && (
+            <div className="space-y-4">
+              <div className="h-5 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+              <div className="flex gap-4 overflow-x-auto pb-4">
+                {[1, 2].map((i) => (
+                  <div key={i} className="w-80 h-48 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse"></div>
+                ))}
+              </div>
+            </div>
+          )}
           
           {/* Error Display */}
           {paymentMethodsError && (
@@ -1431,7 +1435,7 @@ const MembershipBilling = ({ user }: { user: User }) => {
             </div>
           )}
           
-          {paymentMethods.length > 0 ? (
+          {!loading && paymentMethods.length > 0 ? (
             <div className="space-y-4">
               <h4 className="text-md font-medium text-gray-700 dark:text-gray-300">Saved Cards</h4>
               <div className="flex gap-4 overflow-x-auto pb-4">
@@ -1472,7 +1476,7 @@ const MembershipBilling = ({ user }: { user: User }) => {
                 ))}
               </div>
             </div>
-          ) : (
+          ) : !loading && (
             <div className="text-center py-12">
               <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
                 <CreditCard className="w-8 h-8 text-gray-400 dark:text-gray-500" />
@@ -1481,15 +1485,6 @@ const MembershipBilling = ({ user }: { user: User }) => {
               <p className="text-gray-600 dark:text-gray-300 mb-4">
                 You haven't added any payment methods yet. Add a card to enable quick and secure payments.
               </p>
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 max-w-md mx-auto">
-                <div className="flex items-center gap-2 mb-2">
-                  <Shield className="w-4 h-4 text-blue-500" />
-                  <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Secure & Safe</span>
-                </div>
-                <p className="text-sm text-blue-600 dark:text-blue-400">
-                  Your payment information is encrypted and secure with industry-standard protection.
-                </p>
-              </div>
             </div>
           )}
         </div>
@@ -1499,6 +1494,30 @@ const MembershipBilling = ({ user }: { user: User }) => {
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
             Payment History
           </h3>
+          
+          {/* Loading State for Payment History */}
+          {loading && (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="bg-white/50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4 animate-pulse">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-gray-200 dark:bg-gray-600 rounded-lg"></div>
+                      <div className="space-y-2">
+                        <div className="h-5 w-48 bg-gray-200 dark:bg-gray-600 rounded"></div>
+                        <div className="h-4 w-64 bg-gray-200 dark:bg-gray-600 rounded"></div>
+                        <div className="h-4 w-40 bg-gray-200 dark:bg-gray-600 rounded"></div>
+                      </div>
+                    </div>
+                    <div className="text-right space-y-2">
+                      <div className="h-5 w-20 bg-gray-200 dark:bg-gray-600 rounded ml-auto"></div>
+                      <div className="h-4 w-16 bg-gray-200 dark:bg-gray-600 rounded ml-auto"></div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
           
           {/* Error Display */}
           {invoicesError && (
@@ -1521,7 +1540,7 @@ const MembershipBilling = ({ user }: { user: User }) => {
             </div>
           )}
           
-          {invoices.length > 0 ? (
+          {!loading && invoices.length > 0 ? (
             <div className="space-y-3">
               {invoices.map((invoice) => (
                 <div key={invoice.id} className="bg-white/50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
@@ -1562,7 +1581,7 @@ const MembershipBilling = ({ user }: { user: User }) => {
                 </div>
               ))}
             </div>
-          ) : (
+          ) : !loading && (
             <div className="text-center py-12">
               <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
                 <FileText className="w-8 h-8 text-gray-400 dark:text-gray-500" />
@@ -1571,15 +1590,6 @@ const MembershipBilling = ({ user }: { user: User }) => {
               <p className="text-gray-600 dark:text-gray-300 mb-4">
                 You haven't made any purchases yet. Your payment history will appear here once you upgrade to a paid plan.
               </p>
-              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 max-w-md mx-auto">
-                <div className="flex items-center gap-2 mb-2">
-                  <Gift className="w-4 h-4 text-green-500" />
-                  <span className="text-sm font-medium text-green-700 dark:text-green-300">Free Plan Benefits</span>
-                </div>
-                <p className="text-sm text-green-600 dark:text-green-400">
-                  You're currently enjoying our free plan with basic features.
-                </p>
-              </div>
             </div>
           )}
         </div>
@@ -1984,7 +1994,7 @@ const ConnectedAppsIntegrations_OLD = () => {
                   ) : (
                     <>
                       <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
-                      <button className="px-4 py-2 bg-gradient-to-r from-lime-500 to-lime-600 hover:from-lime-600 hover:to-lime-700 text-white rounded-lg font-medium transition-all duration-300 shadow-lg hover:shadow-xl text-sm">
+                      <button className="px-4 py-2 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black rounded-lg font-medium transition-all duration-300 shadow-lg hover:shadow-xl text-sm">
                         Connect
                       </button>
                     </>
@@ -2024,130 +2034,14 @@ const ConnectedAppsIntegrations_OLD = () => {
   );
 };
 
-// Settings Sidebar Component
-const SettingsSidebar = ({ 
-  activeTab, 
-  setActiveTab 
-}: { 
-  activeTab: string;
-  setActiveTab: (tab: string) => void;
-}) => {
-  const personalItems = [
-    { id: 'account', name: 'Account & Profile', icon: User },
-    { id: 'security', name: 'Security & Notifications', icon: Shield },
-    { id: 'membership', name: 'Membership & Billing', icon: CreditCard },
-  ];
-
-  const workspaceItems = [
-    { id: 'integrations', name: 'Connected Apps & Integrations', icon: Link },
-    { id: 'workspace', name: 'Workspace & Team', icon: Users },
-  ];
-
-  return (
-    <div className="p-3 md:p-6 h-full overflow-y-auto flex flex-col">
-      {/* Personal Section */}
-      <div className="mb-6 md:mb-8">
-        <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-3 md:mb-4 hidden md:block">
-          PERSONAL
-        </h3>
-        <div className="block md:hidden mb-3">
-          <div className="flex flex-col items-center gap-1">
-            <User size={14} className="text-gray-500 dark:text-gray-300" />
-            <div className="w-full h-px bg-gray-300 dark:bg-gray-600"></div>
-          </div>
-        </div>
-        <div className="space-y-1">
-          {personalItems.map(item => {
-            const IconComponent = item.icon;
-            return (
-              <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                className={`w-full flex items-center gap-3 px-2 md:px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  activeTab === item.id
-                    ? 'bg-lime-100 dark:bg-lime-400/20 text-lime-700 dark:text-lime-400 border border-lime-300 dark:border-lime-400/30'
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                }`}
-                title={item.name}
-              >
-                <IconComponent size={16} />
-                <span className="hidden md:inline">{item.name}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Workspace Section */}
-      <div className="flex-1">
-        <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider mb-3 md:mb-4 hidden md:block">
-          WORKSPACE
-        </h3>
-        <div className="block md:hidden mb-3">
-          <div className="flex flex-col items-center gap-1">
-            <Users size={14} className="text-gray-500 dark:text-gray-300" />
-            <div className="w-full h-px bg-gray-300 dark:bg-gray-600"></div>
-          </div>
-        </div>
-        <div className="space-y-1">
-          {workspaceItems.map(item => {
-            const IconComponent = item.icon;
-            return (
-              <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                className={`w-full flex items-center gap-3 px-2 md:px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  activeTab === item.id
-                    ? 'bg-lime-100 dark:bg-lime-400/20 text-lime-700 dark:text-lime-400 border border-lime-300 dark:border-lime-400/30'
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                }`}
-                title={item.name}
-              >
-                <IconComponent size={16} />
-                <span className="hidden md:inline">{item.name}</span>
-                {item.id === 'workspace' && (
-                  <span className="ml-auto text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded hidden md:inline">
-                    Soon
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Policy Links Section */}
-      <div className="mt-auto pt-6 border-t border-gray-200 dark:border-gray-700">
-        <div className="space-y-2">
-          <a 
-            href="/privacy-policy" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="block text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-          >
-            Privacy Policy
-          </a>
-          <a 
-            href="/terms" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="block text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-          >
-            Terms of Service
-          </a>
-          <a 
-            href="/cookie-policy" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="block text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-          >
-            Cookie Policy
-          </a>
-        </div>
-      </div>
-    </div>
-  );
-};
+// Settings tabs configuration
+const settingsTabs = [
+  { id: 'account', name: 'Account & Profile', icon: User },
+  { id: 'security', name: 'Security & Notifications', icon: Shield },
+  { id: 'membership', name: 'Membership & Billing', icon: CreditCard },
+  { id: 'integrations', name: 'Integrations', icon: Link },
+  { id: 'workspace', name: 'Workspace', icon: Users },
+];
 
 // Helper function to get tab description
 const getTabDescription = (tab: string) => {
@@ -2316,11 +2210,17 @@ const SettingsContent = () => {
     }
   };
 
+  // Update URL when tab changes
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    router.push(`/dashboard/settings?tab=${value}`, { scroll: false });
+  };
+
   return (
     <RouteGuard requireAuth={true}>
-      <div className="h-screen flex flex-col">
-        {/* Page Header - Fixed */}
-        <div className="flex-shrink-0 sticky top-0 z-10">
+      <div className="min-h-screen">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Page Header - Same style as other dashboard pages */}
           <PageHeader
             title="Settings"
             description={getTabDescription(activeTab)}
@@ -2330,26 +2230,42 @@ const SettingsContent = () => {
               username: userData?.username || user?.username,
               profilePhoto: userData?.profilePhoto || user?.image,
               designation: 'Software Developer',
-              subscription: userData?.subscription
+              subscription: userData?.subscription,
+              isEmailVerified: userData?.isEmailVerified || false
             }}
             showSettings={true}
             onMobileMenuToggle={toggleSidebar}
             isMobileMenuOpen={isOpen}
           />
-        </div>
-        
-        {/* Main Layout - Flexible */}
-        <div className="flex flex-1 min-h-0 h-[calc(100vh-8rem)]">
-          {/* Settings Sidebar - Fixed */}
-          <div className="w-16 md:w-80 flex-shrink-0 bg-gray-50/95 dark:bg-[#141810]/95 backdrop-blur-xl rounded-2xl shadow-xl shadow-gray-900/10 dark:shadow-black/20 m-2">
-            <SettingsSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-          </div>
-          
-          {/* Content Area - Scrollable */}
-          <div className="flex-1 overflow-y-auto bg-gray-50/95 dark:bg-[#141810]/95 backdrop-blur-xl rounded-2xl shadow-xl shadow-gray-900/10 dark:shadow-black/20 m-2 mr-4">
-            {/* Main Content */}
-            {renderTabContent()}
-          </div>
+
+          {/* Settings Tabs */}
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+            <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
+              <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
+                <TabsList className="flex w-max bg-transparent border-0 justify-start">
+                  {settingsTabs.map((tab) => {
+                    const IconComponent = tab.icon;
+                    return (
+                      <TabsTrigger
+                        key={tab.id}
+                        value={tab.id}
+                        className="data-[state=active]:text-lime-700 dark:data-[state=active]:text-lime-400 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white flex-shrink-0 rounded-none px-4 py-3 border-b-2 data-[state=active]:border-lime-500 dark:data-[state=active]:border-lime-400 border-transparent"
+                      >
+                        <IconComponent className="h-4 w-4 mr-2" />
+                        <span className="hidden sm:inline">{tab.name}</span>
+                        <span className="sm:hidden">{tab.name.split(' ')[0]}</span>
+                      </TabsTrigger>
+                    );
+                  })}
+                </TabsList>
+              </div>
+            </div>
+
+            {/* Content Area */}
+            <TabsContent value={activeTab} className="mt-0">
+              {renderTabContent()}
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     </RouteGuard>

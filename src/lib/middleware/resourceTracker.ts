@@ -6,6 +6,7 @@ import CoverLetter from '@/models/CoverLetter';
 import Job from '@/models/Job';
 // import CVJourney from '@/models/CVJourney'; // Model not found, commented out
 import User from '@/models/User';
+import usageLimitsService from '@/lib/services/usageLimitsService';
 
 export interface ResourceCounts {
   cvs: number;
@@ -102,9 +103,20 @@ export async function getUserResourceCounts(userId: string): Promise<ResourceCou
 export async function canCreateResource(
   userId: string,
   resourceType: 'cv' | 'coverLetter' | 'job' | 'journey'
-): Promise<{ allowed: boolean; reason?: string; counts?: ResourceCounts; limits?: SubscriptionLimits }> {
+): Promise<{ allowed: boolean; reason?: string; counts?: ResourceCounts; limits?: SubscriptionLimits; timeRemaining?: { hours?: number; days?: number }; requiresUpgrade?: boolean }> {
   try {
     await getConnection();
+
+    // First check time-based access
+    const timeCheck = await usageLimitsService.checkTimeBasedAccess(userId);
+    if (!timeCheck.hasAccess) {
+      return {
+        allowed: false,
+        reason: timeCheck.reason || 'Subscription access expired',
+        requiresUpgrade: true,
+        timeRemaining: timeCheck.hoursRemaining ? { hours: timeCheck.hoursRemaining } : timeCheck.daysRemaining ? { days: timeCheck.daysRemaining } : undefined
+      };
+    }
 
     // Get user's subscription plan
     const user = await User.findById(userId);
@@ -112,7 +124,7 @@ export async function canCreateResource(
       return { allowed: false, reason: 'User not found' };
     }
 
-    const plan = user.subscription?.plan || 'free';
+    const plan = user.currentPlanKey || 'free';
     const limits = getSubscriptionLimits(plan);
     const counts = await getUserResourceCounts(userId);
 
@@ -149,11 +161,18 @@ export async function canCreateResource(
         allowed: false,
         reason: `You've reached the limit of ${maxLimit} ${resourceType}s for your ${plan} plan. Please upgrade to create more.`,
         counts,
-        limits
+        limits,
+        requiresUpgrade: true,
+        timeRemaining: timeCheck.hoursRemaining ? { hours: timeCheck.hoursRemaining } : timeCheck.daysRemaining ? { days: timeCheck.daysRemaining } : undefined
       };
     }
 
-    return { allowed: true, counts, limits };
+    return {
+      allowed: true,
+      counts,
+      limits,
+      timeRemaining: timeCheck.hoursRemaining ? { hours: timeCheck.hoursRemaining } : timeCheck.daysRemaining ? { days: timeCheck.daysRemaining } : undefined
+    };
   } catch (error) {
     console.error('Error checking resource creation permission:', error);
     return { allowed: false, reason: 'Error checking permissions' };

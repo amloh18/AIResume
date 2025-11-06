@@ -3,7 +3,6 @@ export { default as CV, type ICV } from './CV';
 export { default as JobApplication, type IJobApplication } from './JobApplication';
 
 export { default as Template, type ITemplate, type ISectionBlueprint } from './Template';
-export { default as AIUsageLog, type IAIUsageLog } from './AIUsageLog';
 export { default as PricingPlan, type IPricingPlan } from './PricingPlan';
 export { default as DiscountCode, type IDiscountCode } from './DiscountCode';
 export { default as Subscription, type ISubscription } from './Subscription';

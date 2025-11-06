@@ -43,7 +43,6 @@ import {
   Activity,
   AlertTriangle,
   AlertCircle,
-  Search,
   SortAsc
 } from 'lucide-react';
 import { useCreateCV } from '@/lib/utils/cvCreationUtils';
@@ -1898,29 +1897,44 @@ const Canvas: React.FC = () => {
         isMobileMenuOpen={isMobileMenuOpen}
       />
 
-      {/* Search and Sort Controls */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between mb-6">
-        {/* Search and Sort */}
-        <div className="flex flex-col sm:flex-row gap-3 flex-1">
-          {/* Search */}
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
-            <input
-              type="text"
-              placeholder={`Search ${activeTab === 'cv' ? 'CVs' : 'Cover Letters'}...`}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 rounded-full bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
-              aria-label={`Search ${activeTab === 'cv' ? 'CVs' : 'Cover Letters'}`}
-              role="searchbox"
-            />
+      {/* Tab Navigation */}
+      <div className="flex items-center justify-between gap-4 mb-6">
+        <div className="flex-1">
+          <div className="border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setActiveTab('cv')}
+                className={`flex items-center px-4 py-3 text-sm font-medium transition-all duration-200 rounded-none border-b-2 ${
+                  activeTab === 'cv'
+                    ? 'text-lime-700 dark:text-lime-400 border-lime-500 dark:border-lime-400'
+                    : 'text-gray-600 dark:text-gray-300 border-transparent hover:text-gray-900 dark:hover:text-white'
+                }`}
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                CVs
+              </button>
+              <button
+                onClick={() => setActiveTab('coverLetter')}
+                className={`flex items-center px-4 py-3 text-sm font-medium transition-all duration-200 rounded-none border-b-2 ${
+                  activeTab === 'coverLetter'
+                    ? 'text-lime-700 dark:text-lime-400 border-lime-500 dark:border-lime-400'
+                    : 'text-gray-600 dark:text-gray-300 border-transparent hover:text-gray-900 dark:hover:text-white'
+                }`}
+              >
+                <PenTool className="h-4 w-4 mr-2" />
+                Cover Letters
+              </button>
+            </div>
+          </div>
           </div>
 
+        {/* Right Side - Sort and Clean Unlinked Buttons */}
+        <div className="flex items-center gap-2">
           {/* Sort By Button */}
           <div className="relative" data-sort-dropdown>
             <button
               onClick={() => setShowSortDropdown(!showSortDropdown)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-full font-medium transition-all duration-200 bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 text-gray-700 dark:text-gray-300 hover:bg-[#141810] dark:hover:bg-[#141810]"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 text-gray-700 dark:text-gray-300 hover:bg-[#141810] dark:hover:bg-[#141810]"
             >
               <SortAsc className="h-4 w-4" />
               <span className="hidden sm:inline">
@@ -1963,37 +1977,9 @@ const Canvas: React.FC = () => {
                 </motion.div>
               )}
             </AnimatePresence>
-          </div>
         </div>
 
-      </div>
-
-      {/* Tab Navigation */}
-      <div className="flex items-center justify-between gap-4 mb-6">
-        <div className="flex items-center gap-2">
-          <motion.button
-            onClick={() => setActiveTab('cv')}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
-              activeTab === 'cv' ? 'bg-gradient-to-r from-lime-500 to-lime-600 text-white shadow-md' : 'bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 text-gray-700 dark:text-gray-300 hover:bg-[#141810] dark:hover:bg-[#141810]'
-            }`}
-            whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-          >
-            <FileText size={16} className="inline mr-2" />
-            CVs
-          </motion.button>
-          <motion.button
-            onClick={() => setActiveTab('coverLetter')}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
-              activeTab === 'coverLetter' ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md' : 'bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 text-gray-700 dark:text-gray-300 hover:bg-[#141810] dark:hover:bg-[#141810]'
-            }`}
-            whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-          >
-            <PenTool size={16} className="inline mr-2" />
-            Cover Letters
-          </motion.button>
-        </div>
-        
-        {/* Clean Unlinked Button - Inline with tab selector */}
+          {/* Clean Unlinked Button - Inline with sort button */}
         {activeTab === 'cv' && (
           <CleanUnlinkedButton
             type="cv"
@@ -2012,6 +1998,7 @@ const Canvas: React.FC = () => {
             className="bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30"
           />
         )}
+        </div>
       </div>
 
       {/* Main Content Based on Active Tab */}
@@ -2133,7 +2120,7 @@ const Canvas: React.FC = () => {
                   <FileText className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
                   <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No CVs Found</h3>
                   <p className="text-gray-600 dark:text-gray-400">
-                    No CVs match your search criteria.
+                    No CVs found.
                   </p>
                 </div>
               </div>
@@ -2295,13 +2282,11 @@ const Canvas: React.FC = () => {
                     <MessageSquare className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
                     <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No Cover Letters Found</h3>
                     <p className="text-gray-600 dark:text-gray-400 mb-6">
-                      {searchQuery ? 'No cover letters match your search criteria.' : 'Create your first cover letter to get started.'}
+                      Create your first cover letter to get started.
                     </p>
-                    {!searchQuery && (
                       <p className="text-sm text-gray-500 dark:text-gray-400">
                         Cover letters are typically created when you start a job application journey.
                       </p>
-                    )}
                   </div>
                 </div>
               )}

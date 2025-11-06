@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import usageLimitsService from '@/lib/services/usageLimitsService';
+import { connectToDatabase } from '@/lib/database';
+import User from '@/models/User';
 
 export async function GET(request: NextRequest) {
   try {
@@ -22,9 +24,32 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
+    // Get time-based access information
+    const timeAccess = await usageLimitsService.checkTimeBasedAccess(userId);
+
+    // Get user subscription for additional info
+    await connectToDatabase();
+    const user = await User.findById(userId);
+    const subscription = user?.subscription;
+
     return NextResponse.json({
       success: true,
-      usage
+      usage,
+      timeAccess: {
+        hasAccess: timeAccess.hasAccess,
+        hoursRemaining: timeAccess.hoursRemaining,
+        daysRemaining: timeAccess.daysRemaining,
+        expiredAt: timeAccess.expiredAt,
+        isInGracePeriod: timeAccess.isInGracePeriod,
+        gracePeriodEndsAt: timeAccess.gracePeriodEndsAt
+      },
+      subscription: subscription ? {
+        planKey: subscription.planKey,
+        status: subscription.status,
+        accessExpiresAt: subscription.accessExpiresAt,
+        currentPeriodEnd: subscription.currentPeriodEnd,
+        autoRenew: subscription.autoRenew
+      } : null
     });
 
   } catch (error) {

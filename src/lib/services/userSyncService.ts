@@ -222,8 +222,8 @@ export async function getTargetedUsers(filters: any): Promise<any[]> {
       query.currentPlanKey = { $in: filters.membershipPlans };
     }
 
-    // Apply user age filter (new users)
-    if (filters.userAge && typeof filters.userAge === 'object') {
+    // Apply user age filter (new users) - only if registrationDateRange is not set
+    if (filters.userAge && typeof filters.userAge === 'object' && !filters.registrationDateRange) {
       const now = new Date();
       if (filters.userAge.type === 'new_users' && typeof filters.userAge.days === 'number') {
         const daysAgo = new Date(now.getTime() - filters.userAge.days * 24 * 60 * 60 * 1000);
@@ -234,7 +234,7 @@ export async function getTargetedUsers(filters: any): Promise<any[]> {
       }
     }
 
-    // Apply registration date range
+    // Apply registration date range (takes precedence over userAge)
     if (filters.registrationDateRange) {
       query.registrationDate = {};
       if (filters.registrationDateRange.startDate) {

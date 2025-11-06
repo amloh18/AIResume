@@ -27,6 +27,7 @@ import {
   TrendingUp
 } from 'lucide-react';
 import UniversalPaymentModal from '@/components/payment/UniversalPaymentModal';
+import UserActivityModal from './UserActivityModal';
 
 interface User {
   _id: string;
@@ -68,17 +69,44 @@ const UserManagement: React.FC = () => {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [isMembershipModalOpen, setIsMembershipModalOpen] = useState(false);
   const [selectedUserForModal, setSelectedUserForModal] = useState<User | null>(null);
+  const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
+  const [selectedUserForActivity, setSelectedUserForActivity] = useState<User | null>(null);
   const [metrics, setMetrics] = useState({
     totalUsers: 0,
     activeUsers: 0,
     jobsLanded: 0,
     successRate: 0
   });
+  const [planConfig, setPlanConfig] = useState<{
+    plans: string[];
+    planDisplayNames: Record<string, string>;
+  }>({
+    plans: [],
+    planDisplayNames: {}
+  });
 
   useEffect(() => {
     fetchUsers();
     fetchMetrics();
+    fetchPlanConfig();
   }, []);
+
+  const fetchPlanConfig = async () => {
+    try {
+      const response = await fetch('/api/admin/config/plans');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setPlanConfig({
+            plans: data.plans || [],
+            planDisplayNames: data.planDisplayNames || {}
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching plan config:', error);
+    }
+  };
 
   const fetchUsers = async () => {
     try {
@@ -202,14 +230,7 @@ const UserManagement: React.FC = () => {
   };
 
   const getPlanDisplayName = (planKey: string) => {
-    const planNames = {
-      'free': 'Free',
-      'day_pass': 'Day Pass',
-      'pro_monthly': 'Monthly Pro',
-      'pro_quarterly': 'Quarterly Pro',
-      'pro_yearly': 'Yearly Pro'
-    };
-    return planNames[planKey as keyof typeof planNames] || planKey;
+    return planConfig.planDisplayNames[planKey] || planKey;
   };
 
   const getProviderIcon = (provider: string) => {
@@ -399,11 +420,11 @@ const UserManagement: React.FC = () => {
           className="px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         >
           <option value="all">All Plans</option>
-          <option value="free">Free</option>
-          <option value="day_pass">Day Pass</option>
-          <option value="pro_monthly">Monthly Pro</option>
-          <option value="pro_quarterly">Quarterly Pro</option>
-          <option value="pro_yearly">Yearly Pro</option>
+          {planConfig.plans.map((planKey) => (
+            <option key={planKey} value={planKey}>
+              {planConfig.planDisplayNames[planKey] || planKey}
+            </option>
+          ))}
         </select>
       </div>
 
@@ -464,7 +485,14 @@ const UserManagement: React.FC = () => {
                 </tr>
               ) : (
                 filteredUsers.map((user) => (
-                <tr key={user._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                <tr 
+                  key={user._id} 
+                  className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+                  onClick={() => {
+                    setSelectedUserForActivity(user);
+                    setIsActivityModalOpen(true);
+                  }}
+                >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="flex-shrink-0 h-10 w-10">
@@ -515,7 +543,7 @@ const UserManagement: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                       <button
                         onClick={() => handleChangePlan(user)}
                         className="text-blue-600 hover:text-blue-900 flex items-center gap-1"
@@ -566,6 +594,20 @@ const UserManagement: React.FC = () => {
           }}
           adminMode={true}
           subjectUserId={selectedUserForModal._id}
+        />
+      )}
+
+      {/* User Activity Modal */}
+      {selectedUserForActivity && (
+        <UserActivityModal
+          userId={selectedUserForActivity._id}
+          userName={`${selectedUserForActivity.firstName} ${selectedUserForActivity.lastName}`}
+          userEmail={selectedUserForActivity.email}
+          isOpen={isActivityModalOpen}
+          onClose={() => {
+            setIsActivityModalOpen(false);
+            setSelectedUserForActivity(null);
+          }}
         />
       )}
     </div>

@@ -381,27 +381,13 @@ const ApplicationJourneyPageContent: React.FC = () => {
 
       {/* Controls Bar */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        {/* Search and Filters */}
+        {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-3 flex-1">
-          {/* Search */}
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
-            <input
-              type="text"
-              placeholder="Search journeys..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 rounded-full bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
-              aria-label="Search journeys"
-              role="searchbox"
-            />
-          </div>
-
           {/* Sort By Button */}
           <div className="relative" data-sort-dropdown>
             <button
               onClick={() => setShowSortDropdown(!showSortDropdown)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-full font-medium transition-all duration-200 bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 text-gray-700 dark:text-gray-300 hover:bg-[#141810] dark:hover:bg-[#141810]"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all duration-200 bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 text-gray-700 dark:text-gray-300 hover:bg-[#141810] dark:hover:bg-[#141810]"
             >
               <SortAsc className="h-4 w-4" />
               <span className="hidden sm:inline">
@@ -452,7 +438,7 @@ const ApplicationJourneyPageContent: React.FC = () => {
           <div className="flex gap-3">
             <motion.button
               onClick={handleStartNewJourney}
-              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-lime-500 to-lime-600 hover:from-lime-600 hover:to-lime-700 text-black font-medium rounded-full transition-all duration-200 shadow-md hover:shadow-lg"
+              className="flex items-center gap-2 px-6 py-3 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black font-medium rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -527,16 +513,8 @@ const ApplicationJourneyPageContent: React.FC = () => {
                   No journeys found
                 </h3>
                 <p className="text-gray-600 dark:text-gray-300 mb-4">
-                  Try adjusting your search criteria
+                  Try adjusting your filter criteria
                 </p>
-                <button
-                  onClick={() => {
-                    setSearchQuery('');
-                  }}
-                  className="text-lime-600 dark:text-lime-400 hover:text-lime-700 dark:hover:text-lime-300 font-medium"
-                >
-                  Clear search
-                </button>
               </div>
             )}
           </motion.div>

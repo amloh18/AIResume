@@ -77,6 +77,22 @@ export default function EmailCampaignManager() {
   const fetchSyncStatus = async () => {
     try {
       const response = await fetch('/api/admin/users/sync');
+      
+      // Check if response is ok
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Failed to fetch sync status:', response.status, errorText);
+        return;
+      }
+
+      // Check content type before parsing JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const errorText = await response.text();
+        console.error('Non-JSON response from sync status:', errorText);
+        return;
+      }
+
       const data = await response.json();
       if (data.success) {
         setSyncStatus(data.stats);
@@ -94,17 +110,40 @@ export default function EmailCampaignManager() {
       const response = await fetch('/api/admin/users/sync', {
         method: 'POST',
       });
+
+      // Check if response is ok
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Sync users API error:', response.status, errorText);
+        alert(`Failed to sync users: ${response.status} ${response.statusText}`);
+        setSyncing(false);
+        return;
+      }
+
+      // Check content type before parsing JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const errorText = await response.text();
+        console.error('Non-JSON response from sync users:', errorText);
+        alert('Invalid response from server. Please check the console for details.');
+        setSyncing(false);
+        return;
+      }
+
       const data = await response.json();
       
       if (data.success) {
         alert(`User sync completed!\n- Synced: ${data.stats.syncedCount}\n- New: ${data.stats.newUsers}\n- Updated: ${data.stats.updatedUsers}`);
         fetchSyncStatus();
       } else {
-        alert('User sync failed: ' + data.error);
+        alert('User sync failed: ' + (data.error || 'Unknown error'));
+        if (data.details) {
+          console.error('Sync error details:', data.details);
+        }
       }
-    } catch (error) {
-      alert('Failed to sync users');
-      console.error(error);
+    } catch (error: any) {
+      console.error('Failed to sync users:', error);
+      alert('Failed to sync users: ' + (error.message || 'Unknown error'));
     } finally {
       setSyncing(false);
     }

@@ -42,6 +42,18 @@ export interface IPricingPlan extends Document {
   razorpayPlanId_yearly?: string;
   // Day Pass specific
   dayPassDuration?: number; // in hours
+  // Time-based fields
+  durationInDays?: number; // 1, 30, 90, 365
+  durationType?: 'hour' | 'day' | 'month' | 'year';
+  // Regional pricing
+  regionalPricing?: Array<{
+    region: string; // 'IN', 'US', 'EU', 'GB', etc.
+    currency: string;
+    price: number;
+    displayPrice: string;
+    stripePriceId?: string; // Region-specific Stripe price ID
+    razorpayPlanId?: string; // Region-specific Razorpay plan ID
+  }>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -202,7 +214,43 @@ const pricingPlanSchema = new Schema<IPricingPlan>({
     type: Number,
     default: 24, // 24 hours default
     min: [1, 'Day pass duration must be at least 1 hour']
-  }
+  },
+  // Time-based fields
+  durationInDays: {
+    type: Number,
+    min: [0, 'Duration cannot be negative']
+    // 1 for day pass, 30 for monthly, 90 for quarterly, 365 for yearly
+  },
+  durationType: {
+    type: String,
+    enum: ['hour', 'day', 'month', 'year'],
+    default: 'day'
+  },
+  // Regional pricing
+  regionalPricing: [{
+    region: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    currency: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    price: {
+      type: Number,
+      required: true,
+      min: [0, 'Price cannot be negative']
+    },
+    displayPrice: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    stripePriceId: String,
+    razorpayPlanId: String
+  }]
 }, {
   timestamps: true,
   toJSON: { virtuals: true },
@@ -241,6 +289,7 @@ pricingPlanSchema.index({ status: 1, sortOrder: 1 });
 pricingPlanSchema.index({ billingCycle: 1, currency: 1 });
 pricingPlanSchema.index({ displayOnLanding: 1, targetAudience: 1 });
 pricingPlanSchema.index({ promotionValidFrom: 1, promotionValidUntil: 1 });
+pricingPlanSchema.index({ 'regionalPricing.region': 1 });
 
 // Export the schema for use in admin models
 export { pricingPlanSchema };

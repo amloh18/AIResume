@@ -4,7 +4,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
-import UserAvatarDropdown from '@/components/ui/UserAvatarDropdown';
+import GlobalSearchBar from '@/components/layout/GlobalSearchBar';
 
 interface PageHeaderProps {
   title: string;
@@ -43,57 +43,34 @@ const PageHeader: React.FC<PageHeaderProps> = ({
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{title}</h1>
           <p className="text-base text-gray-600 dark:text-white/60 mt-2">{description}</p>
         </div>
-        {/* Actions */}
-        <div className="flex items-center gap-2">
-          {/* User Avatar */}
-          <UserAvatarDropdown 
-            user={{
-              name: user?.name || 'User',
-              email: user?.email || '',
-              profilePhoto: user?.profilePhoto,
-              isEmailVerified: user?.isEmailVerified || false,
-              subscription: user?.subscription || {
-                planName: 'Free Plan',
-                status: 'active'
-              }
-            }}
-          />
+        
+        {/* Search Bar - Right side on desktop */}
+        <div className="flex items-center gap-4">
+          <GlobalSearchBar />
         </div>
       </div>
 
       {/* Mobile Layout */}
       <div className="xl:hidden py-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           {/* Hamburger Menu */}
           <button
             onClick={onMobileMenuToggle}
-            className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+            className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors flex-shrink-0"
             aria-label="Toggle mobile menu"
           >
             {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
 
           {/* Title and Description - Offset towards hamburger */}
-          <div className="flex-1 ml-4">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{title}</h1>
-            <p className="text-base text-gray-600 dark:text-white/60 mt-2">{description}</p>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white truncate">{title}</h1>
+            <p className="text-base text-gray-600 dark:text-white/60 mt-2 line-clamp-1">{description}</p>
           </div>
-
-          {/* User Profile */}
-          <div className="flex items-center gap-2">
-            {/* User Avatar */}
-            <UserAvatarDropdown 
-              user={{
-                name: user?.name || 'User',
-                email: user?.email || '',
-                profilePhoto: user?.profilePhoto,
-                isEmailVerified: user?.isEmailVerified || false,
-                subscription: user?.subscription || {
-                  planName: 'Free Plan',
-                  status: 'active'
-                }
-              }}
-            />
+          
+          {/* Search Bar - Right side on mobile (icon with overlay) */}
+          <div className="flex-shrink-0">
+            <GlobalSearchBar />
           </div>
         </div>
       </div>

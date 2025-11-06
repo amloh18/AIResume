@@ -12,6 +12,7 @@ import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
 import { useUserData, getUserDisplayName, getUserAvatar } from '@/lib/hooks/useUserData';
 import { useRoutePreloader } from '@/lib/services/routePreloader';
 import UniversalPaymentModal from '@/components/payment/UniversalPaymentModal';
+import UserAvatarDropdown from '@/components/ui/UserAvatarDropdown';
 
 const OptimizedNavigation: React.FC = () => {
   const router = useRouter();
@@ -116,7 +117,7 @@ const OptimizedNavigation: React.FC = () => {
           {/* Logo Icon */}
           <div className="w-8 h-8 rounded-lg flex items-center justify-center shadow-lg">
             <img 
-              src="/images/Logo.png" 
+              src="/images/logo.png" 
               alt="CVCircle Logo" 
               className="w-8 h-8 object-contain"
             />
@@ -285,35 +286,19 @@ const OptimizedNavigation: React.FC = () => {
 
       {/* User Profile */}
       <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-lime-400 to-lime-600 flex items-center justify-center text-white text-sm font-medium overflow-hidden">
-            {getUserAvatar(userData) ? (
-              <img 
-                src={getUserAvatar(userData)} 
-                alt={getUserDisplayName(userData)}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                  const nextSibling = e.currentTarget.nextElementSibling;
-                  if (nextSibling && 'style' in nextSibling) {
-                    (nextSibling as HTMLElement).style.display = 'flex';
-                  }
-                }}
-              />
-            ) : null}
-            <div style={{ display: getUserAvatar(userData) ? 'none' : 'flex' }} className="w-full h-full items-center justify-center">
-              {getUserDisplayName(userData).charAt(0)}
-            </div>
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
-              {getUserDisplayName(userData)}
-            </div>
-            <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-              {userData?.email}
-            </div>
-          </div>
-        </div>
+        <UserAvatarDropdown 
+          user={{
+            name: getUserDisplayName(userData),
+            email: userData?.email || '',
+            profilePhoto: getUserAvatar(userData),
+            isEmailVerified: userData?.isEmailVerified || false,
+            subscription: userData?.subscription || {
+              planName: 'Free Plan',
+              status: 'active'
+            }
+          }}
+          openUpward={true}
+        />
       </div>
 
       {/* Subscription Modal */}

@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect, useCallback } from 'react';
 import { UnifiedCVService } from '@/lib/services/unified-cv-service';
 import { JobService } from '@/lib/services/jobService';

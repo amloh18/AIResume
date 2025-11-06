@@ -6,6 +6,8 @@ import { getAdminPricingPlan } from '@/models/admin-models';
 import User from '@/models/User';
 import { stripe } from '@/lib/payment/stripe';
 import { razorpay } from '@/lib/payment/razorpay';
+import { detectUserRegion, getPricingForRegion } from '@/lib/services/regionDetectionService';
+import Coupon from '@/models/Coupon';
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,10 +24,37 @@ export async function POST(request: NextRequest) {
       interval, 
       billingDetails, 
       discountCode, 
+      couponCode,
       provider,
       returnUrl,
       triggerContext
     } = body;
+    
+    // Handle coupon/discount code
+    let couponDiscount = null;
+    if (couponCode || discountCode) {
+      const code = (couponCode || discountCode).toUpperCase();
+      const coupon = await Coupon.findOne({ code });
+      
+      if (coupon) {
+        const validation = coupon.isValid();
+        if (validation.valid) {
+          // Check if coupon applies to this plan
+          const isApplicable = 
+            (!coupon.applicablePlanKeys || coupon.applicablePlanKeys.length === 0 || coupon.applicablePlanKeys.includes(planKey)) &&
+            (!coupon.applicablePlans || coupon.applicablePlans.length === 0 || coupon.applicablePlans.includes(planKey));
+          
+          if (isApplicable) {
+            couponDiscount = {
+              code: coupon.code,
+              type: coupon.type,
+              value: coupon.discountValue || 0,
+              id: coupon._id.toString()
+            };
+          }
+        }
+      }
+    }
 
     // Validate plan key
     const validPlanKeys = ['free', 'day_pass', 'pro_monthly', 'pro_quarterly', 'pro_yearly'];
@@ -46,12 +75,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
+    // Detect user region from IP or use provided region
+    const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined;
+    const regionInfo = await detectUserRegion(ip);
+    
     // Determine payment provider based on region or override
     let paymentProvider = provider;
     if (!paymentProvider) {
-      // Auto-detect based on user's country or IP
-      // For now, default to Stripe, but you can implement IP-based detection
-      paymentProvider = 'stripe';
+      // Auto-detect based on region
+      paymentProvider = regionInfo.paymentPartner;
     }
 
     // Handle different plan types
@@ -66,10 +98,10 @@ export async function POST(request: NextRequest) {
 
     if (planKey === 'day_pass') {
       // Day Pass - one-time payment
-      return await handleDayPassPayment(plan, user, billingDetails, paymentProvider);
+      return await handleDayPassPayment(plan, user, billingDetails, paymentProvider, regionInfo, couponDiscount);
     } else {
-      // Pro plans - subscription
-      return await handleProPlanPayment(plan, user, interval, billingDetails, paymentProvider, returnUrl);
+      // Pro plans - monthly (recurring) or quarterly/yearly (one-time)
+      return await handleProPlanPayment(plan, user, interval, billingDetails, paymentProvider, returnUrl, regionInfo, couponDiscount);
     }
 
   } catch (error) {
@@ -82,24 +114,67 @@ async function handleDayPassPayment(
   plan: any, 
   user: any, 
   billingDetails: any, 
-  provider: string
+  provider: string,
+  regionInfo: any,
+  couponDiscount?: any
 ) {
-  const amount = plan.price_one_time * 100; // Convert to cents/paisa
+  // Get regional pricing
+  const regionalPrice = getPricingForRegion(plan, regionInfo.countryCode);
+  let amount = (regionalPrice?.price || plan.price_one_time || 0) * 100; // Convert to cents/paisa
+  const currency = regionalPrice?.currency || plan.currency || 'USD';
+  
+  // Apply coupon discount
+  if (couponDiscount && couponDiscount.type === 'percentage') {
+    amount = Math.round(amount * (1 - couponDiscount.value / 100));
+  } else if (couponDiscount && couponDiscount.type === 'fixed') {
+    amount = Math.max(0, amount - (couponDiscount.value * 100));
+  }
 
   if (provider === 'stripe') {
     if (!stripe) {
       return NextResponse.json({ error: 'Stripe is not configured' }, { status: 500 });
     }
     try {
-      // Create Stripe PaymentIntent for one-time payment
+      // Use region-specific Stripe price ID if available, otherwise create payment intent
+      const stripePriceId = regionalPrice?.stripePriceId;
+      
+      if (stripePriceId) {
+        // Use existing Stripe price
+        const session = await stripe.checkout.sessions.create({
+          customer: user.subscription?.providerCustomerId || undefined,
+          payment_method_types: ['card'],
+          line_items: [{
+            price: stripePriceId,
+            quantity: 1,
+          }],
+          mode: 'payment', // One-time payment
+          success_url: `${process.env.NEXTAUTH_URL || ''}/dashboard?success=true&session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${process.env.NEXTAUTH_URL || ''}/dashboard/settings?canceled=true`,
+          metadata: {
+            planKey: plan.key,
+            userId: user._id.toString(),
+            planId: plan._id.toString(),
+            type: 'day_pass',
+            region: regionInfo.countryCode
+          }
+        });
+
+        return NextResponse.json({
+          provider: 'stripe',
+          redirect_url: session.url
+        });
+      }
+
+      // Fallback: Create PaymentIntent for one-time payment
       const paymentIntent = await stripe.paymentIntents.create({
         amount: Math.round(amount),
-        currency: plan.currency.toLowerCase(),
+        currency: currency.toLowerCase(),
         metadata: {
           planKey: plan.key,
           userId: user._id.toString(),
           planId: plan._id.toString(),
-          type: 'day_pass'
+          type: 'day_pass',
+          region: regionInfo.countryCode
         },
         customer: user.subscription?.providerCustomerId || undefined,
         description: `Day Pass - ${plan.name}`,
@@ -122,16 +197,42 @@ async function handleDayPassPayment(
       return NextResponse.json({ error: 'Razorpay is not configured' }, { status: 500 });
     }
     try {
-      // Create Razorpay Order for one-time payment
+      // Use region-specific Razorpay plan ID if available, otherwise create order
+      const razorpayPlanId = regionalPrice?.razorpayPlanId;
+      
+      if (razorpayPlanId) {
+        // Create Razorpay subscription for one-time payment (total_count: 1)
+        const subscription = await razorpay.subscriptions.create({
+          plan_id: razorpayPlanId,
+          total_count: 1, // One-time payment
+          customer_notify: 1,
+          notes: {
+            planKey: plan.key,
+            userId: user._id.toString(),
+            planId: plan._id.toString(),
+            type: 'day_pass',
+            region: regionInfo.countryCode
+          }
+        });
+
+        return NextResponse.json({
+          provider: 'razorpay',
+          subscription_id: subscription.id,
+          plan_id: razorpayPlanId
+        });
+      }
+
+      // Fallback: Create Razorpay Order for one-time payment
       const order = await razorpay.orders.create({
         amount: Math.round(amount),
-        currency: plan.currency,
+        currency: currency,
         receipt: `day_pass_${user._id}_${Date.now()}`,
         notes: {
           planKey: plan.key,
           userId: user._id.toString(),
           planId: plan._id.toString(),
-          type: 'day_pass'
+          type: 'day_pass',
+          region: regionInfo.countryCode
         }
       });
 
@@ -139,7 +240,13 @@ async function handleDayPassPayment(
         provider: 'razorpay',
         order_id: order.id,
         amount: order.amount,
-        currency: order.currency
+        currency: order.currency,
+        key_id: process.env.RAZORPAY_KEY_ID,
+        checkout: true, // Use Razorpay Checkout
+        coupon: couponDiscount ? {
+          code: couponDiscount.code,
+          id: couponDiscount.id
+        } : null
       });
 
     } catch (error) {
@@ -157,23 +264,43 @@ async function handleProPlanPayment(
   interval: string, 
   billingDetails: any, 
   provider: string,
-  returnUrl?: string
+  returnUrl?: string,
+  regionInfo?: any,
+  couponDiscount?: any
 ) {
+  // Get regional pricing
+  const regionalPrice = regionInfo ? getPricingForRegion(plan, regionInfo.countryCode) : null;
+  
   // Determine the correct price based on interval
   let priceId: string | undefined;
   let amount: number;
+  let paymentMode: 'payment' | 'subscription' = 'subscription'; // Default to subscription
+  
+  // Monthly = recurring subscription, Quarterly/Yearly = one-time payment
+  if (interval === 'quarterly' || interval === 'yearly') {
+    paymentMode = 'payment'; // One-time payment
+  }
 
   if (provider === 'stripe') {
-    // Get the appropriate Stripe price ID
+    // Get the appropriate Stripe price ID (use regional if available)
     if (interval === 'monthly') {
-      priceId = plan.stripePriceId_monthly;
-      amount = plan.price_monthly * 100;
+      priceId = regionalPrice?.stripePriceId || plan.stripePriceId_monthly;
+      amount = (regionalPrice?.price || plan.price_monthly || 0) * 100;
     } else if (interval === 'quarterly') {
-      priceId = plan.stripePriceId_quarterly;
-      amount = plan.price_quarterly * 100;
+      priceId = regionalPrice?.stripePriceId || plan.stripePriceId_quarterly;
+      amount = (regionalPrice?.price || plan.price_quarterly || 0) * 100;
     } else if (interval === 'yearly') {
-      priceId = plan.stripePriceId_yearly;
-      amount = plan.price_yearly * 100;
+      priceId = regionalPrice?.stripePriceId || plan.stripePriceId_yearly;
+      amount = (regionalPrice?.price || plan.price_yearly || 0) * 100;
+    }
+    
+    // Apply coupon discount
+    if (couponDiscount) {
+      if (couponDiscount.type === 'percentage') {
+        amount = Math.round(amount * (1 - couponDiscount.value / 100));
+      } else if (couponDiscount.type === 'fixed') {
+        amount = Math.max(0, amount - (couponDiscount.value * 100));
+      }
     }
 
     if (!priceId) {
@@ -203,7 +330,7 @@ async function handleProPlanPayment(
       }
 
       // Create Stripe Checkout Session
-      const session = await stripe.checkout.sessions.create({
+      const sessionConfig: any = {
         customer: customerId,
         payment_method_types: ['card'],
         line_items: [
@@ -212,24 +339,34 @@ async function handleProPlanPayment(
             quantity: 1,
           },
         ],
-        mode: 'subscription',
+        mode: paymentMode,
         success_url: `${returnUrl || process.env.NEXTAUTH_URL}/dashboard?success=true&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${returnUrl || process.env.NEXTAUTH_URL}/dashboard/settings?canceled=true`,
         metadata: {
           planKey: plan.key,
           userId: user._id.toString(),
           planId: plan._id.toString(),
-          interval: interval
-        },
-        subscription_data: {
+          interval: interval,
+          region: regionInfo?.countryCode || 'US',
+          couponCode: couponDiscount?.code || '',
+          couponId: couponDiscount?.id || ''
+        }
+      };
+
+      // For subscriptions (monthly), add subscription_data
+      if (paymentMode === 'subscription') {
+        sessionConfig.subscription_data = {
           metadata: {
             planKey: plan.key,
             userId: user._id.toString(),
             planId: plan._id.toString(),
-            interval: interval
+            interval: interval,
+            region: regionInfo?.countryCode || 'US'
           }
-        }
-      });
+        };
+      }
+
+      const session = await stripe.checkout.sessions.create(sessionConfig);
 
       return NextResponse.json({
         provider: 'stripe',
@@ -242,50 +379,68 @@ async function handleProPlanPayment(
     }
 
   } else if (provider === 'razorpay') {
-    // Get the appropriate Razorpay plan ID
-    let planId: string | undefined;
+    // For Razorpay, we'll use Checkout (embedded form) for better UX
+    // Calculate amount based on interval
     if (interval === 'monthly') {
-      planId = plan.razorpayPlanId_monthly;
-      amount = plan.price_monthly * 100;
+      amount = (regionalPrice?.price || plan.price_monthly || 0) * 100; // Convert to paise
     } else if (interval === 'quarterly') {
-      planId = plan.razorpayPlanId_quarterly;
-      amount = plan.price_quarterly * 100;
+      amount = (regionalPrice?.price || plan.price_quarterly || 0) * 100;
     } else if (interval === 'yearly') {
-      planId = plan.razorpayPlanId_yearly;
-      amount = plan.price_yearly * 100;
+      amount = (regionalPrice?.price || plan.price_yearly || 0) * 100;
     }
-
-    if (!planId) {
-      return NextResponse.json({ error: 'Plan not configured for Razorpay' }, { status: 400 });
+    
+    // Apply coupon discount
+    if (couponDiscount) {
+      if (couponDiscount.type === 'percentage') {
+        amount = Math.round(amount * (1 - couponDiscount.value / 100));
+      } else if (couponDiscount.type === 'fixed') {
+        amount = Math.max(0, amount - (couponDiscount.value * 100));
+      }
     }
+    
+    const currency = regionalPrice?.currency || plan.currency || 'INR';
 
     if (!razorpay) {
       return NextResponse.json({ error: 'Razorpay is not configured' }, { status: 500 });
     }
 
     try {
-      // Create Razorpay Subscription
-      const subscription = await razorpay.subscriptions.create({
-        plan_id: planId,
-        customer_notify: 1,
-        total_count: undefined as any, // Ongoing subscription
+      // Create Razorpay Order for Checkout
+      const order = await razorpay.orders.create({
+        amount: amount,
+        currency: currency,
+        receipt: `order_${user._id}_${Date.now()}`,
         notes: {
           planKey: plan.key,
           userId: user._id.toString(),
           planId: plan._id.toString(),
-          interval: interval
+          interval: interval,
+          region: regionInfo?.countryCode || 'IN',
+          couponCode: couponDiscount?.code || '',
+          couponId: couponDiscount?.id || ''
         }
       });
 
       return NextResponse.json({
         provider: 'razorpay',
-        subscription_id: subscription.id,
-        plan_id: planId,
-        status: subscription.status
+        order_id: order.id,
+        amount: order.amount,
+        currency: order.currency,
+        key_id: process.env.RAZORPAY_KEY_ID,
+        checkout: true, // Use Razorpay Checkout
+        coupon: couponDiscount ? {
+          code: couponDiscount.code,
+          id: couponDiscount.id
+        } : null,
+        metadata: {
+          planKey: plan.key,
+          interval: interval,
+          userId: user._id.toString()
+        }
       });
 
     } catch (error) {
-      console.error('Razorpay Subscription error:', error);
+      console.error('Razorpay Order error:', error);
       return NextResponse.json({ error: 'Payment setup failed' }, { status: 500 });
     }
   }

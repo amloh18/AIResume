@@ -84,23 +84,23 @@
 }
 
 .card-nav-cta-button {
-  background: linear-gradient(135deg, #84cc16, #a3e635);
+  background: rgb(129, 255, 0);
   color: #000000;
-  border: 2px solid rgba(132, 204, 22, 0.3);
+  border: 2px solid rgba(129, 255, 0, 0.3);
   border-radius: 30px;
   padding: 0.875rem 2rem;
   font-weight: 600;
   font-size: 15px;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 6px 20px rgba(132, 204, 22, 0.4);
+  box-shadow: 0 6px 20px rgba(129, 255, 0, 0.4);
 }
 
 .card-nav-cta-button:hover {
-  background: linear-gradient(135deg, #65a30d, #84cc16);
+  background: rgb(110, 230, 0);
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(132, 204, 22, 0.5);
-  border-color: rgba(132, 204, 22, 0.6);
+  box-shadow: 0 8px 25px rgba(129, 255, 0, 0.5);
+  border-color: rgba(129, 255, 0, 0.6);
 }
 
 .card-nav-cta-button:active {
@@ -212,23 +212,23 @@
 }
 
 .mobile-cta-button {
-  background: linear-gradient(135deg, #84cc16, #a3e635);
+  background: rgb(129, 255, 0);
   color: #000000;
-  border: 2px solid rgba(132, 204, 22, 0.3);
+  border: 2px solid rgba(129, 255, 0, 0.3);
   border-radius: 12px;
   padding: 0.875rem 1.5rem;
   font-weight: 600;
   font-size: 16px;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 6px 20px rgba(132, 204, 22, 0.4);
+  box-shadow: 0 6px 20px rgba(129, 255, 0, 0.4);
   margin-top: 0.5rem;
 }
 
 .mobile-cta-button:hover {
-  background: linear-gradient(135deg, #65a30d, #84cc16);
+  background: rgb(110, 230, 0);
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(132, 204, 22, 0.5);
+  box-shadow: 0 8px 25px rgba(129, 255, 0, 0.5);
 }
 
 @media (max-width: 640px) {

@@ -501,7 +501,7 @@ const JobSelector: React.FC<JobSelectorProps> = ({
                   setIsOpen(false);
                   setShowJobModal(true);
                 }}
-                className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-gradient-to-r from-lime-600 to-lime-700 hover:from-lime-700 hover:to-lime-800 text-white text-xs font-medium rounded-lg transition-all duration-200 shadow-md hover:shadow-lg group"
+                className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black text-xs font-medium rounded-lg transition-all duration-200 shadow-md hover:shadow-lg group"
               >
                 <div className="p-0.5 bg-white/20 rounded-md group-hover:bg-white/30 transition-colors">
                   <Plus className="h-3 w-3" />

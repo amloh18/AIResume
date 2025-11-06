@@ -9,9 +9,10 @@ import {
   Settings, 
   LogOut, 
   Crown,
-  Mail,
   Sun,
-  Moon
+  Moon,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import UserAvatar from './UserAvatar';
 import { useTheme } from '@/lib/contexts/ThemeContext';
@@ -28,9 +29,10 @@ interface UserAvatarDropdownProps {
       status: string;
     };
   };
+  openUpward?: boolean;
 }
 
-const UserAvatarDropdown: React.FC<UserAvatarDropdownProps> = ({ user }) => {
+const UserAvatarDropdown: React.FC<UserAvatarDropdownProps> = ({ user, openUpward = false }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -81,53 +83,60 @@ const UserAvatarDropdown: React.FC<UserAvatarDropdownProps> = ({ user }) => {
 
   return (
     <div className="relative" ref={dropdownRef}>
-      {/* Avatar Button */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="focus:outline-none focus:ring-2 focus:ring-lime-500 rounded-full"
-      >
-        <UserAvatar
-          src={user.profilePhoto}
-          name={user.name}
-          size="md"
-          className="cursor-pointer hover:ring-2 hover:ring-lime-500 transition-all"
-        />
-      </button>
+      {/* Avatar Button - Show full user info for sidebar, or just avatar for header */}
+      {openUpward ? (
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="w-full focus:outline-none rounded-lg transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <UserAvatar
+              src={user.profilePhoto}
+              name={user.name}
+              size="md"
+              className="cursor-pointer transition-all"
+            />
+            <div className="flex-1 min-w-0 text-left">
+              <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                {user.name}
+              </div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                {user.email}
+              </div>
+            </div>
+            <motion.div
+              animate={{ rotate: isOpen ? 180 : 0 }}
+              transition={{ duration: 0.2 }}
+              className="flex-shrink-0"
+            >
+              <ChevronDown className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+            </motion.div>
+          </div>
+        </button>
+      ) : (
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="focus:outline-none focus:ring-2 focus:ring-lime-500 rounded-full"
+        >
+          <UserAvatar
+            src={user.profilePhoto}
+            name={user.name}
+            size="md"
+            className="cursor-pointer hover:ring-2 hover:ring-lime-500 transition-all"
+          />
+        </button>
+      )}
 
       {/* Dropdown Menu */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: -10, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -10, scale: 0.95 }}
+            initial={{ opacity: 0, y: openUpward ? 10 : -10, x: openUpward ? '-50%' : 0, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, x: openUpward ? '-50%' : 0, scale: 1 }}
+            exit={{ opacity: 0, y: openUpward ? 10 : -10, x: openUpward ? '-50%' : 0, scale: 0.95 }}
             transition={{ duration: 0.15 }}
-            className="absolute right-0 mt-2 w-72 bg-white dark:bg-[#141810] rounded-xl shadow-2xl border border-gray-200 dark:border-white/10 z-50 overflow-hidden"
+            className={`absolute ${openUpward ? 'bottom-full mb-2 left-1/2' : 'top-full mt-2 left-0'} w-72 bg-white dark:bg-[#141810] rounded-xl shadow-2xl border border-gray-200 dark:border-white/10 z-50 overflow-hidden`}
           >
-            {/* User Info Section */}
-            <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-br from-lime-50 to-emerald-50 dark:from-gray-800 dark:to-gray-900">
-              <div className="flex items-start gap-3">
-                <UserAvatar
-                  src={user.profilePhoto}
-                  name={user.name}
-                  size="lg"
-                />
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-gray-900 dark:text-white truncate">
-                    {user.name}
-                  </h3>
-                  <div className="flex items-center gap-1 mt-1">
-                    <Mail className="h-3 w-3 text-gray-500 dark:text-gray-400 flex-shrink-0" />
-                    <p className="text-sm text-gray-600 dark:text-gray-300 truncate">
-                      {user.email}
-                    </p>
-                  </div>
-                  
-                </div>
-              </div>
-
-            </div>
-
             {/* Menu Items */}
             <div className="py-2">
               <button

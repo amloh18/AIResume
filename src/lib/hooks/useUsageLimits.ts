@@ -1,4 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+'use client';
+
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 
 export interface UsageLimits {
@@ -14,6 +16,23 @@ export interface UsageLimits {
   dayPassExpiry?: Date;
 }
 
+export interface TimeAccessInfo {
+  hasAccess: boolean;
+  hoursRemaining?: number;
+  daysRemaining?: number;
+  expiredAt?: Date;
+  isInGracePeriod?: boolean;
+  gracePeriodEndsAt?: Date;
+}
+
+export interface SubscriptionInfo {
+  planKey: string;
+  status: string;
+  accessExpiresAt?: Date;
+  currentPeriodEnd?: Date;
+  autoRenew?: boolean;
+}
+
 export interface UsageCheckResult {
   allowed: boolean;
   reason?: string;
@@ -25,6 +44,8 @@ export interface UsageCheckResult {
 export function useUsageLimits() {
   const { data: session } = useSession();
   const [usageLimits, setUsageLimits] = useState<UsageLimits | null>(null);
+  const [timeAccess, setTimeAccess] = useState<TimeAccessInfo | null>(null);
+  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,6 +62,8 @@ export function useUsageLimits() {
 
       if (response.ok && data.success) {
         setUsageLimits(data.usage);
+        setTimeAccess(data.timeAccess || null);
+        setSubscription(data.subscription || null);
       } else {
         setError(data.error || 'Failed to fetch usage limits');
       }
@@ -177,6 +200,47 @@ export function useUsageLimits() {
     return Math.max(0, expiry.getTime() - now.getTime());
   }, [usageLimits]);
 
+  // Calculate time remaining with formatted display
+  const timeRemaining = useMemo(() => {
+    if (!timeAccess) return null;
+
+    if (timeAccess.hoursRemaining !== undefined) {
+      // Day pass: hours remaining
+      const hours = Math.floor(timeAccess.hoursRemaining);
+      const minutes = Math.floor((timeAccess.hoursRemaining - hours) * 60);
+      const isExpiringSoon = hours < 3;
+
+      return {
+        hours,
+        minutes,
+        totalHours: timeAccess.hoursRemaining,
+        formatted: hours > 0 
+          ? `${hours} hour${hours !== 1 ? 's' : ''} ${minutes} minute${minutes !== 1 ? 's' : ''}`
+          : `${minutes} minute${minutes !== 1 ? 's' : ''}`,
+        isExpiringSoon,
+        expiredAt: timeAccess.expiredAt
+      };
+    } else if (timeAccess.daysRemaining !== undefined) {
+      // Pro plans: days remaining
+      const days = Math.floor(timeAccess.daysRemaining);
+      const hours = Math.floor((timeAccess.daysRemaining - days) * 24);
+      const isExpiringSoon = days < 7;
+
+      return {
+        days,
+        hours,
+        totalDays: timeAccess.daysRemaining,
+        formatted: days > 0
+          ? `${days} day${days !== 1 ? 's' : ''} ${hours} hour${hours !== 1 ? 's' : ''}`
+          : `${hours} hour${hours !== 1 ? 's' : ''}`,
+        isExpiringSoon,
+        expiredAt: timeAccess.expiredAt
+      };
+    }
+
+    return null;
+  }, [timeAccess]);
+
   // Generate device fingerprint (simple implementation)
   const generateDeviceFingerprint = useCallback((): string => {
     const canvas = document.createElement('canvas');
@@ -213,6 +277,9 @@ export function useUsageLimits() {
 
   return {
     usageLimits,
+    timeAccess,
+    subscription,
+    timeRemaining,
     loading,
     error,
     fetchUsageLimits,

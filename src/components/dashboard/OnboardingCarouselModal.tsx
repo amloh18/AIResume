@@ -178,7 +178,7 @@ const OnboardingCarouselModal: React.FC<OnboardingCarouselModalProps> = ({ userI
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center">
               <img 
-                src="/images/Logo.png" 
+                src="/images/logo.png" 
                 alt="CVCircle Logo" 
                 className="w-8 h-8 object-contain"
               />
@@ -341,7 +341,7 @@ const OnboardingCarouselModal: React.FC<OnboardingCarouselModalProps> = ({ userI
             hasMasterCV === false && !isCheckingCV ? (
               <motion.button
                 onClick={handleCreateMasterCV}
-                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-lime-400 to-lime-500 text-black rounded-lg font-semibold hover:from-lime-300 hover:to-lime-400 transition-all duration-200"
+                className="flex items-center gap-2 px-6 py-3 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black rounded-lg font-semibold transition-all duration-200"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >

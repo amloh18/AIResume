@@ -6,10 +6,32 @@ import { Filter, X, Plus } from 'lucide-react';
 interface FilterProps {
   filters: any;
   onChange: (filters: any) => void;
+  twoColumn?: boolean;
 }
 
-export default function CampaignFilters({ filters, onChange }: FilterProps) {
+export default function CampaignFilters({ filters, onChange, twoColumn = false }: FilterProps) {
   const [localFilters, setLocalFilters] = useState(filters || {});
+  const [availablePlans, setAvailablePlans] = useState<string[]>([]);
+
+  useEffect(() => {
+    fetchAvailablePlans();
+  }, []);
+
+  const fetchAvailablePlans = async () => {
+    try {
+      const response = await fetch('/api/admin/config/plans?forCampaigns=true');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setAvailablePlans(data.plans || []);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching plans for campaign filters:', error);
+      // Fallback to empty array
+      setAvailablePlans([]);
+    }
+  };
 
   useEffect(() => {
     onChange(localFilters);
@@ -81,28 +103,33 @@ export default function CampaignFilters({ filters, onChange }: FilterProps) {
   const hasActiveFilters = Object.keys(localFilters).length > 0;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Filter className="w-5 h-5 text-lime-400" />
-          <h3 className="text-lg font-semibold text-white">Target Audience Filters</h3>
-        </div>
-        {hasActiveFilters && (
-          <button
-            onClick={clearAllFilters}
-            className="text-sm text-red-400 hover:text-red-300 transition-colors"
-          >
-            Clear All
-          </button>
-        )}
-      </div>
+    <div className={twoColumn ? "grid grid-cols-2 gap-4" : "space-y-6"}>
+      {!twoColumn && (
+        <>
+          {/* Header */}
+          <div className="flex items-center justify-between col-span-2">
+            <div className="flex items-center gap-2">
+              <Filter className="w-5 h-5 text-lime-400" />
+              <h3 className="text-lg font-semibold text-white">Target Audience Filters</h3>
+            </div>
+            {hasActiveFilters && (
+              <button
+                onClick={clearAllFilters}
+                className="text-sm text-red-400 hover:text-red-300 transition-colors"
+              >
+                Clear All
+              </button>
+            )}
+          </div>
+        </>
+      )}
 
       {/* Membership Plans */}
       <div className="bg-white/5 border border-white/10 rounded-lg p-4">
         <h4 className="text-sm font-medium text-gray-300 mb-3">Membership Plans</h4>
         <div className="grid grid-cols-2 gap-3">
-          {['free', 'basic', 'premium', 'enterprise'].map((plan) => {
+          {availablePlans.length > 0 ? (
+            availablePlans.map((plan) => {
             const isChecked = localFilters.membershipPlans?.includes(plan);
             return (
               <label
@@ -118,7 +145,10 @@ export default function CampaignFilters({ filters, onChange }: FilterProps) {
                 <span className="text-white capitalize">{plan}</span>
               </label>
             );
-          })}
+            })
+          ) : (
+            <div className="col-span-2 text-sm text-gray-400">Loading plans...</div>
+          )}
         </div>
       </div>
 
@@ -319,7 +349,7 @@ export default function CampaignFilters({ filters, onChange }: FilterProps) {
 
       {/* Summary */}
       {hasActiveFilters && (
-        <div className="bg-lime-500/10 border border-lime-500/20 rounded-lg p-4">
+        <div className={`bg-lime-500/10 border border-lime-500/20 rounded-lg p-4 ${twoColumn ? 'col-span-2' : ''}`}>
           <h4 className="text-sm font-medium text-lime-400 mb-2">Active Filters</h4>
           <div className="text-xs text-gray-300 space-y-1">
             {localFilters.membershipPlans?.length > 0 && (

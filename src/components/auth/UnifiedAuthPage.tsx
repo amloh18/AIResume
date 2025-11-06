@@ -980,17 +980,24 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
             <div className="mt-6 pt-4 border-t border-gray-600/30">
               <div className="flex justify-center space-x-4 text-xs text-gray-400">
                 <a 
-                  href="/privacy-policy" 
+                  href="/legal#privacy" 
                   className="hover:text-[#88E03F] transition-colors duration-200"
                 >
                   Privacy Policy
                 </a>
                 <span className="text-gray-500">•</span>
                 <a 
-                  href="/terms" 
+                  href="/legal#terms" 
                   className="hover:text-[#88E03F] transition-colors duration-200"
                 >
                   Terms of Service
+                </a>
+                <span className="text-gray-500">•</span>
+                <a 
+                  href="/legal#support" 
+                  className="hover:text-[#88E03F] transition-colors duration-200"
+                >
+                  Support
                 </a>
               </div>
             </div>

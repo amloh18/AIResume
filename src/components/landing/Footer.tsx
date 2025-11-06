@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import Logo from '../ui/Logo';
-import { Twitter, Linkedin, Github, MessageCircle, Mail, ArrowRight, Heart, CheckCircle, AlertCircle, Phone, MapPin } from 'lucide-react';
+import { X, Linkedin, Instagram, Mail, ArrowRight, Heart, CheckCircle, AlertCircle, Phone, MapPin } from 'lucide-react';
 
 const Footer = () => {
   const [email, setEmail] = useState('');
@@ -19,10 +19,9 @@ const Footer = () => {
   ];
 
   const socialLinks = [
-    { name: 'Twitter', icon: Twitter, href: '#', color: 'from-blue-400 to-blue-500' },
+    { name: 'X', icon: X, href: 'https://x.com/cvcircle_io', color: 'from-blue-400 to-blue-500' },
+    { name: 'Instagram', icon: Instagram, href: 'https://www.instagram.com/cvcircle.io/', color: 'from-pink-500 to-purple-500' },
     { name: 'LinkedIn', icon: Linkedin, href: 'https://www.linkedin.com/company/cvcircle-io/', color: 'from-blue-600 to-blue-700' },
-    { name: 'GitHub', icon: Github, href: '#', color: 'from-gray-600 to-gray-700' },
-    { name: 'Discord', icon: MessageCircle, href: '#', color: 'from-purple-400 to-purple-500' },
   ];
 
   const scrollToSection = (href: string) => {
@@ -406,7 +405,7 @@ const Footer = () => {
           
           <div className="flex space-x-8">
             <motion.a 
-              href="/privacy-policy"
+              href="/legal#privacy"
               className="text-white/60 hover:text-lime-400 text-sm transition-colors duration-300 font-medium"
               whileHover={{ y: -2 }}
               whileTap={{ scale: 0.95 }}
@@ -414,7 +413,7 @@ const Footer = () => {
               Privacy Policy
             </motion.a>
             <motion.a 
-              href="/terms"
+              href="/legal#terms"
               className="text-white/60 hover:text-lime-400 text-sm transition-colors duration-300 font-medium"
               whileHover={{ y: -2 }}
               whileTap={{ scale: 0.95 }}
@@ -422,12 +421,20 @@ const Footer = () => {
               Terms of Service
             </motion.a>
             <motion.a 
-              href="/cookie-policy"
+              href="/legal#cookies"
               className="text-white/60 hover:text-lime-400 text-sm transition-colors duration-300 font-medium"
               whileHover={{ y: -2 }}
               whileTap={{ scale: 0.95 }}
             >
               Cookie Policy
+            </motion.a>
+            <motion.a 
+              href="/legal#support"
+              className="text-white/60 hover:text-lime-400 text-sm transition-colors duration-300 font-medium"
+              whileHover={{ y: -2 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              Support
             </motion.a>
           </div>
         </motion.div>

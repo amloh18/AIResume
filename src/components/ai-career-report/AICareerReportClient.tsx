@@ -139,7 +139,7 @@ function AICareerReportContent() {
               {/* Logo */}
               <div className="flex items-center gap-3">
                 <Image 
-                  src="/images/Logo.png" 
+                  src="/images/logo.png" 
                   alt="CV Circle Logo" 
                   width={40} 
                   height={40}

@@ -9,8 +9,7 @@ import {
   Calendar,
   DollarSign,
   Eye,
-  Download,
-  Bell
+  Download
 } from 'lucide-react';
 import { AdminKPISkeleton } from './AdminSkeletons';
 import {
@@ -51,11 +50,7 @@ interface ChartData {
   aiUsage: number;
 }
 
-interface AdminKPIsProps {
-  onNotificationClick?: () => void;
-}
-
-const AdminKPIs: React.FC<AdminKPIsProps> = ({ onNotificationClick }) => {
+const AdminKPIs: React.FC = () => {
   const [kpiData, setKpiData] = useState<KPIData | null>(null);
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [loading, setLoading] = useState(false);
@@ -85,16 +80,16 @@ const AdminKPIs: React.FC<AdminKPIsProps> = ({ onNotificationClick }) => {
       setKpiData(data);
     } catch (error) {
       console.error('Error fetching KPI data:', error);
-      // Set fallback data instead of null to prevent error states
+      // Set zero values instead of random fallback data
       setKpiData({
-        totalUsers: Math.floor(Math.random() * 100) + 50,
-        activeUsers: Math.floor(Math.random() * 30) + 20,
-        totalCVs: Math.floor(Math.random() * 200) + 100,
-        totalJobs: Math.floor(Math.random() * 150) + 75,
-        totalCoverLetters: Math.floor(Math.random() * 80) + 40,
-        aiUsage: Math.floor(Math.random() * 100) + 50,
-        revenue: Math.floor(Math.random() * 5000) + 1000,
-        growthRate: Math.floor(Math.random() * 20) + 5
+        totalUsers: 0,
+        activeUsers: 0,
+        totalCVs: 0,
+        totalJobs: 0,
+        totalCoverLetters: 0,
+        aiUsage: 0,
+        revenue: 0,
+        growthRate: 0
       });
     } finally {
       setDataLoading(false);
@@ -362,16 +357,6 @@ const AdminKPIs: React.FC<AdminKPIsProps> = ({ onNotificationClick }) => {
         </div>
         
         <div className="flex items-center space-x-2">
-          <button
-            onClick={onNotificationClick}
-            className="p-2 rounded-md text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-gray-100 transition-colors relative"
-            title="Notifications"
-          >
-            <Bell size={20} />
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-              3
-            </span>
-          </button>
           <select
             value={timeRange}
             onChange={(e) => setTimeRange(e.target.value)}

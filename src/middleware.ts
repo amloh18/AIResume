@@ -150,6 +150,18 @@ export default async function middleware(req: NextRequest) {
       return NextResponse.redirect(new URL('/sign-in', req.url))
     }
 
+    // For dashboard routes, check for expired subscription context
+    // Note: Full time-based access check happens at API/resource level
+    // This is just a lightweight check to redirect users with expired subscriptions
+    if (pathname.startsWith('/dashboard') && !pathname.startsWith('/dashboard/settings')) {
+      // Check if there's an expired subscription context in the URL
+      const expiredParam = req.nextUrl.searchParams.get('expired');
+      if (expiredParam === 'true') {
+        // Redirect to membership settings with expired context
+        return NextResponse.redirect(new URL('/dashboard/settings?tab=membership&expired=true', req.url));
+      }
+    }
+
     log.debug('Protected route accessed', { 
       pathname, 
       userId: getUserId(token),

@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
 import { getConnection } from '@/lib/database';
 import AdminAuth from '@/models/AdminAuth';
+import { ActivityLogService } from '@/lib/services/activityLogService';
 
 // Admin authentication using database
 export async function POST(request: NextRequest) {
@@ -23,6 +24,19 @@ export async function POST(request: NextRequest) {
     const adminUser = await AdminAuth.findOne({ email: email.toLowerCase() }).select('+password');
     
     if (!adminUser) {
+      // Log failed login attempt
+      await ActivityLogService.logAdminAction({
+        adminUserId: undefined,
+        adminEmail: email.toLowerCase(),
+        action: 'admin_login_failed',
+        actionType: 'authentication',
+        status: 'failed',
+        metadata: {
+          reason: 'user_not_found',
+          ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined
+        }
+      });
+
       return NextResponse.json(
         { success: false, error: 'Invalid credentials' },
         { status: 401 }
@@ -33,6 +47,19 @@ export async function POST(request: NextRequest) {
     const isPasswordValid = await adminUser.comparePassword(password);
     
     if (!isPasswordValid) {
+      // Log failed login attempt
+      await ActivityLogService.logAdminAction({
+        adminUserId: adminUser._id.toString(),
+        adminEmail: adminUser.email,
+        action: 'admin_login_failed',
+        actionType: 'authentication',
+        status: 'failed',
+        metadata: {
+          reason: 'invalid_password',
+          ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined
+        }
+      });
+
       return NextResponse.json(
         { success: false, error: 'Invalid credentials' },
         { status: 401 }
@@ -42,6 +69,19 @@ export async function POST(request: NextRequest) {
     // Update last login
     adminUser.lastLogin = new Date();
     await adminUser.save();
+
+    // Log successful admin login
+    await ActivityLogService.logAdminAction({
+      adminUserId: adminUser._id.toString(),
+      adminEmail: adminUser.email,
+      action: 'admin_login_success',
+      actionType: 'authentication',
+      status: 'success',
+      metadata: {
+        role: adminUser.role,
+        ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined
+      }
+    });
 
     // Create JWT token
     const token = jwt.sign(
