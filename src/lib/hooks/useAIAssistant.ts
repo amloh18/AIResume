@@ -1,3 +1,5 @@
+'use client';
+
 import { useCallback, useEffect, useRef } from 'react';
 import { useAIStore, AISuggestion } from '@/lib/stores/aiStore';
 import { useJobStore } from '@/lib/stores/jobStore';

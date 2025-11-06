@@ -188,7 +188,7 @@ const Features = () => {
                   {/* CTA Button */}
                   <motion.a
                     href={feature.ctaLink}
-                    className="group/btn relative inline-flex items-center gap-2 bg-gradient-to-r from-lime-400 to-lime-500 text-black px-5 py-2.5 sm:px-6 sm:py-3 rounded-full font-semibold text-sm sm:text-base shadow-lg hover:shadow-lime-400/50 transition-all overflow-hidden mt-6 w-fit"
+                    className="group/btn relative inline-flex items-center gap-2 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black px-5 py-2.5 sm:px-6 sm:py-3 rounded-full font-semibold text-sm sm:text-base shadow-lg hover:shadow-[rgb(129,255,0)]/50 transition-all overflow-hidden mt-6 w-fit"
                     whileHover={{ 
                       scale: 1.05,
                       boxShadow: "0 15px 30px -8px rgba(132, 204, 22, 0.5)"

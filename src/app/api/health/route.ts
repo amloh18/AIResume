@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
-import { getLogsConnection } from '@/lib/logs-database-connection';
 import { validateEnvironment } from '@/lib/env-validation';
 
 interface HealthCheckResult {
@@ -11,11 +10,6 @@ interface HealthCheckResult {
   uptime: number;
   checks: {
     database: {
-      status: 'healthy' | 'unhealthy';
-      responseTime: number;
-      error?: string;
-    };
-    logsDatabase: {
       status: 'healthy' | 'unhealthy';
       responseTime: number;
       error?: string;
@@ -57,27 +51,6 @@ async function checkDatabase(): Promise<{ status: 'healthy' | 'unhealthy'; respo
       status: 'unhealthy', 
       responseTime, 
       error: error instanceof Error ? error.message : 'Unknown database error' 
-    };
-  }
-}
-
-async function checkLogsDatabase(): Promise<{ status: 'healthy' | 'unhealthy'; responseTime: number; error?: string }> {
-  const startTime = Date.now();
-  try {
-    const logsConnection = await getLogsConnection();
-    const responseTime = Date.now() - startTime;
-    
-    if (logsConnection.readyState === 1) {
-      return { status: 'healthy', responseTime };
-    } else {
-      return { status: 'unhealthy', responseTime, error: 'Logs database not connected' };
-    }
-  } catch (error) {
-    const responseTime = Date.now() - startTime;
-    return { 
-      status: 'unhealthy', 
-      responseTime, 
-      error: error instanceof Error ? error.message : 'Unknown logs database error' 
     };
   }
 }
@@ -175,9 +148,8 @@ export async function GET(request: NextRequest) {
   
   try {
     // Run all health checks in parallel
-    const [databaseCheck, logsDatabaseCheck, environmentCheck, memoryCheck, externalServicesCheck] = await Promise.all([
+    const [databaseCheck, environmentCheck, memoryCheck, externalServicesCheck] = await Promise.all([
       checkDatabase(),
-      checkLogsDatabase(),
       Promise.resolve(checkEnvironment()),
       Promise.resolve(checkMemory()),
       checkExternalServices()
@@ -205,7 +177,6 @@ export async function GET(request: NextRequest) {
       uptime: Math.floor(process.uptime()),
       checks: {
         database: databaseCheck,
-        logsDatabase: logsDatabaseCheck,
         environment: environmentCheck,
         memory: memoryCheck,
         externalServices: externalServicesCheck
@@ -234,7 +205,6 @@ export async function GET(request: NextRequest) {
       uptime: Math.floor(process.uptime()),
       checks: {
         database: { status: 'unhealthy', responseTime: 0, error: 'Health check failed' },
-        logsDatabase: { status: 'unhealthy', responseTime: 0, error: 'Health check failed' },
         environment: { status: 'unhealthy', missingVars: [], errors: ['Health check failed'] },
         memory: { status: 'unhealthy', used: 0, total: 0, percentage: 0 },
         externalServices: {

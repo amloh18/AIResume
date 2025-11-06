@@ -343,7 +343,7 @@ const SidebarStudioPanel: React.FC<SidebarStudioPanelProps> = ({
   return (
     <div className="flex h-full bg-[#1A201A]">
       {/* Sticky Sidebar - Matching MasterCVBuilderStep theme */}
-      <div className="w-20 md:w-80 flex-shrink-0 p-2 md:p-4">
+      <div className="w-20 md:w-72 flex-shrink-0 p-2 md:p-4">
       <div
           className="bg-[#222B22] rounded-2xl border border-white/10 h-full flex flex-col shadow-xl overflow-hidden"
         onMouseEnter={() => setIsHovered(true)}

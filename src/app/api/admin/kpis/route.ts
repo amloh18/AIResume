@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
-import { User, CV, JobApplication, CoverLetter, Subscription, Invoice, AIUsageLog } from '@/models';
+import { User, CV, JobApplication, CoverLetter, Subscription, Invoice } from '@/models';
+import ActivityLog from '@/models/ActivityLog';
 
 export async function GET(request: NextRequest) {
   try {
@@ -89,16 +90,15 @@ export async function GET(request: NextRequest) {
       growthRate = Math.floor(Math.random() * 20) + 5; // Fallback growth rate
     }
 
-    // Calculate AI usage from AIUsageLog with fallback
+    // Calculate AI usage from ActivityLog
     let aiUsage = 0;
     try {
-      if (AIUsageLog) {
-        aiUsage = await AIUsageLog.countDocuments({
-          createdAt: { $gte: startDate }
-        });
-      }
+      aiUsage = await ActivityLog.countDocuments({
+        logType: 'ai',
+        timestamp: { $gte: startDate }
+      });
     } catch (error) {
-      console.log('AIUsageLog not available, using fallback');
+      console.log('ActivityLog AI usage query failed, using fallback');
       aiUsage = Math.floor(Math.random() * 100) + 50; // Fallback data
     }
     

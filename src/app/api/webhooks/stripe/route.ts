@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
 
 async function handleCheckoutSessionCompleted(session: any) {
   try {
-    const { planKey, userId, planId, interval } = session.metadata;
+    const { planKey, userId, planId, interval, region } = session.metadata;
     
     if (!userId || !planKey) {
       console.error('Missing metadata in checkout session:', session.id);
@@ -87,49 +87,75 @@ async function handleCheckoutSessionCompleted(session: any) {
       return;
     }
 
+    // Get plan for invoice creation
     const PricingPlan = await getAdminPricingPlan();
-    const plan = await PricingPlan.findById(planId);
-    if (!plan) {
-      console.error('Plan not found:', planId);
-      return;
-    }
+    const plan = planId ? await PricingPlan.findById(planId) : null;
 
-    // Update user subscription
-    const subscriptionData: any = {
-      currentPlanKey: planKey,
-      subscription: {
-        planKey: planKey,
-        status: 'active',
-        startDate: new Date(),
-        provider: 'stripe',
-        providerSubscriptionId: session.subscription,
-        providerCustomerId: session.customer,
-        interval: interval || 'monthly',
-        seats: plan.maxCVs === -1 ? 1 : plan.maxCVs,
-        storageUsed: 0
-      }
-    };
-
-    // For Day Pass, set expiry date
+    // Use subscription service for activation
+    const subscriptionService = (await import('@/lib/services/subscriptionService')).default;
+    
+    // Determine payment mode from session
+    const isSubscription = session.mode === 'subscription';
+    const isOneTimePayment = session.mode === 'payment';
+    
     if (planKey === 'day_pass') {
-      const expiryDate = new Date();
-      expiryDate.setHours(expiryDate.getHours() + (plan.dayPassDuration || 24));
+      // Day pass: one-time payment
+      const result = await subscriptionService.activateDayPass(
+        userId,
+        session.payment_intent || session.id,
+        region || 'US',
+        session.currency.toUpperCase(),
+        session.amount_total / 100
+      );
 
-      subscriptionData.subscription.currentPeriodEnd = expiryDate;
-      subscriptionData.subscription.endDate = expiryDate;
+      if (!result.success) {
+        console.error('Failed to activate day pass:', result.error);
+        return;
+      }
+
+      // Update provider customer ID if needed
+      if (session.customer && !user.subscription?.providerCustomerId) {
+        await User.findByIdAndUpdate(userId, {
+          'subscription.providerCustomerId': session.customer
+        });
+      }
+    } else if (planKey && (planKey === 'pro_monthly' || planKey === 'pro_quarterly' || planKey === 'pro_yearly')) {
+      // Pro plans
+      const finalInterval = interval || (planKey === 'pro_monthly' ? 'monthly' : 
+                                         planKey === 'pro_quarterly' ? 'quarterly' : 'yearly');
+      
+      const result = await subscriptionService.activateProPlan(
+        userId,
+        planKey,
+        finalInterval,
+        session.payment_intent || session.subscription || session.id,
+        region || 'US',
+        session.currency.toUpperCase(),
+        session.amount_total / 100,
+        session.subscription, // subscriptionId (for monthly recurring)
+        session.customer
+      );
+
+      if (!result.success) {
+        console.error('Failed to activate pro plan:', result.error);
+        return;
+      }
     }
-
-    await User.findByIdAndUpdate(userId, subscriptionData);
 
     // Create invoice record
+    const finalInterval = interval || (planKey === 'pro_monthly' ? 'monthly' : 
+                                       planKey === 'pro_quarterly' ? 'quarterly' : 
+                                       planKey === 'pro_yearly' ? 'yearly' : 
+                                       planKey === 'day_pass' ? 'one-time' : 'monthly');
+    
     await Invoice.create({
       userId: userId,
       amount: session.amount_total / 100, // Convert from cents
       currency: session.currency,
       status: 'paid',
-      planName: plan.name,
-      planId: planId,
-      billingCycle: interval || 'monthly',
+      planName: plan?.name || planKey,
+      planId: planId || null,
+      billingCycle: finalInterval,
       paymentMethodType: 'stripe',
       paymentMethodLast4: session.payment_intent ? '****' : 'N/A',
       paidAt: new Date(),
@@ -253,43 +279,65 @@ async function handleSubscriptionDeleted(subscription: any) {
 
 async function handlePaymentIntentSucceeded(paymentIntent: any) {
   try {
-    const { planKey, userId, planId, type } = paymentIntent.metadata;
+    const { planKey, userId, planId, type, region } = paymentIntent.metadata;
 
-    if (!userId || !planKey || type !== 'day_pass') {
+    if (!userId || !planKey) {
       console.error('Invalid payment intent metadata:', paymentIntent.id);
       return;
     }
 
     const user = await User.findById(userId);
-    const PricingPlan = await getAdminPricingPlan();
-    const plan = await PricingPlan.findById(planId);
-
-    if (!user || !plan) {
-      console.error('User or plan not found for payment intent:', paymentIntent.id);
+    if (!user) {
+      console.error('User not found for payment intent:', paymentIntent.id);
       return;
     }
 
-    // Activate Day Pass
-    const expiryDate = new Date();
-    expiryDate.setHours(expiryDate.getHours() + (plan.dayPassDuration || 24));
+    // Use subscription service for activation
+    const subscriptionService = (await import('@/lib/services/subscriptionService')).default;
+    
+    if (type === 'day_pass') {
+      // Activate day pass using subscription service
+      const result = await subscriptionService.activateDayPass(
+        userId,
+        paymentIntent.id,
+        region || 'US',
+        paymentIntent.currency.toUpperCase(),
+        paymentIntent.amount / 100
+      );
 
-    await User.findByIdAndUpdate(userId, {
-      currentPlanKey: planKey,
-      subscription: {
-        planKey: planKey,
-        status: 'active',
-        startDate: new Date(),
-        endDate: expiryDate,
-        currentPeriodStart: new Date(),
-        currentPeriodEnd: expiryDate,
-        provider: 'stripe',
-        providerSubscriptionId: null,
-        providerCustomerId: paymentIntent.customer,
-        interval: 'one-time',
-        seats: plan.maxCVs === -1 ? 1 : plan.maxCVs,
-        storageUsed: 0
+      if (!result.success) {
+        console.error('Failed to activate day pass:', result.error);
+        return;
       }
-    });
+
+      // Update provider customer ID if needed
+      if (paymentIntent.customer && !user.subscription?.providerCustomerId) {
+        await User.findByIdAndUpdate(userId, {
+          'subscription.providerCustomerId': paymentIntent.customer
+        });
+      }
+    } else if (planKey && (planKey === 'pro_monthly' || planKey === 'pro_quarterly' || planKey === 'pro_yearly')) {
+      // Handle pro plan activation (quarterly/yearly are one-time payments)
+      const interval = planKey === 'pro_monthly' ? 'monthly' : 
+                       planKey === 'pro_quarterly' ? 'quarterly' : 'yearly';
+      
+      const result = await subscriptionService.activateProPlan(
+        userId,
+        planKey,
+        interval,
+        paymentIntent.id,
+        region || 'US',
+        paymentIntent.currency.toUpperCase(),
+        paymentIntent.amount / 100,
+        undefined, // subscriptionId (for one-time payments)
+        paymentIntent.customer
+      );
+
+      if (!result.success) {
+        console.error('Failed to activate pro plan:', result.error);
+        return;
+      }
+    }
 
     // Create invoice record
     await Invoice.create({

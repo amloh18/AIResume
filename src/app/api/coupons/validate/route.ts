@@ -45,11 +45,22 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if coupon is applicable to the selected plan
-    if (plan && coupon.applicablePlans.length > 0 && !coupon.applicablePlans.includes(plan)) {
-      return NextResponse.json(
-        { success: false, error: 'This coupon is not applicable to the selected plan' },
-        { status: 400 }
-      );
+    // Support both plan keys and plan IDs
+    if (plan) {
+      const hasApplicablePlans = coupon.applicablePlans.length > 0 || (coupon.applicablePlanKeys && coupon.applicablePlanKeys.length > 0);
+      
+      if (hasApplicablePlans) {
+        const isApplicable = 
+          coupon.applicablePlans.includes(plan) || 
+          (coupon.applicablePlanKeys && coupon.applicablePlanKeys.includes(plan));
+        
+        if (!isApplicable) {
+          return NextResponse.json(
+            { success: false, error: 'This coupon is not applicable to the selected plan' },
+            { status: 400 }
+          );
+        }
+      }
     }
 
     // Return coupon details
@@ -62,7 +73,8 @@ export async function POST(request: NextRequest) {
         trialDays: coupon.trialDays,
         requiresCreditCard: coupon.requiresCreditCard,
         description: coupon.description,
-        applicablePlans: coupon.applicablePlans
+        applicablePlans: coupon.applicablePlans,
+        applicablePlanKeys: coupon.applicablePlanKeys || []
       }
     });
   } catch (error) {

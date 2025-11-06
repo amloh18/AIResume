@@ -9,7 +9,8 @@ export interface ICoupon extends Document {
   usedCount: number;
   validFrom: Date;
   validUntil: Date;
-  applicablePlans: string[]; // Array of plan IDs
+  applicablePlans: string[]; // Array of plan keys (e.g., 'pro_monthly', 'pro_quarterly') or plan IDs
+  applicablePlanKeys?: string[]; // Array of plan keys for easier filtering
   requiresCreditCard: boolean;
   isActive: boolean;
   description?: string;
@@ -79,8 +80,11 @@ const couponSchema = new Schema<ICoupon>({
     required: true
   },
   applicablePlans: [{
+    type: String // Can be plan IDs or plan keys
+  }],
+  applicablePlanKeys: [{
     type: String,
-    enum: ['basic', 'pro', 'enterprise']
+    enum: ['free', 'day_pass', 'pro_monthly', 'pro_quarterly', 'pro_yearly']
   }],
   requiresCreditCard: {
     type: Boolean,

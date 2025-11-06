@@ -126,13 +126,16 @@ const PromotionalOfferManager: React.FC = () => {
 
   const fetchPricingPlans = async () => {
     try {
-      const response = await fetch('/api/admin/pricing-plans');
+      const response = await fetch('/api/pricing-plans?includeInactive=true');
       if (response.ok) {
         const data = await response.json();
-        setPricingPlans(data);
+        // Extract plans from response - API returns { plans: [...], region: {...} }
+        const plans = Array.isArray(data) ? data : (data?.plans || []);
+        setPricingPlans(Array.isArray(plans) ? plans : []);
       }
     } catch (error) {
       console.error('Error fetching pricing plans:', error);
+      setPricingPlans([]); // Set empty array on error
     }
   };
 

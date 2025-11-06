@@ -61,11 +61,14 @@ const RedesignedPricingCards: React.FC<RedesignedPricingCardsProps> = ({
 }) => {
   const [hoveredPlan, setHoveredPlan] = useState<string | null>(null);
 
+  // Ensure plans is always an array
+  const safePlans = Array.isArray(plans) ? plans : [];
+  
   // Group plans into categories
-  const essentialPlans = plans.filter(plan => 
+  const essentialPlans = safePlans.filter(plan => 
     plan.key === 'free' || plan.key === 'day_pass'
   );
-  const proPlans = plans.filter(plan => 
+  const proPlans = safePlans.filter(plan => 
     plan.key === 'pro_monthly' || plan.key === 'pro_quarterly' || plan.key === 'pro_yearly'
   );
 

@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
       ...queryCondition,
       $or: [
         { createdAt: { $gte: startDate } }, // Jobs created in the date range
-        { updatedAt: { $gte: startDate } } // Jobs updated (status changes) in the date range
+        { updatedAt: { $gte: startDate } } // Jobs updated in the date range
       ]
     }).sort({ createdAt: 1 });
 
@@ -69,17 +69,18 @@ export async function GET(request: NextRequest) {
       dataByDate[dateKey] = { jobs: 0, cvs: 0, coverLetters: 0 };
     }
 
-    // Count jobs by date (consider both creation and update dates)
+    // Count jobs by date (consider both creation and update dates, same as CVs and Cover Letters)
     jobs.forEach(job => {
-      const createdDate = job.createdAt.toISOString().split('T')[0];
+      const createdDate = job.createdAt ? job.createdAt.toISOString().split('T')[0] : null;
       const updatedDate = job.updatedAt ? job.updatedAt.toISOString().split('T')[0] : null;
       
-      // Count job creation
-      if (dataByDate[createdDate]) {
+      // Count job creation if it's within the date range
+      if (createdDate && dataByDate[createdDate]) {
         dataByDate[createdDate].jobs++;
       }
       
-      // If job was updated in the date range (status change), count it again for the update date
+      // Count job update if it's within the date range and different from creation date
+      // This ensures jobs updated in the range are counted even if created before the range
       if (updatedDate && updatedDate !== createdDate && dataByDate[updatedDate]) {
         dataByDate[updatedDate].jobs++;
       }
@@ -125,12 +126,21 @@ export async function GET(request: NextRequest) {
       coverLetters: counts.coverLetters
     }));
 
+    // Calculate totals from the grouped data (not from raw counts)
+    const totalJobsInData = progressData.reduce((sum, item) => sum + item.jobs, 0);
+    const totalCVsInData = progressData.reduce((sum, item) => sum + item.cvs, 0);
+    const totalCoverLettersInData = progressData.reduce((sum, item) => sum + item.coverLetters, 0);
+
     console.log('Progress API: Data summary', {
-      totalJobs: jobs.length,
-      totalCVs: cvs.length,
-      totalCoverLetters: coverLetters.length,
+      totalJobsFetched: jobs.length,
+      totalCVsFetched: cvs.length,
+      totalCoverLettersFetched: coverLetters.length,
+      totalJobsInData: totalJobsInData,
+      totalCVsInData: totalCVsInData,
+      totalCoverLettersInData: totalCoverLettersInData,
       progressDataPoints: progressData.length,
-      sampleData: progressData.slice(0, 3)
+      sampleData: progressData.slice(0, 3),
+      dateRange: { start: startDate.toISOString().split('T')[0], end: now.toISOString().split('T')[0] }
     });
 
     return NextResponse.json({

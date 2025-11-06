@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Check, CreditCard, Zap, Star, Shield, Crown, Gift } from 'lucide-react';
+import { X, Check, CreditCard, Zap, Star, Shield, Crown, Gift, Brain, Users, Globe, ArrowRight } from 'lucide-react';
 import { PricingPlan } from '@/types/pricing';
+import { usePricingPlans, DatabasePricingPlan } from '@/lib/hooks/usePricingPlans';
 
 interface UniversalPaymentModalProps {
   isOpen: boolean;
@@ -43,7 +44,6 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
   const [step, setStep] = useState(1);
   const [selectedPlan, setSelectedPlan] = useState<PricingPlan | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<'essential' | 'professional'>('professional');
-  const [pricingPlans, setPricingPlans] = useState<PricingPlan[]>([]);
   const [loading, setLoading] = useState(false);
   const [discountCode, setDiscountCode] = useState('');
   const [appliedDiscount, setAppliedDiscount] = useState<DiscountCode | null>(null);
@@ -51,95 +51,89 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
   const [paymentProvider, setPaymentProvider] = useState<'stripe' | 'razorpay'>('stripe');
   const [currentUserPlan, setCurrentUserPlan] = useState<string>(propCurrentUserPlan || 'free');
   const [userCurrentPlan, setUserCurrentPlan] = useState<any>(null);
-  const [promotionalOffers, setPromotionalOffers] = useState<any[]>([]);
   const [showPromotionalPricing, setShowPromotionalPricing] = useState(false);
 
-  // Fetch pricing plans and user data
+  // Use the shared pricing hook
+  const {
+    plans: pricingPlansRaw,
+    promotionalOffers,
+    locationData,
+    regionalPricing,
+    loading: plansLoading,
+    error: plansError,
+    getRegionalPrice,
+    getMonthlyEquivalent,
+    getCurrencySymbol,
+    getEffectivePrice,
+    hasPromotionalPricing
+  } = usePricingPlans({});
+
+  // Convert DatabasePricingPlan to PricingPlan format
+  // Ensure pricingPlans is always an array to prevent filter errors
+  const pricingPlans: PricingPlan[] = Array.isArray(pricingPlansRaw) 
+    ? (pricingPlansRaw as unknown as PricingPlan[])
+    : [];
+
+  // Set preselected plan when plans are loaded
   useEffect(() => {
-    const fetchData = async () => {
-      if (!isOpen) return;
+    if (pricingPlans.length > 0 && !selectedPlan) {
+      if (preselectedPlanKey) {
+        const plan = pricingPlans.find((p: PricingPlan) => p.key === preselectedPlanKey);
+        if (plan) setSelectedPlan(plan);
+      } else {
+        // Default to first paid plan (not free)
+        const paidPlan = pricingPlans.find((p: PricingPlan) => p.key !== 'free');
+        if (paidPlan) setSelectedPlan(paidPlan);
+      }
+    }
+  }, [pricingPlans, preselectedPlanKey, selectedPlan]);
+
+  // Check if any plans have promotional pricing
+  useEffect(() => {
+    if (promotionalOffers.length > 0) {
+      const hasPromo = promotionalOffers.some((offer: any) => 
+        offer.promotionalPricing && offer.promotionalPricing.length > 0
+      );
+      setShowPromotionalPricing(hasPromo);
+    }
+  }, [promotionalOffers]);
+
+  // Fetch user data when modal opens (only if not in admin mode)
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (!isOpen || adminMode) return;
 
       try {
-        const fetchPromises = [
-          fetch('/api/pricing-plans'),
-          fetch('/api/promotional-offers/active?userType=all')
-        ];
+        const [userResponse, planResponse] = await Promise.all([
+          fetch('/api/user'),
+          fetch('/api/user/current-plan')
+        ]);
 
-        // Only fetch user data if not in admin mode
-        if (!adminMode) {
-          fetchPromises.push(fetch('/api/user'));
-          fetchPromises.push(fetch('/api/user/current-plan'));
-        }
-
-        const responses = await Promise.all(fetchPromises);
-
-        if (responses[0].ok) {
-          const plans = await responses[0].json();
-          setPricingPlans(plans);
-          
-          // Set preselected plan or default to first paid plan
-          if (preselectedPlanKey) {
-            const plan = plans.find((p: PricingPlan) => p.key === preselectedPlanKey);
-            if (plan) setSelectedPlan(plan);
-          } else {
-            // Default to first paid plan (not free)
-            const paidPlan = plans.find((p: PricingPlan) => p.key !== 'free');
-            if (paidPlan) setSelectedPlan(paidPlan);
-          }
-        }
-
-        if (responses[1].ok) {
-          const offersData = await responses[1].json();
-          if (offersData.success) {
-            setPromotionalOffers(offersData.offers);
-            // Check if any plans have promotional pricing
-            const hasPromotionalPricing = offersData.offers.some((offer: any) => 
-              offer.promotionalPricing && offer.promotionalPricing.length > 0
-            );
-            setShowPromotionalPricing(hasPromotionalPricing);
-          }
-        }
-
-        if (!adminMode && responses[2] && responses[2].ok) {
-          const userData = await responses[2].json();
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
           if (userData.success && userData.user) {
             setCurrentUserPlan(userData.user.currentPlanKey || 'free');
           }
         }
 
-        // Handle current plan data response
-        if (!adminMode && responses[3] && responses[3].ok) {
-          const planData = await responses[3].json();
+        if (planResponse.ok) {
+          const planData = await planResponse.json();
           setUserCurrentPlan(planData);
         }
       } catch (error) {
-        console.error('Error fetching data:', error);
+        console.error('Error fetching user data:', error);
       }
     };
 
-    fetchData();
-  }, [isOpen, preselectedPlanKey]);
+    fetchUserData();
+  }, [isOpen, adminMode]);
 
-  // Detect user region for payment provider
+  // Set payment provider based on location data from hook
   useEffect(() => {
-    const detectRegion = async () => {
-      try {
-        const response = await fetch('/api/user/region');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.country === 'IN') {
-            setPaymentProvider('razorpay');
-          }
-        }
-      } catch (error) {
-        console.error('Error detecting region:', error);
-      }
-    };
-
-    if (isOpen) {
-      detectRegion();
+    if (locationData) {
+      setPaymentProvider(locationData.paymentPartner);
     }
-  }, [isOpen]);
+  }, [locationData]);
 
   const applyDiscountCode = async () => {
     if (!discountCode.trim() || !selectedPlan) return;
@@ -181,11 +175,100 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
     setDiscountError(null);
   };
 
+  // Load Razorpay Checkout script
+  useEffect(() => {
+    if (paymentProvider === 'razorpay' && typeof window !== 'undefined') {
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.async = true;
+      document.body.appendChild(script);
+      
+      return () => {
+        // Cleanup script on unmount
+        const existingScript = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
+        if (existingScript) {
+          document.body.removeChild(existingScript);
+        }
+      };
+    }
+  }, [paymentProvider]);
+
+  const handleRazorpayCheckout = async (checkoutData: any) => {
+    try {
+      const options = {
+        key: checkoutData.key_id || (process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID as string),
+        amount: checkoutData.amount,
+        currency: checkoutData.currency,
+        name: 'CV Circle',
+        description: `${selectedPlan?.name} Subscription`,
+        order_id: checkoutData.order_id,
+        handler: async function (response: any) {
+          // Payment successful - verify and process
+          try {
+            const verifyResponse = await fetch('/api/payment/razorpay/verify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                planKey: selectedPlan?.key,
+                interval: selectedPlan ? getBillingInterval(selectedPlan) : 'monthly',
+                couponId: checkoutData.coupon?.id
+              })
+            });
+
+            const verifyData = await verifyResponse.json();
+            
+            if (verifyData.success) {
+              onSuccess?.(verifyData.subscription || verifyData);
+            } else {
+              throw new Error(verifyData.error || 'Payment verification failed');
+            }
+          } catch (error) {
+            console.error('Payment verification error:', error);
+            alert('Payment verification failed. Please contact support.');
+          }
+        },
+        prefill: {
+          name: '',
+          email: '',
+        },
+        theme: {
+          color: '#84cc16' // lime-500
+        },
+        modal: {
+          ondismiss: function() {
+            setLoading(false);
+          }
+        }
+      };
+
+      const razorpay = new window.Razorpay(options);
+      razorpay.open();
+    } catch (error) {
+      console.error('Razorpay checkout error:', error);
+      throw new Error('Failed to open Razorpay checkout');
+    }
+  };
+
   const getPlanPrice = (plan: PricingPlan) => {
     if (plan.key === 'free') return 0;
     
-    // Use promotional pricing if available
-    const effectivePrice = getEffectivePrice(plan);
+    // Use regional pricing if available
+    const regionalPrice = (plan as any).regionalPricing;
+    if (regionalPrice?.price) {
+      // Use promotional pricing if available
+      const promotional = getPromotionalPricing(plan);
+      if (promotional && promotional.pricing) {
+        return promotional.pricing.monthly || promotional.pricing.quarterly || promotional.pricing.yearly || promotional.pricing.oneTime || regionalPrice.price;
+      }
+      return regionalPrice.price;
+    }
+    
+    // Fallback to effective price from hook (convert to DatabasePricingPlan)
+    const dbPlan = plan as unknown as DatabasePricingPlan;
+    const effectivePrice = getEffectivePrice(dbPlan);
     return effectivePrice || 0;
   };
 
@@ -229,19 +312,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
     return null;
   };
 
-  // Get effective price for a plan (promotional or regular)
-  const getEffectivePrice = (plan: PricingPlan) => {
-    if (plan.key === 'free') return 0;
-    
-    // Use promotional pricing if available
-    const promotional = getPromotionalPricing(plan);
-    if (promotional && promotional.pricing) {
-      return promotional.pricing.monthly || promotional.pricing.quarterly || promotional.pricing.yearly || plan.price_monthly;
-    }
-    
-    // Return the appropriate price based on plan type
-    return plan.price_monthly || plan.price_quarterly || plan.price_yearly || plan.price_one_time || 0;
-  };
+  // getEffectivePrice is now provided by the usePricingPlans hook
 
   // Check if a plan is the user's current plan
   const isCurrentPlan = (plan: PricingPlan) => {
@@ -300,26 +371,41 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
         }
       } else if (adminMode && subjectUserId) {
         // Admin mode - grant plan directly
-        const response = await fetch(`/api/admin/users/${subjectUserId}/subscription/upgrade`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            planKey: selectedPlan.key,
-            interval: getBillingInterval(selectedPlan),
-            reason: 'Admin granted via payment modal'
-          })
-        });
+        try {
+          const response = await fetch(`/api/admin/users/${subjectUserId}/subscription/upgrade`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              planKey: selectedPlan.key,
+              interval: getBillingInterval(selectedPlan),
+              reason: 'Admin granted via payment modal'
+            })
+          });
 
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success) {
-            onSuccess?.(data.subscription);
-            onClose();
-            alert(`Plan ${selectedPlan.name} granted successfully!`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+              onSuccess?.(data.subscription);
+              onClose();
+              alert(`Plan ${selectedPlan.name} granted successfully!`);
+            } else {
+              alert(`Error: ${data.error || 'Failed to grant plan'}`);
+            }
+          } else {
+            // Try to parse JSON error, fallback to text if it's HTML
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+              const errorData = await response.json();
+              alert(`Error: ${errorData.error || 'Failed to grant plan'}`);
+            } else {
+              const errorText = await response.text();
+              console.error('Non-JSON error response:', errorText);
+              alert(`Error: Failed to grant plan (Status: ${response.status}). Please check the console for details.`);
+            }
           }
-        } else {
-          const errorData = await response.json();
-          alert(`Error: ${errorData.error || 'Failed to grant plan'}`);
+        } catch (fetchError) {
+          console.error('Error granting plan:', fetchError);
+          alert(`Error: Network error while granting plan. Please try again.`);
         }
       } else {
         // Regular payment flow
@@ -327,6 +413,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
           planKey: selectedPlan.key,
           interval: getBillingInterval(selectedPlan),
           discountCode: appliedDiscount?.code || undefined,
+          couponCode: appliedDiscount?.code || undefined,
           provider: paymentProvider,
           returnUrl: returnUrl || window.location.href,
           triggerContext
@@ -342,14 +429,18 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
           const data = await response.json();
           
           if (data.redirect_url) {
-            // Redirect to payment provider
+            // Stripe Checkout - redirect to Stripe
             window.location.href = data.redirect_url;
+          } else if (data.provider === 'razorpay' && data.checkout && data.order_id) {
+            // Razorpay Checkout - open embedded form
+            await handleRazorpayCheckout(data);
           } else if (data.client_secret) {
             // Handle Stripe payment intent
             console.log('Stripe payment intent:', data.client_secret);
           }
         } else {
-          console.error('Failed to create checkout session');
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to create checkout session');
         }
       }
     } catch (error) {
@@ -367,14 +458,15 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
     return planOrder[plan.key as keyof typeof planOrder] > planOrder[currentUserPlan as keyof typeof planOrder];
   };
 
+  // Get plan icon component (matching landing page)
   const getPlanIcon = (planKey: string) => {
     switch (planKey) {
-      case 'free': return <Shield className="w-6 h-6" />;
-      case 'day_pass': return <Zap className="w-6 h-6" />;
-      case 'pro_monthly': return <Star className="w-6 h-6" />;
-      case 'pro_quarterly': return <Crown className="w-6 h-6" />;
-      case 'pro_yearly': return <Crown className="w-6 h-6" />;
-      default: return <Star className="w-6 h-6" />;
+      case 'free': return Brain;
+      case 'day_pass': return Star;
+      case 'pro_monthly': return Crown;
+      case 'pro_quarterly': return Users;
+      case 'pro_yearly': return Globe;
+      default: return Brain;
     }
   };
 
@@ -404,7 +496,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
-          className="bg-white dark:bg-[#141810] rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+          className="bg-white dark:bg-[#141810] rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto"
         >
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
@@ -444,14 +536,33 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
           <div className="p-6">
             {step === 1 && (
               <>
-                {/* Category Toggle */}
+                {/* Category Toggle - Matching Landing Page */}
                 <div className="flex justify-center mb-8">
-                  <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+                  <div className="relative bg-white/5 dark:bg-gray-800 backdrop-blur-sm border border-white/10 dark:border-gray-700 rounded-full p-1 inline-flex">
+                    {/* Sliding background indicator */}
+                    <motion.div
+                      className="absolute top-1 bottom-1 bg-lime-400 rounded-full shadow-lg z-0"
+                      initial={false}
+                      animate={{
+                        left: selectedCategory === 'essential' 
+                          ? '4px' 
+                          : 'calc(50% + 2px)',
+                      }}
+                      transition={{
+                        type: 'spring',
+                        stiffness: 300,
+                        damping: 30,
+                      }}
+                      style={{
+                        width: 'calc(50% - 4px)',
+                      }}
+                    />
+                    
                     <button
                       onClick={() => setSelectedCategory('essential')}
-                      className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                      className={`relative z-10 min-w-[140px] px-6 py-3 rounded-full font-medium text-sm transition-colors duration-300 ${
                         selectedCategory === 'essential'
-                          ? 'bg-lime-500 text-white shadow-sm'
+                          ? 'text-black'
                           : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                       }`}
                     >
@@ -459,9 +570,9 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                     </button>
                     <button
                       onClick={() => setSelectedCategory('professional')}
-                      className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                      className={`relative z-10 min-w-[140px] px-6 py-3 rounded-full font-medium text-sm transition-colors duration-300 ${
                         selectedCategory === 'professional'
-                          ? 'bg-lime-500 text-white shadow-sm'
+                          ? 'text-black'
                           : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                       }`}
                     >
@@ -471,142 +582,228 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                 </div>
 
                 {/* Plans Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                  {pricingPlans.filter(plan => {
-                    if (selectedCategory === 'essential') {
-                      return plan.key === 'free' || plan.key === 'day_pass';
-                    } else {
-                      return plan.key === 'pro_monthly' || plan.key === 'pro_quarterly' || plan.key === 'pro_yearly';
-                    }
-                  }).map((plan) => (
-                    <motion.div
-                      key={plan.key}
-                      whileHover={{ scale: 1.02 }}
-                      className={`relative border-2 rounded-xl p-6 cursor-pointer transition-all ${
-                        isCurrentPlan(plan)
-                          ? 'border-lime-500 bg-lime-50 dark:bg-lime-900/20'
-                          : selectedPlan?.key === plan.key
-                          ? 'border-lime-500 bg-lime-50 dark:bg-lime-900/20'
-                          : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                      }`}
-                      onClick={() => setSelectedPlan(plan)}
-                    >
-                      {isCurrentPlan(plan) && (
-                        <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                          <span className="bg-lime-500 text-white text-xs font-medium px-3 py-1 rounded-full">
-                            Current Plan
-                          </span>
-                        </div>
-                      )}
-                      {plan.isPopular && !isCurrentPlan(plan) && (
-                        <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                          <span className="bg-lime-500 text-white text-xs font-medium px-3 py-1 rounded-full">
-                            Most Popular
-                          </span>
-                        </div>
-                      )}
+                {(() => {
+                  const filteredPlans = Array.isArray(pricingPlans) && pricingPlans.length > 0 
+                    ? pricingPlans.filter(plan => {
+                        if (selectedCategory === 'essential') {
+                          return plan.key === 'free' || plan.key === 'day_pass';
+                        } else {
+                          return plan.key === 'pro_monthly' || plan.key === 'pro_quarterly' || plan.key === 'pro_yearly';
+                        }
+                      })
+                    : [];
+                  
+                  // Determine grid classes based on number of plans
+                  const gridClasses = filteredPlans.length === 2
+                    ? 'grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 max-w-4xl mx-auto'
+                    : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8';
+                  
+                  return (
+                    <div className={gridClasses}>
+                      {filteredPlans.length > 0 ? (
+                        filteredPlans.map((plan, index) => {
+                          // Convert to DatabasePricingPlan format for hook functions
+                          const dbPlan = plan as unknown as DatabasePricingPlan;
+                          const regionalPrice = getRegionalPrice(dbPlan);
+                          const currencySymbol = getCurrencySymbol();
+                          const effectivePrice = getEffectivePrice(dbPlan);
+                          const hasPromo = hasPromotionalPricing(dbPlan);
+                          const Icon = getPlanIcon(plan.key);
+                          const monthlyEquivalent = getMonthlyEquivalent(dbPlan);
+                          const isCurrent = isCurrentPlan(plan);
+                          const isSelected = selectedPlan?.key === plan.key;
 
-                      <div className="text-center">
-                        <div className={`inline-flex items-center justify-center w-12 h-12 rounded-lg mb-4 ${getPlanColor(plan.key)}`}>
-                          {getPlanIcon(plan.key)}
-                        </div>
-                        
-                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                          {plan.name}
-                        </h3>
-                        
-                        <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-                          {plan.description}
-                        </p>
+                          return (
+                            <motion.div
+                              key={plan.key}
+                              className={`group relative bg-gradient-to-br from-white/5 to-white/10 dark:from-gray-800/50 dark:to-gray-900/50 backdrop-blur-xl border border-white/10 dark:border-gray-700 rounded-2xl p-6 flex flex-col cursor-pointer transition-all ${
+                                isCurrent || isSelected
+                                  ? 'ring-2 ring-lime-400/50'
+                                  : plan.isPopular
+                                  ? 'ring-2 ring-lime-400/50'
+                                  : ''
+                              }`}
+                              initial={{ opacity: 0, y: 50 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.6, delay: 0.1 * index }}
+                              whileHover={{ 
+                                scale: 1.02,
+                                y: -5,
+                                boxShadow: "0 15px 30px -5px rgba(132, 204, 22, 0.3)"
+                              }}
+                              onClick={() => setSelectedPlan(plan)}
+                              style={{ willChange: 'transform' }}
+                            >
+                              {/* Glow Effect */}
+                              <motion.div
+                                className="absolute inset-0 rounded-2xl bg-gradient-to-br from-lime-400/10 to-lime-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                                style={{ filter: 'blur(20px)' }}
+                              />
+                              
+                              {/* Current Plan Badge */}
+                              {isCurrent && (
+                                <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10">
+                                  <span className="bg-lime-400 text-black text-xs font-medium px-3 py-1 rounded-full shadow-lg">
+                                    Current Plan
+                                  </span>
+                                </div>
+                              )}
+                              
+                              {/* Popular Badge */}
+                              {plan.isPopular && !isCurrent && (
+                                <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10">
+                                  <span className="bg-lime-400 text-black text-xs font-medium px-3 py-1 rounded-full shadow-lg">
+                                    Most Popular
+                                  </span>
+                                </div>
+                              )}
 
-                        <div className="mb-4">
-                          {plan.key === 'free' ? (
-                            <div className="text-3xl font-bold text-gray-900 dark:text-white">
-                              Free
-                            </div>
-                          ) : (
-                            <div>
-                              {(() => {
-                                const promotional = getPromotionalPricing(plan);
-                                const originalPrice = plan.price_monthly || plan.price_quarterly || plan.price_yearly || plan.price_one_time;
-                                const currentPrice = getPlanPrice(plan);
-                                
-                                return (
+                              {/* Promotional Badge */}
+                              {hasPromo && (
+                                <div className="absolute -top-3 right-3 z-10">
+                                  <span className="bg-lime-400 text-black text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1 shadow-lg">
+                                    <Gift size={10} />
+                                    Limited Time!
+                                  </span>
+                                </div>
+                              )}
+
+                              {/* Plan Icon */}
+                              <motion.div 
+                                className={`inline-flex items-center justify-center w-12 h-12 rounded-xl mb-4 bg-gradient-to-br from-lime-400 to-lime-500 shadow-lg relative z-10`}
+                                whileHover={{ 
+                                  scale: 1.1,
+                                  rotateY: 15,
+                                  boxShadow: "0 20px 40px -12px rgba(132, 204, 22, 0.5)"
+                                }}
+                                style={{
+                                  transformStyle: 'preserve-3d',
+                                  perspective: '1000px'
+                                }}
+                              >
+                                <Icon size={24} className="text-white" />
+                              </motion.div>
+
+                              {/* Plan Name */}
+                              <h3 className="text-lg sm:text-xl font-bold mb-3 text-gray-900 dark:text-white relative z-10">{plan.name}</h3>
+
+                              {/* Plan Description */}
+                              <p className="text-gray-600 dark:text-gray-400 mb-4 text-xs sm:text-sm leading-relaxed relative z-10">
+                                {plan.description}
+                              </p>
+
+                              {/* Pricing */}
+                              <div className="mb-6 relative z-10">
+                                {plan.key === 'free' ? (
+                                  <div className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Free</div>
+                                ) : (
                                   <div>
-                                    {promotional && originalPrice && originalPrice > currentPrice ? (
+                                    {hasPromo ? (
                                       <div>
-                                        <div className="flex items-center justify-center gap-2">
-                                          <span className="text-3xl font-bold text-gray-900 dark:text-white">
-                                            €{currentPrice}
-                                          </span>
-                                          <span className="text-lg text-gray-500 line-through">
-                                            €{originalPrice}
-                                          </span>
+                                        <div className="flex flex-col gap-1">
+                                          <div className="flex items-baseline gap-2 flex-wrap">
+                                            <span className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+                                              {regionalPrice}
+                                            </span>
+                                            <span className="text-base sm:text-lg text-gray-500 dark:text-gray-400 line-through">
+                                              {(() => {
+                                                // Get original price for strikethrough
+                                                const originalPrice = plan.price_quarterly || plan.price_yearly || plan.price_monthly || plan.price_one_time || 0;
+                                                return originalPrice > 0 ? `${currencySymbol}${originalPrice}` : '';
+                                              })()}
+                                            </span>
+                                          </div>
+                                          {monthlyEquivalent.showMonthly && (
+                                            <div className="text-sm text-gray-600 dark:text-gray-400">
+                                              {monthlyEquivalent.price} equivalent
+                                            </div>
+                                          )}
                                         </div>
-                                        <div className="text-xs text-green-600 font-medium">
-                                          {promotional.offer.bannerText || 'Limited Time Offer!'}
+                                        <div className="text-xs sm:text-sm text-lime-400 font-medium mt-1">
+                                          Limited Time Offer!
                                         </div>
                                       </div>
                                     ) : (
-                                      <div className="text-3xl font-bold text-gray-900 dark:text-white">
-                                        €{currentPrice}
+                                      <div>
+                                        <div className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+                                          {regionalPrice}
+                                        </div>
+                                        {monthlyEquivalent.showMonthly && (
+                                          <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                            {monthlyEquivalent.price} equivalent
+                                          </div>
+                                        )}
                                       </div>
                                     )}
-                                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                                      per {getBillingInterval(plan)}
+                                    <div className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm mt-1">
+                                      {plan.key === 'day_pass' 
+                                        ? 'one-time' 
+                                        : (plan.price_quarterly ? 'quarterly' : plan.price_yearly ? 'yearly' : plan.price_monthly ? 'monthly' : 'one-time')}
                                     </div>
                                   </div>
-                                );
-                              })()}
-                            </div>
-                          )}
+                                )}
+                              </div>
+
+                              {/* Features */}
+                              <ul className="space-y-3 mb-6 relative z-10 flex-grow">
+                                {plan.features.map((feature: string, featureIndex: number) => (
+                                  <li key={featureIndex} className="flex items-start gap-2">
+                                    <motion.div
+                                      initial={{ opacity: 0, scale: 0 }}
+                                      animate={{ opacity: 1, scale: 1 }}
+                                      transition={{ delay: 0.5 + featureIndex * 0.1 }}
+                                      whileHover={{ scale: 1.2 }}
+                                    >
+                                      <Check size={18} className="text-lime-400 flex-shrink-0 mt-0.5" />
+                                    </motion.div>
+                                    <span className="text-gray-700 dark:text-gray-300 text-sm sm:text-base leading-relaxed">{feature}</span>
+                                  </li>
+                                ))}
+                              </ul>
+
+                              {/* Not Included Features */}
+                              {(plan as any).notIncludedFeatures && (plan as any).notIncludedFeatures.length > 0 && (
+                                <div className="mb-4 relative z-10">
+                                  <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Not Included:</h4>
+                                  <ul className="space-y-1">
+                                    {(plan as any).notIncludedFeatures.slice(0, 2).map((feature: string, featureIndex: number) => (
+                                      <li key={featureIndex} className="flex items-start gap-2">
+                                        <div className="w-4 h-4 rounded-full border border-gray-300 dark:border-gray-600 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                          <div className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full"></div>
+                                        </div>
+                                        <span className="text-gray-500 dark:text-gray-400 text-xs">{feature}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+
+                              {/* Current Plan Indicator */}
+                              {isCurrent && (
+                                <div className="w-full py-3 px-4 bg-lime-100 dark:bg-lime-900/20 text-lime-700 dark:text-lime-300 rounded-lg text-center font-semibold relative z-10">
+                                  Current Plan
+                                </div>
+                              )}
+                            </motion.div>
+                          );
+                        })
+                      ) : (
+                        <div className="col-span-full text-center py-8">
+                          <p className="text-gray-500 dark:text-gray-400">
+                            {plansLoading ? 'Loading plans...' : 'No plans available'}
+                          </p>
                         </div>
-
-                        <ul className="text-left space-y-2 mb-6">
-                          {plan.features.map((feature: string, index: number) => (
-                            <li key={index} className="flex items-center text-sm text-gray-600 dark:text-gray-400">
-                              <Check className="w-4 h-4 text-green-500 mr-2 flex-shrink-0" />
-                              {feature}
-                            </li>
-                          ))}
-                        </ul>
-
-                        {(() => {
-                          const statusText = getPlanStatusText(plan);
-                          const isCurrent = isCurrentPlan(plan);
-                          const isUpgrade = statusText === 'Upgrade' || statusText === 'Change Plan';
-                          
-                          if (isCurrent) {
-                            return (
-                              <div className="w-full py-2 px-4 bg-lime-100 dark:bg-lime-900/20 text-lime-700 dark:text-lime-300 rounded-lg text-center font-medium">
-                                {statusText}
-                              </div>
-                            );
-                          } else if (isUpgrade) {
-                            return (
-                              <div className="w-full py-2 px-4 bg-lime-500 text-white rounded-lg text-center font-medium">
-                                {statusText}
-                              </div>
-                            );
-                          } else {
-                            return (
-                              <div className="w-full py-2 px-4 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-lg text-center">
-                                {statusText}
-                              </div>
-                            );
-                          }
-                        })()}
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* Continue Button */}
                 <div className="flex justify-center">
                   <button
                     onClick={() => setStep(2)}
                     disabled={!selectedPlan || isCurrentPlan(selectedPlan)}
-                    className="px-8 py-3 bg-lime-500 text-white rounded-lg font-medium hover:bg-lime-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                    className="px-8 py-3 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black rounded-lg font-medium disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
                   >
                     {adminMode ? 'Grant Plan' : previewMode ? 'Preview' : 'Continue to Payment'}
                   </button>
@@ -625,7 +822,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                 </button>
 
                 {/* Selected Plan Summary */}
-                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 mb-6">
+                <div className="bg-white/5 dark:bg-gray-800/50 backdrop-blur-sm border border-white/10 dark:border-gray-700 rounded-lg p-6 mb-6">
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -636,19 +833,42 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                       </p>
                     </div>
                     <div className="text-right">
-                      <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                        €{getPlanPrice(selectedPlan)}
-                      </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        per {getBillingInterval(selectedPlan)}
-                      </div>
+                      {(() => {
+                        const regionalPrice = (selectedPlan as any).regionalPricing;
+                        const currencySymbol = regionalPrice?.currencySymbol || regionalPricing?.currencySymbol || getCurrencySymbol();
+                        const durationInfo = (selectedPlan as any).durationInfo;
+                        const price = getPlanPrice(selectedPlan);
+                        
+                        return (
+                          <>
+                            <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                              {currencySymbol}{price}
+                            </div>
+                            <div className="text-sm text-gray-600 dark:text-gray-400">
+                              {selectedPlan.billingCycle === 'one-time' || selectedPlan.key === 'day_pass'
+                                ? 'one-time payment'
+                                : `per ${getBillingInterval(selectedPlan)}`}
+                            </div>
+                            {durationInfo && (
+                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                {durationInfo.displayText} access
+                              </div>
+                            )}
+                            {regionalPrice && regionalPrice.regionName && (
+                              <div className="text-xs text-gray-500 dark:text-gray-400 italic mt-1">
+                                Price for {regionalPrice.regionName}
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>
 
                 {/* Discount Code Section */}
                 <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-gray-900 dark:text-gray-300 mb-2">
                     Coupon Code
                   </label>
                   <div className="flex gap-2">
@@ -657,12 +877,12 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                       value={discountCode}
                       onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
                       placeholder="Enter coupon code"
-                      className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                      className="flex-1 px-3 py-2 border border-white/10 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-lime-500 focus:border-transparent bg-white/5 dark:bg-gray-800/50 dark:text-white text-gray-900"
                     />
                     <button
                       onClick={applyDiscountCode}
                       disabled={!discountCode.trim() || loading}
-                      className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                      className="px-4 py-2 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium"
                     >
                       Apply
                     </button>
@@ -693,7 +913,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                 </div>
 
                 {/* Payment Summary */}
-                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 mb-6">
+                <div className="bg-white/5 dark:bg-gray-800/50 backdrop-blur-sm border border-white/10 dark:border-gray-700 rounded-lg p-6 mb-6">
                   <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                     Payment Summary
                   </h4>
@@ -702,63 +922,49 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                     <div className="flex justify-between">
                       <span className="text-gray-600 dark:text-gray-400">
                         {selectedPlan.name}
+                        {(selectedPlan as any).durationInfo && (
+                          <span className="text-xs ml-2">({(selectedPlan as any).durationInfo.displayText})</span>
+                        )}
                       </span>
                       <span className="text-gray-900 dark:text-white">
-                        €{getPlanPrice(selectedPlan)}
+                        {(() => {
+                          const regionalPrice = (selectedPlan as any).regionalPricing;
+                          const currencySymbol = regionalPrice?.currencySymbol || regionalPricing?.currencySymbol || getCurrencySymbol();
+                          return `${currencySymbol}${getPlanPrice(selectedPlan)}`;
+                        })()}
                       </span>
                     </div>
                     
                     {appliedDiscount && (
-                      <div className="flex justify-between text-green-600 dark:text-green-400">
+                      <div className="flex justify-between text-lime-600 dark:text-lime-400">
                         <span>Discount ({appliedDiscount.code})</span>
                         <span>
-                          -€{getPlanPrice(selectedPlan) - getFinalPrice()}
+                          -{(() => {
+                            const regionalPrice = selectedPlan ? (selectedPlan as any).regionalPricing : null;
+                            const currencySymbol = regionalPrice?.currencySymbol || regionalPricing?.currencySymbol || getCurrencySymbol();
+                            return `${currencySymbol}${getPlanPrice(selectedPlan) - getFinalPrice()}`;
+                          })()}
                         </span>
                       </div>
                     )}
                     
-                    <div className="border-t border-gray-200 dark:border-gray-600 pt-2">
+                    <div className="border-t border-white/10 dark:border-gray-600 pt-2">
                       <div className="flex justify-between text-lg font-semibold">
                         <span className="text-gray-900 dark:text-white">Total</span>
                         <span className="text-gray-900 dark:text-white">
-                          €{getFinalPrice()}
+                          {(() => {
+                            const regionalPrice = selectedPlan ? (selectedPlan as any).regionalPricing : null;
+                            const currencySymbol = regionalPrice?.currencySymbol || regionalPricing?.currencySymbol || getCurrencySymbol();
+                            return `${currencySymbol}${getFinalPrice()}`;
+                          })()}
                         </span>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Payment Method Selection */}
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                    Payment Method
-                  </label>
-                  <div className="flex gap-4">
-                    <button
-                      onClick={() => setPaymentProvider('stripe')}
-                      className={`flex items-center px-4 py-3 border-2 rounded-lg transition-colors ${
-                        paymentProvider === 'stripe'
-                          ? 'border-lime-500 bg-lime-50 dark:bg-lime-900/20'
-                          : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                      }`}
-                    >
-                      <CreditCard className="w-5 h-5 mr-2" />
-                      <span className="font-medium">Stripe</span>
-                    </button>
-                    
-                    <button
-                      onClick={() => setPaymentProvider('razorpay')}
-                      className={`flex items-center px-4 py-3 border-2 rounded-lg transition-colors ${
-                        paymentProvider === 'razorpay'
-                          ? 'border-lime-500 bg-lime-50 dark:bg-lime-900/20'
-                          : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                      }`}
-                    >
-                      <CreditCard className="w-5 h-5 mr-2" />
-                      <span className="font-medium">Razorpay</span>
-                    </button>
-                  </div>
-                </div>
+                {/* Payment Method Selection - Hidden for regular users, auto-selected based on location */}
+                {/* Payment provider is automatically selected based on user's location */}
 
                 {/* Terms and Conditions */}
                 <div className="text-center mb-4">
@@ -803,7 +1009,11 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                           ? `Grant ${selectedPlan.name} Plan`
                           : selectedPlan.key === 'free' 
                             ? 'Activate Free Plan' 
-                            : `Pay €${getFinalPrice()}`
+                            : (() => {
+                                const regionalPrice = (selectedPlan as any).regionalPricing;
+                                const currencySymbol = regionalPrice?.currencySymbol || regionalPricing?.currencySymbol || getCurrencySymbol();
+                                return `Pay ${currencySymbol}${getFinalPrice()}`;
+                              })()
                         }
                       </>
                     )}

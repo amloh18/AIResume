@@ -53,10 +53,37 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if code applies to this plan
+    // Support both plan IDs and plan keys
     if (discountCode.applicablePlans.length > 0) {
       const PricingPlan = await getAdminPricingPlan();
       const plan = await PricingPlan.findById(planId);
-      if (!plan || !discountCode.applicablePlans.includes(plan._id)) {
+      
+      if (!plan) {
+        return NextResponse.json({
+          success: false,
+          error: 'Plan not found'
+        });
+      }
+      
+      // Check if code applies to plan ID or plan key
+      const isApplicable = 
+        discountCode.applicablePlans.includes(plan._id.toString()) ||
+        discountCode.applicablePlans.includes(plan.key);
+      
+      if (!isApplicable) {
+        return NextResponse.json({
+          success: false,
+          error: 'Discount code is not applicable to this plan'
+        });
+      }
+    }
+    
+    // Also check applicablePlanKeys if available (for Coupon model compatibility)
+    if (discountCode.applicablePlanKeys && discountCode.applicablePlanKeys.length > 0) {
+      const PricingPlan = await getAdminPricingPlan();
+      const plan = await PricingPlan.findById(planId);
+      
+      if (!plan || !discountCode.applicablePlanKeys.includes(plan.key)) {
         return NextResponse.json({
           success: false,
           error: 'Discount code is not applicable to this plan'

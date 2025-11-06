@@ -239,13 +239,13 @@ const PreviewPanel = React.forwardRef<HTMLDivElement, PreviewPanelProps>(({
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200/50 dark:border-white/10">
         {/* Left Side - Document Type Switcher */}
         {onDocumentTypeChange && (
-          <div className="flex items-center space-x-1 bg-gradient-to-r from-lime-50 to-lime-100 dark:from-lime-900/20 dark:to-lime-800/20 border border-lime-200 dark:border-lime-700/50 rounded-lg p-1 shadow-sm">
+          <div className="flex items-center space-x-1 bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 rounded-lg p-1">
             <button
               onClick={() => onDocumentTypeChange('cv')}
-              className={`px-4 py-2 text-sm font-semibold rounded-md transition-all duration-200 ${
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
                 documentType === 'cv'
-                  ? 'bg-lime-600 text-white shadow-md'
-                  : 'text-lime-700 dark:text-lime-300 hover:text-lime-800 dark:hover:text-lime-200 hover:bg-lime-100 dark:hover:bg-lime-800/30'
+                  ? 'bg-gray-200 dark:bg-[#2a3a1f] text-gray-900 dark:text-white shadow-sm'
+                  : 'text-gray-600 dark:text-white/60 hover:text-gray-900 dark:text-white/80'
               }`}
             >
               CV
@@ -269,12 +269,12 @@ const PreviewPanel = React.forwardRef<HTMLDivElement, PreviewPanelProps>(({
                 }
               }}
               disabled={isMasterCV}
-              className={`px-4 py-2 text-sm font-semibold rounded-md transition-all duration-200 ${
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
                 documentType === 'cover-letter'
-                  ? 'bg-lime-600 text-white shadow-md'
+                  ? 'bg-gray-200 dark:bg-[#2a3a1f] text-gray-900 dark:text-white shadow-sm'
                   : isMasterCV
-                  ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed'
-                  : 'text-lime-700 dark:text-lime-300 hover:text-lime-800 dark:hover:text-lime-200 hover:bg-lime-100 dark:hover:bg-lime-800/30'
+                  ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-50'
+                  : 'text-gray-600 dark:text-white/60 hover:text-gray-900 dark:text-white/80'
               }`}
               title={isMasterCV ? 'Cover letters cannot be created for Master CV' : 'Switch to Cover Letter'}
             >
@@ -287,23 +287,23 @@ const PreviewPanel = React.forwardRef<HTMLDivElement, PreviewPanelProps>(({
         <div className="flex items-center space-x-3">
           {/* Paper Size Toggle - Only for CV */}
           {documentType === 'cv' && (
-            <div className="flex items-center space-x-1 bg-white dark:bg-gray-800 rounded-lg p-1">
+            <div className="flex items-center space-x-1 bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 rounded-lg p-1">
               <button
                 onClick={() => setPaperSize('A4')}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
                   paperSize === 'A4'
-                    ? 'bg-lime-600 text-white shadow-sm'
-                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    ? 'bg-gray-200 dark:bg-[#2a3a1f] text-gray-900 dark:text-white shadow-sm'
+                    : 'text-gray-600 dark:text-white/60 hover:text-gray-900 dark:text-white/80'
                 }`}
               >
                 A4
               </button>
               <button
                 onClick={() => setPaperSize('Letter')}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
                   paperSize === 'Letter'
-                    ? 'bg-lime-600 text-white shadow-sm'
-                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    ? 'bg-gray-200 dark:bg-[#2a3a1f] text-gray-900 dark:text-white shadow-sm'
+                    : 'text-gray-600 dark:text-white/60 hover:text-gray-900 dark:text-white/80'
                 }`}
               >
                 US Letter
@@ -312,24 +312,24 @@ const PreviewPanel = React.forwardRef<HTMLDivElement, PreviewPanelProps>(({
           )}
 
           {/* Zoom Controls - Show for both CV and Cover Letter */}
-          <div className="flex items-center space-x-2 bg-white dark:bg-gray-800 rounded-lg px-3 py-1.5">
+          <div className="flex items-center space-x-2 bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 rounded-lg px-3 py-2">
             <button
               onClick={handleZoomOut}
               disabled={zoom <= 0.5}
-              className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
+              className="p-1 rounded-md hover:bg-gray-200 dark:hover:bg-[#2a3a1f] disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
               title="Zoom Out"
             >
               <ZoomOut className="w-3.5 h-3.5 text-gray-600 dark:text-gray-300" />
             </button>
             
-            <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 min-w-[45px] text-center">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 min-w-[45px] text-center">
               {Math.round(zoom * 100)}%
             </span>
             
             <button
               onClick={handleZoomIn}
               disabled={zoom >= 2}
-              className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
+              className="p-1 rounded-md hover:bg-gray-200 dark:hover:bg-[#2a3a1f] disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200"
               title="Zoom In"
             >
               <ZoomIn className="w-3.5 h-3.5 text-gray-600 dark:text-gray-300" />

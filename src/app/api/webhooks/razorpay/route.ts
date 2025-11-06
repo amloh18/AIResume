@@ -5,6 +5,8 @@ import { getConnection } from '@/lib/database';
 import User from '@/models/User';
 import { getAdminPricingPlan } from '@/models/admin-models';
 import Invoice from '@/models/Invoice';
+import Coupon from '@/models/Coupon';
+import subscriptionService from '@/lib/services/subscriptionService';
 import crypto from 'crypto';
 
 const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
@@ -73,7 +75,7 @@ export async function POST(request: NextRequest) {
 
 async function handlePaymentCaptured(payment: any) {
   try {
-    const { planKey, userId, planId, type } = payment.notes;
+    const { planKey, userId, planId, type, region, couponCode, couponId } = payment.notes || {};
 
     if (!userId || !planKey) {
       console.error('Missing metadata in payment:', payment.id);
@@ -81,58 +83,120 @@ async function handlePaymentCaptured(payment: any) {
     }
 
     const user = await User.findById(userId);
-    const PricingPlan = await getAdminPricingPlan();
-    const plan = await PricingPlan.findById(planId);
-
-    if (!user || !plan) {
-      console.error('User or plan not found for payment:', payment.id);
+    if (!user) {
+      console.error('User not found for payment:', payment.id);
       return;
     }
 
-    if (type === 'day_pass') {
-      // Handle Day Pass payment
-      const expiryDate = new Date();
-      expiryDate.setHours(expiryDate.getHours() + (plan.dayPassDuration || 24));
+    // Increment coupon usage if applicable
+    if (couponId || couponCode) {
+      const coupon = couponId 
+        ? await Coupon.findById(couponId)
+        : await Coupon.findOne({ code: couponCode });
+      
+      if (coupon) {
+        await coupon.incrementUsage();
+      }
+    }
 
-      await User.findByIdAndUpdate(userId, {
-        currentPlanKey: planKey,
-        subscription: {
-          planKey: planKey,
-          status: 'active',
-          startDate: new Date(),
-          endDate: expiryDate,
-          currentPeriodStart: new Date(),
-          currentPeriodEnd: expiryDate,
-          provider: 'razorpay',
-          providerSubscriptionId: null,
-          providerCustomerId: payment.customer_id,
-          interval: 'one-time',
-          seats: plan.maxCVs === -1 ? 1 : plan.maxCVs,
-          storageUsed: 0
-        }
-      });
+    const regionCode = region || 'IN';
+    const currency = payment.currency.toUpperCase() || 'INR';
+    const amount = payment.amount / 100; // Convert from paisa
+
+    if (planKey === 'day_pass' || type === 'day_pass') {
+      // Activate day pass using subscription service
+      const result = await subscriptionService.activateDayPass(
+        userId,
+        payment.id,
+        regionCode,
+        currency,
+        amount
+      );
+
+      if (!result.success) {
+        console.error('Failed to activate day pass:', result.error);
+        return;
+      }
+
+      // Update provider customer ID if needed
+      if (payment.customer_id && !user.subscription?.providerCustomerId) {
+        await User.findByIdAndUpdate(userId, {
+          'subscription.providerCustomerId': payment.customer_id
+        });
+      }
 
       // Create invoice record
+      const PricingPlan = await getAdminPricingPlan();
+      const plan = planId ? await PricingPlan.findById(planId) : null;
+      
       await Invoice.create({
         userId: userId,
-        amount: payment.amount / 100, // Convert from paisa
-        currency: payment.currency,
+        amount: amount,
+        currency: currency,
         status: 'paid',
-        planName: plan.name,
-        planId: planId,
+        planName: plan?.name || 'Day Pass',
+        planId: planId || null,
         billingCycle: 'one-time',
         paymentMethodType: 'razorpay',
         paymentMethodLast4: '****',
         paidAt: new Date(),
-        description: `Day Pass - ${plan.name}`,
+        description: `Day Pass - ${plan?.name || 'Day Pass'}`,
         metadata: {
           razorpayPaymentId: payment.id,
           razorpayOrderId: payment.order_id,
-          razorpayCustomerId: payment.customer_id
+          razorpayCustomerId: payment.customer_id,
+          couponCode: couponCode || null
         }
       });
 
       console.log(`✅ Day Pass activated for user ${user.email}`);
+    } else if (planKey && ['pro_monthly', 'pro_quarterly', 'pro_yearly'].includes(planKey)) {
+      // Handle pro plan activation (quarterly/yearly are one-time payments)
+      const interval = planKey === 'pro_monthly' ? 'monthly' : 
+                       planKey === 'pro_quarterly' ? 'quarterly' : 'yearly';
+      
+      const result = await subscriptionService.activateProPlan(
+        userId,
+        planKey,
+        interval,
+        payment.id,
+        regionCode,
+        currency,
+        amount,
+        undefined, // subscriptionId (for one-time payments)
+        payment.customer_id
+      );
+
+      if (!result.success) {
+        console.error('Failed to activate pro plan:', result.error);
+        return;
+      }
+
+      // Create invoice record
+      const PricingPlan = await getAdminPricingPlan();
+      const plan = planId ? await PricingPlan.findById(planId) : null;
+      
+      await Invoice.create({
+        userId: userId,
+        amount: amount,
+        currency: currency,
+        status: 'paid',
+        planName: plan?.name || planKey,
+        planId: planId || null,
+        billingCycle: interval,
+        paymentMethodType: 'razorpay',
+        paymentMethodLast4: '****',
+        paidAt: new Date(),
+        description: `${plan?.name || planKey} - ${interval} subscription`,
+        metadata: {
+          razorpayPaymentId: payment.id,
+          razorpayOrderId: payment.order_id,
+          razorpayCustomerId: payment.customer_id,
+          couponCode: couponCode || null
+        }
+      });
+
+      console.log(`✅ Pro plan activated for user ${user.email}: ${planKey}`);
     }
   } catch (error) {
     console.error('Error handling payment captured:', error);
@@ -141,7 +205,7 @@ async function handlePaymentCaptured(payment: any) {
 
 async function handleSubscriptionActivated(subscription: any) {
   try {
-    const { planKey, userId, planId, interval } = subscription.notes;
+    const { planKey, userId, planId, interval, region, couponCode, couponId } = subscription.notes || {};
 
     if (!userId || !planKey) {
       console.error('Missing metadata in subscription:', subscription.id);
@@ -149,35 +213,56 @@ async function handleSubscriptionActivated(subscription: any) {
     }
 
     const user = await User.findById(userId);
-    const PricingPlan = await getAdminPricingPlan();
-    const plan = await PricingPlan.findById(planId);
-
-    if (!user || !plan) {
-      console.error('User or plan not found for subscription:', subscription.id);
+    if (!user) {
+      console.error('User not found for subscription:', subscription.id);
       return;
+    }
+
+    // Increment coupon usage if applicable
+    if (couponId || couponCode) {
+      const coupon = couponId 
+        ? await Coupon.findById(couponId)
+        : await Coupon.findOne({ code: couponCode });
+      
+      if (coupon) {
+        await coupon.incrementUsage();
+      }
     }
 
     // Calculate subscription period
     const startDate = new Date(subscription.start_at * 1000);
     const endDate = new Date(subscription.end_at * 1000);
-
-    await User.findByIdAndUpdate(userId, {
-      currentPlanKey: planKey,
-      subscription: {
-        planKey: planKey,
-        status: 'active',
-        startDate: startDate,
-        endDate: endDate,
-        currentPeriodStart: startDate,
-        currentPeriodEnd: endDate,
-        provider: 'razorpay',
-        providerSubscriptionId: subscription.id,
-        providerCustomerId: subscription.customer_id,
-        interval: interval || 'monthly',
-        seats: plan.maxCVs === -1 ? 1 : plan.maxCVs,
-        storageUsed: 0
-      }
+    const regionCode = region || 'IN';
+    
+    // Get payment details if available
+    const invoices = await razorpay.invoices.all({
+      subscription_id: subscription.id,
+      count: 1
     });
+    
+    const currency = invoices.items[0]?.currency || 'INR';
+    const amount = invoices.items[0]?.amount ? invoices.items[0].amount / 100 : 0;
+
+    // Activate subscription using subscription service
+    const finalInterval = interval || (planKey === 'pro_monthly' ? 'monthly' : 
+                                       planKey === 'pro_quarterly' ? 'quarterly' : 'yearly');
+    
+    const result = await subscriptionService.activateProPlan(
+      userId,
+      planKey,
+      finalInterval,
+      subscription.id, // Use subscription ID as payment ID
+      regionCode,
+      currency,
+      amount,
+      subscription.id, // subscriptionId
+      subscription.customer_id
+    );
+
+    if (!result.success) {
+      console.error('Failed to activate subscription:', result.error);
+      return;
+    }
 
     console.log(`✅ Subscription activated for user ${user.email}: ${planKey}`);
   } catch (error) {
@@ -226,11 +311,15 @@ async function handleSubscriptionCharged(subscription: any) {
       });
     }
 
-    // Update subscription period
-    await User.findByIdAndUpdate(userId, {
-      'subscription.currentPeriodStart': new Date(subscription.current_start * 1000),
-      'subscription.currentPeriodEnd': new Date(subscription.current_end * 1000)
-    });
+    // Handle subscription renewal
+    const user = await User.findById(userId);
+    if (user) {
+      const result = await subscriptionService.handleSubscriptionRenewal(userId);
+      
+      if (!result.success) {
+        console.error('Failed to handle subscription renewal:', result.error);
+      }
+    }
 
     console.log(`✅ Recurring payment processed for user ${userId}: ${planKey}`);
   } catch (error) {
@@ -286,64 +375,127 @@ async function handleSubscriptionCompleted(subscription: any) {
 
 async function handleOrderPaid(order: any) {
   try {
-    const { planKey, userId, planId, type } = order.notes;
+    const { planKey, userId, planId, type, region, couponCode, couponId } = order.notes || {};
 
-    if (!userId || !planKey || type !== 'day_pass') {
+    if (!userId || !planKey) {
       console.error('Invalid order metadata:', order.id);
       return;
     }
 
     const user = await User.findById(userId);
-    const PricingPlan = await getAdminPricingPlan();
-    const plan = await PricingPlan.findById(planId);
-
-    if (!user || !plan) {
-      console.error('User or plan not found for order:', order.id);
+    if (!user) {
+      console.error('User not found for order:', order.id);
       return;
     }
 
-    // Activate Day Pass
-    const expiryDate = new Date();
-    expiryDate.setHours(expiryDate.getHours() + (plan.dayPassDuration || 24));
-
-    await User.findByIdAndUpdate(userId, {
-      currentPlanKey: planKey,
-      subscription: {
-        planKey: planKey,
-        status: 'active',
-        startDate: new Date(),
-        endDate: expiryDate,
-        currentPeriodStart: new Date(),
-        currentPeriodEnd: expiryDate,
-        provider: 'razorpay',
-        providerSubscriptionId: null,
-        providerCustomerId: order.customer_id,
-        interval: 'one-time',
-        seats: plan.maxCVs === -1 ? 1 : plan.maxCVs,
-        storageUsed: 0
+    // Increment coupon usage if applicable
+    if (couponId || couponCode) {
+      const coupon = couponId 
+        ? await Coupon.findById(couponId)
+        : await Coupon.findOne({ code: couponCode });
+      
+      if (coupon) {
+        await coupon.incrementUsage();
       }
-    });
+    }
 
-    // Create invoice record
-    await Invoice.create({
-      userId: userId,
-      amount: order.amount / 100,
-      currency: order.currency,
-      status: 'paid',
-      planName: plan.name,
-      planId: planId,
-      billingCycle: 'one-time',
-      paymentMethodType: 'razorpay',
-      paymentMethodLast4: '****',
-      paidAt: new Date(),
-      description: `Day Pass - ${plan.name}`,
-      metadata: {
-        razorpayOrderId: order.id,
-        razorpayCustomerId: order.customer_id
+    const regionCode = region || 'IN';
+    const currency = order.currency.toUpperCase() || 'INR';
+    const amount = order.amount / 100; // Convert from paise
+
+    if (planKey === 'day_pass' || type === 'day_pass') {
+      // Activate day pass using subscription service
+      const result = await subscriptionService.activateDayPass(
+        userId,
+        order.id,
+        regionCode,
+        currency,
+        amount
+      );
+
+      if (!result.success) {
+        console.error('Failed to activate day pass:', result.error);
+        return;
       }
-    });
 
-    console.log(`✅ Day Pass activated for user ${user.email} via order payment`);
+      // Update provider customer ID if needed
+      if (order.customer_id && !user.subscription?.providerCustomerId) {
+        await User.findByIdAndUpdate(userId, {
+          'subscription.providerCustomerId': order.customer_id
+        });
+      }
+
+      // Create invoice record
+      const PricingPlan = await getAdminPricingPlan();
+      const plan = planId ? await PricingPlan.findById(planId) : null;
+      
+      await Invoice.create({
+        userId: userId,
+        amount: amount,
+        currency: currency,
+        status: 'paid',
+        planName: plan?.name || 'Day Pass',
+        planId: planId || null,
+        billingCycle: 'one-time',
+        paymentMethodType: 'razorpay',
+        paymentMethodLast4: '****',
+        paidAt: new Date(),
+        description: `Day Pass - ${plan?.name || 'Day Pass'}`,
+        metadata: {
+          razorpayOrderId: order.id,
+          razorpayCustomerId: order.customer_id,
+          couponCode: couponCode || null
+        }
+      });
+
+      console.log(`✅ Day Pass activated for user ${user.email} via order payment`);
+    } else if (planKey && ['pro_monthly', 'pro_quarterly', 'pro_yearly'].includes(planKey)) {
+      // Handle pro plan activation (quarterly/yearly are one-time payments)
+      const interval = planKey === 'pro_monthly' ? 'monthly' : 
+                       planKey === 'pro_quarterly' ? 'quarterly' : 'yearly';
+      
+      const result = await subscriptionService.activateProPlan(
+        userId,
+        planKey,
+        interval,
+        order.id,
+        regionCode,
+        currency,
+        amount,
+        undefined, // subscriptionId (for one-time payments)
+        order.customer_id
+      );
+
+      if (!result.success) {
+        console.error('Failed to activate pro plan:', result.error);
+        return;
+      }
+
+      // Create invoice record
+      const PricingPlan = await getAdminPricingPlan();
+      const plan = planId ? await PricingPlan.findById(planId) : null;
+      
+      await Invoice.create({
+        userId: userId,
+        amount: amount,
+        currency: currency,
+        status: 'paid',
+        planName: plan?.name || planKey,
+        planId: planId || null,
+        billingCycle: interval,
+        paymentMethodType: 'razorpay',
+        paymentMethodLast4: '****',
+        paidAt: new Date(),
+        description: `${plan?.name || planKey} - ${interval} subscription`,
+        metadata: {
+          razorpayOrderId: order.id,
+          razorpayCustomerId: order.customer_id,
+          couponCode: couponCode || null
+        }
+      });
+
+      console.log(`✅ Pro plan activated for user ${user.email}: ${planKey}`);
+    }
   } catch (error) {
     console.error('Error handling order paid:', error);
   }

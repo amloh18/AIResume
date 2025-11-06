@@ -32,6 +32,16 @@ export interface IUser extends Document {
     lastResetDate: Date;
     deviceFingerprint?: string;
   };
+  // Day pass tracking (for cumulative usage across multiple passes)
+  dayPassPurchases?: Array<{
+    purchaseDate: Date;
+    expiresAt: Date;
+    paymentId: string;
+    region: string;
+    currency: string;
+    price: number;
+    documentsAllowed: number; // Typically 5 per pass
+  }>;
   
   // Grace period for promotional legacy users
   gracePeriod?: {
@@ -65,6 +75,7 @@ export interface IUser extends Document {
   // Admin tracking fields
   lastLogin?: Date;
   region?: string;
+  ip_location?: string; // Location detected from IP address (e.g., "United States (US)")
   
   // Subscription details
   subscription: {
@@ -74,6 +85,15 @@ export interface IUser extends Document {
     endDate?: Date;
     currentPeriodStart?: Date;
     currentPeriodEnd?: Date;
+    // Time-based access tracking
+    accessExpiresAt?: Date; // Expiry time for day pass and time-limited plans
+    usageResetDate?: Date; // When monthly/quarterly counters reset
+    // Regional purchase info
+    purchaseRegion?: string; // Region where subscription was purchased
+    purchaseCurrency?: string; // Currency used for purchase
+    purchasePrice?: number; // Original purchase price
+    // Auto-renewal (only for monthly plans)
+    autoRenew?: boolean; // Whether subscription auto-renews
     provider: 'stripe' | 'razorpay' | 'admin';
     providerSubscriptionId?: string;
     providerCustomerId?: string;
@@ -224,6 +244,40 @@ const userSchema = new Schema<IUser>({
       trim: true
     }
   },
+  // Day pass tracking (for cumulative usage across multiple passes)
+  dayPassPurchases: [{
+    purchaseDate: {
+      type: Date,
+      required: true,
+      default: Date.now
+    },
+    expiresAt: {
+      type: Date,
+      required: true
+    },
+    paymentId: {
+      type: String,
+      required: true
+    },
+    region: {
+      type: String,
+      required: true
+    },
+    currency: {
+      type: String,
+      required: true
+    },
+    price: {
+      type: Number,
+      required: true,
+      min: 0
+    },
+    documentsAllowed: {
+      type: Number,
+      default: 5,
+      min: 0
+    }
+  }],
   gracePeriod: {
     isActive: {
       type: Boolean,
@@ -336,6 +390,11 @@ const userSchema = new Schema<IUser>({
     trim: true,
     maxlength: [100, 'Region cannot exceed 100 characters']
   },
+  ip_location: {
+    type: String,
+    trim: true,
+    maxlength: [200, 'IP location cannot exceed 200 characters']
+  },
   subscription: {
     planKey: {
       type: String,
@@ -354,6 +413,18 @@ const userSchema = new Schema<IUser>({
     endDate: Date,
     currentPeriodStart: Date,
     currentPeriodEnd: Date,
+    // Time-based access tracking
+    accessExpiresAt: Date, // Expiry time for day pass and time-limited plans
+    usageResetDate: Date, // When monthly/quarterly counters reset
+    // Regional purchase info
+    purchaseRegion: String, // Region where subscription was purchased
+    purchaseCurrency: String, // Currency used for purchase
+    purchasePrice: Number, // Original purchase price
+    // Auto-renewal (only for monthly plans)
+    autoRenew: {
+      type: Boolean,
+      default: false
+    },
     provider: {
       type: String,
       enum: ['stripe', 'razorpay', 'admin'],
