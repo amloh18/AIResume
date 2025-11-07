@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,13 +16,14 @@ export async function GET(request: NextRequest) {
     console.log('🔑 API Key found:', apiKey.substring(0, 10) + '...');
 
     // Initialize Gemini AI
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-
+    const genAI = new GoogleGenAI({ apiKey });
+    
     // Test with a simple prompt
-    const result = await model.generateContent('Hello, respond with "API is working"');
-    const response = await result.response;
-    const text = response.text();
+    const result = await genAI.models.generateContent({
+      model: 'gemini-2.5-flash-lite',
+      contents: 'Hello, respond with "API is working"'
+    });
+    const text = result.text || '';
 
     console.log('✅ Gemini API test successful:', text);
 

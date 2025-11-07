@@ -1,14 +1,12 @@
 /**
- * AI API Helper Utility
+ * Gemini API Helper Utility
  * Provides unified interface for Google Gemini API calls with gemini_api_key and gemini_api_key2 fallback
  * Uses @google/genai package with gemini-2.5-flash-lite model
- * 
- * This file now uses Gemini API instead of OpenAI/Perplexity
  */
 
 import { GoogleGenAI } from '@google/genai';
 
-export interface AICallOptions {
+interface GeminiCallOptions {
   prompt: string;
   systemPrompt?: string;
   temperature?: number;
@@ -16,10 +14,10 @@ export interface AICallOptions {
   model?: string;
 }
 
-export interface AIResponse {
+interface GeminiResponse {
   content: string;
   provider: 'gemini';
-  apiKeyUsed?: string;
+  apiKeyUsed: string;
 }
 
 /**
@@ -63,7 +61,7 @@ function getGeminiApiKeys(): Array<{ name: string; key: string }> {
 /**
  * Call Gemini API using @google/genai package
  */
-async function callGemini(options: AICallOptions, apiKey: string): Promise<string> {
+async function callGemini(options: GeminiCallOptions, apiKey: string): Promise<string> {
   try {
     const genAI = new GoogleGenAI({ apiKey });
     
@@ -79,14 +77,14 @@ async function callGemini(options: AICallOptions, apiKey: string): Promise<strin
     // Generate content using the new SDK API
     const result = await genAI.models.generateContent({
       model: modelName,
-      contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
+      contents: fullPrompt,
       config: {
         temperature: options.temperature || 0.7,
         maxOutputTokens: options.maxTokens || 2048,
       }
     });
     
-    const text = result.text;
+    const text = result.text || '';
     
     if (!text) {
       throw new Error('Gemini API returned empty response');
@@ -103,7 +101,7 @@ async function callGemini(options: AICallOptions, apiKey: string): Promise<strin
  * Call Gemini API with automatic fallback
  * Tries gemini_api_key first, then gemini_api_key2
  */
-export async function callAIWithFallback(options: AICallOptions): Promise<AIResponse> {
+export async function callGeminiWithFallback(options: GeminiCallOptions): Promise<GeminiResponse> {
   const apiKeys = getGeminiApiKeys();
   
   if (apiKeys.length === 0) {
@@ -145,14 +143,36 @@ export async function callAIWithFallback(options: AICallOptions): Promise<AIResp
 /**
  * Check if Gemini API keys are available
  */
-export function hasAIApiKeys(): boolean {
+export function hasGeminiApiKeys(): boolean {
   return getGeminiApiKeys().length > 0;
 }
 
 /**
  * Get the name of the available API keys (for logging)
  */
-export function getAvailableAIKeys(): string[] {
+export function getAvailableGeminiKeys(): string[] {
   return getGeminiApiKeys().map(k => k.name);
+}
+
+/**
+ * Legacy compatibility: Alias for callGeminiWithFallback
+ * This maintains backward compatibility with existing code
+ */
+export async function callAIWithFallback(options: GeminiCallOptions): Promise<GeminiResponse> {
+  return callGeminiWithFallback(options);
+}
+
+/**
+ * Legacy compatibility: Alias for hasGeminiApiKeys
+ */
+export function hasAIApiKeys(): boolean {
+  return hasGeminiApiKeys();
+}
+
+/**
+ * Legacy compatibility: Alias for getAvailableGeminiKeys
+ */
+export function getAvailableAIKeys(): string[] {
+  return getAvailableGeminiKeys();
 }
 

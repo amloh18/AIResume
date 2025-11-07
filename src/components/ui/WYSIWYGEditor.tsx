@@ -82,6 +82,30 @@ const WYSIWYGEditor: React.FC<WYSIWYGEditorProps> = ({
     redoStack
   } = useWYSIWYG(value, onChange);
 
+  // Ensure value is set when component mounts or value changes
+  // This is a backup to the hook's sync logic
+  React.useEffect(() => {
+    // Use requestAnimationFrame to ensure DOM is ready
+    const frameId = requestAnimationFrame(() => {
+      if (editorRef.current && value && value.trim()) {
+        const currentContent = editorRef.current.innerHTML.trim();
+        // If we have a value but the editor is empty or doesn't match, set it
+        if (!currentContent || currentContent === '<br>' || currentContent === '') {
+          // Convert plain text to HTML if needed
+          const htmlValue = /<[^>]+>/.test(value) 
+            ? value 
+            : value.split(/\n\n+/).map(para => {
+                const lines = para.split(/\n/).filter(l => l.trim());
+                return lines.map(line => `<p>${line.trim()}</p>`).join('');
+              }).join('') || value.replace(/\n/g, '<br>');
+          editorRef.current.innerHTML = htmlValue;
+        }
+      }
+    });
+    
+    return () => cancelAnimationFrame(frameId);
+  }, [value]);
+
   const minHeight = `${rows * 1.5}rem`;
 
   return (
@@ -115,6 +139,7 @@ const WYSIWYGEditor: React.FC<WYSIWYGEditorProps> = ({
           className="w-full px-4 py-3 text-white placeholder-white/50 focus:outline-none resize-none overflow-y-auto"
           style={{ minHeight, maxHeight: `${rows * 2}rem` }}
           data-placeholder={placeholder}
+          suppressContentEditableWarning
         />
 
         {/* Placeholder */}

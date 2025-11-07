@@ -1,10 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import mammoth from 'mammoth';
+import { GoogleGenAI } from '@google/genai';
 
 // pdf-parse is loaded dynamically to avoid bundling test files
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent';
+// Get API key with fallback
+function getGeminiApiKey(): string | null {
+  return (
+    process.env.gemini_api_key || 
+    process.env.GEMINI_API_KEY ||
+    process.env.gemini_api_key1 ||
+    process.env.GEMINI_API_KEY1 ||
+    process.env.NEXT_PUBLIC_GEMINI_API_KEY ||
+    null
+  );
+}
+
+function getGeminiApiKey2(): string | null {
+  return (
+    process.env.gemini_api_key2 || 
+    process.env.GEMINI_API_KEY2 ||
+    process.env['GEMINI_API-KEY2'] ||
+    process.env['gemini_api-key2'] ||
+    null
+  );
+}
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -16,42 +36,65 @@ Schema:
   "basics": {"name":"","label":"","image":"","email":"","phone":"","url":"","summary":"","location": {"address":"","postalCode":"","city":"","countryCode":"","region":""}, "profiles":[{"network":"","username":"","url":""}]},
   "work":[{"name":"","position":"","url":"","startDate":"","endDate":"","summary":"","highlights":[""]}],
   "volunteer":[{"organization":"","position":"","url":"","startDate":"","endDate":"","summary":"","highlights":[""]}],
-  "education":[{"institution":"","url":"","area":"","studyType":"","startDate":"","endDate":"","score":"","courses":[""]}],
+  "education":[{"institution":"","url":"","area":"","studyType":"","startDate":"","endDate":"","score":"","courses":[""],"description":""}],
   "awards":[{"title":"","date":"","awarder":"","summary":""}],
-  "certificates":[{"name":"","date":"","issuer":"","url":""}],
+  "certificates":[{"name":"","date":"","issuer":"","url":"","description":""}],
   "publications":[{"name":"","publisher":"","releaseDate":"","url":"","summary":""}],
-  "skills":[{"name":"","level":"","keywords":[""]}],
+  "skills":[{"category":"","skills":[""]}],
   "languages":[{"language":"","fluency":""}],
   "interests":[{"name":"","keywords":[""]}],
   "references":[{"name":"","reference":""}],
-  "projects":[{"name":"","startDate":"","endDate":"","description":"","highlights":[""],"url":""}]
+  "projects":[{"name":"","startDate":"","endDate":"","description":"","highlights":[""],"keywords":[""],"url":""}]
 }
+Note: "courses" in education and "highlights" in projects are optional fields. Only include them if relevant data is found. If not found, you may omit them or use empty arrays.
 Date formatting rules: Prefer YYYY-MM. If only a year is known use YYYY. If date is present/ongoing, leave the field as an empty string. Do NOT output textual words like "Present" or ranges with hyphens. One entry per job/education.`;
 
-  const body = {
-    contents: [{ parts: [{ text: `${system}\n\nCV Content:\n${content}` }]}],
-    generationConfig: { temperature: 0.2, maxOutputTokens: 2048 }
-  };
+  const prompt = `${system}\n\nCV Content:\n${content}`;
+  
+  // Use Gemini API with fallback
+  const apiKeys = [
+    { name: 'gemini_api_key', key: getGeminiApiKey() },
+    { name: 'gemini_api_key2', key: getGeminiApiKey2() }
+  ].filter(k => k.key);
 
-  const res = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-
-  if (!res.ok) {
-    const t = await res.text();
-    throw new Error(`AI error ${res.status}: ${t}`);
+  if (apiKeys.length === 0) {
+    throw new Error('No Gemini API keys configured');
   }
 
-  const data = await res.json();
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  // Clean possible code fences
-  const cleaned = text
-    .replace(/```json[\s\S]*?\n/g, '')
-    .replace(/```/g, '')
-    .trim();
-  return cleaned;
+  let lastError: Error | null = null;
+
+  for (const { name, key } of apiKeys) {
+    try {
+      console.log(`🔑 Attempting Gemini API call with ${name}...`);
+      const genAI = new GoogleGenAI({ apiKey: key! });
+      const result = await genAI.models.generateContent({
+        model: 'gemini-2.5-flash-lite',
+        contents: prompt
+      });
+      const text = result.text || '';
+      
+      if (text) {
+        console.log(`✅ Gemini API call successful with ${name}`);
+        // Clean possible code fences
+        const cleaned = text
+          .replace(/```json[\s\S]*?\n/g, '')
+          .replace(/```/g, '')
+          .trim();
+        return cleaned;
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(`❌ ${name} failed:`, errorMessage);
+      lastError = error instanceof Error ? error : new Error(String(error));
+      
+      if (apiKeys.indexOf(apiKeys.find(k => k.name === name)!) === apiKeys.length - 1) {
+        throw new Error(`AI error: ${errorMessage}`);
+      }
+      console.log(`⏭️  Continuing to next API key...`);
+    }
+  }
+
+  throw lastError || new Error('Failed to call Gemini API');
 }
 
 async function extractFromPDF(buffer: Buffer): Promise<string> {
@@ -249,7 +292,8 @@ export async function POST(req: NextRequest) {
           startDate: asString(e?.startDate),
           endDate: asString(e?.endDate),
           score: asString(e?.score),
-          courses: asStringArray(e?.courses)
+          courses: e?.courses ? asStringArray(e.courses) : undefined,  // Optional field
+          description: asString(e?.description)
         })),
         awards: asObjectArray(raw.awards).map((a: any) => ({
           title: asString(a?.title),
@@ -292,7 +336,8 @@ export async function POST(req: NextRequest) {
           startDate: asString(p?.startDate),
           endDate: asString(p?.endDate),
           description: asString(p?.description),
-          highlights: asStringArray(p?.highlights),
+          highlights: p?.highlights ? asStringArray(p.highlights) : undefined,  // Optional field
+          keywords: asStringArray(p?.keywords),
           url: asString(p?.url)
         }))
       };

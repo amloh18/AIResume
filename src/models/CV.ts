@@ -123,7 +123,7 @@ const cvSchema = new Schema<ICV>({
       startDate: { type: String },
       endDate: { type: String },
       score: { type: String },
-      courses: [{ type: String }],
+      courses: [{ type: String }],  // Optional field
       description: { type: String }
     }],
     awards: [{
@@ -167,7 +167,8 @@ const cvSchema = new Schema<ICV>({
       startDate: { type: String },
       endDate: { type: String },
       description: { type: String },
-      highlights: [{ type: String }],
+      highlights: [{ type: String }],  // Optional field
+      keywords: [{ type: String }],
       url: { type: String }
     }]
   },

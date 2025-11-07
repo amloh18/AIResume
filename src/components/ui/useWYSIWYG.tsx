@@ -9,15 +9,61 @@ export function useWYSIWYG(value: string, onChange: (value: string) => void) {
   const [redoStack, setRedoStack] = useState<string[]>([]);
   const [formatState, setFormatState] = useState({ bold: false, italic: false, underline: false });
   const isInternalUpdateRef = useRef(false);
+  const lastSyncedValueRef = useRef<string>('');
 
-  // Sync external value changes to editor
+  // Helper function to convert plain text to HTML
+  const convertPlainTextToHTML = (text: string): string => {
+    if (!text || !text.trim()) return '';
+    
+    // If it already has HTML tags, return as is
+    if (/<[^>]+>/.test(text)) {
+      return text;
+    }
+    
+    // Convert plain text to HTML paragraphs, preserving line breaks
+    const paragraphs = text
+      .split(/\n\n+/) // Split by double newlines for paragraphs
+      .map(para => para.trim())
+      .filter(para => para);
+    
+    if (paragraphs.length > 0) {
+      return paragraphs
+        .map(para => {
+          // Split by single newlines for line breaks within paragraphs
+          const lines = para.split(/\n/).filter(line => line.trim());
+          return lines.map(line => `<p>${line.trim()}</p>`).join('');
+        })
+        .join('');
+    }
+    
+    // If no paragraphs, just convert newlines to <br>
+    return text.replace(/\n/g, '<br>');
+  };
+
+  // Sync external value changes to editor (including initialization)
   useEffect(() => {
     if (editorRef.current && !isInternalUpdateRef.current) {
       const currentContent = editorRef.current.innerHTML.trim();
-      const newValue = value || '';
+      let newValue = value || '';
       
-      if (currentContent !== newValue && newValue !== '<br>') {
-        editorRef.current.innerHTML = newValue || '';
+      // Check if we need to update
+      const needsUpdate = lastSyncedValueRef.current !== newValue;
+      
+      // Also update if editor is empty but we have a value
+      const isEmptyButHasValue = (!currentContent || currentContent === '<br>' || currentContent === '') && newValue && newValue.trim();
+      
+      if (needsUpdate || isEmptyButHasValue) {
+        // Convert plain text to HTML if needed
+        const htmlValue = convertPlainTextToHTML(newValue);
+        
+        // Normalize empty values
+        const normalizedValue = (!htmlValue || htmlValue === '<br>' || htmlValue.trim() === '') ? '' : htmlValue;
+        
+        // Only update if content is actually different
+        if (currentContent !== normalizedValue) {
+          editorRef.current.innerHTML = normalizedValue;
+          lastSyncedValueRef.current = newValue;
+        }
       }
     }
     isInternalUpdateRef.current = false;
@@ -43,17 +89,20 @@ export function useWYSIWYG(value: string, onChange: (value: string) => void) {
     if (!editorRef.current) return;
     
     const content = editorRef.current.innerHTML;
-    if (content !== value) {
+    // Compare with the last synced value, not the current prop value
+    // This prevents unnecessary updates when we're syncing external changes
+    if (content !== lastSyncedValueRef.current && !isInternalUpdateRef.current) {
       isInternalUpdateRef.current = true;
       setUndoStack(prev => {
-        const newStack = [...prev, value];
+        const newStack = [...prev, lastSyncedValueRef.current];
         return newStack.slice(-20);
       });
       setRedoStack([]);
+      lastSyncedValueRef.current = content;
       onChange(content);
     }
     updateFormatState();
-  }, [value, onChange, updateFormatState]);
+  }, [onChange, updateFormatState]);
 
   // Formatting functions
   const applyFormatting = useCallback((command: string) => {
