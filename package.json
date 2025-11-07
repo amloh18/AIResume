@@ -17,7 +17,8 @@
     "backup-database": "node scripts/backup-database.js",
     "backup-cleanup": "node scripts/backup-database.js cleanup",
     "backup-list": "node scripts/backup-database.js list",
-    "health-check": "curl -f http://localhost:3000/api/health || exit 1"
+    "health-check": "curl -f http://localhost:3000/api/health || exit 1",
+    "test:gemini": "node scripts/test-gemini-apis.js"
   },
   "keywords": [
     "cv",
@@ -45,7 +46,6 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@emotion/is-prop-valid": "^1.4.0",
     "@google/genai": "^1.28.0",
-    "@google/generative-ai": "^0.24.1",
     "@heroicons/react": "^2.2.0",
     "@radix-ui/react-collapsible": "^1.1.12",
     "@radix-ui/react-label": "^2.1.7",
@@ -89,6 +89,7 @@
     "framer-motion": "^12.23.12",
     "google-auth-library": "^10.3.0",
     "googleapis": "^160.0.0",
+    "gsap": "^3.13.0",
     "html-to-image": "^1.11.13",
     "html2canvas": "^1.4.1",
     "html2pdf.js": "^0.12.0",

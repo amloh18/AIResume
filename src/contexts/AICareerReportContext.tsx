@@ -177,42 +177,94 @@ const clearStorage = () => {
   }
 };
 
+// Default CV data structure
+const getDefaultCVData = (): UnifiedCVDataStructure => ({
+  basics: {
+    name: '',
+    label: '',
+    image: '',
+    email: '',
+    phone: '',
+    url: '',
+    summary: '',
+    location: {
+      address: '',
+      postalCode: '',
+      city: '',
+      countryCode: '',
+      region: ''
+    },
+    profiles: []
+  },
+  work: [],
+  volunteer: [],
+  education: [],
+  awards: [],
+  certificates: [],
+  publications: [],
+  skills: [],
+  languages: [],
+  interests: [],
+  references: [],
+  projects: []
+});
+
 // Initial State
 const getInitialState = (): AICareerReportState => {
   const savedData = loadFromStorage();
   
+  // Log what we're restoring for debugging
+  if (savedData) {
+    console.log('📦 Restoring AI Career Report data from localStorage:', {
+      currentStep: savedData.currentStep,
+      hasCvData: !!savedData.cvData,
+      cvDataKeys: savedData.cvData ? Object.keys(savedData.cvData) : [],
+      workCount: savedData.cvData?.work?.length || 0,
+      educationCount: savedData.cvData?.education?.length || 0,
+      projectsCount: savedData.cvData?.projects?.length || 0
+    });
+  } else {
+    console.log('📦 No saved data found in localStorage, using defaults');
+  }
+  
+  // Ensure cvData is properly structured - merge saved data with defaults
+  let cvData: UnifiedCVDataStructure;
+  if (savedData?.cvData) {
+    // Merge saved cvData with defaults to ensure all fields exist
+    const defaultData = getDefaultCVData();
+    cvData = {
+      ...defaultData,
+      ...savedData.cvData,
+      // Ensure nested objects are properly merged
+      basics: {
+        ...defaultData.basics,
+        ...(savedData.cvData.basics || {}),
+        location: {
+          ...defaultData.basics.location,
+          ...(savedData.cvData.basics?.location || {})
+        },
+        profiles: savedData.cvData.basics?.profiles || defaultData.basics.profiles
+      },
+      // Ensure arrays exist (they might be undefined)
+      work: savedData.cvData.work || [],
+      volunteer: savedData.cvData.volunteer || [],
+      education: savedData.cvData.education || [],
+      awards: savedData.cvData.awards || [],
+      certificates: savedData.cvData.certificates || [],
+      publications: savedData.cvData.publications || [],
+      skills: savedData.cvData.skills || [],
+      languages: savedData.cvData.languages || [],
+      interests: savedData.cvData.interests || [],
+      references: savedData.cvData.references || [],
+      projects: savedData.cvData.projects || []
+    };
+  } else {
+    cvData = getDefaultCVData();
+  }
+  
   return {
     currentStep: savedData?.currentStep || 1,
-    cvData: savedData?.cvData || {
-      basics: {
-        name: '',
-        label: '',
-        image: '',
-        email: '',
-        phone: '',
-        url: '',
-        summary: '',
-        location: {
-          address: '',
-          postalCode: '',
-          city: '',
-          countryCode: '',
-          region: ''
-        },
-        profiles: []
-      },
-      work: [],
-      volunteer: [],
-      education: [],
-      awards: [],
-      certificates: [],
-      publications: [],
-      skills: [],
-      languages: [],
-      interests: [],
-      references: [],
-      projects: []
-    },
+    cvData,
     uploadedFile: null, // File objects can't be serialized, will be handled separately
     aiAnalysis: savedData?.aiAnalysis || null, // Restore AI analysis if available
     isAnalyzing: false,
@@ -244,9 +296,36 @@ function aiCareerReportReducer(
       };
 
     case 'SET_CV_DATA':
+      // Always set CV data when explicitly requested via SET_CV_DATA
+      // This is used when parsing CVs or loading data, so we should trust it
       return {
         ...state,
-        cvData: action.payload
+        cvData: {
+          ...getDefaultCVData(),
+          ...action.payload,
+          // Ensure arrays exist
+          work: action.payload.work || [],
+          education: action.payload.education || [],
+          projects: action.payload.projects || [],
+          skills: action.payload.skills || [],
+          volunteer: action.payload.volunteer || [],
+          awards: action.payload.awards || [],
+          certificates: action.payload.certificates || [],
+          publications: action.payload.publications || [],
+          languages: action.payload.languages || [],
+          interests: action.payload.interests || [],
+          references: action.payload.references || [],
+          // Merge basics properly
+          basics: {
+            ...getDefaultCVData().basics,
+            ...(action.payload.basics || {}),
+            location: {
+              ...getDefaultCVData().basics.location,
+              ...(action.payload.basics?.location || {})
+            },
+            profiles: action.payload.basics?.profiles || []
+          }
+        }
       };
 
     case 'UPDATE_CV_DATA':
@@ -366,7 +445,23 @@ export function AICareerReportProvider({ children }: { children: ReactNode }) {
     if (typeof window !== 'undefined') {
       const masterCVCreated = sessionStorage.getItem('masterCVCreated');
       if (masterCVCreated !== 'true') {
-        saveToStorage(state);
+        // Only save if we have meaningful data (not just empty defaults)
+        const hasData = state.cvData && (
+          state.cvData.basics?.name ||
+          state.cvData.basics?.email ||
+          state.cvData.work?.length > 0 ||
+          state.cvData.education?.length > 0 ||
+          state.currentStep > 1
+        );
+        
+        if (hasData || state.currentStep > 1) {
+          saveToStorage(state);
+          console.log('💾 Saved AI Career Report data to localStorage:', {
+            step: state.currentStep,
+            workCount: state.cvData.work?.length || 0,
+            educationCount: state.cvData.education?.length || 0
+          });
+        }
       }
     }
   }, [state]);

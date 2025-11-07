@@ -189,8 +189,8 @@ const EducationSection: React.FC<EducationSectionProps> = ({
             startDate: '',
             endDate: '',
             score: '',
-            courses: [],
             description: ''
+            // courses is optional - only include if user adds courses
           };
           onUpdate([...safeData, newEducation]);
         }}

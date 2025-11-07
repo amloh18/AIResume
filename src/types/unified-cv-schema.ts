@@ -91,7 +91,7 @@ export interface UnifiedCVDataStructure {
     startDate: string;
     endDate: string;
     score: string;
-    courses: string[];
+    courses?: string[];  // Optional field
     description?: string;
   }>;
 
@@ -151,7 +151,7 @@ export interface UnifiedCVDataStructure {
     startDate: string;
     endDate: string;
     description: string;
-    highlights: string[];
+    highlights?: string[];  // Optional field
     keywords: string[];  // Technologies/skills used in the project
     url: string;
   }>;

@@ -24,28 +24,85 @@ function AICareerReportContent() {
   const [showSavedIndicator, setShowSavedIndicator] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
 
-  // Handle URL parameters and authentication
+  // Sync URL with current step to maintain state on refresh
   useEffect(() => {
-    // Handle step parameter
-    if (stepParam) {
-      const step = parseInt(stepParam);
-      if (step >= 1 && step <= 3) {
-        dispatch({ type: 'SET_CURRENT_STEP', payload: step as 1 | 2 | 3 });
+    if (typeof window === 'undefined') return;
+    
+    const currentUrl = new URL(window.location.href);
+    const urlStep = currentUrl.searchParams.get('step');
+    const currentStepStr = state.currentStep.toString();
+    
+    // Only update URL if it doesn't match current step (avoid infinite loops)
+    if (urlStep !== currentStepStr) {
+      currentUrl.searchParams.set('step', currentStepStr);
+      // Use replaceState to avoid adding to history
+      window.history.replaceState({}, '', currentUrl.toString());
+    }
+  }, [state.currentStep]);
+
+  // Handle URL parameters and authentication (only on initial load)
+  useEffect(() => {
+    // Check if we have saved data with a step and CV data
+    const savedData = localStorage.getItem('ai-career-report-data');
+    let savedStep: number | null = null;
+    let hasSavedCvData = false;
+    
+    if (savedData) {
+      try {
+        const parsed = JSON.parse(savedData);
+        if (parsed.currentStep && parsed.cvData) {
+          savedStep = parsed.currentStep;
+          // Check if we have actual CV data (not just empty structure)
+          hasSavedCvData = !!(
+            parsed.cvData.basics?.name ||
+            parsed.cvData.basics?.email ||
+            parsed.cvData.work?.length > 0 ||
+            parsed.cvData.education?.length > 0 ||
+            parsed.cvData.projects?.length > 0
+          );
+        }
+      } catch (e) {
+        console.warn('Failed to parse saved data:', e);
       }
     }
 
-    // Handle mode parameter (guide mode)
-    if (modeParam === 'guide') {
-      // If user has existing Master CV, jump to Step 3
-      // Otherwise, start from Step 1
+    console.log('🔍 URL parameter handling:', {
+      stepParam,
+      savedStep,
+      currentStep: state.currentStep,
+      hasSavedCvData,
+      hasCvData: !!(state.cvData.work?.length || state.cvData.education?.length)
+    });
+
+    // Priority: URL step param > Saved step (if has data) > Mode param > Default
+    // Only override if URL explicitly specifies a different step
+    if (stepParam) {
+      // URL explicitly specifies step - use it only if different from current
+      const step = parseInt(stepParam);
+      if (step >= 1 && step <= 3 && step !== state.currentStep) {
+        console.log(`📍 Setting step from URL: ${step}`);
+        dispatch({ type: 'SET_CURRENT_STEP', payload: step as 1 | 2 | 3 });
+      }
+    } else if (savedStep && hasSavedCvData) {
+      // No URL param but we have saved step with data - ensure it's set
+      // The context already loaded it, but double-check
+      if (savedStep !== state.currentStep) {
+        console.log(`📍 Restoring saved step: ${savedStep}`);
+        dispatch({ type: 'SET_CURRENT_STEP', payload: savedStep as 1 | 2 | 3 });
+      }
+    } else if (modeParam === 'guide' && !hasSavedCvData) {
+      // No saved data and guide mode - start at step 1
+      console.log('📍 Starting in guide mode at step 1');
       dispatch({ type: 'SET_CURRENT_STEP', payload: 1 });
     }
+    // Otherwise, keep the step from initial state (which loads from localStorage)
 
     // Handle job ID parameter
     if (jobIdParam) {
       dispatch({ type: 'SET_JOB_ID', payload: jobIdParam });
     }
-  }, [stepParam, modeParam, jobIdParam, dispatch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
 
   // Log authentication status for debugging
   useEffect(() => {

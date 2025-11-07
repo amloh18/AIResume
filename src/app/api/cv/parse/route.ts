@@ -66,7 +66,7 @@ const educationSchema = z.object({
   startDate: z.string().nullable(),
   endDate: z.string().nullable(),
   score: z.string().nullable(),
-  courses: z.array(z.string()).default([]),
+  courses: z.array(z.string()).optional().default([]),  // Optional field
   description: z.string().nullable().optional(),
 });
 
@@ -80,7 +80,7 @@ const projectsSchema = z.object({
   startDate: z.string().nullable(),
   endDate: z.string().nullable(),
   description: z.string().nullable(),
-  highlights: z.array(z.string()).default([]),
+  highlights: z.array(z.string()).optional().default([]),  // Optional field
   keywords: z.array(z.string()).default([]),
   url: z.string().url().nullable().or(z.literal('')),
 });
@@ -171,6 +171,7 @@ async function extractTextFromFile(fileBuffer: Buffer, mimeType: string): Promis
   // 2. Handle PDF files
   else if (mimeType === 'application/pdf') {
     let pdfParseSucceeded = false;
+    const extractionErrors: string[] = [];
     
     // Attempt 1: Fast Text Parse (Method 1: pdf-parse)
     // Load pdf-parse dynamically to avoid bundling test files
@@ -180,25 +181,118 @@ async function extractTextFromFile(fileBuffer: Buffer, mimeType: string): Promis
       
       try {
         const data = await pdfParse(fileBuffer);
-        if (data && data.text && data.text.trim().length > 100) {
-          rawText = data.text;
+        const extractedText = data?.text?.trim() || '';
+        if (extractedText.length >= 50) {
+          rawText = extractedText;
           pdfParseSucceeded = true;
           console.log('✅ Method 1 (pdf-parse) succeeded:', rawText.length, 'characters');
         } else {
-          console.log(`⚠️ pdf-parse returned insufficient text (${data?.text?.trim().length || 0} chars), will try OCR fallback.`);
+          const errorMsg = `pdf-parse returned insufficient text (${extractedText.length} chars, minimum 50 required)`;
+          console.log(`⚠️ ${errorMsg}`);
+          if (data?.text) {
+            console.log(`📝 Sample text (first 100 chars): ${data.text.substring(0, 100)}`);
+          }
+          extractionErrors.push(errorMsg);
         }
       } catch (e1) {
-        console.log(`⚠️ Method 1 (pdf-parse) failed: ${e1 instanceof Error ? e1.message : String(e1)}. Will try OCR fallback.`);
+        const errorMsg = `pdf-parse execution failed: ${e1 instanceof Error ? e1.message : String(e1)}`;
+        console.log(`⚠️ ${errorMsg}`);
+        if (e1 instanceof Error && e1.stack) {
+          console.log(`📚 Stack trace: ${e1.stack.substring(0, 200)}`);
+        }
+        extractionErrors.push(errorMsg);
       }
     } catch (loadError) {
-      console.log('⚠️ pdf-parse library not available:', loadError instanceof Error ? loadError.message : String(loadError));
-      console.log('⚠️ Skipping to OCR method.');
+      const errorMsg = `pdf-parse library not available: ${loadError instanceof Error ? loadError.message : String(loadError)}`;
+      console.log(`⚠️ ${errorMsg}`);
+      extractionErrors.push(errorMsg);
     }
     
-    // Attempt 2: OCR Fallback (Method 2: tesseract + pdf2pic) - only if pdf-parse didn't work
-    if (!pdfParseSucceeded && rawText.length < 100) {
+    // Attempt 2: pdfjs-dist fallback (Method 2) - only if pdf-parse didn't work
+    if (!pdfParseSucceeded && rawText.length < 50) {
       try {
-        console.log('Attempting Method 2: OCR (tesseract + pdf2pic)...');
+        console.log('Attempting Method 2: pdfjs-dist (loading dynamically)...');
+        
+        // Try different import paths for pdfjs-dist compatibility
+        let pdfjs: any;
+        try {
+          // Try standard import first
+          pdfjs = await import('pdfjs-dist');
+        } catch (e1) {
+          try {
+            // Try legacy build
+            pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+          } catch (e2) {
+            throw new Error(`Failed to import pdfjs-dist: ${e1 instanceof Error ? e1.message : String(e1)}`);
+          }
+        }
+        
+        // Disable worker for server-side usage if GlobalWorkerOptions exists
+        if (pdfjs.GlobalWorkerOptions) {
+          pdfjs.GlobalWorkerOptions.workerSrc = '';
+        }
+        
+        // Set up document loading - handle both old and new API
+        const getDocument = pdfjs.getDocument || pdfjs.default?.getDocument;
+        if (!getDocument) {
+          throw new Error('pdfjs-dist getDocument method not found');
+        }
+        
+        const loadingTask = getDocument({
+          data: fileBuffer,
+          useWorkerFetch: false,
+          isEvalSupported: false,
+          useSystemFonts: true,
+          verbosity: 0, // Suppress warnings
+        });
+        
+        const pdfDocument = await loadingTask.promise;
+        const numPages = pdfDocument.numPages;
+        console.log(`📄 PDF has ${numPages} pages`);
+        
+        let extractedText = '';
+        // Process up to 5 pages (most CVs are 1-2 pages)
+        const maxPages = Math.min(numPages, 5);
+        
+        for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
+          try {
+            const page = await pdfDocument.getPage(pageNum);
+            const textContent = await page.getTextContent();
+            const pageText = textContent.items
+              .map((item: any) => item.str || '')
+              .filter((str: string) => str.trim().length > 0)
+              .join(' ')
+              .trim();
+            
+            if (pageText.length > 0) {
+              extractedText += pageText + '\n';
+              console.log(`✅ Page ${pageNum}: extracted ${pageText.length} characters`);
+            }
+          } catch (pageError) {
+            console.warn(`⚠️ Failed to extract text from page ${pageNum}:`, pageError instanceof Error ? pageError.message : String(pageError));
+          }
+        }
+        
+        if (extractedText.trim().length >= 50) {
+          rawText = extractedText.trim();
+          pdfParseSucceeded = true;
+          console.log('✅ Method 2 (pdfjs-dist) succeeded:', rawText.length, 'characters');
+        } else {
+          const errorMsg = `pdfjs-dist returned insufficient text (${extractedText.trim().length} chars)`;
+          console.log(`⚠️ ${errorMsg}`);
+          extractionErrors.push(errorMsg);
+        }
+      } catch (pdfjsError) {
+        const errorMsg = `pdfjs-dist failed: ${pdfjsError instanceof Error ? pdfjsError.message : String(pdfjsError)}`;
+        console.log(`⚠️ ${errorMsg}`);
+        extractionErrors.push(errorMsg);
+      }
+    }
+    
+    // Attempt 3: OCR Fallback (Method 3: tesseract + pdf2pic) - only if previous methods didn't work
+    if (!pdfParseSucceeded && rawText.length < 50) {
+      try {
+        console.log('Attempting Method 3: OCR (tesseract + pdf2pic)...');
         
         if (!createWorker) {
           throw new Error('tesseract.js not available');
@@ -348,15 +442,27 @@ async function extractTextFromFile(fileBuffer: Buffer, mimeType: string): Promis
             }
           }
         }
-      } catch (e2) {
-        console.error(`Method 2 (OCR) also failed: ${e2 instanceof Error ? e2.message : String(e2)}`);
+      } catch (e3) {
+        const errorMsg = `Method 3 (OCR) failed: ${e3 instanceof Error ? e3.message : String(e3)}`;
+        console.error(`❌ ${errorMsg}`);
+        extractionErrors.push(errorMsg);
         // Don't throw here - let it fall through to final validation
       }
     }
     
-    // If both methods failed, throw error
+    // If all methods failed, throw error with details
     if (!rawText || rawText.trim().length < 50) {
-      throw new Error('All PDF text extraction methods failed. Please ensure pdf-parse or pdf2pic/tesseract.js are properly installed.');
+      const errorDetails = extractionErrors.length > 0 
+        ? `\nFailed methods:\n${extractionErrors.map((e, i) => `  ${i + 1}. ${e}`).join('\n')}`
+        : '';
+      throw new Error(
+        `All PDF text extraction methods failed.${errorDetails}\n\n` +
+        `Please ensure:\n` +
+        `- pdf-parse is installed (npm install pdf-parse)\n` +
+        `- pdfjs-dist is installed (npm install pdfjs-dist)\n` +
+        `- For scanned PDFs: pdf2pic and tesseract.js are installed (npm install pdf2pic tesseract.js)\n` +
+        `- For pdf2pic: ImageMagick/Ghostscript must be installed on the server`
+      );
     }
   }
   // 3. Handle image files (direct OCR)
@@ -398,22 +504,24 @@ async function structureTextWithAI(rawText: string): Promise<any> {
   const { callAIWithFallback, hasAIApiKeys } = await import('@/lib/utils/ai-api-helper');
 
   if (!hasAIApiKeys()) {
-    throw new Error('No AI API keys configured (ChatGPT_API_KEY or PERPLEXITY_API_KEY). AI parsing is unavailable.');
+    throw new Error('No AI API keys configured (gemini_api_key or gemini_api_key2). AI parsing is unavailable.');
   }
 
-  console.log(`🔑 Using AI API helper with ChatGPT_API_KEY and PERPLEXITY_API_KEY fallback`);
+  console.log(`🔑 Using AI API helper with gemini_api_key and gemini_api_key2 fallback`);
   
   // Create a simplified schema for the AI prompt to save tokens
+  // Note: courses in education and highlights in projects are optional
+  // IMPORTANT: All fields must match the validation schema exactly
   const simpleSchema = `{
-    "basics": { "name": "...", "email": "...", "phone": "...", "summary": "...", "location": { "city": "...", "countryCode": "..." }, "profiles": [{ "network": "LinkedIn", "url": "..." }] },
-    "work": [{ "name": "Company", "position": "...", "startDate": "...", "endDate": "...", "summary": "...", "highlights": ["..."] }],
-    "education": [{ "institution": "...", "studyType": "...", "area": "...", "endDate": "..." }],
+    "basics": { "name": "...", "label": "...", "image": "...", "email": "...", "phone": "...", "url": "...", "summary": "...", "location": { "address": "...", "postalCode": "...", "city": "...", "countryCode": "...", "region": "..." }, "profiles": [{ "network": "...", "username": "...", "url": "..." }] },
+    "work": [{ "name": "...", "position": "...", "url": "...", "startDate": "...", "endDate": "...", "summary": "...", "highlights": ["..."] }],
+    "education": [{ "institution": "...", "url": "...", "area": "...", "studyType": "...", "startDate": "...", "endDate": "...", "score": "...", "courses": ["..."], "description": "..." }],
     "skills": [{ "category": "...", "skills": ["...", "..."] }],
-    "projects": [{ "name": "...", "description": "...", "highlights": ["..."], "keywords": ["..."], "url": "..." }],
-    "volunteer": [{ "organization": "...", "position": "..." }],
-    "awards": [{ "title": "...", "date": "..." }],
-    "certificates": [{ "name": "...", "issuer": "..." }],
-    "publications": [{ "name": "...", "publisher": "..." }],
+    "projects": [{ "name": "...", "startDate": "...", "endDate": "...", "description": "...", "highlights": ["..."], "keywords": ["..."], "url": "..." }],
+    "volunteer": [{ "organization": "...", "position": "...", "url": "...", "startDate": "...", "endDate": "...", "summary": "...", "highlights": ["..."] }],
+    "awards": [{ "title": "...", "date": "...", "awarder": "...", "summary": "..." }],
+    "certificates": [{ "name": "...", "date": "...", "issuer": "...", "url": "...", "description": "..." }],
+    "publications": [{ "name": "...", "publisher": "...", "releaseDate": "...", "url": "...", "summary": "..." }],
     "languages": [{ "language": "...", "fluency": "..." }],
     "interests": [{ "name": "...", "keywords": ["..."] }],
     "references": [{ "name": "...", "reference": "..." }]
@@ -425,7 +533,12 @@ from the resume text and return **only** a valid JSON object.
 - Adhere strictly to this JSON structure: ${simpleSchema}
 - Do not include any other text, greetings, explanations, or markdown \`\`\`json wrappers.
 - Your entire response must be *only* the JSON object, nothing else.
-- If a value is not found, use \`null\` or an empty array \`[]\`.
+- **CRITICAL**: Always include ALL fields in the schema. If a value is not found, use \`null\` (NOT undefined, NOT omitted).
+- For URL fields: Use a valid URL string, or \`null\` if not found, or empty string \`""\` if explicitly empty.
+- For string fields: Use a string value, or \`null\` if not found. Never omit fields or use undefined.
+- For arrays: Use an empty array \`[]\` if no items found, never null or undefined.
+- **IMPORTANT**: The "courses" field in education and "highlights" field in projects are optional. If no data is found, you may omit them or use empty arrays \`[]\`.
+- **REQUIRED FIELDS**: All other fields must be present. Missing fields will cause validation errors.
 - Date formatting: Use YYYY-MM format (e.g., "2023-05"). If only a year is known, use "YYYY". If date is "Present" or "Current", leave endDate as empty string ("").
 - Do NOT output textual words like "Present" in date fields.
 - Clean all text: Remove dates, extra whitespace, and formatting artifacts from titles.
@@ -532,7 +645,227 @@ async function robustDocumentParser(
     console.log('═══════════════════════════════════════════════════════');
     console.log('🚀 STAGE 3: Validation');
     console.log('═══════════════════════════════════════════════════════');
-    const validatedData = cvDataSchema.parse(aiJsonOutput);
+    
+    // Pre-process: Convert all undefined values to null and sanitize URLs
+    // Also ensure optional fields (courses, highlights in projects) are handled correctly
+    const normalizeUndefinedToNull = (obj: any, parentKey?: string): any => {
+      if (obj === null || obj === undefined) {
+        return null;
+      }
+      if (Array.isArray(obj)) {
+        return obj.map((item, index) => normalizeUndefinedToNull(item, `${parentKey}[${index}]`));
+      }
+      if (typeof obj === 'object') {
+        const normalized: any = {};
+        for (const key in obj) {
+          if (obj.hasOwnProperty(key)) {
+            let value = obj[key];
+            
+            // Convert undefined to null
+            if (value === undefined) {
+              value = null;
+            }
+            // Handle optional array fields - ensure they're arrays if present
+            else if ((key === 'courses' || key === 'highlights') && value !== null && value !== undefined) {
+              // If it's a string, try to parse it or convert to array
+              if (typeof value === 'string') {
+                value = value.trim() ? [value] : [];
+              } else if (!Array.isArray(value)) {
+                value = [];
+              }
+              value = normalizeUndefinedToNull(value, `${parentKey}.${key}`);
+            }
+            // Sanitize URL fields: convert invalid/empty URLs to empty string
+            else if (key === 'url' && typeof value === 'string') {
+              const trimmed = value.trim();
+              if (trimmed === '' || trimmed === 'null' || trimmed === 'undefined' || trimmed.toLowerCase() === 'n/a') {
+                value = '';
+              } else {
+                // Try to validate URL - must have protocol (http:// or https://)
+                try {
+                  // Only validate if it has a protocol
+                  if (trimmed.match(/^https?:\/\//i)) {
+                    new URL(trimmed);
+                    value = trimmed; // Valid URL with protocol
+                  } else {
+                    // No protocol - convert to empty string (Zod expects valid URL or empty string)
+                    value = '';
+                  }
+                } catch {
+                  // Invalid URL, convert to empty string
+                  value = '';
+                }
+              }
+            }
+            // Recursively normalize nested objects
+            else {
+              value = normalizeUndefinedToNull(value, `${parentKey ? parentKey + '.' : ''}${key}`);
+            }
+            
+            normalized[key] = value;
+          }
+        }
+        return normalized;
+      }
+      return obj;
+    };
+    
+    const normalizedJson = normalizeUndefinedToNull(aiJsonOutput);
+    console.log('📝 Normalized undefined values to null and sanitized URLs');
+    console.log('📝 Normalized JSON structure:', JSON.stringify(normalizedJson, null, 2).substring(0, 1000));
+    
+    // Pre-validate: Ensure all required fields exist before Zod validation
+    const ensureRequiredFields = (data: any): any => {
+      // Ensure arrays exist
+      if (!data.work) data.work = [];
+      if (!data.education) data.education = [];
+      if (!data.skills) data.skills = [];
+      if (!data.projects) data.projects = [];
+      if (!data.volunteer) data.volunteer = [];
+      if (!data.awards) data.awards = [];
+      if (!data.certificates) data.certificates = [];
+      if (!data.publications) data.publications = [];
+      if (!data.languages) data.languages = [];
+      if (!data.interests) data.interests = [];
+      if (!data.references) data.references = [];
+      
+      // Ensure education items have all required fields
+      if (Array.isArray(data.education)) {
+        data.education = data.education.map((edu: any) => ({
+          institution: edu.institution ?? null,
+          url: edu.url ?? null,
+          area: edu.area ?? null,
+          studyType: edu.studyType ?? null,
+          startDate: edu.startDate ?? null,
+          endDate: edu.endDate ?? null,
+          score: edu.score ?? null,
+          courses: edu.courses ?? [], // Optional field
+          description: edu.description ?? null
+        }));
+      }
+      
+      // Ensure project items have all required fields
+      if (Array.isArray(data.projects)) {
+        data.projects = data.projects.map((proj: any) => ({
+          name: proj.name ?? null,
+          startDate: proj.startDate ?? null,
+          endDate: proj.endDate ?? null,
+          description: proj.description ?? null,
+          highlights: proj.highlights ?? [], // Optional field
+          keywords: proj.keywords ?? [],
+          url: proj.url ?? null
+        }));
+      }
+      
+      // Ensure work items have all required fields
+      if (Array.isArray(data.work)) {
+        data.work = data.work.map((w: any) => ({
+          name: w.name ?? null,
+          position: w.position ?? null,
+          url: w.url ?? null,
+          startDate: w.startDate ?? null,
+          endDate: w.endDate ?? null,
+          summary: w.summary ?? null,
+          highlights: w.highlights ?? []
+        }));
+      }
+      
+      // Ensure volunteer items have all required fields
+      if (Array.isArray(data.volunteer)) {
+        data.volunteer = data.volunteer.map((v: any) => ({
+          organization: v.organization ?? null,
+          position: v.position ?? null,
+          url: v.url ?? null,
+          startDate: v.startDate ?? null,
+          endDate: v.endDate ?? null,
+          summary: v.summary ?? null,
+          highlights: v.highlights ?? []
+        }));
+      }
+      
+      // Ensure skills items have all required fields
+      if (Array.isArray(data.skills)) {
+        data.skills = data.skills.map((s: any) => ({
+          category: s.category ?? null,
+          skills: Array.isArray(s.skills) ? s.skills : []
+        }));
+      }
+      
+      // Ensure awards items have all required fields
+      if (Array.isArray(data.awards)) {
+        data.awards = data.awards.map((a: any) => ({
+          title: a.title ?? null,
+          date: a.date ?? null,
+          awarder: a.awarder ?? null,
+          summary: a.summary ?? null
+        }));
+      }
+      
+      // Ensure certificates items have all required fields
+      if (Array.isArray(data.certificates)) {
+        data.certificates = data.certificates.map((c: any) => ({
+          name: c.name ?? null,
+          date: c.date ?? null,
+          issuer: c.issuer ?? null,
+          url: c.url ?? null,
+          description: c.description ?? null
+        }));
+      }
+      
+      // Ensure publications items have all required fields
+      if (Array.isArray(data.publications)) {
+        data.publications = data.publications.map((p: any) => ({
+          name: p.name ?? null,
+          publisher: p.publisher ?? null,
+          releaseDate: p.releaseDate ?? null,
+          url: p.url ?? null,
+          summary: p.summary ?? null
+        }));
+      }
+      
+      // Ensure languages items have all required fields
+      if (Array.isArray(data.languages)) {
+        data.languages = data.languages.map((l: any) => ({
+          language: l.language ?? null,
+          fluency: l.fluency ?? null
+        }));
+      }
+      
+      // Ensure interests items have all required fields
+      if (Array.isArray(data.interests)) {
+        data.interests = data.interests.map((i: any) => ({
+          name: i.name ?? null,
+          keywords: Array.isArray(i.keywords) ? i.keywords : []
+        }));
+      }
+      
+      // Ensure references items have all required fields
+      if (Array.isArray(data.references)) {
+        data.references = data.references.map((r: any) => ({
+          name: r.name ?? null,
+          reference: r.reference ?? null
+        }));
+      }
+      
+      return data;
+    };
+    
+    const preValidatedJson = ensureRequiredFields(normalizedJson);
+    console.log('📝 Pre-validated JSON structure');
+    
+    let validatedData;
+    try {
+      validatedData = cvDataSchema.parse(preValidatedJson);
+    } catch (validationError) {
+      if (validationError instanceof z.ZodError) {
+        console.error('❌ Zod validation failed with errors:');
+        validationError.issues.forEach((issue, index) => {
+          console.error(`  ${index + 1}. Path: ${issue.path.join('.')}, Message: ${issue.message}, Code: ${issue.code}`);
+        });
+        console.error('❌ Full normalized JSON (first 2000 chars):', JSON.stringify(preValidatedJson, null, 2).substring(0, 2000));
+      }
+      throw validationError;
+    }
     
     // Helper function to convert null to empty string
     const nullToEmpty = (value: string | null | undefined): string => value ?? '';
@@ -581,7 +914,7 @@ async function robustDocumentParser(
         startDate: nullToEmpty(e.startDate),
         endDate: nullToEmpty(e.endDate),
         score: nullToEmpty(e.score),
-        courses: e.courses || [],
+        courses: e.courses || [],  // Optional field, default to empty array
         description: e.description ?? '',
       })),
       skills: validatedData.skills.map(s => ({
@@ -593,7 +926,7 @@ async function robustDocumentParser(
         startDate: nullToEmpty(p.startDate),
         endDate: nullToEmpty(p.endDate),
         description: nullToEmpty(p.description),
-        highlights: p.highlights || [],
+        highlights: p.highlights || [],  // Optional field, default to empty array
         keywords: p.keywords || [],
         url: nullToEmpty(p.url),
       })),

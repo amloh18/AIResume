@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
 
     // Check if AI API keys are available
     if (!hasAIApiKeys()) {
-      console.log('⚠️ No AI API keys found (ChatGPT_API_KEY or PERPLEXITY_API_KEY), using fallback analysis');
+      console.log('⚠️ No AI API keys found (gemini_api_key or gemini_api_key2), using fallback analysis');
       const fallbackAnalysis = generateFallbackAnalysis();
       return NextResponse.json({
         success: true,

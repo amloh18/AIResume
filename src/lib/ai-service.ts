@@ -3,7 +3,7 @@ export interface AIRequest {
   context?: string;
   type: 'rewrite' | 'optimize' | 'suggest' | 'generate';
   section?: string;
-  provider?: 'gemini' | 'perplexity' | 'auto';
+  provider?: 'gemini' | 'auto';
 }
 
 export interface AIResponse {
@@ -26,34 +26,19 @@ export interface Job {
 
 export class AIService {
   private static geminiUrl = '/api/ai/gemini';
-  private static perplexityUrl = '/api/ai/perplexity';
 
   static async generateContent(request: AIRequest): Promise<AIResponse> {
     const { provider = 'auto', ...requestData } = request;
 
-    if (provider === 'auto') {
-      // Try Gemini first, then Perplexity as fallback
-      try {
-        const geminiResponse = await this.callGemini(requestData);
-        if (geminiResponse.success) {
-          return geminiResponse;
-        }
-        // If Gemini fails, try Perplexity
-        return await this.callPerplexity(requestData);
-      } catch (error) {
-        // If Gemini throws an error, try Perplexity
-        return await this.callPerplexity(requestData);
-      }
-    } else if (provider === 'gemini') {
+    // Always use Gemini (auto defaults to Gemini)
+    if (provider === 'auto' || provider === 'gemini') {
       return await this.callGemini(requestData);
-    } else if (provider === 'perplexity') {
-      return await this.callPerplexity(requestData);
     }
 
     return {
       success: false,
       error: 'Invalid provider specified',
-      details: 'Provider must be gemini, perplexity, or auto'
+      details: 'Provider must be gemini or auto'
     };
   }
 
@@ -96,46 +81,8 @@ export class AIService {
     }
   }
 
-  private static async callPerplexity(request: Omit<AIRequest, 'provider'>): Promise<AIResponse> {
-    try {
-      const response = await fetch(this.perplexityUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(request),
-      });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        return {
-          success: false,
-          error: data.error || 'Failed to generate content',
-          details: data.details || 'Unknown error occurred',
-          provider: 'perplexity'
-        };
-      }
-
-      return {
-        success: true,
-        content: data.content,
-        type: data.type,
-        section: data.section,
-        provider: 'perplexity'
-      };
-    } catch (error) {
-      console.error('Perplexity Service error:', error);
-      return {
-        success: false,
-        error: 'Network error',
-        details: 'Failed to connect to Perplexity service',
-        provider: 'perplexity'
-      };
-    }
-  }
-
-  static async rewriteContent(content: string, section?: string, provider?: 'gemini' | 'perplexity' | 'auto'): Promise<AIResponse> {
+  static async rewriteContent(content: string, section?: string, provider?: 'gemini' | 'auto'): Promise<AIResponse> {
     return this.generateContent({
       prompt: content,
       type: 'rewrite',
@@ -249,9 +196,9 @@ export class AIService {
   }
 
   // Provider status check
-  static async checkProviderStatus(provider: 'gemini' | 'perplexity'): Promise<{ available: boolean; error?: string }> {
+  static async checkProviderStatus(provider: 'gemini'): Promise<{ available: boolean; error?: string }> {
     try {
-      const url = provider === 'gemini' ? this.geminiUrl : this.perplexityUrl;
+      const url = this.geminiUrl;
       const response = await fetch(url, {
         method: 'POST',
         headers: {

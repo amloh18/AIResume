@@ -1,9 +1,14 @@
 /**
  * AI API Helper Utility
- * Provides unified interface for AI API calls with ChatGPT_API_KEY and PERPLEXITY_API_KEY fallback
+ * Provides unified interface for Google Gemini API calls with gemini_api_key and gemini_api_key2 fallback
+ * Uses @google/genai package with gemini-2.5-flash-lite model
+ * 
+ * This file now uses Gemini API instead of OpenAI/Perplexity
  */
 
-interface AICallOptions {
+import { GoogleGenAI } from '@google/genai';
+
+export interface AICallOptions {
   prompt: string;
   systemPrompt?: string;
   temperature?: number;
@@ -11,32 +16,44 @@ interface AICallOptions {
   model?: string;
 }
 
-interface AIResponse {
+export interface AIResponse {
   content: string;
-  provider: 'openai' | 'perplexity';
+  provider: 'gemini';
+  apiKeyUsed?: string;
 }
 
 /**
- * Get available AI API keys in priority order
+ * Get available Gemini API keys in priority order
+ * Checks both naming conventions: GEMINI_API_KEY/gemini_api_key and GEMINI_API_KEY2/gemini_api_key2
  */
-function getAIApiKeys(): Array<{ name: string; key: string; provider: 'openai' | 'perplexity' }> {
-  const keys: Array<{ name: string; key: string; provider: 'openai' | 'perplexity' }> = [];
+function getGeminiApiKeys(): Array<{ name: string; key: string }> {
+  const keys: Array<{ name: string; key: string }> = [];
   
-  // Primary: ChatGPT_API_KEY (OpenAI)
-  if (process.env.ChatGPT_API_KEY) {
+  // Primary: Check multiple naming conventions
+  const primaryKey = 
+    process.env.gemini_api_key || 
+    process.env.GEMINI_API_KEY ||
+    process.env.gemini_api_key1 ||
+    process.env.GEMINI_API_KEY1;
+  
+  if (primaryKey) {
     keys.push({
-      name: 'ChatGPT_API_KEY',
-      key: process.env.ChatGPT_API_KEY,
-      provider: 'openai'
+      name: 'gemini_api_key',
+      key: primaryKey
     });
   }
   
-  // Fallback: PERPLEXITY_API_KEY
-  if (process.env.PERPLEXITY_API_KEY) {
+  // Fallback: Check multiple naming conventions for second key
+  const fallbackKey = 
+    process.env.gemini_api_key2 || 
+    process.env.GEMINI_API_KEY2 ||
+    process.env['GEMINI_API-KEY2'] ||
+    process.env['gemini_api-key2'];
+  
+  if (fallbackKey) {
     keys.push({
-      name: 'PERPLEXITY_API_KEY',
-      key: process.env.PERPLEXITY_API_KEY,
-      provider: 'perplexity'
+      name: 'gemini_api_key2',
+      key: fallbackKey
     });
   }
   
@@ -44,136 +61,77 @@ function getAIApiKeys(): Array<{ name: string; key: string; provider: 'openai' |
 }
 
 /**
- * Call OpenAI API
+ * Call Gemini API using @google/genai package
  */
-async function callOpenAI(options: AICallOptions, apiKey: string): Promise<string> {
-  const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
-  
-  const messages = [];
-  if (options.systemPrompt) {
-    messages.push({
-      role: 'system',
-      content: options.systemPrompt
+async function callGemini(options: AICallOptions, apiKey: string): Promise<string> {
+  try {
+    const genAI = new GoogleGenAI({ apiKey });
+    
+    // Use gemini-2.5-flash-lite as default for speed and cost efficiency
+    const modelName = options.model || 'gemini-2.5-flash-lite';
+    
+    // Combine system prompt and user prompt
+    let fullPrompt = options.prompt;
+    if (options.systemPrompt) {
+      fullPrompt = `${options.systemPrompt}\n\n${options.prompt}`;
+    }
+    
+    // Generate content using the new SDK API
+    const result = await genAI.models.generateContent({
+      model: modelName,
+      contents: [{ role: 'user', parts: [{ text: fullPrompt }] }],
+      config: {
+        temperature: options.temperature || 0.7,
+        maxOutputTokens: options.maxTokens || 2048,
+      }
     });
+    
+    const text = result.text;
+    
+    if (!text) {
+      throw new Error('Gemini API returned empty response');
+    }
+    
+    return text;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Gemini API error: ${errorMessage}`);
   }
-  messages.push({
-    role: 'user',
-    content: options.prompt
-  });
-  
-  const response = await fetch(OPENAI_API_URL, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: options.model || 'gpt-4o-mini',
-      messages,
-      temperature: options.temperature || 0.7,
-      max_tokens: options.maxTokens || 2048,
-    }),
-  });
-  
-  if (!response.ok) {
-    const errorData = await response.text();
-    throw new Error(`OpenAI API error: ${response.status} - ${errorData}`);
-  }
-  
-  const data = await response.json();
-  
-  if (!data.choices || data.choices.length === 0 || !data.choices[0].message?.content) {
-    throw new Error('OpenAI API returned empty response');
-  }
-  
-  return data.choices[0].message.content;
 }
 
 /**
- * Call Perplexity API
- */
-async function callPerplexity(options: AICallOptions, apiKey: string): Promise<string> {
-  const PERPLEXITY_API_URL = 'https://api.perplexity.ai/chat/completions';
-  
-  const messages = [];
-  if (options.systemPrompt) {
-    messages.push({
-      role: 'system',
-      content: options.systemPrompt
-    });
-  }
-  messages.push({
-    role: 'user',
-    content: options.prompt
-  });
-  
-  const response = await fetch(PERPLEXITY_API_URL, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: options.model || 'sonar-pro-chat',
-      messages,
-      max_tokens: options.maxTokens || 2048,
-      temperature: options.temperature || 0.7,
-      top_p: 0.95,
-      stream: false
-    }),
-  });
-  
-  if (!response.ok) {
-    const errorData = await response.text();
-    throw new Error(`Perplexity API error: ${response.status} - ${errorData}`);
-  }
-  
-  const data = await response.json();
-  
-  if (!data.choices || data.choices.length === 0 || !data.choices[0].message?.content) {
-    throw new Error('Perplexity API returned empty response');
-  }
-  
-  return data.choices[0].message.content;
-}
-
-/**
- * Call AI API with automatic fallback
- * Tries ChatGPT_API_KEY first, then PERPLEXITY_API_KEY
+ * Call Gemini API with automatic fallback
+ * Tries gemini_api_key first, then gemini_api_key2
  */
 export async function callAIWithFallback(options: AICallOptions): Promise<AIResponse> {
-  const apiKeys = getAIApiKeys();
+  const apiKeys = getGeminiApiKeys();
   
   if (apiKeys.length === 0) {
-    throw new Error('No AI API keys configured. Please set ChatGPT_API_KEY or PERPLEXITY_API_KEY');
+    throw new Error('No Gemini API keys configured. Please set gemini_api_key or gemini_api_key2');
   }
   
   let lastError: Error | null = null;
   
-  for (const { name, key, provider } of apiKeys) {
+  for (const { name, key } of apiKeys) {
     try {
-      console.log(`🔑 Attempting AI API call with ${name} (${provider})...`);
+      console.log(`🔑 Attempting Gemini API call with ${name}...`);
       
-      let content: string;
-      if (provider === 'openai') {
-        content = await callOpenAI(options, key);
-      } else {
-        content = await callPerplexity(options, key);
-      }
+      const content = await callGemini(options, key);
       
-      console.log(`✅ AI API call successful with ${name} (${provider})`);
+      console.log(`✅ Gemini API call successful with ${name}`);
       return {
         content,
-        provider
+        provider: 'gemini',
+        apiKeyUsed: name
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error(`❌ ${name} (${provider}) failed:`, errorMessage);
+      console.error(`❌ ${name} failed:`, errorMessage);
       lastError = error instanceof Error ? error : new Error(String(error));
       
       // If this is the last key, throw the error
       if (apiKeys.indexOf(apiKeys.find(k => k.name === name)!) === apiKeys.length - 1) {
-        throw new Error(`All AI API keys failed. Last error (${name}): ${errorMessage}`);
+        throw new Error(`All Gemini API keys failed. Last error (${name}): ${errorMessage}`);
       }
       
       // Otherwise, continue to next key
@@ -181,20 +139,20 @@ export async function callAIWithFallback(options: AICallOptions): Promise<AIResp
     }
   }
   
-  throw lastError || new Error('Failed to call AI API');
+  throw lastError || new Error('Failed to call Gemini API');
 }
 
 /**
- * Check if AI API keys are available
+ * Check if Gemini API keys are available
  */
 export function hasAIApiKeys(): boolean {
-  return getAIApiKeys().length > 0;
+  return getGeminiApiKeys().length > 0;
 }
 
 /**
  * Get the name of the available API keys (for logging)
  */
 export function getAvailableAIKeys(): string[] {
-  return getAIApiKeys().map(k => k.name);
+  return getGeminiApiKeys().map(k => k.name);
 }
 
