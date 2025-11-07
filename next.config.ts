@@ -299,6 +299,8 @@ const nextConfig: NextConfig = {
     'next-auth', 
     'openid-client', 
     'pdf2pic',
+    'pdf-parse',
+    'pdfjs-dist',
     // Exclude Sentry from Edge Runtime
     '@sentry/nextjs',
     '@sentry/node',

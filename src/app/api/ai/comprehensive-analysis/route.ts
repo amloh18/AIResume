@@ -111,7 +111,7 @@ Guidelines:
     // Check if AI API keys are available
     if (!hasAIApiKeys()) {
       return NextResponse.json(
-        { success: false, error: 'AI API keys not configured (ChatGPT_API_KEY or PERPLEXITY_API_KEY)' },
+        { success: false, error: 'AI API keys not configured (gemini_api_key or gemini_api_key2)' },
         { status: 500 }
       );
     }

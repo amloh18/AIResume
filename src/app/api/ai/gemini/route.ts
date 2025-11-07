@@ -1,7 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { GoogleGenAI } from '@google/genai';
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyAnOiNIKp0jVXQeFOYo2Z26Wza8kijf6SA';
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent';
+// Get API key with fallback
+function getGeminiApiKey(): string | null {
+  return (
+    process.env.gemini_api_key || 
+    process.env.GEMINI_API_KEY ||
+    process.env.gemini_api_key1 ||
+    process.env.GEMINI_API_KEY1 ||
+    null
+  );
+}
+
+function getGeminiApiKey2(): string | null {
+  return (
+    process.env.gemini_api_key2 || 
+    process.env.GEMINI_API_KEY2 ||
+    process.env['GEMINI_API-KEY2'] ||
+    process.env['gemini_api-key2'] ||
+    null
+  );
+}
 
 interface GeminiRequest {
   prompt: string;
@@ -98,83 +117,74 @@ Please provide the generated content:`;
         return NextResponse.json({ error: 'Invalid type specified' }, { status: 400 });
     }
 
-    // Prepare the request to Gemini API
-    const geminiRequest = {
-      contents: [
-        {
-          parts: [
-            {
-              text: `${systemPrompt}\n\n${userPrompt}`
-            }
-          ]
-        }
-      ],
-      generationConfig: {
-        temperature: 0.7,
-        topK: 40,
-        topP: 0.95,
-        maxOutputTokens: 2048,
-      },
-      safetySettings: [
-        {
-          category: "HARM_CATEGORY_HARASSMENT",
-          threshold: "BLOCK_MEDIUM_AND_ABOVE"
-        },
-        {
-          category: "HARM_CATEGORY_HATE_SPEECH",
-          threshold: "BLOCK_MEDIUM_AND_ABOVE"
-        },
-        {
-          category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-          threshold: "BLOCK_MEDIUM_AND_ABOVE"
-        },
-        {
-          category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-          threshold: "BLOCK_MEDIUM_AND_ABOVE"
-        }
-      ]
-    };
-
-    // Make request to Gemini API
-    const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(geminiRequest),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.text();
-      console.error('Gemini API error:', errorData);
-      
-      // Check if it's a quota error
-      if (response.status === 429) {
-        return NextResponse.json({ 
-          error: 'API quota exceeded',
-          details: 'The AI service has reached its usage limits. Please try again later or upgrade your plan.',
-          retryAfter: '27s'
-        }, { status: 429 });
-      }
-      
+    // Use Gemini API with fallback
+    const apiKey = getGeminiApiKey() || getGeminiApiKey2();
+    
+    if (!apiKey) {
       return NextResponse.json({ 
-        error: 'AI service temporarily unavailable',
-        details: 'Failed to generate content',
-        status: response.status
-      }, { status: 503 });
+        error: 'No Gemini API key configured',
+        details: 'Please set gemini_api_key or gemini_api_key2'
+      }, { status: 500 });
     }
 
-    const data: GeminiResponse = await response.json();
+    let lastError: Error | null = null;
+    const apiKeys = [
+      { name: 'gemini_api_key', key: getGeminiApiKey() },
+      { name: 'gemini_api_key2', key: getGeminiApiKey2() }
+    ].filter(k => k.key);
 
-    // Extract the generated text
-    if (!data.candidates || data.candidates.length === 0) {
+    let generatedText: string | null = null;
+
+    for (const { name, key } of apiKeys) {
+      try {
+        console.log(`🔑 Attempting Gemini API call with ${name}...`);
+        
+        const genAI = new GoogleGenAI({ apiKey: key! });
+        // Use gemini-2.5-flash-lite for speed and cost efficiency
+        const fullPrompt = `${systemPrompt}\n\n${userPrompt}`;
+        const result = await genAI.models.generateContent({
+          model: 'gemini-2.5-flash-lite',
+          contents: fullPrompt
+        });
+        generatedText = result.text || '';
+        
+        if (generatedText) {
+          console.log(`✅ Gemini API call successful with ${name}`);
+          break;
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error(`❌ ${name} failed:`, errorMessage);
+        lastError = error instanceof Error ? error : new Error(String(error));
+        
+        // If this is the last key, continue to error handling
+        if (apiKeys.indexOf(apiKeys.find(k => k.name === name)!) === apiKeys.length - 1) {
+          // Check if it's a quota error
+          if (errorMessage.includes('429') || errorMessage.includes('quota')) {
+            return NextResponse.json({ 
+              error: 'API quota exceeded',
+              details: 'The AI service has reached its usage limits. Please try again later or upgrade your plan.',
+              retryAfter: '27s'
+            }, { status: 429 });
+          }
+          
+          return NextResponse.json({ 
+            error: 'AI service temporarily unavailable',
+            details: `Failed to generate content: ${errorMessage}`,
+            status: 503
+          }, { status: 503 });
+        }
+        
+        console.log(`⏭️  Continuing to next API key...`);
+      }
+    }
+
+    if (!generatedText) {
       return NextResponse.json({ 
         error: 'No content generated',
         details: 'AI model returned empty response'
       }, { status: 500 });
     }
-
-    const generatedText = data.candidates[0].content.parts[0].text;
 
     // Log successful request (without sensitive data)
     console.log(`AI request completed - Type: ${type}, Section: ${section || 'general'}`);

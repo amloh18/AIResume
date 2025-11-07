@@ -115,10 +115,11 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
     const newWork = {
       name: '',
       position: '',
+      url: '',
       startDate: '',
       endDate: '',
       summary: '',
-      highlights: ['']
+      highlights: []
     };
     updateCVData('work', [...state.cvData.work, newWork]);
   };
@@ -137,13 +138,14 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
   const addEducation = () => {
     const newEducation = {
       institution: '',
-      studyType: '',
+      url: '',
       area: '',
+      studyType: '',
       startDate: '',
       endDate: '',
-      gpa: '',
-      courses: [],
+      score: '',
       description: ''
+      // courses is optional - only include if user adds courses
     };
     updateCVData('education', [...state.cvData.education, newEducation]);
   };
@@ -526,20 +528,32 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
                       placeholder="May 2023"
                     />
                   </div>
+                  
+                  <div className="md:col-span-2">
+                    <label className="block text-white/80 text-sm font-medium mb-2">Company URL</label>
+                    <input
+                      type="url"
+                      value={work.url || ''}
+                      onChange={(e) => updateWorkExperience(index, 'url', e.target.value)}
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                      placeholder="https://company.com"
+                    />
+                  </div>
                 </div>
                 
                 <div className="mt-4">
                   <div className="flex items-center justify-between mb-2">
-                    <label className="block text-white/80 text-sm font-medium">Description</label>
+                    <label className="block text-white/80 text-sm font-medium">Job Description</label>
                     <ToolbarWrapper
                       showAIButton={true}
                       fieldType="experience"
-                      onAIGenerate={() => handleAIGenerate('experience', `work-experience-${index}`, work.summary || '', index)}
+                      onAIGenerate={() => handleAIGenerate('experience', `work-experience-${index}`, state.cvData.work[index]?.summary || '', index)}
                       isGenerating={generatingAI[`work-experience-${index}`] || false}
                     />
                   </div>
                   <WYSIWYGEditor
-                    value={work.summary || ''}
+                    key={`work-summary-${index}-${state.cvData.work[index]?.summary?.substring(0, 20) || ''}`}
+                    value={state.cvData.work[index]?.summary || ''}
                     onChange={(value) => updateWorkExperience(index, 'summary', value)}
                     rows={4}
                     placeholder="Describe your key responsibilities and achievements..."
@@ -575,39 +589,98 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
                   </button>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">Degree</label>
-                    <input
-                      type="text"
-                      value={edu.studyType || ''}
-                      onChange={(e) => updateEducation(index, 'studyType', e.target.value)}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="M.Sc. Computer Science"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">University</label>
+                    <label className="block text-white/80 text-sm font-medium mb-2">Institution</label>
                     <input
                       type="text"
                       value={edu.institution || ''}
                       onChange={(e) => updateEducation(index, 'institution', e.target.value)}
                       className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="University Name"
+                      placeholder="University of California"
                     />
                   </div>
-                  
                   <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">Graduation Year</label>
+                    <label className="block text-white/80 text-sm font-medium mb-2">Field of Study</label>
+                    <input
+                      type="text"
+                      value={edu.area || ''}
+                      onChange={(e) => updateEducation(index, 'area', e.target.value)}
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                      placeholder="Computer Science"
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                  <div>
+                    <label className="block text-white/80 text-sm font-medium mb-2">Degree Type</label>
+                    <input
+                      type="text"
+                      value={edu.studyType || ''}
+                      onChange={(e) => updateEducation(index, 'studyType', e.target.value)}
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                      placeholder="Bachelor's Degree"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white/80 text-sm font-medium mb-2">Start Date</label>
+                    <input
+                      type="text"
+                      value={edu.startDate || ''}
+                      onChange={(e) => updateEducation(index, 'startDate', e.target.value)}
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                      placeholder="Sep 2016"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white/80 text-sm font-medium mb-2">End Date</label>
                     <input
                       type="text"
                       value={edu.endDate || ''}
                       onChange={(e) => updateEducation(index, 'endDate', e.target.value)}
                       className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="2017"
+                      placeholder="May 2020"
                     />
                   </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <label className="block text-white/80 text-sm font-medium mb-2">Score/GPA</label>
+                    <input
+                      type="text"
+                      value={edu.score || ''}
+                      onChange={(e) => updateEducation(index, 'score', e.target.value)}
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                      placeholder="3.8/4.0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-white/80 text-sm font-medium mb-2">Institution URL</label>
+                    <input
+                      type="url"
+                      value={edu.url || ''}
+                      onChange={(e) => updateEducation(index, 'url', e.target.value)}
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                      placeholder="https://university.edu"
+                    />
+                  </div>
+                </div>
+                
+                <div className="mt-4">
+                  <label className="block text-white/80 text-sm font-medium mb-2">Relevant Courses</label>
+                  <input
+                    type="text"
+                    value={edu.courses?.join(', ') || ''}
+                    onChange={(e) => {
+                      const courses = e.target.value.split(',').map(c => c.trim()).filter(c => c);
+                      updateEducation(index, 'courses', courses);
+                    }}
+                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                    placeholder="Data Structures, Algorithms, Database Systems"
+                  />
+                  <p className="text-white/60 text-sm mt-1">Separate courses with commas</p>
                 </div>
                 
                 <div className="mt-4">
@@ -739,7 +812,52 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
                   </div>
                   
                   <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">Technologies</label>
+                    <label className="block text-white/80 text-sm font-medium mb-2">Project URL</label>
+                    <input
+                      type="url"
+                      value={project.url || ''}
+                      onChange={(e) => {
+                        const updatedProjects = [...(state.cvData.projects || [])];
+                        updatedProjects[index] = { ...updatedProjects[index], url: e.target.value };
+                        updateCVData('projects', updatedProjects);
+                      }}
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                      placeholder="https://github.com/username/project"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-white/80 text-sm font-medium mb-2">Start Date</label>
+                    <input
+                      type="text"
+                      value={project.startDate || ''}
+                      onChange={(e) => {
+                        const updatedProjects = [...(state.cvData.projects || [])];
+                        updatedProjects[index] = { ...updatedProjects[index], startDate: e.target.value };
+                        updateCVData('projects', updatedProjects);
+                      }}
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                      placeholder="Jan 2022"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-white/80 text-sm font-medium mb-2">End Date</label>
+                    <input
+                      type="text"
+                      value={project.endDate || ''}
+                      onChange={(e) => {
+                        const updatedProjects = [...(state.cvData.projects || [])];
+                        updatedProjects[index] = { ...updatedProjects[index], endDate: e.target.value };
+                        updateCVData('projects', updatedProjects);
+                      }}
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                      placeholder="Dec 2022"
+                    />
+                  </div>
+                  
+                  <div className="md:col-span-2">
+                    <label className="block text-white/80 text-sm font-medium mb-2">Technologies/Keywords</label>
                     <input
                       type="text"
                       value={project.keywords?.join(', ') || ''}
@@ -753,6 +871,23 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
                       placeholder="React, Node.js, MongoDB"
                     />
                   </div>
+                </div>
+                
+                <div className="mt-4">
+                  <label className="block text-white/80 text-sm font-medium mb-2">Highlights</label>
+                  <textarea
+                    value={project.highlights?.join('\n') || ''}
+                    onChange={(e) => {
+                      const highlights = e.target.value.split('\n').filter(h => h.trim());
+                      const updatedProjects = [...(state.cvData.projects || [])];
+                      updatedProjects[index] = { ...updatedProjects[index], highlights };
+                      updateCVData('projects', updatedProjects);
+                    }}
+                    rows={3}
+                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors resize-none"
+                    placeholder="Key achievement 1&#10;Key achievement 2&#10;Key achievement 3"
+                  />
+                  <p className="text-white/60 text-sm mt-1">Enter each highlight on a new line</p>
                 </div>
                 
                 <div className="mt-4">
@@ -778,9 +913,12 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
               onClick={() => {
                 const newProject = {
                   name: '',
+                  startDate: '',
+                  endDate: '',
                   description: '',
                   keywords: [],
                   url: ''
+                  // highlights is optional - only include if user adds highlights
                 };
                 updateCVData('projects', [...(state.cvData.projects || []), newProject]);
               }}
@@ -840,6 +978,21 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
                       placeholder="2023"
                     />
                   </div>
+                  
+                  <div className="md:col-span-2">
+                    <label className="block text-white/80 text-sm font-medium mb-2">Awarder</label>
+                    <input
+                      type="text"
+                      value={award.awarder || ''}
+                      onChange={(e) => {
+                        const updatedAwards = [...(state.cvData.awards || [])];
+                        updatedAwards[index] = { ...updatedAwards[index], awarder: e.target.value };
+                        updateCVData('awards', updatedAwards);
+                      }}
+                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                      placeholder="Company Name or Organization"
+                    />
+                  </div>
                 </div>
                 
                 <div className="mt-4">
@@ -866,6 +1019,7 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
                 const newAward = {
                   title: '',
                   date: '',
+                  awarder: '',
                   summary: ''
                 };
                 updateCVData('awards', [...(state.cvData.awards || []), newAward]);
