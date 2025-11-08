@@ -15,6 +15,31 @@ import {
 } from 'recharts';
 import { TrendingUp, Target, CheckCircle, RefreshCw } from 'lucide-react';
 
+// Helper function to convert paragraphs to bullet points
+const convertToBulletPoints = (text: string): React.ReactNode => {
+  if (!text) return null;
+  
+  // Split by common sentence endings and newlines
+  const sentences = text
+    .split(/(?<=[.!?])\s+|(?<=\n)/)
+    .map(s => s.trim())
+    .filter(s => s.length > 0);
+  
+  // If text is already short or has few sentences, return as is
+  if (sentences.length <= 1) {
+    return <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">{text}</p>;
+  }
+  
+  // Convert to bullet points
+  return (
+    <ul className="list-disc list-inside space-y-1 text-gray-600 dark:text-gray-400 text-sm">
+      {sentences.map((sentence, index) => (
+        <li key={index} className="leading-relaxed">{sentence}</li>
+      ))}
+    </ul>
+  );
+};
+
 interface CareerPathStep {
   title: string;
   reasoning: string;
@@ -337,7 +362,7 @@ const CareerTrajectoryGraph: React.FC<CareerTrajectoryGraphProps> = ({
       </div>
 
       {/* Career Path Steps */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
         {[
           { ...careerPath.step1, step: 1, icon: Target },
           { ...careerPath.step2, step: 2, icon: TrendingUp },
@@ -360,9 +385,7 @@ const CareerTrajectoryGraph: React.FC<CareerTrajectoryGraphProps> = ({
                   <span className="text-xs font-semibold text-[#80FF00]">STEP {step}</span>
                 </div>
                 <h4 className="text-gray-900 dark:text-white font-semibold mb-2 text-sm">{title}</h4>
-                <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
-                  {reasoning}
-                </p>
+                {convertToBulletPoints(reasoning)}
               </div>
             </div>
           </motion.div>

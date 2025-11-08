@@ -127,6 +127,30 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
     
     if (filteredData.length === 0) return null;
 
+    // Calculate domain to center current day
+    const today = new Date().toISOString().split('T')[0];
+    const dataMin = filteredData[0]?.date || today;
+    const dataMax = filteredData[filteredData.length - 1]?.date || today;
+    
+    // Calculate the range to center today
+    const todayDate = new Date(today);
+    const minDate = new Date(dataMin);
+    const maxDate = new Date(dataMax);
+    
+    // Find the distance from today to the edges
+    const daysBeforeToday = Math.floor((todayDate.getTime() - minDate.getTime()) / (24 * 60 * 60 * 1000));
+    const daysAfterToday = Math.floor((maxDate.getTime() - todayDate.getTime()) / (24 * 60 * 60 * 1000));
+    
+    // Extend domain to center today (use the larger distance on both sides)
+    const maxDistance = Math.max(daysBeforeToday, daysAfterToday);
+    const domainStart = new Date(todayDate);
+    domainStart.setDate(domainStart.getDate() - maxDistance);
+    const domainEnd = new Date(todayDate);
+    domainEnd.setDate(domainEnd.getDate() + maxDistance);
+    
+    const domainMin = domainStart.toISOString().split('T')[0];
+    const domainMax = domainEnd.toISOString().split('T')[0];
+
     return (
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={filteredData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
@@ -149,12 +173,12 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
             dataKey="date" 
             stroke="#6B7280"
             fontSize={12}
-            interval={0}
+            interval={timeRange === '90d' ? 4 : timeRange === '30d' ? 1 : 0}
             angle={timeRange === '90d' ? -45 : 0}
             textAnchor={timeRange === '90d' ? 'end' : 'middle'}
             height={timeRange === '90d' ? 60 : 30}
             tickFormatter={(value) => formatDate(value)}
-            domain={['dataMin', 'dataMax']}
+            domain={[domainMin, domainMax]}
           />
           <YAxis 
             stroke="#6B7280"
@@ -225,31 +249,31 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
   const totals = getTotalStats();
 
   return (
-    <div className="glass-widget-premium rounded-xl p-6 h-full flex flex-col">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-400/20 to-blue-500/20 rounded-xl flex items-center justify-center">
-            <TrendingUp className="h-5 w-5 text-blue-400" />
+    <div className="glass-widget-premium rounded-xl p-4 sm:p-6 h-full flex flex-col">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4 md:mb-6">
+        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-400/20 to-blue-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+            <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-blue-400" />
           </div>
-          <div>
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white">Progress Tracking</h2>
-            <p className="text-gray-600 dark:text-white/60 text-sm">Track your application progress over time</p>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white truncate">Progress Tracking</h2>
+            <p className="text-gray-600 dark:text-white/60 text-xs sm:text-sm truncate">Track your application progress over time</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 w-full md:w-auto">
           {/* Filter Buttons */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide pb-1 sm:pb-0">
             {[
               { key: 'all', label: 'All', color: 'bg-gray-500' },
               { key: 'jobs', label: 'Jobs', color: 'bg-blue-500' },
               { key: 'cvs', label: 'CVs', color: 'bg-red-500' },
-              { key: 'coverLetters', label: 'Cover Letters', color: 'bg-green-500' },
+              { key: 'coverLetters', label: 'Cover Letters', shortLabel: 'CL', color: 'bg-green-500' },
             ].map((item) => (
               <motion.button
                 key={item.key}
                 onClick={() => setFilter(item.key as any)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors h-8 flex items-center justify-center whitespace-nowrap ${
+                className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors h-8 flex items-center justify-center whitespace-nowrap flex-shrink-0 ${
                   filter === item.key
                     ? `${item.color} text-white shadow-lg`
                     : 'bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 text-gray-600 dark:text-white/60 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-[#2a3a1f]'
@@ -257,7 +281,8 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
-                {item.label}
+                <span className="hidden sm:inline">{item.label}</span>
+                <span className="sm:hidden">{item.shortLabel || item.label}</span>
               </motion.button>
             ))}
           </div>
@@ -271,7 +296,7 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
                 setTimeRange(value as '7d' | '30d' | '90d');
               }
             }}
-            className="px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white rounded-lg text-sm focus:ring-2 focus:ring-blue-500/50"
+            className="px-2 sm:px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-blue-500/50 flex-shrink-0 w-full sm:w-auto"
           >
             <option value="7d">Last 7 days</option>
             <option value="30d">Last 30 days</option>
@@ -281,20 +306,21 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
       </div>
 
       {/* Chart */}
-      <div className="h-72 bg-white/5 rounded-lg p-4 relative" style={{ minHeight: '288px', maxHeight: '288px' }}>
+      <div className="h-64 sm:h-72 bg-white/5 rounded-lg p-2 sm:p-4 relative" style={{ minHeight: '256px', maxHeight: '288px' }}>
         {/* Labels in upper right corner */}
-        <div className="absolute top-4 right-4 z-10 flex items-center gap-4 text-xs font-medium">
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-full bg-[#EF4444]"></div>
-            <span className="text-gray-700 dark:text-gray-300">CVs</span>
+        <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-10 flex flex-wrap items-center gap-2 sm:gap-4 text-[10px] sm:text-xs font-medium max-w-[calc(100%-1rem)] sm:max-w-none">
+          <div className="flex items-center gap-1 sm:gap-1.5">
+            <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-[#EF4444] flex-shrink-0"></div>
+            <span className="text-gray-700 dark:text-gray-300 whitespace-nowrap">CVs</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-full bg-[#10B981]"></div>
-            <span className="text-gray-700 dark:text-gray-300">Cover Letters</span>
+          <div className="flex items-center gap-1 sm:gap-1.5">
+            <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-[#10B981] flex-shrink-0"></div>
+            <span className="text-gray-700 dark:text-gray-300 whitespace-nowrap hidden sm:inline">Cover Letters</span>
+            <span className="text-gray-700 dark:text-gray-300 whitespace-nowrap sm:hidden">CL</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-full bg-[#3B82F6]"></div>
-            <span className="text-gray-700 dark:text-gray-300">Jobs</span>
+          <div className="flex items-center gap-1 sm:gap-1.5">
+            <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-[#3B82F6] flex-shrink-0"></div>
+            <span className="text-gray-700 dark:text-gray-300 whitespace-nowrap">Jobs</span>
           </div>
         </div>
         {loading ? (

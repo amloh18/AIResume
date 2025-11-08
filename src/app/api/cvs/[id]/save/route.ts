@@ -252,6 +252,33 @@ export async function POST(
 
     await cv.save();
 
+    // Save CV with template to S3 as backup
+    try {
+      const { CVS3Service } = await import('@/lib/services/cvS3Service');
+      const s3Url = await CVS3Service.saveCVToS3(
+        cv._id.toString(),
+        userId,
+        cv.cvData,
+        cv.templateData || template
+      );
+      
+      if (s3Url) {
+        // Store S3 URL in metadata
+        if (!cv.metadata) {
+          cv.metadata = {} as any;
+        }
+        (cv.metadata as any).s3BackupUrl = s3Url;
+        (cv.metadata as any).s3BackupSavedAt = new Date();
+        await cv.save();
+        console.log('✅ CV saved to S3:', s3Url);
+      }
+    } catch (s3Error) {
+      console.warn('⚠️ Failed to save CV to S3 (non-critical):', s3Error);
+      // Continue - S3 backup is non-critical
+    }
+
+    // Note: Thumbnail generation moved to studio exit for better performance
+
     const cvResponse = cv.toJSON();
 
     return NextResponse.json({

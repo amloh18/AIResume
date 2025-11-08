@@ -121,7 +121,7 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
             onClick={onClose}
           />
 
@@ -131,10 +131,10 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className={`relative w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-white rounded-2xl shadow-2xl ${className}`}
+            className={`relative w-[90%] max-w-4xl max-h-[85vh] overflow-hidden bg-white rounded-2xl shadow-2xl flex flex-col ${className}`}
           >
             {/* Header */}
-            <div className="relative p-6 border-b border-gray-200">
+            <div className="relative p-6 border-b border-gray-200 flex-shrink-0">
               <button
                 onClick={onClose}
                 className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 transition-colors"
@@ -160,7 +160,7 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({
             </div>
 
             {/* Content */}
-            <div className="p-6">
+            <div className="p-6 flex-1 overflow-y-auto min-h-0">
               {/* Feature Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
                 {features.map((feature, index) => (

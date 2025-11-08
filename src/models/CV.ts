@@ -6,6 +6,8 @@ export interface ICV extends Document {
   title: string;
   cvData: UnifiedCVDataStructure; // Using unified schema
   templateId: mongoose.Types.ObjectId; // Reference to Template collection
+  templateName?: string; // Template name for quick access
+  templateData?: any; // Full template data stored for S3 backup and faster access
   journeyId?: mongoose.Types.ObjectId; // Optional link to an application journey
   status: 'draft' | 'published' | 'archived';
   version: number;
@@ -45,6 +47,14 @@ const cvSchema = new Schema<ICV>({
     type: Schema.Types.Mixed, // Allow both ObjectId and String for hardcoded templates
     ref: 'Template',
     required: true
+  },
+  templateName: {
+    type: String,
+    required: false
+  },
+  templateData: {
+    type: Schema.Types.Mixed, // Store full template data for S3 backup and faster access
+    required: false
   },
   journeyId: {
     type: Schema.Types.ObjectId,

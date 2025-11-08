@@ -19,6 +19,7 @@ import { getStudioLayoutClasses } from '@/lib/utils/themeUtils';
 import { useSession } from 'next-auth/react';
 import UserAvatarDropdown from '@/components/ui/UserAvatarDropdown';
 import DownloadModal, { DocumentType, FormatType } from '@/components/ui/DownloadModal';
+import NotificationCenter from '@/components/notifications/NotificationCenter';
 
 
 interface FloatingStudioLayoutProps {
@@ -91,6 +92,10 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
     if (isNavigating) return;
     
     setIsNavigating(true);
+    
+    // Trigger thumbnail generation before navigation (if callback provided)
+    // This is handled by CVStudio's exit handlers, but we can also trigger it here
+    // The actual generation will be handled by the studio component's cleanup
     
     try {
       console.log('🏠 Navigating to application tracker...');
@@ -208,6 +213,9 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
 
               {/* Right Section - Save Button + Notifications + User */}
               <div className="flex items-center gap-2">
+                {/* Notification Center */}
+                <NotificationCenter />
+                
                 {/* Save Button */}
                 <motion.button
                   onClick={onSave}
@@ -340,6 +348,9 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
 
               {/* Right Section */}
               <div className="flex items-center gap-3">
+                {/* Notification Center */}
+                <NotificationCenter />
+                
                 {/* Save Button */}
                 {onSave && (
                   <button
@@ -377,12 +388,12 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
                   {onDownload && (
                   <motion.button
                     onClick={() => setDownloadModalOpen(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#80FF00] hover:bg-[#70e600] text-black rounded-md transition-colors shadow-lg shadow-[#80FF00]/30 hover:shadow-[#80FF00]/50"
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                     >
-                      <Download size={16} />
-                    <span className="hidden sm:inline">Download</span>
+                      <Download size={14} />
+                    <span className="hidden sm:inline text-xs font-medium">Download</span>
                             </motion.button>
                 )}
 
@@ -457,7 +468,7 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            <div className="absolute inset-0 bg-black/50" onClick={() => setMobileMenuOpen(false)} />
+            <div className="absolute inset-0 bg-black/70" onClick={() => setMobileMenuOpen(false)} />
             <motion.div
               className="absolute top-16 left-4 right-4 bg-white/95 dark:bg-[#1a230f] border border-gray-200/50 dark:border-white/10 rounded-2xl shadow-xl p-6"
               initial={{ opacity: 0, y: -20 }}
@@ -506,7 +517,7 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
                     className="w-full flex items-center gap-3 px-4 py-3 text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                     title="Download Documents"
                     >
-                    <Download size={18} className="text-red-500" />
+                    <Download size={18} className="text-[#80FF00]" />
                     <span>Download</span>
                   </button>
                 )}

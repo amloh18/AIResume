@@ -183,7 +183,7 @@ const Modal: React.FC<ModalProps> = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+          className="absolute inset-0 bg-black/70 backdrop-blur-sm"
           onClick={onClose}
         />
         
@@ -297,7 +297,7 @@ const CleanUnlinkedButton: React.FC<CleanUnlinkedButtonProps> = ({
         disabled={items.length === 0}
       >
         <Trash size={16} />
-        Clean Unlinked
+        <span className="hidden md:inline">Clean Unlinked</span>
       </motion.button>
 
       {/* Clean Modal */}
@@ -307,7 +307,7 @@ const CleanUnlinkedButton: React.FC<CleanUnlinkedButtonProps> = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50"
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
@@ -839,9 +839,10 @@ const Canvas: React.FC = () => {
             thumbnail: cv.metadata?.thumbnailUrl || '',
             description: cv.description || '',
             cvData: cv.cvData || null, // Include CV data for preview
-            template: cv.template || (cv.templateId ? { _id: cv.templateId, name: cv.templateName || 'Default Template' } : null), // Include template data for preview - handle both populated and ID formats
+            template: cv.template || cv.templateData || (cv.templateId ? { _id: cv.templateId, name: cv.templateName || 'Default Template' } : null), // Include template data for preview - prioritize saved templateData
             templateId: cv.templateId,
             templateName: cv.templateName,
+            templateData: cv.templateData, // Include saved template data
             journeyId: cv.journeyId,
             completionPercentage: calculateCompletionPercentage(cv),
             isMaster: cv.metadata?.isMaster || cv.isMaster || false, // Include master flag - handle both formats
@@ -2012,7 +2013,7 @@ const Canvas: React.FC = () => {
       {/* CV Grid */}
       <div className="space-y-6">
 
-        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+        <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5">
           {/* Master CV Card - Always First */}
           {(() => {
             console.log('🔍 Canvas - Rendering CV Grid:', {
@@ -2248,7 +2249,7 @@ const Canvas: React.FC = () => {
             <div className="space-y-6">
 
               {filteredAndSortedCoverLetters.length > 0 ? (
-                <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+                <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5">
                   {filteredAndSortedCoverLetters.map((coverLetter) => (
                     <CoverLetterCardOverlay
                       key={coverLetter.id}

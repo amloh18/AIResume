@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Shield, Users, Settings, LogOut, ArrowLeft, BarChart3, Mail, DollarSign, MessageSquare, Activity, Crown, FileText, LayoutTemplate, ChevronDown, User, Sparkles } from 'lucide-react';
+import { Shield, Users, Settings, LogOut, ArrowLeft, BarChart3, Mail, DollarSign, MessageSquare, Activity, Crown, FileText, LayoutTemplate, ChevronDown, User, Sparkles, Bell } from 'lucide-react';
 import Link from 'next/link';
 import RecentActivityPanel from '@/components/admin/RecentActivityPanel';
 
@@ -19,6 +19,7 @@ import CVJourneyKPIs from '@/components/admin/CVJourneyKPIs';
 import TemplateManager from '@/components/admin/TemplateManager';
 import UserManagement from '@/components/admin/UserManagement';
 import EmailCampaignManager from '@/components/admin/EmailCampaignManager';
+import NotificationManager from '@/components/admin/NotificationManager';
 import SystemHealth from '@/components/admin/SystemHealth';
 import PricingPlanManager from '@/components/admin/PricingPlanManager';
 import TestimonialManager from '@/components/admin/TestimonialManager';
@@ -336,6 +337,10 @@ export default function AdminDashboard() {
                     <Mail className="h-4 w-4 mr-2" />
                     Campaigns
                   </TabsTrigger>
+                  <TabsTrigger value="notifications" className="data-[state=active]:bg-gray-700 data-[state=active]:text-white text-gray-300 rounded-none px-6 py-3">
+                    <Bell className="h-4 w-4 mr-2" />
+                    Notifications
+                  </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="users" className="mt-6">
@@ -344,6 +349,10 @@ export default function AdminDashboard() {
 
                 <TabsContent value="campaigns" className="mt-6">
                   <EmailCampaignManager />
+                </TabsContent>
+
+                <TabsContent value="notifications" className="mt-6">
+                  <NotificationManager />
                 </TabsContent>
               </Tabs>
             </TabsContent>

@@ -7,6 +7,7 @@ import { User } from '@/models';
 import { getAdminPricingPlan } from '@/models/admin-models';
 import { ActivityLogService } from '@/lib/services/activityLogService';
 import { getAdminContext } from '@/lib/utils/adminAuth';
+import creditService from '@/lib/services/creditService';
 import { invalidateConfigCache } from '@/lib/config/adminConfig';
 
 export async function POST(
@@ -124,6 +125,21 @@ export async function POST(
         { success: false, error: 'Failed to update user subscription' },
         { status: 500 }
       );
+    }
+
+    // Handle credits on plan change
+    const oldPlanKey = user.currentPlanKey || 'free';
+    const isUpgrade = planKey !== oldPlanKey;
+    
+    if (isUpgrade) {
+      // Initialize credits for new plan
+      await creditService.initializeCredits(userId, planKey);
+    } else {
+      // If same plan, just ensure credits are initialized
+      const creditStatus = await creditService.getCreditStatus(userId);
+      if (!creditStatus || creditStatus.cvCredits === 0) {
+        await creditService.initializeCredits(userId, planKey);
+      }
     }
 
     const responseTime = Date.now() - startTime;

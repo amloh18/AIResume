@@ -54,14 +54,14 @@ const ContactFormModal: React.FC<ContactFormModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
         onClick={onClose}
       />
       
       {/* Modal */}
-      <div className="relative w-full max-w-md bg-gray-900 border border-gray-700 rounded-xl shadow-2xl">
+      <div className="relative w-[90%] max-w-md max-h-[85vh] overflow-hidden bg-gray-900 border border-gray-700 rounded-xl shadow-2xl flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-700">
+        <div className="flex items-center justify-between p-6 border-b border-gray-700 flex-shrink-0">
           <h2 className="text-xl font-semibold text-white">
             Contact {recipientName}
           </h2>
@@ -77,7 +77,7 @@ const ContactFormModal: React.FC<ContactFormModalProps> = ({
         </div>
 
         {/* Form */}
-        <form action={handleSubmit} className="p-6 space-y-4">
+        <form action={handleSubmit} className="p-6 space-y-4 flex-1 overflow-y-auto min-h-0">
           {/* Message Display */}
           {message && (
             <div className={`p-3 rounded-lg text-sm ${

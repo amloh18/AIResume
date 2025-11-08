@@ -165,16 +165,16 @@ const OnboardingCarouselModal: React.FC<OnboardingCarouselModalProps> = ({ userI
   const allCardsVisited = visitedCards.every(visited => visited);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
         transition={{ duration: 0.3, ease: "easeOut" }}
-        className="bg-[#1A261A] rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden border border-white/10"
+        className="bg-[#1A261A] rounded-2xl shadow-2xl w-[90%] max-w-4xl max-h-[85vh] overflow-hidden border border-white/10 flex flex-col"
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-white/10">
+        <div className="flex items-center justify-between p-6 border-b border-white/10 flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center">
               <img 
@@ -209,7 +209,7 @@ const OnboardingCarouselModal: React.FC<OnboardingCarouselModalProps> = ({ userI
         </div>
 
         {/* Carousel Content */}
-        <div className="relative h-[500px] overflow-hidden">
+        <div className="relative flex-1 overflow-y-auto min-h-0">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentCard}
@@ -217,9 +217,9 @@ const OnboardingCarouselModal: React.FC<OnboardingCarouselModalProps> = ({ userI
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -50 }}
               transition={{ duration: 0.3, ease: "easeInOut" }}
-              className="absolute inset-0 flex"
+              className="flex h-full"
             >
-              <div className="flex-1 flex items-center justify-center p-8">
+              <div className="flex-1 flex items-center justify-center p-8 min-h-full">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-6xl">
                   {/* Left Side - Content */}
                   <div className="flex flex-col justify-center space-y-6">
@@ -298,7 +298,7 @@ const OnboardingCarouselModal: React.FC<OnboardingCarouselModalProps> = ({ userI
         </div>
 
         {/* Navigation Footer */}
-        <div className="flex items-center justify-between p-6 border-t border-white/10">
+        <div className="flex items-center justify-between p-6 border-t border-white/10 flex-shrink-0">
           <motion.button
             onClick={prevCard}
             disabled={currentCard === 0}
@@ -349,14 +349,15 @@ const OnboardingCarouselModal: React.FC<OnboardingCarouselModalProps> = ({ userI
                 <ArrowRight className="w-5 h-5" />
               </motion.button>
             ) : (
-              // Show close button if master CV exists or while checking
+              // Show Complete tour button if master CV exists or while checking
               <motion.button
                 onClick={handleDismiss}
-                className="flex items-center gap-2 px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-lg font-semibold transition-all duration-200 border border-white/20"
+                className="flex items-center gap-2 px-6 py-3 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black rounded-lg font-semibold transition-all duration-200"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
-                Close
+                Complete tour
+                <ArrowRight className="w-5 h-5" />
               </motion.button>
             )
           ) : (

@@ -86,6 +86,7 @@ export const metadata: Metadata = {
     icon: [
       { url: '/images/favicon.png', sizes: '32x32', type: 'image/png' },
       { url: '/images/favicon.png', sizes: '16x16', type: 'image/png' },
+      { url: '/images/favicon.png', sizes: '128x128', type: 'image/png' },
     ],
     shortcut: '/images/favicon.png',
     apple: [
@@ -95,7 +96,7 @@ export const metadata: Metadata = {
       {
         rel: 'mask-icon',
         url: '/images/favicon.png',
-        color: '#5bbad5',
+        color: '#81ff00',
       },
     ],
   },

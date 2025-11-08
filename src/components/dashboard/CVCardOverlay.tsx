@@ -19,7 +19,7 @@ import { CVJourneyLookupService } from '@/lib/services/cvJourneyLookupService';
 import { CVProgressService } from '@/lib/services/cvProgressService';
 import { useSession } from 'next-auth/react';
 import { formatDetailedTime } from '@/lib/utils/timeUtils';
-import CVPreviewThumbnail from './CVPreviewThumbnail';
+// CVPreviewThumbnail removed - using S3 thumbnails only
 
 interface CV {
   id: string;
@@ -223,7 +223,7 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
              style={{
                backgroundImage: thumbnailUrl ? `url(${thumbnailUrl})` : 'none'
              }}>
-          {/* CV Preview - Prioritize S3 thumbnail for performance */}
+          {/* CV Preview - Use S3 thumbnail only (no live rendering) */}
           {thumbnailUrl ? (
             <img
               src={thumbnailUrl}
@@ -231,38 +231,34 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
               className="w-full h-full object-cover rounded-xl"
               loading="lazy"
               onError={(e) => {
-                // If S3 URL fails, try to get presigned URL first
+                // If S3 URL fails, try to get presigned URL
                 const target = e.target as HTMLImageElement;
                 const currentSrc = target.src;
                 if (currentSrc.includes('s3.amazonaws.com') || currentSrc.includes('s3.')) {
                   // Extract key and fetch presigned URL
-                  fetch(`/api/files/${encodeURIComponent(currentSrc.split('.amazonaws.com/')[1] || '')}`)
-                    .then(res => res.json())
-                    .then(data => {
-                      if (data.url) {
-                        target.src = data.url;
-                      } else {
-                        // If presigned URL fails, fallback to live rendering
+                  const keyMatch = currentSrc.match(/\.amazonaws\.com\/(.+)$/);
+                  if (keyMatch && keyMatch[1]) {
+                    fetch(`/api/files/${encodeURIComponent(keyMatch[1])}`)
+                      .then(res => res.json())
+                      .then(data => {
+                        if (data.url) {
+                          target.src = data.url;
+                        } else {
+                          // If presigned URL fails, show placeholder
+                          setThumbnailUrl(null);
+                        }
+                      })
+                      .catch(() => {
+                        console.error('Failed to fetch presigned URL for thumbnail');
                         setThumbnailUrl(null);
-                      }
-                    })
-                    .catch(() => {
-                      // If all S3 attempts fail, fallback to live rendering
-                      console.error('Failed to fetch presigned URL for thumbnail, falling back to live rendering');
-                      setThumbnailUrl(null);
-                    });
+                      });
+                  } else {
+                    setThumbnailUrl(null);
+                  }
                 } else {
-                  // For non-S3 URLs, if they fail, try live rendering
                   setThumbnailUrl(null);
                 }
               }}
-            />
-          ) : cv.cvData && cv.template ? (
-            // Fallback to live rendering if thumbnail is not available
-            <CVPreviewThumbnail 
-              cvData={cv.cvData}
-              template={cv.template}
-              className="rounded-xl"
             />
           ) : thumbnailLoading ? (
             /* Loading state */
@@ -413,7 +409,7 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50"
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50"
             onClick={cancelDelete}
           >
             <motion.div

@@ -65,7 +65,8 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
       }
       
       console.log('🔍 AnalyticsJourneyWidget - Fetching journeys for user:', userId);
-      const response = await fetch(`/api/application-journey?userId=${userId}&status=in-progress`);
+      // Fetch all journeys, not just in-progress, so we can filter incomplete ones
+      const response = await fetch(`/api/application-journey?userId=${userId}`);
       console.log('🔍 AnalyticsJourneyWidget - Response status:', response.status);
       
       if (!response.ok) {
@@ -118,7 +119,12 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
     };
   };
 
-  const incompleteJourneys = journeys.filter(journey => journey.status === 'in-progress');
+  // Filter for incomplete journeys - include all statuses except 'completed'
+  const incompleteJourneys = journeys.filter(journey => 
+    journey.status !== 'completed' && 
+    journey.status !== 'accepted' &&
+    journey.status !== 'rejected'
+  );
   const journeysPerPage = 3; // Show maximum 3 journeys per page
   const totalPages = Math.ceil(incompleteJourneys.length / journeysPerPage);
 
@@ -326,8 +332,23 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
                       // Handle download functionality
                     }}
                     onDelete={onDeleteJourney}
-                    onRefresh={() => {
+                    onRefresh={async () => {
                       // Refresh journeys in AnalyticsJourneyWidget
+                      const userId = getUserIdForAPI(user);
+                      if (userId) {
+                        await fetchJourneys(userId);
+                      }
+                    }}
+                    onUpdateJourney={async (journeyId, updates) => {
+                      // Update journey in local state
+                      setJourneys(prev => prev.map(j => 
+                        j.id === journeyId ? { ...j, ...updates } : j
+                      ));
+                      // Optionally refresh from server
+                      const userId = getUserIdForAPI(user);
+                      if (userId) {
+                        await fetchJourneys(userId);
+                      }
                     }}
                     onShowDeleteConfirm={setShowDeleteConfirm}
                   />
@@ -342,7 +363,7 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
         <motion.div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}

@@ -24,40 +24,28 @@ const DashboardContent: React.FC<{ children?: React.ReactNode }> = ({ children }
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#1a230f]">
       <div className="flex h-screen">
-        {/* Desktop Sidebar - Hidden on mobile and small screens, visible on xl and up */}
-        <div className="hidden xl:flex xl:w-[335px] xl:flex-col xl:fixed xl:inset-y-0 xl:z-50 xl:p-1">
+        {/* Desktop Sidebar - Hidden on sm/md, visible on lg and up */}
+        <div className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:z-50 lg:py-0.5 lg:px-0.5 lg:w-[108px] xl:w-[108px] 2xl:w-[335px] overflow-visible">
           <OptimizedNavigation />
         </div>
 
-        {/* Mobile/Small Screen Sidebar - Hidden on xl and up */}
+        {/* Mobile/Small Screen Full-Screen Menu - Hidden on lg and up */}
         <AnimatePresence>
           {isMobileMenuOpen && (
             <motion.div
-              initial={{ opacity: 0, x: -300 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -300 }}
-              className="fixed inset-y-0 left-0 z-50 w-[335px] p-1 xl:hidden"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 z-50 bg-white dark:bg-[#141810] lg:hidden"
             >
               <OptimizedNavigation />
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Mobile/Small Screen Overlay - Hidden on xl and up */}
-        <AnimatePresence>
-          {isMobileMenuOpen && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-40 bg-black bg-opacity-50 xl:hidden"
-              onClick={toggleSidebar}
-            />
-          )}
-        </AnimatePresence>
-
         {/* Main Content */}
-        <div className="flex flex-col flex-1 xl:pl-[335px]">
+        <div className="flex flex-col flex-1 lg:pl-[108px] xl:pl-[108px] 2xl:pl-[335px]">
           {/* Page Content */}
           <main className="flex-1 overflow-auto">
             <div className="p-6 pb-[10px]">

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
+import Image from 'next/image';
 import { Settings, Menu, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { getTopBarClasses } from '@/lib/utils/themeUtils';
@@ -9,6 +10,7 @@ import UserAvatar from '@/components/ui/UserAvatar';
 import { useUserData } from '@/lib/hooks/useUserData';
 import { useSession } from 'next-auth/react';
 import GlobalSearchBar from './GlobalSearchBar';
+import NotificationCenter from '@/components/notifications/NotificationCenter';
 
 interface TopBarProps {
   onMenuToggle?: () => void;
@@ -51,15 +53,19 @@ const TopBar: React.FC<TopBarProps> = ({
 
           {/* Logo/Brand */}
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center">
-              <img 
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white dark:bg-[#1a2015] p-1 shadow-sm">
+              <Image 
                 src="/images/logo.png" 
                 alt="CVCircle Logo" 
-                className="w-8 h-8 object-contain"
+                width={32}
+                height={32}
+                className="w-full h-full object-contain"
+                priority
+                unoptimized
               />
             </div>
-            <span className="text-white font-semibold text-lg hidden sm:block">
-              <span className="text-lime-400">CV</span><span className="text-gray-300">Circle</span>
+            <span className="text-white dark:text-gray-100 font-semibold text-lg hidden sm:block">
+              <span className="text-lime-400 dark:text-[rgb(129,255,0)]">CV</span><span className="text-gray-300 dark:text-gray-200">Circle</span>
             </span>
           </div>
         </div>
@@ -73,6 +79,9 @@ const TopBar: React.FC<TopBarProps> = ({
         <div className="flex items-center gap-2">
           {/* Search Bar */}
           <GlobalSearchBar />
+
+          {/* Notification Center */}
+          <NotificationCenter />
 
           {/* Settings */}
           <motion.button

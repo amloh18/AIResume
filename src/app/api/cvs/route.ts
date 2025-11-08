@@ -7,6 +7,7 @@ import { getAuthenticatedUser } from '@/lib/auth-helpers';
 import { getTemplateById, isHardcodedTemplate } from '@/lib/templates/template-utils';
 import { HARDCODED_TEMPLATES } from '@/lib/templates/hardcoded-templates';
 import mongoose from 'mongoose';
+import usageLimitsService from '@/lib/services/usageLimitsService';
 
 // GET - List CVs for a user with comprehensive filtering
 export async function GET(request: NextRequest) {
@@ -234,14 +235,20 @@ export async function GET(request: NextRequest) {
           cvData: cv.cvData,
           templateId: cv.templateId,
           templateName: cv.templateName,
+          templateData: cv.templateData, // Include saved template data
+          template: cv.templateData || (isHardcodedTemplate(cv.templateId?.toString() || '') 
+            ? getTemplateById(cv.templateId?.toString() || '') 
+            : cv.templateId), // Use saved templateData if available
           styling: cv.styling
         }),
         ...(projection === 'summary' && {
           cvData: cv.cvData,
           templateId: cv.templateId,
-          template: isHardcodedTemplate(cv.templateId?.toString() || '') 
+          templateName: cv.templateName,
+          templateData: cv.templateData, // Include saved template data
+          template: cv.templateData || (isHardcodedTemplate(cv.templateId?.toString() || '') 
             ? getTemplateById(cv.templateId?.toString() || '') 
-            : cv.templateId // Include populated template data or hardcoded template
+            : cv.templateId) // Use saved templateData if available
         })
       };
     });
@@ -346,6 +353,26 @@ export async function POST(request: NextRequest) {
     const userId = authResult.userId;
     console.log('🔍 CV POST API - Using authenticated user:', authResult.userEmail);
 
+    // Check credits before allowing CV creation
+    const creditCheck = await usageLimitsService.checkUsageLimit({
+      userId,
+      action: 'cv_create'
+    });
+
+    if (!creditCheck.allowed) {
+      console.log('❌ CV POST API - Credit check failed:', creditCheck.reason);
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: creditCheck.reason || 'Credit limit exceeded',
+          requiresUpgrade: true,
+          currentUsage: creditCheck.currentUsage,
+          limit: creditCheck.limit
+        },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     console.log('🚀 CV POST API - Request body received');
 
@@ -369,30 +396,40 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Ensure templateId is provided or get default template
+    // Ensure templateId is provided or get default template (Executive Professional)
     let finalTemplateId = templateId;
     if (!finalTemplateId) {
-      // First check hardcoded templates for default
+      // Use Executive Professional as default template
       const { HARDCODED_TEMPLATES } = await import('@/lib/templates/hardcoded-templates');
-      const hardcodedDefault = HARDCODED_TEMPLATES.find(
-        t => t.isDefault === true && t.category === 'cv'
+      const executiveProfessional = HARDCODED_TEMPLATES.find(
+        t => t.id === 'executive-professional-layout-template' || t.name === 'Executive Professional'
       );
       
-      if (hardcodedDefault) {
-        finalTemplateId = hardcodedDefault.id || hardcodedDefault._id;
-        console.log('✅ CV POST API - Using hardcoded default template:', hardcodedDefault.name);
+      if (executiveProfessional) {
+        finalTemplateId = executiveProfessional.id || executiveProfessional._id;
+        console.log('✅ CV POST API - Using Executive Professional as default template');
       } else {
-        // Fallback to database
-        const defaultTemplate = await Template.findOne({ isDefault: true, category: 'cv' });
-        if (!defaultTemplate) {
-          console.log('❌ CV POST API - No default template found');
-          return NextResponse.json(
-            { success: false, error: 'No template specified and no default template available' },
-            { status: 400 }
-          );
+        // Fallback to any default template
+        const hardcodedDefault = HARDCODED_TEMPLATES.find(
+          t => t.isDefault === true && t.category === 'cv'
+        );
+        
+        if (hardcodedDefault) {
+          finalTemplateId = hardcodedDefault.id || hardcodedDefault._id;
+          console.log('✅ CV POST API - Using hardcoded default template:', hardcodedDefault.name);
+        } else {
+          // Fallback to database
+          const defaultTemplate = await Template.findOne({ isDefault: true, category: 'cv' });
+          if (!defaultTemplate) {
+            console.log('❌ CV POST API - No default template found');
+            return NextResponse.json(
+              { success: false, error: 'No template specified and no default template available' },
+              { status: 400 }
+            );
+          }
+          finalTemplateId = defaultTemplate._id;
+          console.log('🔍 CV POST API - Using database default template:', defaultTemplate.name);
         }
-        finalTemplateId = defaultTemplate._id;
-        console.log('🔍 CV POST API - Using database default template:', defaultTemplate.name);
       }
     }
 
@@ -436,10 +473,22 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Get template name for storage
+    let templateName = '';
+    if (hardcodedTemplate) {
+      templateName = hardcodedTemplate.name || '';
+    } else if (finalTemplateId) {
+      const template = await Template.findById(finalTemplateId);
+      if (template) {
+        templateName = template.name || '';
+      }
+    }
+
     // Prepare CV data for creation (clean schema - no styling data)
     const cvDataToCreate = {
       title,
       templateId: finalTemplateId,
+      templateName: templateName,
       cvData,
       status: status || 'draft',
       isMaster: isMaster || false,
@@ -471,6 +520,54 @@ export async function POST(request: NextRequest) {
     });
 
     await newCV.save();
+
+    // Spend credit after successful CV creation
+    await usageLimitsService.incrementUsage({
+      userId,
+      action: 'cv_create'
+    });
+
+    // Save CV with template to S3 as backup
+    try {
+      // Get template data if available
+      let templateData = null;
+      if (finalTemplateId) {
+        const { HARDCODED_TEMPLATES } = await import('@/lib/templates/hardcoded-templates');
+        const hardcodedTemplate = HARDCODED_TEMPLATES.find(t => t.id === finalTemplateId || t._id === finalTemplateId);
+        if (hardcodedTemplate) {
+          templateData = hardcodedTemplate;
+        } else {
+          const template = await Template.findById(finalTemplateId);
+          if (template) {
+            templateData = template.toJSON();
+          }
+        }
+      }
+      
+      const { CVS3Service } = await import('@/lib/services/cvS3Service');
+      const s3Url = await CVS3Service.saveCVToS3(
+        newCV._id.toString(),
+        userId,
+        newCV.cvData,
+        templateData
+      );
+      
+      if (s3Url) {
+        // Store S3 URL in metadata
+        if (!newCV.metadata) {
+          newCV.metadata = {} as any;
+        }
+        (newCV.metadata as any).s3BackupUrl = s3Url;
+        (newCV.metadata as any).s3BackupSavedAt = new Date();
+        await newCV.save();
+        console.log('✅ CV POST API - CV saved to S3:', s3Url);
+      }
+    } catch (s3Error) {
+      console.warn('⚠️ CV POST API - Failed to save CV to S3 (non-critical):', s3Error);
+      // Continue - S3 backup is non-critical
+    }
+
+    // Note: Thumbnail generation moved to studio exit for better performance
 
     console.log('✅ CV POST API - CV saved successfully:', {
       id: newCV._id,

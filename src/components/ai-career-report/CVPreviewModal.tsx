@@ -54,18 +54,18 @@ export default function CVPreviewModal({ isOpen, onClose, cvData }: CVPreviewMod
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
           onClick={onClose}
         >
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
-          className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+          className="bg-white rounded-xl w-[90%] max-w-4xl max-h-[85vh] overflow-hidden flex flex-col"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+          <div className="p-6 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
             <div className="flex items-center gap-3">
               <Eye className="w-6 h-6 text-blue-600" />
               <h3 className="text-xl font-bold text-gray-900">CV Preview</h3>
@@ -79,7 +79,7 @@ export default function CVPreviewModal({ isOpen, onClose, cvData }: CVPreviewMod
           </div>
 
           {/* CV Content */}
-          <div className="p-8">
+          <div className="p-8 flex-1 overflow-y-auto min-h-0">
             <div className="max-w-4xl mx-auto">
               {/* Header Section */}
               <div className="text-center mb-8">

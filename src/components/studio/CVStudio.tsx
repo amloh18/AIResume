@@ -192,6 +192,10 @@ const CVStudio: React.FC<CVStudioProps> = ({
   const [isMasterCV, setIsMasterCV] = useState(false);
   const [currentMasterCV, setCurrentMasterCV] = useState<any>(null);
   
+  // Track if CV data has changed during this session (for thumbnail generation on exit)
+  const cvDataChangedRef = useRef(false);
+  const thumbnailGenerationInProgressRef = useRef(false);
+  
   // Debounced CV data for preview - prevents excessive re-renders during typing
   // This is the key optimization from Reactive Resume: separate edit state from preview state
   const debouncedCvData = useDebounce(cvData, 300);
@@ -1015,31 +1019,13 @@ const CVStudio: React.FC<CVStudioProps> = ({
 
       current[finalKey] = value;
 
-      // Auto-update CV title when name, label, or summary changes
-      if (path.startsWith('basics.') && (path.includes('name') || path.includes('label') || path.includes('summary'))) {
-        const newTitle = generateCVName(newData);
-        const newDescription = generateCVDescription(newData);
-
-        // Update local title state immediately
-        setCvTitle(newTitle);
-
-        // Update the CV title in the database if we have a CV ID
-        if (cvId) {
-          // Debounced update to avoid too many API calls
-          const updateTitle = debounce(async () => {
-            try {
-              // Use updateCV with just the title field
-              await CVService.updateCV(cvId, {
-                title: newTitle
-              }, userId || undefined);
-            } catch (error) {
-              console.error('❌ Failed to auto-update CV title:', error);
-            }
-          }, 1000);
-
-          updateTitle();
-        }
+      // Mark that CV data has changed (for thumbnail generation on exit)
+      if (documentType === 'cv') {
+        cvDataChangedRef.current = true;
       }
+
+      // Note: CV title is only updated when manually edited from the header
+      // Auto-update of title based on name/label/summary changes has been disabled
 
       // Trigger auto-save for CV data changes
       if (cvId && documentType === 'cv') {
@@ -1448,6 +1434,109 @@ const CVStudio: React.FC<CVStudioProps> = ({
       }
     }
   }, [cvData, coverLetterData, debouncedSave, isLoading, justCreated, documentType, lastSavedData]);
+
+  // Generate thumbnail on studio exit (robust implementation)
+  const generateThumbnailOnExit = useCallback(async () => {
+    // Only generate if CV data changed and we have a CV ID
+    if (!cvDataChangedRef.current || !cvId || documentType !== 'cv' || !userId) {
+      return;
+    }
+
+    // Prevent multiple simultaneous thumbnail generations
+    if (thumbnailGenerationInProgressRef.current) {
+      console.log('⚠️ Studio - Thumbnail generation already in progress, skipping');
+      return;
+    }
+
+    thumbnailGenerationInProgressRef.current = true;
+
+    try {
+      console.log('🖼️ Studio - Generating thumbnail on exit for CV:', cvId);
+      
+      // Use sendBeacon for more reliable delivery on page unload
+      const useBeacon = typeof navigator !== 'undefined' && 'sendBeacon' in navigator;
+      
+      if (useBeacon) {
+        // For page unload scenarios, use sendBeacon
+        const data = JSON.stringify({ cvId, userId, forceRegenerate: true });
+        const blob = new Blob([data], { type: 'application/json' });
+        const success = navigator.sendBeacon('/api/cv/thumbnail/generate-on-exit', blob);
+        
+        if (success) {
+          console.log('✅ Studio - Thumbnail generation request sent via beacon');
+        } else {
+          // Fallback to fetch if beacon fails
+          await fetch('/api/cv/thumbnail/generate-on-exit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cvId, userId, forceRegenerate: true }),
+            keepalive: true // Keep request alive even if page unloads
+          });
+        }
+      } else {
+        // Standard fetch with keepalive
+        await fetch('/api/cv/thumbnail/generate-on-exit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cvId, userId, forceRegenerate: true }),
+          keepalive: true
+        });
+      }
+      
+      console.log('✅ Studio - Thumbnail generation triggered on exit');
+    } catch (error) {
+      console.warn('⚠️ Studio - Failed to trigger thumbnail generation on exit:', error);
+      // Non-critical, don't block exit
+    } finally {
+      // Reset after a delay to allow retry if needed
+      setTimeout(() => {
+        thumbnailGenerationInProgressRef.current = false;
+      }, 2000);
+    }
+  }, [cvId, userId, documentType]);
+
+  // Handle studio exit - generate thumbnail on component unmount
+  useEffect(() => {
+    return () => {
+      if (cvDataChangedRef.current && cvId && documentType === 'cv' && userId) {
+        generateThumbnailOnExit();
+      }
+    };
+  }, [cvId, documentType, userId, generateThumbnailOnExit]);
+
+  // Handle page visibility change and beforeunload for robust exit handling
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && cvDataChangedRef.current && cvId && documentType === 'cv' && userId) {
+        // Page is being hidden, generate thumbnail
+        generateThumbnailOnExit();
+      }
+    };
+
+    const handleBeforeUnload = () => {
+      if (cvDataChangedRef.current && cvId && documentType === 'cv' && userId) {
+        // Generate thumbnail before page unload
+        generateThumbnailOnExit();
+      }
+    };
+
+    const handlePageHide = () => {
+      if (cvDataChangedRef.current && cvId && documentType === 'cv' && userId) {
+        // Generate thumbnail on page hide
+        generateThumbnailOnExit();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('pagehide', handlePageHide);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('pagehide', handlePageHide);
+    };
+  }, [cvId, documentType, userId, generateThumbnailOnExit]);
 
   // Initialize CV journey on component mount
   useEffect(() => {
@@ -2270,14 +2359,37 @@ const CVStudio: React.FC<CVStudioProps> = ({
               console.log('✅ Studio - Loaded saved template:', template.name);
               setSelectedTemplate(template);
             } else {
-              console.warn('⚠️ Studio - Saved template not found, keeping current selection');
-              // Don't force default if template not found - keep user selection
+              console.warn('⚠️ Studio - Saved template not found, using Executive Professional as fallback');
+              // Fallback to Executive Professional template
+              const { HARDCODED_TEMPLATES } = await import('@/lib/templates/hardcoded-templates');
+              const executiveProfessional = HARDCODED_TEMPLATES.find((t: any) => 
+                t.id === 'executive-professional-layout-template' || 
+                t.name === 'Executive Professional'
+              );
+              if (executiveProfessional) {
+                console.log('✅ Studio - Using Executive Professional as fallback');
+                setSelectedTemplate(executiveProfessional);
+              } else if (templatesResult.length > 0) {
+                setSelectedTemplate(templatesResult[0]);
+              }
             }
-          } else if (!selectedTemplate && templatesResult.length > 0) {
-            // Only set default if no template is currently selected
-            console.log('🔍 Studio - No saved template, setting first available');
-            setSelectedTemplate(templatesResult[0]);
+          } else if (!selectedTemplate) {
+            // No saved template, use Executive Professional as default
+            console.log('🔍 Studio - No saved template, using Executive Professional as default');
+            const { HARDCODED_TEMPLATES } = await import('@/lib/templates/hardcoded-templates');
+            const executiveProfessional = HARDCODED_TEMPLATES.find((t: any) => 
+              t.id === 'executive-professional-layout-template' || 
+              t.name === 'Executive Professional'
+            );
+            if (executiveProfessional) {
+              setSelectedTemplate(executiveProfessional);
+            } else if (templatesResult.length > 0) {
+              setSelectedTemplate(templatesResult[0]);
+            }
           }
+          
+          // Reset change tracking flag after initial load
+          cvDataChangedRef.current = false;
         } else {
             // Create default CV data structure
             const defaultCVData: UnifiedCVDataStructure = {
@@ -3898,7 +4010,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
 
       {/* Add Section Modal - Matching MasterCVBuilderStep */}
         {showAddSectionModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}

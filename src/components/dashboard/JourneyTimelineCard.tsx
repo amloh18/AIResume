@@ -1300,22 +1300,150 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
     }
   };
 
-  const handleDownloadFiles = async (downloadType: 'all' | 'cv' | 'coverLetter' | 'jobDescription' = 'all') => {
+  const handleDownloadFiles = async (
+    downloadType: 'all' | 'cv' | 'coverLetter' | 'jobDescription' = 'all',
+    format: FormatType = 'pdf'
+  ) => {
     try {
-      const url = `/api/application-journey/${journey.id}/download?type=${downloadType}`;
+      // For DOC/DOCX formats, use CV export API with template
+      if ((format === 'docx' || format === 'doc') && downloadType === 'cv' && journey.cvId && linkedCV) {
+        try {
+          // Get CV data and template
+          const cvResponse = await fetch(`/api/cvs/${journey.cvId}`);
+          if (!cvResponse.ok) throw new Error('Failed to fetch CV data');
+          
+          const cvResult = await cvResponse.json();
+          if (!cvResult.success || !cvResult.data) throw new Error('CV data not found');
+          
+          const cv = cvResult.data.cv;
+          
+          // Get template data - try multiple sources
+          let template = cv.templateData || cv.template || {};
+          
+          // If template is just an ID, fetch the full template
+          if (cv.templateId && (!template || typeof template === 'string')) {
+            try {
+              const templateResponse = await fetch(`/api/templates/${cv.templateId}`);
+              if (templateResponse.ok) {
+                const templateResult = await templateResponse.json();
+                if (templateResult.success && templateResult.data) {
+                  template = templateResult.data;
+                }
+              }
+            } catch (templateError) {
+              console.warn('Could not fetch template, using defaults:', templateError);
+            }
+          }
+          
+          // Use DOCX format for both DOC and DOCX (DOC is legacy, DOCX is compatible)
+          const exportFormat = format === 'doc' ? 'docx' : format;
+          
+          // Use CV export API for DOC/DOCX
+          const exportResponse = await fetch('/api/cv/export', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              cvData: cv.cvData || cv.data,
+              template: template,
+              format: exportFormat,
+              userId: session?.user?.id,
+              cvId: journey.cvId,
+              jobId: journey.jobId
+            })
+          });
+          
+          if (!exportResponse.ok) {
+            const errorData = await exportResponse.json().catch(() => ({ error: 'Export failed' }));
+            throw new Error(errorData.error || `Export failed: ${exportResponse.status} ${exportResponse.statusText}`);
+          }
+          
+          const blob = await exportResponse.blob();
+          
+          // Check if blob is valid
+          if (!blob || blob.size === 0) {
+            throw new Error('Exported file is empty');
+          }
+          
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.style.display = 'none';
+          // Use .docx extension for both DOC and DOCX (DOCX is compatible with DOC readers)
+          a.download = `${journey.jobTitle} - CV.${exportFormat}`;
+          document.body.appendChild(a);
+          a.click();
+          
+          // Clean up after a delay
+          setTimeout(() => {
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+          }, 100);
+          
+          toast.success('CV downloaded successfully');
+          return;
+        } catch (error: any) {
+          console.error('Error downloading CV in DOC/DOCX format:', error);
+          toast.error(error.message || 'Failed to download CV');
+          throw error;
+        }
+      }
       
-      // Create a temporary link to trigger download
+      // For PDF or other formats, use the journey download endpoint
+      const url = `/api/application-journey/${journey.id}/download?type=${downloadType}${format !== 'pdf' ? `&format=${format}` : ''}`;
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': downloadType === 'all' ? 'application/zip' : format === 'pdf' ? 'application/pdf' : format === 'docx' ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'application/msword',
+        },
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Download failed' }));
+        throw new Error(errorData.error || `Download failed: ${response.status} ${response.statusText}`);
+      }
+      
+      const blob = await response.blob();
+      
+      // Check if blob is valid
+      if (!blob || blob.size === 0) {
+        throw new Error('Downloaded file is empty');
+      }
+      
+      const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = url;
-      link.download = `${journey.jobTitle} - Application Files${downloadType === 'all' ? '.zip' : '.pdf'}`;
+      link.href = downloadUrl;
+      link.style.display = 'none';
+      
+      const extension = downloadType === 'all' ? 'zip' : format === 'pdf' ? 'pdf' : format;
+      const filename = `${journey.jobTitle} - ${downloadType === 'all' ? 'Application Files' : downloadType === 'cv' ? 'CV' : downloadType === 'coverLetter' ? 'Cover Letter' : 'Job Description'}.${extension}`;
+      link.download = filename;
+      
       document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
+      
+      // Clean up after a delay to ensure download starts
+      setTimeout(() => {
+        window.URL.revokeObjectURL(downloadUrl);
+        document.body.removeChild(link);
+      }, 100);
       
       toast.success('Files downloaded successfully');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error downloading files:', error);
-      toast.error('Error downloading files');
+      const errorMessage = error.message || 'Error downloading files';
+      toast.error(errorMessage);
+      
+      // Show retry option with better UX
+      const shouldRetry = window.confirm(`Download failed: ${errorMessage}\n\nWould you like to retry?`);
+      if (shouldRetry) {
+        // Retry after a short delay
+        setTimeout(() => {
+          handleDownloadFiles(downloadType, format).catch(err => {
+            console.error('Retry failed:', err);
+          });
+        }, 1000);
+      }
     }
   };
 
@@ -2201,7 +2329,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                           {/* Score Display */}
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
+                              <div className={`w-8 h-8 min-w-8 min-h-8 aspect-square rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
                                 atsScore >= 80 ? 'bg-green-500 text-white' :
                                 atsScore >= 60 ? 'bg-yellow-500 text-white' :
                                 'bg-red-500 text-white'
@@ -2214,7 +2342,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                                    atsScore >= 60 ? 'Good Match' :
                                    'Needs Improvement'}
                                 </p>
-                                <p className="text-xs text-gray-400">ATS Compatibility Score</p>
+                                <p className="text-xs text-gray-400">ATS Score</p>
                               </div>
                             </div>
                             
@@ -2332,13 +2460,6 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                               <ExternalLink className="h-3 w-3" />
                               Edit
                             </motion.button>
-                            <motion.button
-                              onClick={() => setExpandedStep(expandedStep === 4 ? null : 4)}
-                              className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
-                            >
-                              <RefreshCw className="h-3 w-3" />
-                              Change
-                            </motion.button>
                           </div>
                         </div>
                       )}
@@ -2418,13 +2539,13 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                         
                         return canMoveToApplied ? (
                           /* Action buttons for Step 5 - All conditions met */
-                          <div className="flex gap-2 w-full">
+                          <div className="flex flex-col gap-2 w-full">
                             <motion.button
                               onClick={() => {
                                 handleGetFileSizeEstimates();
                                 setShowMoveToAppliedModal(true);
                               }}
-                              className="flex-1 px-2 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors flex items-center gap-1 justify-center min-w-0"
+                              className="w-full px-2 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors flex items-center gap-1 justify-center min-w-0"
                               whileHover={{ scale: 1.02 }}
                               whileTap={{ scale: 0.98 }}
                               disabled={isCompletingJourney}
@@ -2435,7 +2556,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                         
                           <motion.button
                           onClick={() => setDownloadModalOpen(true)}
-                          className="flex-1 px-2 py-2 bg-lime-600 hover:bg-lime-700 text-white text-xs rounded transition-colors flex items-center gap-1 justify-center min-w-0"
+                          className="w-full px-2 py-2 bg-lime-600 hover:bg-lime-700 text-white text-xs rounded transition-colors flex items-center gap-1 justify-center min-w-0"
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                           >
@@ -3004,7 +3125,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
 
         {/* Keyboard Shortcuts Help Modal */}
         {showKeyboardShortcuts && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -3064,9 +3185,9 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
               apiType = 'coverLetter';
             } else if (documentType === 'cvAndCoverLetter') {
               // For separate files, download both
-              await handleDownloadFiles('cv');
+              await handleDownloadFiles('cv', format);
               await new Promise(resolve => setTimeout(resolve, 500)); // Small delay between downloads
-              await handleDownloadFiles('coverLetter');
+              await handleDownloadFiles('coverLetter', format);
               setDownloadModalOpen(false);
               setIsDownloading(false);
               return;
@@ -3074,10 +3195,11 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
               apiType = 'all';
             }
 
-            await handleDownloadFiles(apiType);
+            await handleDownloadFiles(apiType, format);
             setDownloadModalOpen(false);
           } catch (error) {
             console.error('Download error:', error);
+            // Error handling is done in handleDownloadFiles
           } finally {
             setIsDownloading(false);
           }

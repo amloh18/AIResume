@@ -11,8 +11,10 @@ import { LoadingProvider } from './LoadingProvider';
 import { PaymentModalProvider } from '@/contexts/PaymentModalContext';
 import CookieConsent from '@/components/CookieConsent';
 import { ConsoleLoggerProvider } from '@/contexts/ConsoleLoggerProvider';
+import { NotificationProvider } from '@/contexts/NotificationContext';
 import SessionCleanup from '@/components/SessionCleanup';
 import { setupEventErrorHandling } from '@/lib/utils/errorHandler';
+import { Toaster } from '@/components/ui/toaster';
 
 interface ClientProvidersProps {
   children: ReactNode;
@@ -30,10 +32,13 @@ function ConditionalProviders({ children }: ClientProvidersProps) {
           <LoadingProvider>
             <PaymentModalProvider>
               <ConsoleLoggerProvider>
+                <NotificationProvider>
                 <PerformanceMonitor />
                 <CookieConsent />
                 <SessionCleanup />
+                  <Toaster />
                 {children}
+                </NotificationProvider>
               </ConsoleLoggerProvider>
             </PaymentModalProvider>
           </LoadingProvider>
@@ -49,10 +54,13 @@ function ConditionalProviders({ children }: ClientProvidersProps) {
         <LoadingProvider>
           <PaymentModalProvider>
             <ConsoleLoggerProvider>
+              <NotificationProvider>
               <PerformanceMonitor />
               <CookieConsent />
               <SessionCleanup />
+                <Toaster />
               {children}
+              </NotificationProvider>
             </ConsoleLoggerProvider>
           </PaymentModalProvider>
         </LoadingProvider>

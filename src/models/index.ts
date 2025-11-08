@@ -15,4 +15,8 @@ export { default as Newsletter, type INewsletter } from './Newsletter';
 export { ApplicationJourney, type IApplicationJourney } from './ApplicationJourney';
 
 // Admin models
-export { default as EmailCampaign, type IEmailCampaign } from './admin/EmailCampaign'; 
+export { default as EmailCampaign, type IEmailCampaign } from './admin/EmailCampaign';
+
+// Notification models
+export { default as Notification, type INotification, type NotificationType, type NotificationChannel, type NotificationPriority } from './Notification';
+export { default as NotificationQueue, type INotificationQueue, type QueueTaskType, type QueueTaskStatus } from './NotificationQueue'; 

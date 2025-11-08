@@ -188,12 +188,24 @@ async function handleInvoicePaymentSucceeded(invoice: any) {
       return;
     }
 
+    // Check if this is a renewal (not first payment)
+    const user = await User.findById(userId);
+    const isRenewal = user?.subscription?.status === 'active' && 
+                      user?.subscription?.currentPeriodEnd && 
+                      new Date(user.subscription.currentPeriodEnd) < new Date();
+
     // Update subscription period
     const sub = subscription as any;
     await User.findByIdAndUpdate(userId, {
       'subscription.currentPeriodStart': new Date(sub.current_period_start * 1000),
       'subscription.currentPeriodEnd': new Date(sub.current_period_end * 1000)
     });
+
+    // Reset credits on renewal
+    if (isRenewal && planKey === 'pro_monthly') {
+      const subscriptionService = (await import('@/lib/services/subscriptionService')).default;
+      await subscriptionService.handleSubscriptionRenewal(userId);
+    }
 
     // Create invoice record for recurring payment
     await Invoice.create({

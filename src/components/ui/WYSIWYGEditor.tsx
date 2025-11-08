@@ -87,18 +87,20 @@ const WYSIWYGEditor: React.FC<WYSIWYGEditorProps> = ({
   React.useEffect(() => {
     // Use requestAnimationFrame to ensure DOM is ready
     const frameId = requestAnimationFrame(() => {
-      if (editorRef.current && value && value.trim()) {
+      if (editorRef.current) {
         const currentContent = editorRef.current.innerHTML.trim();
+        const stringValue = value ? String(value) : '';
+        
         // If we have a value but the editor is empty or doesn't match, set it
-        if (!currentContent || currentContent === '<br>' || currentContent === '') {
+        if (stringValue && stringValue.trim() && (!currentContent || currentContent === '<br>' || currentContent === '' || currentContent === '<p></p>')) {
           // Convert plain text to HTML if needed
-          const htmlValue = /<[^>]+>/.test(value) 
-            ? value 
-            : value.split(/\n\n+/).map(para => {
+          const htmlValue = /<[^>]+>/.test(stringValue) 
+            ? stringValue 
+            : stringValue.split(/\n\n+/).map(para => {
                 const lines = para.split(/\n/).filter(l => l.trim());
                 return lines.map(line => `<p>${line.trim()}</p>`).join('');
-              }).join('') || value.replace(/\n/g, '<br>');
-          editorRef.current.innerHTML = htmlValue;
+              }).join('') || stringValue.replace(/\n/g, '<br>');
+          editorRef.current.innerHTML = htmlValue || '';
         }
       }
     });

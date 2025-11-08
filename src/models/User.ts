@@ -32,6 +32,19 @@ export interface IUser extends Document {
     lastResetDate: Date;
     deviceFingerprint?: string;
   };
+  // Credit-based usage system
+  credits?: {
+    cvCredits: number;
+    exportCredits: number;
+    atsCheckCredits: number;
+    lastResetDate: Date;
+    resetSchedule: 'monthly' | 'quarterly' | 'yearly' | 'one-time' | 'never';
+    totalCreated: {
+      cvs: number;
+      exports: number;
+      atsChecks: number;
+    };
+  };
   // Day pass tracking (for cumulative usage across multiple passes)
   dayPassPurchases?: Array<{
     purchaseDate: Date;
@@ -111,6 +124,18 @@ export interface IUser extends Document {
     };
     timezone: string;
     languagePreference: string;
+  };
+  
+  // Granular Notification Preferences
+  notificationPreferences?: {
+    [key: string]: {
+      enabled: boolean;
+      channels: {
+        'in-app': boolean;
+        email: boolean;
+        push: boolean;
+      };
+    };
   };
   
   createdAt: Date;
@@ -242,6 +267,50 @@ const userSchema = new Schema<IUser>({
     deviceFingerprint: {
       type: String,
       trim: true
+    }
+  },
+  // Credit-based usage system
+  credits: {
+    cvCredits: {
+      type: Number,
+      default: 3,
+      min: -1 // -1 means unlimited
+    },
+    exportCredits: {
+      type: Number,
+      default: 3,
+      min: -1
+    },
+    atsCheckCredits: {
+      type: Number,
+      default: 3,
+      min: -1
+    },
+    lastResetDate: {
+      type: Date,
+      default: Date.now
+    },
+    resetSchedule: {
+      type: String,
+      enum: ['monthly', 'quarterly', 'yearly', 'one-time', 'never'],
+      default: 'monthly'
+    },
+    totalCreated: {
+      cvs: {
+        type: Number,
+        default: 0,
+        min: 0
+      },
+      exports: {
+        type: Number,
+        default: 0,
+        min: 0
+      },
+      atsChecks: {
+        type: Number,
+        default: 0,
+        min: 0
+      }
     }
   },
   // Day pass tracking (for cumulative usage across multiple passes)
@@ -472,6 +541,10 @@ const userSchema = new Schema<IUser>({
       trim: true,
       default: 'en'
     }
+  },
+  notificationPreferences: {
+    type: Schema.Types.Mixed,
+    default: {}
   }
 }, {
   timestamps: true,
@@ -554,5 +627,6 @@ userSchema.methods.comparePassword = async function(candidatePassword: string): 
 userSchema.index({ authProvider: 1, authProviderId: 1 });
 userSchema.index({ 'subscription.status': 1 });
 userSchema.index({ email: 1, authProvider: 1 }); // For NextAuth lookups
+userSchema.index({ 'credits.lastResetDate': 1 }); // For credit reset cron job
 
 export default mongoose.models.User || mongoose.model<IUser>('User', userSchema);

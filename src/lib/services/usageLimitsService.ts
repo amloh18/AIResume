@@ -1,6 +1,7 @@
 import { connectToDatabase } from '@/lib/database';
 import User from '@/models/User';
 import { getAdminPricingPlan } from '@/models/admin-models';
+import creditService from './creditService';
 
 export interface UsageLimitResult {
   allowed: boolean;
@@ -240,86 +241,18 @@ class UsageLimitsService {
           return {
             allowed: false,
             reason: 'Day pass has expired',
-            currentUsage: user.usage.cvJourneyCount,
-            limit: plan.maxCVs
+            currentUsage: 0,
+            limit: 0
           };
         }
       }
 
-      // Get current usage and limit based on action type
-      let currentUsage: number;
-      let limit: number;
-
-      // For day pass users, calculate cumulative limit from active purchases
-      if (user.currentPlanKey === 'day_pass' && user.dayPassPurchases && Array.isArray(user.dayPassPurchases)) {
-        const now = new Date();
-        // Find all active (non-expired) day pass purchases
-        const activePasses = user.dayPassPurchases.filter((pass: any) => {
-          const expiresAt = new Date(pass.expiresAt);
-          return expiresAt > now;
-        });
-        
-        // Sum up documentsAllowed from all active passes
-        const cumulativeLimit = activePasses.reduce((sum: number, pass: any) => {
-          return sum + (pass.documentsAllowed || 5);
-        }, 0);
-
-        switch (context.action) {
-          case 'cv_journey':
-            currentUsage = user.usage.cvJourneyCount;
-            limit = cumulativeLimit;
-            break;
-          case 'cv_create':
-            currentUsage = user.usage.cvCreatedCount;
-            limit = cumulativeLimit;
-            break;
-          case 'export':
-            currentUsage = user.usage.exportCount;
-            limit = plan.maxExports; // Exports use plan limit, not cumulative
-            break;
-          case 'ats_check':
-            currentUsage = user.usage.atsCheckCount;
-            limit = cumulativeLimit; // ATS checks count as CV usage
-            break;
-          default:
-            return {
-              allowed: false,
-              reason: 'Invalid action',
-              currentUsage: 0,
-              limit: 0
-            };
-        }
-      } else {
-        // For non-day-pass plans, use standard plan limits
-        switch (context.action) {
-          case 'cv_journey':
-            currentUsage = user.usage.cvJourneyCount;
-            limit = plan.maxCVs;
-            break;
-          case 'cv_create':
-            currentUsage = user.usage.cvCreatedCount;
-            limit = plan.maxCVs;
-            break;
-          case 'export':
-            currentUsage = user.usage.exportCount;
-            limit = plan.maxExports;
-            break;
-          case 'ats_check':
-            currentUsage = user.usage.atsCheckCount;
-            limit = plan.maxCVs; // ATS checks typically count as CV usage
-            break;
-          default:
-            return {
-              allowed: false,
-              reason: 'Invalid action',
-              currentUsage: 0,
-              limit: 0
-            };
-        }
-      }
-
-      // Check if limit is exceeded
-      const allowed = limit === -1 || currentUsage < limit;
+      // Check credits instead of resource counts
+      const creditCheck = await creditService.checkCreditAvailability(context.userId, context.action);
+      
+      const allowed = creditCheck.available;
+      const currentUsage = creditCheck.limit === -1 ? -1 : creditCheck.limit - creditCheck.creditsRemaining;
+      const limit = creditCheck.limit;
 
       return {
         allowed,
@@ -345,26 +278,11 @@ class UsageLimitsService {
   }
 
   /**
-   * Increment usage counter for a specific action
+   * Spend credit for a specific action (replaces incrementUsage)
    */
   async incrementUsage(context: ActionContext): Promise<boolean> {
-    try {
-      await connectToDatabase();
-
-      const updateField = this.getUsageField(context.action);
-      if (!updateField) {
-        return false;
-      }
-
-      await User.findByIdAndUpdate(context.userId, {
-        $inc: { [`usage.${updateField}`]: 1 }
-      });
-
-      return true;
-    } catch (error) {
-      console.error('Error incrementing usage:', error);
-      return false;
-    }
+    // Use credit service to spend credit
+    return await creditService.spendCredit(context.userId, context.action);
   }
 
   /**

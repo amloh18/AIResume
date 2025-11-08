@@ -317,6 +317,50 @@ export async function PUT(
     Object.assign(cv, updateData);
     await cv.save();
     
+    // Save CV with template to S3 as backup
+    try {
+      // Get template data if available
+      let templateData = cv.templateData || null;
+      if (!templateData && cv.templateId) {
+        const { HARDCODED_TEMPLATES } = await import('@/lib/templates/hardcoded-templates');
+        const hardcodedTemplate = HARDCODED_TEMPLATES.find(t => 
+          t.id === cv.templateId?.toString() || t._id === cv.templateId?.toString()
+        );
+        if (hardcodedTemplate) {
+          templateData = hardcodedTemplate;
+        } else {
+          const template = await Template.findById(cv.templateId);
+          if (template) {
+            templateData = template.toJSON();
+          }
+        }
+      }
+      
+      const { CVS3Service } = await import('@/lib/services/cvS3Service');
+      const s3Url = await CVS3Service.saveCVToS3(
+        cv._id.toString(),
+        cv.userId.toString(),
+        cv.cvData,
+        templateData
+      );
+      
+      if (s3Url) {
+        // Store S3 URL in metadata
+        if (!cv.metadata) {
+          cv.metadata = {} as any;
+        }
+        (cv.metadata as any).s3BackupUrl = s3Url;
+        (cv.metadata as any).s3BackupSavedAt = new Date();
+        await cv.save();
+        console.log('✅ CV UPDATE API - CV saved to S3:', s3Url);
+      }
+    } catch (s3Error) {
+      console.warn('⚠️ CV UPDATE API - Failed to save CV to S3 (non-critical):', s3Error);
+      // Continue - S3 backup is non-critical
+    }
+
+    // Note: Thumbnail generation moved to studio exit for better performance
+    
     console.log('✅ CV UPDATE API - CV saved successfully');
 
     // Get updated CV with template data
