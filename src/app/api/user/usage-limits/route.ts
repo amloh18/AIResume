@@ -33,12 +33,13 @@ export async function GET(request: NextRequest) {
     const user = await User.findById(userId);
     const subscription = user?.subscription;
 
-    // Get credit information for free plan users
+    // Get credit information for free and day pass plan users
     let creditInfo = null;
-    if (user?.currentPlanKey === 'free') {
+    const planKey = user?.currentPlanKey || 'free';
+    if (planKey === 'free' || planKey === 'day_pass') {
       const creditStatus = await creditService.getCreditStatus(userId);
       if (creditStatus) {
-        const creditCheck = await creditService.checkCreditAvailability(userId, 'cv_create');
+        const creditCheck = await creditService.checkCreditAvailability(userId, 'job_create');
         creditInfo = {
           remaining: creditCheck.creditsRemaining,
           limit: creditCheck.limit

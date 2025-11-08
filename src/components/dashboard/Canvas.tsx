@@ -688,10 +688,20 @@ const Canvas: React.FC = () => {
     }
   };
 
+  // Optimistic UI: Delete CV with immediate feedback and rollback on error
   const handleDeleteCV = async (cv: CV) => {
+    // Store original state for rollback
+    const originalCvs = [...cvs];
+    
+    // Optimistic update: Remove from UI immediately
+    setCvs(cvs.filter(c => c.id !== cv.id));
+    
     try {
       await deleteCV(cv.id);
     } catch (error) {
+      // Rollback on error
+      console.error('Error deleting CV:', error);
+      setCvs(originalCvs);
       // Removed notification:'error', 'Failed to delete CV');
     }
   };
@@ -1137,10 +1147,34 @@ const Canvas: React.FC = () => {
 
 
 
-  const toggleStar = (id: string) => {
+  // Optimistic UI: Toggle star with immediate feedback and rollback on error
+  const toggleStar = async (id: string) => {
+    // Store original state for rollback
+    const originalCvs = [...cvs];
+    const cv = cvs.find(c => c.id === id);
+    const newStarredState = !cv?.isStarred;
+    
+    // Optimistic update: Update UI immediately
     setCvs(cvs.map(cv => 
-      cv.id === id ? { ...cv, isStarred: !cv.isStarred } : cv
+      cv.id === id ? { ...cv, isStarred: newStarredState } : cv
     ));
+    
+    try {
+      // Execute the actual API call
+      const response = await authenticatedFetch(`/api/cvs/${id}/star`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isStarred: newStarredState })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update star status');
+      }
+    } catch (error) {
+      // Rollback on error
+      console.error('Error toggling star:', error);
+      setCvs(originalCvs);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -1350,46 +1384,42 @@ const Canvas: React.FC = () => {
     setEditingCoverLetterTitle('');
   };
 
+  // Optimistic UI: Delete cover letter with immediate feedback and rollback on error
   const handleDeleteCoverLetter = async (coverLetter: CoverLetter) => {
+    // Store original state for rollback
+    const originalCoverLetters = [...coverLetters];
+    
+    // Optimistic update: Remove from UI immediately
+    setCoverLetters(coverLetters.filter(cl => cl.id !== coverLetter.id));
+    
     try {
       const userId = getUserIdForAPI(user);
       if (!userId) {
-        console.error('User not authenticated for cover letter deletion');
-        return;
+        throw new Error('User not authenticated for cover letter deletion');
       }
 
       const response = await authenticatedFetch(`/api/cover-letters/${coverLetter.id}?userId=${userId}`, {
         method: 'DELETE',
       });
 
-      if (response.ok) {
-        const result = await response.json().catch(() => ({}));
-        if (result.success) {
-          setCoverLetters(coverLetters.filter(cl => cl.id !== coverLetter.id));
-          console.log(`Successfully deleted cover letter: ${coverLetter.title}`);
-        } else {
-          console.error('Delete cover letter error:', {
-            coverLetterId: coverLetter.id,
-            title: coverLetter.title,
-            error: result.error || 'Unknown error'
-          });
-        }
-      } else {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        console.error('Delete cover letter error:', {
-          coverLetterId: coverLetter.id,
-          title: coverLetter.title,
-          userId,
-          status: response.status,
-          error: errorData.error || errorData.message || 'Failed to delete cover letter'
-        });
+      if (!response.ok) {
+        throw new Error('Failed to delete cover letter');
       }
+      
+      const result = await response.json().catch(() => ({}));
+      if (!result.success) {
+        throw new Error(result.error || 'Unknown error');
+      }
+      
+      console.log(`Successfully deleted cover letter: ${coverLetter.title}`);
     } catch (error) {
+      // Rollback on error
       console.error('Error deleting cover letter:', {
         coverLetterId: coverLetter.id,
         title: coverLetter.title,
         error: error instanceof Error ? error.message : 'Unknown error'
       });
+      setCoverLetters(originalCoverLetters);
     }
   };
 
@@ -1447,11 +1477,11 @@ const Canvas: React.FC = () => {
 
       // Delete each unlinked cover letter
       for (const coverLetter of unlinkedCoverLetters) {
+        // Ensure we have a valid ID - check both id and _id fields (declared outside try for catch block access)
+        const coverLetterId = coverLetter.id || coverLetter._id;
+        const coverLetterTitle = coverLetter.title || coverLetter.name || 'Unknown Cover Letter';
+        
         try {
-          // Ensure we have a valid ID - check both id and _id fields
-          const coverLetterId = coverLetter.id || coverLetter._id;
-          
-          const coverLetterTitle = coverLetter.title || coverLetter.name || 'Unknown Cover Letter';
           
           if (!coverLetterId) {
             console.error(`Cover letter missing ID: ${coverLetterTitle}`, {
@@ -1558,30 +1588,36 @@ const Canvas: React.FC = () => {
     }
   };
 
+  // Optimistic UI: Toggle cover letter star with immediate feedback and rollback on error
   const toggleCoverLetterStar = async (coverLetterId: string) => {
+    // Store original state for rollback
+    const originalCoverLetters = [...coverLetters];
+    const coverLetter = coverLetters.find(cl => cl.id === coverLetterId);
+    if (!coverLetter) return;
+    
+    const newStarredState = !coverLetter.isStarred;
+    
+    // Optimistic update: Update UI immediately
+    setCoverLetters(coverLetters.map(cl => 
+      cl.id === coverLetterId ? { ...cl, isStarred: newStarredState } : cl
+    ));
+    
     try {
-      const coverLetter = coverLetters.find(cl => cl.id === coverLetterId);
-      if (!coverLetter) return;
-
       const response = await authenticatedFetch(`/api/cover-letters/${coverLetterId}`, {
         method: 'PUT',
         body: JSON.stringify({
-          isStarred: !coverLetter.isStarred,
+          isStarred: newStarredState,
           userId: getUserIdForAPI(user)
         }),
       });
 
-      if (response.ok) {
-        setCoverLetters(coverLetters.map(cl => 
-          cl.id === coverLetterId ? { ...cl, isStarred: !cl.isStarred } : cl
-        ));
-        // Removed notification:'success', coverLetter.isStarred ? 'Removed from favorites' : 'Added to favorites');
-      } else {
-        // Removed notification:'error', 'Failed to update favorite status');
+      if (!response.ok) {
+        throw new Error('Failed to update favorite status');
       }
     } catch (error) {
+      // Rollback on error
       console.error('Error toggling cover letter star:', error);
-      // Removed notification:'error', 'Error updating favorite status');
+      setCoverLetters(originalCoverLetters);
     }
   };
 

@@ -18,7 +18,11 @@
     "backup-cleanup": "node scripts/backup-database.js cleanup",
     "backup-list": "node scripts/backup-database.js list",
     "health-check": "curl -f http://localhost:3000/api/health || exit 1",
-    "test:gemini": "node scripts/test-gemini-apis.js"
+    "test:gemini": "node scripts/test-gemini-apis.js",
+    "migrate:work-summaries": "npx tsx scripts/migrate-work-summary-to-html.ts",
+    "add-credits": "npx tsx scripts/add-credits-to-users.ts",
+    "init-credits-schema": "npx tsx scripts/add-credits-schema-to-users.ts",
+    "cleanup-users": "npx tsx scripts/cleanup-users.ts"
   },
   "keywords": [
     "cv",

@@ -108,6 +108,13 @@ const TemplateRendererComponent: React.FC<TemplateRendererProps> = ({
   enabledSections,
   customStyles = {}
 }) => {
+  // IMPORTANT: Never use sample/hardcoded data - only use the provided cvData
+  // If cvData is null or undefined, this component should not render
+  if (!cvData) {
+    console.warn('⚠️ TemplateRenderer - cvData is null/undefined. Component should not render without actual CV data.');
+    return null;
+  }
+
   // Check if this is a custom template with a hardcoded renderer
   const customRenderer = template.customRenderer;
   if (customRenderer && HardcodedTemplates[customRenderer as keyof typeof HardcodedTemplates]) {
@@ -116,6 +123,7 @@ const TemplateRendererComponent: React.FC<TemplateRendererProps> = ({
       className?: string;
     }>;
     
+    // Ensure we're passing actual cvData, not sample data
     return <CustomTemplateComponent cvData={cvData} className={className} />;
   }
 

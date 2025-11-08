@@ -542,8 +542,6 @@ const ApplicationJourneyPageContent: React.FC = () => {
                 journey={journey}
                 onResume={handleResumeJourney}
                 onDownload={handleDownloadFiles}
-                onDelete={handleDeleteJourney}
-                onShowDeleteConfirm={setShowDeleteConfirm}
               />
             ))}
           </div>

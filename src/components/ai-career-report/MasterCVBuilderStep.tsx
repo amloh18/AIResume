@@ -572,7 +572,7 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
                 
                 <div className="mt-4">
                   <div className="flex items-center justify-between mb-2">
-                    <label className="block text-white/80 text-sm font-medium">Job Description</label>
+                    <label className="block text-white/80 text-sm font-medium">Work Summary</label>
                     <ToolbarWrapper
                       showAIButton={true}
                       fieldType="experience"

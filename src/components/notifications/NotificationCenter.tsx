@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useSession } from 'next-auth/react';
 import { Bell, X, Check, CheckCheck, ExternalLink, Clock } from 'lucide-react';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { INotification } from '@/models/Notification';
@@ -10,7 +11,14 @@ import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 
 export default function NotificationCenter() {
+  const { data: session, status } = useSession();
+  const isAuthenticated = status === 'authenticated' && !!session?.user;
   const { notifications, unreadCount, markAsRead, markAllAsRead, handleNotificationAction } = useNotifications();
+  
+  // Don't render notification center if user is not authenticated
+  if (!isAuthenticated) {
+    return null;
+  }
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'unread' | 'read'>('unread');
 

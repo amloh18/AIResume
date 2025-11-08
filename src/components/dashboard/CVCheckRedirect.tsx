@@ -4,7 +4,6 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUnifiedAuth } from '@/lib/hooks/useUnifiedAuth';
 import OnboardingCarouselModal from './OnboardingCarouselModal';
-import UpgradePopup from './UpgradePopup';
 
 interface CVCheckRedirectProps {
   children: React.ReactNode;
@@ -14,7 +13,6 @@ export default function CVCheckRedirect({ children }: CVCheckRedirectProps) {
   const [isChecking, setIsChecking] = useState(true);
   const [hasRedirected, setHasRedirected] = useState(false);
   const [hasMasterCV, setHasMasterCV] = useState(false);
-  const [showUpgradePopup, setShowUpgradePopup] = useState(false);
   const router = useRouter();
   const { user, loading: authLoading, isAuthenticated } = useUnifiedAuth();
   const hasCheckedRef = useRef(false);
@@ -110,6 +108,42 @@ export default function CVCheckRedirect({ children }: CVCheckRedirectProps) {
       // Mark as checked to prevent multiple calls
       hasCheckedRef.current = true;
 
+      // Check if user has AI career report data in localStorage (in-progress CV creation)
+      if (typeof window !== 'undefined') {
+        const aiCareerReportData = localStorage.getItem('ai-career-report-data');
+        if (aiCareerReportData) {
+          try {
+            const parsed = JSON.parse(aiCareerReportData);
+            // Check if we have meaningful CV data (not just empty structure)
+            const hasCvData = !!(
+              parsed.cvData?.basics?.name ||
+              parsed.cvData?.basics?.email ||
+              parsed.cvData?.work?.length > 0 ||
+              parsed.cvData?.education?.length > 0 ||
+              parsed.cvData?.projects?.length > 0 ||
+              parsed.currentStep > 1
+            );
+            
+            if (hasCvData) {
+              console.log('✅ User has AI career report data in localStorage, redirecting to continue...');
+              console.log('🔍 CVCheckRedirect - AI Career Report data:', {
+                currentStep: parsed.currentStep,
+                hasWork: parsed.cvData?.work?.length > 0,
+                hasEducation: parsed.cvData?.education?.length > 0
+              });
+              
+              // Redirect to AI career report to continue where they left off
+              const step = parsed.currentStep || 3;
+              router.push(`/ai-career-report?step=${step}`);
+              setIsChecking(false);
+              return;
+            }
+          } catch (e) {
+            console.warn('Failed to parse AI career report data:', e);
+          }
+        }
+      }
+
       // Check if user just completed onboarding or AI career report
       if (typeof window !== 'undefined' && (
         sessionStorage.getItem('fromOnboarding') === 'true' ||
@@ -126,12 +160,6 @@ export default function CVCheckRedirect({ children }: CVCheckRedirectProps) {
         sessionStorage.removeItem('fromAICareerReport');
         sessionStorage.removeItem('masterCVCreated');
         
-        // Check if should show upgrade popup
-        const shouldShowUpgrade = sessionStorage.getItem('showUpgradePopup') === 'true';
-        if (shouldShowUpgrade) {
-          sessionStorage.removeItem('showUpgradePopup');
-          setShowUpgradePopup(true);
-        }
         
         // Set hasMasterCV to true since we're skipping the check
         setHasMasterCV(true);
@@ -287,11 +315,6 @@ export default function CVCheckRedirect({ children }: CVCheckRedirectProps) {
         </div>
       </div>
     );
-  }
-
-  // Show upgrade popup if needed
-  if (showUpgradePopup && user?.id) {
-    return <UpgradePopup onClose={() => setShowUpgradePopup(false)} userId={user.id} />;
   }
 
   // Show onboarding modal if no master CV found

@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     results.creditStatus = creditStatus;
 
     // Test 2: Check credit availability
-    const availability = await creditService.checkCreditAvailability(userId, 'cv_create');
+    const availability = await creditService.checkCreditAvailability(userId, 'job_create');
     results.creditAvailability = {
       available: availability.available,
       creditsRemaining: availability.creditsRemaining,
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
     // Test 3: Check usage limit (full check)
     const usageCheck = await usageLimitsService.checkUsageLimit({
       userId,
-      action: 'cv_create'
+      action: 'job_create'
     });
     results.usageLimitCheck = {
       allowed: usageCheck.allowed,
@@ -75,11 +75,10 @@ export async function GET(request: NextRequest) {
       currentPlanKey: user.currentPlanKey,
       subscriptionStatus: user.subscription?.status,
       credits: user.credits ? {
-        cvCredits: user.credits.cvCredits,
-        exportCredits: user.credits.exportCredits,
-        atsCheckCredits: user.credits.atsCheckCredits,
+        jobCredits: user.credits.jobCredits,
         lastResetDate: user.credits.lastResetDate,
-        resetSchedule: user.credits.resetSchedule
+        resetSchedule: user.credits.resetSchedule,
+        totalCreated: user.credits.totalCreated
       } : null
     };
 
@@ -126,16 +125,16 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { action } = body;
 
-    const actionType = action || 'cv_create';
+    const actionType: 'job_create' = (action || 'job_create') as 'job_create';
 
     // Check before
-    const before = await creditService.checkCreditAvailability(userId, actionType as any);
+    const before = await creditService.checkCreditAvailability(userId, actionType);
 
     // Spend credit
-    const spendResult = await creditService.spendCredit(userId, actionType as any);
+    const spendResult = await creditService.spendCredit(userId, actionType);
 
     // Check after
-    const after = await creditService.checkCreditAvailability(userId, actionType as any);
+    const after = await creditService.checkCreditAvailability(userId, actionType);
 
     return NextResponse.json({
       success: spendResult,

@@ -377,6 +377,20 @@ async function handleSaveClick() {
         updateButtonState('normal');
       }, 2000);
     } else {
+      // Check if this is a credit exhaustion error
+      if (response.requiresUpgrade) {
+        updateButtonState('error');
+        showSaveNotification(
+          `You've used all your job credits (${response.creditsRemaining || 0}/${response.limit || 1}). Upgrade page opened in new tab.`,
+          'error',
+          5000
+        );
+        setTimeout(() => {
+          updateButtonState('normal');
+        }, 5000);
+        return; // Don't throw error, paywall is already opened
+      }
+      
       throw new Error(response.message || 'Failed to save job');
     }
     
@@ -391,7 +405,7 @@ async function handleSaveClick() {
 }
 
 // Show save notification
-function showSaveNotification(message, type = 'success') {
+function showSaveNotification(message, type = 'success', duration = 3000) {
   // Create notification element
   const notification = document.createElement('div');
   notification.className = `circle-cv-notification ${type}`;
@@ -451,7 +465,7 @@ function showSaveNotification(message, type = 'success') {
   // Add to page
   document.body.appendChild(notification);
   
-  // Remove after 3 seconds
+  // Remove after specified duration
   setTimeout(() => {
     notification.classList.add('removing');
     setTimeout(() => {
@@ -459,7 +473,7 @@ function showSaveNotification(message, type = 'success') {
         notification.parentNode.removeChild(notification);
       }
     }, 300);
-  }, 3000);
+  }, duration);
 }
 
 // Handle download button click

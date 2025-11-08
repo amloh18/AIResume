@@ -543,7 +543,8 @@ from the resume text and return **only** a valid JSON object.
 - Do NOT output textual words like "Present" in date fields.
 - Clean all text: Remove dates, extra whitespace, and formatting artifacts from titles.
 - Skills should be categorized appropriately (e.g., "Technical Skills", "Programming Languages", "Soft Skills").
-- Extract URLs and links properly (GitHub, LinkedIn, personal websites).`;
+- Extract URLs and links properly (GitHub, LinkedIn, personal websites).
+- **IMPORTANT for work experience**: The "summary" field should contain the complete job description/responsibilities. If the work experience has both a description and summary, combine them into a single "summary" field. Do not split work experience details into separate fields.`;
 
   const prompt = `Here is the resume text:\n\n${rawText}`;
 

@@ -37,12 +37,14 @@ export interface IUser extends Document {
     cvCredits: number;
     exportCredits: number;
     atsCheckCredits: number;
+    jobCredits: number;
     lastResetDate: Date;
     resetSchedule: 'monthly' | 'quarterly' | 'yearly' | 'one-time' | 'never';
     totalCreated: {
       cvs: number;
       exports: number;
       atsChecks: number;
+      jobs: number;
     };
   };
   // Day pass tracking (for cumulative usage across multiple passes)
@@ -269,22 +271,12 @@ const userSchema = new Schema<IUser>({
       trim: true
     }
   },
-  // Credit-based usage system
+  // Credit-based usage system - only job credits
   credits: {
-    cvCredits: {
+    jobCredits: {
       type: Number,
-      default: 3,
+      default: 1, // Free plan: 1 credit per month
       min: -1 // -1 means unlimited
-    },
-    exportCredits: {
-      type: Number,
-      default: 3,
-      min: -1
-    },
-    atsCheckCredits: {
-      type: Number,
-      default: 3,
-      min: -1
     },
     lastResetDate: {
       type: Date,
@@ -296,17 +288,7 @@ const userSchema = new Schema<IUser>({
       default: 'monthly'
     },
     totalCreated: {
-      cvs: {
-        type: Number,
-        default: 0,
-        min: 0
-      },
-      exports: {
-        type: Number,
-        default: 0,
-        min: 0
-      },
-      atsChecks: {
+      jobs: {
         type: Number,
         default: 0,
         min: 0

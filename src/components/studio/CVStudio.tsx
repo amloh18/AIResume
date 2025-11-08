@@ -2233,6 +2233,12 @@ const CVStudio: React.FC<CVStudioProps> = ({
                   console.log('🔍 CVStudio - CV data type:', typeof convertedData);
                   console.log('🔍 CVStudio - CV data work section:', convertedData?.work);
                   console.log('🔍 CVStudio - CV data work array length:', convertedData?.work?.length);
+                  if (convertedData?.work && Array.isArray(convertedData.work) && convertedData.work.length > 0) {
+                    console.log('🔍 CVStudio - First work item:', convertedData.work[0]);
+                    console.log('🔍 CVStudio - First work item summary:', convertedData.work[0]?.summary);
+                    console.log('🔍 CVStudio - First work item summary type:', typeof convertedData.work[0]?.summary);
+                    console.log('🔍 CVStudio - First work item summary length:', convertedData.work[0]?.summary?.length);
+                  }
                   setCvData(convertedData);
 
                   // Set CV title from the result

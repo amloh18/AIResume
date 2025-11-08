@@ -935,13 +935,38 @@ async function handleSaveJob(jobData, sendResponse) {
     if (response.ok) {
       const result = await response.json();
       console.log('✅ Job saved to API:', result);
-    sendResponse({ 
-      success: true, 
-      message: 'Job saved successfully!',
+      sendResponse({ 
+        success: true, 
+        message: 'Job saved successfully!',
         data: result.data 
-    });
+      });
     } else {
-      const errorData = await response.json();
+      const errorData = await response.json().catch(() => ({}));
+      
+      // Check if this is a credit exhaustion error
+      if (response.status === 403 && errorData.requiresUpgrade) {
+        console.log('⚠️ Credit exhaustion detected - opening paywall');
+        console.log('Error data:', errorData);
+        
+        // Calculate remaining credits: limit - currentUsage
+        const limit = errorData.limit || 1;
+        const currentUsage = errorData.currentUsage || limit;
+        const creditsRemaining = Math.max(0, limit - currentUsage);
+        
+        // Open dashboard with paywall trigger
+        const dashboardUrl = `${API_BASE_URL}/dashboard/application-tracker?showPaywall=true&creditsRemaining=${creditsRemaining}&limit=${limit}`;
+        chrome.tabs.create({ url: dashboardUrl });
+        
+        sendResponse({ 
+          success: false, 
+          message: 'Job creation limit reached. Opening upgrade page...',
+          requiresUpgrade: true,
+          creditsRemaining: creditsRemaining,
+          limit: limit
+        });
+        return;
+      }
+      
       throw new Error(errorData.error || `API request failed: ${response.status}`);
     }
     

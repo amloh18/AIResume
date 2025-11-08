@@ -752,10 +752,8 @@ ${userName}`
                       journey={journey}
                       onResume={handleContinueJourney}
                       onDownload={handleApplyNow}
-                      onDelete={handleDeleteJourney}
                       onRefresh={onRefresh}
                       onUpdateJourney={handleUpdateJourney}
-                      onShowDeleteConfirm={setShowDeleteConfirm}
                     />
                   );
                 })}

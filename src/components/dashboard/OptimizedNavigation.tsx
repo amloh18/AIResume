@@ -25,9 +25,10 @@ const OptimizedNavigation: React.FC = () => {
   const { preloadOnHover } = useRoutePreloader();
   const [activeSection, setActiveSection] = useState('analytics');
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
-  const [isUserMenuExpanded, setIsUserMenuExpanded] = useState(true);
+  const [isUserMenuExpanded, setIsUserMenuExpanded] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [creditInfo, setCreditInfo] = useState<{ remaining: number; limit: number } | null>(null);
+  const [creditInfoLoading, setCreditInfoLoading] = useState(true);
   
   // Update time every minute for day pass countdown
   useEffect(() => {
@@ -38,38 +39,56 @@ const OptimizedNavigation: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch credit information for free plan users
+  // Fetch credit information for free and day pass plan users
   useEffect(() => {
     const fetchCreditInfo = async () => {
-      if (userData?.currentPlanKey === 'free' && userData?.id) {
+      const planKey = userData?.currentPlanKey || 'free';
+      
+      // Only fetch credits for free and day_pass plans
+      if ((planKey === 'free' || planKey === 'day_pass') && userData?.id) {
+        setCreditInfoLoading(true);
         try {
           // Fetch credit status from the new credit system
           const response = await fetch('/api/user/usage-limits');
           if (response.ok) {
             const data = await response.json();
-            if (data.success) {
-              // Try to get from credit system first
-              if (data.credits) {
-                const limit = data.credits.limit || 3;
-                const remaining = data.credits.creditsRemaining >= 0 ? data.credits.creditsRemaining : limit;
+            if (data.success && data.credits) {
+              // Only set credit info if we have actual data from API
+              const limit = data.credits.limit;
+              const remaining = data.credits.remaining;
+              
+              // Verify we have valid credit data (not fallback values)
+              if (limit !== undefined && remaining !== undefined) {
                 setCreditInfo({ remaining, limit });
-              } else if (data.usageLimits) {
-                // Fallback to old system
-                const limit = data.usageLimits.planLimits?.maxCVs || 3;
-                const used = data.usageLimits.cvJourneyCount || 0;
-                const remaining = Math.max(0, limit - used);
-                setCreditInfo({ remaining, limit });
+                setCreditInfoLoading(false);
+              } else {
+                // Invalid data, don't show card
+                setCreditInfo(null);
+                setCreditInfoLoading(false);
               }
+            } else {
+              // No credit data in response, don't show card
+              setCreditInfo(null);
+              setCreditInfoLoading(false);
             }
+          } else {
+            // API error, don't show card
+            setCreditInfo(null);
+            setCreditInfoLoading(false);
           }
         } catch (error) {
           console.error('Error fetching credit info:', error);
-          // Default to 3 credits if fetch fails
-          setCreditInfo({ remaining: 3, limit: 3 });
+          // Don't show card on error
+          setCreditInfo(null);
+          setCreditInfoLoading(false);
         }
-      } else if (userData?.currentPlanKey !== 'free') {
-        // Clear credit info for non-free plans
+      } else if (planKey !== 'free' && planKey !== 'day_pass') {
+        // Clear credit info for pro plans (unlimited)
         setCreditInfo(null);
+        setCreditInfoLoading(false);
+      } else {
+        // No user data yet, still loading
+        setCreditInfoLoading(true);
       }
     };
 
@@ -78,6 +97,23 @@ const OptimizedNavigation: React.FC = () => {
 
   // Check if user is admin
   const isAdmin = userData?.role === 'admin';
+
+  // Prefetch routes on mount for faster navigation
+  useEffect(() => {
+    const routesToPrefetch = [
+      '/dashboard',
+      '/dashboard/career-report',
+      '/dashboard/application-tracker',
+      '/dashboard/canvas',
+      '/dashboard/application-journey',
+      '/dashboard/settings'
+    ];
+    
+    // Prefetch all dashboard routes for instant navigation
+    routesToPrefetch.forEach(route => {
+      router.prefetch(route);
+    });
+  }, [router]);
 
   // Update active section based on current path
   useEffect(() => {
@@ -118,6 +154,8 @@ const OptimizedNavigation: React.FC = () => {
     
     const targetRoute = routes[sectionId as keyof typeof routes];
     if (targetRoute) {
+      // Prefetch route if not already prefetched
+      router.prefetch(targetRoute);
       // Use replace to avoid back button issues and ensure immediate navigation
       router.replace(targetRoute);
     }
@@ -240,7 +278,11 @@ const OptimizedNavigation: React.FC = () => {
             <motion.button
               key={section.id}
               onClick={() => handleNavigation(section.id)}
-              onMouseEnter={() => preloadOnHover(section.id)}
+              onMouseEnter={() => {
+                // Prefetch route and preload component on hover for instant navigation
+                router.prefetch(section.route);
+                preloadOnHover(section.id);
+              }}
               className={`w-full flex items-center gap-4 px-5 py-4 lg:px-3 lg:py-3 rounded-xl transition-all duration-200 text-left lg:justify-center 2xl:px-4 2xl:justify-start ${
                 isActive
                   ? 'bg-lime-100 dark:bg-lime-900/30 text-lime-700 dark:text-lime-400'
@@ -294,11 +336,16 @@ const OptimizedNavigation: React.FC = () => {
       {/* Membership Card - Persistent for free and day pass only */}
       <div className="px-4 pb-3">
         {(() => {
-          const currentPlan = userData?.subscription?.planKey || 'free';
+          const currentPlan = userData?.subscription?.planKey || userData?.currentPlanKey || 'free';
           const planStatus = userData?.subscription?.status || 'active';
           
           // Only show for free and day_pass plans
           if (currentPlan !== 'free' && currentPlan !== 'day_pass') {
+            return null;
+          }
+          
+          // Don't show card if credit info is still loading or not available
+          if (creditInfoLoading || !creditInfo) {
             return null;
           }
           
@@ -329,8 +376,10 @@ const OptimizedNavigation: React.FC = () => {
           
           // Free plan card
           if (currentPlan === 'free') {
-            const remaining = creditInfo?.remaining ?? 3;
-            const limit = creditInfo?.limit ?? 3;
+            const remaining = creditInfo.remaining;
+            const limit = creditInfo.limit;
+            const isUnlimited = limit === -1;
+            const hasCredits = isUnlimited || remaining > 0;
             
             return (
               <div className="hidden 2xl:block rounded-2xl p-3 text-white border-2 border-white/20" style={{ backgroundColor: '#603a86' }}>
@@ -339,16 +388,27 @@ const OptimizedNavigation: React.FC = () => {
                 </div>
                 
                 <div className="text-xs text-white/95 mb-3">
-                  You have <span className="font-bold">{remaining}</span> of your <span className="font-bold">{limit}</span> free job credits left.
+                  {isUnlimited ? (
+                    <span>You have <span className="font-bold">Unlimited</span> job credits.</span>
+                  ) : (
+                    <span>You have <span className="font-bold">{remaining}</span> of <span className="font-bold">{limit}</span> job credit{limit !== 1 ? 's' : ''} left this month.</span>
+                  )}
                 </div>
+                
+                {!hasCredits && (
+                  <div className="text-xs text-yellow-300 mb-2 font-medium">
+                    ⚠️ Credits exhausted. Upgrade to continue creating jobs.
+                  </div>
+                )}
                 
                 <div className="text-xs font-semibold mb-1.5">
                   Go Pro to get:
                 </div>
                 
                 <ul className="text-xs text-white/90 space-y-0.5 mb-3">
-                  <li>• Unlimited CVs & exports</li>
-                  <li>• ATS optimization</li>
+                  <li>• Unlimited job creation</li>
+                  <li>• Unlimited CVs & cover letters</li>
+                  <li>• Unlimited ATS checks per job</li>
                   <li>• Premium templates</li>
                   <li>• Priority support</li>
                 </ul>
@@ -367,6 +427,11 @@ const OptimizedNavigation: React.FC = () => {
           }
           
           // Day pass card
+          const dayPassRemaining = creditInfo.remaining;
+          const dayPassLimit = creditInfo.limit;
+          const dayPassIsUnlimited = dayPassLimit === -1;
+          const dayPassHasCredits = dayPassIsUnlimited || dayPassRemaining > 0;
+          
           return (
             <motion.div 
               className={`bg-gradient-to-r ${isUrgent ? 'from-red-500 to-red-600' : 'from-orange-500 to-orange-600'} rounded-2xl p-3 text-white border-2 ${isUrgent ? 'border-red-300' : 'border-white/20'}`}
@@ -394,11 +459,25 @@ const OptimizedNavigation: React.FC = () => {
                 )}
               </div>
               
+              <div className="text-xs text-white/95 mb-2 leading-relaxed">
+                {dayPassIsUnlimited ? (
+                  <span>You have <span className="font-bold">Unlimited</span> job credits.</span>
+                ) : (
+                  <span>You have <span className="font-bold">{dayPassRemaining}</span> of <span className="font-bold">{dayPassLimit}</span> job credit{dayPassLimit !== 1 ? 's' : ''} left.</span>
+                )}
+              </div>
+              
+              {!dayPassHasCredits && !isExpired && (
+                <div className="text-xs text-yellow-200 mb-2 font-medium">
+                  ⚠️ Credits exhausted. Upgrade to continue.
+                </div>
+              )}
+              
               <div className="text-xs text-white/95 mb-2.5 leading-relaxed">
                 {isUrgent ? (
                   <span className="font-medium">⚠️ Running out! Upgrade now for unlimited access</span>
                 ) : (
-                  <span>Missing: Unlimited CVs, ATS checks & exports</span>
+                  <span>Upgrade for: Unlimited jobs, CVs, ATS checks & exports</span>
                 )}
               </div>
               
