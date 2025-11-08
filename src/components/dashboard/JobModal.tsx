@@ -678,19 +678,23 @@ ${userName}`
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 bg-black/60 dark:bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
+        className="fixed inset-0 z-50 bg-black/70 dark:bg-black/70 backdrop-blur-md flex items-center justify-center p-4"
         onClick={onClose}
       >
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
-          className="bg-white dark:bg-[#1A201A] rounded-2xl shadow-2xl border border-gray-200 dark:border-white/10 w-full max-w-6xl max-h-[90vh] overflow-hidden mx-4 sm:mx-0 flex flex-col"
+          className="bg-white dark:bg-[#1A201A] rounded-2xl shadow-2xl border border-gray-200 dark:border-white/10 w-[90%] max-w-6xl max-h-[85vh] overflow-hidden flex flex-col"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-white/10 flex-shrink-0">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Job Application Details</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{job.jobTitle || job.title}</h2>
+              <span className="text-gray-500 dark:text-gray-400">at</span>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{job.company}</h2>
+            </div>
             <div className="flex items-center gap-3">
               <motion.button
                 onClick={handleOpenEditModal}
@@ -713,13 +717,7 @@ ${userName}`
           </div>
 
           {/* Scrollable Content */}
-          <div className="flex-1 overflow-y-auto">
-            {/* Job Title and Company */}
-            <div className="px-6 py-4">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{job.jobTitle}</h1>
-              <p className="text-gray-600 dark:text-white/70 text-lg">at {job.company}</p>
-            </div>
-
+          <div className="flex-1 overflow-y-auto min-h-0">
             {/* CV Journeys Section */}
             <div className="px-6 py-4">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">🎯 CV Journeys for this Job</h3>
@@ -785,7 +783,7 @@ ${userName}`
           {/* Main Content - Two Column Layout */}
           <div className="flex flex-1 overflow-hidden">
             {/* Left Column - Main Content */}
-            <div className="flex-1 p-6 overflow-y-auto">
+            <div className="flex-1 p-6 overflow-y-auto min-h-0">
               <div className="space-y-2">
                 {/* Job Description */}
                 <div className="p-4">
@@ -883,7 +881,7 @@ ${userName}`
             </div>
 
             {/* Right Column - Sidebar */}
-            <div className="w-80 p-6 overflow-y-auto">
+            <div className="w-80 p-6 overflow-y-auto min-h-0">
               <div className="space-y-6">
                 {/* Application Status */}
                 <div className="bg-gray-50 dark:bg-[#232f1c] border border-gray-200 dark:border-lime-500/20 rounded-2xl p-4">
@@ -1130,7 +1128,7 @@ ${userName}`
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-60 bg-black/60 dark:bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
+          className="fixed inset-0 z-60 bg-black/70 dark:bg-black/70 backdrop-blur-md flex items-center justify-center p-4"
         >
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}

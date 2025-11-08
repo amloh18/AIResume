@@ -1,22 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import getConnection from '@/lib/database';
-import Job from '@/models/Job';
+import { getAuthenticatedUser } from '@/lib/auth-helpers';
+import mongoose from 'mongoose';
+import { JobApplication } from '@/models';
 import CV from '@/models/CV';
 import CoverLetter from '@/models/CoverLetter';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
     const range = searchParams.get('range') || '30d';
 
-    console.log('Progress API: Request received', { userId, range });
+    console.log('Progress API: Request received', { range });
 
-    if (!userId) {
-      console.log('Progress API: No userId provided');
+    // Get authenticated user to ensure we have the correct MongoDB ObjectId
+    const authResult = await getAuthenticatedUser(request);
+    
+    if (!authResult || !authResult.userId) {
+      console.log('Progress API: No authenticated user found');
       return NextResponse.json(
-        { success: false, message: 'User ID is required' },
-        { status: 400 }
+        { success: false, message: 'Unauthorized' },
+        { status: 401 }
       );
     }
 
@@ -27,52 +31,105 @@ export async function GET(request: NextRequest) {
     const days = range === '7d' ? 7 : range === '30d' ? 30 : 90;
     const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
 
-    // Handle both MongoDB ObjectId and Firebase UID
-    const queryCondition = userId.length === 24 && /^[0-9a-fA-F]{24}$/.test(userId)
-      ? { userId: userId } // MongoDB ObjectId
-      : { firebaseUid: userId }; // Firebase UID
+    // JobApplication uses Mixed type for userId, so we need to handle both ObjectId and string
+    // Support both ObjectId and string userId formats
+    let userIdQuery: any;
+    if (mongoose.Types.ObjectId.isValid(authResult.userId)) {
+      userIdQuery = { $in: [new mongoose.Types.ObjectId(authResult.userId), authResult.userId] };
+    } else {
+      userIdQuery = authResult.userId;
+    }
+
+    console.log('Progress API: Using userId from authenticated user', { 
+      userId: authResult.userId,
+      userIdQuery 
+    });
 
     // Fetch jobs created in the date range OR updated in the date range
-    const jobs = await Job.find({
-      ...queryCondition,
+    const jobs = await JobApplication.find({
+      userId: userIdQuery,
       $or: [
         { createdAt: { $gte: startDate } }, // Jobs created in the date range
         { updatedAt: { $gte: startDate } } // Jobs updated in the date range
       ]
     }).sort({ createdAt: 1 });
 
+    console.log('Progress API: Query condition', { 
+      userIdQuery, 
+      startDate: startDate.toISOString(),
+      jobsCount: jobs.length 
+    });
+
+    console.log('Progress API: Jobs fetched', { count: jobs.length, sample: jobs.slice(0, 2).map(j => ({ id: j._id, createdAt: j.createdAt, updatedAt: j.updatedAt })) });
+
+    // CV and CoverLetter use ObjectId for userId, so we can use the ObjectId directly
+    const userIdObjectId = mongoose.Types.ObjectId.isValid(authResult.userId) 
+      ? new mongoose.Types.ObjectId(authResult.userId)
+      : null;
+
+    if (!userIdObjectId) {
+      console.error('Progress API: Invalid userId format for CV/CoverLetter query', { userId: authResult.userId });
+      return NextResponse.json(
+        { success: false, message: 'Invalid user ID format' },
+        { status: 400 }
+      );
+    }
+
     // Fetch CVs created or updated in the date range
     const cvs = await CV.find({
-      ...queryCondition,
+      userId: userIdObjectId,
       $or: [
         { createdAt: { $gte: startDate } }, // CVs created in the date range
         { updatedAt: { $gte: startDate } } // CVs updated in the date range
       ]
     }).sort({ createdAt: 1 });
 
+    console.log('Progress API: CVs fetched', { count: cvs.length });
+
     // Fetch cover letters created or updated in the date range
     const coverLetters = await CoverLetter.find({
-      ...queryCondition,
+      userId: userIdObjectId,
       $or: [
         { createdAt: { $gte: startDate } }, // Cover letters created in the date range
         { updatedAt: { $gte: startDate } } // Cover letters updated in the date range
       ]
     }).sort({ createdAt: 1 });
 
+    console.log('Progress API: Cover letters fetched', { count: coverLetters.length });
+
     // Group data by date
     const dataByDate: { [key: string]: { jobs: number; cvs: number; coverLetters: number } } = {};
 
     // Initialize all dates in range with zero values
+    // Use UTC dates to avoid timezone issues
+    const startDateUTC = new Date(Date.UTC(
+      startDate.getUTCFullYear(),
+      startDate.getUTCMonth(),
+      startDate.getUTCDate()
+    ));
+    
     for (let i = 0; i < days; i++) {
-      const date = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000);
+      const date = new Date(startDateUTC.getTime() + i * 24 * 60 * 60 * 1000);
       const dateKey = date.toISOString().split('T')[0];
       dataByDate[dateKey] = { jobs: 0, cvs: 0, coverLetters: 0 };
     }
+    
+    console.log('Progress API: Date range initialized', { 
+      startDate: startDateUTC.toISOString().split('T')[0],
+      endDate: new Date(startDateUTC.getTime() + (days - 1) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      totalDays: days,
+      dateKeys: Object.keys(dataByDate).slice(0, 5)
+    });
 
     // Count jobs by date (consider both creation and update dates, same as CVs and Cover Letters)
     jobs.forEach(job => {
-      const createdDate = job.createdAt ? job.createdAt.toISOString().split('T')[0] : null;
-      const updatedDate = job.updatedAt ? job.updatedAt.toISOString().split('T')[0] : null;
+      // Convert dates to UTC date strings (YYYY-MM-DD) for consistent comparison
+      const createdDate = job.createdAt 
+        ? new Date(job.createdAt).toISOString().split('T')[0] 
+        : null;
+      const updatedDate = job.updatedAt 
+        ? new Date(job.updatedAt).toISOString().split('T')[0] 
+        : null;
       
       // Count job creation if it's within the date range
       if (createdDate && dataByDate[createdDate]) {
@@ -84,6 +141,11 @@ export async function GET(request: NextRequest) {
       if (updatedDate && updatedDate !== createdDate && dataByDate[updatedDate]) {
         dataByDate[updatedDate].jobs++;
       }
+    });
+
+    console.log('Progress API: Jobs counted by date', { 
+      totalJobs: jobs.length,
+      jobsInDateRange: Object.values(dataByDate).reduce((sum, day) => sum + day.jobs, 0)
     });
 
     // Count CVs by date (consider both creation and update dates)

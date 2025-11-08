@@ -36,11 +36,15 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Unsupported format' }, { status: 400 });
     }
 
-    // Return the file as a blob
+    // Return the file as a blob with proper headers
     return new NextResponse(exportResult.buffer, {
       headers: {
         'Content-Type': exportResult.mimeType,
-        'Content-Disposition': `attachment; filename="${exportResult.filename}"`,
+        'Content-Disposition': `attachment; filename="${encodeURIComponent(exportResult.filename)}"`,
+        'Content-Length': exportResult.buffer.length.toString(),
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
       },
     });
 
@@ -70,14 +74,280 @@ async function generatePDFExport(cvData: any, template: any) {
 }
 
 async function generateDOCXExport(cvData: any, template: any) {
-  // For DOCX generation, you'd use a library like docx or officegen
-  // This is a simplified implementation
+  // Use docx library for proper DOCX generation with template styling
+  const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, WidthType } = await import('docx');
   
-  const docContent = generateDocContent(cvData, template);
-  const docxBuffer = Buffer.from(docContent, 'utf-8');
+  // Extract template styling
+  const primaryColor = template?.globalStyles?.primaryColor || '#000000';
+  const fontFamily = template?.globalStyles?.fontFamily || 'Calibri';
+  const fontSize = template?.globalStyles?.fontSize || '11pt';
+  const fontSizeNum = parseInt(fontSize) || 22; // Convert pt to half-points (11pt = 22 half-points)
+  
+  // Helper to convert hex color to RGB
+  const hexToRgb = (hex: string) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : { r: 0, g: 0, b: 0 };
+  };
+  
+  const primaryRgb = hexToRgb(primaryColor);
+  
+  const doc = new Document({
+    sections: [{
+      properties: {
+        page: {
+          size: {
+            width: 12240, // A4 width in twips (8.5in)
+            height: 15840, // A4 height in twips (11in)
+          },
+          margin: {
+            top: 1440, // 1 inch
+            right: 1440,
+            bottom: 1440,
+            left: 1440,
+          },
+        },
+      },
+      children: [
+        // Header with template styling
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: cvData.basics?.name || 'Your Name',
+              bold: true,
+              size: fontSizeNum * 1.5, // Larger for name
+              color: primaryColor.startsWith('#') ? primaryColor.substring(1) : primaryColor,
+              font: fontFamily,
+            }),
+          ],
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 200 },
+        }),
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: cvData.basics?.label || 'Professional Title',
+              size: fontSizeNum,
+              color: primaryColor.startsWith('#') ? primaryColor.substring(1) : primaryColor,
+              font: fontFamily,
+            }),
+          ],
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 200 },
+        }),
+        new Paragraph({
+          children: [
+            ...(cvData.basics?.email ? [new TextRun({ text: cvData.basics.email, size: fontSizeNum - 2, font: fontFamily })] : []),
+            ...(cvData.basics?.phone ? [new TextRun({ text: cvData.basics.phone, size: fontSizeNum - 2, font: fontFamily, break: 1 })] : []),
+            ...(cvData.basics?.location?.city ? [new TextRun({ text: cvData.basics.location.city, size: fontSizeNum - 2, font: fontFamily, break: 1 })] : []),
+          ],
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 400 },
+        }),
+        
+        // Summary
+        ...(cvData.basics?.summary ? [
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: 'PROFESSIONAL SUMMARY',
+                bold: true,
+                size: fontSizeNum + 2,
+                color: primaryColor.startsWith('#') ? primaryColor.substring(1) : primaryColor,
+                font: fontFamily,
+                underline: {},
+              }),
+            ],
+            spacing: { after: 200 },
+          }),
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: cvData.basics.summary,
+                size: fontSizeNum,
+                font: fontFamily,
+              }),
+            ],
+            spacing: { after: 400 },
+          }),
+        ] : []),
+        
+        // Work Experience
+        ...(cvData.work && cvData.work.length > 0 ? [
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: 'WORK EXPERIENCE',
+                bold: true,
+                size: fontSizeNum + 2,
+                color: primaryColor.startsWith('#') ? primaryColor.substring(1) : primaryColor,
+                font: fontFamily,
+                underline: {},
+              }),
+            ],
+            spacing: { after: 200 },
+          }),
+          ...cvData.work.flatMap((work: any) => [
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: work.position || 'Position',
+                  bold: true,
+                  size: fontSizeNum,
+                  font: fontFamily,
+                }),
+              ],
+              spacing: { after: 100 },
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `${work.name || 'Company'} | ${work.startDate || ''} - ${work.endDate || 'Present'}`,
+                  size: fontSizeNum - 2,
+                  italics: true,
+                  font: fontFamily,
+                }),
+              ],
+              spacing: { after: 100 },
+            }),
+            ...(work.summary ? [
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: work.summary,
+                    size: fontSizeNum,
+                    font: fontFamily,
+                  }),
+                ],
+                spacing: { after: 200 },
+              }),
+            ] : []),
+          ]),
+        ] : []),
+        
+        // Education
+        ...(cvData.education && cvData.education.length > 0 ? [
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: 'EDUCATION',
+                bold: true,
+                size: fontSizeNum + 2,
+                color: primaryColor.startsWith('#') ? primaryColor.substring(1) : primaryColor,
+                font: fontFamily,
+                underline: {},
+              }),
+            ],
+            spacing: { after: 200 },
+          }),
+          ...cvData.education.flatMap((edu: any) => [
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `${edu.studyType || 'Degree'} in ${edu.area || 'Field'}`,
+                  bold: true,
+                  size: fontSizeNum,
+                  font: fontFamily,
+                }),
+              ],
+              spacing: { after: 100 },
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `${edu.institution || 'Institution'} | ${edu.startDate || ''} - ${edu.endDate || ''}`,
+                  size: fontSizeNum - 2,
+                  italics: true,
+                  font: fontFamily,
+                }),
+              ],
+              spacing: { after: 200 },
+            }),
+          ]),
+        ] : []),
+        
+        // Skills
+        ...(cvData.skills && cvData.skills.length > 0 ? [
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: 'SKILLS',
+                bold: true,
+                size: fontSizeNum + 2,
+                color: primaryColor.startsWith('#') ? primaryColor.substring(1) : primaryColor,
+                font: fontFamily,
+                underline: {},
+              }),
+            ],
+            spacing: { after: 200 },
+          }),
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: cvData.skills.map((skill: any) => 
+                  typeof skill === 'string' ? skill : 
+                  (skill.category ? `${skill.category}: ${Array.isArray(skill.skills) ? skill.skills.join(', ') : skill.skills}` : skill.name || skill)
+                ).join(' • '),
+                size: fontSizeNum,
+                font: fontFamily,
+              }),
+            ],
+            spacing: { after: 400 },
+          }),
+        ] : []),
+        
+        // Projects
+        ...(cvData.projects && cvData.projects.length > 0 ? [
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: 'PROJECTS',
+                bold: true,
+                size: fontSizeNum + 2,
+                color: primaryColor.startsWith('#') ? primaryColor.substring(1) : primaryColor,
+                font: fontFamily,
+                underline: {},
+              }),
+            ],
+            spacing: { after: 200 },
+          }),
+          ...cvData.projects.flatMap((project: any) => [
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: project.name || 'Project',
+                  bold: true,
+                  size: fontSizeNum,
+                  font: fontFamily,
+                }),
+              ],
+              spacing: { after: 100 },
+            }),
+            ...(project.description ? [
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: project.description,
+                    size: fontSizeNum,
+                    font: fontFamily,
+                  }),
+                ],
+                spacing: { after: 200 },
+              }),
+            ] : []),
+          ]),
+        ] : []),
+      ],
+    }],
+  });
+  
+  const buffer = await Packer.toBuffer(doc);
   
   return {
-    buffer: docxBuffer,
+    buffer: buffer,
     mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     filename: `${cvData.basics?.name || 'CV'}.docx`
   };
@@ -264,26 +534,4 @@ function generateHTMLContent(cvData: any, template: any): string {
     </body>
     </html>
   `;
-}
-
-function generateDocContent(cvData: any, template: any): string {
-  // Simplified DOCX content - in production, use proper DOCX library
-  let content = `${cvData.basics?.name || 'Your Name'}\n`;
-  content += `${cvData.basics?.label || 'Professional Title'}\n\n`;
-  
-  if (cvData.basics?.summary) {
-    content += `PROFESSIONAL SUMMARY\n${cvData.basics.summary}\n\n`;
-  }
-  
-  if (cvData.work && cvData.work.length > 0) {
-    content += `WORK EXPERIENCE\n`;
-    cvData.work.forEach((work: any) => {
-      content += `${work.position || 'Position'} at ${work.name || 'Company'}\n`;
-      content += `${work.startDate || ''} - ${work.endDate || 'Present'}\n`;
-      if (work.summary) content += `${work.summary}\n`;
-      content += `\n`;
-    });
-  }
-  
-  return content;
 }

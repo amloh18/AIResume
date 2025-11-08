@@ -16,7 +16,7 @@ import {
 import { useSession } from 'next-auth/react';
 import { CVProgressService } from '@/lib/services/cvProgressService';
 import { UnifiedCVService } from '@/lib/services/unified-cv-service';
-import CVPreviewThumbnail from './CVPreviewThumbnail';
+// CVPreviewThumbnail removed - using S3 thumbnails only
 
 interface MasterCV {
   id: string;
@@ -448,31 +448,22 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
                   // Extract key and fetch presigned URL
                   fetch(`/api/files/${encodeURIComponent(currentSrc.split('.amazonaws.com/')[1] || '')}`)
                     .then(res => res.json())
-                    .then(data => {
-                      if (data.url) {
-                        target.src = data.url;
-                      } else {
-                        // If presigned URL fails, fallback to live rendering
+                      .then(data => {
+                        if (data.url) {
+                          target.src = data.url;
+                        } else {
+                          // If presigned URL fails, show placeholder
+                          setThumbnailUrl(null);
+                        }
+                      })
+                      .catch(() => {
+                        console.error('Failed to fetch presigned URL for thumbnail');
                         setThumbnailUrl(null);
-                      }
-                    })
-                    .catch(() => {
-                      // If all S3 attempts fail, fallback to live rendering
-                      console.error('Failed to fetch presigned URL for thumbnail, falling back to live rendering');
-                      setThumbnailUrl(null);
-                    });
+                      });
                 } else {
-                  // For non-S3 URLs, if they fail, try live rendering
                   setThumbnailUrl(null);
                 }
               }}
-            />
-          ) : masterCV?.cvData && masterCV?.template && masterCV.template.globalStyles ? (
-            // Fallback to live rendering if thumbnail is not available
-            <CVPreviewThumbnail 
-              cvData={masterCV.cvData}
-              template={masterCV.template}
-              className="rounded-xl"
             />
           ) : thumbnailLoading ? (
             /* Loading state */

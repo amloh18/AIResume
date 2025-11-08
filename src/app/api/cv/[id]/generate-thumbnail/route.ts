@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getAuthenticatedUser } from '@/lib/auth-helpers';
 import { getConnection } from '@/lib/database';
 import CV from '@/models/CV';
 import Template from '@/models/Template';
+import { HARDCODED_TEMPLATES } from '@/lib/templates/hardcoded-templates';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { getS3Client, getS3PublicUrl } from '@/lib/s3-client';
 
@@ -12,13 +12,15 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    // Use getAuthenticatedUser to support both session and JWT tokens
+    const authResult = await getAuthenticatedUser(request);
+    if (!authResult) {
+      console.log('❌ Thumbnail API - Authentication failed');
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
     const { id: cvId } = await params;
-    const userId = session.user.id;
+    const userId = authResult.userId;
 
     console.log('🔍 Thumbnail API - Generating thumbnail for CV:', { cvId, userId });
 
@@ -57,18 +59,43 @@ export async function POST(
       });
     }
 
-    // Get the template
-    const template = await Template.findById(cv.templateId);
+    // Get the template - handle both hardcoded and database templates
+    let template: any = null;
+    
+    // Check hardcoded templates first
+    const templateIdStr = cv.templateId?.toString() || '';
+    const hardcodedTemplate = HARDCODED_TEMPLATES.find(t => 
+      t.id === templateIdStr || t._id === templateIdStr
+    );
+    
+    if (hardcodedTemplate) {
+      template = hardcodedTemplate;
+      console.log('🔍 Thumbnail API - Using hardcoded template:', {
+        id: template.id || template._id,
+        name: template.name,
+        hasGlobalStyles: !!template.globalStyles
+      });
+    } else {
+      // Try database template (only if templateId looks like an ObjectId)
+      try {
+        template = await Template.findById(cv.templateId);
+        if (template) {
+          console.log('🔍 Thumbnail API - Using database template:', {
+            id: template._id,
+            name: template.name,
+            hasGlobalStyles: !!template.globalStyles
+          });
+        }
+      } catch (error) {
+        // If templateId is not a valid ObjectId, this will fail - that's OK, we'll check hardcoded templates
+        console.log('🔍 Thumbnail API - Template ID is not a valid ObjectId, checking hardcoded templates...');
+      }
+    }
+    
     if (!template) {
-      console.log('🔍 Thumbnail API - Template not found:', { templateId: cv.templateId });
+      console.log('❌ Thumbnail API - Template not found:', { templateId: cv.templateId });
       return NextResponse.json({ success: false, error: 'Template not found' }, { status: 404 });
     }
-
-    console.log('🔍 Thumbnail API - Template found:', {
-      id: template._id,
-      name: template.name,
-      hasGlobalStyles: !!template.globalStyles
-    });
 
     // Generate new thumbnail
     console.log('🔍 Thumbnail API - Generating thumbnail...');
@@ -187,17 +214,17 @@ function generateCVThumbnailSVG(cv: any, template: any): string {
       <rect width="${width}" height="${height}" fill="${backgroundColor}" stroke="#e5e7eb" stroke-width="1"/>
       
       <!-- Header -->
-      <text x="${padding}" y="25" class="cv-text cv-title">${name}</text>
-      <text x="${padding}" y="40" class="cv-text cv-subtitle">${title}</text>
-      <text x="${padding}" y="55" class="cv-text cv-small">${email} | ${phone}</text>
+      <text x="${padding}" y="25" class="cv-text cv-title">${escapeXml(name)}</text>
+      <text x="${padding}" y="40" class="cv-text cv-subtitle">${escapeXml(title)}</text>
+      <text x="${padding}" y="55" class="cv-text cv-small">${escapeXml(email)} | ${escapeXml(phone)}</text>
       
       <!-- Work Experience -->
       ${workItems.length > 0 ? `
         <text x="${padding}" y="80" class="cv-text cv-section">Work Experience</text>
         <line x1="${padding}" y1="85" x2="${width - padding}" y2="85" stroke="${accentColor}" stroke-width="1"/>
         ${workItems.map((job: any, index: number) => `
-          <text x="${padding}" y="${100 + index * 35}" class="cv-text cv-body">${job.position || 'Position'}</text>
-          <text x="${padding}" y="${112 + index * 35}" class="cv-text cv-small">${job.company || 'Company'} | ${job.startDate || 'Start'} - ${job.endDate || 'End'}</text>
+          <text x="${padding}" y="${100 + index * 35}" class="cv-text cv-body">${escapeXml(job.position || 'Position')}</text>
+          <text x="${padding}" y="${112 + index * 35}" class="cv-text cv-small">${escapeXml(job.name || job.company || 'Company')} | ${escapeXml(job.startDate || 'Start')} - ${escapeXml(job.endDate || 'End')}</text>
         `).join('')}
       ` : ''}
       
@@ -206,16 +233,26 @@ function generateCVThumbnailSVG(cv: any, template: any): string {
         <text x="${padding}" y="${workItems.length > 0 ? 170 + workItems.length * 35 : 80}" class="cv-text cv-section">Education</text>
         <line x1="${padding}" y1="${workItems.length > 0 ? 175 + workItems.length * 35 : 85}" x2="${width - padding}" y2="${workItems.length > 0 ? 175 + workItems.length * 35 : 85}" stroke="${accentColor}" stroke-width="1"/>
         ${educationItems.map((edu: any, index: number) => `
-          <text x="${padding}" y="${(workItems.length > 0 ? 190 : 100) + workItems.length * 35 + index * 25}" class="cv-text cv-body">${edu.institution || 'Institution'}</text>
-          <text x="${padding}" y="${(workItems.length > 0 ? 202 : 112) + workItems.length * 35 + index * 25}" class="cv-text cv-small">${edu.area || 'Field of Study'} | ${edu.startDate || 'Start'} - ${edu.endDate || 'End'}</text>
+          <text x="${padding}" y="${(workItems.length > 0 ? 190 : 100) + workItems.length * 35 + index * 25}" class="cv-text cv-body">${escapeXml(edu.institution || 'Institution')}</text>
+          <text x="${padding}" y="${(workItems.length > 0 ? 202 : 112) + workItems.length * 35 + index * 25}" class="cv-text cv-small">${escapeXml(edu.area || 'Field of Study')} | ${escapeXml(edu.startDate || 'Start')} - ${escapeXml(edu.endDate || 'End')}</text>
         `).join('')}
       ` : ''}
       
       <!-- Skills -->
       ${skills ? `
         <text x="${padding}" y="${height - 30}" class="cv-text cv-section">Skills</text>
-        <text x="${padding}" y="${height - 15}" class="cv-text cv-small">${skills}</text>
+        <text x="${padding}" y="${height - 15}" class="cv-text cv-small">${escapeXml(skills)}</text>
       ` : ''}
     </svg>
   `;
+}
+
+function escapeXml(text: string): string {
+  if (!text) return '';
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
 }

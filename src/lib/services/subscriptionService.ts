@@ -1,6 +1,8 @@
 import { connectToDatabase } from '@/lib/database';
 import User from '@/models/User';
 import { getAdminPricingPlan } from '@/models/admin-models';
+import creditService from './creditService';
+import creditResetService from './creditResetService';
 
 export interface SubscriptionActivationResult {
   success: boolean;
@@ -92,6 +94,9 @@ class SubscriptionService {
           }
         }
       });
+
+      // Initialize credits for day pass
+      await creditService.initializeCredits(userId, 'day_pass');
 
       const hoursRemaining = durationHours;
 
@@ -199,6 +204,9 @@ class SubscriptionService {
         }
       });
 
+      // Initialize credits for pro plan
+      await creditService.initializeCredits(userId, planKey);
+
       return {
         success: true,
         expiresAt,
@@ -247,6 +255,9 @@ class SubscriptionService {
           'subscription.status': 'active'
         }
       });
+
+      // Reset credits on renewal
+      await creditResetService.resetUserCredits(userId);
 
       const daysRemaining = Math.round((nextPeriodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 

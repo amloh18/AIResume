@@ -1,0 +1,263 @@
+'use client';
+
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { INotification, NotificationType } from '@/models/Notification';
+
+interface NotificationContextType {
+  notifications: INotification[];
+  unreadCount: number;
+  isLoading: boolean;
+  markAsRead: (notificationId: string) => Promise<void>;
+  markAllAsRead: () => Promise<void>;
+  handleNotificationAction: (notificationId: string, actionType: string) => Promise<void>;
+  refreshNotifications: () => Promise<void>;
+}
+
+const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
+
+export function NotificationProvider({ children }: { children: React.ReactNode }) {
+  const [notifications, setNotifications] = useState<INotification[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+  const [eventSource, setEventSource] = useState<EventSource | null>(null);
+
+  // Filter out expired time-sensitive notifications
+  const filterExpiredNotifications = useCallback((notifs: INotification[]) => {
+    const now = new Date();
+    return notifs.filter((notif) => {
+      // Persistent notifications never expire
+      if (notif.persistent) return true;
+      // Time-sensitive notifications expire based on expiresAt
+      if (notif.expiresAt) {
+        return new Date(notif.expiresAt) > now;
+      }
+      // If no expiresAt, keep it (shouldn't happen but safe fallback)
+      return true;
+    });
+  }, []);
+
+  // Fetch notifications from API
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const response = await fetch('/api/notifications');
+      if (!response.ok) throw new Error('Failed to fetch notifications');
+      const data = await response.json();
+      const filtered = filterExpiredNotifications(data.notifications || []);
+      setNotifications(filtered);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [filterExpiredNotifications]);
+
+  // Refresh notifications
+  const refreshNotifications = useCallback(async () => {
+    await fetchNotifications();
+  }, [fetchNotifications]);
+
+  // Mark notification as read
+  const markAsRead = useCallback(async (notificationId: string) => {
+    try {
+      const response = await fetch(`/api/notifications/${notificationId}/read`, {
+        method: 'PUT',
+      });
+      if (!response.ok) throw new Error('Failed to mark as read');
+      
+      setNotifications((prev) =>
+        prev.map((notif) =>
+          notif._id.toString() === notificationId
+            ? { ...notif, read: true, readAt: new Date() }
+            : notif
+        )
+      );
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to mark notification as read',
+        variant: 'destructive',
+      });
+    }
+  }, [toast]);
+
+  // Mark all as read
+  const markAllAsRead = useCallback(async () => {
+    try {
+      const response = await fetch('/api/notifications/read-all', {
+        method: 'PUT',
+      });
+      if (!response.ok) throw new Error('Failed to mark all as read');
+      
+      setNotifications((prev) =>
+        prev.map((notif) => ({ ...notif, read: true, readAt: new Date() }))
+      );
+    } catch (error) {
+      console.error('Error marking all as read:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to mark all notifications as read',
+        variant: 'destructive',
+      });
+    }
+  }, [toast]);
+
+  // Handle notification action
+  const handleNotificationAction = useCallback(async (notificationId: string, actionType: string) => {
+    try {
+      const response = await fetch(`/api/notifications/${notificationId}/action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ actionType }),
+      });
+      if (!response.ok) throw new Error('Failed to handle action');
+      
+      const data = await response.json();
+      
+      // Mark as read after action
+      await markAsRead(notificationId);
+      
+      // Show success message
+      toast({
+        title: 'Success',
+        description: data.message || 'Action completed',
+      });
+      
+      // Refresh notifications
+      await refreshNotifications();
+    } catch (error) {
+      console.error('Error handling notification action:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to complete action',
+        variant: 'destructive',
+      });
+    }
+  }, [markAsRead, refreshNotifications, toast]);
+
+  // Set up Server-Sent Events for real-time notifications
+  useEffect(() => {
+    // Only set up SSE if we're in the browser
+    if (typeof window === 'undefined') return;
+
+    const setupSSE = () => {
+      // Close existing connection if any
+      if (eventSource) {
+        eventSource.close();
+      }
+
+      const es = new EventSource('/api/notifications/stream');
+      
+      es.onmessage = (event) => {
+        try {
+          const notification: INotification = JSON.parse(event.data);
+          
+          // Filter expired notifications
+          const filtered = filterExpiredNotifications([notification]);
+          if (filtered.length > 0) {
+            setNotifications((prev) => {
+              // Check if notification already exists (avoid duplicates)
+              const exists = prev.some((n) => n._id === notification._id);
+              if (exists) return prev;
+              
+              // Add new notification at the beginning
+              return filterExpiredNotifications([notification, ...prev]);
+            });
+
+            // Show toast for in-app notifications
+            if (notification.channels.includes('in-app') && !notification.read) {
+              toast({
+                title: notification.title,
+                description: notification.message,
+                action: notification.interactive && notification.actionType ? (
+                  <button
+                    onClick={() => handleNotificationAction(notification._id.toString(), notification.actionType!)}
+                    className="text-sm font-medium text-primary hover:underline"
+                  >
+                    {notification.actionType === 'move_to_next_stage' ? 'Move to Next Stage' :
+                     notification.actionType === 'review_job' ? 'Review Job' :
+                     'View Details'}
+                  </button>
+                ) : undefined,
+              });
+            }
+          }
+        } catch (error) {
+          console.error('Error parsing SSE message:', error);
+        }
+      };
+
+      es.onerror = (error) => {
+        // EventSource onerror can fire with empty object or no details
+        // Check connection state to determine error type
+        if (es.readyState === EventSource.CLOSED) {
+          console.warn('SSE connection closed. Will attempt to reconnect...');
+        } else if (es.readyState === EventSource.CONNECTING) {
+          console.warn('SSE connection lost. Reconnecting...');
+        } else {
+          // Only log if there's actual error information
+          if (error && typeof error === 'object' && Object.keys(error).length > 0) {
+            console.error('SSE error:', error);
+          } else {
+            // Empty error object is common with EventSource - just log a warning
+            console.warn('SSE connection error. Reconnecting in 5 seconds...');
+          }
+        }
+        
+        // Close current connection before reconnecting
+        es.close();
+        
+        // Reconnect after 5 seconds
+        setTimeout(() => {
+          setupSSE();
+        }, 5000);
+      };
+
+      setEventSource(es);
+    };
+
+    setupSSE();
+
+    // Cleanup on unmount
+    return () => {
+      if (eventSource) {
+        eventSource.close();
+      }
+    };
+  }, [handleNotificationAction, filterExpiredNotifications, toast]); // Include dependencies
+
+  // Initial fetch
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
+
+
+  // Calculate unread count (only non-expired notifications)
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  return (
+    <NotificationContext.Provider
+      value={{
+        notifications,
+        unreadCount,
+        isLoading,
+        markAsRead,
+        markAllAsRead,
+        handleNotificationAction,
+        refreshNotifications,
+      }}
+    >
+      {children}
+    </NotificationContext.Provider>
+  );
+}
+
+export function useNotifications() {
+  const context = useContext(NotificationContext);
+  if (context === undefined) {
+    throw new Error('useNotifications must be used within a NotificationProvider');
+  }
+  return context;
+}
+

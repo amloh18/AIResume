@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, FileText, Download as DownloadIcon } from 'lucide-react';
 import { CVJourneyLookupService } from '@/lib/services/cvJourneyLookupService';
@@ -124,13 +125,13 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
     return `Download ${getFormatLabel(selectedFormat)}`;
   };
 
-  return (
+  const modalContent = (
     <AnimatePresence>
       {isOpen && (
         <>
           {/* Backdrop */}
           <motion.div
-            className="fixed inset-0 bg-black/50 z-50"
+            className="fixed inset-0 bg-black/70 z-[60]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -139,14 +140,14 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
 
           {/* Modal */}
           <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
           >
             <motion.div
-              className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl shadow-sm w-full max-w-md p-8 relative"
+              className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl shadow-sm w-[90%] max-w-md max-h-[85vh] overflow-hidden flex flex-col relative"
               initial={{ scale: 0.95, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 20 }}
@@ -155,14 +156,14 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
               {/* Close Button */}
               <button
                 onClick={onClose}
-                className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                className="absolute top-6 right-6 z-10 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                 disabled={isDownloading}
               >
                 <X size={20} />
               </button>
 
               {/* Header */}
-              <div className="mb-6">
+              <div className="p-8 pb-6 flex-shrink-0">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="w-8 h-8 bg-[#80FF00] rounded flex items-center justify-center">
                     <DownloadIcon className="w-5 h-5 text-black" />
@@ -176,6 +177,8 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
                 </p>
               </div>
 
+              {/* Scrollable Content */}
+              <div className="flex-1 overflow-y-auto min-h-0 px-8">
               {/* Section 1: Choose Document(s) */}
               <div className="mb-6">
                 <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3">
@@ -250,9 +253,10 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
                   </p>
                 )}
               </div>
+              </div>
 
               {/* Action Buttons */}
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-white/10">
+              <div className="flex justify-end gap-3 p-8 pt-4 border-t border-gray-200 dark:border-white/10 flex-shrink-0">
                 <button
                   onClick={onClose}
                   disabled={isDownloading}
@@ -284,6 +288,13 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
       )}
     </AnimatePresence>
   );
+
+  // Use portal to render modal at document body level to avoid overflow clipping
+  if (typeof window !== 'undefined') {
+    return createPortal(modalContent, document.body);
+  }
+
+  return modalContent;
 };
 
 export default DownloadModal;

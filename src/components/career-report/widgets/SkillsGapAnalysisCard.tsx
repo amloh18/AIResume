@@ -49,20 +49,28 @@ const SkillsGapAnalysisCard: React.FC<SkillsGapAnalysisCardProps> = ({ careerAna
                 </tr>
               </thead>
               <tbody className="text-gray-700 dark:text-white/70">
-                {careerAnalysis.skillsGap?.skills?.slice(0, 5).map((skill, index) => (
-                  <tr key={index} className="border-b border-gray-200 dark:border-white/5">
-                    <td className="py-2 text-xs">{skill.name}</td>
-                    <td className="py-2 text-xs">{skill.mentions} times</td>
-                    <td className="py-2 text-xs">{skill.quantifiedUse} times</td>
-                    <td className={`py-2 text-xs ${
-                      skill.gapInsight === 'Major Gap' ? 'text-red-500' :
-                      skill.gapInsight === 'Minor Gap' ? 'text-yellow-500' :
-                      'text-[#80FF00]'
-                    }`}>
-                      {skill.gapInsight}
+                {careerAnalysis.skillsGap?.skills && careerAnalysis.skillsGap.skills.length > 0 ? (
+                  careerAnalysis.skillsGap.skills.slice(0, 5).map((skill, index) => (
+                    <tr key={index} className="border-b border-gray-200 dark:border-white/5">
+                      <td className="py-2 text-xs">{skill.name}</td>
+                      <td className="py-2 text-xs">{skill.mentions} times</td>
+                      <td className="py-2 text-xs">{skill.quantifiedUse} times</td>
+                      <td className={`py-2 text-xs ${
+                        skill.gapInsight === 'Major Gap' ? 'text-red-500' :
+                        skill.gapInsight === 'Minor Gap' ? 'text-yellow-500' :
+                        'text-[#80FF00]'
+                      }`}>
+                        {skill.gapInsight}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={4} className="py-4 text-center text-gray-500 dark:text-gray-400 text-xs">
+                      No skill data available. Please regenerate the analysis.
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>

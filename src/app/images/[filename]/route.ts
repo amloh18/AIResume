@@ -5,8 +5,9 @@ import { existsSync } from 'fs';
 
 // Map of missing files to their fallback files
 const fallbackMap: Record<string, string> = {
-  'favicon-16x16.png': 'favicon.png',
-  'icon-144x144.png': 'favicon.png',
+  'favicon-16x16.png': 'logo.png',
+  'icon-144x144.png': 'logo.png',
+  'favicon.png': 'logo.png',
 };
 
 export async function GET(

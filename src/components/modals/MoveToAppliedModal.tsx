@@ -57,7 +57,7 @@ const MoveToAppliedModal: React.FC<MoveToAppliedModalProps> = ({
   const modalContent = (
     <AnimatePresence>
       <div 
-        className="fixed inset-0 bg-black/50 flex items-center justify-center z-[99999] p-4" 
+        className="fixed inset-0 bg-black/70 flex items-center justify-center z-[99999] p-4" 
         style={{ pointerEvents: 'auto' }}
         onClick={onClose}
       >
@@ -65,11 +65,11 @@ const MoveToAppliedModal: React.FC<MoveToAppliedModalProps> = ({
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
-          className="bg-white dark:bg-[#141810] rounded-xl shadow-xl max-w-md w-full"
+          className="bg-white dark:bg-[#141810] rounded-xl shadow-xl w-[90%] max-w-md max-h-[85vh] overflow-hidden flex flex-col"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
                 <CheckCircle className="h-5 w-5 text-blue-600 dark:text-blue-400" />
@@ -93,7 +93,7 @@ const MoveToAppliedModal: React.FC<MoveToAppliedModalProps> = ({
           </div>
 
           {/* Content */}
-          <div className="p-6 space-y-4">
+          <div className="p-6 space-y-4 flex-1 overflow-y-auto min-h-0">
             {/* Journey Details */}
             <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
               <h4 className="font-medium text-gray-900 dark:text-white mb-2">
@@ -134,13 +134,13 @@ const MoveToAppliedModal: React.FC<MoveToAppliedModalProps> = ({
             )}
 
             {/* Warning */}
-            <div className="flex items-start gap-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-              <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+            <div className="flex items-start gap-3 p-3 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 rounded-lg">
+              <AlertTriangle className="h-5 w-5 text-gray-600 dark:text-white/60 flex-shrink-0 mt-0.5" />
               <div className="text-sm">
-                <p className="font-medium text-amber-800 dark:text-amber-200">
+                <p className="font-medium text-gray-900 dark:text-white">
                   This will mark the job as "Applied"
                 </p>
-                <p className="text-amber-700 dark:text-amber-300 mt-1">
+                <p className="text-gray-700 dark:text-white/80 mt-1">
                   The journey will be completed and moved to your completed journeys list.
                 </p>
               </div>
@@ -148,7 +148,7 @@ const MoveToAppliedModal: React.FC<MoveToAppliedModalProps> = ({
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3 p-6 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex gap-3 p-6 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
             <button
               onClick={onClose}
               className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors font-medium"

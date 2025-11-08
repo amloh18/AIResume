@@ -714,7 +714,7 @@ const PricingPlanManager: React.FC = () => {
       {/* Plan Details Modal */}
       {selectedPlanForDetails && (
         <div 
-          className={`fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 ${isPlanDetailsModalOpen ? 'block' : 'hidden'}`}
+          className={`fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 ${isPlanDetailsModalOpen ? 'block' : 'hidden'}`}
           onClick={() => setIsPlanDetailsModalOpen(false)}
         >
           <Card 

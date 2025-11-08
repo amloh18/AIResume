@@ -5,6 +5,7 @@ import { JobApplication, ApplicationJourney } from '@/models';
 import jwt from 'jsonwebtoken';
 import type { MyJwtPayload } from '@/types/jwt-payload';
 import mongoose from 'mongoose';
+import { createJourneyDocuments } from '@/lib/services/journeyDocumentService';
 
 export async function POST(request: NextRequest) {
   try {
@@ -116,14 +117,19 @@ export async function POST(request: NextRequest) {
     console.log('✅ Job application created successfully in application tracker:', jobApplication._id);
     
     // Create ApplicationJourney for this job
+    let newJourney: any = null;
     try {
+      // Determine if documents need to be created
+      const needsDocuments = true; // Always create documents when job is added
+      const initialStatus = needsDocuments ? 'processing_documents' : 'in-progress';
+      
       const journeyData = {
         journeyId: `journey_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         userId: new mongoose.Types.ObjectId(userId),
         jobId: jobApplication._id.toString(),
         cvId: null,
         coverLetterId: null,
-        status: 'in-progress',
+        status: initialStatus,
         currentStep: 1,
         totalSteps: 5,
         jobTitle: jobApplication.jobTitle,
@@ -174,8 +180,35 @@ export async function POST(request: NextRequest) {
         }
       };
       
-      const newJourney = await ApplicationJourney.create(journeyData);
+      newJourney = await ApplicationJourney.create(journeyData);
       console.log('✅ ApplicationJourney created successfully:', newJourney._id);
+      
+      // If documents need to be created, trigger async creation
+      if (needsDocuments && newJourney.status === 'processing_documents') {
+        // Call document creation service directly (no HTTP request needed)
+        // Run in background to avoid blocking the response
+        setImmediate(async () => {
+          try {
+            console.log('🚀 Jobs API - Starting document creation for journey:', newJourney._id);
+            const result = await createJourneyDocuments(newJourney._id.toString(), userId);
+            
+            if (result.success) {
+              console.log('✅ Jobs API - Document creation completed successfully:', {
+                journeyId: newJourney._id,
+                cvId: result.cvId,
+                coverLetterId: result.coverLetterId
+              });
+            } else {
+              console.error('❌ Jobs API - Document creation failed:', result.error);
+            }
+          } catch (error) {
+            console.error('❌ Jobs API - Error in document creation:', error);
+            // Journey status will be updated by the service on error
+          }
+        });
+        
+        console.log('🚀 Jobs API - Triggered async document creation for journey:', newJourney._id);
+      }
     } catch (journeyError) {
       console.error('⚠️ Failed to create ApplicationJourney (non-critical):', journeyError);
       // Don't fail the request if journey creation fails

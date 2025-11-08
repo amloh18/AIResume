@@ -208,13 +208,20 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
         <label className="block text-white/80 text-sm font-medium mb-2">Location</label>
         <input
           type="text"
-          value={`${safePersonalInfo.location.city}${safePersonalInfo.location.region ? ', ' + safePersonalInfo.location.region : ''}`}
+          readOnly={false}
+          disabled={false}
+          value={(() => {
+            const city = safePersonalInfo.location.city || '';
+            const region = safePersonalInfo.location.region || '';
+            return city && region ? `${city}, ${region}` : city || region || '';
+          })()}
           onChange={(e) => {
-            const parts = e.target.value.split(', ');
+            const inputValue = e.target.value;
+            const parts = inputValue.split(', ').map(p => p.trim());
             handleLocationChange('city', parts[0] || '');
             handleLocationChange('region', parts[1] || '');
           }}
-          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors cursor-text"
           placeholder="San Francisco, CA"
         />
       </div>

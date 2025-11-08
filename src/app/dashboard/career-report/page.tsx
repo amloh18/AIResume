@@ -20,7 +20,8 @@ import {
   AlertTriangle,
   X,
   Menu,
-  ChevronDown
+  ChevronDown,
+  Download
 } from 'lucide-react';
 import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
 import { useRouter } from 'next/navigation';
@@ -37,6 +38,8 @@ import ImpactDensityChart from '@/components/career-report/widgets/ImpactDensity
 import ImpactScoreAnalysisCard from '@/components/career-report/widgets/ImpactScoreAnalysisCard';
 import SkillsGapAnalysisCard from '@/components/career-report/widgets/SkillsGapAnalysisCard';
 import StrategicRecommendationsCard from '@/components/career-report/widgets/StrategicRecommendationsCard';
+import CareerReportDownloadModal, { ReportFormatType } from '@/components/career-report/CareerReportDownloadModal';
+import { personalizeCareerAnalysis, makeShareableCareerAnalysis } from '@/lib/utils/career-report-transform';
 
 interface CareerAnalysis {
   experienceLevel: {
@@ -118,68 +121,38 @@ const CareerReportPage: React.FC = () => {
   const [loadingMessage, setLoadingMessage] = useState('Loading Career Report...');
   const [isGenerating, setIsGenerating] = useState(false);
   const [showCVDropdown, setShowCVDropdown] = useState(false);
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Load analysis for a specific CV
+  // Load analysis for a specific CV - only fetch cached, don't generate
   const loadAnalysisForCV = useCallback(async (cv: CVDocument) => {
     try {
       setLoading(true);
       setError(null);
       setLoadingMessage('Loading analysis...');
       
-      // Check if CV has cached analysis
+      // Only use cached analysis - don't generate new one
       if (cv.metadata?.aiAnalysis) {
         console.log('✅ Career Report - Using cached AI analysis');
-        setCareerAnalysis(cv.metadata.aiAnalysis);
+        // Personalize the analysis for viewing (convert to "you" with name)
+        const userName = getUserDisplayName(userData);
+        const personalizedAnalysis = personalizeCareerAnalysis(cv.metadata.aiAnalysis, userName);
+        setCareerAnalysis(personalizedAnalysis);
         setLoading(false);
         return;
       }
       
-      // Generate new analysis if CV data is available
-      if (cv.cvData) {
-        setLoadingMessage('Generating AI analysis...');
-        const analysisResponse = await fetch('/api/ai/career-analysis', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            cvData: cv.cvData,
-            jobData: null,
-            jobId: null
-          })
-        });
-        
-        if (analysisResponse.ok) {
-          const analysisResult = await analysisResponse.json();
-          if (analysisResult.success) {
-            console.log('✅ Career Report - Generated AI analysis successfully');
-            setCareerAnalysis(analysisResult.analysis);
-            
-            // Cache the analysis in the CV metadata
-            try {
-              await fetch(`/api/cvs/${cv.id}/metadata`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  userId: user?.id,
-                  aiAnalysis: analysisResult.analysis,
-                  lastModified: new Date().toISOString()
-                })
-              });
-            } catch (updateError) {
-              console.warn('⚠️ Career Report - Failed to cache analysis:', updateError);
-            }
-          }
-        }
-      } else {
-        setError('CV data not available for analysis');
-      }
+      // If no cached analysis, show message to regenerate
+      setCareerAnalysis(null);
+      setError(null); // Don't show error, just show empty state with regenerate button
+      setLoading(false);
     } catch (error) {
       console.error('❌ Career Report - Error loading analysis:', error);
       setError('Failed to load analysis');
-    } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [userData]);
 
   // Fetch all CVs and set default to Master CV
   useEffect(() => {
@@ -196,20 +169,46 @@ const CareerReportPage: React.FC = () => {
         
         if (result.success && result.data?.cvs) {
           const cvs = result.data.cvs as CVDocument[];
-          setAllCVs(cvs);
+          
+          // Fetch full CV data with metadata for each CV (always fetch to ensure we have aiAnalysis)
+          const cvsWithData = await Promise.all(
+            cvs.map(async (cv) => {
+              try {
+                // Always fetch individual CV to get complete metadata including aiAnalysis
+                const cvResponse = await fetch(`/api/cvs/${cv.id}`);
+                const cvResult = await cvResponse.json();
+                if (cvResult.success && cvResult.data?.cv) {
+                  return {
+                    ...cv,
+                    metadata: {
+                      ...cv.metadata,
+                      ...cvResult.data.cv.metadata, // Merge to ensure aiAnalysis is included
+                      aiAnalysis: cvResult.data.cv.metadata?.aiAnalysis || cv.metadata?.aiAnalysis
+                    },
+                    cvData: cvResult.data.cv.cvData || cv.cvData
+                  };
+                }
+              } catch (error) {
+                console.warn(`Failed to fetch metadata for CV ${cv.id}:`, error);
+              }
+              return cv;
+            })
+          );
+          
+          setAllCVs(cvsWithData);
           
           // Find and set Master CV as default
-          const masterCV = cvs.find((cv: CVDocument) => 
+          const masterCV = cvsWithData.find((cv: CVDocument) => 
             cv.metadata?.isMaster === true || cv.isMaster === true
           );
           
           if (masterCV) {
             setSelectedCV(masterCV);
             await loadAnalysisForCV(masterCV);
-          } else if (cvs.length > 0) {
+          } else if (cvsWithData.length > 0) {
             // Fallback to first CV if no Master CV
-            setSelectedCV(cvs[0]);
-            await loadAnalysisForCV(cvs[0]);
+            setSelectedCV(cvsWithData[0]);
+            await loadAnalysisForCV(cvsWithData[0]);
           } else {
             setError('No CVs found. Please create a CV first.');
           }
@@ -227,24 +226,30 @@ const CareerReportPage: React.FC = () => {
 
   // Handle CV selection
   const handleCVSelect = async (cv: CVDocument) => {
-    // If CV doesn't have cvData, fetch it first
-    if (!cv.cvData) {
-      try {
-        const cvResponse = await fetch(`/api/cvs/${cv.id}`);
-        const cvResult = await cvResponse.json();
-        if (cvResult.success && cvResult.data?.cv) {
-          cv.cvData = cvResult.data.cv.cvData;
-        }
-      } catch (error) {
-        console.error('Error fetching CV data:', error);
+    // Always fetch individual CV to ensure we have complete metadata including aiAnalysis
+    try {
+      const cvResponse = await fetch(`/api/cvs/${cv.id}`);
+      const cvResult = await cvResponse.json();
+      if (cvResult.success && cvResult.data?.cv) {
+        const updatedCV: CVDocument = {
+          ...cv,
+          metadata: {
+            ...cv.metadata,
+            ...cvResult.data.cv.metadata, // Merge to ensure aiAnalysis is included
+            aiAnalysis: cvResult.data.cv.metadata?.aiAnalysis || cv.metadata?.aiAnalysis
+          },
+          cvData: cvResult.data.cv.cvData || cv.cvData
+        };
+        setSelectedCV(updatedCV);
+        setShowCVDropdown(false);
+        await loadAnalysisForCV(updatedCV);
+      } else {
         setError('Failed to load CV data');
-        return;
       }
+    } catch (error) {
+      console.error('Error fetching CV data:', error);
+      setError('Failed to load CV data');
     }
-    
-    setSelectedCV(cv);
-    setShowCVDropdown(false);
-    await loadAnalysisForCV(cv);
   };
 
   // Close dropdown when clicking outside
@@ -277,21 +282,247 @@ const CareerReportPage: React.FC = () => {
     return Math.round(impactScore * 0.6 + coherenceScore * 0.4);
   };
 
+  // Handle download
+  const handleDownload = async (format: ReportFormatType) => {
+    if (!careerAnalysis || !selectedCV) {
+      setError('No analysis available to download');
+      return;
+    }
+
+    setIsDownloading(true);
+    try {
+      // Get the original analysis from CV metadata (third person format)
+      const originalAnalysis = selectedCV.metadata?.aiAnalysis || careerAnalysis;
+      
+      // Ensure it's in shareable format (third person)
+      const userName = getUserDisplayName(userData);
+      const shareableAnalysis = makeShareableCareerAnalysis(originalAnalysis, userName);
+
+      // Generate HTML content
+      const htmlContent = generateReportHTML(shareableAnalysis, selectedCV, userName, format);
+
+      if (format === 'pdf') {
+        // For PDF, we'll create a blob and use browser print
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+          printWindow.document.write(htmlContent);
+          printWindow.document.close();
+          printWindow.onload = () => {
+            printWindow.print();
+          };
+        }
+      } else {
+        // For HTML, create a download link
+        const blob = new Blob([htmlContent], { type: 'text/html' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${selectedCV.title || 'Career Report'}_${new Date().toISOString().split('T')[0]}.html`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }
+
+      setShowDownloadModal(false);
+    } catch (error) {
+      console.error('❌ Error downloading report:', error);
+      setError('Failed to download report');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  // Generate HTML content for the report
+  const generateReportHTML = (
+    analysis: CareerAnalysis,
+    cv: CVDocument,
+    userName: string | null | undefined,
+    format: ReportFormatType
+  ): string => {
+    const reportDate = new Date().toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Career Report - ${cv.title}</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #1f2937;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 20px;
+      background: #ffffff;
+    }
+    .header {
+      border-bottom: 2px solid #80FF00;
+      padding-bottom: 20px;
+      margin-bottom: 40px;
+    }
+    h1 {
+      color: #111827;
+      font-size: 2.5rem;
+      margin: 0 0 10px 0;
+    }
+    .subtitle {
+      color: #6b7280;
+      font-size: 1rem;
+      margin: 0;
+    }
+    .section {
+      margin-bottom: 40px;
+      padding: 30px;
+      background: #f9fafb;
+      border-radius: 8px;
+      border-left: 4px solid #80FF00;
+    }
+    .section h2 {
+      color: #111827;
+      font-size: 1.5rem;
+      margin: 0 0 20px 0;
+    }
+    .section h3 {
+      color: #374151;
+      font-size: 1.25rem;
+      margin: 20px 0 10px 0;
+    }
+    .section p, .section li {
+      color: #4b5563;
+      margin: 10px 0;
+    }
+    .section ul {
+      margin: 10px 0;
+      padding-left: 20px;
+    }
+    .metric {
+      display: inline-block;
+      padding: 10px 20px;
+      background: #80FF00;
+      color: #000;
+      border-radius: 6px;
+      font-weight: bold;
+      margin: 10px 10px 10px 0;
+    }
+    @media print {
+      body {
+        padding: 20px;
+      }
+      .section {
+        page-break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Career Report</h1>
+    <p class="subtitle">${cv.title} • Generated on ${reportDate}</p>
+    ${userName ? `<p class="subtitle">Report for: ${userName}</p>` : ''}
+  </div>
+
+  ${analysis.experienceLevel ? `
+    <div class="section">
+      <h2>Experience Level</h2>
+      <div class="metric">${analysis.experienceLevel.level}</div>
+      <p>${analysis.experienceLevel.rationale}</p>
+    </div>
+  ` : ''}
+
+  ${analysis.careerPath ? `
+    <div class="section">
+      <h2>Career Trajectory</h2>
+      ${analysis.careerPath.step1 ? `
+        <h3>Step 1: ${analysis.careerPath.step1.title}</h3>
+        <p>${analysis.careerPath.step1.reasoning}</p>
+      ` : ''}
+      ${analysis.careerPath.step2 ? `
+        <h3>Step 2: ${analysis.careerPath.step2.title}</h3>
+        <p>${analysis.careerPath.step2.reasoning}</p>
+      ` : ''}
+      ${analysis.careerPath.step3 ? `
+        <h3>Step 3: ${analysis.careerPath.step3.title}</h3>
+        <p>${analysis.careerPath.step3.reasoning}</p>
+      ` : ''}
+    </div>
+  ` : ''}
+
+  ${analysis.strategicSuggestions ? `
+    <div class="section">
+      <h2>Strategic Recommendations</h2>
+      ${analysis.strategicSuggestions.hardSkill && typeof analysis.strategicSuggestions.hardSkill === 'object' ? `
+        <h3>Hard Skill: ${analysis.strategicSuggestions.hardSkill.skill}</h3>
+        <p>${analysis.strategicSuggestions.hardSkill.rationale}</p>
+      ` : ''}
+      ${analysis.strategicSuggestions.softSkill && typeof analysis.strategicSuggestions.softSkill === 'object' ? `
+        <h3>Soft Skill: ${analysis.strategicSuggestions.softSkill.skill}</h3>
+        <p>${analysis.strategicSuggestions.softSkill.rationale}</p>
+      ` : ''}
+    </div>
+  ` : ''}
+
+  ${analysis.impactScore ? `
+    <div class="section">
+      <h2>Impact Score</h2>
+      <p>Quantifiable Statements: ${analysis.impactScore.quantifiableStatements || 0}/15</p>
+      <p>High-Impact Verbs: ${analysis.impactScore.highImpactVerbs || 0}/30</p>
+      <p>Industry Keywords: ${analysis.impactScore.industryKeywords || 0}/100</p>
+    </div>
+  ` : ''}
+
+  ${analysis.careerCoherence ? `
+    <div class="section">
+      <h2>Career Coherence</h2>
+      <div class="metric">${analysis.careerCoherence.score || 0}%</div>
+      ${analysis.careerCoherence.strengths && analysis.careerCoherence.strengths.length > 0 ? `
+        <h3>Strengths</h3>
+        <ul>
+          ${analysis.careerCoherence.strengths.map((s: string) => `<li>${s}</li>`).join('')}
+        </ul>
+      ` : ''}
+    </div>
+  ` : ''}
+</body>
+</html>`;
+  };
+
   const handleRegenerateAnalysis = async () => {
-    if (!selectedCV || !selectedCV.cvData) {
+    if (!selectedCV) {
       setError('No CV selected for analysis');
       return;
     }
     
     setIsGenerating(true);
     setError(null);
+    setLoadingMessage('Generating AI analysis...');
     
     try {
+      // Fetch CV data if not available
+      let cvDataToUse = selectedCV.cvData;
+      if (!cvDataToUse) {
+        const cvResponse = await fetch(`/api/cvs/${selectedCV.id}`);
+        const cvResult = await cvResponse.json();
+        if (cvResult.success && cvResult.data?.cv) {
+          cvDataToUse = cvResult.data.cv.cvData;
+        } else {
+          setError('Failed to load CV data');
+          setIsGenerating(false);
+          return;
+        }
+      }
+      
       const analysisResponse = await fetch('/api/ai/career-analysis', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          cvData: selectedCV.cvData,
+          cvData: cvDataToUse,
           jobData: null,
           jobId: null
         })
@@ -300,29 +531,39 @@ const CareerReportPage: React.FC = () => {
       if (analysisResponse.ok) {
         const analysisResult = await analysisResponse.json();
         if (analysisResult.success) {
-          setCareerAnalysis(analysisResult.analysis);
+          // Personalize the analysis for viewing (convert to "you" with name)
+          const userName = getUserDisplayName(userData);
+          const personalizedAnalysis = personalizeCareerAnalysis(analysisResult.analysis, userName);
+          setCareerAnalysis(personalizedAnalysis);
           
-          // Update CV with new analysis
+          // Update CV with new analysis (store in original third-person format)
           try {
             await fetch(`/api/cvs/${selectedCV.id}/metadata`, {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 userId: user?.id,
-                aiAnalysis: analysisResult.analysis,
+                aiAnalysis: analysisResult.analysis, // Store original third-person format
                 lastModified: new Date().toISOString()
               })
             });
+            console.log('✅ Career Report - Analysis cached successfully');
           } catch (updateError) {
             console.warn('⚠️ Failed to update CV with analysis:', updateError);
           }
+        } else {
+          setError(analysisResult.message || 'Failed to generate analysis');
         }
+      } else {
+        const errorData = await analysisResponse.json();
+        setError(errorData.message || 'Failed to generate analysis');
       }
     } catch (error) {
       console.error('❌ Error regenerating analysis:', error);
       setError('Failed to regenerate analysis');
     } finally {
       setIsGenerating(false);
+      setLoadingMessage('');
     }
   };
 
@@ -405,7 +646,7 @@ const CareerReportPage: React.FC = () => {
     );
   }
 
-  if (!careerAnalysis) {
+  if (!careerAnalysis && !loading) {
     return (
       <div className="space-y-6">
         <PageHeader
@@ -422,6 +663,66 @@ const CareerReportPage: React.FC = () => {
           onMobileMenuToggle={toggleSidebar}
           isMobileMenuOpen={isOpen}
         />
+
+        {/* Action Bar */}
+        <div className="flex justify-between items-center mb-6">
+          {/* CV Selector Dropdown */}
+          <div className="relative" ref={dropdownRef}>
+            <button
+              onClick={() => setShowCVDropdown(!showCVDropdown)}
+              className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-lg font-semibold hover:bg-gray-50 dark:hover:bg-[#1a2015] transition-colors shadow-sm"
+            >
+              <span className="text-gray-900 dark:text-white">
+                {selectedCV ? (
+                  <>
+                    <span className="font-semibold">{selectedCV.title}</span>
+                    {selectedCV.metadata?.isMaster || selectedCV.isMaster ? (
+                      <span className="ml-2 px-2 py-0.5 bg-[#80FF00]/20 text-[#80FF00] rounded text-xs">
+                        Master
+                      </span>
+                    ) : null}
+                  </>
+                ) : 'Select CV'}
+              </span>
+              <ChevronDown className={`w-4 h-4 text-gray-600 dark:text-gray-400 transition-transform ${showCVDropdown ? 'rotate-180' : ''}`} />
+            </button>
+            
+            {showCVDropdown && (
+              <div className="absolute top-full left-0 mt-2 w-64 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
+                {allCVs.map((cv) => (
+                  <button
+                    key={cv.id}
+                    onClick={() => handleCVSelect(cv)}
+                    className={`w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-[#1a2015] transition-colors ${
+                      selectedCV?.id === cv.id ? 'bg-gray-50 dark:bg-[#313a28]' : ''
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-gray-900 dark:text-white">{cv.title}</span>
+                      {cv.metadata?.isMaster || cv.isMaster ? (
+                        <span className="px-2 py-0.5 bg-[#80FF00]/20 text-[#80FF00] rounded text-xs">
+                          Master
+                        </span>
+                      ) : null}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Regenerate Button */}
+          <motion.button
+            onClick={handleRegenerateAnalysis}
+            disabled={isGenerating || !selectedCV}
+            className="flex items-center gap-2 px-4 py-2 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black rounded-md font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            whileHover={{ scale: isGenerating ? 1 : 1.05 }}
+            whileTap={{ scale: isGenerating ? 1 : 0.95 }}
+          >
+            <RefreshCw className={`w-4 h-4 ${isGenerating ? 'animate-spin' : ''}`} />
+            {isGenerating ? 'Generating...' : 'Regenerate Analysis'}
+          </motion.button>
+        </div>
         
         <div className="flex items-center justify-center py-20">
           <div className="text-center">
@@ -429,14 +730,7 @@ const CareerReportPage: React.FC = () => {
               <Sparkles className="w-8 h-8 text-gray-400" />
             </div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No Career Analysis Found</h2>
-            <p className="text-gray-600 dark:text-gray-400 mb-4">Create a Master CV to get your AI-powered career report</p>
-            <button
-              onClick={() => router.push('/ai-career-report')}
-              className="px-6 py-3 bg-lime-500 text-white rounded-lg font-semibold hover:bg-lime-600 transition-colors flex items-center gap-2 mx-auto"
-            >
-              Create Master CV
-              <ArrowRight className="w-5 h-5" />
-            </button>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">Click "Regenerate Analysis" in the header to generate your AI-powered career report</p>
           </div>
         </div>
       </div>
@@ -462,12 +756,12 @@ const CareerReportPage: React.FC = () => {
       />
 
       {/* Action Bar */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3 mb-6">
         {/* CV Selector Dropdown */}
         <div className="relative" ref={dropdownRef}>
           <button
             onClick={() => setShowCVDropdown(!showCVDropdown)}
-            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-lg font-semibold hover:bg-gray-50 dark:hover:bg-[#1a2015] transition-colors shadow-sm"
+            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-lg font-semibold hover:bg-gray-50 dark:hover:bg-[#1a2015] transition-colors shadow-sm w-full md:w-auto"
           >
             <span className="text-gray-900 dark:text-white">
               {selectedCV ? (
@@ -481,11 +775,11 @@ const CareerReportPage: React.FC = () => {
                 </>
               ) : 'Select CV'}
             </span>
-            <ChevronDown className={`w-4 h-4 text-gray-600 dark:text-gray-400 transition-transform ${showCVDropdown ? 'rotate-180' : ''}`} />
+            <ChevronDown className={`w-4 h-4 text-gray-600 dark:text-gray-400 transition-transform ml-auto md:ml-0 ${showCVDropdown ? 'rotate-180' : ''}`} />
           </button>
           
           {showCVDropdown && (
-            <div className="absolute top-full left-0 mt-2 w-64 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
+            <div className="absolute top-full left-0 mt-2 w-full md:w-64 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
               {allCVs.map((cv) => (
                 <button
                   key={cv.id}
@@ -508,136 +802,165 @@ const CareerReportPage: React.FC = () => {
           )}
         </div>
 
-        {/* Regenerate Button */}
-        <motion.button
-          onClick={handleRegenerateAnalysis}
-          disabled={isGenerating || !selectedCV}
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-semibold hover:from-purple-400 hover:to-pink-400 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          whileHover={{ scale: isGenerating ? 1 : 1.05 }}
-          whileTap={{ scale: isGenerating ? 1 : 0.95 }}
-        >
-          <RefreshCw className={`w-4 h-4 ${isGenerating ? 'animate-spin' : ''}`} />
-          {isGenerating ? 'Generating...' : 'Regenerate Analysis'}
-        </motion.button>
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          {/* Download Button */}
+          <motion.button
+            onClick={() => setShowDownloadModal(true)}
+            disabled={!careerAnalysis || !selectedCV}
+            className="flex items-center justify-center gap-2 px-3 py-1.5 text-sm h-[32px] bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-md font-medium text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-[#1a2015] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+            whileHover={{ scale: (!careerAnalysis || !selectedCV) ? 1 : 1.05 }}
+            whileTap={{ scale: (!careerAnalysis || !selectedCV) ? 1 : 0.95 }}
+          >
+            <Download className="w-3.5 h-3.5" />
+            Download Report
+          </motion.button>
+
+          {/* Regenerate Button */}
+          <motion.button
+            onClick={handleRegenerateAnalysis}
+            disabled={isGenerating || !selectedCV}
+            className="flex items-center justify-center gap-2 px-3 py-1.5 text-sm h-[32px] bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black rounded-md font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+            whileHover={{ scale: isGenerating ? 1 : 1.05 }}
+            whileTap={{ scale: isGenerating ? 1 : 0.95 }}
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isGenerating ? 'animate-spin' : ''}`} />
+            {isGenerating ? 'Generating...' : 'Regenerate Analysis'}
+          </motion.button>
+        </div>
       </div>
 
       {/* Main Content */}
       {careerAnalysis && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
-          {/* Column 1 */}
-          <div className="flex flex-col gap-0">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0 }}
-            >
-              <CVHealthScore
-                score={calculateHealthScore()}
-                experienceLevel={careerAnalysis.experienceLevel}
-                impactScore={careerAnalysis.impactScore}
-                careerCoherence={careerAnalysis.careerCoherence}
-                cvOptimization={careerAnalysis.cvOptimization}
-              />
-            </motion.div>
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+            {/* Column 1 */}
+            <div className="flex flex-col gap-4 md:gap-6">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0 }}
+              >
+                <CVHealthScore
+                  score={calculateHealthScore()}
+                  experienceLevel={careerAnalysis.experienceLevel}
+                  impactScore={careerAnalysis.impactScore}
+                  careerCoherence={careerAnalysis.careerCoherence}
+                  cvOptimization={careerAnalysis.cvOptimization}
+                />
+              </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-            >
-              <TopActionsPanel
-                impactScore={careerAnalysis.impactScore}
-                strategicSuggestions={careerAnalysis.strategicSuggestions}
-                cvOptimization={careerAnalysis.cvOptimization}
-              />
-            </motion.div>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+              >
+                <TopActionsPanel
+                  impactScore={careerAnalysis.impactScore}
+                  strategicSuggestions={careerAnalysis.strategicSuggestions}
+                  cvOptimization={careerAnalysis.cvOptimization}
+                />
+              </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-            >
-              <SkillsRadarChart
-                skillsGap={careerAnalysis.skillsGap}
-                impactScore={careerAnalysis.impactScore}
-              />
-            </motion.div>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.4 }}
+              >
+                <SkillsRadarChart
+                  skillsGap={careerAnalysis.skillsGap}
+                  impactScore={careerAnalysis.impactScore}
+                />
+              </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.6 }}
-            >
-              <CareerTrajectoryGraph
-                careerPath={careerAnalysis.careerPath}
-                careerCoherence={careerAnalysis.careerCoherence}
-                experienceLevel={careerAnalysis.experienceLevel?.level}
-              />
-            </motion.div>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.6 }}
+              >
+                <SkillsGapAnalysisCard careerAnalysis={careerAnalysis} />
+              </motion.div>
+            </div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.8 }}
-            >
-              <SkillsGapAnalysisCard careerAnalysis={careerAnalysis} />
-            </motion.div>
+            {/* Column 2 */}
+            <div className="flex flex-col gap-4 md:gap-6">
+              {/* Only show ATS Compatibility Meter if CV is not a Master CV */}
+              {!(selectedCV?.metadata?.isMaster || selectedCV?.isMaster) && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.1 }}
+                >
+                  <ATSCompatibilityMeter
+                    impactScore={careerAnalysis.impactScore}
+                    cvOptimization={careerAnalysis.cvOptimization}
+                    industrySpecialization={careerAnalysis.industrySpecialization}
+                  />
+                </motion.div>
+              )}
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.3 }}
+              >
+                <KeywordMatchHeatmap
+                  industrySpecialization={careerAnalysis.industrySpecialization}
+                  impactScore={careerAnalysis.impactScore}
+                />
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.5 }}
+              >
+                <ImpactDensityChart
+                  impactScore={careerAnalysis.impactScore}
+                  skillsGap={careerAnalysis.skillsGap}
+                />
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.7 }}
+              >
+                <ImpactScoreAnalysisCard careerAnalysis={careerAnalysis} />
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.9 }}
+              >
+                <StrategicRecommendationsCard careerAnalysis={careerAnalysis} />
+              </motion.div>
+            </div>
           </div>
 
-          {/* Column 2 */}
-          <div className="flex flex-col gap-0">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-            >
-              <ATSCompatibilityMeter
-                impactScore={careerAnalysis.impactScore}
-                cvOptimization={careerAnalysis.cvOptimization}
-                industrySpecialization={careerAnalysis.industrySpecialization}
-              />
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-            >
-              <KeywordMatchHeatmap
-                industrySpecialization={careerAnalysis.industrySpecialization}
-                impactScore={careerAnalysis.impactScore}
-              />
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.5 }}
-            >
-              <ImpactDensityChart
-                impactScore={careerAnalysis.impactScore}
-                skillsGap={careerAnalysis.skillsGap}
-              />
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.7 }}
-            >
-              <ImpactScoreAnalysisCard careerAnalysis={careerAnalysis} />
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.9 }}
-            >
-              <StrategicRecommendationsCard careerAnalysis={careerAnalysis} />
-            </motion.div>
-          </div>
-        </div>
+          {/* Career Trajectory Analysis - Full Width Row at the End */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 1.0 }}
+            className="w-full"
+          >
+            <CareerTrajectoryGraph
+              careerPath={careerAnalysis.careerPath}
+              careerCoherence={careerAnalysis.careerCoherence}
+              experienceLevel={careerAnalysis.experienceLevel?.level}
+            />
+          </motion.div>
+        </>
       )}
+
+      {/* Download Modal */}
+      <CareerReportDownloadModal
+        isOpen={showDownloadModal}
+        onClose={() => setShowDownloadModal(false)}
+        onDownload={handleDownload}
+        isDownloading={isDownloading}
+      />
     </div>
   );
 };
