@@ -10,6 +10,7 @@ export function useWYSIWYG(value: string, onChange: (value: string) => void) {
   const [formatState, setFormatState] = useState({ bold: false, italic: false, underline: false });
   const isInternalUpdateRef = useRef(false);
   const lastSyncedValueRef = useRef<string>('');
+  const hasInitializedRef = useRef(false);
 
   // Helper function to convert plain text to HTML
   const convertPlainTextToHTML = (text: string): string => {
@@ -42,36 +43,94 @@ export function useWYSIWYG(value: string, onChange: (value: string) => void) {
 
   // Sync external value changes to editor (including initialization)
   useEffect(() => {
+    // Use requestAnimationFrame to ensure DOM is ready
+    const frameId = requestAnimationFrame(() => {
     if (editorRef.current && !isInternalUpdateRef.current) {
       const currentContent = editorRef.current.innerHTML.trim();
       let newValue = value || '';
+        
+        // Debug logging
+        console.log('🔍 useWYSIWYG - Sync effect triggered');
+        console.log('🔍 useWYSIWYG - newValue:', newValue);
+        console.log('🔍 useWYSIWYG - currentContent:', currentContent);
+        console.log('🔍 useWYSIWYG - lastSyncedValueRef:', lastSyncedValueRef.current);
+        console.log('🔍 useWYSIWYG - hasInitializedRef:', hasInitializedRef.current);
       
       // Ensure newValue is a string
       if (typeof newValue !== 'string') {
         newValue = String(newValue);
       }
       
-      // Check if we need to update
-      const needsUpdate = lastSyncedValueRef.current !== newValue;
+        // Convert prop value to normalized HTML for consistent comparison
+        const normalizedPropHTML = convertPlainTextToHTML(newValue);
+        const normalizedPropValue = (!normalizedPropHTML || normalizedPropHTML === '<br>' || normalizedPropHTML.trim() === '' || normalizedPropHTML === '<p></p>') ? '' : normalizedPropHTML.trim();
+        
+        console.log('🔍 useWYSIWYG - normalizedPropHTML:', normalizedPropHTML);
+        console.log('🔍 useWYSIWYG - normalizedPropValue:', normalizedPropValue);
+        
+        // Convert lastSyncedValueRef to normalized HTML for comparison
+        // This ensures we're always comparing HTML to HTML, not plain text to HTML
+        const normalizedLastSynced = lastSyncedValueRef.current 
+          ? convertPlainTextToHTML(lastSyncedValueRef.current).trim() 
+          : '';
+        
+        console.log('🔍 useWYSIWYG - normalizedLastSynced:', normalizedLastSynced);
+        
+        // Check if we need to update by comparing normalized HTML values
+        const needsUpdate = normalizedLastSynced !== normalizedPropValue;
       
       // Also update if editor is empty but we have a value
       const isEmptyButHasValue = (!currentContent || currentContent === '<br>' || currentContent === '' || currentContent === '<p></p>') && newValue && newValue.trim();
       
-      if (needsUpdate || isEmptyButHasValue) {
-        // Convert plain text to HTML if needed
-        const htmlValue = convertPlainTextToHTML(newValue);
+      // Force update on first initialization if we have a value
+      // Also reset initialization if we went from empty to having a value
+      const wasEmpty = !lastSyncedValueRef.current || !lastSyncedValueRef.current.trim();
+      const nowHasValue = newValue && newValue.trim();
+      const isFirstInit = !hasInitializedRef.current && nowHasValue;
+      const valueJustAppeared = wasEmpty && nowHasValue;
+      
+      console.log('🔍 useWYSIWYG - needsUpdate:', needsUpdate);
+      console.log('🔍 useWYSIWYG - isEmptyButHasValue:', isEmptyButHasValue);
+      console.log('🔍 useWYSIWYG - isFirstInit:', isFirstInit);
+      console.log('🔍 useWYSIWYG - valueJustAppeared:', valueJustAppeared);
+      
+      if (needsUpdate || isEmptyButHasValue || isFirstInit || valueJustAppeared) {
+        // Normalize current content for comparison (remove extra whitespace)
+        const normalizedCurrentContent = currentContent.replace(/\s+/g, ' ').trim();
+        const normalizedPropForCompare = normalizedPropValue.replace(/\s+/g, ' ').trim();
         
-        // Normalize empty values
-        const normalizedValue = (!htmlValue || htmlValue === '<br>' || htmlValue.trim() === '' || htmlValue === '<p></p>') ? '' : htmlValue;
+        console.log('🔍 useWYSIWYG - normalizedCurrentContent:', normalizedCurrentContent);
+        console.log('🔍 useWYSIWYG - normalizedPropForCompare:', normalizedPropForCompare);
         
-        // Only update if content is actually different
-        if (currentContent !== normalizedValue && currentContent !== normalizedValue.trim()) {
-          editorRef.current.innerHTML = normalizedValue || '';
+        // Always update if normalized values don't match (handles whitespace differences)
+        // Or if this is the first initialization or value just appeared
+        if (isFirstInit || valueJustAppeared || normalizedCurrentContent !== normalizedPropForCompare) {
+          console.log('✅ useWYSIWYG - UPDATING editor innerHTML with:', normalizedPropValue);
+          editorRef.current.innerHTML = normalizedPropValue || '';
+          // Store the original prop value for future comparisons
+          lastSyncedValueRef.current = newValue;
+          hasInitializedRef.current = true;
+          console.log('✅ useWYSIWYG - Updated editor, new innerHTML:', editorRef.current.innerHTML);
+          console.log('✅ useWYSIWYG - Editor textContent:', editorRef.current.textContent);
+          console.log('✅ useWYSIWYG - Editor innerText:', editorRef.current.innerText);
+          console.log('✅ useWYSIWYG - Editor computed style color:', window.getComputedStyle(editorRef.current).color);
+        } else if (needsUpdate) {
+          // Content matches but ref doesn't - update ref to prevent false positives
+          console.log('🔍 useWYSIWYG - Content matches, updating ref only');
           lastSyncedValueRef.current = newValue;
         }
+      } else {
+        console.log('⏭️ useWYSIWYG - Skipping update (no changes needed)');
       }
+    } else if (!editorRef.current) {
+      console.warn('⚠️ useWYSIWYG - editorRef.current is null, cannot sync');
+    } else if (isInternalUpdateRef.current) {
+      console.log('⏭️ useWYSIWYG - Skipping (internal update in progress)');
     }
     isInternalUpdateRef.current = false;
+    });
+    
+    return () => cancelAnimationFrame(frameId);
   }, [value]);
 
   // Update format state when selection changes
@@ -94,15 +153,22 @@ export function useWYSIWYG(value: string, onChange: (value: string) => void) {
     if (!editorRef.current) return;
     
     const content = editorRef.current.innerHTML;
-    // Compare with the last synced value, not the current prop value
-    // This prevents unnecessary updates when we're syncing external changes
-    if (content !== lastSyncedValueRef.current && !isInternalUpdateRef.current) {
+    // Normalize the content for comparison
+    const normalizedContent = content.trim();
+    const normalizedLastSynced = lastSyncedValueRef.current 
+      ? convertPlainTextToHTML(lastSyncedValueRef.current).trim() 
+      : '';
+    
+    // Compare normalized HTML values to detect actual changes
+    // This ensures we catch changes even if format differs (plain text vs HTML)
+    if (normalizedContent !== normalizedLastSynced && !isInternalUpdateRef.current) {
       isInternalUpdateRef.current = true;
       setUndoStack(prev => {
         const newStack = [...prev, lastSyncedValueRef.current];
         return newStack.slice(-20);
       });
       setRedoStack([]);
+      // Store the HTML content (which is what we're actually working with)
       lastSyncedValueRef.current = content;
       onChange(content);
     }

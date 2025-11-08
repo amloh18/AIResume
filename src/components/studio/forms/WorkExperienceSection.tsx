@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Plus, Trash2, Copy } from 'lucide-react';
-import WYSIWYGEditor, { useWYSIWYGToolbarProps } from '@/components/ui/WYSIWYGEditor';
+import WYSIWYGEditor, { WYSIWYGToolbar } from '@/components/ui/WYSIWYGEditor';
 
 interface WorkExperienceSectionProps {
   data: any[];
@@ -25,6 +25,13 @@ const WorkExperienceSection: React.FC<WorkExperienceSectionProps> = ({
   console.log('🔍 WorkExperienceSection - is array:', Array.isArray(data));
   console.log('🔍 WorkExperienceSection - data length:', data?.length);
   console.log('🔍 WorkExperienceSection - first item:', data?.[0]);
+  if (data && Array.isArray(data) && data.length > 0) {
+    data.forEach((work, idx) => {
+      console.log(`🔍 WorkExperienceSection - work[${idx}].summary:`, work?.summary);
+      console.log(`🔍 WorkExperienceSection - work[${idx}].summary type:`, typeof work?.summary);
+      console.log(`🔍 WorkExperienceSection - work[${idx}].summary length:`, work?.summary?.length);
+    });
+  }
   
   // Ensure we have proper data structure
   const safeData = Array.isArray(data) ? data : [];
@@ -94,37 +101,6 @@ const WorkExperienceSection: React.FC<WorkExperienceSectionProps> = ({
     }
   };
 
-  // Component to properly connect toolbar and editor using shared hook instance
-  const WorkExperienceEditor: React.FC<{
-    value: string;
-    onChange: (value: string) => void;
-    onAIGenerate: () => void;
-    isGenerating: boolean;
-  }> = ({ value, onChange, onAIGenerate, isGenerating }) => {
-    const { toolbar } = useWYSIWYGToolbarProps(
-      value,
-      onChange,
-      true, // showAIButton
-      'experience',
-      onAIGenerate,
-      isGenerating
-    );
-
-    return (
-      <div className="mt-4">
-        <div className="flex items-center justify-between mb-2">
-          <label className="block text-white/80 text-sm font-medium">Description</label>
-          {toolbar}
-        </div>
-        <WYSIWYGEditor
-          value={value}
-          onChange={onChange}
-          rows={4}
-          placeholder="Describe your key responsibilities and achievements..."
-        />
-      </div>
-    );
-  };
 
   return (
     <>
@@ -193,13 +169,25 @@ const WorkExperienceSection: React.FC<WorkExperienceSectionProps> = ({
             </div>
           </div>
 
-          <WorkExperienceEditor
-            key={`work-editor-${index}`}
-            value={work.summary || ''}
-            onChange={(value) => updateWorkItem(index, 'summary', value)}
+          {/* Work Summary - Same pattern as PersonalInfoForm summary */}
+          <div className="mt-4">
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-white/80 text-sm font-medium">Work Summary</label>
+              <WYSIWYGToolbar
+                showAIButton={true}
+                fieldType="experience"
             onAIGenerate={() => generateAIDescription(index, work)}
             isGenerating={generatingIndex === index}
           />
+            </div>
+            <WYSIWYGEditor
+              key={`work-summary-${index}`}
+              value={work?.summary || ''}
+              onChange={(value) => updateWorkItem(index, 'summary', value)}
+              rows={4}
+              placeholder="Describe your key responsibilities and achievements..."
+            />
+          </div>
         </div>
       ))}
       

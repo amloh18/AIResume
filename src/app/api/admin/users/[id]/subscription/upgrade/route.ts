@@ -137,7 +137,7 @@ export async function POST(
     } else {
       // If same plan, just ensure credits are initialized
       const creditStatus = await creditService.getCreditStatus(userId);
-      if (!creditStatus || creditStatus.cvCredits === 0) {
+      if (!creditStatus || creditStatus.jobCredits === 0) {
         await creditService.initializeCredits(userId, planKey);
       }
     }

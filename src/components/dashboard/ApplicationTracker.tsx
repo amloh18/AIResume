@@ -24,6 +24,7 @@ import { useOptimizedDataFetching } from '@/lib/hooks/useOptimizedDataFetching';
 import { ApplicationTrackerSkeleton } from '@/components/ui/OptimizedSkeletons';
 import { formatCardTime } from '@/lib/utils/timeUtils';
 import { CVJourney } from '@/types/cv';
+import JobCreationPaywall from '@/components/payment/JobCreationPaywall';
 
 interface JobApplication {
   id: string;
@@ -164,7 +165,34 @@ const ApplicationTracker: React.FC = () => {
   const [cvContext, setCvContext] = useState<any>(null); // Store CV context when navigating from CV card
   const [showAddJobModal, setShowAddJobModal] = useState(false);
   const [editingJob, setEditingJob] = useState<JobApplication | null>(null);
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [creditInfo, setCreditInfo] = useState<{ creditsRemaining: number; limit: number; resetTime?: Date } | null>(null);
   const [zoomedStage, setZoomedStage] = useState<string | null>(null);
+
+  // Check for paywall trigger from URL (e.g., from extension)
+  useEffect(() => {
+    const showPaywallParam = searchParams.get('showPaywall');
+    const creditsRemainingParam = searchParams.get('creditsRemaining');
+    const limitParam = searchParams.get('limit');
+    
+    if (showPaywallParam === 'true') {
+      const creditsRemaining = creditsRemainingParam ? parseInt(creditsRemainingParam, 10) : 0;
+      const limit = limitParam ? parseInt(limitParam, 10) : 1;
+      
+      setCreditInfo({
+        creditsRemaining,
+        limit
+      });
+      setShowPaywall(true);
+      
+      // Clean up URL parameters
+      const url = new URL(window.location.href);
+      url.searchParams.delete('showPaywall');
+      url.searchParams.delete('creditsRemaining');
+      url.searchParams.delete('limit');
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, [searchParams]);
 
   // Load data on component mount
   useEffect(() => {
@@ -772,6 +800,7 @@ const ApplicationTracker: React.FC = () => {
   };
 
   return (
+    <>
     <div className="space-y-6">
       {/* Page Header - Always show immediately */}
       <PageHeader
@@ -1674,7 +1703,18 @@ const ApplicationTracker: React.FC = () => {
         } as any : null}
         userId={userId || ''}
       />
+
+      {/* Job Creation Paywall */}
+      <JobCreationPaywall
+        isOpen={showPaywall}
+        onClose={() => setShowPaywall(false)}
+        creditsRemaining={creditInfo?.creditsRemaining || 0}
+        limit={creditInfo?.limit || 1}
+        resetTime={creditInfo?.resetTime}
+        preselectedPlanKey="pro_monthly"
+      />
     </div>
+    </>
   );
 };
 

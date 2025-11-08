@@ -15,6 +15,7 @@ import { Job } from '@/lib/stores/jobStore';
 import { downloadAsPDF, downloadAsDOCX, downloadAsImage } from '@/lib/utils/download';
 import { TemplateRenderer } from '@/lib/templates/template-renderer';
 import { getVisibleCVSections } from '@/lib/selectors/cv-section-selectors';
+import { HARDCODED_TEMPLATES } from '@/lib/templates/hardcoded-templates';
 
 interface CVPreviewProps {
   cvData: UnifiedCVDataStructure | null;
@@ -70,6 +71,45 @@ const CVPreviewComponent: React.FC<CVPreviewProps> = ({
   const [totalPages, setTotalPages] = useState(1);
   const [isDownloading, setIsDownloading] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
+
+  // Get fallback template (Executive Professional) if template is missing
+  const fallbackTemplate = useMemo(() => {
+    return HARDCODED_TEMPLATES.find((t: any) => 
+      t.id === 'executive-professional-layout-template' || 
+      t.name === 'Executive Professional'
+    ) || null;
+  }, []);
+
+  // Use provided template or fallback to Executive Professional
+  const effectiveTemplate = useMemo(() => {
+    if (template) {
+      return template;
+    }
+    if (fallbackTemplate) {
+      console.log('⚠️ CVPreview - No template provided, using Executive Professional as fallback');
+      return fallbackTemplate;
+    }
+    return null;
+  }, [template, fallbackTemplate]);
+
+  // Use effective template's styles if customCSS/templateStyles not provided
+  const effectiveCustomCSS = useMemo(() => {
+    if (customCSS) return customCSS;
+    if (effectiveTemplate) {
+      return (effectiveTemplate as any)?.customCSS || 
+             (effectiveTemplate as any)?.globalStyles?.customCSS || 
+             '';
+    }
+    return '';
+  }, [customCSS, effectiveTemplate]);
+
+  const effectiveTemplateStyles = useMemo(() => {
+    if (templateStyles) return templateStyles;
+    if (effectiveTemplate) {
+      return (effectiveTemplate as any)?.globalStyles || {};
+    }
+    return {};
+  }, [templateStyles, effectiveTemplate]);
 
   // Get current page dimensions
   const currentDimensions = PAGE_DIMENSIONS[paperSize];
@@ -298,26 +338,43 @@ const CVPreviewComponent: React.FC<CVPreviewProps> = ({
               )}
 
               {/* Use TemplateRenderer with current page sections */}
-              {template && (
+              {/* IMPORTANT: Only render if cvData exists - never use sample/hardcoded data */}
+              {effectiveTemplate && cvData ? (
                 <TemplateRenderer
                   cvData={cvData}
-                  template={template as any}
+                  template={effectiveTemplate as any}
                   sectionOrder={effectiveSectionOrder}
                   sectionVisibility={sectionVisibility}
                   enabledSections={pageSections}
                   className="template-rendered-content"
-                customStyles={{
-                  height: '100%',
-                  overflow: 'hidden',
-                  pageBreakInside: 'avoid',
-                  breakInside: 'avoid'
-                }}
+                  customStyles={{
+                    height: '100%',
+                    overflow: 'hidden',
+                    pageBreakInside: 'avoid',
+                    breakInside: 'avoid'
+                  }}
                 />
+              ) : !cvData ? (
+                <div className="flex items-center justify-center h-full text-gray-400">
+                  <div className="text-center">
+                    <FileText size={48} className="mx-auto mb-4 opacity-50" />
+                    <p className="text-lg font-medium">No CV data available</p>
+                    <p className="text-sm mt-2">Please add your CV information to see the preview</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center h-full text-gray-400">
+                  <div className="text-center">
+                    <FileText size={48} className="mx-auto mb-4 opacity-50" />
+                    <p className="text-lg font-medium">No template available</p>
+                    <p className="text-sm mt-2">Please select a template to preview your CV</p>
+                  </div>
+                </div>
               )}
 
               {/* Custom CSS */}
-              {customCSS && (
-                <style dangerouslySetInnerHTML={{ __html: customCSS }} />
+              {effectiveCustomCSS && (
+                <style dangerouslySetInnerHTML={{ __html: effectiveCustomCSS }} />
               )}
               
               {/* Page break CSS - optimized for both screen and print */}

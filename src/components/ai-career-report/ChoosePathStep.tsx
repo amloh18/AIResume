@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, FileText, ArrowRight, Sparkles, X, Eye, Save } from 'lucide-react';
 import { useAICareerReport } from '@/contexts/AICareerReportContext';
 
@@ -191,18 +191,32 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
     onNext();
   };
 
+  // Handle click outside to collapse upload card
+  const handleClickOutside = (e: React.MouseEvent) => {
+    if (selectedOption === 'upload' && !state.isUploading) {
+      const target = e.target as HTMLElement;
+      // Check if click is outside the upload card
+      if (!target.closest('.upload-card-container')) {
+        setSelectedOption(null);
+      }
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-[#1A201A] flex items-center justify-center p-4">
-      <div className="w-full max-w-7xl">
+    <div 
+      className="h-screen bg-[#1A201A] flex items-center justify-center p-4 pt-4 lg:pt-8 overflow-hidden"
+      onClick={handleClickOutside}
+    >
+      <div className="w-full max-w-7xl h-full flex flex-col justify-center">
         {/* Header Section */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-4 lg:mb-8">
           
           {/* Step Information */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="mb-8"
+            className="mb-4 lg:mb-6"
           >
             <div className="text-[#80FF00] font-bold text-lg mb-2">Step 1 of 3</div>
           </motion.div>
@@ -211,7 +225,7 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="text-4xl md:text-5xl font-bold text-white mb-6"
+            className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 lg:mb-6"
           >
             Choose Your Path to Success
           </motion.h1>
@@ -220,24 +234,30 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-xl text-white/70 max-w-2xl mx-auto leading-relaxed"
+            className="text-lg lg:text-xl text-white/70 max-w-2xl mx-auto leading-relaxed"
           >
             Get personalized career insights and recommendations tailored to your experience level and goals.
           </motion.p>
         </div>
 
         {/* Main Content Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-5xl mx-auto">
+        <div className={`grid gap-8 max-w-5xl mx-auto transition-all duration-500 ${
+          selectedOption === 'upload' ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2'
+        }`}>
           {/* Upload CV Card */}
           <motion.div
             initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
+            animate={{ 
+              opacity: 1, 
+              x: 0
+            }}
             transition={{ duration: 0.6, delay: 0.3 }}
-            className={`relative bg-[#263326] rounded-2xl p-8 transition-all duration-300 ${
-              selectedOption === 'upload' ? 'ring-2 ring-[#80FF00] shadow-2xl shadow-[#80FF00]/20' : 'hover:shadow-xl hover:shadow-black/20'
+            className={`upload-card-container relative bg-[#263326] rounded-2xl p-8 transition-all duration-500 ${
+              selectedOption === 'upload' ? 'ring-2 ring-[#80FF00] shadow-2xl shadow-[#80FF00]/20 lg:col-span-2' : 'hover:shadow-xl hover:shadow-black/20'
             }`}
-            whileHover={{ scale: 1.02, y: -5 }}
+            whileHover={selectedOption !== 'upload' ? { scale: 1.02, y: -5 } : {}}
             whileTap={{ scale: 0.98 }}
+            onClick={(e) => e.stopPropagation()}
           >
             {/* Background Pattern */}
             <div className="absolute inset-0 rounded-2xl bg-[#80FF00]/5 opacity-50"></div>
@@ -263,18 +283,21 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
                 </button>
               ) : (
                 <div className="space-y-6">
-                  <div className="border-2 border-dashed border-white/20 rounded-xl p-8 text-center bg-white/5 backdrop-blur-sm">
-                    <Upload className="h-16 w-16 text-white/40 mx-auto mb-4" />
-                    <h4 className="text-xl font-semibold text-white mb-2">Drag & drop your file here</h4>
-                    <p className="text-white/50 mb-4">or</p>
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="text-[#80FF00] font-bold text-lg underline hover:text-[#70e600] transition-colors"
-                    >
-                      browse files
-                    </button>
-                    <p className="text-white/50 text-sm mt-4">PDF, DOC, DOCX up to 10MB</p>
-                  </div>
+                  {/* Only show drag & drop section when not uploading */}
+                  {!state.isUploading && (
+                    <div className="border-2 border-dashed border-white/20 rounded-xl p-8 text-center bg-white/5 backdrop-blur-sm">
+                      <Upload className="h-16 w-16 text-white/40 mx-auto mb-4" />
+                      <h4 className="text-xl font-semibold text-white mb-2">Drag & drop your file here</h4>
+                      <p className="text-white/50 mb-4">or</p>
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="text-[#80FF00] font-bold text-lg underline hover:text-[#70e600] transition-colors"
+                      >
+                        browse files
+                      </button>
+                      <p className="text-white/50 text-sm mt-4">PDF, DOC, DOCX up to 10MB</p>
+                    </div>
+                  )}
 
                   <input
                     ref={fileInputRef}
@@ -299,10 +322,54 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
                   )}
 
                   {state.isUploading && (
-                    <div className="p-4 bg-[#80FF00]/10 border border-[#80FF00]/30 rounded-xl text-[#80FF00] text-center backdrop-blur-sm">
-                      <div className="flex items-center justify-center gap-3">
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#80FF00]"></div>
-                        <span className="font-medium">Processing your CV...</span>
+                    <div className="p-6 bg-[#80FF00]/10 border border-[#80FF00]/30 rounded-xl text-[#80FF00] backdrop-blur-sm">
+                      <div className="flex flex-col items-center gap-4">
+                        <div className="flex items-center justify-center gap-3">
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#80FF00]"></div>
+                          <span className="font-medium text-lg">Processing your CV...</span>
+                        </div>
+                        
+                        {/* Processing Steps */}
+                        <div className="w-full space-y-3 mt-4">
+                          <motion.div
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.2 }}
+                            className="flex items-center gap-3 text-sm"
+                          >
+                            <div className="w-2 h-2 rounded-full bg-[#80FF00] animate-pulse"></div>
+                            <span className="text-white/80">Extracting text from your document...</span>
+                          </motion.div>
+                          <motion.div
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.5 }}
+                            className="flex items-center gap-3 text-sm"
+                          >
+                            <div className="w-2 h-2 rounded-full bg-[#80FF00] animate-pulse" style={{ animationDelay: '0.3s' }}></div>
+                            <span className="text-white/80">Analyzing work experience and education...</span>
+                          </motion.div>
+                          <motion.div
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.8 }}
+                            className="flex items-center gap-3 text-sm"
+                          >
+                            <div className="w-2 h-2 rounded-full bg-[#80FF00] animate-pulse" style={{ animationDelay: '0.6s' }}></div>
+                            <span className="text-white/80">Identifying skills and achievements...</span>
+                          </motion.div>
+                          <motion.div
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 1.1 }}
+                            className="flex items-center gap-3 text-sm"
+                          >
+                            <div className="w-2 h-2 rounded-full bg-[#80FF00] animate-pulse" style={{ animationDelay: '0.9s' }}></div>
+                            <span className="text-white/80">Structuring your data for analysis...</span>
+                          </motion.div>
+                        </div>
+                        
+                        <p className="text-white/50 text-xs mt-2">This usually takes 10-30 seconds</p>
                       </div>
                     </div>
                   )}
@@ -312,16 +379,28 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
           </motion.div>
 
           {/* Start from Scratch Card */}
-          <motion.div
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            className={`relative bg-[#263326] rounded-2xl p-8 transition-all duration-300 ${
-              selectedOption === 'manual' ? 'ring-2 ring-[#80FF00] shadow-2xl shadow-[#80FF00]/20' : 'hover:shadow-xl hover:shadow-black/20'
-            }`}
-            whileHover={{ scale: 1.02, y: -5 }}
-            whileTap={{ scale: 0.98 }}
-          >
+          <AnimatePresence>
+            {selectedOption !== 'upload' && (
+              <motion.div
+                initial={{ opacity: 0, x: 50 }}
+                animate={{ 
+                  opacity: 1,
+                  x: 0,
+                  scale: 1
+                }}
+                exit={{ 
+                  opacity: 0,
+                  x: 50,
+                  scale: 0.8,
+                  transition: { duration: 0.4 }
+                }}
+                transition={{ duration: 0.5, delay: 0.4 }}
+                className={`relative bg-[#263326] rounded-2xl p-8 transition-all duration-500 ${
+                  selectedOption === 'manual' ? 'ring-2 ring-[#80FF00] shadow-2xl shadow-[#80FF00]/20' : 'hover:shadow-xl hover:shadow-black/20'
+                }`}
+                whileHover={{ scale: 1.02, y: -5 }}
+                whileTap={{ scale: 0.98 }}
+              >
             {/* Background Pattern */}
             <div className="absolute inset-0 rounded-2xl bg-[#80FF00]/5 opacity-50"></div>
             
@@ -345,20 +424,24 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
                 <ArrowRight className="h-5 w-5" />
               </button>
             </div>
-          </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
-        {/* Bottom Info */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.5 }}
-          className="text-center mt-16"
-        >
-          <p className="text-white/50 text-sm">
-            Both options will lead to the same comprehensive AI career analysis
-          </p>
-        </motion.div>
+        {/* Bottom Info - Only show when both cards are visible */}
+        {selectedOption !== 'upload' && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.5 }}
+            className="text-center mt-8 lg:mt-12"
+          >
+            <p className="text-white/50 text-sm">
+              Both options will lead to the same comprehensive AI career analysis
+            </p>
+          </motion.div>
+        )}
       </div>
     </div>
   );

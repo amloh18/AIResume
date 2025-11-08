@@ -353,25 +353,9 @@ export async function POST(request: NextRequest) {
     const userId = authResult.userId;
     console.log('🔍 CV POST API - Using authenticated user:', authResult.userEmail);
 
-    // Check credits before allowing CV creation
-    const creditCheck = await usageLimitsService.checkUsageLimit({
-      userId,
-      action: 'cv_create'
-    });
-
-    if (!creditCheck.allowed) {
-      console.log('❌ CV POST API - Credit check failed:', creditCheck.reason);
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: creditCheck.reason || 'Credit limit exceeded',
-          requiresUpgrade: true,
-          currentUsage: creditCheck.currentUsage,
-          limit: creditCheck.limit
-        },
-        { status: 403 }
-      );
-    }
+    // Note: Credit check removed - CV creation is unlimited
+    // Master CV can be created/edited unlimited times
+    // Journey CVs are auto-created with job (credit already spent at job creation)
 
     const body = await request.json();
     console.log('🚀 CV POST API - Request body received');
@@ -394,6 +378,37 @@ export async function POST(request: NextRequest) {
         { success: false, error: 'Title and CV data are required' },
         { status: 400 }
       );
+    }
+
+    // Check if trying to create Master CV - limit to 1 per user
+    const isCreatingMasterCV = isMaster === true || 
+                                isMaster === 'true' || 
+                                metadata?.isMaster === true || 
+                                metadata?.isMaster === 'true';
+
+    if (isCreatingMasterCV) {
+      // Check if Master CV already exists
+      const existingMasterCV = await CV.findOne({
+        userId: new mongoose.Types.ObjectId(userId),
+        $or: [
+          { 'metadata.isMaster': true },
+          { 'metadata.isMaster': 'true' },
+          { isMaster: true },
+          { isMaster: 'true' }
+        ]
+      });
+
+      if (existingMasterCV) {
+        console.log('❌ CV POST API - Master CV already exists for user');
+        return NextResponse.json(
+          { 
+            success: false, 
+            error: 'Master CV already exists. You can only have one Master CV. Please edit your existing Master CV instead.',
+            existingMasterCVId: existingMasterCV._id.toString()
+          },
+          { status: 409 } // 409 Conflict
+        );
+      }
     }
 
     // Ensure templateId is provided or get default template (Executive Professional)
@@ -521,11 +536,8 @@ export async function POST(request: NextRequest) {
 
     await newCV.save();
 
-    // Spend credit after successful CV creation
-    await usageLimitsService.incrementUsage({
-      userId,
-      action: 'cv_create'
-    });
+    // Note: Credit spending removed - CV creation is unlimited
+    // Credits are only spent at job creation
 
     // Save CV with template to S3 as backup
     try {

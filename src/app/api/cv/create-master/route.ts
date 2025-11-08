@@ -27,6 +27,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
+    // Check if Master CV already exists (limit: 1 per user)
+    const existingMasterCV = await CV.findOne({
+      userId: user._id,
+      $or: [
+        { 'metadata.isMaster': true },
+        { 'metadata.isMaster': 'true' },
+        { isMaster: true },
+        { isMaster: 'true' }
+      ]
+    });
+
+    if (existingMasterCV) {
+      return NextResponse.json(
+        { 
+          error: 'Master CV already exists. You can only have one Master CV. Please edit your existing Master CV instead.',
+          existingMasterCVId: existingMasterCV._id
+        },
+        { status: 409 } // 409 Conflict
+      );
+    }
+
     // Create Master CV
     const masterCV = new CV({
       userId: user._id,

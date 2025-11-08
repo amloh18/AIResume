@@ -33,6 +33,19 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
   designSettings,
   sectionConfig
 }) => {
+  // IMPORTANT: Never use sample/hardcoded data - only use actual cvData
+  // If cvData is null, return early to prevent rendering with empty data
+  if (!cvData) {
+    return (
+      <div className="flex items-center justify-center h-full text-gray-400">
+        <div className="text-center">
+          <p className="text-lg font-medium">No CV data available</p>
+          <p className="text-sm mt-2">Please add your CV information to see the preview</p>
+        </div>
+      </div>
+    );
+  }
+
   const isDark = theme === 'dark';
   
   // Get visible sections using centralized selector (respects structure visibility)
@@ -339,7 +352,9 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
                             <h6 className="font-medium">{job.position}</h6>
                             <p className="text-sm text-gray-600">{job.name}</p>
                             <p className="text-xs text-gray-500">{job.startDate} - {job.endDate}</p>
-                            <p className="text-sm mt-2">{job.summary}</p>
+                            {job.summary && job.summary.trim() && (
+                              <p className="text-sm mt-2">{job.summary}</p>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -485,7 +500,7 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
                               {work.startDate && work.endDate ? `${work.startDate} - ${work.endDate}` : ''}
                             </span>
                           </div>
-                          {work.summary && (
+                          {work.summary && work.summary.trim() && (
                             <div className="text-sm leading-relaxed" style={{
                               color: templateStyles?.secondaryColor || themeClasses.text.secondary
                             }}>

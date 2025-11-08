@@ -30,6 +30,7 @@ import { useUnifiedAuth } from '@/lib/hooks/useUnifiedAuth';
 import { authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
 import { v4 as uuidv4 } from 'uuid';
 import { ApplicationPackageService } from '@/lib/services/applicationPackageService';
+import JobCreationPaywall from '@/components/payment/JobCreationPaywall';
 
 interface Job {
   id?: string;
@@ -119,6 +120,8 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
   const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [creditInfo, setCreditInfo] = useState<{ creditsRemaining: number; limit: number; resetTime?: Date } | null>(null);
   
   // Auto-save refs
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -295,7 +298,37 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
         console.error('❌ Missing required fields:', { jobTitle: jobData.jobTitle, company: jobData.company });
         setErrorMessage('Job title and company are required');
         setShowErrorDialog(true);
+        if (!isAutoSave) setIsSaving(false);
         return;
+      }
+
+      // Check credits before creating new job (not for editing existing jobs)
+      if (isNewJob && !isAutoSave && user?.id) {
+        try {
+          const creditCheckResponse = await authenticatedFetchWithUserId('/api/user/usage/check', user.id, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'job_create' })
+          });
+
+          if (creditCheckResponse.ok) {
+            const creditCheck = await creditCheckResponse.json();
+            if (!creditCheck.allowed) {
+              // Credits exhausted - show paywall
+              setCreditInfo({
+                creditsRemaining: creditCheck.usage?.currentUsage || 0,
+                limit: creditCheck.usage?.limit || 1,
+                resetTime: creditCheck.usage?.resetTime ? new Date(creditCheck.usage.resetTime) : undefined
+              });
+              setShowPaywall(true);
+              if (!isAutoSave) setIsSaving(false);
+              return;
+            }
+          }
+        } catch (creditError) {
+          console.error('Error checking credits:', creditError);
+          // Continue with job creation if credit check fails (don't block user)
+        }
       }
 
       // Step 1: Save the job
@@ -536,6 +569,7 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
   if (!isOpen) return null;
 
   return (
+    <>
     <AnimatePresence>
       <motion.div
         className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 dark:bg-black/70 backdrop-blur-sm"
@@ -899,10 +933,11 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
           </div>
         </motion.div>
       </motion.div>
+    </AnimatePresence>
 
       {/* Unsaved Changes Warning */}
-      <AnimatePresence>
-        {showUnsavedWarning && (
+      {showUnsavedWarning && (
+        <AnimatePresence>
           <motion.div
             className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
             initial={{ opacity: 0 }}
@@ -941,12 +976,12 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
               </div>
             </motion.div>
           </motion.div>
-        )}
-      </AnimatePresence>
+        </AnimatePresence>
+      )}
 
       {/* Error Dialog */}
-      <AnimatePresence>
-        {showErrorDialog && (
+      {showErrorDialog && (
+        <AnimatePresence>
           <motion.div
             className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
             initial={{ opacity: 0 }}
@@ -982,9 +1017,19 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
               </div>
             </motion.div>
           </motion.div>
-        )}
-      </AnimatePresence>
-    </AnimatePresence>
+        </AnimatePresence>
+      )}
+
+    {/* Job Creation Paywall */}
+    <JobCreationPaywall
+      isOpen={showPaywall}
+      onClose={() => setShowPaywall(false)}
+      creditsRemaining={creditInfo?.creditsRemaining || 0}
+      limit={creditInfo?.limit || 1}
+      resetTime={creditInfo?.resetTime}
+      preselectedPlanKey="pro_monthly"
+    />
+    </>
   );
 };
 

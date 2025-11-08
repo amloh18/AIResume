@@ -20,11 +20,13 @@ const DashboardContent: React.FC<{ children?: React.ReactNode }> = ({ children }
   const { userData, loading: userLoading } = useUserData();
   const { isOpen: isMobileMenuOpen, toggleSidebar } = useMobileSidebar();
 
-  // Render immediately - pages handle their own loading states
+  // App Shell Pattern: Render layout structure immediately, regardless of data loading
+  // This provides instant visual feedback and prevents layout shifts
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#1a230f]">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#1a230f] layout-stable">
       <div className="flex h-screen">
         {/* Desktop Sidebar - Hidden on sm/md, visible on lg and up */}
+        {/* Always render sidebar shell for layout stability */}
         <div className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:z-50 lg:py-0.5 lg:px-0.5 lg:w-[108px] xl:w-[108px] 2xl:w-[335px] overflow-visible">
           <OptimizedNavigation />
         </div>
@@ -44,8 +46,8 @@ const DashboardContent: React.FC<{ children?: React.ReactNode }> = ({ children }
           )}
         </AnimatePresence>
 
-        {/* Main Content */}
-        <div className="flex flex-col flex-1 lg:pl-[108px] xl:pl-[108px] 2xl:pl-[335px]">
+        {/* Main Content - Always render shell to prevent CLS */}
+        <div className="flex flex-col flex-1 lg:pl-[108px] xl:pl-[108px] 2xl:pl-[335px] layout-stable">
           {/* Page Content */}
           <main className="flex-1 overflow-auto">
             <div className="p-6 pb-[10px]">

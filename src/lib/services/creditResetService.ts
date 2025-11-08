@@ -64,6 +64,7 @@ class CreditResetService {
 
   /**
    * Check if a user's credits need to be reset
+   * For free plan: Reset on 1st of each month
    */
   async shouldResetCredits(userId: string): Promise<boolean> {
     try {
@@ -77,15 +78,23 @@ class CreditResetService {
       const planKey = user.currentPlanKey || 'free';
       const resetSchedule = user.credits?.resetSchedule || this.getResetScheduleForPlan(planKey);
 
-      // Day pass and one-time plans don't reset
+      // Day pass and paid plans don't reset
       if (resetSchedule === 'never' || resetSchedule === 'one-time') {
         return false;
       }
 
       const lastReset = user.credits?.lastResetDate || new Date();
-      const nextReset = this.calculateNextResetDate(lastReset, resetSchedule);
       const now = new Date();
 
+      // For monthly reset (free plan), check if we're past the 1st of current month
+      if (resetSchedule === 'monthly') {
+        // If last reset was before the 1st of current month, reset is needed
+        const firstOfCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        return lastReset < firstOfCurrentMonth;
+      }
+
+      // For other schedules, use the calculated next reset date
+      const nextReset = this.calculateNextResetDate(lastReset, resetSchedule);
       return now >= nextReset;
     } catch (error) {
       console.error('Error checking if credits should reset:', error);
@@ -115,13 +124,17 @@ class CreditResetService {
 
   /**
    * Calculate next reset date based on schedule
+   * For monthly: Reset on 1st of next month
    */
   private calculateNextResetDate(lastReset: Date, schedule: CreditResetSchedule): Date {
     const next = new Date(lastReset);
     
     switch (schedule) {
       case 'monthly':
+        // Reset on 1st of next month
         next.setMonth(next.getMonth() + 1);
+        next.setDate(1);
+        next.setHours(0, 0, 0, 0);
         break;
       case 'quarterly':
         next.setMonth(next.getMonth() + 3);
@@ -130,26 +143,27 @@ class CreditResetService {
         next.setFullYear(next.getFullYear() + 1);
         break;
       default:
+        // Default to 1st of next month
         next.setMonth(next.getMonth() + 1);
+        next.setDate(1);
+        next.setHours(0, 0, 0, 0);
     }
-
+    
     return next;
   }
 
   /**
    * Reset credits for all users who need it (for cron job)
+   * Should run daily, but only resets free plan users on 1st of month
    */
   async resetCreditsForEligibleUsers(): Promise<{ reset: number; skipped: number }> {
     try {
       await connectToDatabase();
 
+      // Only reset free plan users (monthly reset on 1st)
       const users = await User.find({
-        'subscription.status': 'active',
-        $or: [
-          { 'credits.resetSchedule': 'monthly' },
-          { 'credits.resetSchedule': 'quarterly' },
-          { 'credits.resetSchedule': 'yearly' }
-        ]
+        currentPlanKey: 'free',
+        'credits.resetSchedule': 'monthly'
       });
 
       let reset = 0;

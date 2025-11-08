@@ -79,14 +79,96 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
     if (pricingPlans.length > 0 && !selectedPlan) {
       if (preselectedPlanKey) {
         const plan = pricingPlans.find((p: PricingPlan) => p.key === preselectedPlanKey);
-        if (plan) setSelectedPlan(plan);
+        if (plan) {
+          // Attach regional pricing to preselected plan
+          const dbPlan = plan as unknown as DatabasePricingPlan;
+          // Determine the correct price based on plan key and billing interval
+          let planPrice = 0;
+          if (plan.key === 'pro_monthly') {
+            planPrice = dbPlan.price_monthly || 0;
+          } else if (plan.key === 'pro_quarterly') {
+            planPrice = dbPlan.price_quarterly || 0;
+          } else if (plan.key === 'pro_yearly') {
+            planPrice = dbPlan.price_yearly || 0;
+          } else if (plan.key === 'day_pass') {
+            planPrice = dbPlan.price_one_time || 0;
+          } else {
+            planPrice = getEffectivePrice(dbPlan) || 0;
+          }
+          
+          const currencySymbol = getCurrencySymbol();
+          const monthlyEquivalent = getMonthlyEquivalent(dbPlan);
+          const regionalPriceStr = getRegionalPrice(dbPlan);
+          // Extract numeric price from regional price string
+          const extractNumericFromString = (priceString: string): number => {
+            if (!priceString) return 0;
+            let cleaned = priceString.replace(/[^\d.,]/g, '');
+            cleaned = cleaned.replace(/,/g, '');
+            return parseFloat(cleaned) || 0;
+          };
+          const finalPrice = regionalPriceStr ? extractNumericFromString(regionalPriceStr) : planPrice;
+          
+          const planWithPricing = {
+            ...plan,
+            regionalPricing: {
+              price: finalPrice || planPrice || 0,
+              currencySymbol: currencySymbol,
+              currency: regionalPricing?.currency || 'USD'
+            },
+            durationInfo: monthlyEquivalent.showMonthly ? {
+              displayText: monthlyEquivalent.price
+            } : undefined
+          };
+          setSelectedPlan(planWithPricing);
+        }
       } else {
         // Default to first paid plan (not free)
         const paidPlan = pricingPlans.find((p: PricingPlan) => p.key !== 'free');
-        if (paidPlan) setSelectedPlan(paidPlan);
+        if (paidPlan) {
+          // Attach regional pricing to default plan
+          const dbPlan = paidPlan as unknown as DatabasePricingPlan;
+          // Determine the correct price based on plan key and billing interval
+          let planPrice = 0;
+          if (paidPlan.key === 'pro_monthly') {
+            planPrice = dbPlan.price_monthly || 0;
+          } else if (paidPlan.key === 'pro_quarterly') {
+            planPrice = dbPlan.price_quarterly || 0;
+          } else if (paidPlan.key === 'pro_yearly') {
+            planPrice = dbPlan.price_yearly || 0;
+          } else if (paidPlan.key === 'day_pass') {
+            planPrice = dbPlan.price_one_time || 0;
+          } else {
+            planPrice = getEffectivePrice(dbPlan) || 0;
+          }
+          
+          const currencySymbol = getCurrencySymbol();
+          const monthlyEquivalent = getMonthlyEquivalent(dbPlan);
+          const regionalPriceStr = getRegionalPrice(dbPlan);
+          // Extract numeric price from regional price string
+          const extractNumericFromString = (priceString: string): number => {
+            if (!priceString) return 0;
+            let cleaned = priceString.replace(/[^\d.,]/g, '');
+            cleaned = cleaned.replace(/,/g, '');
+            return parseFloat(cleaned) || 0;
+          };
+          const finalPrice = regionalPriceStr ? extractNumericFromString(regionalPriceStr) : planPrice;
+          
+          const planWithPricing = {
+            ...paidPlan,
+            regionalPricing: {
+              price: finalPrice || planPrice || 0,
+              currencySymbol: currencySymbol,
+              currency: regionalPricing?.currency || 'USD'
+            },
+            durationInfo: monthlyEquivalent.showMonthly ? {
+              displayText: monthlyEquivalent.price
+            } : undefined
+          };
+          setSelectedPlan(planWithPricing);
+        }
       }
     }
-  }, [pricingPlans, preselectedPlanKey, selectedPlan]);
+  }, [pricingPlans, preselectedPlanKey, selectedPlan, getEffectivePrice, getCurrencySymbol, getMonthlyEquivalent, regionalPricing]);
 
   // Check if any plans have promotional pricing
   useEffect(() => {
@@ -252,10 +334,20 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
     }
   };
 
+  // Helper function to extract numeric value from price string
+  const extractNumericPrice = (priceString: string): number => {
+    if (!priceString) return 0;
+    // Remove all non-numeric characters except dots and commas
+    let cleaned = priceString.replace(/[^\d.,]/g, '');
+    // Handle comma as thousands separator (e.g., 1,999 -> 1999)
+    cleaned = cleaned.replace(/,/g, '');
+    return parseFloat(cleaned) || 0;
+  };
+
   const getPlanPrice = (plan: PricingPlan) => {
     if (plan.key === 'free') return 0;
     
-    // Use regional pricing if available
+    // Use regional pricing if available (attached when plan is selected)
     const regionalPrice = (plan as any).regionalPricing;
     if (regionalPrice?.price) {
       // Use promotional pricing if available
@@ -266,10 +358,23 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
       return regionalPrice.price;
     }
     
-    // Fallback to effective price from hook (convert to DatabasePricingPlan)
+    // Fallback: Get price from plan based on key
     const dbPlan = plan as unknown as DatabasePricingPlan;
-    const effectivePrice = getEffectivePrice(dbPlan);
-    return effectivePrice || 0;
+    let planPrice = 0;
+    if (plan.key === 'pro_monthly') {
+      planPrice = dbPlan.price_monthly || 0;
+    } else if (plan.key === 'pro_quarterly') {
+      planPrice = dbPlan.price_quarterly || 0;
+    } else if (plan.key === 'pro_yearly') {
+      planPrice = dbPlan.price_yearly || 0;
+    } else if (plan.key === 'day_pass') {
+      planPrice = dbPlan.price_one_time || 0;
+    } else {
+      // Fallback to effective price from hook
+      planPrice = getEffectivePrice(dbPlan) || 0;
+    }
+    
+    return planPrice;
   };
 
   const getFinalPrice = () => {
@@ -631,7 +736,39 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                 y: -5,
                                 boxShadow: "0 15px 30px -5px rgba(132, 204, 22, 0.3)"
                               }}
-                              onClick={() => setSelectedPlan(plan)}
+                              onClick={() => {
+                                // Determine the correct price based on plan key and billing interval
+                                let planPrice = 0;
+                                if (plan.key === 'pro_monthly') {
+                                  planPrice = dbPlan.price_monthly || 0;
+                                } else if (plan.key === 'pro_quarterly') {
+                                  planPrice = dbPlan.price_quarterly || 0;
+                                } else if (plan.key === 'pro_yearly') {
+                                  planPrice = dbPlan.price_yearly || 0;
+                                } else if (plan.key === 'day_pass') {
+                                  planPrice = dbPlan.price_one_time || 0;
+                                } else {
+                                  // Fallback to effective price
+                                  planPrice = effectivePrice || 0;
+                                }
+                                
+                                // Extract numeric price from regional price string if available
+                                const finalPrice = regionalPrice ? extractNumericPrice(regionalPrice) : planPrice;
+                                
+                                // Attach regional pricing to plan before selecting
+                                const planWithPricing = {
+                                  ...plan,
+                                  regionalPricing: {
+                                    price: finalPrice || planPrice || 0,
+                                    currencySymbol: currencySymbol,
+                                    currency: regionalPricing?.currency || 'USD'
+                                  },
+                                  durationInfo: monthlyEquivalent.showMonthly ? {
+                                    displayText: monthlyEquivalent.price
+                                  } : undefined
+                                };
+                                setSelectedPlan(planWithPricing);
+                              }}
                               style={{ willChange: 'transform' }}
                             >
                               {/* Glow Effect */}

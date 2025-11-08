@@ -14,9 +14,10 @@ import {
   ReferenceLine
 } from 'recharts';
 import { TrendingUp, Target, CheckCircle, RefreshCw } from 'lucide-react';
+import { useTheme } from '@/lib/contexts/ThemeContext';
 
 // Helper function to convert paragraphs to bullet points
-const convertToBulletPoints = (text: string): React.ReactNode => {
+const convertToBulletPoints = (text: string, useLightTheme: boolean): React.ReactNode => {
   if (!text) return null;
   
   // Split by common sentence endings and newlines
@@ -27,12 +28,12 @@ const convertToBulletPoints = (text: string): React.ReactNode => {
   
   // If text is already short or has few sentences, return as is
   if (sentences.length <= 1) {
-    return <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">{text}</p>;
+    return <p className={`text-sm leading-relaxed ${useLightTheme ? 'text-gray-600' : 'text-gray-400 dark:text-gray-400'}`}>{text}</p>;
   }
   
   // Convert to bullet points
   return (
-    <ul className="list-disc list-inside space-y-1 text-gray-600 dark:text-gray-400 text-sm">
+    <ul className={`list-disc list-inside space-y-1 text-sm ${useLightTheme ? 'text-gray-600' : 'text-gray-400 dark:text-gray-400'}`}>
       {sentences.map((sentence, index) => (
         <li key={index} className="leading-relaxed">{sentence}</li>
       ))}
@@ -63,13 +64,18 @@ interface CareerTrajectoryGraphProps {
   };
   careerCoherence?: CareerCoherence;
   experienceLevel?: string;
+  forceLightTheme?: boolean; // Force light theme (for step 3 in ai-career-report)
 }
 
 const CareerTrajectoryGraph: React.FC<CareerTrajectoryGraphProps> = ({
   careerPath,
   careerCoherence,
-  experienceLevel
+  experienceLevel,
+  forceLightTheme = false
 }) => {
+  // Get theme from context, but if forceLightTheme is true, always use light theme
+  const { isDark } = useTheme();
+  const useLightTheme = forceLightTheme || !isDark;
   const coherenceScore = careerCoherence?.score ?? 85;
   
   // Generate trajectory data points based on career path steps
@@ -120,11 +126,11 @@ const CareerTrajectoryGraph: React.FC<CareerTrajectoryGraphProps> = ({
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
-        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-4">
-          <p className="font-semibold text-gray-900 dark:text-white mb-2">{data.milestone}</p>
-          <p className="text-sm text-gray-600 dark:text-gray-300">{data.stage}</p>
+        <div className={`${useLightTheme ? 'bg-white border-gray-200' : 'bg-gray-800 dark:bg-gray-800 border-gray-700 dark:border-gray-700'} border rounded-lg shadow-lg p-4`}>
+          <p className={`font-semibold mb-2 ${useLightTheme ? 'text-gray-900' : 'text-white dark:text-white'}`}>{data.milestone}</p>
+          <p className={`text-sm ${useLightTheme ? 'text-gray-600' : 'text-gray-300 dark:text-gray-300'}`}>{data.stage}</p>
           {data.reasoning && (
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 italic">{data.reasoning}</p>
+            <p className={`text-xs mt-2 italic ${useLightTheme ? 'text-gray-500' : 'text-gray-400 dark:text-gray-400'}`}>{data.reasoning}</p>
           )}
         </div>
       );
@@ -155,7 +161,7 @@ const CareerTrajectoryGraph: React.FC<CareerTrajectoryGraphProps> = ({
           x={x}
           y={y - 20}
           textAnchor="middle"
-          className="text-xs font-semibold fill-gray-900 dark:fill-gray-100"
+          className={`text-xs font-semibold ${useLightTheme ? 'fill-gray-900' : 'fill-gray-100 dark:fill-gray-100'}`}
           style={{ fontWeight: 600 }}
         >
           {payload.shortMilestone || payload.milestone}
@@ -165,23 +171,24 @@ const CareerTrajectoryGraph: React.FC<CareerTrajectoryGraphProps> = ({
   };
 
   return (
-    <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-8 shadow-sm">
+    <div className={`${useLightTheme ? 'bg-white border-gray-200' : 'bg-[#141810] dark:bg-[#141810] border-white/10 dark:border-white/10'} border rounded-xl p-8 shadow-sm`}>
+      {/* Container Header */}
       <div className="flex items-center gap-3 mb-6">
         <div className="w-8 h-8 bg-[#80FF00] rounded flex items-center justify-center">
           <RefreshCw className="w-5 h-5 text-black" />
         </div>
-        <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Career Trajectory Analysis</h3>
+        <h3 className={`text-2xl font-bold ${useLightTheme ? 'text-gray-900' : 'text-white dark:text-white'}`}>Career Trajectory Analysis</h3>
       </div>
       
       <div className="space-y-4">
       {/* Coherence Score with Radial Progress */}
-      <div className="bg-gray-50 dark:bg-[#313a28] border border-gray-200 dark:border-white/10 rounded-lg p-4">
+      <div className={`${useLightTheme ? 'bg-gray-50 border-gray-200' : 'bg-[#313a28] dark:bg-[#313a28] border-white/10 dark:border-white/10'} border rounded-lg p-4`}>
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-1">
+            <h4 className={`text-sm font-bold mb-1 ${useLightTheme ? 'text-gray-900' : 'text-white dark:text-white'}`}>
               Career Coherence Score
             </h4>
-            <p className="text-xs text-gray-600 dark:text-white/60">
+            <p className={`text-xs ${useLightTheme ? 'text-gray-600' : 'text-white/60 dark:text-white/60'}`}>
               {coherenceScore >= 80
                 ? "Strong alignment with consistent progression."
                 : coherenceScore >= 60
@@ -198,7 +205,7 @@ const CareerTrajectoryGraph: React.FC<CareerTrajectoryGraphProps> = ({
                 stroke="currentColor"
                 strokeWidth="6"
                 fill="none"
-                className="text-gray-200 dark:text-gray-700"
+                className={useLightTheme ? "text-gray-200" : "text-gray-700 dark:text-gray-700"}
               />
               <motion.circle
                 cx="48"
@@ -244,16 +251,16 @@ const CareerTrajectoryGraph: React.FC<CareerTrajectoryGraphProps> = ({
         </div>
 
         {careerCoherence?.strengths && careerCoherence.strengths.length > 0 && (
-          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-2 mt-2">
-            <p className="text-green-600 dark:text-green-400 text-xs">
+          <div className={`${useLightTheme ? 'bg-green-50 border-green-200' : 'bg-green-900/20 dark:bg-green-900/20 border-green-800 dark:border-green-800'} border rounded-lg p-2 mt-2`}>
+            <p className={`text-xs ${useLightTheme ? 'text-green-600' : 'text-green-400 dark:text-green-400'}`}>
               <strong>✅ Strengths:</strong> {careerCoherence.strengths.join(', ')}
             </p>
           </div>
         )}
 
         {careerCoherence?.redFlags && careerCoherence.redFlags.length > 0 && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mt-4">
-            <h5 className="text-red-600 dark:text-red-400 font-semibold mb-2">
+          <div className={`${useLightTheme ? 'bg-red-50 border-red-200' : 'bg-red-900/20 dark:bg-red-900/20 border-red-800 dark:border-red-800'} border rounded-lg p-4 mt-4`}>
+            <h5 className={`font-semibold mb-2 ${useLightTheme ? 'text-red-600' : 'text-red-400 dark:text-red-400'}`}>
               ⚠️ Potential Red Flags Detected
             </h5>
             <div className="space-y-2">
@@ -261,12 +268,12 @@ const CareerTrajectoryGraph: React.FC<CareerTrajectoryGraphProps> = ({
                 <div key={index} className="flex items-start gap-2">
                   <div className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
                   <div>
-                    <p className="text-red-600 dark:text-red-400 text-sm">
+                    <p className={`text-sm ${useLightTheme ? 'text-red-600' : 'text-red-400 dark:text-red-400'}`}>
                       <strong>{flag.issue}</strong>
                     </p>
-                    <p className="text-red-500 dark:text-red-400 text-xs mt-1">{flag.impact}</p>
+                    <p className={`text-xs mt-1 ${useLightTheme ? 'text-red-500' : 'text-red-400 dark:text-red-400'}`}>{flag.impact}</p>
                     {flag.action && (
-                      <p className="text-red-600 dark:text-red-400 text-xs mt-1">
+                      <p className={`text-xs mt-1 ${useLightTheme ? 'text-red-600' : 'text-red-400 dark:text-red-400'}`}>
                         <strong>Action:</strong> {flag.action}
                       </p>
                     )}
@@ -279,10 +286,10 @@ const CareerTrajectoryGraph: React.FC<CareerTrajectoryGraphProps> = ({
       </div>
 
       {/* Career Trajectory Line Chart */}
-      <div className="bg-gray-50 dark:bg-[#313a28] border border-gray-200 dark:border-white/10 rounded-lg p-4">
+      <div className={`${useLightTheme ? 'bg-gray-50 border-gray-200' : 'bg-[#313a28] dark:bg-[#313a28] border-white/10 dark:border-white/10'} border rounded-lg p-4`}>
         <div className="flex items-center gap-2 mb-4">
           <TrendingUp className="w-4 h-4 text-[#80FF00]" />
-          <h4 className="text-sm font-bold text-gray-900 dark:text-white">
+          <h4 className={`text-sm font-bold ${useLightTheme ? 'text-gray-900' : 'text-white dark:text-white'}`}>
             Career Progression Trajectory
           </h4>
         </div>
@@ -308,13 +315,13 @@ const CareerTrajectoryGraph: React.FC<CareerTrajectoryGraphProps> = ({
               <CartesianGrid
                 strokeDasharray="3 3"
                 stroke="#e5e7eb"
-                className="dark:stroke-gray-700"
+                className={useLightTheme ? "stroke-gray-200" : "stroke-gray-700 dark:stroke-gray-700"}
                 opacity={0.3}
               />
               <XAxis
                 dataKey="stage"
                 stroke="#6b7280"
-                className="dark:stroke-gray-400"
+                className={useLightTheme ? "stroke-gray-400" : "stroke-gray-400 dark:stroke-gray-400"}
                 fontSize={12}
                 tick={{ fill: 'currentColor' }}
                 tickLine={{ stroke: 'currentColor' }}
@@ -322,7 +329,7 @@ const CareerTrajectoryGraph: React.FC<CareerTrajectoryGraphProps> = ({
               <YAxis
                 domain={[0, 5]}
                 stroke="#6b7280"
-                className="dark:stroke-gray-400"
+                className={useLightTheme ? "stroke-gray-400" : "stroke-gray-400 dark:stroke-gray-400"}
                 fontSize={12}
                 tick={{ fill: 'currentColor' }}
                 tickLine={{ stroke: 'currentColor' }}
@@ -373,7 +380,7 @@ const CareerTrajectoryGraph: React.FC<CareerTrajectoryGraphProps> = ({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 + index * 0.1 }}
-            className="bg-gray-50 dark:bg-[#313a28] border border-gray-200 dark:border-white/10 rounded-lg p-4 relative overflow-hidden group"
+            className={`${useLightTheme ? 'bg-gray-50 border-gray-200' : 'bg-[#313a28] dark:bg-[#313a28] border-white/10 dark:border-white/10'} border rounded-lg p-4 relative overflow-hidden group`}
           >
             <div className="absolute top-0 right-0 w-16 h-16 bg-[#80FF00]/10 rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
             <div className="flex items-start gap-3 mb-2">
@@ -384,8 +391,8 @@ const CareerTrajectoryGraph: React.FC<CareerTrajectoryGraphProps> = ({
                 <div className="flex items-center gap-1.5 mb-2">
                   <span className="text-xs font-semibold text-[#80FF00]">STEP {step}</span>
                 </div>
-                <h4 className="text-gray-900 dark:text-white font-semibold mb-2 text-sm">{title}</h4>
-                {convertToBulletPoints(reasoning)}
+                <h4 className={`font-semibold mb-2 text-sm ${useLightTheme ? 'text-gray-900' : 'text-white dark:text-white'}`}>{title}</h4>
+                {convertToBulletPoints(reasoning, useLightTheme)}
               </div>
             </div>
           </motion.div>

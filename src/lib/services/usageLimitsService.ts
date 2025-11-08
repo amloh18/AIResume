@@ -25,7 +25,7 @@ export interface TimeBasedAccessResult {
 
 export interface ActionContext {
   userId: string;
-  action: 'cv_journey' | 'cv_create' | 'export' | 'ats_check';
+  action: 'job_create';
   deviceFingerprint?: string;
   ipAddress?: string;
 }
@@ -247,8 +247,8 @@ class UsageLimitsService {
         }
       }
 
-      // Check credits instead of resource counts
-      const creditCheck = await creditService.checkCreditAvailability(context.userId, context.action);
+      // Check job creation credits
+      const creditCheck = await creditService.checkCreditAvailability(context.userId, 'job_create');
       
       const allowed = creditCheck.available;
       const currentUsage = creditCheck.limit === -1 ? -1 : creditCheck.limit - creditCheck.creditsRemaining;
@@ -278,11 +278,11 @@ class UsageLimitsService {
   }
 
   /**
-   * Spend credit for a specific action (replaces incrementUsage)
+   * Spend credit for job creation (replaces incrementUsage)
    */
   async incrementUsage(context: ActionContext): Promise<boolean> {
-    // Use credit service to spend credit
-    return await creditService.spendCredit(context.userId, context.action);
+    // Use credit service to spend credit for job creation
+    return await creditService.spendCredit(context.userId, 'job_create');
   }
 
   /**
@@ -438,14 +438,8 @@ class UsageLimitsService {
    */
   private getUsageField(action: string): string | null {
     switch (action) {
-      case 'cv_journey':
-        return 'cvJourneyCount';
-      case 'cv_create':
-        return 'cvCreatedCount';
-      case 'export':
-        return 'exportCount';
-      case 'ats_check':
-        return 'atsCheckCount';
+      case 'job_create':
+        return 'journeysCreated'; // Jobs create journeys
       default:
         return null;
     }

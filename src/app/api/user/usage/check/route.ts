@@ -20,31 +20,10 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { resourceType, action } = body;
+    const { action } = body;
 
-    // Determine action from resourceType if action not provided
-    let finalAction: 'cv_journey' | 'cv_create' | 'export' | 'ats_check' = action;
-    
-    if (!finalAction && resourceType) {
-      switch (resourceType) {
-        case 'cv':
-        case 'journey':
-          finalAction = 'cv_journey';
-          break;
-        case 'export':
-          finalAction = 'export';
-          break;
-        case 'ats_check':
-          finalAction = 'ats_check';
-          break;
-        default:
-          finalAction = 'cv_create';
-      }
-    }
-
-    if (!finalAction) {
-      return NextResponse.json({ error: 'Action or resourceType is required' }, { status: 400 });
-    }
+    // Only job creation requires credit check
+    const finalAction: 'job_create' = action || 'job_create';
 
     // Check time-based access first
     const timeCheck = await usageLimitsService.checkTimeBasedAccess(userId);

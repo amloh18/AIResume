@@ -331,7 +331,6 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
                     onDownload={(journey) => {
                       // Handle download functionality
                     }}
-                    onDelete={onDeleteJourney}
                     onRefresh={async () => {
                       // Refresh journeys in AnalyticsJourneyWidget
                       const userId = getUserIdForAPI(user);

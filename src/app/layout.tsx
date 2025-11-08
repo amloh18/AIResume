@@ -1,8 +1,8 @@
 import type { Metadata, Viewport } from 'next'
-import { Analytics } from '@vercel/analytics/next'
-import { SpeedInsights } from '@vercel/speed-insights/next'
 import './globals.css'
 import ClientProviders from '@/components/providers/ClientProviders'
+import ResourceHints from '@/components/ResourceHints'
+import DeferredAnalytics from '@/components/DeferredAnalytics'
 
 // Force dynamic rendering for all pages
 export const dynamic = 'force-dynamic'
@@ -112,11 +112,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
+        <ResourceHints />
         <ClientProviders>
           {children}
         </ClientProviders>
-        <Analytics />
-        <SpeedInsights />
+        {/* Load analytics after page is interactive */}
+        <DeferredAnalytics />
       </body>
     </html>
   )

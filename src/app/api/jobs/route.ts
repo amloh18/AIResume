@@ -88,6 +88,35 @@ export async function POST(request: NextRequest) {
     
     await getConnection();
     
+    // Check job creation credits before creating job
+    console.log(`🔍 [${source.toUpperCase()}] Job POST API - Checking credits for user: ${userId}`);
+    const usageLimitsService = await import('@/lib/services/usageLimitsService');
+    const creditCheck = await usageLimitsService.default.checkUsageLimit({
+      userId,
+      action: 'job_create'
+    });
+
+    console.log(`🔍 [${source.toUpperCase()}] Job POST API - Credit check result:`, {
+      allowed: creditCheck.allowed,
+      reason: creditCheck.reason,
+      currentUsage: creditCheck.currentUsage,
+      limit: creditCheck.limit
+    });
+
+    if (!creditCheck.allowed) {
+      console.log(`❌ [${source.toUpperCase()}] Job POST API - Credit check failed:`, creditCheck.reason);
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: creditCheck.reason || 'Job creation limit exceeded',
+          requiresUpgrade: true,
+          currentUsage: creditCheck.currentUsage,
+          limit: creditCheck.limit
+        },
+        { status: 403 }
+      );
+    }
+    
     // Create the job application in the application tracker
     const jobApplication = new JobApplication({
       userId,
@@ -114,7 +143,39 @@ export async function POST(request: NextRequest) {
     
     await jobApplication.save();
     
-    console.log('✅ Job application created successfully in application tracker:', jobApplication._id);
+    console.log(`✅ [${source.toUpperCase()}] Job application created successfully in application tracker:`, jobApplication._id);
+    
+    // Spend credit after successful job creation
+    // CRITICAL: This must succeed or we have a data inconsistency
+    try {
+      console.log(`💳 [${source.toUpperCase()}] Job POST API - Attempting to spend credit for user: ${userId}`);
+      const creditService = await import('@/lib/services/creditService');
+      const creditSpent = await creditService.default.spendCredit(userId, 'job_create');
+      
+      if (!creditSpent) {
+        console.error(`❌ [${source.toUpperCase()}] Job POST API - CRITICAL: Failed to spend credit after job creation for user: ${userId}`);
+        console.error(`⚠️ [${source.toUpperCase()}] Data inconsistency: Job ${jobApplication._id} created but credit not spent`);
+        
+        // For extension requests, we should still return success but log the error
+        // The job was created, so we can't roll it back easily
+        // This should be investigated and fixed manually
+      } else {
+        console.log(`✅ [${source.toUpperCase()}] Job POST API - Credit spent successfully for job creation. User: ${userId}, Job: ${jobApplication._id}`);
+        
+        // Verify credit was actually spent by checking again
+        const verifyCheck = await creditService.default.checkCreditAvailability(userId, 'job_create');
+        console.log(`🔍 [${source.toUpperCase()}] Job POST API - Credit verification after spending:`, {
+          creditsRemaining: verifyCheck.creditsRemaining,
+          limit: verifyCheck.limit,
+          available: verifyCheck.available
+        });
+      }
+    } catch (creditError: any) {
+      console.error(`❌ [${source.toUpperCase()}] Job POST API - Error spending credit:`, creditError);
+      console.error(`⚠️ [${source.toUpperCase()}] Data inconsistency: Job ${jobApplication._id} created but credit spending failed:`, creditError.message);
+      console.error(`Stack trace:`, creditError.stack);
+      // Don't fail the request, but log the error for investigation
+    }
     
     // Create ApplicationJourney for this job
     let newJourney: any = null;
