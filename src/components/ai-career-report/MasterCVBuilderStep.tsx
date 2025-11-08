@@ -447,6 +447,35 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
               />
             </div>
             
+            <div>
+              <label className="block text-white/80 text-sm font-medium mb-2">Location</label>
+              <input
+                type="text"
+                readOnly={false}
+                disabled={false}
+                value={(() => {
+                  const city = state.cvData.basics.location?.city || '';
+                  const region = state.cvData.basics.location?.region || '';
+                  return city && region ? `${city}, ${region}` : city || region || '';
+                })()}
+                onChange={(e) => {
+                  const inputValue = e.target.value;
+                  const parts = inputValue.split(', ').map(p => p.trim());
+                  const updatedLocation = {
+                    ...(state.cvData.basics.location || {}),
+                    city: parts[0] || '',
+                    region: parts[1] || ''
+                  };
+                  updateCVData('basics', {
+                    ...state.cvData.basics,
+                    location: updatedLocation
+                  });
+                }}
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors cursor-text"
+                placeholder="City, Region"
+              />
+            </div>
+            
             <div className="md:col-span-2">
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-white/80 text-sm font-medium">Professional Summary</label>
@@ -552,8 +581,8 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
                     />
                   </div>
                   <WYSIWYGEditor
-                    key={`work-summary-${index}-${state.cvData.work[index]?.summary?.substring(0, 20) || ''}`}
-                    value={state.cvData.work[index]?.summary || ''}
+                    key={`work-summary-${index}`}
+                    value={state.cvData.work[index]?.summary ? String(state.cvData.work[index].summary) : ''}
                     onChange={(value) => updateWorkExperience(index, 'summary', value)}
                     rows={4}
                     placeholder="Describe your key responsibilities and achievements..."
@@ -1650,7 +1679,7 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
 
       {/* Add Section Modal */}
       {showAddSectionModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}

@@ -102,7 +102,7 @@ const UpgradePopup: React.FC<UpgradePopupProps> = ({ onClose, userId }) => {
     <>
       <AnimatePresence>
         {isVisible && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}

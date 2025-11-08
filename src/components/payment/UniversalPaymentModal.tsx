@@ -489,17 +489,17 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+        className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
         onClick={(e) => e.target === e.currentTarget && onClose()}
       >
-        <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.9, opacity: 0 }}
-          className="bg-white dark:bg-[#141810] rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto"
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        className="bg-white dark:bg-[#141810] rounded-xl shadow-2xl w-[90%] max-w-6xl max-h-[85vh] overflow-hidden flex flex-col"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
             <div>
               <div className="flex items-center gap-3">
                 <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -533,7 +533,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
             </button>
           </div>
 
-          <div className="p-6">
+          <div className="p-6 overflow-y-auto flex-1 min-h-0">
             {step === 1 && (
               <>
                 {/* Category Toggle - Matching Landing Page */}
@@ -595,8 +595,8 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                   
                   // Determine grid classes based on number of plans
                   const gridClasses = filteredPlans.length === 2
-                    ? 'grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 max-w-4xl mx-auto'
-                    : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8';
+                    ? 'grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 max-w-4xl mx-auto'
+                    : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6';
                   
                   return (
                     <div className={gridClasses}>
@@ -616,7 +616,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                           return (
                             <motion.div
                               key={plan.key}
-                              className={`group relative bg-gradient-to-br from-white/5 to-white/10 dark:from-gray-800/50 dark:to-gray-900/50 backdrop-blur-xl border border-white/10 dark:border-gray-700 rounded-2xl p-6 flex flex-col cursor-pointer transition-all ${
+                              className={`group relative bg-gradient-to-br from-white/5 to-white/10 dark:from-gray-800/50 dark:to-gray-900/50 backdrop-blur-xl border border-white/10 dark:border-gray-700 rounded-2xl p-4 flex flex-col cursor-pointer transition-all ${
                                 isCurrent || isSelected
                                   ? 'ring-2 ring-lime-400/50'
                                   : plan.isPopular
@@ -642,8 +642,8 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                               
                               {/* Current Plan Badge */}
                               {isCurrent && (
-                                <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10">
-                                  <span className="bg-lime-400 text-black text-xs font-medium px-3 py-1 rounded-full shadow-lg">
+                                <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 z-10">
+                                  <span className="bg-lime-400 text-black text-xs font-medium px-2 py-0.5 rounded-full shadow-lg">
                                     Current Plan
                                   </span>
                                 </div>
@@ -651,8 +651,8 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                               
                               {/* Popular Badge */}
                               {plan.isPopular && !isCurrent && (
-                                <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10">
-                                  <span className="bg-lime-400 text-black text-xs font-medium px-3 py-1 rounded-full shadow-lg">
+                                <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 z-10">
+                                  <span className="bg-lime-400 text-black text-xs font-medium px-2 py-0.5 rounded-full shadow-lg">
                                     Most Popular
                                   </span>
                                 </div>
@@ -660,9 +660,9 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
 
                               {/* Promotional Badge */}
                               {hasPromo && (
-                                <div className="absolute -top-3 right-3 z-10">
-                                  <span className="bg-lime-400 text-black text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1 shadow-lg">
-                                    <Gift size={10} />
+                                <div className="absolute -top-2 right-2 z-10">
+                                  <span className="bg-lime-400 text-black text-xs font-medium px-2 py-0.5 rounded-full flex items-center gap-1 shadow-lg">
+                                    <Gift size={9} />
                                     Limited Time!
                                   </span>
                                 </div>
@@ -670,7 +670,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
 
                               {/* Plan Icon */}
                               <motion.div 
-                                className={`inline-flex items-center justify-center w-12 h-12 rounded-xl mb-4 bg-gradient-to-br from-lime-400 to-lime-500 shadow-lg relative z-10`}
+                                className={`inline-flex items-center justify-center w-10 h-10 rounded-lg mb-3 bg-gradient-to-br from-lime-400 to-lime-500 shadow-lg relative z-10`}
                                 whileHover={{ 
                                   scale: 1.1,
                                   rotateY: 15,
@@ -681,31 +681,31 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                   perspective: '1000px'
                                 }}
                               >
-                                <Icon size={24} className="text-white" />
+                                <Icon size={20} className="text-white" />
                               </motion.div>
 
                               {/* Plan Name */}
-                              <h3 className="text-lg sm:text-xl font-bold mb-3 text-gray-900 dark:text-white relative z-10">{plan.name}</h3>
+                              <h3 className="text-base font-bold mb-2 text-gray-900 dark:text-white relative z-10">{plan.name}</h3>
 
                               {/* Plan Description */}
-                              <p className="text-gray-600 dark:text-gray-400 mb-4 text-xs sm:text-sm leading-relaxed relative z-10">
+                              <p className="text-gray-600 dark:text-gray-400 mb-3 text-xs leading-relaxed relative z-10">
                                 {plan.description}
                               </p>
 
                               {/* Pricing */}
-                              <div className="mb-6 relative z-10">
+                              <div className="mb-4 relative z-10">
                                 {plan.key === 'free' ? (
-                                  <div className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Free</div>
+                                  <div className="text-xl font-bold text-gray-900 dark:text-white">Free</div>
                                 ) : (
                                   <div>
                                     {hasPromo ? (
                                       <div>
-                                        <div className="flex flex-col gap-1">
+                                        <div className="flex flex-col gap-0.5">
                                           <div className="flex items-baseline gap-2 flex-wrap">
-                                            <span className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+                                            <span className="text-xl font-bold text-gray-900 dark:text-white">
                                               {regionalPrice}
                                             </span>
-                                            <span className="text-base sm:text-lg text-gray-500 dark:text-gray-400 line-through">
+                                            <span className="text-sm text-gray-500 dark:text-gray-400 line-through">
                                               {(() => {
                                                 // Get original price for strikethrough
                                                 const originalPrice = plan.price_quarterly || plan.price_yearly || plan.price_monthly || plan.price_one_time || 0;
@@ -714,28 +714,28 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                             </span>
                                           </div>
                                           {monthlyEquivalent.showMonthly && (
-                                            <div className="text-sm text-gray-600 dark:text-gray-400">
+                                            <div className="text-xs text-gray-600 dark:text-gray-400">
                                               {monthlyEquivalent.price} equivalent
                                             </div>
                                           )}
                                         </div>
-                                        <div className="text-xs sm:text-sm text-lime-400 font-medium mt-1">
+                                        <div className="text-xs text-lime-400 font-medium mt-0.5">
                                           Limited Time Offer!
                                         </div>
                                       </div>
                                     ) : (
                                       <div>
-                                        <div className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+                                        <div className="text-xl font-bold text-gray-900 dark:text-white">
                                           {regionalPrice}
                                         </div>
                                         {monthlyEquivalent.showMonthly && (
-                                          <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                          <div className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
                                             {monthlyEquivalent.price} equivalent
                                           </div>
                                         )}
                                       </div>
                                     )}
-                                    <div className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm mt-1">
+                                    <div className="text-gray-600 dark:text-gray-400 text-xs mt-0.5">
                                       {plan.key === 'day_pass' 
                                         ? 'one-time' 
                                         : (plan.price_quarterly ? 'quarterly' : plan.price_yearly ? 'yearly' : plan.price_monthly ? 'monthly' : 'one-time')}
@@ -745,31 +745,31 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                               </div>
 
                               {/* Features */}
-                              <ul className="space-y-3 mb-6 relative z-10 flex-grow">
+                              <ul className="space-y-2 mb-4 relative z-10 flex-grow">
                                 {plan.features.map((feature: string, featureIndex: number) => (
-                                  <li key={featureIndex} className="flex items-start gap-2">
+                                  <li key={featureIndex} className="flex items-start gap-1.5">
                                     <motion.div
                                       initial={{ opacity: 0, scale: 0 }}
                                       animate={{ opacity: 1, scale: 1 }}
                                       transition={{ delay: 0.5 + featureIndex * 0.1 }}
                                       whileHover={{ scale: 1.2 }}
                                     >
-                                      <Check size={18} className="text-lime-400 flex-shrink-0 mt-0.5" />
+                                      <Check size={14} className="text-lime-400 flex-shrink-0 mt-0.5" />
                                     </motion.div>
-                                    <span className="text-gray-700 dark:text-gray-300 text-sm sm:text-base leading-relaxed">{feature}</span>
+                                    <span className="text-gray-700 dark:text-gray-300 text-xs leading-relaxed">{feature}</span>
                                   </li>
                                 ))}
                               </ul>
 
                               {/* Not Included Features */}
                               {(plan as any).notIncludedFeatures && (plan as any).notIncludedFeatures.length > 0 && (
-                                <div className="mb-4 relative z-10">
-                                  <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Not Included:</h4>
+                                <div className="mb-3 relative z-10">
+                                  <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Not Included:</h4>
                                   <ul className="space-y-1">
                                     {(plan as any).notIncludedFeatures.slice(0, 2).map((feature: string, featureIndex: number) => (
-                                      <li key={featureIndex} className="flex items-start gap-2">
-                                        <div className="w-4 h-4 rounded-full border border-gray-300 dark:border-gray-600 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                          <div className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full"></div>
+                                      <li key={featureIndex} className="flex items-start gap-1.5">
+                                        <div className="w-3 h-3 rounded-full border border-gray-300 dark:border-gray-600 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                          <div className="w-1 h-1 bg-gray-400 dark:bg-gray-500 rounded-full"></div>
                                         </div>
                                         <span className="text-gray-500 dark:text-gray-400 text-xs">{feature}</span>
                                       </li>
@@ -780,7 +780,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
 
                               {/* Current Plan Indicator */}
                               {isCurrent && (
-                                <div className="w-full py-3 px-4 bg-lime-100 dark:bg-lime-900/20 text-lime-700 dark:text-lime-300 rounded-lg text-center font-semibold relative z-10">
+                                <div className="w-full py-2 px-3 bg-lime-100 dark:bg-lime-900/20 text-lime-700 dark:text-lime-300 rounded-lg text-center text-xs font-semibold relative z-10">
                                   Current Plan
                                 </div>
                               )}
@@ -803,7 +803,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                   <button
                     onClick={() => setStep(2)}
                     disabled={!selectedPlan || isCurrentPlan(selectedPlan)}
-                    className="px-8 py-3 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black rounded-lg font-medium disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                    className="px-8 py-3 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black rounded-md font-medium disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
                   >
                     {adminMode ? 'Grant Plan' : previewMode ? 'Preview' : 'Continue to Payment'}
                   </button>

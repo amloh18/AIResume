@@ -538,20 +538,20 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
   return (
     <AnimatePresence>
       <motion.div
-        className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 dark:bg-black/80 backdrop-blur-sm"
+        className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 dark:bg-black/70 backdrop-blur-sm"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
       >
         <motion.div
-          className="bg-white dark:bg-[#1A201A] border border-gray-200 dark:border-white/10 rounded-2xl p-6 pb-0 w-full max-w-7xl max-h-[95vh] overflow-hidden shadow-2xl"
+          className="bg-white dark:bg-[#1A201A] border border-gray-200 dark:border-white/10 rounded-2xl w-[90%] max-w-7xl max-h-[85vh] overflow-hidden shadow-2xl flex flex-col"
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
         >
-          <div className="text-gray-900 dark:text-white">
+          <div className="text-gray-900 dark:text-white flex flex-col flex-1 min-h-0">
             {/* Header */}
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-white/10 flex-shrink-0">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
                 {editingJob ? 'Edit Job Application' : 'Add New Job Application'}
               </h2>
@@ -566,10 +566,11 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
               </motion.button>
             </div>
 
-            {/* Two Column Layout */}
-            <div className="grid grid-cols-2 gap-6 h-full">
-              {/* Left Column */}
-              <div className="space-y-3">
+            {/* Two Column Layout - Scrollable Container */}
+            <div className="flex-1 overflow-y-auto min-h-0">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
+                {/* Left Column */}
+                <div className="space-y-3">
                 {/* Basic Information */}
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Basic Information</h3>
@@ -581,7 +582,7 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
                         type="text"
                         value={formData.jobTitle || ''}
                         onChange={(e) => handleFormChange('jobTitle', e.target.value)}
-                        className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-lg"
+                        className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
                         placeholder="Enter job title"
                         maxLength={100}
                       />
@@ -595,7 +596,7 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
                           type="text"
                           value={formData.company || ''}
                           onChange={(e) => handleFormChange('company', e.target.value)}
-                          className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-lg"
+                          className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
                           placeholder="Enter company name"
                           maxLength={100}
                         />
@@ -607,7 +608,7 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
                           type="text"
                           value={formData.location || ''}
                           onChange={(e) => handleFormChange('location', e.target.value)}
-                          className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-lg"
+                          className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
                           placeholder="Enter location"
                         />
                       </div>
@@ -619,7 +620,7 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
                         type="url"
                         value={formData.jobUrl || ''}
                         onChange={(e) => handleFormChange('jobUrl', e.target.value)}
-                        className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-lg"
+                        className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
                         placeholder="https://company.com/job-posting"
                       />
                     </div>
@@ -632,7 +633,7 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
                             type="date"
                             value={formData.applicationDate || ''}
                             onChange={(e) => handleFormChange('applicationDate', e.target.value)}
-                            className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 rounded-xl text-gray-900 dark:text-white text-sm focus:border-lime-500 dark:focus:border-lime-400/50 focus:outline-none"
+                            className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 rounded-md text-gray-900 dark:text-white text-sm focus:border-lime-500 dark:focus:border-lime-400/50 focus:outline-none"
                             placeholder="mm/dd/yyyy"
                           />
                           <Calendar size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-white/50" />
@@ -646,7 +647,7 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
                             type="date"
                             value={formData.deadline || ''}
                             onChange={(e) => handleFormChange('deadline', e.target.value)}
-                            className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 rounded-xl text-gray-900 dark:text-white text-sm focus:border-lime-500 dark:focus:border-lime-400/50 focus:outline-none"
+                            className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 rounded-md text-gray-900 dark:text-white text-sm focus:border-lime-500 dark:focus:border-lime-400/50 focus:outline-none"
                             placeholder="mm/dd/yyyy"
                           />
                           <Calendar size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-white/50" />
@@ -687,7 +688,7 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
                         type="number"
                         value={formData.salary?.min || ''}
                         onChange={(e) => handleFormChange('salary', { ...formData.salary, min: e.target.value ? parseInt(e.target.value) : undefined })}
-                        className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-lg"
+                        className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
                         placeholder="e.g. 80000"
                       />
                     </div>
@@ -698,7 +699,7 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
                         type="number"
                         value={formData.salary?.max || ''}
                         onChange={(e) => handleFormChange('salary', { ...formData.salary, max: e.target.value ? parseInt(e.target.value) : undefined })}
-                        className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-lg"
+                        className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
                         placeholder="e.g. 120000"
                       />
                     </div>
@@ -710,7 +711,7 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
                       <select
                         value={formData.salary?.currency || 'USD'}
                         onChange={(e) => handleFormChange('salary', { ...formData.salary, currency: e.target.value })}
-                        className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 rounded-xl text-gray-900 dark:text-white text-sm focus:border-lime-500 dark:focus:border-lime-400/50 focus:outline-none"
+                        className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 rounded-md text-gray-900 dark:text-white text-sm focus:border-lime-500 dark:focus:border-lime-400/50 focus:outline-none"
                       >
                         <option value="USD">USD</option>
                         <option value="EUR">EUR</option>
@@ -770,7 +771,7 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
                       rows={10}
                       value={formData.jobDescription || ''}
                       onChange={(e) => handleFormChange('jobDescription', e.target.value)}
-                      className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-lg resize-none"
+                        className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md resize-none"
                       placeholder="Paste the job description here..."
                       maxLength={2000}
                     />
@@ -811,7 +812,7 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
                               type="text"
                               value={formData.contactDetails?.name || ''}
                               onChange={(e) => handleFormChange('contactDetails', { ...formData.contactDetails, name: e.target.value })}
-                              className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-lg"
+                              className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
                               placeholder="HR Manager"
                             />
                           </div>
@@ -821,7 +822,7 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
                               type="text"
                               value={formData.contactDetails?.role || ''}
                               onChange={(e) => handleFormChange('contactDetails', { ...formData.contactDetails, role: e.target.value })}
-                              className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-lg"
+                              className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
                               placeholder="HR Manager"
                             />
                           </div>
@@ -833,7 +834,7 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
                               type="email"
                               value={formData.contactDetails?.email || ''}
                               onChange={(e) => handleFormChange('contactDetails', { ...formData.contactDetails, email: e.target.value })}
-                              className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-lg"
+                              className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
                               placeholder="hr@company.com"
                             />
                           </div>
@@ -843,7 +844,7 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
                               type="tel"
                               value={formData.contactDetails?.phone || ''}
                               onChange={(e) => handleFormChange('contactDetails', { ...formData.contactDetails, phone: e.target.value })}
-                              className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-lg"
+                              className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
                               placeholder="+1 (555) 123-4567"
                             />
                           </div>
@@ -866,17 +867,18 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
                       rows={6}
                       value={formData.notes || ''}
                       onChange={(e) => handleFormChange('notes', e.target.value)}
-                      className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-lg resize-none"
+                        className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md resize-none"
                       placeholder="Add any personal notes here..."
                       maxLength={500}
                     />
                   </div>
                 </div>
               </div>
+              </div>
             </div>
 
             {/* Action Buttons */}
-            <div className="flex items-center justify-end mt-2 pt-2 pb-2 border-t border-gray-200 dark:border-white/20">
+            <div className="flex items-center justify-end p-6 border-t border-gray-200 dark:border-white/20 flex-shrink-0">
               <motion.button
                 onClick={() => handleSaveJob(false)}
                 disabled={isSaving}
@@ -902,7 +904,7 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
       <AnimatePresence>
         {showUnsavedWarning && (
           <motion.div
-            className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm"
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -946,7 +948,7 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
       <AnimatePresence>
         {showErrorDialog && (
           <motion.div
-            className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm"
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}

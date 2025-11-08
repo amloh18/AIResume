@@ -46,22 +46,27 @@ export function useWYSIWYG(value: string, onChange: (value: string) => void) {
       const currentContent = editorRef.current.innerHTML.trim();
       let newValue = value || '';
       
+      // Ensure newValue is a string
+      if (typeof newValue !== 'string') {
+        newValue = String(newValue);
+      }
+      
       // Check if we need to update
       const needsUpdate = lastSyncedValueRef.current !== newValue;
       
       // Also update if editor is empty but we have a value
-      const isEmptyButHasValue = (!currentContent || currentContent === '<br>' || currentContent === '') && newValue && newValue.trim();
+      const isEmptyButHasValue = (!currentContent || currentContent === '<br>' || currentContent === '' || currentContent === '<p></p>') && newValue && newValue.trim();
       
       if (needsUpdate || isEmptyButHasValue) {
         // Convert plain text to HTML if needed
         const htmlValue = convertPlainTextToHTML(newValue);
         
         // Normalize empty values
-        const normalizedValue = (!htmlValue || htmlValue === '<br>' || htmlValue.trim() === '') ? '' : htmlValue;
+        const normalizedValue = (!htmlValue || htmlValue === '<br>' || htmlValue.trim() === '' || htmlValue === '<p></p>') ? '' : htmlValue;
         
         // Only update if content is actually different
-        if (currentContent !== normalizedValue) {
-          editorRef.current.innerHTML = normalizedValue;
+        if (currentContent !== normalizedValue && currentContent !== normalizedValue.trim()) {
+          editorRef.current.innerHTML = normalizedValue || '';
           lastSyncedValueRef.current = newValue;
         }
       }

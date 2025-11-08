@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import usageLimitsService from '@/lib/services/usageLimitsService';
+import creditService from '@/lib/services/creditService';
 import { connectToDatabase } from '@/lib/database';
 import User from '@/models/User';
 
@@ -32,9 +33,23 @@ export async function GET(request: NextRequest) {
     const user = await User.findById(userId);
     const subscription = user?.subscription;
 
+    // Get credit information for free plan users
+    let creditInfo = null;
+    if (user?.currentPlanKey === 'free') {
+      const creditStatus = await creditService.getCreditStatus(userId);
+      if (creditStatus) {
+        const creditCheck = await creditService.checkCreditAvailability(userId, 'cv_create');
+        creditInfo = {
+          remaining: creditCheck.creditsRemaining,
+          limit: creditCheck.limit
+        };
+      }
+    }
+
     return NextResponse.json({
       success: true,
       usage,
+      credits: creditInfo,
       timeAccess: {
         hasAccess: timeAccess.hasAccess,
         hoursRemaining: timeAccess.hoursRemaining,

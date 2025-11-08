@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
+import Image from 'next/image';
 import { Menu, X } from 'lucide-react';
 import './CardNav.css';
 
@@ -54,16 +55,39 @@ const CardNav = ({
     }
   };
 
+  const handleLogoClick = () => {
+    if (typeof window === 'undefined') return;
+    // Scroll to top of page
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setIsMobileMenuOpen(false);
+  };
+
   return (
     <div className={`card-nav-container ${className}`}>
       <nav ref={navRef} className="card-nav">
         <div className="card-nav-content">
-          <div className="logo-container">
+          <button 
+            className="logo-container"
+            onClick={handleLogoClick}
+            aria-label="Go to top"
+            type="button"
+          >
+            <div className="logo-image-wrapper">
+              <Image 
+                src="/images/logo.png" 
+                alt="CVCircle Logo" 
+                width={32}
+                height={32}
+                className="logo-image"
+                priority
+                unoptimized
+              />
+            </div>
             <span className="logo-text">
-              <span>CV</span>
-              <span>Circle</span>
+              <span className="logo-cv">CV</span>
+              <span className="logo-circle">Circle</span>
             </span>
-          </div>
+          </button>
 
           <div className="nav-links">
             {links.map((link, index) => (

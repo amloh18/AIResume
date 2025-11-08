@@ -79,6 +79,65 @@ const ApplicationTracker: React.FC = () => {
   const { userData, loading: userLoading, error: userError } = useUserData();
   const searchParams = useSearchParams();
   const cvId = searchParams.get('cvId'); // Get CV ID from URL params
+
+  // Add CSS for animated dotted border
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.id = 'drag-drop-animation-styles';
+    style.textContent = `
+      @keyframes dashMove {
+        0% {
+          background-position: 0 0;
+        }
+        100% {
+          background-position: 16px 16px;
+        }
+      }
+      .animated-dotted-border {
+        position: relative;
+        background-image: repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 7px,
+          rgba(147, 197, 253, 0.2) 7px,
+          rgba(147, 197, 253, 0.2) 8px
+        );
+        background-size: 16px 16px;
+        animation: dashMove 1s linear infinite;
+        min-height: 100vh;
+      }
+      .dark .animated-dotted-border {
+        background-image: repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 7px,
+          rgba(60, 75, 60, 0.3) 7px,
+          rgba(60, 75, 60, 0.3) 8px
+        );
+      }
+      .animated-dotted-border::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: 0.75rem;
+        border: 2px dashed rgb(147, 197, 253);
+        pointer-events: none;
+        min-height: 100vh;
+      }
+      .dark .animated-dotted-border::after {
+        border-color: rgb(60, 75, 60);
+      }
+    `;
+    if (!document.getElementById('drag-drop-animation-styles')) {
+      document.head.appendChild(style);
+    }
+    return () => {
+      const existingStyle = document.getElementById('drag-drop-animation-styles');
+      if (existingStyle) {
+        document.head.removeChild(existingStyle);
+      }
+    };
+  }, []);
   
   // Get user ID for data fetching using unified authentication
   const userId = getUserIdForAPI(user);
@@ -574,45 +633,69 @@ const ApplicationTracker: React.FC = () => {
     e.dataTransfer.dropEffect = 'move';
   };
 
+  const handleDragEnd = (e: React.DragEvent) => {
+    // Clear dragged job state immediately when drag ends
+    setDraggedJob(null);
+  };
+
   const handleDrop = async (e: React.DragEvent, newStatus: string) => {
     e.preventDefault();
-    if (!draggedJob) return;
+    const currentDraggedJob = draggedJob;
+    
+    // Clear dragged job state immediately when drop occurs
+    setDraggedJob(null);
+    
+    if (!currentDraggedJob) return;
 
     // Validate that target stage allows drops
     if (!isDraggableStage(newStatus)) {
-      setDraggedJob(null);
       return;
     }
 
-    const job = jobs.find(j => j.id === draggedJob);
+    const job = jobs.find(j => j.id === currentDraggedJob);
     if (!job || !isJobDraggable(job)) {
-      setDraggedJob(null);
       return;
     }
 
-    try {
-      // Update job status
-      const response = await authenticatedFetchWithUserId(`/api/jobs/${draggedJob}`, userId || undefined, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: newStatus }),
-      });
+    // Store original status for potential rollback
+    const originalStatus = job.status;
 
-      if (response.ok) {
-        // Update local state
+    // Optimistic update: Update UI immediately for instant feedback
+    setJobs(prevJobs => 
+      prevJobs.map(j => 
+        j.id === currentDraggedJob ? { ...j, status: newStatus as any } : j
+      )
+    );
+
+    // Update in background (fire and forget for better UX)
+    authenticatedFetchWithUserId(`/api/jobs/${currentDraggedJob}`, userId || undefined, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ status: newStatus }),
+    })
+      .then(response => {
+        if (!response.ok) {
+          // Revert on failure
+          setJobs(prevJobs => 
+            prevJobs.map(j => 
+              j.id === currentDraggedJob ? { ...j, status: originalStatus } : j
+            )
+          );
+          toast.error('Failed to update job status. Please try again.');
+        }
+      })
+      .catch(error => {
+        console.error('Error updating job status:', error);
+        // Revert on error
         setJobs(prevJobs => 
-          prevJobs.map(job => 
-            job.id === draggedJob ? { ...job, status: newStatus as any } : job
+          prevJobs.map(j => 
+            j.id === currentDraggedJob ? { ...j, status: originalStatus } : j
           )
         );
-      }
-    } catch (error) {
-      console.error('Error updating job status:', error);
-    } finally {
-      setDraggedJob(null);
-    }
+        toast.error('Failed to update job status. Please try again.');
+      });
   };
 
   // Stage zoom handlers
@@ -744,11 +827,11 @@ const ApplicationTracker: React.FC = () => {
       {/* Enhanced Action Bar */}
       <div className="space-y-4">
         {/* Top Row */}
-        <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
-          <div className="flex flex-row items-center gap-2 w-full lg:w-auto lg:flex-1">
+        <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 items-start lg:items-center justify-between">
+          <div className="flex flex-row items-center gap-2 w-full lg:w-auto lg:flex-1 overflow-x-auto scrollbar-hide pb-1 lg:pb-0">
             <motion.button
               onClick={handleAddJob}
-              className="px-4 py-2 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 shadow-md hover:shadow-lg flex-shrink-0"
+              className="px-3 sm:px-4 py-2 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 shadow-md hover:shadow-lg flex-shrink-0 h-[36px]"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -757,11 +840,11 @@ const ApplicationTracker: React.FC = () => {
             </motion.button>
             
             {/* View Mode Toggle */}
-            <div className="flex items-center bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 rounded-lg p-1 flex-shrink-0">
+            <div className="flex items-center bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 rounded-lg p-0.5 flex-shrink-0 h-[36px]">
               <motion.button
                 onClick={() => handleViewModeChange('kanban')}
                 disabled={isLoadingViewMode}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                className={`px-3 sm:px-4 h-full rounded-md text-sm font-medium transition-all duration-200 flex items-center justify-center ${
                   viewMode === 'kanban' 
                     ? 'bg-gray-200 dark:bg-[#2a3a1f] text-gray-900 dark:text-white shadow-sm' 
                     : 'text-gray-600 dark:text-white/60 hover:text-gray-900 dark:text-white/80'
@@ -774,7 +857,7 @@ const ApplicationTracker: React.FC = () => {
               <motion.button
                 onClick={() => handleViewModeChange('list')}
                 disabled={isLoadingViewMode}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                className={`px-3 sm:px-4 h-full rounded-md text-sm font-medium transition-all duration-200 flex items-center justify-center ${
                   viewMode === 'list' 
                     ? 'bg-gray-200 dark:bg-[#2a3a1f] text-gray-900 dark:text-white shadow-sm' 
                     : 'text-gray-600 dark:text-white/60 hover:text-gray-900 dark:text-white/80'
@@ -789,7 +872,7 @@ const ApplicationTracker: React.FC = () => {
             {/* Consolidated Sort Button */}
             <motion.button
               onClick={() => setShowFilters(!showFilters)}
-              className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-[#2a3a1f] transition-all duration-200 flex items-center gap-2 flex-shrink-0 ml-auto lg:ml-0"
+              className="px-3 sm:px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-[#2a3a1f] transition-all duration-200 flex items-center gap-2 flex-shrink-0 h-[36px]"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -979,7 +1062,7 @@ const ApplicationTracker: React.FC = () => {
             viewMode === 'kanban' 
               ? zoomedStage 
                 ? 'grid grid-cols-1 gap-4' 
-                : 'flex flex-row overflow-x-auto gap-4 pb-4 scrollbar-hide md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5'
+                : 'flex flex-row overflow-x-auto gap-4 pb-4 scrollbar-hide'
               : 'grid grid-cols-1 gap-4'
           }`}
         >
@@ -1002,7 +1085,7 @@ const ApplicationTracker: React.FC = () => {
                 { status: 'rejected', title: 'Rejected', color: 'bg-red-100 dark:bg-red-500/20 border-red-300 dark:border-red-500/30 text-red-800 dark:text-white' }
               ]
           ).map((stage) => (
-          <div key={stage.status} className={`space-y-4 ${viewMode === 'kanban' && !zoomedStage ? 'min-w-[280px] flex-shrink-0 md:min-w-0' : ''}`}>
+          <div key={stage.status} className={`space-y-4 ${viewMode === 'kanban' && !zoomedStage ? 'min-w-[280px] flex-shrink-0' : ''}`}>
             {/* Stage Header */}
             <div 
               className={`p-3 rounded-xl border-2 ${stage.status === 'created' ? 'border-solid' : 'border-dashed'} ${stage.color} min-h-[60px] flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity duration-200`}
@@ -1043,8 +1126,12 @@ const ApplicationTracker: React.FC = () => {
 
             {/* Drop Zone */}
             <div 
-              className={`min-h-[100px] rounded-xl border-2 border-dashed border-transparent transition-all duration-300 ${
-                draggedJob && isDraggableStage(stage.status) ? 'border-blue-400 bg-blue-400/10' : ''
+              className={`w-full rounded-xl border-2 border-dashed transition-all duration-300 ${
+                draggedJob 
+                  ? isDraggableStage(stage.status)
+                    ? `border-blue-300 dark:border-[rgb(60,75,60)] bg-blue-50/50 dark:bg-[rgb(60,75,60)]/20 animated-dotted-border min-h-[100vh]`
+                    : 'border-gray-300 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-800/30 opacity-50 min-h-[100px]'
+                  : 'border-transparent min-h-[100px]'
               }`}
               onDragOver={handleDragOver}
               onDrop={(e) => handleDrop(e, stage.status)}
@@ -1125,13 +1212,14 @@ const ApplicationTracker: React.FC = () => {
                     key={job.id}
                     draggable={canDrag}
                     onDragStart={(e: React.DragEvent) => handleDragStart(e, job.id)}
+                    onDragEnd={handleDragEnd}
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleDrop(e, stage.status)}
                     onClick={() => handleJobClick(job)}
                     className={`group relative overflow-hidden cursor-pointer transition-all duration-300 ${
                       isSelected ? 'ring-2 ring-blue-500 ring-opacity-50' : ''
                     } ${isDragging ? 'opacity-50' : ''} ${
-                      !canDrag ? 'opacity-60 cursor-not-allowed' : ''
+                      !canDrag && stage.status !== 'created' ? 'opacity-60 cursor-not-allowed' : ''
                     }`}
                     role="button"
                     tabIndex={0}
@@ -1144,7 +1232,7 @@ const ApplicationTracker: React.FC = () => {
                     }}
                   >
                     {/* Card Background */}
-                    <div className="absolute inset-0 bg-white/80 dark:bg-[#141810] border border-gray-200 dark:border-white/20 dark:border-white/10 rounded-xl shadow-lg group-hover:shadow-xl transition-all duration-300" />
+                    <div className="absolute inset-0 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/20 rounded-xl shadow-lg group-hover:shadow-xl transition-all duration-300" />
                     
                     {/* Card Content */}
                     <div className="relative z-10 p-4">
@@ -1169,7 +1257,7 @@ const ApplicationTracker: React.FC = () => {
                                  const atsScore = primaryJourney.atsScore;
                                  
                                  return (
-                                   <div className="flex items-center gap-2">
+                                   <div className="flex flex-col items-end gap-1">
                                      {/* CV Status */}
                                      <div className={`flex items-center gap-1 ${hasCV ? 'text-green-500' : 'text-red-500'}`}>
                                        {hasCV ? <CheckCircle size={14} /> : <X size={14} />}
@@ -1228,7 +1316,7 @@ const ApplicationTracker: React.FC = () => {
                          
                          {/* Progress Bar - Only show for non-Applied/Interview/Offer/Rejected stages */}
                          {jobJourneys.length > 0 && !['applied', 'interview', 'offer', 'rejected'].includes(stage.status) && (
-                           <div className="w-full bg-white/30 dark:bg-gray-700/50 rounded-full h-2 overflow-hidden group-hover:h-0 group-hover:opacity-0 transition-all duration-300">
+                           <div className="w-full bg-gray-200 dark:bg-gray-700/50 rounded-full h-2 overflow-hidden group-hover:h-0 group-hover:opacity-0 transition-all duration-300">
                              <motion.div 
                                className={`h-2 rounded-full transition-all duration-500 ${
                                  avgProgress >= 80 ? 'bg-gradient-to-r from-green-500 to-green-600' :
@@ -1295,17 +1383,42 @@ const ApplicationTracker: React.FC = () => {
                               </span>
                             </div>
                           )}
-                          <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-500">
-                            <Calendar size={12} />
-                            <span>{new Date(job.createdAt).toLocaleDateString()}</span>
-                          </div>
+                          {/* Show application date and deadline inline for created and applied stages */}
+                          {['created', 'applied'].includes(stage.status) ? (
+                            <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-500">
+                              {job.applicationDate && (
+                                <div className="flex items-center gap-1.5">
+                                  <Calendar size={12} />
+                                  <span>Applied: {new Date(job.applicationDate).toLocaleDateString()}</span>
+                                </div>
+                              )}
+                              {job.deadline && (
+                                <div className="flex items-center gap-1.5">
+                                  <Clock size={12} />
+                                  <span>Deadline: {new Date(job.deadline).toLocaleDateString()}</span>
+                                </div>
+                              )}
+                              {!job.applicationDate && !job.deadline && (
+                                <div className="flex items-center gap-2">
+                                  <Calendar size={12} />
+                                  <span>Created: {new Date(job.createdAt).toLocaleDateString()}</span>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-500">
+                              <Calendar size={12} />
+                              <span>{new Date(job.createdAt).toLocaleDateString()}</span>
+                            </div>
+                          )}
                         </div>
 
                         {/* Divider */}
                         <div className="border-t border-gray-200 dark:border-white/20 dark:border-gray-600/50"></div>
 
-                        {/* Journey Status */}
-                        <div className="space-y-2">
+                        {/* Journey Status - Hidden for created and applied stages */}
+                        {!['created', 'applied'].includes(stage.status) && (
+                          <div className="space-y-2">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
                               <Target size={12} />
@@ -1371,7 +1484,7 @@ const ApplicationTracker: React.FC = () => {
                                 <span className="text-gray-600 dark:text-gray-400">Progress</span>
                                 <span className="text-gray-600 dark:text-gray-400">{Math.round(avgProgress)}%</span>
                               </div>
-                              <div className="w-full bg-white/30 dark:bg-gray-700/50 rounded-full h-2 overflow-hidden">
+                              <div className="w-full bg-gray-200 dark:bg-gray-700/50 rounded-full h-2 overflow-hidden">
                                 <motion.div 
                                   className={`h-2 rounded-full transition-all duration-500 ${
                                     avgProgress >= 80 ? 'bg-gradient-to-r from-green-500 to-green-600' :
@@ -1386,7 +1499,8 @@ const ApplicationTracker: React.FC = () => {
                               </div>
                             </div>
                           )}
-                        </div>
+                          </div>
+                        )}
 
                           {/* Action Button */}
                           <motion.button

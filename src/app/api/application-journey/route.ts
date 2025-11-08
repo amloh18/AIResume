@@ -5,6 +5,7 @@ import { ApplicationJourney } from '@/models';
 import type { IApplicationJourney } from '@/models/ApplicationJourney';
 import { createErrorResponse } from '@/lib/db-utils';
 import mongoose from 'mongoose';
+import { createJourneyDocuments } from '@/lib/services/journeyDocumentService';
 
 // Type for journey object returned from Mongoose create operations
 interface LeanJourney {
@@ -201,6 +202,54 @@ export async function GET(request: NextRequest) {
       createdAt: journey.createdAt,
       updatedAt: journey.updatedAt
     }));
+
+    // Check for journeys missing CV or cover letter and trigger creation automatically
+    const journeysNeedingDocuments = journeys.filter(journey => {
+      const journeyId = journey._id.toString();
+      const hasNoCV = !journey.cvId;
+      const hasNoCoverLetter = !journey.coverLetterId;
+      const isProcessingOrInProgress = journey.status === 'processing_documents' || journey.status === 'in-progress';
+      
+      return (hasNoCV || hasNoCoverLetter) && isProcessingOrInProgress;
+    });
+
+    // Trigger document creation for journeys missing documents (run in background)
+    if (journeysNeedingDocuments.length > 0) {
+      console.log(`🚀 Application Journey API - Found ${journeysNeedingDocuments.length} journeys needing documents, triggering creation...`);
+      
+      journeysNeedingDocuments.forEach(journey => {
+        const journeyId = journey._id.toString();
+        
+        // Update status to processing_documents if not already
+        if (journey.status !== 'processing_documents') {
+          ApplicationJourney.findByIdAndUpdate(journeyId, {
+            status: 'processing_documents',
+            'metadata.updatedAt': new Date()
+          }).catch(err => {
+            console.error(`❌ Application Journey API - Failed to update journey status for ${journeyId}:`, err);
+          });
+        }
+        
+        // Trigger document creation in background
+        setImmediate(async () => {
+          try {
+            console.log(`🚀 Application Journey API - Auto-triggering document creation for journey: ${journeyId}`);
+            const result = await createJourneyDocuments(journeyId, userId);
+            
+            if (result.success) {
+              console.log(`✅ Application Journey API - Auto-created documents for journey ${journeyId}:`, {
+                cvId: result.cvId,
+                coverLetterId: result.coverLetterId
+              });
+            } else {
+              console.error(`❌ Application Journey API - Auto-document creation failed for journey ${journeyId}:`, result.error);
+            }
+          } catch (error) {
+            console.error(`❌ Application Journey API - Error in auto-document creation for journey ${journeyId}:`, error);
+          }
+        });
+      });
+    }
 
     // Calculate total count for pagination
     const totalCount = await ApplicationJourney.countDocuments(baseQuery);
@@ -434,37 +483,26 @@ export async function POST(request: NextRequest) {
 
     // If documents need to be created, trigger async creation with better error handling
     if (needsDocuments && newJourney.status === 'processing_documents') {
-      const baseUrl = process.env.NEXTAUTH_URL || process.env.VERCEL_URL || 'http://localhost:3000';
-      const createUrl = `${baseUrl}/api/journey-documents/create`;
-      
-      // Trigger async document creation with proper error handling
-      fetch(createUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(request.headers.get('cookie') && { Cookie: request.headers.get('cookie')! }),
-          // Pass authorization headers if available
-          ...(request.headers.get('authorization') && { Authorization: request.headers.get('authorization')! })
-        },
-        body: JSON.stringify({ journeyId: newJourney._id.toString() })
-      })
-      .then(async (response) => {
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('❌ CV Journey POST API - Document creation failed:', response.status, errorText);
-        } else {
-          console.log('✅ CV Journey POST API - Document creation triggered successfully');
+      // Call document creation service directly (no HTTP request needed)
+      // Run in background to avoid blocking the response
+      setImmediate(async () => {
+        try {
+          console.log('🚀 CV Journey POST API - Starting document creation for journey:', newJourney._id);
+          const result = await createJourneyDocuments(newJourney._id.toString(), userId);
+          
+          if (result.success) {
+            console.log('✅ CV Journey POST API - Document creation completed successfully:', {
+              journeyId: newJourney._id,
+              cvId: result.cvId,
+              coverLetterId: result.coverLetterId
+            });
+          } else {
+            console.error('❌ CV Journey POST API - Document creation failed:', result.error);
+          }
+        } catch (error) {
+          console.error('❌ CV Journey POST API - Error in document creation:', error);
+          // Journey status will be updated by the service on error
         }
-      })
-      .catch(error => {
-        console.error('❌ CV Journey POST API - Error triggering document creation:', error);
-        // Update journey status to failed if the request itself fails
-        ApplicationJourney.findByIdAndUpdate(newJourney._id, {
-          status: 'creation_failed',
-          'metadata.updatedAt': new Date()
-        }).catch(updateError => {
-          console.error('❌ CV Journey POST API - Failed to update journey status:', updateError);
-        });
       });
       
       console.log('🚀 CV Journey POST API - Triggered async document creation for journey:', newJourney._id);

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { JobApplication, CV, CoverLetter, ApplicationJourney } from '@/models';
 import { createErrorResponse } from '@/lib/db-utils';
+import { createJourneyDocuments } from '@/lib/services/journeyDocumentService';
 
 // Extend global type for cache
 declare global {
@@ -106,6 +107,54 @@ export async function GET(request: NextRequest) {
       cvId: journey.cvId,
       coverLetterId: journey.coverLetterId
     }));
+
+    // Check for journeys missing CV or cover letter and trigger creation automatically
+    const journeysNeedingDocuments = cvJourneys.filter(journey => {
+      const journeyId = (journey._id as any).toString();
+      const hasNoCV = !journey.cvId;
+      const hasNoCoverLetter = !journey.coverLetterId;
+      const isProcessingOrInProgress = journey.status === 'processing_documents' || journey.status === 'in-progress';
+      
+      return (hasNoCV || hasNoCoverLetter) && isProcessingOrInProgress;
+    });
+
+    // Trigger document creation for journeys missing documents (run in background)
+    if (journeysNeedingDocuments.length > 0) {
+      console.log(`🚀 Journeys API - Found ${journeysNeedingDocuments.length} journeys needing documents, triggering creation...`);
+      
+      journeysNeedingDocuments.forEach(journey => {
+        const journeyId = (journey._id as any).toString();
+        
+        // Update status to processing_documents if not already
+        if (journey.status !== 'processing_documents') {
+          ApplicationJourney.findByIdAndUpdate(journeyId, {
+            status: 'processing_documents',
+            'metadata.updatedAt': new Date()
+          }).catch(err => {
+            console.error(`❌ Journeys API - Failed to update journey status for ${journeyId}:`, err);
+          });
+        }
+        
+        // Trigger document creation in background
+        setImmediate(async () => {
+          try {
+            console.log(`🚀 Journeys API - Auto-triggering document creation for journey: ${journeyId}`);
+            const result = await createJourneyDocuments(journeyId, userId);
+            
+            if (result.success) {
+              console.log(`✅ Journeys API - Auto-created documents for journey ${journeyId}:`, {
+                cvId: result.cvId,
+                coverLetterId: result.coverLetterId
+              });
+            } else {
+              console.error(`❌ Journeys API - Auto-document creation failed for journey ${journeyId}:`, result.error);
+            }
+          } catch (error) {
+            console.error(`❌ Journeys API - Error in auto-document creation for journey ${journeyId}:`, error);
+          }
+        });
+      });
+    }
 
     let userProfile = null;
 
