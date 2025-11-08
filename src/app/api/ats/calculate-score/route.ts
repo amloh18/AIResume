@@ -36,6 +36,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Block ATS check for Master CV
+    const isMasterCV = cv.isMaster === true || 
+                       cv.metadata?.isMaster === true || 
+                       cv.metadata?.isMaster === 'true';
+
+    if (isMasterCV) {
+      console.log('❌ ATS Calculate Score API - ATS check blocked for Master CV');
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'ATS check is not available for Master CV. Please use a job-specific CV.' 
+        },
+        { status: 403 }
+      );
+    }
+
     // Verify user owns the CV (if userId provided)
     // Convert both to strings for comparison (cv.userId is ObjectId, userId is string)
     if (userId && cv.userId?.toString() !== userId) {

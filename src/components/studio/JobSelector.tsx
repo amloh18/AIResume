@@ -60,6 +60,8 @@ const JobSelector: React.FC<JobSelectorProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [showJobModal, setShowJobModal] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [creditInfo, setCreditInfo] = useState<{ creditsRemaining: number; limit: number; resetTime?: Date } | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Load jobs from database
@@ -497,7 +499,37 @@ const JobSelector: React.FC<JobSelectorProps> = ({
             {/* Add New Job Button */}
             <div className="p-2 border-t border-gray-100/50 dark:border-gray-700/50">
               <button
-                onClick={() => {
+                onClick={async () => {
+                  // Check credits before opening job modal
+                  if (userId) {
+                    try {
+                      const { authenticatedFetchWithUserId } = await import('@/lib/utils/apiUtils');
+                      const creditCheckResponse = await authenticatedFetchWithUserId('/api/user/usage/check', userId, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ action: 'job_create' })
+                      });
+
+                      if (creditCheckResponse.ok) {
+                        const creditCheck = await creditCheckResponse.json();
+                        if (!creditCheck.allowed) {
+                          // Credits exhausted - show paywall
+                          setCreditInfo({
+                            creditsRemaining: creditCheck.usage?.currentUsage || 0,
+                            limit: creditCheck.usage?.limit || 1,
+                            resetTime: creditCheck.usage?.resetTime ? new Date(creditCheck.usage.resetTime) : undefined
+                          });
+                          setShowPaywall(true);
+                          setIsOpen(false);
+                          return;
+                        }
+                      }
+                    } catch (creditError) {
+                      console.error('Error checking credits:', creditError);
+                      // Continue with opening modal if credit check fails
+                    }
+                  }
+                  
                   setIsOpen(false);
                   setShowJobModal(true);
                 }}

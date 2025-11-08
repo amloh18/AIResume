@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { useSession } from 'next-auth/react';
 import { useToast } from '@/hooks/use-toast';
 import { INotification, NotificationType } from '@/models/Notification';
 
@@ -21,6 +22,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const [eventSource, setEventSource] = useState<EventSource | null>(null);
+  const { data: session, status } = useSession();
+  const isAuthenticated = status === 'authenticated' && !!session?.user;
 
   // Filter out expired time-sensitive notifications
   const filterExpiredNotifications = useCallback((notifs: INotification[]) => {
@@ -37,20 +40,41 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     });
   }, []);
 
-  // Fetch notifications from API
+  // Fetch notifications from API - only if authenticated
   const fetchNotifications = useCallback(async () => {
+    // Don't fetch if user is not authenticated
+    if (!isAuthenticated) {
+      setNotifications([]);
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const response = await fetch('/api/notifications');
-      if (!response.ok) throw new Error('Failed to fetch notifications');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        const errorMessage = errorData.error || errorData.message || `HTTP ${response.status}`;
+        throw new Error(`Failed to fetch notifications: ${errorMessage}`);
+      }
       const data = await response.json();
       const filtered = filterExpiredNotifications(data.notifications || []);
       setNotifications(filtered);
     } catch (error) {
       console.error('Error fetching notifications:', error);
+      // Set empty array on error to prevent UI issues
+      setNotifications([]);
+      // Only show toast for non-401 errors (401 means user is not authenticated, which is expected for logged-out users)
+      if (error instanceof Error && !error.message.includes('401')) {
+        toast({
+          title: 'Error',
+          description: 'Failed to load notifications. Please refresh the page.',
+          variant: 'destructive',
+        });
+      }
     } finally {
       setIsLoading(false);
     }
-  }, [filterExpiredNotifications]);
+  }, [filterExpiredNotifications, toast, isAuthenticated]);
 
   // Refresh notifications
   const refreshNotifications = useCallback(async () => {
@@ -136,10 +160,17 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
   }, [markAsRead, refreshNotifications, toast]);
 
-  // Set up Server-Sent Events for real-time notifications
+  // Set up Server-Sent Events for real-time notifications - only if authenticated
   useEffect(() => {
-    // Only set up SSE if we're in the browser
-    if (typeof window === 'undefined') return;
+    // Only set up SSE if we're in the browser and user is authenticated
+    if (typeof window === 'undefined' || !isAuthenticated) {
+      // Close any existing connection if user is not authenticated
+      if (eventSource) {
+        eventSource.close();
+        setEventSource(null);
+      }
+      return;
+    }
 
     const setupSSE = () => {
       // Close existing connection if any
@@ -165,8 +196,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
               return filterExpiredNotifications([notification, ...prev]);
             });
 
-            // Show toast for in-app notifications
-            if (notification.channels.includes('in-app') && !notification.read) {
+            // Show toast for in-app notifications (only if authenticated)
+            if (notification.channels.includes('in-app') && !notification.read && isAuthenticated) {
               toast({
                 title: notification.title,
                 description: notification.message,
@@ -208,10 +239,12 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         // Close current connection before reconnecting
         es.close();
         
-        // Reconnect after 5 seconds
-        setTimeout(() => {
-          setupSSE();
-        }, 5000);
+        // Only reconnect if still authenticated
+        if (isAuthenticated) {
+          setTimeout(() => {
+            setupSSE();
+          }, 5000);
+        }
       };
 
       setEventSource(es);
@@ -219,18 +252,37 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
     setupSSE();
 
-    // Cleanup on unmount
+    // Cleanup on unmount or when authentication changes
     return () => {
       if (eventSource) {
         eventSource.close();
+        setEventSource(null);
       }
     };
-  }, [handleNotificationAction, filterExpiredNotifications, toast]); // Include dependencies
+  }, [handleNotificationAction, filterExpiredNotifications, toast, isAuthenticated]); // Include isAuthenticated
 
-  // Initial fetch
+  // Clear notifications when user logs out
   useEffect(() => {
+    if (status === 'unauthenticated') {
+      setNotifications([]);
+      setIsLoading(false);
+      // Close SSE connection if open
+      if (eventSource) {
+        eventSource.close();
+        setEventSource(null);
+      }
+    }
+  }, [status, eventSource]);
+
+  // Initial fetch - only if authenticated
+  useEffect(() => {
+    // Wait for session to load before deciding whether to fetch
+    if (status === 'loading') {
+      return; // Don't fetch while session is loading
+    }
+    
     fetchNotifications();
-  }, [fetchNotifications]);
+  }, [fetchNotifications, status]);
 
 
   // Calculate unread count (only non-expired notifications)

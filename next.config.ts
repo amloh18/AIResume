@@ -208,6 +208,13 @@ const nextConfig: NextConfig = {
         hostname: '*.s3.amazonaws.com',
       },
     ],
+    // Enable modern image formats for better performance
+    formats: ['image/avif', 'image/webp'],
+    // Optimize image loading
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    // Minimum quality for optimization
+    minimumCacheTTL: 60,
   },
   // Performance optimizations
   experimental: {
@@ -252,6 +259,31 @@ const nextConfig: NextConfig = {
           { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization, Cookie' },
           { key: 'Access-Control-Allow-Credentials', value: 'true' },
           { key: 'Vary', value: 'Origin' },
+        ],
+      },
+      // Cache static assets for better performance
+      {
+        source: '/images/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+      {
+        source: '/icons/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+      {
+        source: '/templates/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+      {
+        source: '/_next/static/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
         ],
       },
       {

@@ -7,7 +7,6 @@ import {
   FileText, 
   CheckCircle, 
   Download, 
-  Trash2, 
   Play,
   Calendar,
   Building,
@@ -94,20 +93,16 @@ interface JourneyTimelineCardProps {
   journey: Journey;
   onResume: (journey: Journey) => void;
   onDownload: (journey: Journey) => void;
-  onDelete: (journeyId: string) => void;
   onRefresh?: () => void;
   onUpdateJourney?: (journeyId: string, updates: Partial<Journey>) => void;
-  onShowDeleteConfirm: (journeyId: string) => void;
 }
 
 const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
   journey,
   onResume,
   onDownload,
-  onDelete,
   onRefresh,
-  onUpdateJourney,
-  onShowDeleteConfirm
+  onUpdateJourney
 }) => {
   const { isDark } = useTheme();
   const { state, updateJourneyStatus, updateJobInfo, updateCurrentStep, updateCVId, updateCoverLetterId, updateAtsScore, updateCurrentJobId, endJourney } = useJobJourney();
@@ -2067,21 +2062,6 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 <span className="hidden sm:inline">Resume</span>
               </motion.button>
             )}
-            
-            {/* Delete Button */}
-            <motion.button
-              onClick={() => onShowDeleteConfirm(journey.id)}
-              className={`p-2 rounded transition-colors ${
-                liveProgress.status === 'completed' 
-                  ? 'text-gray-600 dark:text-white/60 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20' 
-                  : 'text-white/60 hover:text-red-400 hover:bg-red-500/20'
-              }`}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              title="Delete Journey"
-            >
-              <Trash2 className="h-4 w-4" />
-            </motion.button>
           </div>
         </div>
       </div>

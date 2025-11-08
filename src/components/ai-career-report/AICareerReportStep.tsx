@@ -45,8 +45,7 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
     }
   }, []);
 
-  // Track if auto-save has been attempted to prevent multiple attempts
-  const autoSaveAttempted = useRef(false);
+  // Removed: autoSaveAttempted ref - no longer needed since auto-save is disabled
 
   const generateAIAnalysis = async (isRetry = false) => {
     if (isRetry) {
@@ -184,12 +183,10 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
         if (typeof window !== 'undefined') {
           sessionStorage.setItem('masterCVCreated', 'true');
           sessionStorage.setItem('fromAICareerReport', 'true');
-          sessionStorage.setItem('showUpgradePopup', 'true');
           
           console.log('🔍 AICareerReportStep - Session storage set:', {
             masterCVCreated: sessionStorage.getItem('masterCVCreated'),
-            fromAICareerReport: sessionStorage.getItem('fromAICareerReport'),
-            showUpgradePopup: sessionStorage.getItem('showUpgradePopup')
+            fromAICareerReport: sessionStorage.getItem('fromAICareerReport')
           });
           
           // Clear localStorage now that CV is saved
@@ -223,42 +220,10 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
     }
   }, [currentSession, state.cvData, state.aiAnalysis, onComplete]);
 
-  // Auto-save Master CV when user becomes authenticated (if not already saved)
-  useEffect(() => {
-    const checkAndSave = async () => {
-      // Only auto-save if:
-      // 1. User is authenticated
-      // 2. We have CV data
-      // 3. AI analysis is complete
-      // 4. Master CV hasn't been saved yet (check sessionStorage flag)
-      // 5. We haven't already attempted auto-save
-      if (
-        currentSession?.user && 
-        state.cvData && 
-        state.aiAnalysis && 
-        !autoSaveAttempted.current &&
-        typeof window !== 'undefined'
-      ) {
-        const masterCVCreated = sessionStorage.getItem('masterCVCreated');
-        
-        if (masterCVCreated !== 'true') {
-          console.log('🔄 Auto-saving Master CV after authentication...');
-          autoSaveAttempted.current = true;
-          try {
-            await handleSaveMasterCV();
-          } catch (error) {
-            console.error('❌ Auto-save failed:', error);
-            // Reset flag so user can try again manually
-            autoSaveAttempted.current = false;
-          }
-        }
-      }
-    };
-
-    // Small delay to ensure session is fully loaded
-    const timer = setTimeout(checkAndSave, 1500);
-    return () => clearTimeout(timer);
-  }, [currentSession?.user, state.cvData, state.aiAnalysis, handleSaveMasterCV]);
+  // REMOVED: Auto-save Master CV when user becomes authenticated
+  // Step 3 should only proceed when the user explicitly clicks the "Create Master CV" button
+  // This prevents auto-skipping step 3 and opening the welcome modal prematurely
+  // The user must manually click the Finish button to save and proceed
 
   if (isGenerating) {
     return (
@@ -590,28 +555,17 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
           </div>
         </motion.div>
 
-        {/* Career Trajectory Coherence Score */}
+        {/* Career Trajectory Analysis */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.4 }}
-          className="bg-white border border-gray-200 rounded-xl p-8 shadow-sm"
         >
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-8 h-8 bg-[#80FF00] rounded flex items-center justify-center">
-              <RefreshCw className="w-5 h-5 text-black" />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-900">Career Trajectory Analysis</h2>
-          </div>
-          
-          <p className="text-gray-600 mb-6">
-            Analysis of your career progression, job duration patterns, and trajectory coherence.
-          </p>
-          
           <CareerTrajectoryGraph
             careerPath={careerPath}
             careerCoherence={careerCoherence}
             experienceLevel={experienceLevel?.level}
+            forceLightTheme={true}
           />
         </motion.div>
 

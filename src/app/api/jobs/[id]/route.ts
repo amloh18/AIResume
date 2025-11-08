@@ -382,17 +382,109 @@ export async function DELETE(
     }
     
     const resolvedParams = await params;
+    const jobId = resolvedParams.id;
 
-    const job = await JobApplication.findOneAndDelete({
-      _id: resolvedParams.id,
+    console.log('🔍 Job DELETE API - Starting cascade deletion for job:', jobId);
+
+    // First, find the job to ensure it exists and user owns it
+    const job = await JobApplication.findOne({
+      _id: jobId,
       userId: userId
     });
 
     if (!job) {
+      console.log('❌ Job DELETE API - Job not found');
       return NextResponse.json({ error: 'Job not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ message: 'Job deleted successfully' });
+    // Import models for cascade deletion
+    const { ApplicationJourney, CV, CoverLetter } = await import('@/models');
+
+    // Step 1: Find all journeys associated with this job
+    console.log('🔍 Job DELETE API - Finding associated journeys for job:', jobId);
+    const journeys = await ApplicationJourney.find({ 
+      jobId: jobId.toString() 
+    });
+
+    console.log(`🔍 Job DELETE API - Found ${journeys.length} journey(s) associated with job`);
+
+    // Step 2: For each journey, delete associated CV and cover letter
+    for (const journey of journeys) {
+      console.log('🔍 Job DELETE API - Processing journey:', journey._id);
+
+      // Delete cover letter if it exists
+      if (journey.coverLetterId) {
+        try {
+          console.log('🔍 Job DELETE API - Deleting cover letter:', journey.coverLetterId);
+          const coverLetterResult = await CoverLetter.findByIdAndDelete(journey.coverLetterId);
+          if (coverLetterResult) {
+            console.log('✅ Job DELETE API - Cover letter deleted successfully');
+          } else {
+            console.log('⚠️ Job DELETE API - Cover letter not found (already deleted)');
+          }
+        } catch (error) {
+          console.error('❌ Job DELETE API - Error deleting cover letter:', error);
+          // Continue with deletion even if cover letter deletion fails
+        }
+      }
+
+      // Delete CV if it exists (but NOT if it's a Master CV)
+      if (journey.cvId) {
+        try {
+          console.log('🔍 Job DELETE API - Checking CV for deletion:', journey.cvId);
+          const cv = await CV.findById(journey.cvId);
+          
+          if (cv) {
+            // Hard stop for Master CV protection
+            if (cv.isMaster || cv.metadata?.isMaster) {
+              console.error(`❌ CRITICAL: Attempt to delete Master CV ${cv._id} from job ${jobId}. Aborting CV deletion.`);
+              console.log('⚠️ Job DELETE API - Skipping Master CV deletion (protected)');
+            } else {
+              console.log('🔍 Job DELETE API - Deleting CV:', journey.cvId);
+              const cvResult = await CV.findByIdAndDelete(journey.cvId);
+              if (cvResult) {
+                console.log('✅ Job DELETE API - CV deleted successfully');
+              }
+            }
+          } else {
+            console.log('⚠️ Job DELETE API - CV not found (already deleted)');
+          }
+        } catch (error) {
+          console.error('❌ Job DELETE API - Error deleting CV:', error);
+          // Continue with deletion even if CV deletion fails
+        }
+      }
+
+      // Delete the journey itself
+      try {
+        console.log('🔍 Job DELETE API - Deleting journey:', journey._id);
+        await ApplicationJourney.findByIdAndDelete(journey._id);
+        console.log('✅ Job DELETE API - Journey deleted successfully');
+      } catch (error) {
+        console.error('❌ Job DELETE API - Error deleting journey:', error);
+        // Continue with job deletion even if journey deletion fails
+      }
+    }
+
+    // Step 3: Finally, delete the job itself
+    console.log('🔍 Job DELETE API - Deleting job:', jobId);
+    const deletedJob = await JobApplication.findOneAndDelete({
+      _id: jobId,
+      userId: userId
+    });
+
+    if (!deletedJob) {
+      console.log('❌ Job DELETE API - Job deletion failed (may have been deleted already)');
+      return NextResponse.json({ error: 'Job deletion failed' }, { status: 500 });
+    }
+
+    console.log('✅ Job DELETE API - Job and all associated data deleted successfully');
+    return NextResponse.json({ 
+      message: 'Job deleted successfully',
+      deletedJourneys: journeys.length,
+      deletedCVs: journeys.filter(j => j.cvId).length,
+      deletedCoverLetters: journeys.filter(j => j.coverLetterId).length
+    });
   } catch (error) {
     console.error('Error deleting job:', error);
     return NextResponse.json(

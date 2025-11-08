@@ -124,6 +124,14 @@ function sanitizeCVData(cvData: any): any {
             }
           }
           
+          // Remove empty summary fields (empty strings or whitespace-only) to keep database clean
+          if (cleanedItem.summary !== undefined) {
+            const summaryValue = String(cleanedItem.summary || '').trim();
+            if (summaryValue === '' || summaryValue === '<br>' || summaryValue === '<p></p>' || summaryValue === '<p><br></p>') {
+              delete cleanedItem.summary;
+            }
+          }
+          
           return cleanedItem;
         });
       }

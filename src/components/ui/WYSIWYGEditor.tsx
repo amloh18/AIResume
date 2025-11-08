@@ -83,7 +83,7 @@ const WYSIWYGEditor: React.FC<WYSIWYGEditorProps> = ({
   } = useWYSIWYG(value, onChange);
 
   // Ensure value is set when component mounts or value changes
-  // This is a backup to the hook's sync logic
+  // This is a backup to the hook's sync logic - handles cases where hook sync might miss
   React.useEffect(() => {
     // Use requestAnimationFrame to ensure DOM is ready
     const frameId = requestAnimationFrame(() => {
@@ -91,15 +91,25 @@ const WYSIWYGEditor: React.FC<WYSIWYGEditorProps> = ({
         const currentContent = editorRef.current.innerHTML.trim();
         const stringValue = value ? String(value) : '';
         
-        // If we have a value but the editor is empty or doesn't match, set it
-        if (stringValue && stringValue.trim() && (!currentContent || currentContent === '<br>' || currentContent === '' || currentContent === '<p></p>')) {
-          // Convert plain text to HTML if needed
-          const htmlValue = /<[^>]+>/.test(stringValue) 
+        // Convert prop value to HTML for comparison
+        const htmlValue = stringValue && stringValue.trim() 
+          ? (/<[^>]+>/.test(stringValue) 
             ? stringValue 
             : stringValue.split(/\n\n+/).map(para => {
                 const lines = para.split(/\n/).filter(l => l.trim());
                 return lines.map(line => `<p>${line.trim()}</p>`).join('');
-              }).join('') || stringValue.replace(/\n/g, '<br>');
+                }).join('') || stringValue.replace(/\n/g, '<br>'))
+          : '';
+        
+        // Normalize both for comparison (remove extra whitespace)
+        const normalizedCurrent = currentContent.replace(/\s+/g, ' ').trim();
+        const normalizedValue = htmlValue.replace(/\s+/g, ' ').trim();
+        
+        // Update if editor is empty but we have a value, OR if values don't match
+        const isEmpty = !currentContent || currentContent === '<br>' || currentContent === '' || currentContent === '<p></p>';
+        const valuesDontMatch = normalizedCurrent !== normalizedValue && htmlValue;
+        
+        if ((isEmpty && htmlValue) || valuesDontMatch) {
           editorRef.current.innerHTML = htmlValue || '';
         }
       }
@@ -159,9 +169,13 @@ const WYSIWYGEditor: React.FC<WYSIWYGEditorProps> = ({
       <style jsx>{`
         [contenteditable] {
           outline: none;
+          color: white !important;
         }
         [contenteditable]:focus {
           outline: none;
+        }
+        [contenteditable] * {
+          color: white !important;
         }
         [contenteditable] ul {
           list-style-type: disc;
@@ -170,24 +184,34 @@ const WYSIWYGEditor: React.FC<WYSIWYGEditorProps> = ({
         }
         [contenteditable] li {
           margin: 0.25rem 0;
+          color: white !important;
         }
         /* Ensure bold shows actual bold text, not markdown */
         [contenteditable] strong,
         [contenteditable] b {
           font-weight: bold !important;
+          color: white !important;
         }
         /* Ensure italic shows actual italic text, not markdown */
         [contenteditable] em,
         [contenteditable] i {
           font-style: italic !important;
+          color: white !important;
         }
         /* Ensure underline shows actual underline */
         [contenteditable] u {
           text-decoration: underline !important;
+          color: white !important;
         }
         /* Ensure formatting is visible and not stripped */
         [contenteditable] p {
           margin: 0.5rem 0;
+          color: white !important;
+        }
+        /* Ensure all text content is visible */
+        [contenteditable] {
+          -webkit-text-fill-color: white !important;
+          text-fill-color: white !important;
         }
       `}</style>
     </div>

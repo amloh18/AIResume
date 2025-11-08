@@ -23,6 +23,12 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
   const { data: session, status } = useSession();
   // const { messages, clearMessages } = useConsoleLoggerContext();
 
+  // Get callbackUrl from search params, default to dashboard
+  const callbackUrl = useMemo(() => {
+    const url = searchParams.get('callbackUrl');
+    return url || '/dashboard';
+  }, [searchParams]);
+
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -40,21 +46,23 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
   // Check if user is already signed in
   useEffect(() => {
     if (status === 'authenticated' && session?.user) {
-      console.log('🔍 User already signed in, redirecting to dashboard');
-      router.push('/dashboard');
+      console.log('🔍 User already signed in, redirecting to:', callbackUrl);
+      // Use window.location for reliable redirect that preserves callbackUrl
+      window.location.href = callbackUrl;
     }
-  }, [status, session?.user, router]);
+  }, [status, session?.user, callbackUrl]);
 
   // Handle redirect after successful sign-in
   useEffect(() => {
     if (success && status === 'authenticated' && session?.user) {
-      console.log('🔍 Sign-in successful, redirecting to dashboard');
+      console.log('🔍 Sign-in successful, redirecting to:', callbackUrl);
+      // Use window.location for reliable redirect that preserves callbackUrl
       const timer = setTimeout(() => {
-        router.push('/dashboard');
-      }, 1500);
+        window.location.href = callbackUrl;
+      }, 1000);
       return () => clearTimeout(timer);
     }
-  }, [success, status, session?.user, router, success]);
+  }, [success, status, session?.user, callbackUrl]);
 
   const handleFormSubmit = async (formData: Record<string, string>) => {
     setIsLoading(true);
@@ -119,10 +127,12 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
 
       if (result?.ok) {
         setSuccess('Sign in successful! Redirecting...');
-        // Redirect immediately after showing success message
+        // Force session update and wait for it to be ready
+        // Use window.location for reliable redirect that preserves callbackUrl
         setTimeout(() => {
-          router.push('/dashboard');
-        }, 500);
+          console.log('✅ Redirecting to:', callbackUrl);
+          window.location.href = callbackUrl;
+        }, 1000);
       } else {
         // Handle specific error cases
         let errorMessage = 'Invalid email or password.';
@@ -247,7 +257,7 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
             if ((signInResult as any)?.ok) {
               setSuccess('Authentication successful, redirecting...');
               setTimeout(() => {
-                router.push('/dashboard');
+                window.location.href = callbackUrl;
               }, 800);
             } else {
               // If sign-in fails, try to verify via API to get better error message

@@ -432,12 +432,8 @@ img {
   display: block;
 }
 
-/* Optimize fonts */
-@font-face {
-  font-family: 'Inter';
-  font-display: swap;
-  src: url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-}
+/* Optimize fonts - Cabinet Grotesk is loaded via Google Fonts with font-display: swap */
+/* Font preloading is handled in layout.tsx for optimal performance */
 
 /* Optimize layout shifts */
 .layout-stable {
@@ -474,6 +470,30 @@ img {
   will-change: transform, opacity;
   backface-visibility: hidden;
   transform: translateZ(0);
+  /* Use GPU acceleration */
+  -webkit-transform: translateZ(0);
+  -moz-transform: translateZ(0);
+  -ms-transform: translateZ(0);
+  -o-transform: translateZ(0);
+}
+
+/* Respect user's motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  .animate-optimized,
+  .cv-circle-loading,
+  .progress-optimized {
+    will-change: auto;
+    transform: none;
+  }
 }
 
 /* Optimize loading animation specifically */

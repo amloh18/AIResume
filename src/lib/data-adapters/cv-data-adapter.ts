@@ -216,7 +216,17 @@ export function adaptParsedCVToUnified(parsedData: ParsedCVData): UnifiedCVDataS
         url: '',
         startDate: exp.startDate || '',
         endDate: hasCurrent && exp.current ? '' : (exp.endDate || ''),
-        summary: ('description' in exp ? exp.description : '') || ('summary' in exp ? exp.summary : '') || '',
+        summary: (() => {
+          // Combine description and summary into a single work summary field
+          const description = ('description' in exp ? exp.description : '') || '';
+          const summary = ('summary' in exp ? exp.summary : '') || '';
+          // If both exist, combine them with a newline
+          if (description && summary) {
+            return `${description}\n${summary}`.trim();
+          }
+          // Otherwise, use whichever exists
+          return description || summary;
+        })(),
         highlights: ('achievements' in exp ? exp.achievements : []) || ('highlights' in exp ? exp.highlights : []) || []
       };
     }),
