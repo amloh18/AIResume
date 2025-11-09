@@ -8,6 +8,12 @@ let hasHandledCvCircleDomain = false; // Track if we've already handled cvcircle
 
 // Initialize sidebar system
 function initSidebar() {
+  // Check if Chrome extension APIs are available
+  if (!chrome || !chrome.runtime || !chrome.runtime.onMessage) {
+    console.warn('Chrome extension APIs not available');
+    return;
+  }
+
   // Listen for messages from background script
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'toggleSidebar') {
@@ -307,20 +313,22 @@ function createSidebar() {
   window.addEventListener('message', handleIframeMessage);
 
   // Listen for session updates from background
-  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.type === 'SESSION_UPDATED' || request.action === 'SESSION_UPDATED') {
-      console.log('🔄 Sidebar received session update:', request.session);
-      // Reload iframe with new route if needed
-      if (sidebarIframe && sidebarIframe.contentWindow) {
-        const session = request.session || request.sessionData;
-        const newRoute = session && session.isAuthenticated ? '/extension/dashboard' : '/extension/auth';
-        const currentSrc = sidebarIframe.src.split('#')[0];
-        sidebarIframe.src = currentSrc + '#' + newRoute;
+  if (chrome.runtime.onMessage) {
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+      if (request.type === 'SESSION_UPDATED' || request.action === 'SESSION_UPDATED') {
+        console.log('🔄 Sidebar received session update:', request.session);
+        // Reload iframe with new route if needed
+        if (sidebarIframe && sidebarIframe.contentWindow) {
+          const session = request.session || request.sessionData;
+          const newRoute = session && session.isAuthenticated ? '/extension/dashboard' : '/extension/auth';
+          const currentSrc = sidebarIframe.src.split('#')[0];
+          sidebarIframe.src = currentSrc + '#' + newRoute;
+        }
+        sendResponse({ success: true });
       }
-      sendResponse({ success: true });
-    }
-    return false;
-  });
+      return false;
+    });
+  }
 
   // Handle iframe load errors (especially for CVCircle domain blocking)
   sidebarIframe.onerror = () => {
@@ -703,4 +711,3 @@ if (document.readyState === 'loading') {
 } else {
   initSidebar();
 }
-

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useSearchParams } from 'next/navigation';
 import { 
@@ -143,7 +144,7 @@ const calculateCompletionPercentage = (cv: any): number => {
 };
 
 // 1. Combined CV Management Section - CV Health Score + Master CV Management + Quick Actions + Monthly Goal
-const CVManagementSection: React.FC<{ 
+const CVManagementSection: React.FC<{
   cvHealthScore: number; 
   cvs: any[];
   drafts: any[];
@@ -161,12 +162,13 @@ const CVManagementSection: React.FC<{
 }> = ({ cvHealthScore, cvs, drafts, onImproveScore, onCreateCV, onAddJob, onWriteCoverLetter, onCreateCoverLetter, onCreateJob, onSetMasterCV, predictions, onUpdateGoal, userId, jobs = [] }) => {
   
   // Function to navigate to studio with master CV and ATS mode
+  const router = useRouter();
   const handleShowATSAnalysis = () => {
     if (masterCV) {
-      window.location.href = `/studio?cvId=${masterCV.id}&type=cv&mode=ats`;
+      router.push(`/studio?cvId=${masterCV.id}&type=cv&mode=ats`);
     } else {
       // If no master CV, create one first
-      window.location.href = '/studio?type=cv&mode=ats';
+      router.push('/studio?type=cv&mode=ats');
     }
   };
   
@@ -1102,7 +1104,7 @@ const Analytics: React.FC = () => {
     // High priority - essential for Analytics page
     cvs: () => {
       memoizedStartDataFetch();
-      return authenticatedFetch('/api/cvs').then(res => {
+      return authenticatedFetch('/api/cvs?projection=summary').then(res => {
         memoizedEndDataFetch();
         return res.json();
       });
@@ -1343,7 +1345,7 @@ const Analytics: React.FC = () => {
             cvHealthScore={cvHealthScore}
             cvs={cvs}
             drafts={drafts}
-            onImproveScore={() => window.location.href = '/studio'}
+            onImproveScore={() => router.push('/studio')}
             onCreateCV={async () => {
               try {
                 const currentUserId = userId;
@@ -1354,10 +1356,10 @@ const Analytics: React.FC = () => {
                 console.error('Error creating CV:', error);
               }
             }}
-            onAddJob={() => window.location.href = '/dashboard/application-tracker'}
-            onWriteCoverLetter={() => window.location.href = '/studio?type=cover_letter'}
-            onCreateCoverLetter={() => window.location.href = '/studio?type=cover_letter'}
-            onCreateJob={() => window.location.href = '/dashboard/application-tracker'}
+            onAddJob={() => router.push('/dashboard/application-tracker')}
+            onWriteCoverLetter={() => router.push('/studio?type=cover_letter')}
+            onCreateCoverLetter={() => router.push('/studio?type=cover_letter')}
+            onCreateJob={() => router.push('/dashboard/application-tracker')}
             onSetMasterCV={handleSetMasterCV}
             predictions={analyticsData?.predictions}
             onUpdateGoal={handleUpdateMonthlyGoal}
@@ -1368,8 +1370,8 @@ const Analytics: React.FC = () => {
         <div className="flex w-full min-h-[320px]">
           <RecentJobsWidget
             jobs={jobs}
-            onViewJob={(jobId) => window.location.href = `/dashboard/application-tracker?job=${jobId}`}
-            onCreateJob={() => window.location.href = '/dashboard/application-tracker'}
+            onViewJob={(jobId) => router.push(`/dashboard/application-tracker?job=${jobId}`)}
+            onCreateJob={() => router.push('/dashboard/application-tracker')}
             analyticsData={analyticsData}
           />
         </div>
@@ -1397,14 +1399,14 @@ const Analytics: React.FC = () => {
           <AnalyticsJourneyWidget
             onResumeJourney={(journey) => {
               // Navigate to Application Journey page and resume the specific journey
-              window.location.href = `/dashboard/application-journey?resume=${journey.id}`;
+              router.push(`/dashboard/application-journey?resume=${journey.id}`);
             }}
             onDeleteJourney={(journeyId) => {
               // TODO: Implement delete journey functionality
             }}
             onViewJourney={(journey) => {
               // TODO: Implement view journey functionality
-              window.location.href = `/dashboard/application-journey`;
+              router.push(`/dashboard/application-journey`);
             }}
           />
         </div>
@@ -1428,7 +1430,8 @@ const Analytics: React.FC = () => {
           console.log('Payment successful:', subscription);
           setShowPaymentModal(false);
           // Optionally refresh the page or show success message
-          window.location.reload();
+          // Avoid full reload; navigate to dashboard to refresh data client-side
+          router.replace('/dashboard');
         }}
         returnUrl="/dashboard"
         triggerContext="landing-page-plan-selection"

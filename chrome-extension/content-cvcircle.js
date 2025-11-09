@@ -330,7 +330,8 @@ async function notifyBackgroundScript(message) {
 }
 
 // Handle messages from background script
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+if (chrome && chrome.runtime && chrome.runtime.onMessage) {
+  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log('CVCircle content script received message:', request);
   
   // Handle session update broadcasts
@@ -384,7 +385,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     default:
       sendResponse({ success: false, message: 'Unknown action' });
   }
-});
+  });
+}
 
 // Stop session monitoring
 function stopSessionMonitoring() {

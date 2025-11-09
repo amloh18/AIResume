@@ -7,6 +7,7 @@ import React, { useState, Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
 import { usePricingPlans } from '@/lib/hooks/usePricingPlans';
+import { useBillingData } from '@/lib/hooks/useBillingData';
 import {
   User,
   Trash2,
@@ -1117,130 +1118,34 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
 
 // Membership & Billing Component
 const MembershipBilling = ({ user }: { user: User }) => {
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [subscription, setSubscription] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  // Use consolidated billing data hook (fetches subscription, payment methods, invoices in parallel)
+  const { data: billingData, isLoading: billingLoading, error: billingErrors, refetch: refetchBillingData } = useBillingData();
   
-  // Use the shared pricing hook
-  const { plans: availablePlans, loading: plansLoading, error: plansError } = usePricingPlans({ excludeFree: true });
+  // Use the shared pricing hook - get full result to pass to modal
+  const pricingHookResult = usePricingPlans({ excludeFree: true });
+  
   const [isMembershipModalOpen, setIsMembershipModalOpen] = useState(false);
   const [isAddPaymentModalOpen, setIsAddPaymentModalOpen] = useState(false);
   
   // Toast notification state
-  
-  // Error states for individual API calls
-  const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
-  const [paymentMethodsError, setPaymentMethodsError] = useState<string | null>(null);
-  const [invoicesError, setInvoicesError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetchPaymentData();
-  }, []);
-
   const showToastNotification = (type: 'success' | 'error' | 'info', message: string) => {
     // Notification removed
   };
 
   const handlePaymentMethodAdded = (paymentMethod: any) => {
-    // Refresh payment methods list
-    fetchPaymentData();
+    // Refresh billing data
+    refetchBillingData();
     showToastNotification('success', 'Payment method added successfully!');
   };
 
-  const fetchPaymentData = async () => {
-    try {
-      setLoading(true);
-      
-      // Reset error states
-      setSubscriptionError(null);
-      setPaymentMethodsError(null);
-      setInvoicesError(null);
-      // plansError is now managed by usePricingPlans hook
-      
-      // Fetch subscription data
-      try {
-        const subscriptionResponse = await fetch('/api/user/subscription');
-        if (subscriptionResponse.ok) {
-          const subscriptionData = await subscriptionResponse.json();
-          if (subscriptionData.success) {
-            setSubscription(subscriptionData.subscription);
-          } else {
-            setSubscriptionError(subscriptionData.error || 'Failed to load subscription');
-          }
-        } else {
-          setSubscriptionError('Failed to load subscription data');
-        }
-      } catch (error) {
-        console.error('Error fetching subscription:', error);
-        setSubscriptionError('Network error loading subscription');
-      }
-
-      // Fetch payment methods
-      try {
-        const paymentResponse = await fetch('/api/user/payment-methods');
-        if (paymentResponse.ok) {
-          const paymentData = await paymentResponse.json();
-          if (paymentData.success) {
-            setPaymentMethods(paymentData.paymentMethods || []);
-          } else {
-            // Only show error if it's not a "no records" case
-            if (paymentData.error && !paymentData.error.includes('No payment methods found') && !paymentData.error.includes('not found')) {
-              setPaymentMethodsError(paymentData.error);
-            } else {
-              setPaymentMethods([]);
-            }
-          }
-        } else {
-          // Only show error for actual HTTP errors, not 404s for empty data
-          if (paymentResponse.status !== 404) {
-            setPaymentMethodsError('Failed to load payment methods');
-          } else {
-            setPaymentMethods([]);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching payment methods:', error);
-        setPaymentMethodsError('Network error loading payment methods');
-      }
-
-      // Fetch invoices
-      try {
-        const invoiceResponse = await fetch('/api/user/invoices?limit=20');
-        if (invoiceResponse.ok) {
-          const invoiceData = await invoiceResponse.json();
-          if (invoiceData.success) {
-            setInvoices(invoiceData.invoices || []);
-          } else {
-            // Only show error if it's not a "no records" case
-            if (invoiceData.error && !invoiceData.error.includes('No invoices found') && !invoiceData.error.includes('not found')) {
-              setInvoicesError(invoiceData.error);
-            } else {
-              setInvoices([]);
-            }
-          }
-        } else {
-          // Only show error for actual HTTP errors, not 404s for empty data
-          if (invoiceResponse.status !== 404) {
-            setInvoicesError('Failed to load invoices');
-          } else {
-            setInvoices([]);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching invoices:', error);
-        setInvoicesError('Network error loading invoices');
-      }
-
-      // Plans are now loaded via usePricingPlans hook (handled outside this function)
-      // No need to fetch here - the hook handles it
-    } catch (error) {
-      console.error('Error fetching payment data:', error);
-      showToastNotification('error', 'Failed to load billing information');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Extract data from billing hook
+  const subscription = billingData.subscription;
+  const paymentMethods = billingData.paymentMethods;
+  const invoices = billingData.invoices;
+  const loading = billingLoading;
+  const subscriptionError = billingErrors.subscription;
+  const paymentMethodsError = billingErrors.paymentMethods;
+  const invoicesError = billingErrors.invoices;
 
   const formatCurrency = (amount: number, currency: string) => {
     return new Intl.NumberFormat('en-US', {
@@ -1426,8 +1331,7 @@ const MembershipBilling = ({ user }: { user: User }) => {
               <button 
                 className="mt-2 text-red-600 dark:text-red-400 text-sm hover:underline"
                 onClick={() => {
-                  setPaymentMethodsError(null);
-                  fetchPaymentData();
+                  refetchBillingData();
                 }}
               >
                 Retry
@@ -1531,8 +1435,7 @@ const MembershipBilling = ({ user }: { user: User }) => {
               <button 
                 className="mt-2 text-red-600 dark:text-red-400 text-sm hover:underline"
                 onClick={() => {
-                  setInvoicesError(null);
-                  fetchPaymentData();
+                  refetchBillingData();
                 }}
               >
                 Retry
@@ -1602,9 +1505,19 @@ const MembershipBilling = ({ user }: { user: User }) => {
         currentUserPlan={subscription?.planKey || 'free'}
         onSuccess={() => {
           setIsMembershipModalOpen(false);
-          fetchPaymentData();
+          refetchBillingData();
           showToastNotification('success', 'Subscription updated successfully!');
         }}
+        // Pass pricing data to avoid duplicate API calls
+        plans={pricingHookResult.plans}
+        promotionalOffers={pricingHookResult.promotionalOffers}
+        locationData={pricingHookResult.locationData}
+        regionalPricing={pricingHookResult.regionalPricing}
+        getRegionalPrice={pricingHookResult.getRegionalPrice}
+        getMonthlyEquivalent={pricingHookResult.getMonthlyEquivalent}
+        getCurrencySymbol={pricingHookResult.getCurrencySymbol}
+        getEffectivePrice={pricingHookResult.getEffectivePrice}
+        hasPromotionalPricing={pricingHookResult.hasPromotionalPricing}
       />
 
       {/* Add Payment Method Modal */}

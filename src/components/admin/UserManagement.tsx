@@ -64,8 +64,13 @@ const UserManagement: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filterRole, setFilterRole] = useState('all');
   const [filterPlan, setFilterPlan] = useState('all');
+  const [page, setPage] = useState(1);
+  const [limit] = useState(50);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [isMembershipModalOpen, setIsMembershipModalOpen] = useState(false);
   const [selectedUserForModal, setSelectedUserForModal] = useState<User | null>(null);
@@ -86,10 +91,16 @@ const UserManagement: React.FC = () => {
   });
 
   useEffect(() => {
-    fetchUsers();
+    fetchUsers(true);
     fetchMetrics();
     fetchPlanConfig();
   }, []);
+
+  // Debounce search to reduce API calls
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchTerm.trim()), 300);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
 
   const fetchPlanConfig = async () => {
     try {
@@ -108,18 +119,38 @@ const UserManagement: React.FC = () => {
     }
   };
 
-  const fetchUsers = async () => {
+  const fetchUsers = async (reset: boolean = false) => {
     try {
       setError(null);
-      console.log('🔍 Fetching users from admin API...');
-      const response = await fetch('/api/admin/users');
+      const nextPage = reset ? 1 : page;
+      const params = new URLSearchParams();
+      params.set('page', String(nextPage));
+      params.set('limit', String(limit));
+      if (debouncedSearch) params.set('search', debouncedSearch);
+      if (filterRole && filterRole !== 'all') params.set('role', filterRole);
+      if (filterPlan && filterPlan !== 'all') params.set('plan', filterPlan);
+      const url = `/api/admin/users?${params.toString()}`;
+      console.log('🔍 Fetching users from admin API...', url);
+      const response = await fetch(url, { cache: 'no-store' });
       console.log('📥 Response status:', response.status);
       
       if (response.ok) {
         const data = await response.json();
         console.log('📥 Response data:', data);
         console.log('👥 Users found:', data.users ? data.users.length : 0);
-        setUsers(data.users || data);
+        const newUsers: User[] = data.users || data || [];
+        if (reset) {
+          setUsers(newUsers);
+          setPage(1);
+        } else {
+          setUsers(prev => {
+            // Deduplicate by _id when appending
+            const seen = new Set(prev.map(u => u._id));
+            const merged = [...prev, ...newUsers.filter(u => !seen.has(u._id))];
+            return merged;
+          });
+        }
+        setHasMore(Boolean(data.pagination && nextPage < data.pagination.pages));
         setError(null);
       } else {
         const errorData = await response.json();
@@ -134,6 +165,26 @@ const UserManagement: React.FC = () => {
       setError(`Network error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // React to filters/search changes
+  useEffect(() => {
+    setLoading(true);
+    setHasMore(true);
+    setPage(1);
+    fetchUsers(true);
+  }, [debouncedSearch, filterRole, filterPlan]);
+
+  const loadMore = async () => {
+    if (!hasMore || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const nextPage = page + 1;
+      setPage(nextPage);
+      await fetchUsers(false);
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -579,6 +630,21 @@ const UserManagement: React.FC = () => {
               )}
             </tbody>
           </table>
+        </div>
+        {/* Load More / Paging Controls */}
+        <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+          <div className="text-sm text-gray-600 dark:text-gray-300">
+            Showing {filteredUsers.length} of {users.length} loaded
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={loadMore}
+              disabled={!hasMore || loadingMore}
+              className="px-4 py-2 text-sm rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50"
+            >
+              {loadingMore ? 'Loading...' : hasMore ? 'Load More' : 'No More'}
+            </button>
+          </div>
         </div>
       </div>
 

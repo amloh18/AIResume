@@ -27,6 +27,22 @@ const nextConfig: NextConfig = {
       config.resolve = {};
     }
     
+    // Fix webpack chunk resolution issues
+    if (!config.resolve.alias) {
+      config.resolve.alias = {};
+    }
+    
+    // Ensure proper chunk loading
+    // Use 'named' in dev for better HMR, 'deterministic' in production for caching
+    config.optimization = config.optimization || {};
+    if (dev) {
+      config.optimization.moduleIds = 'named';
+      config.optimization.chunkIds = 'named';
+    } else {
+      config.optimization.moduleIds = 'deterministic';
+      config.optimization.chunkIds = 'deterministic';
+    }
+    
     // Add webpack plugins for Node.js polyfills
     config.plugins.push(
       new webpack.ProvidePlugin({
@@ -114,32 +130,9 @@ const nextConfig: NextConfig = {
       delete config.resolve.alias['react-dom'];
     }
     
-    // CRITICAL: Force React to resolve to a single instance
-    // This prevents "Cannot read properties of null" errors from multiple React instances
-    // BUT: We must preserve subpath exports (like react/jsx-runtime) by not aliasing the main package
-    // Instead, we'll use resolve.alias only if there are duplicate React instances
-    // For Next.js 15, we should let Next.js handle React resolution naturally
-    // Only alias if we detect multiple React instances (which shouldn't happen in Next.js 15)
-    // if (!isServer) {
-    //   // Commented out: Let Next.js handle React resolution to preserve subpath exports
-    //   // const reactPath = require.resolve('react');
-    //   // const reactDomPath = require.resolve('react-dom');
-    //   // config.resolve.alias.react = reactPath;
-    //   // config.resolve.alias['react-dom'] = reactDomPath;
-    // }
-    
-    // Ensure React is never in externals for client builds
-    if (config.externals && !isServer) {
-      config.externals = config.externals.filter((ext: any) => {
-        if (typeof ext === 'string') {
-          return ext !== 'react' && ext !== 'react-dom';
-        }
-        if (typeof ext === 'object' && ext !== null) {
-          return ext !== 'react' && ext !== 'react-dom';
-        }
-        return true;
-      });
-    }
+    // CRITICAL: Ensure React is properly resolved and never externalized
+    // This fixes "Cannot read properties of null (reading 'useState')" errors
+    // For client builds, React must ALWAYS be bundled, never externalized
 
     // For Edge Runtime builds (middleware), exclude instrumentation and Sentry completely
     // Vercel's Edge bundler analyzes all files, so we need to be aggressive
@@ -183,8 +176,38 @@ const nextConfig: NextConfig = {
     }
 
     // Handle optional dependencies for Vercel
-    config.externals = config.externals || [];
-    if (isServer) {
+    // CRITICAL: For client builds, ensure React is NEVER externalized
+    if (!isServer) {
+      // For client builds, wrap externals to exclude React
+      if (config.externals) {
+        if (Array.isArray(config.externals)) {
+          config.externals = config.externals.filter((ext: any) => {
+            if (typeof ext === 'string') {
+              return ext !== 'react' && ext !== 'react-dom';
+            }
+            if (typeof ext === 'object' && ext !== null) {
+              return ext !== 'react' && ext !== 'react-dom';
+            }
+            return true;
+          });
+        } else if (typeof config.externals === 'function') {
+          const originalExternals = config.externals;
+          config.externals = (context: any, request: string, callback: any) => {
+            // Never externalize React or React-DOM or their subpaths
+            if (request === 'react' || request === 'react-dom' || 
+                request.startsWith('react/') || request.startsWith('react-dom/')) {
+              return callback(); // Don't externalize - bundle it
+            }
+            return originalExternals(context, request, callback);
+          };
+        } else if (typeof config.externals === 'object') {
+          delete (config.externals as any).react;
+          delete (config.externals as any)['react-dom'];
+        }
+      }
+    } else {
+      // Server builds can externalize optional dependencies
+      config.externals = config.externals || [];
       config.externals.push({
         'tesseract.js': 'commonjs tesseract.js',
         'canvas': 'commonjs canvas',
@@ -193,6 +216,7 @@ const nextConfig: NextConfig = {
         'jose': 'commonjs jose',
       });
     }
+
 
     return config;
   },

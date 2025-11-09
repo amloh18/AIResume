@@ -18,6 +18,16 @@ interface UniversalPaymentModalProps {
   previewMode?: boolean;
   subjectUserId?: string; // User ID for admin operations
   currentUserPlan?: string; // Current plan of the subject user
+  // Optional pricing data props to avoid duplicate API calls
+  plans?: DatabasePricingPlan[];
+  promotionalOffers?: any[];
+  locationData?: any;
+  regionalPricing?: any;
+  getRegionalPrice?: (plan: DatabasePricingPlan) => string;
+  getMonthlyEquivalent?: (plan: DatabasePricingPlan) => { price: string; showMonthly: boolean };
+  getCurrencySymbol?: () => string;
+  getEffectivePrice?: (plan: DatabasePricingPlan) => number;
+  hasPromotionalPricing?: (plan: DatabasePricingPlan) => boolean;
 }
 
 interface DiscountCode {
@@ -38,7 +48,17 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
   adminMode = false,
   previewMode = false,
   subjectUserId,
-  currentUserPlan: propCurrentUserPlan
+  currentUserPlan: propCurrentUserPlan,
+  // Optional pricing data props
+  plans: propPlans,
+  promotionalOffers: propPromotionalOffers,
+  locationData: propLocationData,
+  regionalPricing: propRegionalPricing,
+  getRegionalPrice: propGetRegionalPrice,
+  getMonthlyEquivalent: propGetMonthlyEquivalent,
+  getCurrencySymbol: propGetCurrencySymbol,
+  getEffectivePrice: propGetEffectivePrice,
+  hasPromotionalPricing: propHasPromotionalPricing
 }) => {
   const session = null; // Session handling - using unified auth system
   const [step, setStep] = useState(1);
@@ -53,20 +73,22 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
   const [userCurrentPlan, setUserCurrentPlan] = useState<any>(null);
   const [showPromotionalPricing, setShowPromotionalPricing] = useState(false);
 
-  // Use the shared pricing hook
-  const {
-    plans: pricingPlansRaw,
-    promotionalOffers,
-    locationData,
-    regionalPricing,
-    loading: plansLoading,
-    error: plansError,
-    getRegionalPrice,
-    getMonthlyEquivalent,
-    getCurrencySymbol,
-    getEffectivePrice,
-    hasPromotionalPricing
-  } = usePricingPlans({});
+  // Use the shared pricing hook only if props are not provided
+  // Hooks must be called unconditionally at top level
+  const hookResult = usePricingPlans({});
+  
+  // Use props if provided, otherwise fall back to hook result
+  const pricingPlansRaw = propPlans ?? hookResult.plans;
+  const promotionalOffers = propPromotionalOffers ?? hookResult.promotionalOffers;
+  const locationData = propLocationData ?? hookResult.locationData;
+  const regionalPricing = propRegionalPricing ?? hookResult.regionalPricing;
+  const plansLoading = propPlans ? false : hookResult.loading;
+  const plansError = propPlans ? null : hookResult.error;
+  const getRegionalPrice = propGetRegionalPrice ?? hookResult.getRegionalPrice;
+  const getMonthlyEquivalent = propGetMonthlyEquivalent ?? hookResult.getMonthlyEquivalent;
+  const getCurrencySymbol = propGetCurrencySymbol ?? hookResult.getCurrencySymbol;
+  const getEffectivePrice = propGetEffectivePrice ?? hookResult.getEffectivePrice;
+  const hasPromotionalPricing = propHasPromotionalPricing ?? hookResult.hasPromotionalPricing;
 
   // Convert DatabasePricingPlan to PricingPlan format
   // Ensure pricingPlans is always an array to prevent filter errors

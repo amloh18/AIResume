@@ -4,6 +4,16 @@ import { PricingPlan } from '@/models';
 import { detectUserRegion, getPricingForRegion } from '@/lib/services/regionDetectionService';
 import { getAdminPricingPlan } from '@/models/admin-models';
 
+// In-memory cache for pricing plans (static data that rarely changes)
+interface CacheEntry {
+  data: any;
+  timestamp: number;
+  region?: string;
+}
+
+const pricingCache = new Map<string, CacheEntry>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache
+
 // Fallback pricing plans for when database is empty
 const fallbackPlans = [
   // Essential Category
@@ -176,11 +186,32 @@ export async function GET(request: NextRequest) {
     const includeInactive = searchParams.get('includeInactive') === 'true';
     const publicOnly = searchParams.get('public') === 'true';
 
-    // Detect user region from IP
+    // Create cache key based on query parameters
+    const cacheKey = `pricing-${currency || 'all'}-${includeInactive}-${publicOnly}`;
+    const now = Date.now();
+    
+    // Check cache first
+    const cached = pricingCache.get(cacheKey);
+    if (cached && (now - cached.timestamp) < CACHE_TTL) {
+      // Return cached response with appropriate headers
+      return NextResponse.json(cached.data, {
+        headers: {
+          'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+          'X-Cache': 'HIT'
+        }
+      });
+    }
+
+    // Detect user region from IP (with timeout to prevent blocking)
     const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined;
     let regionInfo;
     try {
-      regionInfo = await detectUserRegion(ip);
+      // Add timeout to region detection to prevent slow API calls
+      const regionPromise = detectUserRegion(ip);
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Region detection timeout')), 2000)
+      );
+      regionInfo = await Promise.race([regionPromise, timeoutPromise]) as any;
     } catch (error) {
       console.warn('Region detection failed, using default:', error);
       regionInfo = {
@@ -230,14 +261,14 @@ export async function GET(request: NextRequest) {
     }
 
     // Add promotional pricing, regional pricing, and computed fields
-    const now = new Date();
+    const currentDate = new Date();
     const enhancedPlans = plans.map(plan => {
       // Get regional pricing for this plan
       const regionalPricing = getPricingForRegion(plan, regionInfo.countryCode);
       
       // Check if promotion is active
       const isPromotionActive = (plan as any).promotionValidFrom && (plan as any).promotionValidUntil &&
-        new Date((plan as any).promotionValidFrom) <= now && new Date((plan as any).promotionValidUntil) >= now;
+        new Date((plan as any).promotionValidFrom) <= currentDate && new Date((plan as any).promotionValidUntil) >= currentDate;
 
       // Calculate effective prices (use regional if available, otherwise use plan defaults)
       const basePrice = {
@@ -316,12 +347,12 @@ export async function GET(request: NextRequest) {
         effectivePrice,
         // Add days remaining for promotion
         promotionDaysRemaining: isPromotionActive && (plan as any).promotionValidUntil
-          ? Math.ceil((new Date((plan as any).promotionValidUntil).getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+          ? Math.ceil((new Date((plan as any).promotionValidUntil).getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24))
           : null
       };
     });
 
-    return NextResponse.json({
+    const responseData = {
       plans: enhancedPlans,
       region: {
         countryCode: regionInfo.countryCode,
@@ -330,10 +361,42 @@ export async function GET(request: NextRequest) {
         currencySymbol: regionInfo.currencySymbol,
         paymentPartner: regionInfo.paymentPartner
       }
+    };
+
+    // Cache the response
+    pricingCache.set(cacheKey, {
+      data: responseData,
+      timestamp: now,
+      region: regionInfo.countryCode
+    });
+
+    // Clean up old cache entries (keep only last 10)
+    if (pricingCache.size > 10) {
+      const oldestKey = Array.from(pricingCache.entries())
+        .sort((a, b) => a[1].timestamp - b[1].timestamp)[0]?.[0];
+      if (oldestKey) {
+        pricingCache.delete(oldestKey);
+      }
+    }
+
+    return NextResponse.json(responseData, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+        'X-Cache': 'MISS'
+      }
     });
   } catch (error) {
     console.error('Error fetching pricing plans:', error);
     // Return fallback plans even on error
-    return NextResponse.json(fallbackPlans);
+    return NextResponse.json({
+      plans: fallbackPlans,
+      region: {
+        countryCode: 'US',
+        countryName: 'United States',
+        currency: 'USD',
+        currencySymbol: '$',
+        paymentPartner: 'stripe'
+      }
+    });
   }
 }
