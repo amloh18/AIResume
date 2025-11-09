@@ -140,11 +140,19 @@ const CareerTrajectoryGraph: React.FC<CareerTrajectoryGraphProps> = ({
 
   // Custom label component for milestones
   const CustomLabel = ({ x, y, value, payload }: any) => {
+    // Validate that x and y are valid numbers
+    if (x == null || y == null || isNaN(Number(x)) || isNaN(Number(y))) {
+      return null;
+    }
+
+    const xNum = Number(x);
+    const yNum = Number(y);
+
     return (
       <g>
         <circle
-          cx={x}
-          cy={y}
+          cx={xNum}
+          cy={yNum}
           r={8}
           fill="#80FF00"
           stroke="#ffffff"
@@ -152,19 +160,19 @@ const CareerTrajectoryGraph: React.FC<CareerTrajectoryGraphProps> = ({
           className="drop-shadow-lg"
         />
         <circle
-          cx={x}
-          cy={y}
+          cx={xNum}
+          cy={yNum}
           r={4}
           fill="#ffffff"
         />
         <text
-          x={x}
-          y={y - 20}
+          x={xNum}
+          y={yNum - 20}
           textAnchor="middle"
           className={`text-xs font-semibold ${useLightTheme ? 'fill-gray-900' : 'fill-gray-100 dark:fill-gray-100'}`}
           style={{ fontWeight: 600 }}
         >
-          {payload.shortMilestone || payload.milestone}
+          {payload?.shortMilestone || payload?.milestone || ''}
         </text>
       </g>
     );

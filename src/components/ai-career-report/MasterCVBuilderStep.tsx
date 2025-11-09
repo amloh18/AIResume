@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAICareerReport } from '@/contexts/AICareerReportContext';
 import { useSession } from 'next-auth/react';
@@ -25,33 +25,47 @@ import {
   Star,
   Users,
   FileText,
-  X
+  X,
+  FolderOpen
 } from 'lucide-react';
 import WYSIWYGEditor, { WYSIWYGToolbar } from '@/components/ui/WYSIWYGEditor';
+// Import reusable form components
+import PersonalInfoForm from '@/components/studio/forms/PersonalInfoForm';
+import WorkExperienceSection from '@/components/studio/forms/WorkExperienceSection';
+import EducationSection from '@/components/studio/forms/EducationSection';
+import SkillsSection from '@/components/studio/forms/SkillsSection';
+import ProjectsSection from '@/components/studio/forms/ProjectsSection';
+import CertificatesSection from '@/components/studio/forms/CertificatesSection';
+import VolunteerSection from '@/components/studio/forms/VolunteerSection';
+import AwardsSection from '@/components/studio/forms/AwardsSection';
+import PublicationsSection from '@/components/studio/forms/PublicationsSection';
+import LanguagesSection from '@/components/studio/forms/LanguagesSection';
+import InterestsSection from '@/components/studio/forms/InterestsSection';
+import ReferencesSection from '@/components/studio/forms/ReferencesSection';
+// Import selectors and migration utilities
+import { getVisibleCVSections, getAddableCVSections } from '@/lib/selectors/cv-section-selectors';
+import { migrateLegacyCV, hasStructure } from '@/lib/migrations/cv-structure-migration';
 
 interface MasterCVBuilderStepProps {
   onNext: () => void;
   onBack: () => void;
 }
 
-const sections = [
-  { id: 'personal', title: 'Personal Information', icon: User, color: 'blue' },
-  { id: 'experience', title: 'Work Experience', icon: Briefcase, color: 'green' },
-  { id: 'education', title: 'Education', icon: GraduationCap, color: 'purple' },
-  { id: 'skills', title: 'Skills', icon: Settings, color: 'orange' },
-  { id: 'projects', title: 'Projects', icon: Code, color: 'pink' },
-  { id: 'awards', title: 'Awards & Recognitions', icon: Award, color: 'yellow' },
-  { id: 'certifications', title: 'Certifications', icon: Trophy, color: 'cyan' }
-];
-
-const additionalSections = [
-  { id: 'volunteer', title: 'Volunteer Work', icon: Heart, color: 'red' },
-  { id: 'publications', title: 'Publications', icon: BookOpen, color: 'indigo' },
-  { id: 'languages', title: 'Languages', icon: Globe, color: 'teal' },
-  { id: 'interests', title: 'Interests', icon: Star, color: 'amber' },
-  { id: 'references', title: 'References', icon: Users, color: 'violet' },
-  { id: 'summary', title: 'Summary', icon: FileText, color: 'emerald' }
-];
+// Map section type (from structure) to internal section ID (for renderSectionContent)
+const SECTION_TYPE_TO_ID: Record<string, string> = {
+  'personal_header': 'personal',
+  'work_experience': 'experience',
+  'education': 'education',
+  'skills': 'skills',
+  'projects': 'projects',
+  'certificates': 'certifications',
+  'languages': 'languages',
+  'volunteer': 'volunteer',
+  'awards': 'awards',
+  'publications': 'publications',
+  'interests': 'interests',
+  'references': 'references'
+};
 
 // Simple toolbar wrapper - toolbar operates on currently focused editor
 function ToolbarWrapper({ showAIButton, fieldType, onAIGenerate, isGenerating }: {
@@ -85,15 +99,72 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
   const [showAddSectionModal, setShowAddSectionModal] = useState(false);
   const [generatingAI, setGeneratingAI] = useState<{ [key: string]: boolean }>({});
 
-  // Initialize available sections if empty
-  React.useEffect(() => {
-    if (state.availableSections.length === 0) {
+  // Ensure cvData has structure (migrate if needed)
+  useEffect(() => {
+    if (state.cvData && !hasStructure(state.cvData)) {
+      const migratedData = migrateLegacyCV(state.cvData);
       dispatch({
-        type: 'SET_AVAILABLE_SECTIONS',
-        payload: sections
+        type: 'UPDATE_CV_DATA',
+        payload: migratedData
       });
     }
-  }, [dispatch, state.availableSections.length]);
+  }, [state.cvData, dispatch]);
+
+  // Helper to map icon name to component
+  const getSectionIcon = (sectionType: string) => {
+    const icons: Record<string, any> = {
+      personal_header: User,
+      work_experience: Briefcase,
+      education: GraduationCap,
+      skills: Code,
+      projects: FolderOpen,
+      certificates: Award,
+      languages: Globe,
+      volunteer: Heart,
+      awards: Star,
+      publications: BookOpen,
+      interests: Users,
+      references: Users
+    };
+    return icons[sectionType] || User;
+  };
+
+  // Get visible sections using centralized selector - computed once
+  const visibleSectionsList = useMemo(
+    () => getVisibleCVSections(state.cvData, 'cv'),
+    [state.cvData]
+  );
+
+  // Map visible sections to sidebar format
+  const sidebarSections = useMemo(() => {
+    return visibleSectionsList.map(section => {
+      const sectionId = SECTION_TYPE_TO_ID[section.type] || section.type;
+      return {
+        id: sectionId,
+        type: section.type,
+        title: section.label,
+        icon: getSectionIcon(section.type),
+        color: 'blue' // Default color, can be customized if needed
+      };
+    });
+  }, [visibleSectionsList]);
+
+  // Get addable sections using centralized selector
+  const addableSectionsList = useMemo(
+    () => getAddableCVSections(state.cvData),
+    [state.cvData]
+  );
+
+  // Map addable sections to modal format
+  const addableSections = useMemo(() => {
+    return addableSectionsList.map(section => ({
+      id: section.id,
+      title: section.label,
+      icon: getSectionIcon(section.id),
+      category: section.category,
+      description: section.description
+    }));
+  }, [addableSectionsList]);
 
   const updateCVData = (field: string, value: any) => {
     dispatch({
@@ -104,11 +175,118 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
     });
   };
 
-  const updateBasicInfo = (field: string, value: string) => {
+  const updateBasicInfo = (field: string, value: any) => {
     updateCVData('basics', {
       ...state.cvData.basics,
       [field]: value
     });
+  };
+
+  // Helper functions for add/remove operations
+  const addSection = (sectionType: string) => {
+    switch (sectionType) {
+      case 'education':
+        addEducation();
+        break;
+      case 'skills':
+        updateCVData('skills', [...(state.cvData.skills || []), { category: '', skills: [] }]);
+        break;
+      case 'projects':
+        updateCVData('projects', [...(state.cvData.projects || []), {
+          name: '',
+          startDate: '',
+          endDate: '',
+          description: '',
+          highlights: [],
+          keywords: [],
+          url: ''
+        }]);
+        break;
+      case 'certificates':
+        addCertification();
+        break;
+      case 'volunteer':
+        updateCVData('volunteer', [...(state.cvData.volunteer || []), {
+          organization: '',
+          position: '',
+          url: '',
+          startDate: '',
+          endDate: '',
+          summary: '',
+          highlights: []
+        }]);
+        break;
+      case 'awards':
+        updateCVData('awards', [...(state.cvData.awards || []), {
+          title: '',
+          date: '',
+          awarder: '',
+          summary: ''
+        }]);
+        break;
+      case 'publications':
+        updateCVData('publications', [...(state.cvData.publications || []), {
+          name: '',
+          publisher: '',
+          releaseDate: '',
+          url: '',
+          summary: ''
+        }]);
+        break;
+      case 'languages':
+        updateCVData('languages', [...(state.cvData.languages || []), {
+          language: '',
+          fluency: ''
+        }]);
+        break;
+      case 'interests':
+        updateCVData('interests', [...(state.cvData.interests || []), {
+          name: '',
+          keywords: []
+        }]);
+        break;
+      case 'references':
+        updateCVData('references', [...(state.cvData.references || []), {
+          name: '',
+          reference: ''
+        }]);
+        break;
+    }
+  };
+
+  const removeSection = (sectionType: string, index: number) => {
+    switch (sectionType) {
+      case 'education':
+        removeEducation(index);
+        break;
+      case 'skills':
+        updateCVData('skills', state.cvData.skills?.filter((_, i) => i !== index) || []);
+        break;
+      case 'projects':
+        updateCVData('projects', state.cvData.projects?.filter((_, i) => i !== index) || []);
+        break;
+      case 'certificates':
+        removeCertification(index);
+        break;
+      case 'volunteer':
+        updateCVData('volunteer', state.cvData.volunteer?.filter((_, i) => i !== index) || []);
+        break;
+      case 'awards':
+        updateCVData('awards', state.cvData.awards?.filter((_, i) => i !== index) || []);
+        break;
+      case 'publications':
+        updateCVData('publications', state.cvData.publications?.filter((_, i) => i !== index) || []);
+        break;
+      case 'languages':
+        updateCVData('languages', state.cvData.languages?.filter((_, i) => i !== index) || []);
+        break;
+      case 'interests':
+        updateCVData('interests', state.cvData.interests?.filter((_, i) => i !== index) || []);
+        break;
+      case 'references':
+        updateCVData('references', state.cvData.references?.filter((_, i) => i !== index) || []);
+        break;
+    }
   };
 
   const addWorkExperience = () => {
@@ -221,28 +399,20 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
     }
   };
 
-  const addNewSection = (sectionId: string) => {
-    console.log('Adding new section:', sectionId);
+  const addNewSection = (sectionType: string) => {
+    console.log('Adding new section:', sectionType);
     
-    // Add to available sections
-    const sectionToAdd = additionalSections.find(s => s.id === sectionId);
-    if (sectionToAdd) {
-      dispatch({
-        type: 'ADD_SECTION',
-        payload: sectionToAdd
-      });
-      console.log('Section added to available sections:', sectionToAdd);
-    }
-
     // Initialize CV data for the new section
-    switch (sectionId) {
+    switch (sectionType) {
       case 'volunteer':
         updateCVData('volunteer', [...(state.cvData.volunteer || []), {
           organization: '',
           position: '',
+          url: '',
           startDate: '',
           endDate: '',
-          summary: ''
+          summary: '',
+          highlights: []
         }]);
         break;
       case 'publications':
@@ -269,18 +439,53 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
       case 'references':
         updateCVData('references', [...(state.cvData.references || []), {
           name: '',
-          reference: '',
-          position: '',
-          company: ''
+          reference: ''
         }]);
         break;
-      case 'summary':
-        // This would typically be part of the basics section, but we can add it as a separate field
-        updateCVData('basics', {
-          ...state.cvData.basics,
-          summary: state.cvData.basics.summary || ''
-        });
+      case 'awards':
+        updateCVData('awards', [...(state.cvData.awards || []), {
+          title: '',
+          date: '',
+          awarder: '',
+          summary: ''
+        }]);
         break;
+      case 'certificates':
+        addCertification();
+        break;
+      case 'projects':
+        updateCVData('projects', [...(state.cvData.projects || []), {
+          name: '',
+          startDate: '',
+          endDate: '',
+          description: '',
+          highlights: [],
+          keywords: [],
+          url: ''
+        }]);
+        break;
+      case 'skills':
+        updateCVData('skills', [...(state.cvData.skills || []), { category: '', skills: [] }]);
+        break;
+      case 'education':
+        addEducation();
+        break;
+      case 'work_experience':
+        addWorkExperience();
+        break;
+    }
+    
+    // Update structure to make section visible
+    if (state.cvData && state.cvData.structure) {
+      const updatedStructure = { ...state.cvData.structure };
+      const sectionIndex = updatedStructure.sections.findIndex(s => s.type === sectionType);
+      if (sectionIndex >= 0) {
+        updatedStructure.sections[sectionIndex] = {
+          ...updatedStructure.sections[sectionIndex],
+          visible: true
+        };
+        updateCVData('structure', updatedStructure);
+      }
     }
     
     console.log('CV data after adding section:', state.cvData);
@@ -339,7 +544,7 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
       >
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 bg-gradient-to-r ${getColorClasses(section.color)} rounded-lg flex items-center justify-center`}>
+            <div className={`w-10 h-10 bg-gradient-to-r ${getColorClasses(section.color || 'blue')} rounded-lg flex items-center justify-center`}>
               <Icon className="w-5 h-5 text-white" />
             </div>
             <h3 className="text-xl font-semibold text-white">{section.title}</h3>
@@ -361,1220 +566,151 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
     );
   };
 
-  // Render content for each section type
+  // Render content for each section type using reusable form components
   const renderSectionContent = (sectionId: string) => {
     switch (sectionId) {
       case 'personal':
         return (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-white/80 text-sm font-medium mb-2">First Name</label>
-              <input
-                type="text"
-                value={state.cvData.basics.name?.split(' ')[0] || ''}
-                onChange={(e) => {
-                  const lastName = state.cvData.basics.name?.split(' ').slice(1).join(' ') || '';
-                  updateBasicInfo('name', `${e.target.value} ${lastName}`.trim());
-                }}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                placeholder="Enter your first name"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-white/80 text-sm font-medium mb-2">Last Name</label>
-              <input
-                type="text"
-                value={state.cvData.basics.name?.split(' ').slice(1).join(' ') || ''}
-                onChange={(e) => {
-                  const firstName = state.cvData.basics.name?.split(' ')[0] || '';
-                  updateBasicInfo('name', `${firstName} ${e.target.value}`.trim());
-                }}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                placeholder="Enter your last name"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-white/80 text-sm font-medium mb-2">Email</label>
-              <input
-                type="email"
-                value={state.cvData.basics.email || ''}
-                onChange={(e) => updateBasicInfo('email', e.target.value)}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                placeholder="your.email@example.com"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-white/80 text-sm font-medium mb-2">Phone</label>
-              <input
-                type="tel"
-                value={state.cvData.basics.phone || ''}
-                onChange={(e) => updateBasicInfo('phone', e.target.value)}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                placeholder="+1234567890"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-white/80 text-sm font-medium mb-2">LinkedIn Profile</label>
-              <input
-                type="url"
-                value={state.cvData.basics.profiles?.[0]?.url || ''}
-                onChange={(e) => {
-                  const profiles = [...(state.cvData.basics.profiles || [])];
-                  if (profiles.length === 0) {
-                    profiles.push({ network: 'LinkedIn', url: e.target.value, username: '' });
-                  } else {
-                    profiles[0] = { ...profiles[0], url: e.target.value };
-                  }
-                  updateCVData('basics', { ...state.cvData.basics, profiles });
-                }}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                placeholder="linkedin.com/in/yourprofile"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-white/80 text-sm font-medium mb-2">Personal Website</label>
-              <input
-                type="url"
-                value={state.cvData.basics.url || ''}
-                onChange={(e) => updateBasicInfo('url', e.target.value)}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                placeholder="yourwebsite.com"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-white/80 text-sm font-medium mb-2">Location</label>
-              <input
-                type="text"
-                readOnly={false}
-                disabled={false}
-                value={(() => {
-                  const city = state.cvData.basics.location?.city || '';
-                  const region = state.cvData.basics.location?.region || '';
-                  return city && region ? `${city}, ${region}` : city || region || '';
-                })()}
-                onChange={(e) => {
-                  const inputValue = e.target.value;
-                  const parts = inputValue.split(', ').map(p => p.trim());
-                  const updatedLocation = {
-                    ...(state.cvData.basics.location || {}),
-                    city: parts[0] || '',
-                    region: parts[1] || ''
-                  };
-                  updateCVData('basics', {
-                    ...state.cvData.basics,
-                    location: updatedLocation
-                  });
-                }}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors cursor-text"
-                placeholder="City, Region"
-              />
-            </div>
-            
-            <div className="md:col-span-2">
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-white/80 text-sm font-medium">Professional Summary</label>
-                <ToolbarWrapper
-                  showAIButton={true}
-                  fieldType="summary"
-                  onAIGenerate={() => handleAIGenerate('summary', 'professional-summary', state.cvData.basics.summary || '')}
-                  isGenerating={generatingAI['professional-summary'] || false}
-                />
-              </div>
-              <WYSIWYGEditor
-                value={state.cvData.basics.summary || ''}
-                onChange={(value) => updateBasicInfo('summary', value)}
-                rows={4}
-                placeholder="Write a brief summary of your professional background and key achievements..."
-              />
-            </div>
-          </div>
+          <PersonalInfoForm
+            data={state.cvData.basics || {
+              name: '',
+              label: '',
+              image: '',
+              email: '',
+              phone: '',
+              url: '',
+              summary: '',
+              location: {
+                address: '',
+                postalCode: '',
+                city: '',
+                countryCode: '',
+                region: ''
+              },
+              profiles: []
+            }}
+            onUpdate={updateBasicInfo}
+            cvData={state.cvData}
+            jobData={state.jobData}
+            userId={session?.user?.id || ''}
+          />
         );
 
       case 'experience':
         return (
-          <>
-            {state.cvData.work.map((work, index) => (
-              <div key={index} className="bg-white/5 rounded-xl p-6 border border-white/10">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-lg font-semibold text-white">
-                    {work.position || 'Job Title'} at {work.name || 'Company'}
-                  </h4>
-                  <button
-                    onClick={() => removeWorkExperience(index)}
-                    className="text-red-400 hover:text-red-300 transition-colors"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">Job Title</label>
-                    <input
-                      type="text"
-                      value={work.position || ''}
-                      onChange={(e) => updateWorkExperience(index, 'position', e.target.value)}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="Senior Developer"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">Company</label>
-                    <input
-                      type="text"
-                      value={work.name || ''}
-                      onChange={(e) => updateWorkExperience(index, 'name', e.target.value)}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="Tech Corp"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">Start Date</label>
-                    <input
-                      type="text"
-                      value={work.startDate || ''}
-                      onChange={(e) => updateWorkExperience(index, 'startDate', e.target.value)}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="January 2018"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">End Date</label>
-                    <input
-                      type="text"
-                      value={work.endDate || ''}
-                      onChange={(e) => updateWorkExperience(index, 'endDate', e.target.value)}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="May 2023"
-                    />
-                  </div>
-                  
-                  <div className="md:col-span-2">
-                    <label className="block text-white/80 text-sm font-medium mb-2">Company URL</label>
-                    <input
-                      type="url"
-                      value={work.url || ''}
-                      onChange={(e) => updateWorkExperience(index, 'url', e.target.value)}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="https://company.com"
-                    />
-                  </div>
-                </div>
-                
-                <div className="mt-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="block text-white/80 text-sm font-medium">Work Summary</label>
-                    <ToolbarWrapper
-                      showAIButton={true}
-                      fieldType="experience"
-                      onAIGenerate={() => handleAIGenerate('experience', `work-experience-${index}`, state.cvData.work[index]?.summary || '', index)}
-                      isGenerating={generatingAI[`work-experience-${index}`] || false}
-                    />
-                  </div>
-                  <WYSIWYGEditor
-                    key={`work-summary-${index}`}
-                    value={state.cvData.work[index]?.summary ? String(state.cvData.work[index].summary) : ''}
-                    onChange={(value) => updateWorkExperience(index, 'summary', value)}
-                    rows={4}
-                    placeholder="Describe your key responsibilities and achievements..."
-                  />
-                </div>
-              </div>
-            ))}
-            
-            <button
-              onClick={addWorkExperience}
-              className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/60 hover:text-[#80FF00] rounded-xl transition-colors flex items-center justify-center gap-2"
-            >
-              <Plus size={20} />
-              Add another Work Experience
-            </button>
-          </>
+          <WorkExperienceSection
+            data={state.cvData.work || []}
+            onUpdate={(data: any[]) => updateCVData('work', data)}
+            jobData={state.jobData}
+            userId={session?.user?.id || ''}
+          />
         );
 
       case 'education':
         return (
-          <>
-            {state.cvData.education.map((edu, index) => (
-              <div key={index} className="bg-white/5 rounded-xl p-6 border border-white/10">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-lg font-semibold text-white">
-                    {edu.studyType || 'Degree'} in {edu.area || 'Field'} at {edu.institution || 'University'}
-                  </h4>
-                  <button
-                    onClick={() => removeEducation(index)}
-                    className="text-red-400 hover:text-red-300 transition-colors"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">Institution</label>
-                    <input
-                      type="text"
-                      value={edu.institution || ''}
-                      onChange={(e) => updateEducation(index, 'institution', e.target.value)}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="University of California"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">Field of Study</label>
-                    <input
-                      type="text"
-                      value={edu.area || ''}
-                      onChange={(e) => updateEducation(index, 'area', e.target.value)}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="Computer Science"
-                    />
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">Degree Type</label>
-                    <input
-                      type="text"
-                      value={edu.studyType || ''}
-                      onChange={(e) => updateEducation(index, 'studyType', e.target.value)}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="Bachelor's Degree"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">Start Date</label>
-                    <input
-                      type="text"
-                      value={edu.startDate || ''}
-                      onChange={(e) => updateEducation(index, 'startDate', e.target.value)}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="Sep 2016"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">End Date</label>
-                    <input
-                      type="text"
-                      value={edu.endDate || ''}
-                      onChange={(e) => updateEducation(index, 'endDate', e.target.value)}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="May 2020"
-                    />
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">Score/GPA</label>
-                    <input
-                      type="text"
-                      value={edu.score || ''}
-                      onChange={(e) => updateEducation(index, 'score', e.target.value)}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="3.8/4.0"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">Institution URL</label>
-                    <input
-                      type="url"
-                      value={edu.url || ''}
-                      onChange={(e) => updateEducation(index, 'url', e.target.value)}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="https://university.edu"
-                    />
-                  </div>
-                </div>
-                
-                <div className="mt-4">
-                  <label className="block text-white/80 text-sm font-medium mb-2">Relevant Courses</label>
-                  <input
-                    type="text"
-                    value={edu.courses?.join(', ') || ''}
-                    onChange={(e) => {
-                      const courses = e.target.value.split(',').map(c => c.trim()).filter(c => c);
-                      updateEducation(index, 'courses', courses);
-                    }}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                    placeholder="Data Structures, Algorithms, Database Systems"
-                  />
-                  <p className="text-white/60 text-sm mt-1">Separate courses with commas</p>
-                </div>
-                
-                <div className="mt-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="block text-white/80 text-sm font-medium">Description</label>
-                    <ToolbarWrapper />
-                  </div>
-                  <WYSIWYGEditor
-                    value={edu.description || ''}
-                    onChange={(value) => updateEducation(index, 'description', value)}
-                    rows={3}
-                    placeholder="Describe your education, achievements, relevant coursework, or academic honors..."
-                  />
-                </div>
-              </div>
-            ))}
-            
-            <button
-              onClick={addEducation}
-              className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/60 hover:text-[#80FF00] rounded-xl transition-colors flex items-center justify-center gap-2"
-            >
-              <Plus size={20} />
-              Add another Education
-            </button>
-          </>
+          <EducationSection
+            data={state.cvData.education || []}
+            onUpdate={(data: any[]) => updateCVData('education', data)}
+            onAdd={() => addSection('education')}
+            onRemove={(index) => removeSection('education', index)}
+            jobData={state.jobData}
+            userId={session?.user?.id || ''}
+          />
         );
 
       case 'skills':
         return (
-          <div className="space-y-6">
-            {(state.cvData.skills || []).map((skillGroup, index) => (
-              <div key={index} className="bg-white/5 rounded-xl p-6 border border-white/10">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-lg font-semibold text-white">
-                    {skillGroup.category || 'Skill Category'}
-                  </h4>
-                  <button
-                    onClick={() => {
-                      const updatedSkills = state.cvData.skills?.filter((_, i) => i !== index) || [];
-                      updateCVData('skills', updatedSkills);
-                    }}
-                    className="text-red-400 hover:text-red-300 transition-colors"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">Category</label>
-                    <input
-                      type="text"
-                      value={skillGroup.category || ''}
-                      onChange={(e) => {
-                        const updatedSkills = [...(state.cvData.skills || [])];
-                        updatedSkills[index] = { ...updatedSkills[index], category: e.target.value };
-                        updateCVData('skills', updatedSkills);
-                      }}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="Programming Languages, Frameworks, Tools..."
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">Skills</label>
-                    <textarea
-                      value={skillGroup.skills?.join(', ') || ''}
-                      onChange={(e) => {
-                        const skillNames = e.target.value.split(',').map(name => name.trim()).filter(name => name);
-                        const updatedSkills = [...(state.cvData.skills || [])];
-                        updatedSkills[index] = { ...updatedSkills[index], skills: skillNames };
-                        updateCVData('skills', updatedSkills);
-                      }}
-                      rows={3}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors resize-none"
-                      placeholder="JavaScript, React, Node.js, Python..."
-                    />
-                    <p className="text-white/60 text-sm mt-1">Separate skills with commas</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-            
-            <button
-              onClick={() => {
-                const newSkillGroup = { category: '', skills: [] };
-                updateCVData('skills', [...(state.cvData.skills || []), newSkillGroup]);
-              }}
-              className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/60 hover:text-[#80FF00] rounded-xl transition-colors flex items-center justify-center gap-2"
-            >
-              <Plus size={20} />
-              Add Skill Category
-            </button>
-          </div>
+          <SkillsSection
+            data={state.cvData.skills || []}
+            onUpdate={(data: any[]) => updateCVData('skills', data)}
+            onAdd={() => addSection('skills')}
+            onRemove={(index) => removeSection('skills', index)}
+          />
         );
 
       case 'projects':
         return (
-          <>
-            {state.cvData.projects?.map((project, index) => (
-              <div key={index} className="bg-white/5 rounded-xl p-6 border border-white/10">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-lg font-semibold text-white">{project.name || 'Project Name'}</h4>
-                  <button
-                    onClick={() => {
-                      const updatedProjects = state.cvData.projects?.filter((_, i) => i !== index) || [];
-                      updateCVData('projects', updatedProjects);
-                    }}
-                    className="text-red-400 hover:text-red-300 transition-colors"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">Project Name</label>
-                    <input
-                      type="text"
-                      value={project.name || ''}
-                      onChange={(e) => {
-                        const updatedProjects = [...(state.cvData.projects || [])];
-                        updatedProjects[index] = { ...updatedProjects[index], name: e.target.value };
-                        updateCVData('projects', updatedProjects);
-                      }}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="E-commerce Platform"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">Project URL</label>
-                    <input
-                      type="url"
-                      value={project.url || ''}
-                      onChange={(e) => {
-                        const updatedProjects = [...(state.cvData.projects || [])];
-                        updatedProjects[index] = { ...updatedProjects[index], url: e.target.value };
-                        updateCVData('projects', updatedProjects);
-                      }}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="https://github.com/username/project"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">Start Date</label>
-                    <input
-                      type="text"
-                      value={project.startDate || ''}
-                      onChange={(e) => {
-                        const updatedProjects = [...(state.cvData.projects || [])];
-                        updatedProjects[index] = { ...updatedProjects[index], startDate: e.target.value };
-                        updateCVData('projects', updatedProjects);
-                      }}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="Jan 2022"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">End Date</label>
-                    <input
-                      type="text"
-                      value={project.endDate || ''}
-                      onChange={(e) => {
-                        const updatedProjects = [...(state.cvData.projects || [])];
-                        updatedProjects[index] = { ...updatedProjects[index], endDate: e.target.value };
-                        updateCVData('projects', updatedProjects);
-                      }}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="Dec 2022"
-                    />
-                  </div>
-                  
-                  <div className="md:col-span-2">
-                    <label className="block text-white/80 text-sm font-medium mb-2">Technologies/Keywords</label>
-                    <input
-                      type="text"
-                      value={project.keywords?.join(', ') || ''}
-                      onChange={(e) => {
-                        const keywords = e.target.value.split(',').map(k => k.trim()).filter(k => k);
-                        const updatedProjects = [...(state.cvData.projects || [])];
-                        updatedProjects[index] = { ...updatedProjects[index], keywords };
-                        updateCVData('projects', updatedProjects);
-                      }}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="React, Node.js, MongoDB"
-                    />
-                  </div>
-                </div>
-                
-                <div className="mt-4">
-                  <label className="block text-white/80 text-sm font-medium mb-2">Highlights</label>
-                  <textarea
-                    value={project.highlights?.join('\n') || ''}
-                    onChange={(e) => {
-                      const highlights = e.target.value.split('\n').filter(h => h.trim());
-                      const updatedProjects = [...(state.cvData.projects || [])];
-                      updatedProjects[index] = { ...updatedProjects[index], highlights };
-                      updateCVData('projects', updatedProjects);
-                    }}
-                    rows={3}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors resize-none"
-                    placeholder="Key achievement 1&#10;Key achievement 2&#10;Key achievement 3"
-                  />
-                  <p className="text-white/60 text-sm mt-1">Enter each highlight on a new line</p>
-                </div>
-                
-                <div className="mt-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="block text-white/80 text-sm font-medium">Description</label>
-                    <ToolbarWrapper />
-                  </div>
-                  <WYSIWYGEditor
-                    value={project.description || ''}
-                    onChange={(value) => {
-                      const updatedProjects = [...(state.cvData.projects || [])];
-                      updatedProjects[index] = { ...updatedProjects[index], description: value };
-                      updateCVData('projects', updatedProjects);
-                    }}
-                    rows={3}
-                    placeholder="Describe the project and your role..."
-                  />
-                </div>
-              </div>
-            ))}
-            
-            <button
-              onClick={() => {
-                const newProject = {
-                  name: '',
-                  startDate: '',
-                  endDate: '',
-                  description: '',
-                  keywords: [],
-                  url: ''
-                  // highlights is optional - only include if user adds highlights
-                };
-                updateCVData('projects', [...(state.cvData.projects || []), newProject]);
-              }}
-              className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/60 hover:text-[#80FF00] rounded-xl transition-colors flex items-center justify-center gap-2"
-            >
-              <Plus size={20} />
-              Add another Project
-            </button>
-          </>
+          <ProjectsSection
+            data={state.cvData.projects || []}
+            onUpdate={(data: any[]) => updateCVData('projects', data)}
+            onAdd={() => addSection('projects')}
+            onRemove={(index) => removeSection('projects', index)}
+            jobData={state.jobData}
+            userId={session?.user?.id || ''}
+          />
         );
 
       case 'awards':
         return (
-          <>
-            {state.cvData.awards?.map((award, index) => (
-              <div key={index} className="bg-white/5 rounded-xl p-6 border border-white/10">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-lg font-semibold text-white">{award.title || 'Award Title'}</h4>
-                  <button
-                    onClick={() => {
-                      const updatedAwards = state.cvData.awards?.filter((_, i) => i !== index) || [];
-                      updateCVData('awards', updatedAwards);
-                    }}
-                    className="text-red-400 hover:text-red-300 transition-colors"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">Award Title</label>
-                    <input
-                      type="text"
-                      value={award.title || ''}
-                      onChange={(e) => {
-                        const updatedAwards = [...(state.cvData.awards || [])];
-                        updatedAwards[index] = { ...updatedAwards[index], title: e.target.value };
-                        updateCVData('awards', updatedAwards);
-                      }}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="Employee of the Year"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">Date</label>
-                    <input
-                      type="text"
-                      value={award.date || ''}
-                      onChange={(e) => {
-                        const updatedAwards = [...(state.cvData.awards || [])];
-                        updatedAwards[index] = { ...updatedAwards[index], date: e.target.value };
-                        updateCVData('awards', updatedAwards);
-                      }}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="2023"
-                    />
-                  </div>
-                  
-                  <div className="md:col-span-2">
-                    <label className="block text-white/80 text-sm font-medium mb-2">Awarder</label>
-                    <input
-                      type="text"
-                      value={award.awarder || ''}
-                      onChange={(e) => {
-                        const updatedAwards = [...(state.cvData.awards || [])];
-                        updatedAwards[index] = { ...updatedAwards[index], awarder: e.target.value };
-                        updateCVData('awards', updatedAwards);
-                      }}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="Company Name or Organization"
-                    />
-                  </div>
-                </div>
-                
-                <div className="mt-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="block text-white/80 text-sm font-medium">Description</label>
-                    <ToolbarWrapper />
-                  </div>
-                  <WYSIWYGEditor
-                    value={award.summary || ''}
-                    onChange={(value) => {
-                      const updatedAwards = [...(state.cvData.awards || [])];
-                      updatedAwards[index] = { ...updatedAwards[index], summary: value };
-                      updateCVData('awards', updatedAwards);
-                    }}
-                    rows={3}
-                    placeholder="Describe the award and its significance..."
-                  />
-                </div>
-              </div>
-            ))}
-            
-            <button
-              onClick={() => {
-                const newAward = {
-                  title: '',
-                  date: '',
-                  awarder: '',
-                  summary: ''
-                };
-                updateCVData('awards', [...(state.cvData.awards || []), newAward]);
-              }}
-              className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/60 hover:text-[#80FF00] rounded-xl transition-colors flex items-center justify-center gap-2"
-            >
-              <Plus size={20} />
-              Add another Award
-            </button>
-          </>
+          <AwardsSection
+            data={state.cvData.awards || []}
+            onUpdate={(data: any[]) => updateCVData('awards', data)}
+            onAdd={() => addSection('awards')}
+            onRemove={(index) => removeSection('awards', index)}
+          />
         );
 
       case 'certifications':
         return (
-          <>
-            {state.cvData.certificates?.map((cert, index) => (
-              <div key={index} className="bg-white/5 rounded-xl p-6 border border-white/10">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-lg font-semibold text-white">{cert.name || 'Certification Name'}</h4>
-                  <button
-                    onClick={() => removeCertification(index)}
-                    className="text-red-400 hover:text-red-300 transition-colors"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">Certification Name</label>
-                    <input
-                      type="text"
-                      value={cert.name || ''}
-                      onChange={(e) => updateCertification(index, 'name', e.target.value)}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="AWS Certified Solutions Architect"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">Issuer</label>
-                    <input
-                      type="text"
-                      value={cert.issuer || ''}
-                      onChange={(e) => updateCertification(index, 'issuer', e.target.value)}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="Amazon Web Services"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">Date</label>
-                    <input
-                      type="text"
-                      value={cert.date || ''}
-                      onChange={(e) => updateCertification(index, 'date', e.target.value)}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="2023"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">URL</label>
-                    <input
-                      type="url"
-                      value={cert.url || ''}
-                      onChange={(e) => updateCertification(index, 'url', e.target.value)}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="https://aws.amazon.com/certification/"
-                    />
-                  </div>
-                </div>
-                
-                <div className="mt-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="block text-white/80 text-sm font-medium">Description</label>
-                    <ToolbarWrapper />
-                  </div>
-                  <WYSIWYGEditor
-                    value={cert.description || ''}
-                    onChange={(value) => updateCertification(index, 'description', value)}
-                    rows={3}
-                    placeholder="Describe the certification, its relevance, or what you learned..."
-                  />
-                </div>
-              </div>
-            ))}
-            
-            <button
-              onClick={addCertification}
-              className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/60 hover:text-[#80FF00] rounded-xl transition-colors flex items-center justify-center gap-2"
-            >
-              <Plus size={20} />
-              Add another Certification
-            </button>
-          </>
+          <CertificatesSection
+            data={state.cvData.certificates || []}
+            onUpdate={(data: any[]) => updateCVData('certificates', data)}
+            onAdd={() => addSection('certificates')}
+            onRemove={(index) => removeSection('certificates', index)}
+            jobData={state.jobData}
+            userId={session?.user?.id || ''}
+          />
         );
 
       // Additional sections
       case 'volunteer':
         return (
-          <>
-            {state.cvData.volunteer?.map((vol, index) => (
-              <div key={index} className="bg-white/5 rounded-xl p-6 border border-white/10">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-lg font-semibold text-white">{vol.organization || 'Organization'}</h4>
-                  <button
-                    onClick={() => {
-                      const updatedVolunteer = state.cvData.volunteer?.filter((_, i) => i !== index) || [];
-                      updateCVData('volunteer', updatedVolunteer);
-                    }}
-                    className="text-red-400 hover:text-red-300 transition-colors"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">Organization</label>
-                    <input
-                      type="text"
-                      value={vol.organization || ''}
-                      onChange={(e) => {
-                        const updatedVolunteer = [...(state.cvData.volunteer || [])];
-                        updatedVolunteer[index] = { ...updatedVolunteer[index], organization: e.target.value };
-                        updateCVData('volunteer', updatedVolunteer);
-                      }}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="Red Cross"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">Position</label>
-                    <input
-                      type="text"
-                      value={vol.position || ''}
-                      onChange={(e) => {
-                        const updatedVolunteer = [...(state.cvData.volunteer || [])];
-                        updatedVolunteer[index] = { ...updatedVolunteer[index], position: e.target.value };
-                        updateCVData('volunteer', updatedVolunteer);
-                      }}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="Volunteer Coordinator"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">Start Date</label>
-                    <input
-                      type="text"
-                      value={vol.startDate || ''}
-                      onChange={(e) => {
-                        const updatedVolunteer = [...(state.cvData.volunteer || [])];
-                        updatedVolunteer[index] = { ...updatedVolunteer[index], startDate: e.target.value };
-                        updateCVData('volunteer', updatedVolunteer);
-                      }}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="January 2022"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">End Date</label>
-                    <input
-                      type="text"
-                      value={vol.endDate || ''}
-                      onChange={(e) => {
-                        const updatedVolunteer = [...(state.cvData.volunteer || [])];
-                        updatedVolunteer[index] = { ...updatedVolunteer[index], endDate: e.target.value };
-                        updateCVData('volunteer', updatedVolunteer);
-                      }}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="December 2022"
-                    />
-                  </div>
-                </div>
-                
-                <div className="mt-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="block text-white/80 text-sm font-medium">Description</label>
-                    <ToolbarWrapper />
-                  </div>
-                  <WYSIWYGEditor
-                    value={vol.summary || ''}
-                    onChange={(value) => {
-                      const updatedVolunteer = [...(state.cvData.volunteer || [])];
-                      updatedVolunteer[index] = { ...updatedVolunteer[index], summary: value };
-                      updateCVData('volunteer', updatedVolunteer);
-                    }}
-                    rows={3}
-                    placeholder="Describe your volunteer work and impact..."
-                  />
-                </div>
-              </div>
-            ))}
-            
-            <button
-              onClick={() => {
-                const newVolunteer = {
-                  organization: '',
-                  position: '',
-                  startDate: '',
-                  endDate: '',
-                  summary: ''
-                };
-                updateCVData('volunteer', [...(state.cvData.volunteer || []), newVolunteer]);
-              }}
-              className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/60 hover:text-[#80FF00] rounded-xl transition-colors flex items-center justify-center gap-2"
-            >
-              <Plus size={20} />
-              Add another Volunteer Experience
-            </button>
-          </>
+          <VolunteerSection
+            data={state.cvData.volunteer || []}
+            onUpdate={(data: any[]) => updateCVData('volunteer', data)}
+            onAdd={() => addSection('volunteer')}
+            onRemove={(index) => removeSection('volunteer', index)}
+          />
         );
 
       case 'languages':
         return (
-          <div className="space-y-4">
-            {(state.cvData.languages || []).map((lang, index) => (
-              <div key={index} className="bg-white/5 rounded-xl p-6 border border-white/10">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-lg font-semibold text-white">
-                    {lang.language || 'Language'}
-                  </h4>
-                  <button
-                    onClick={() => {
-                      const updatedLanguages = state.cvData.languages?.filter((_, i) => i !== index) || [];
-                      updateCVData('languages', updatedLanguages);
-                    }}
-                    className="text-red-400 hover:text-red-300 transition-colors"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">Language Name</label>
-                    <input
-                      type="text"
-                      value={lang.language || ''}
-                      onChange={(e) => {
-                        const updatedLanguages = [...(state.cvData.languages || [])];
-                        updatedLanguages[index] = { ...updatedLanguages[index], language: e.target.value };
-                        updateCVData('languages', updatedLanguages);
-                      }}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="English"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">Fluency Level</label>
-                    <select
-                      value={lang.fluency || ''}
-                      onChange={(e) => {
-                        const updatedLanguages = [...(state.cvData.languages || [])];
-                        updatedLanguages[index] = { ...updatedLanguages[index], fluency: e.target.value };
-                        updateCVData('languages', updatedLanguages);
-                      }}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                    >
-                      <option value="">Select fluency level</option>
-                      <option value="Native">Native</option>
-                      <option value="Fluent">Fluent</option>
-                      <option value="Advanced">Advanced</option>
-                      <option value="Intermediate">Intermediate</option>
-                      <option value="Basic">Basic</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            ))}
-            
-            <button
-              onClick={() => {
-                const newLanguage = { language: '', fluency: '' };
-                updateCVData('languages', [...(state.cvData.languages || []), newLanguage]);
-              }}
-              className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/60 hover:text-[#80FF00] rounded-xl transition-colors flex items-center justify-center gap-2"
-            >
-              <Plus size={20} />
-              Add Language
-            </button>
-          </div>
+          <LanguagesSection
+            data={state.cvData.languages || []}
+            onUpdate={(data: any[]) => updateCVData('languages', data)}
+            onAdd={() => addSection('languages')}
+            onRemove={(index) => removeSection('languages', index)}
+          />
         );
 
       case 'interests':
         return (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-white/80 text-sm font-medium mb-2">Interests</label>
-              <textarea
-                value={state.cvData.interests?.map(interest => interest.name).join(', ') || ''}
-                onChange={(e) => {
-                  const interestNames = e.target.value.split(',').map(name => name.trim()).filter(name => name);
-                  const interests = interestNames.map(name => ({ name, keywords: [] }));
-                  updateCVData('interests', interests);
-                }}
-                rows={4}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors resize-none"
-                placeholder="Photography, Hiking, Cooking, Reading, Travel..."
-              />
-              <p className="text-white/60 text-sm mt-1">Separate interests with commas</p>
-            </div>
-          </div>
+          <InterestsSection
+            data={state.cvData.interests || []}
+            onUpdate={(data: any[]) => updateCVData('interests', data)}
+            onAdd={() => addSection('interests')}
+            onRemove={(index) => removeSection('interests', index)}
+          />
         );
 
       case 'references':
         return (
-          <>
-            {state.cvData.references?.map((ref, index) => (
-              <div key={index} className="bg-white/5 rounded-xl p-6 border border-white/10">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-lg font-semibold text-white">{ref.name || 'Reference Name'}</h4>
-                  <button
-                    onClick={() => {
-                      const updatedReferences = state.cvData.references?.filter((_, i) => i !== index) || [];
-                      updateCVData('references', updatedReferences);
-                    }}
-                    className="text-red-400 hover:text-red-300 transition-colors"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">Name</label>
-                    <input
-                      type="text"
-                      value={ref.name || ''}
-                      onChange={(e) => {
-                        const updatedReferences = [...(state.cvData.references || [])];
-                        updatedReferences[index] = { ...updatedReferences[index], name: e.target.value };
-                        updateCVData('references', updatedReferences);
-                      }}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="John Smith"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">Position</label>
-                    <input
-                      type="text"
-                      value={(ref as any).position || ''}
-                      onChange={(e) => {
-                        const updatedReferences = [...(state.cvData.references || [])];
-                        updatedReferences[index] = { ...updatedReferences[index], position: e.target.value } as any;
-                        updateCVData('references', updatedReferences);
-                      }}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="Senior Manager"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">Company</label>
-                    <input
-                      type="text"
-                      value={(ref as any).company || ''}
-                      onChange={(e) => {
-                        const updatedReferences = [...(state.cvData.references || [])];
-                        updatedReferences[index] = { ...updatedReferences[index], company: e.target.value } as any;
-                        updateCVData('references', updatedReferences);
-                      }}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="Tech Corp"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">Email</label>
-                    <input
-                      type="email"
-                      value={ref.reference || ''}
-                      onChange={(e) => {
-                        const updatedReferences = [...(state.cvData.references || [])];
-                        updatedReferences[index] = { ...updatedReferences[index], reference: e.target.value };
-                        updateCVData('references', updatedReferences);
-                      }}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="john.smith@company.com"
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
-            
-            <button
-              onClick={() => {
-                const newReference = {
-                  name: '',
-                  position: '',
-                  company: '',
-                  reference: ''
-                };
-                updateCVData('references', [...(state.cvData.references || []), newReference]);
-              }}
-              className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/60 hover:text-[#80FF00] rounded-xl transition-colors flex items-center justify-center gap-2"
-            >
-              <Plus size={20} />
-              Add another Reference
-            </button>
-          </>
+          <ReferencesSection
+            data={state.cvData.references || []}
+            onUpdate={(data: any[]) => updateCVData('references', data)}
+            onAdd={() => addSection('references')}
+            onRemove={(index) => removeSection('references', index)}
+          />
         );
 
       case 'publications':
         return (
-          <>
-            {state.cvData.publications?.map((pub, index) => (
-              <div key={index} className="bg-white/5 rounded-xl p-6 border border-white/10">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-lg font-semibold text-white">{pub.name || 'Publication Title'}</h4>
-                  <button
-                    onClick={() => {
-                      const updatedPublications = state.cvData.publications?.filter((_, i) => i !== index) || [];
-                      updateCVData('publications', updatedPublications);
-                    }}
-                    className="text-red-400 hover:text-red-300 transition-colors"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">Title</label>
-                    <input
-                      type="text"
-                      value={pub.name || ''}
-                      onChange={(e) => {
-                        const updatedPublications = [...(state.cvData.publications || [])];
-                        updatedPublications[index] = { ...updatedPublications[index], name: e.target.value };
-                        updateCVData('publications', updatedPublications);
-                      }}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="Research Paper Title"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">Publisher</label>
-                    <input
-                      type="text"
-                      value={pub.publisher || ''}
-                      onChange={(e) => {
-                        const updatedPublications = [...(state.cvData.publications || [])];
-                        updatedPublications[index] = { ...updatedPublications[index], publisher: e.target.value };
-                        updateCVData('publications', updatedPublications);
-                      }}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="Journal Name"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">Date</label>
-                    <input
-                      type="text"
-                      value={pub.releaseDate || ''}
-                      onChange={(e) => {
-                        const updatedPublications = [...(state.cvData.publications || [])];
-                        updatedPublications[index] = { ...updatedPublications[index], releaseDate: e.target.value };
-                        updateCVData('publications', updatedPublications);
-                      }}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="2023"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="block text-white/80 text-sm font-medium mb-2">URL</label>
-                    <input
-                      type="url"
-                      value={pub.url || ''}
-                      onChange={(e) => {
-                        const updatedPublications = [...(state.cvData.publications || [])];
-                        updatedPublications[index] = { ...updatedPublications[index], url: e.target.value };
-                        updateCVData('publications', updatedPublications);
-                      }}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                      placeholder="https://example.com/publication"
-                    />
-                  </div>
-                </div>
-                
-                <div className="mt-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="block text-white/80 text-sm font-medium">Summary</label>
-                    <ToolbarWrapper />
-                  </div>
-                  <WYSIWYGEditor
-                    value={pub.summary || ''}
-                    onChange={(value) => {
-                      const updatedPublications = [...(state.cvData.publications || [])];
-                      updatedPublications[index] = { ...updatedPublications[index], summary: value };
-                      updateCVData('publications', updatedPublications);
-                    }}
-                    rows={3}
-                    placeholder="Brief description of the publication..."
-                  />
-                </div>
-              </div>
-            ))}
-            
-            <button
-              onClick={() => {
-                const newPublication = {
-                  name: '',
-                  publisher: '',
-                  releaseDate: '',
-                  url: '',
-                  summary: ''
-                };
-                updateCVData('publications', [...(state.cvData.publications || []), newPublication]);
-              }}
-              className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/60 hover:text-[#80FF00] rounded-xl transition-colors flex items-center justify-center gap-2"
-            >
-              <Plus size={20} />
-              Add another Publication
-            </button>
-          </>
+          <PublicationsSection
+            data={state.cvData.publications || []}
+            onUpdate={(data: any[]) => updateCVData('publications', data)}
+            onAdd={() => addSection('publications')}
+            onRemove={(index) => removeSection('publications', index)}
+          />
         );
 
       default:
@@ -1603,9 +739,9 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
             </div>
           </div>
           
-          {/* Section Navigation */}
+          {/* Section Navigation - Using visible sections from selector */}
           <div className="flex-1 p-2 md:p-4 space-y-2 overflow-y-auto">
-            {state.availableSections.map((section) => {
+            {sidebarSections.map((section) => {
               const IconComponent = section.icon;
               const isActive = state.activeSection === section.id;
               
@@ -1649,8 +785,8 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
       {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto h-full">
         <div className="p-6">
-          {/* Dynamic Sections */}
-          {state.availableSections.map((section, index) => renderSection(section, index))}
+          {/* Dynamic Sections - Using visible sections from selector */}
+          {sidebarSections.map((section, index) => renderSection(section, index))}
 
           {/* Bottom Navigation */}
           <div className="flex items-center justify-between mt-12 pt-8 border-t border-white/10">
@@ -1697,9 +833,9 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
             </div>
             
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {additionalSections.map((section) => {
+              {addableSections.map((section) => {
                 const IconComponent = section.icon;
-                const isAlreadyAdded = state.availableSections.some(s => s.id === section.id);
+                const isAlreadyAdded = sidebarSections.some(s => s.type === section.id);
                 
                 return (
                   <motion.button

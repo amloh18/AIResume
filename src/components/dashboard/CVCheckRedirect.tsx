@@ -305,28 +305,25 @@ export default function CVCheckRedirect({ children }: CVCheckRedirectProps) {
     checkCVsAndRedirect();
   }, [authLoading, isAuthenticated, user?.id]);
 
-  // Show loading while checking - but don't block the page, render children with loading state
-  // This allows the dashboard to render immediately while checking happens in background
-  if (isChecking) {
-    // Return children immediately instead of blocking spinner
-    // The dashboard components will handle their own loading states
-    return <>{children}</>;
-  }
-
-  // Show onboarding modal if no master CV found
-  if (!isChecking && !hasMasterCV && user?.id) {
-    console.log('🔍 CVCheckRedirect - Showing onboarding modal', {
-      isChecking,
-      hasMasterCV,
-      userId: user?.id
-    });
-    return <OnboardingCarouselModal userId={user.id} />;
-  }
-
-  console.log('🔍 CVCheckRedirect - Rendering children', {
+  // CRITICAL FIX: Always render the same structure to maintain consistent hook count
+  // Conditionally show/hide content instead of conditionally returning different components
+  // This prevents "Rendered fewer hooks than expected" errors
+  
+  console.log('🔍 CVCheckRedirect - Rendering', {
     isChecking,
     hasMasterCV,
     userId: user?.id
   });
-  return <>{children}</>;
+
+  return (
+    <>
+      {/* Always render children - they handle their own loading states */}
+      {children}
+      
+      {/* Conditionally show onboarding modal overlay if needed */}
+      {!isChecking && !hasMasterCV && user?.id && (
+        <OnboardingCarouselModal userId={user.id} />
+      )}
+    </>
+  );
 }

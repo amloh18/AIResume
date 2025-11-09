@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
             }
           }
         },
-        { $sort: { count: -1 } }
+        { $sort: { count: -1 } as any }
       ];
 
       const results = await User.aggregate(pipeline);
@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
             }
           }
         },
-        { $sort: { count: -1 } }
+        { $sort: { count: -1 } as any }
       ];
 
       const results = await User.aggregate(pipeline);

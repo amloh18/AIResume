@@ -6,7 +6,7 @@ import { JobApplication } from '@/models';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authResult = await getAuthenticatedUser();
@@ -16,8 +16,9 @@ export async function POST(
 
     await getConnection();
 
+    const { id } = await params;
     const notification = await Notification.findOne({
-      _id: params.id,
+      _id: id,
       userId: authResult.userId,
     });
 

@@ -90,7 +90,11 @@ export async function POST(request: NextRequest) {
       title: sourceCV.title,
       isMaster: sourceCV.isMaster,
       hasCvData: !!sourceCV.cvData,
-      hasData: !!sourceCV.data // Legacy field check
+      hasData: !!sourceCV.data, // Legacy field check
+      hasStructure: !!(sourceCV.cvData?.structure),
+      hasContent: !!(sourceCV.cvData?.content),
+      templateId: sourceCV.templateId,
+      templateName: sourceCV.templateName
     });
 
     // Generate unique title to avoid conflicts
@@ -122,19 +126,28 @@ export async function POST(request: NextRequest) {
       userId
     );
 
-    // Create the duplicated CV
+    // Deep copy cvData to preserve structure/content map
+    // This ensures structure and content are properly preserved during duplication
+    const duplicatedCvData = sourceCV.cvData ? JSON.parse(JSON.stringify(sourceCV.cvData)) : sourceCV.cvData;
+    
+    // Ensure structure and content are preserved
+    if (duplicatedCvData && !duplicatedCvData.structure) {
+      console.log('⚠️ CV Duplicate API - Source CV missing structure, will be initialized in studio');
+    }
+
+    // Create the duplicated CV with deep copies to preserve all data
     const duplicatedCV = new CV({
       userId: toObjectId(userId),
       title: uniqueTitle,
-      cvData: sourceCV.cvData, // Copy the CV data (JSON Resume format)
-      data: sourceCV.data, // Also copy legacy data field for compatibility
+      cvData: duplicatedCvData, // Deep copied to preserve structure/content map
+      data: sourceCV.data ? JSON.parse(JSON.stringify(sourceCV.data)) : sourceCV.data, // Deep copy legacy data
       status: 'draft',
       isMaster: false, // Duplicated CVs are never master CVs
       journeyId: journeyId ? toObjectId(journeyId) : null, // Link to journey if provided
       templateId: sourceCV.templateId,
       templateName: sourceCV.templateName,
-      templateData: sourceCV.templateData,
-      styling: sourceCV.styling,
+      templateData: sourceCV.templateData ? JSON.parse(JSON.stringify(sourceCV.templateData)) : sourceCV.templateData, // Deep copy template data
+      styling: sourceCV.styling ? JSON.parse(JSON.stringify(sourceCV.styling)) : sourceCV.styling, // Deep copy styling
       metadata: {
         ...sourceCV.metadata,
         isMaster: false, // Ensure duplicated CVs are never master CVs
@@ -149,13 +162,18 @@ export async function POST(request: NextRequest) {
 
     // Save the duplicated CV
     const savedCV = await duplicatedCV.save();
-    console.log('✅ CV Duplicate API - CV duplicated successfully:', {
+    console.log('✅ CV Duplicate API - CV duplicated successfully with preserved structure:', {
       newCvId: savedCV._id,
       title: savedCV.title,
       hasCvData: !!savedCV.cvData,
+      hasStructure: !!(savedCV.cvData?.structure),
+      hasContent: !!(savedCV.cvData?.content),
       cvDataKeys: savedCV.cvData ? Object.keys(savedCV.cvData) : [],
       hasData: !!savedCV.data,
-      dataKeys: savedCV.data ? Object.keys(savedCV.data) : []
+      dataKeys: savedCV.data ? Object.keys(savedCV.data) : [],
+      templateId: savedCV.templateId,
+      templateName: savedCV.templateName,
+      hasTemplateData: !!savedCV.templateData
     });
 
     // If journeyId is provided, update the journey to link to the new CV

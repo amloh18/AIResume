@@ -12,7 +12,7 @@ import { invalidateConfigCache } from '@/lib/config/adminConfig';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const startTime = Date.now();
   let adminContext: { adminUserId?: string; adminEmail?: string; adminRole?: string } | null = null;
@@ -45,7 +45,8 @@ export async function POST(
 
     await getConnection();
 
-    const userId = params.id;
+    const { id } = await params;
+    const userId = id;
     const body = await request.json();
     const { planKey, interval, reason } = body;
 
@@ -187,14 +188,15 @@ export async function POST(
 
     // Log failed admin action
     if (adminContext) {
+      const { id } = await params;
       await ActivityLogService.logAdminAction({
         adminUserId: adminContext.adminUserId!,
         adminEmail: adminContext.adminEmail,
         action: 'grant_plan_failed',
-        targetUserId: params.id,
+        targetUserId: id,
         actionType: 'subscription_upgrade',
         resourceType: 'user',
-        resourceId: params.id,
+        resourceId: id,
         status: 'failed',
         metadata: {
           error: error.message
