@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { PricingPlan } from '@/models';
-import { detectUserRegion, getPricingForRegion } from '@/lib/services/regionDetectionService';
+import { detectUserRegion } from '@/lib/services/regionDetectionService';
+import { getRegionalPricingFromDB, getDefaultPricingFromDB } from '@/lib/services/pricingService';
 import { getAdminPricingPlan } from '@/models/admin-models';
 
 // In-memory cache for pricing plans (static data that rarely changes)
@@ -260,22 +261,29 @@ export async function GET(request: NextRequest) {
       plans = fallbackPlans;
     }
 
+    // Get regional pricing from database once (shared across all plans)
+    let regionalPricingData = null;
+    if (regionInfo?.countryCode) {
+      regionalPricingData = await getRegionalPricingFromDB(regionInfo.countryCode);
+    }
+    if (!regionalPricingData) {
+      regionalPricingData = await getDefaultPricingFromDB();
+    }
+
     // Add promotional pricing, regional pricing, and computed fields
     const currentDate = new Date();
     const enhancedPlans = plans.map(plan => {
-      // Get regional pricing for this plan
-      const regionalPricing = getPricingForRegion(plan, regionInfo.countryCode);
       
       // Check if promotion is active
       const isPromotionActive = (plan as any).promotionValidFrom && (plan as any).promotionValidUntil &&
         new Date((plan as any).promotionValidFrom) <= currentDate && new Date((plan as any).promotionValidUntil) >= currentDate;
 
-      // Calculate effective prices (use regional if available, otherwise use plan defaults)
+      // Calculate effective prices (use regional pricing from database if available, otherwise use plan defaults)
       const basePrice = {
-        monthly: regionalPricing?.price || plan.price_monthly,
-        quarterly: regionalPricing?.price || plan.price_quarterly,
-        yearly: regionalPricing?.price || plan.price_yearly,
-        oneTime: regionalPricing?.price || plan.price_one_time
+        monthly: regionalPricingData?.monthly || plan.price_monthly,
+        quarterly: regionalPricingData?.quarterly || plan.price_quarterly,
+        yearly: regionalPricingData?.yearly || plan.price_yearly,
+        oneTime: regionalPricingData?.dayPass || plan.price_one_time
       };
 
       const effectivePrice = {
@@ -333,12 +341,20 @@ export async function GET(request: NextRequest) {
         price: plan.price_monthly || plan.price_one_time || 0,
         billingCycle: plan.billingCycle,
         // Regional pricing info
-        regionalPricing: {
-          ...regionalPricing,
+        regionalPricing: regionalPricingData ? {
           region: regionInfo.countryCode,
           regionName: regionInfo.countryName,
-          currency: regionalPricing?.currency || regionInfo.currency,
-          currencySymbol: regionInfo.currencySymbol
+          currency: regionalPricingData.currency,
+          currencySymbol: regionalPricingData.currencySymbol,
+          price: basePrice.monthly, // For backward compatibility
+          displayPrice: `${regionalPricingData.currencySymbol}${basePrice.monthly}`
+        } : {
+          region: regionInfo.countryCode,
+          regionName: regionInfo.countryName,
+          currency: regionInfo.currency,
+          currencySymbol: regionInfo.currencySymbol,
+          price: plan.price_monthly || 0,
+          displayPrice: `${regionInfo.currencySymbol}${plan.price_monthly || 0}`
         },
         // Time-based metadata
         durationInfo,

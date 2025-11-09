@@ -144,6 +144,8 @@ const coverLetterSchema = new Schema<ICoverLetter>({
 });
 
 // Indexes for efficient queries
+// CRITICAL: Simple userId index for fast lookups (most common query pattern)
+coverLetterSchema.index({ userId: 1 }); // Primary index for user queries - should reduce query time from 1400ms to <100ms
 coverLetterSchema.index({ userId: 1, createdAt: -1 }); // User's cover letters by date
 coverLetterSchema.index({ journeyId: 1, userId: 1 }); // Unique cover letter per journey (prevents duplicates)
 coverLetterSchema.index({ 'metadata.tags': 1 }); // Tag-based searches

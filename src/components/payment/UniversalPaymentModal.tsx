@@ -370,24 +370,39 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
     if (plan.key === 'free') return 0;
     
     // Use regional pricing if available (attached when plan is selected)
+    // This should already contain the full price for quarterly/yearly plans
     const regionalPrice = (plan as any).regionalPricing;
     if (regionalPrice?.price) {
-      // Use promotional pricing if available
+      // Use promotional pricing if available, but ensure we use the correct interval price
       const promotional = getPromotionalPricing(plan);
       if (promotional && promotional.pricing) {
-        return promotional.pricing.monthly || promotional.pricing.quarterly || promotional.pricing.yearly || promotional.pricing.oneTime || regionalPrice.price;
+        // For quarterly/yearly, use the full price, not monthly equivalent
+        if (plan.key === 'pro_quarterly' && promotional.pricing.quarterly) {
+          return promotional.pricing.quarterly;
+        }
+        if (plan.key === 'pro_yearly' && promotional.pricing.yearly) {
+          return promotional.pricing.yearly;
+        }
+        if (plan.key === 'pro_monthly' && promotional.pricing.monthly) {
+          return promotional.pricing.monthly;
+        }
+        // Fallback to regional price which should already be the correct full price
+        return regionalPrice.price;
       }
+      // Regional price should already be the full price for the selected plan
       return regionalPrice.price;
     }
     
-    // Fallback: Get price from plan based on key
+    // Fallback: Get price from plan based on key - use FULL price for quarterly/yearly
     const dbPlan = plan as unknown as DatabasePricingPlan;
     let planPrice = 0;
     if (plan.key === 'pro_monthly') {
       planPrice = dbPlan.price_monthly || 0;
     } else if (plan.key === 'pro_quarterly') {
+      // Use full quarterly price (one-time charge)
       planPrice = dbPlan.price_quarterly || 0;
     } else if (plan.key === 'pro_yearly') {
+      // Use full yearly price (one-time charge)
       planPrice = dbPlan.price_yearly || 0;
     } else if (plan.key === 'day_pass') {
       planPrice = dbPlan.price_one_time || 0;
@@ -418,6 +433,10 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
   const getBillingInterval = (plan: PricingPlan) => {
     if (plan.key === 'day_pass') return 'one-time';
     if (plan.key === 'free') return 'free';
+    // Determine interval from plan key first, then fallback to billingCycle
+    if (plan.key === 'pro_quarterly') return 'quarterly';
+    if (plan.key === 'pro_yearly') return 'yearly';
+    if (plan.key === 'pro_monthly') return 'monthly';
     return plan.billingCycle || 'monthly';
   };
 
@@ -743,29 +762,25 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                           return (
                             <motion.div
                               key={plan.key}
-                              className={`group relative bg-gradient-to-br from-white/5 to-white/10 dark:from-gray-800/50 dark:to-gray-900/50 backdrop-blur-xl border border-white/10 dark:border-gray-700 rounded-2xl p-4 flex flex-col cursor-pointer transition-all ${
-                                isCurrent || isSelected
-                                  ? 'ring-2 ring-lime-400/50'
-                                  : plan.isPopular
-                                  ? 'ring-2 ring-lime-400/50'
-                                  : ''
+                              className={`group relative bg-gradient-to-br from-white/5 to-white/10 dark:from-gray-800/50 dark:to-gray-900/50 backdrop-blur-xl rounded-2xl p-4 flex flex-col cursor-pointer transition-all ${
+                                isSelected
+                                  ? 'border-2 border-lime-400 ring-2 ring-lime-400/50'
+                                  : 'border border-white/10 dark:border-gray-700'
                               }`}
                               initial={{ opacity: 0, y: 50 }}
                               animate={{ opacity: 1, y: 0 }}
                               transition={{ duration: 0.6, delay: 0.1 * index }}
-                              whileHover={{ 
-                                scale: 1.02,
-                                y: -5,
-                                boxShadow: "0 15px 30px -5px rgba(132, 204, 22, 0.3)"
-                              }}
                               onClick={() => {
-                                // Determine the correct price based on plan key and billing interval
+                                // Determine the correct FULL price based on plan key and billing interval
+                                // IMPORTANT: Use the actual plan price, not regional price string which might be monthly equivalent
                                 let planPrice = 0;
                                 if (plan.key === 'pro_monthly') {
                                   planPrice = dbPlan.price_monthly || 0;
                                 } else if (plan.key === 'pro_quarterly') {
+                                  // Use FULL quarterly price (one-time charge), not monthly equivalent
                                   planPrice = dbPlan.price_quarterly || 0;
                                 } else if (plan.key === 'pro_yearly') {
+                                  // Use FULL yearly price (one-time charge), not monthly equivalent
                                   planPrice = dbPlan.price_yearly || 0;
                                 } else if (plan.key === 'day_pass') {
                                   planPrice = dbPlan.price_one_time || 0;
@@ -774,14 +789,31 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                   planPrice = effectivePrice || 0;
                                 }
                                 
-                                // Extract numeric price from regional price string if available
-                                const finalPrice = regionalPrice ? extractNumericPrice(regionalPrice) : planPrice;
+                                // For regional pricing, we need to get the regional price for the SPECIFIC interval
+                                // Don't extract from regionalPrice string as it might be the wrong interval
+                                let regionalPriceValue = planPrice; // Default to plan price
+                                
+                                // If we have regional pricing data, get the correct interval price
+                                if (regionalPricing) {
+                                  if (plan.key === 'pro_quarterly' && regionalPricing.quarterly) {
+                                    regionalPriceValue = extractNumericPrice(regionalPricing.quarterly);
+                                  } else if (plan.key === 'pro_yearly' && regionalPricing.yearly) {
+                                    regionalPriceValue = extractNumericPrice(regionalPricing.yearly);
+                                  } else if (plan.key === 'pro_monthly' && regionalPricing.monthly) {
+                                    regionalPriceValue = extractNumericPrice(regionalPricing.monthly);
+                                  } else if (plan.key === 'day_pass' && regionalPricing.dayPass) {
+                                    regionalPriceValue = extractNumericPrice(regionalPricing.dayPass);
+                                  }
+                                }
+                                
+                                // Use the regional price if available, otherwise use plan price
+                                const finalPrice = regionalPriceValue || planPrice;
                                 
                                 // Attach regional pricing to plan before selecting
                                 const planWithPricing = {
                                   ...plan,
                                   regionalPricing: {
-                                    price: finalPrice || planPrice || 0,
+                                    price: finalPrice, // This is the FULL price for the selected interval
                                     currencySymbol: currencySymbol,
                                     currency: regionalPricing?.currency || 'USD'
                                   },
@@ -791,13 +823,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                 };
                                 setSelectedPlan(planWithPricing);
                               }}
-                              style={{ willChange: 'transform' }}
                             >
-                              {/* Glow Effect */}
-                              <motion.div
-                                className="absolute inset-0 rounded-2xl bg-gradient-to-br from-lime-400/10 to-lime-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-                                style={{ filter: 'blur(20px)' }}
-                              />
                               
                               {/* Current Plan Badge */}
                               {isCurrent && (
@@ -828,20 +854,9 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                               )}
 
                               {/* Plan Icon */}
-                              <motion.div 
-                                className={`inline-flex items-center justify-center w-10 h-10 rounded-lg mb-3 bg-gradient-to-br from-lime-400 to-lime-500 shadow-lg relative z-10`}
-                                whileHover={{ 
-                                  scale: 1.1,
-                                  rotateY: 15,
-                                  boxShadow: "0 20px 40px -12px rgba(132, 204, 22, 0.5)"
-                                }}
-                                style={{
-                                  transformStyle: 'preserve-3d',
-                                  perspective: '1000px'
-                                }}
-                              >
+                              <div className="inline-flex items-center justify-center w-10 h-10 rounded-lg mb-3 bg-gradient-to-br from-lime-400 to-lime-500 shadow-lg relative z-10">
                                 <Icon size={20} className="text-white" />
-                              </motion.div>
+                              </div>
 
                               {/* Plan Name */}
                               <h3 className="text-base font-bold mb-2 text-gray-900 dark:text-white relative z-10">{plan.name}</h3>

@@ -4,7 +4,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { Settings, Menu, X } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { getTopBarClasses } from '@/lib/utils/themeUtils';
 import UserAvatar from '@/components/ui/UserAvatar';
 import { useUserData } from '@/lib/hooks/useUserData';
@@ -24,6 +24,8 @@ const TopBar: React.FC<TopBarProps> = ({
   showMenuButton = true
 }) => {
   const router = useRouter();
+  const pathname = usePathname();
+  const isAdminRoute = pathname ? pathname.startsWith('/admin') : false;
   const topBarClasses = getTopBarClasses();
   const { data: session } = useSession();
   const { userData } = useUserData();
@@ -80,8 +82,8 @@ const TopBar: React.FC<TopBarProps> = ({
           {/* Search Bar */}
           <GlobalSearchBar />
 
-          {/* Notification Center */}
-          <NotificationCenter />
+          {/* Notification Center - Hidden on admin routes */}
+          {!isAdminRoute && <NotificationCenter />}
 
           {/* Settings */}
           <motion.button

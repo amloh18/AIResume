@@ -6,7 +6,8 @@ import { getAdminPricingPlan } from '@/models/admin-models';
 import User from '@/models/User';
 import { stripe } from '@/lib/payment/stripe';
 import { razorpay } from '@/lib/payment/razorpay';
-import { detectUserRegion, getPricingForRegion } from '@/lib/services/regionDetectionService';
+import { detectUserRegion } from '@/lib/services/regionDetectionService';
+import { getRegionalPricingFromDB, getDefaultPricingFromDB } from '@/lib/services/pricingService';
 import Coupon from '@/models/Coupon';
 
 export async function POST(request: NextRequest) {
@@ -118,10 +119,27 @@ async function handleDayPassPayment(
   regionInfo: any,
   couponDiscount?: any
 ) {
-  // Get regional pricing
-  const regionalPrice = getPricingForRegion(plan, regionInfo.countryCode);
-  let amount = (regionalPrice?.price || plan.price_one_time || 0) * 100; // Convert to cents/paisa
-  const currency = regionalPrice?.currency || plan.currency || 'USD';
+  // Get regional pricing from database
+  let regionalPricingData = null;
+  if (regionInfo?.countryCode) {
+    regionalPricingData = await getRegionalPricingFromDB(regionInfo.countryCode);
+  }
+  
+  // Fallback to default pricing if region not found
+  if (!regionalPricingData) {
+    regionalPricingData = await getDefaultPricingFromDB();
+  }
+  
+  // Use regional pricing if available, otherwise fallback to database price
+  let amount: number;
+  let currency: string;
+  if (regionalPricingData) {
+    amount = regionalPricingData.dayPass * 100; // Convert to cents/paisa
+    currency = regionalPricingData.currency;
+  } else {
+    amount = (plan.price_one_time || 0) * 100;
+    currency = plan.currency || 'USD';
+  }
   
   // Apply coupon discount
   if (couponDiscount && couponDiscount.type === 'percentage') {
@@ -135,8 +153,8 @@ async function handleDayPassPayment(
       return NextResponse.json({ error: 'Stripe is not configured' }, { status: 500 });
     }
     try {
-      // Use region-specific Stripe price ID if available, otherwise create payment intent
-      const stripePriceId = regionalPrice?.stripePriceId;
+      // Use Stripe price ID from plan (regional pricing doesn't have separate price IDs)
+      const stripePriceId = plan.stripePriceId_one_time;
       
       if (stripePriceId) {
         // Use existing Stripe price
@@ -258,6 +276,8 @@ async function handleDayPassPayment(
   return NextResponse.json({ error: 'Unsupported payment provider' }, { status: 400 });
 }
 
+// Note: extractNumericPrice function removed - prices are now numeric from database
+
 async function handleProPlanPayment(
   plan: any, 
   user: any, 
@@ -268,12 +288,21 @@ async function handleProPlanPayment(
   regionInfo?: any,
   couponDiscount?: any
 ) {
-  // Get regional pricing
-  const regionalPrice = regionInfo ? getPricingForRegion(plan, regionInfo.countryCode) : null;
+  // Get regional pricing from database
+  let regionalPricingData = null;
+  if (regionInfo?.countryCode) {
+    regionalPricingData = await getRegionalPricingFromDB(regionInfo.countryCode);
+  }
   
-  // Determine the correct price based on interval
+  // Fallback to default pricing if region not found
+  if (!regionalPricingData) {
+    regionalPricingData = await getDefaultPricingFromDB();
+  }
+  
+  // Determine the correct price based on interval - use database pricing
   let priceId: string | undefined;
   let amount: number;
+  let currency: string;
   let paymentMode: 'payment' | 'subscription' = 'subscription'; // Default to subscription
   
   // Monthly = recurring subscription, Quarterly/Yearly = one-time payment
@@ -282,16 +311,36 @@ async function handleProPlanPayment(
   }
 
   if (provider === 'stripe') {
-    // Get the appropriate Stripe price ID (use regional if available)
+    // Use regional pricing from database if available, otherwise fallback to plan prices
     if (interval === 'monthly') {
-      priceId = regionalPrice?.stripePriceId || plan.stripePriceId_monthly;
-      amount = (regionalPrice?.price || plan.price_monthly || 0) * 100;
+      priceId = plan.stripePriceId_monthly;
+      if (regionalPricingData) {
+        amount = regionalPricingData.monthly * 100;
+        currency = regionalPricingData.currency;
+      } else {
+        amount = (plan.price_monthly || 0) * 100;
+        currency = plan.currency || 'USD';
+      }
     } else if (interval === 'quarterly') {
-      priceId = regionalPrice?.stripePriceId || plan.stripePriceId_quarterly;
-      amount = (regionalPrice?.price || plan.price_quarterly || 0) * 100;
+      priceId = plan.stripePriceId_quarterly;
+      if (regionalPricingData) {
+        // Use FULL quarterly price from database (e.g., ₹549)
+        amount = regionalPricingData.quarterly * 100;
+        currency = regionalPricingData.currency;
+      } else {
+        amount = (plan.price_quarterly || 0) * 100;
+        currency = plan.currency || 'USD';
+      }
     } else if (interval === 'yearly') {
-      priceId = regionalPrice?.stripePriceId || plan.stripePriceId_yearly;
-      amount = (regionalPrice?.price || plan.price_yearly || 0) * 100;
+      priceId = plan.stripePriceId_yearly;
+      if (regionalPricingData) {
+        // Use FULL yearly price from database (e.g., ₹1,999)
+        amount = regionalPricingData.yearly * 100;
+        currency = regionalPricingData.currency;
+      } else {
+        amount = (plan.price_yearly || 0) * 100;
+        currency = plan.currency || 'USD';
+      }
     }
     
     // Apply coupon discount
@@ -301,10 +350,6 @@ async function handleProPlanPayment(
       } else if (couponDiscount.type === 'fixed') {
         amount = Math.max(0, amount - (couponDiscount.value * 100));
       }
-    }
-
-    if (!priceId) {
-      return NextResponse.json({ error: 'Price not configured for this plan' }, { status: 400 });
     }
 
     if (!stripe) {
@@ -329,16 +374,11 @@ async function handleProPlanPayment(
         });
       }
 
-      // Create Stripe Checkout Session
+      // For one-time payments (quarterly/yearly), use line_items with amount to ensure correct currency
+      // For subscriptions (monthly), use priceId if available, otherwise use line_items with amount
       const sessionConfig: any = {
         customer: customerId,
         payment_method_types: ['card'],
-        line_items: [
-          {
-            price: priceId,
-            quantity: 1,
-          },
-        ],
         mode: paymentMode,
         success_url: `${returnUrl || process.env.NEXTAUTH_URL}/dashboard?success=true&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${returnUrl || process.env.NEXTAUTH_URL}/dashboard/settings?canceled=true`,
@@ -352,6 +392,65 @@ async function handleProPlanPayment(
           couponId: couponDiscount?.id || ''
         }
       };
+
+      // For one-time payments (quarterly/yearly), use amount directly to ensure correct currency
+      if (paymentMode === 'payment') {
+        sessionConfig.line_items = [
+          {
+            price_data: {
+              currency: currency.toLowerCase(),
+              product_data: {
+                name: `${plan.name} - ${interval === 'quarterly' ? '90 days' : '365 days'}`,
+                description: interval === 'quarterly' 
+                  ? 'Quarterly plan - 90 days access charged together'
+                  : 'Yearly plan - 365 days access charged together'
+              },
+              unit_amount: amount, // Already in cents
+            },
+            quantity: 1,
+          },
+        ];
+      } else {
+        // For subscriptions (monthly), try to use priceId if available and currency matches
+        // Otherwise use price_data to ensure correct currency
+        if (priceId) {
+          // Check if we can use the priceId (only if currency matches)
+          // For now, use price_data to ensure correct regional currency
+          sessionConfig.line_items = [
+            {
+              price_data: {
+                currency: currency.toLowerCase(),
+                product_data: {
+                  name: `${plan.name} - Monthly`,
+                  description: 'Monthly subscription plan'
+                },
+                recurring: {
+                  interval: 'month',
+                },
+                unit_amount: amount, // Already in cents
+              },
+              quantity: 1,
+            },
+          ];
+        } else {
+          sessionConfig.line_items = [
+            {
+              price_data: {
+                currency: currency.toLowerCase(),
+                product_data: {
+                  name: `${plan.name} - Monthly`,
+                  description: 'Monthly subscription plan'
+                },
+                recurring: {
+                  interval: 'month',
+                },
+                unit_amount: amount, // Already in cents
+              },
+              quantity: 1,
+            },
+          ];
+        }
+      }
 
       // For subscriptions (monthly), add subscription_data
       if (paymentMode === 'subscription') {
@@ -379,14 +478,34 @@ async function handleProPlanPayment(
     }
 
   } else if (provider === 'razorpay') {
-    // For Razorpay, we'll use Checkout (embedded form) for better UX
-    // Calculate amount based on interval
+    // For Razorpay, use database pricing
+    // Calculate amount based on interval using regional pricing from database
     if (interval === 'monthly') {
-      amount = (regionalPrice?.price || plan.price_monthly || 0) * 100; // Convert to paise
+      if (regionalPricingData) {
+        amount = regionalPricingData.monthly * 100; // Convert to paise
+        currency = regionalPricingData.currency;
+      } else {
+        amount = (plan.price_monthly || 0) * 100;
+        currency = plan.currency || 'INR';
+      }
     } else if (interval === 'quarterly') {
-      amount = (regionalPrice?.price || plan.price_quarterly || 0) * 100;
+      if (regionalPricingData) {
+        // Use FULL quarterly price from database (e.g., ₹549)
+        amount = regionalPricingData.quarterly * 100;
+        currency = regionalPricingData.currency;
+      } else {
+        amount = (plan.price_quarterly || 0) * 100;
+        currency = plan.currency || 'INR';
+      }
     } else if (interval === 'yearly') {
-      amount = (regionalPrice?.price || plan.price_yearly || 0) * 100;
+      if (regionalPricingData) {
+        // Use FULL yearly price from database (e.g., ₹1,999)
+        amount = regionalPricingData.yearly * 100;
+        currency = regionalPricingData.currency;
+      } else {
+        amount = (plan.price_yearly || 0) * 100;
+        currency = plan.currency || 'INR';
+      }
     }
     
     // Apply coupon discount
@@ -397,8 +516,6 @@ async function handleProPlanPayment(
         amount = Math.max(0, amount - (couponDiscount.value * 100));
       }
     }
-    
-    const currency = regionalPrice?.currency || plan.currency || 'INR';
 
     if (!razorpay) {
       return NextResponse.json({ error: 'Razorpay is not configured' }, { status: 500 });

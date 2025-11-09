@@ -305,16 +305,12 @@ export default function CVCheckRedirect({ children }: CVCheckRedirectProps) {
     checkCVsAndRedirect();
   }, [authLoading, isAuthenticated, user?.id]);
 
-  // Show loading while checking
+  // Show loading while checking - but don't block the page, render children with loading state
+  // This allows the dashboard to render immediately while checking happens in background
   if (isChecking) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lime-500 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Loading Dashboard...</p>
-        </div>
-      </div>
-    );
+    // Return children immediately instead of blocking spinner
+    // The dashboard components will handle their own loading states
+    return <>{children}</>;
   }
 
   // Show onboarding modal if no master CV found

@@ -136,6 +136,59 @@ export class CVJourneyLookupService {
   }
 
   /**
+   * Find journeys for multiple CV IDs in a single batch request (performance optimization)
+   * This eliminates the N+1 query problem by fetching all journeys in one API call
+   */
+  static async findJourneysByCVIds(cvIds: string[], userId: string): Promise<Map<string, CVJourneyInfo>> {
+    try {
+      if (!cvIds || cvIds.length === 0) {
+        return new Map();
+      }
+
+      console.log('🔍 CVJourneyLookupService - Batch finding journeys for CV IDs:', cvIds.length);
+      
+      // Use batch endpoint with comma-separated CV IDs
+      const cvIdsParam = cvIds.join(',');
+      const response = await fetch(`/api/application-journey?userId=${userId}&cvIds=${cvIdsParam}`);
+      
+      if (!response.ok) {
+        console.log('❌ Batch journey fetch failed:', response.status);
+        return new Map();
+      }
+      
+      const data = await response.json();
+      
+      if (data.success && data.data?.journeys) {
+        const journeysMap = new Map<string, CVJourneyInfo>();
+        
+        data.data.journeys.forEach((journey: any) => {
+          if (journey.cvId) {
+            journeysMap.set(journey.cvId, {
+              journeyId: journey.journeyId || journey.id,
+              cvId: journey.cvId,
+              coverLetterId: journey.coverLetterId,
+              jobId: journey.jobId,
+              userId: journey.userId,
+              status: journey.status,
+              currentStep: journey.currentStep,
+              jobTitle: journey.jobTitle,
+              company: journey.company
+            });
+          }
+        });
+        
+        console.log(`✅ Batch found ${journeysMap.size} journeys for ${cvIds.length} CVs`);
+        return journeysMap;
+      }
+      
+      return new Map();
+    } catch (error) {
+      console.error('❌ Error batch finding journeys by CV IDs:', error);
+      return new Map();
+    }
+  }
+
+  /**
    * Get comprehensive journey info for studio initialization
    */
   static async getJourneyInfoForStudio(

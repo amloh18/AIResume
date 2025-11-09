@@ -5,6 +5,7 @@ import { useUnifiedAuth } from '@/lib/hooks/useUnifiedAuth';
 import { useUserData } from '@/lib/hooks/useUserData';
 import { MobileSidebarProvider, useMobileSidebar } from '@/contexts/MobileSidebarContext';
 import { JobJourneyProvider } from '@/contexts/JobJourneyContext';
+import { DashboardDataProvider } from '@/contexts/DashboardDataContext';
 import OptimizedNavigation from './OptimizedNavigation';
 // DashboardRouter removed - using children prop directly
 import CVCheckRedirect from './CVCheckRedirect';
@@ -66,9 +67,11 @@ const OptimizedDashboardLayout: React.FC<OptimizedDashboardLayoutProps> = ({ chi
   return (
     <MobileSidebarProvider>
       <JobJourneyProvider>
-        <DashboardContent>
-          {children}
-        </DashboardContent>
+        <DashboardDataProvider>
+          <DashboardContent>
+            {children}
+          </DashboardContent>
+        </DashboardDataProvider>
       </JobJourneyProvider>
     </MobileSidebarProvider>
   );
