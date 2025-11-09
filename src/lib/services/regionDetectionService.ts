@@ -67,11 +67,37 @@ export async function detectUserRegion(ip?: string): Promise<RegionInfo> {
  * Detect region from IP address using multiple geolocation services
  */
 async function detectRegionFromIP(ip: string): Promise<RegionInfo> {
+  // If no IP provided, use LocationService logic (which tries timezone first)
+  if (!ip) {
+    try {
+      const locationData = await LocationService.getLocationData();
+      return {
+        countryCode: locationData.countryCode,
+        countryName: locationData.country,
+        currency: locationData.currency,
+        currencySymbol: locationData.currencySymbol,
+        paymentPartner: locationData.paymentPartner
+      };
+    } catch (error) {
+      console.warn('LocationService fallback failed:', error);
+      // Continue with IP-based detection
+    }
+  }
+
   // Remove port if present
   const cleanIP = ip.split(':')[0];
-  
-  // List of IP geolocation services (free tier)
+
+  // List of IP geolocation services with improved reliability
   const services = [
+    {
+      url: `https://api.country.is/${cleanIP}`,
+      parse: (data: any) => ({
+        code: data.country,
+        name: data.country, // Limited data but reliable
+        currency: 'USD',
+        currencySymbol: '$'
+      })
+    },
     {
       url: `https://ipapi.co/${cleanIP}/json/`,
       parse: (data: any) => ({
@@ -81,35 +107,20 @@ async function detectRegionFromIP(ip: string): Promise<RegionInfo> {
         currencySymbol: data.currency_symbol || '$'
       })
     },
-    {
-      url: `https://ip-api.com/json/${cleanIP}`,
-      parse: (data: any) => ({
-        code: data.countryCode,
-        name: data.country,
-        currency: 'USD', // ip-api.com doesn't provide currency, use default
-        currencySymbol: '$'
-      })
-    },
-    {
-      url: `https://api.country.is/${cleanIP}`,
-      parse: (data: any) => ({
-        code: data.country,
-        name: data.country, // country.is doesn't provide name
-        currency: 'USD',
-        currencySymbol: '$'
-      })
-    }
+    // Removed ip-api.com as it requires paid SSL certificate
   ];
 
   for (const service of services) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000);
-      
+      // Increased timeout to 5 seconds for better reliability
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
       const response = await fetch(service.url, {
         signal: controller.signal,
         headers: {
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'User-Agent': 'CVCircle/1.0'
         }
       });
 
@@ -125,8 +136,8 @@ async function detectRegionFromIP(ip: string): Promise<RegionInfo> {
       }
 
       const countryCode = parsed.code.toUpperCase();
-      
-      // Get currency and payment partner from LocationService
+
+      // Get currency and payment partner from LocationService mappings
       const locationData = await LocationService.getLocationData();
       const currencyInfo = locationData.currency || parsed.currency || 'USD';
       const paymentPartner = locationData.paymentPartner || (currencyInfo === 'INR' ? 'razorpay' : 'stripe');
@@ -142,6 +153,20 @@ async function detectRegionFromIP(ip: string): Promise<RegionInfo> {
       console.warn(`Region detection service ${service.url} failed:`, error);
       continue;
     }
+  }
+
+  // If all services fail, try LocationService as final fallback
+  try {
+    const locationData = await LocationService.getLocationData();
+    return {
+      countryCode: locationData.countryCode,
+      countryName: locationData.country,
+      currency: locationData.currency,
+      currencySymbol: locationData.currencySymbol,
+      paymentPartner: locationData.paymentPartner
+    };
+  } catch (error) {
+    console.warn('All region detection methods failed:', error);
   }
 
   // Default fallback
@@ -210,4 +235,3 @@ export function getPricingForRegion(
 export function clearRegionCache(): void {
   regionCache.clear();
 }
-

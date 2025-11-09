@@ -15,6 +15,7 @@ import EditJobModal from '../modals/EditJobModal';
 import toast from 'react-hot-toast';
 import { useJobInsights, useJobFallbacks, formatJobDate, formatJobSalary, formatJobUrl } from '@/hooks/useJobInsights';
 import { CVJourney } from '@/types/cv';
+import { useRouter } from 'next/navigation';
 
 interface JobApplication {
   id: string;
@@ -71,6 +72,7 @@ const JobModal: React.FC<JobModalProps> = ({
   onRefresh
 }) => {
   const { user } = useUnifiedAuth();
+  const router = useRouter();
   const [isCreatingJourney, setIsCreatingJourney] = useState(false);
   const [journeys, setJourneys] = useState<CVJourney[]>(initialJourneys);
   const [loadingJourneys, setLoadingJourneys] = useState(false);
@@ -446,9 +448,9 @@ ${userName}`
     // Navigate to studio with journey context using determined mode
     const url = `/studio?journeyId=${journey.id}&type=cv&mode=${mode}`;
     if (journey.cvId) {
-      window.location.href = `${url}&cvId=${journey.cvId}`;
+      router.push(`${url}&cvId=${journey.cvId}`);
     } else {
-      window.location.href = url;
+      router.push(url);
     }
   };
 

@@ -169,6 +169,9 @@
     "util": "^0.12.5"
   },
   "overrides": {
-    "jose": "4.14.4"
+    "jose": "4.14.4",
+    "react": "$react",
+    "react-dom": "$react-dom",
+    "rimraf": "^5.0.0"
   }
 }

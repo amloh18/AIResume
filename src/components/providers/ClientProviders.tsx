@@ -1,7 +1,6 @@
 'use client';
 
 import { ReactNode, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
 import SessionProvider from './SessionProvider';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { AdminAuthProvider } from '@/contexts/AdminAuthContext';
@@ -15,68 +14,53 @@ import { NotificationProvider } from '@/contexts/NotificationContext';
 import SessionCleanup from '@/components/SessionCleanup';
 import { setupEventErrorHandling } from '@/lib/utils/errorHandler';
 import { Toaster } from '@/components/ui/toaster';
+import { Session } from 'next-auth';
+import ClientErrorBoundary from './ClientErrorBoundary';
 
 interface ClientProvidersProps {
   children: ReactNode;
+  session?: Session | null; // Session from getServerSession
 }
 
 function ConditionalProviders({ children }: ClientProvidersProps) {
-  const pathname = usePathname();
-  const isAdminRoute = pathname?.startsWith('/admin');
-
-  // For admin routes, use AdminAuthProvider instead of AuthProvider
-  if (isAdminRoute) {
-    return (
-      <AdminAuthProvider>
-        <ThemeProvider>
-          <LoadingProvider>
-            <PaymentModalProvider>
-              <ConsoleLoggerProvider>
-                <NotificationProvider>
-                <PerformanceMonitor />
-                <CookieConsent />
-                <SessionCleanup />
-                  <Toaster />
-                {children}
-                </NotificationProvider>
-              </ConsoleLoggerProvider>
-            </PaymentModalProvider>
-          </LoadingProvider>
-        </ThemeProvider>
-      </AdminAuthProvider>
-    );
-  }
-
-  // For regular routes, use SessionProvider
   return (
-    <SessionProvider>
-      <ThemeProvider>
-        <LoadingProvider>
-          <PaymentModalProvider>
-            <ConsoleLoggerProvider>
-              <NotificationProvider>
-              <PerformanceMonitor />
-              <CookieConsent />
-              <SessionCleanup />
-                <Toaster />
-              {children}
-              </NotificationProvider>
-            </ConsoleLoggerProvider>
-          </PaymentModalProvider>
-        </LoadingProvider>
-      </ThemeProvider>
-    </SessionProvider>
+    <ThemeProvider>
+      <LoadingProvider>
+        <PaymentModalProvider>
+          <ConsoleLoggerProvider>
+            <PerformanceMonitor />
+            <CookieConsent />
+            <SessionCleanup />
+            <Toaster />
+            {children}
+          </ConsoleLoggerProvider>
+        </PaymentModalProvider>
+      </LoadingProvider>
+    </ThemeProvider>
   );
 }
 
-export default function ClientProviders({ children }: ClientProvidersProps) {
+export default function ClientProviders({ children, session }: ClientProvidersProps) {
   useEffect(() => {
     // Setup global error handling for Event object errors
     const cleanup = setupEventErrorHandling();
-    
+
     // Cleanup on unmount
     return cleanup;
   }, []);
 
-  return <ConditionalProviders>{children}</ConditionalProviders>;
+  return (
+    <SessionProvider session={session}>
+      <AuthProvider>
+        <AdminAuthProvider>
+          {/* NotificationProvider must be inside SessionProvider to use useSession */}
+          <NotificationProvider>
+            <ClientErrorBoundary>
+              <ConditionalProviders>{children}</ConditionalProviders>
+            </ClientErrorBoundary>
+          </NotificationProvider>
+        </AdminAuthProvider>
+      </AuthProvider>
+    </SessionProvider>
+  );
 }

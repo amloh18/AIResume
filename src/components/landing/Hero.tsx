@@ -18,6 +18,9 @@ const Hero = () => {
   const [currentItem, setCurrentItem] = useState('');
   const [isTypingAction, setIsTypingAction] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [imageSrc, setImageSrc] = useState(
+    process.env.NEXT_PUBLIC_HERO_BANNER_S3_URL || '/images/herobanner.png'
+  );
 
   // Typewriter effect
   useEffect(() => {
@@ -223,7 +226,7 @@ const Hero = () => {
           >
             <div className="relative w-full h-[600px] rounded-2xl overflow-hidden">
               <Image
-                src={process.env.NEXT_PUBLIC_HERO_BANNER_S3_URL || '/images/herobanner.png'}
+                src={imageSrc}
                 alt="CV Circle Dashboard"
                 fill
                 className="object-cover object-top"
@@ -233,14 +236,14 @@ const Hero = () => {
                   transform: `translateY(${Math.min(scrollY * 0.3, 200)}px)`,
                   filter: 'drop-shadow(0 10px 20px rgba(132, 204, 22, 0.2))',
                 }}
-                onError={(e) => {
-                  console.error('Hero banner image failed to load');
-                  // Fallback: try local path if S3 URL fails
-                  const target = e.target as HTMLImageElement;
-                  const currentSrc = target.src;
+                onError={() => {
+                  // Fallback to local image if S3 URL fails
                   const localPath = '/images/herobanner.png';
-                  if (typeof window !== 'undefined' && !currentSrc.includes(localPath)) {
-                    target.src = `${window.location.origin}${localPath}`;
+                  if (imageSrc !== localPath) {
+                    console.warn('Hero banner image failed to load, falling back to local image');
+                    setImageSrc(localPath);
+                  } else {
+                    console.error('Hero banner image failed to load from both S3 and local path');
                   }
                 }}
               />

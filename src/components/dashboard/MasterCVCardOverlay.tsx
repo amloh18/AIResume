@@ -127,65 +127,10 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
     }
   }, [masterCV?.id]);
 
-  // Fetch thumbnail if missing
-  useEffect(() => {
-    // Early return conditions
-    if (!masterCV?.id) return;
-    if (thumbnailUrl) return; // Already have thumbnail
-    if (thumbnailLoading) return; // Already loading
-    if (thumbnailFetchAttemptedRef.current === masterCV.id) return; // Already attempted for this CV
-
-    const fetchThumbnail = async () => {
-      // Mark as attempted to prevent retries
-      thumbnailFetchAttemptedRef.current = masterCV.id;
-      
-      console.log('🔍 MasterCVCardOverlay - Fetching thumbnail for Master CV:', {
-        masterCVId: masterCV.id,
-        masterCVTitle: masterCV.title,
-        hasCvData: !!masterCV.cvData,
-        hasTemplateId: !!masterCV.templateId,
-        cvDataKeys: masterCV.cvData ? Object.keys(masterCV.cvData) : 'No cvData'
-      });
-      
-      try {
-        setThumbnailLoading(true);
-        const response = await fetch(`/api/cv/${masterCV.id}/generate-thumbnail`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-        
-        console.log('🔍 MasterCVCardOverlay - Thumbnail API response status:', response.status);
-        
-        if (response.ok) {
-          const result = await response.json();
-          console.log('🔍 MasterCVCardOverlay - Thumbnail API result:', result);
-          if (result.success && result.thumbnailUrl) {
-            setThumbnailUrl(result.thumbnailUrl);
-            console.log('🔍 MasterCVCardOverlay - Thumbnail URL set:', result.thumbnailUrl);
-          } else {
-            console.log('🔍 MasterCVCardOverlay - Thumbnail generation failed:', result.error);
-            // Reset attempted flag on failure so we can retry later if needed
-            thumbnailFetchAttemptedRef.current = null;
-          }
-        } else {
-          const errorResult = await response.json();
-          console.log('🔍 MasterCVCardOverlay - Thumbnail API error:', errorResult);
-          // Reset attempted flag on error so we can retry later if needed
-          thumbnailFetchAttemptedRef.current = null;
-        }
-      } catch (error) {
-        console.error('Error fetching thumbnail:', error);
-        // Reset attempted flag on error so we can retry later if needed
-        thumbnailFetchAttemptedRef.current = null;
-      } finally {
-        setThumbnailLoading(false);
-      }
-    };
-
-    fetchThumbnail();
-  }, [masterCV?.id, thumbnailUrl]); // Only depend on CV ID and thumbnail URL, not loading state
+  // REMOVED: Thumbnail generation on page load
+  // Thumbnails should be generated when leaving studio, not on every page load
+  // This was causing performance issues with POST requests during initial render
+  // Now we just use whatever thumbnail URL is already available in masterCV.thumbnail or masterCV.metadata.thumbnailUrl
 
   const fetchMasterCV = async () => {
     try {

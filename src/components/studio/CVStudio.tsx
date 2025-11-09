@@ -437,6 +437,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
   } = useJobJourney();
 
   // Debounced cover letter save function
+  // Debounced cover letter save - optimized to 1000ms for better performance
   const debouncedCoverLetterSave = useCallback(
     debounce(async () => {
       try {
@@ -488,11 +489,12 @@ const CVStudio: React.FC<CVStudioProps> = ({
         console.error('❌ Studio - Cover letter save error:', error);
         setSaveStatus('error');
       }
-    }, 2000),
+    }, 1000), // Optimized: 1000ms debounce for better balance between responsiveness and server load
     [coverLetterId, coverLetterData, coverLetterTitle, cvId, selectedJobId, userId]
   );
 
   // Debounced autosave - defined early to avoid reference errors
+  // Reduced debounce time from 2000ms to 1000ms for better responsiveness
   const debouncedSave = useCallback(
     debounce(async (data: UnifiedCVDataStructure) => {
       try {
@@ -1427,7 +1429,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
           const timeoutId = setTimeout(() => {
             debouncedSave(cvData);
             setLastSavedData(currentDataHash);
-          }, 2000); // Increased from 500ms to 2000ms
+          }, 1000); // Optimized: 1000ms debounce for better balance between responsiveness and server load
 
           return () => clearTimeout(timeoutId);
         }
@@ -4061,4 +4063,4 @@ const CVStudio: React.FC<CVStudioProps> = ({
   );
 };
 
-export default CVStudio;
+export default React.memo(CVStudio);

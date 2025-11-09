@@ -63,18 +63,7 @@ interface AuthProviderProps {
  * Must be nested inside NextAuth's SessionProvider in the app layout.
  */
 export function AuthProvider({ children }: AuthProviderProps) {
-  // Add error boundary for useSession
-  let session, status: 'loading' | 'authenticated' | 'unauthenticated';
-  try {
-    const sessionData = useSession();
-    session = sessionData.data;
-    status = sessionData.status as 'loading' | 'authenticated' | 'unauthenticated';
-  } catch (error) {
-    console.error('useSession error:', error);
-    session = null;
-    status = 'unauthenticated';
-  }
-  
+  const { data: session, status } = useSession();
   const router = useRouter();
 
   const user: User | null = session?.user ? {

@@ -3,6 +3,8 @@ import './globals.css'
 import ClientProviders from '@/components/providers/ClientProviders'
 import ResourceHints from '@/components/ResourceHints'
 import DeferredAnalytics from '@/components/DeferredAnalytics'
+import { getServerSession } from 'next-auth'
+import { authConfig } from '@/lib/auth-config'
 
 // Force dynamic rendering for all pages
 export const dynamic = 'force-dynamic'
@@ -104,16 +106,26 @@ export const metadata: Metadata = {
   category: 'technology',
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  // Fetch the session on the server - wrap in try-catch to prevent crashes
+  let session = null;
+  try {
+    session = await getServerSession(authConfig);
+  } catch (error) {
+    // Log error but don't crash the app
+    console.error('Error fetching session in RootLayout:', error);
+    // Continue with null session - app will work without session
+  }
+
   return (
     <html lang="en">
       <body>
         <ResourceHints />
-        <ClientProviders>
+        <ClientProviders session={session}>
           {children}
         </ClientProviders>
         {/* Load analytics after page is interactive */}

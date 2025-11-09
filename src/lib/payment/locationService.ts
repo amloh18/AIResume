@@ -249,6 +249,53 @@ export class LocationService {
   }
 
   static async getLocationData(): Promise<LocationData> {
+    // First, try to detect from browser timezone (more reliable for development)
+    try {
+      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+      // Try to infer country from timezone
+      const timezoneToCountry: Record<string, string> = {
+        'Asia/Kolkata': 'IN',
+        'Asia/Calcutta': 'IN',
+        'Asia/Karachi': 'PK',
+        'Asia/Dhaka': 'BD',
+        'Europe/London': 'GB',
+        'America/New_York': 'US',
+        'America/Los_Angeles': 'US',
+        'America/Toronto': 'CA',
+        'Australia/Sydney': 'AU',
+        'Europe/Paris': 'FR',
+        'Europe/Berlin': 'DE',
+        'Europe/Rome': 'IT',
+        'Europe/Madrid': 'ES',
+        'Europe/Amsterdam': 'NL',
+        'Europe/Brussels': 'BE',
+        'Europe/Vienna': 'AT',
+        'Europe/Warsaw': 'PL',
+      };
+
+      const inferredCountryCode = timezoneToCountry[timezone];
+      if (inferredCountryCode) {
+        const currencyInfo = COUNTRY_CURRENCIES[inferredCountryCode] || COUNTRY_CURRENCIES.default;
+        const paymentPartner = COUNTRY_PAYMENT_PARTNERS[inferredCountryCode] || COUNTRY_PAYMENT_PARTNERS.default;
+        const exchangeRate = EXCHANGE_RATES[currencyInfo.currency] || 1.0;
+
+        const locationData: LocationData = {
+          country: 'Detected from timezone',
+          countryCode: inferredCountryCode,
+          currency: currencyInfo.currency,
+          currencySymbol: currencyInfo.symbol,
+          paymentPartner,
+          exchangeRate
+        };
+
+        console.log('Location inferred from timezone:', locationData);
+        return locationData;
+      }
+    } catch (error) {
+      console.warn('Failed to infer location from timezone:', error);
+    }
+
     // Try multiple IP geolocation services as fallbacks
     const services = [
       { url: 'https://ipapi.co/json/', parse: (data: any) => ({ code: data.country_code, name: data.country_name }) },
@@ -295,55 +342,7 @@ export class LocationService {
       }
     }
 
-    // If all services fail, try to detect from browser language/timezone
-    try {
-      const browserLocale = navigator.language || (navigator as any).userLanguage;
-      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      
-      console.log('Browser locale:', browserLocale, 'Timezone:', timezone);
-      
-      // Try to infer country from timezone
-      const timezoneToCountry: Record<string, string> = {
-        'Asia/Kolkata': 'IN',
-        'Asia/Calcutta': 'IN',
-        'Asia/Karachi': 'PK',
-        'Asia/Dhaka': 'BD',
-        'Europe/London': 'GB',
-        'America/New_York': 'US',
-        'America/Los_Angeles': 'US',
-        'America/Toronto': 'CA',
-        'Australia/Sydney': 'AU',
-        'Europe/Paris': 'FR',
-        'Europe/Berlin': 'DE',
-        'Europe/Rome': 'IT',
-        'Europe/Madrid': 'ES',
-        'Europe/Amsterdam': 'NL',
-        'Europe/Brussels': 'BE',
-        'Europe/Vienna': 'AT',
-        'Europe/Warsaw': 'PL',
-      };
 
-      const inferredCountryCode = timezoneToCountry[timezone];
-      if (inferredCountryCode) {
-        const currencyInfo = COUNTRY_CURRENCIES[inferredCountryCode] || COUNTRY_CURRENCIES.default;
-        const paymentPartner = COUNTRY_PAYMENT_PARTNERS[inferredCountryCode] || COUNTRY_PAYMENT_PARTNERS.default;
-        const exchangeRate = EXCHANGE_RATES[currencyInfo.currency] || 1.0;
-
-        const locationData: LocationData = {
-          country: 'Detected from timezone',
-          countryCode: inferredCountryCode,
-          currency: currencyInfo.currency,
-          currencySymbol: currencyInfo.symbol,
-          paymentPartner,
-          exchangeRate
-        };
-
-        console.log('Location inferred from timezone:', locationData);
-        return locationData;
-      }
-    } catch (error) {
-      console.warn('Failed to infer location from browser:', error);
-    }
 
     // Final fallback to default values
     console.warn('All location detection methods failed, using default (US)');

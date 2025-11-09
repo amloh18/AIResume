@@ -59,6 +59,7 @@ interface CVCardOverlayProps {
   onStartEditing?: (cv: CV) => void;
   onSaveTitle?: (cvId: string) => void | Promise<void>;
   onCancelEditing?: () => void;
+  linkedJourney?: any | null; // Pre-fetched journey data to avoid API calls
 }
 
 const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
@@ -75,12 +76,15 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
   editingTitle,
   onStartEditing,
   onSaveTitle,
-  onCancelEditing
+  onCancelEditing,
+  linkedJourney: linkedJourneyProp
 }) => {
   const { data: session } = useSession();
   const [isHovered, setIsHovered] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [linkedJourney, setLinkedJourney] = useState<any>(null);
+  // Use linkedJourney from props if provided, otherwise maintain internal state (for backwards compatibility)
+  const [linkedJourneyState, setLinkedJourneyState] = useState<any>(null);
+  const linkedJourney = linkedJourneyProp !== undefined ? linkedJourneyProp : linkedJourneyState;
   const [checkingJourney, setCheckingJourney] = useState(false);
   // Initialize thumbnail from cv.thumbnail or cv.metadata.thumbnailUrl
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(
@@ -112,15 +116,20 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
     return colors[Math.abs(hash) % colors.length];
   };
 
-  // Check if CV is linked to any journey
+  // Check if CV is linked to any journey (ONLY if not provided via props)
   useEffect(() => {
+    // Skip API call if journey data is provided via props
+    if (linkedJourneyProp !== undefined) {
+      return;
+    }
+    
     const checkForLinkedJourney = async () => {
       if (!session?.user?.id || !cv.id) return;
       
       try {
         setCheckingJourney(true);
         const journey = await CVJourneyLookupService.findJourneyByCVId(cv.id, session.user.id);
-        setLinkedJourney(journey);
+        setLinkedJourneyState(journey);
       } catch (error) {
         console.error('Error checking for linked journey:', error);
       } finally {
@@ -129,7 +138,7 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
     };
 
     checkForLinkedJourney();
-  }, [cv.id, session?.user?.id]);
+  }, [cv.id, session?.user?.id, linkedJourneyProp]);
 
   // Track if we've attempted to fetch thumbnail to prevent loops
   const thumbnailFetchAttemptedRef = useRef<string | null>(null);
@@ -141,50 +150,10 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
     }
   }, [cv.id]);
 
-  // Fetch thumbnail if missing
-  useEffect(() => {
-    // Early return conditions
-    if (!cv?.id) return;
-    if (thumbnailUrl) return; // Already have thumbnail
-    if (thumbnailLoading) return; // Already loading
-    if (thumbnailFetchAttemptedRef.current === cv.id) return; // Already attempted for this CV
-
-    const fetchThumbnail = async () => {
-      // Mark as attempted to prevent retries
-      thumbnailFetchAttemptedRef.current = cv.id;
-      
-      try {
-        setThumbnailLoading(true);
-        const response = await fetch(`/api/cv/${cv.id}/generate-thumbnail`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
-        
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success && result.thumbnailUrl) {
-            setThumbnailUrl(result.thumbnailUrl);
-          } else {
-            // Reset attempted flag on failure so we can retry later if needed
-            thumbnailFetchAttemptedRef.current = null;
-          }
-        } else {
-          // Reset attempted flag on error so we can retry later if needed
-          thumbnailFetchAttemptedRef.current = null;
-        }
-      } catch (error) {
-        console.error('Error fetching thumbnail:', error);
-        // Reset attempted flag on error so we can retry later if needed
-        thumbnailFetchAttemptedRef.current = null;
-      } finally {
-        setThumbnailLoading(false);
-      }
-    };
-
-    fetchThumbnail();
-  }, [cv.id, thumbnailUrl]); // Only depend on CV ID and thumbnail URL, not loading state
+  // REMOVED: Thumbnail generation on page load
+  // Thumbnails should be generated when leaving studio, not on every page load
+  // This was causing performance issues with POST requests during initial render
+  // Now we just use whatever thumbnail URL is already available in cv.thumbnail or cv.metadata.thumbnailUrl
 
   const formatDate = (dateString: string) => {
     return formatDetailedTime(dateString);

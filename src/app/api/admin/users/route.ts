@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
         total: totalCount,
         pages: Math.ceil(totalCount / limit)
       }
-    });
+    }, { headers: { 'Cache-Control': 'no-store' } });
 
   } catch (error: any) {
     console.error('Error fetching users:', error);

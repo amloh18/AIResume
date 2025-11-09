@@ -4,7 +4,7 @@ import { getAuthenticatedUser } from '@/lib/auth-helpers';
 import JobApplication from '@/models/JobApplication';
 import CV from '@/models/CV';
 import CoverLetter from '@/models/CoverLetter';
-import ApplicationJourney from '@/models/ApplicationJourney';
+import { ApplicationJourney } from '@/models/ApplicationJourney';
 import mongoose from 'mongoose';
 
 export async function GET(request: NextRequest) {
@@ -247,7 +247,7 @@ export async function GET(request: NextRequest) {
           }
         })
       }
-    });
+    }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error: any) {
     console.error('Search error:', error);
     console.error('Error stack:', error?.stack);
@@ -262,4 +262,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-

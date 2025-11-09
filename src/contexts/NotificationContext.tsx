@@ -1,8 +1,9 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useToast } from '@/hooks/use-toast';
+import { usePathname } from 'next/navigation';
 import { INotification, NotificationType } from '@/models/Notification';
 
 interface NotificationContextType {
@@ -17,13 +18,20 @@ interface NotificationContextType {
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
-export function NotificationProvider({ children }: { children: React.ReactNode }) {
+// Component that provides notifications with session - only for non-admin routes
+function NotificationProviderWithSession({ children }: { children: React.ReactNode }) {
   const [notifications, setNotifications] = useState<INotification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const [eventSource, setEventSource] = useState<EventSource | null>(null);
+  const pathname = usePathname();
+  
+  // Check if we're on admin route - skip session logic if so
+  const isAdminRoute = pathname ? pathname.startsWith('/admin') : false;
+  
+  // Use useSession - this component must be rendered inside SessionProvider
   const { data: session, status } = useSession();
-  const isAuthenticated = status === 'authenticated' && !!session?.user;
+  const isAuthenticated = !isAdminRoute && status === 'authenticated' && !!session?.user;
 
   // Filter out expired time-sensitive notifications
   const filterExpiredNotifications = useCallback((notifs: INotification[]) => {
@@ -50,7 +58,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
 
     try {
-      const response = await fetch('/api/notifications');
+      const response = await fetch('/api/notifications', { cache: 'no-store' });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
         const errorMessage = errorData.error || errorData.message || `HTTP ${response.status}`;
@@ -90,11 +98,11 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       if (!response.ok) throw new Error('Failed to mark as read');
       
       setNotifications((prev) =>
-        prev.map((notif) =>
-          notif._id.toString() === notificationId
-            ? { ...notif, read: true, readAt: new Date() }
+        (prev.map((notif) =>
+          (notif._id as any).toString() === notificationId
+            ? { ...notif, read: true, readAt: new Date() as any }
             : notif
-        )
+        ) as unknown as INotification[])
       );
     } catch (error) {
       console.error('Error marking notification as read:', error);
@@ -115,7 +123,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       if (!response.ok) throw new Error('Failed to mark all as read');
       
       setNotifications((prev) =>
-        prev.map((notif) => ({ ...notif, read: true, readAt: new Date() }))
+        (prev.map((notif) => ({ ...notif, read: true, readAt: new Date() as any })) as unknown as INotification[])
       );
     } catch (error) {
       console.error('Error marking all as read:', error);
@@ -160,6 +168,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }
   }, [markAsRead, refreshNotifications, toast]);
 
+  // Track displayed notification IDs to avoid duplicate toasts
+  const displayedToastIdsRef = useRef<Set<string>>(new Set());
+  const lastToastAtRef = useRef<number>(0);
+
   // Set up Server-Sent Events for real-time notifications - only if authenticated
   useEffect(() => {
     // Only set up SSE if we're in the browser and user is authenticated
@@ -182,28 +194,35 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       
       es.onmessage = (event) => {
         try {
-          const notification: INotification = JSON.parse(event.data);
-          
+          const notification = JSON.parse(event.data) as INotification;
+
           // Filter expired notifications
           const filtered = filterExpiredNotifications([notification]);
           if (filtered.length > 0) {
             setNotifications((prev) => {
               // Check if notification already exists (avoid duplicates)
-              const exists = prev.some((n) => n._id === notification._id);
+              const exists = prev.some((n) => (n._id as any).toString() === (notification._id as any).toString());
               if (exists) return prev;
-              
+
               // Add new notification at the beginning
               return filterExpiredNotifications([notification, ...prev]);
             });
 
             // Show toast for in-app notifications (only if authenticated)
-            if (notification.channels.includes('in-app') && !notification.read && isAuthenticated) {
+            if (notification.channels && notification.channels.includes('in-app') && !notification.read && isAuthenticated) {
+              const notifId = (notification._id as any).toString?.() || String(notification._id);
+              const now = Date.now();
+              const tooSoon = now - lastToastAtRef.current < 1000;
+              const alreadyShown = displayedToastIdsRef.current.has(notifId);
+              if (!tooSoon && !alreadyShown) {
+                lastToastAtRef.current = now;
+                displayedToastIdsRef.current.add(notifId);
               toast({
                 title: notification.title,
                 description: notification.message,
                 action: notification.interactive && notification.actionType ? (
                   <button
-                    onClick={() => handleNotificationAction(notification._id.toString(), notification.actionType!)}
+                    onClick={() => handleNotificationAction((notification._id as any).toString(), notification.actionType!)}
                     className="text-sm font-medium text-primary hover:underline"
                   >
                     {notification.actionType === 'move_to_next_stage' ? 'Move to Next Stage' :
@@ -212,6 +231,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
                   </button>
                 ) : undefined,
               });
+              }
             }
           }
         } catch (error) {
@@ -227,18 +247,25 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         } else if (es.readyState === EventSource.CONNECTING) {
           console.warn('SSE connection lost. Reconnecting...');
         } else {
-          // Only log if there's actual error information
-          if (error && typeof error === 'object' && Object.keys(error).length > 0) {
+          // Log Event object details instead of the object itself
+          if (error && typeof error === 'object' && error instanceof Event) {
+            console.error('SSE error event:', {
+              type: error.type,
+              target: error.target,
+              readyState: es.readyState,
+              url: es.url
+            });
+          } else if (error && typeof error === 'object' && Object.keys(error).length > 0) {
             console.error('SSE error:', error);
           } else {
             // Empty error object is common with EventSource - just log a warning
             console.warn('SSE connection error. Reconnecting in 5 seconds...');
           }
         }
-        
+
         // Close current connection before reconnecting
         es.close();
-        
+
         // Only reconnect if still authenticated
         if (isAuthenticated) {
           setTimeout(() => {
@@ -305,6 +332,13 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   );
 }
 
+// Outer provider - provides a default context for routes that don't use notifications
+export function NotificationProvider({ children }: { children: React.ReactNode }) {
+  // Always render NotificationProviderWithSession
+  // It will handle session availability internally
+  return <NotificationProviderWithSession>{children}</NotificationProviderWithSession>;
+}
+
 export function useNotifications() {
   const context = useContext(NotificationContext);
   if (context === undefined) {
@@ -312,4 +346,3 @@ export function useNotifications() {
   }
   return context;
 }
-

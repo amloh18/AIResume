@@ -134,6 +134,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const jobId = searchParams.get('jobId');
     const cvId = searchParams.get('cvId');
+    const cvIds = searchParams.get('cvIds'); // Support batch queries with comma-separated CV IDs
     const status = searchParams.get('status');
     const limit = searchParams.get('limit');
     const sort = searchParams.get('sort') || 'createdAt';
@@ -157,7 +158,14 @@ export async function GET(request: NextRequest) {
       baseQuery.jobId = jobId;
     }
     
-    if (cvId) {
+    // Support batch CV ID queries (performance optimization)
+    if (cvIds) {
+      const cvIdArray = cvIds.split(',').filter(id => id.trim());
+      if (cvIdArray.length > 0) {
+        baseQuery.cvId = { $in: cvIdArray };
+        console.log('🔍 CV Journey API - Batch query for CV IDs:', cvIdArray.length);
+      }
+    } else if (cvId) {
       baseQuery.cvId = cvId;
     }
     

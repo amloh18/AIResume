@@ -206,11 +206,10 @@ const ApplicationJourneySchema = new Schema<IApplicationJourney>({
 });
 
 // Optimized indexes for better query performance
-ApplicationJourneySchema.index({ userId: 1, status: 1, updatedAt: -1 }); // Compound index for common queries
+ApplicationJourneySchema.index({ userId: 1, status: 1 }); // Compound index for common queries (without updatedAt since timestamps: true handles it)
 ApplicationJourneySchema.index({ userId: 1, jobId: 1 }); // Index for performance, uniqueness handled in API
-ApplicationJourneySchema.index({ userId: 1, createdAt: -1 });
 ApplicationJourneySchema.index({ firebaseUid: 1, status: 1 }); // For Firebase user queries
-ApplicationJourneySchema.index({ status: 1, updatedAt: -1 }); // For status-based queries
+// Removed duplicate { status: 1 } index - already covered by { userId: 1, status: 1 } compound index
 ApplicationJourneySchema.index({ userId: 1, completedAt: -1 }); // For completed journeys queries
 ApplicationJourneySchema.index({ userId: 1, lastWorkedOn: -1 }); // For inactivity detection
 ApplicationJourneySchema.index({ applicationDate: -1 }); // For application date queries
