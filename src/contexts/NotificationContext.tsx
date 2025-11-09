@@ -120,13 +120,19 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
       });
       if (!response.ok) throw new Error('Failed to mark as read');
       
-      setNotifications((prev) =>
-        (prev.map((notif) =>
-          (notif._id as any).toString() === notificationId
+      setNotifications((prev) => {
+        // Fix 1: Ensure prev is an array before calling map
+        if (!prev || !Array.isArray(prev)) {
+          return [];
+        }
+        return prev.map((notif) => {
+          // Fix 2: Safely convert _id to string
+          const notifId = notif._id ? (typeof notif._id === 'string' ? notif._id : String(notif._id)) : '';
+          return notifId === notificationId
             ? { ...notif, read: true, readAt: new Date() as any }
-            : notif
-        ) as unknown as INotification[])
-      );
+            : notif;
+        }) as INotification[];
+      });
     } catch (error) {
       console.error('Error marking notification as read:', error);
       toast({
@@ -145,9 +151,13 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
       });
       if (!response.ok) throw new Error('Failed to mark all as read');
       
-      setNotifications((prev) =>
-        (prev.map((notif) => ({ ...notif, read: true, readAt: new Date() as any })) as unknown as INotification[])
-      );
+      setNotifications((prev) => {
+        // Fix 3: Ensure prev is an array before calling map
+        if (!prev || !Array.isArray(prev)) {
+          return [];
+        }
+        return prev.map((notif) => ({ ...notif, read: true, readAt: new Date() as any })) as INotification[];
+      });
     } catch (error) {
       console.error('Error marking all as read:', error);
       toast({
@@ -229,7 +239,12 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
               }
               
               // Check if notification already exists (avoid duplicates)
-              const exists = prev.some((n) => (n._id as any).toString() === (notification._id as any).toString());
+              // Fix 4: Safely convert _id to string for comparison
+              const notificationId = notification._id ? (typeof notification._id === 'string' ? notification._id : String(notification._id)) : '';
+              const exists = prev.some((n) => {
+                const nId = n._id ? (typeof n._id === 'string' ? n._id : String(n._id)) : '';
+                return nId === notificationId;
+              });
               if (exists) return prev;
 
               // Add new notification at the beginning
@@ -237,8 +252,11 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
             });
 
             // Show toast for in-app notifications (only if authenticated)
-            if (notification.channels && notification.channels.includes('in-app') && !notification.read && isAuthenticated) {
-              const notifId = (notification._id as any).toString?.() || String(notification._id);
+            // Fix 5: Ensure channels is an array before calling includes
+            const channels = Array.isArray(notification.channels) ? notification.channels : [];
+            if (channels.includes('in-app') && !notification.read && isAuthenticated) {
+              // Fix 6: Safely convert _id to string
+              const notifId = notification._id ? (typeof notification._id === 'string' ? notification._id : String(notification._id)) : '';
               const now = Date.now();
               const tooSoon = now - lastToastAtRef.current < 1000;
               const alreadyShown = displayedToastIdsRef.current.has(notifId);
@@ -250,7 +268,11 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
                 description: notification.message,
                 action: notification.interactive && notification.actionType ? (
                   <button
-                    onClick={() => handleNotificationAction((notification._id as any).toString(), notification.actionType!)}
+                    onClick={() => {
+                      // Fix 7: Safely convert _id to string
+                      const notifId = notification._id ? (typeof notification._id === 'string' ? notification._id : String(notification._id)) : '';
+                      handleNotificationAction(notifId, notification.actionType || '');
+                    }}
                     className="text-sm font-medium text-primary hover:underline"
                   >
                     {notification.actionType === 'move_to_next_stage' ? 'Move to Next Stage' :
@@ -267,26 +289,26 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
         }
       };
 
-      es.onerror = (error) => {
-        // EventSource onerror can fire with empty object or no details
+      es.onerror = (event: Event) => {
+        // EventSource onerror receives an Event object, not an Error
+        // Safely handle it without converting to string which causes "[object Event]"
         // Check connection state to determine error type
         if (es.readyState === EventSource.CLOSED) {
           console.warn('SSE connection closed. Will attempt to reconnect...');
         } else if (es.readyState === EventSource.CONNECTING) {
           console.warn('SSE connection lost. Reconnecting...');
         } else {
-          // Log Event object details instead of the object itself
-          if (error && typeof error === 'object' && error instanceof Event) {
-            console.error('SSE error event:', {
-              type: error.type,
-              target: error.target,
+          // Log Event object details safely without stringifying the Event
+          try {
+            const errorInfo = {
+              type: event?.type || 'error',
               readyState: es.readyState,
-              url: es.url
-            });
-          } else if (error && typeof error === 'object' && Object.keys(error).length > 0) {
-            console.error('SSE error:', error);
-          } else {
-            // Empty error object is common with EventSource - just log a warning
+              url: es.url,
+              timestamp: event?.timeStamp || Date.now()
+            };
+            console.warn('SSE connection error. Reconnecting in 5 seconds...', errorInfo);
+          } catch (e) {
+            // Fallback: just log a simple message if we can't extract event details
             console.warn('SSE connection error. Reconnecting in 5 seconds...');
           }
         }
@@ -349,7 +371,8 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
 
 
   // Calculate unread count (only non-expired notifications)
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  // Fix 8: Ensure notifications is an array before calling filter
+  const unreadCount = Array.isArray(notifications) ? notifications.filter((n) => !n.read).length : 0;
 
   return (
     <NotificationContext.Provider
@@ -370,30 +393,9 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
 
 // Outer provider - provides a default context for routes that don't use notifications
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
-  // Check if we're in a browser environment
-  const isBrowser = typeof window !== 'undefined';
-  
-  // If not in browser, provide a minimal context (SSR)
-  if (!isBrowser) {
-    return (
-      <NotificationContext.Provider
-        value={{
-          notifications: [],
-          unreadCount: 0,
-          isLoading: false,
-          markAsRead: async () => {},
-          markAllAsRead: async () => {},
-          handleNotificationAction: async () => {},
-          refreshNotifications: async () => {},
-        }}
-      >
-        {children}
-      </NotificationContext.Provider>
-    );
-  }
-  
-  // In browser, render the full provider with session
-  // This assumes SessionProvider is available in the component tree
+  // CRITICAL FIX: Always render NotificationProviderWithSession to ensure hooks are called consistently
+  // The component itself handles SSR/client differences internally
+  // Cannot conditionally return here - violates Rules of Hooks
   return <NotificationProviderWithSession>{children}</NotificationProviderWithSession>;
 }
 

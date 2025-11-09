@@ -6,9 +6,6 @@ const nextConfig: NextConfig = {
     // We lint and type-check locally via `npm run type-check`.
     ignoreBuildErrors: true,
   },
-  eslint: {
-    ignoreDuringBuilds: true, // Temporarily enabled for v1.8.5.1 deployment
-  },
   // Disable Fast Refresh notifications
   devIndicators: {
     position: 'bottom-right',
@@ -246,6 +243,8 @@ const nextConfig: NextConfig = {
     optimizeCss: false,
     optimizePackageImports: ['lucide-react', 'lottie-react'],
   },
+  // Turbopack configuration - use webpack for now due to custom webpack config
+  turbopack: {},
   
   // Force dynamic rendering for all pages to prevent SSR issues
   // Disable static optimization to prevent build errors with React hooks

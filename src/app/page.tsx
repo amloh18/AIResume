@@ -1,10 +1,9 @@
 'use client';
 
-import React, { useEffect, Suspense } from 'react';
+import React, { useEffect } from 'react';
 
 // Force dynamic rendering to prevent SSR issues
 export const dynamic = 'force-dynamic';
-import { useSearchParams } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import Hero from '@/components/landing/Hero';
 import Features from '@/components/landing/Features';
@@ -18,24 +17,17 @@ import FAQ from '@/components/landing/FAQ';
 import Footer from '@/components/landing/Footer';
 import CardNav from '@/components/landing/CardNav';
 import LaunchBanner from '@/components/landing/LaunchBanner';
-import { motion } from 'framer-motion';
 
 function LandingPageContent() {
-  // Safely get search params with fallback for build time
-  let searchParams;
-  try {
-    searchParams = useSearchParams();
-  } catch (error) {
-    // Fallback for build time when Next.js context is not available
-    searchParams = null;
-  }
-  
   // Handle logout cleanup - client-side only
+  // Using window.location.search instead of useSearchParams to avoid hook issues
   useEffect(() => {
-    // Only run on client side and if searchParams is available
-    if (typeof window === 'undefined' || !searchParams) return;
+    // Only run on client side
+    if (typeof window === 'undefined') return;
     
-    const logoutParam = searchParams.get('logout');
+    // Get logout param from URL directly (avoids useSearchParams hook issues)
+    const urlParams = new URLSearchParams(window.location.search);
+    const logoutParam = urlParams.get('logout');
     
     if (logoutParam === 'success' || logoutParam === 'fallback') {
       console.log('🔍 Landing page detected logout, ensuring session is cleared...');
@@ -65,7 +57,7 @@ function LandingPageContent() {
         console.error('⚠️ Error calling signOut on landing:', error);
       }
     }
-  }, [searchParams]);
+  }, []); // Empty deps - only run once on mount
   
   const navLinks = [
     { label: 'Features', href: '#features', ariaLabel: 'View features section' },
@@ -127,13 +119,5 @@ function LandingPageContent() {
 }
 
 export default function LandingPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 flex items-center justify-center">
-        <div className="text-lime-400 text-xl">Loading...</div>
-      </div>
-    }>
-      <LandingPageContent />
-    </Suspense>
-  );
+  return <LandingPageContent />;
 }

@@ -108,8 +108,29 @@ const TemplateRendererComponent: React.FC<TemplateRendererProps> = ({
   enabledSections,
   customStyles = {}
 }) => {
+  // CRITICAL FIX: Hooks must be called BEFORE any conditional returns (Rules of Hooks)
+  // Memoize CSS generation to avoid regenerating on every render
+  const templateCSS = useMemo(() => {
+    if (!template?.globalStyles) return '';
+    return generateTemplateCSS(template.globalStyles);
+  }, [template?.globalStyles]);
+  
+  // NEW: Get sections from cvData.structure if it exists, otherwise fall back to legacy props
+  const sectionsFromStructure = useMemo(() => {
+    if (!cvData?.structure?.sections || !Array.isArray(cvData.structure.sections)) {
+      return null; // Fall back to legacy approach
+    }
+    // Use structure as source of truth - preserve all sections for lookup
+    return cvData.structure.sections.map(section => ({
+      id: section.id,
+      type: section.type,
+      visible: section.visible
+    }));
+  }, [cvData?.structure]);
+  
   // IMPORTANT: Never use sample/hardcoded data - only use the provided cvData
   // If cvData is null or undefined, this component should not render
+  // BUT: Check AFTER hooks are called (Rules of Hooks)
   if (!cvData) {
     console.warn('⚠️ TemplateRenderer - cvData is null/undefined. Component should not render without actual CV data.');
     return null;
@@ -126,24 +147,6 @@ const TemplateRendererComponent: React.FC<TemplateRendererProps> = ({
     // Ensure we're passing actual cvData, not sample data
     return <CustomTemplateComponent cvData={cvData} className={className} />;
   }
-
-  // Memoize CSS generation to avoid regenerating on every render
-  const templateCSS = useMemo(() => {
-    return generateTemplateCSS(template?.globalStyles);
-  }, [template?.globalStyles]);
-  
-  // NEW: Get sections from cvData.structure if it exists, otherwise fall back to legacy props
-  const sectionsFromStructure = useMemo(() => {
-    if (cvData.structure?.sections && Array.isArray(cvData.structure.sections)) {
-      // Use structure as source of truth - preserve all sections for lookup
-      return cvData.structure.sections.map(section => ({
-        id: section.id,
-        type: section.type,
-        visible: section.visible
-      }));
-    }
-    return null; // Fall back to legacy approach
-  }, [cvData.structure]);
 
   // Determine section order - use structure if available, otherwise use legacy props
   let finalSectionOrder: string[] | undefined;

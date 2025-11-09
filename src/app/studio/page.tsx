@@ -14,6 +14,7 @@ import JourneyStatusBanner from '@/components/JourneyStatusBanner';
 import { getPageBackground } from '@/lib/utils/themeUtils';
 
 function StudioPageContent() {
+  // CRITICAL FIX: All hooks must be called before any conditional returns (Rules of Hooks)
   const { user, loading: authLoading, isAuthenticated } = useUnifiedAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -103,6 +104,7 @@ function StudioPageContent() {
     loadCurrentJourney();
   }, [primaryJourneyId, user?.id]);
 
+  // NOW we can conditionally return - all hooks have been called
   // Show loading state while auth is loading
   if (authLoading) {
     return <LoadingAnimation progress={0.5} showProgressBar={false} />;

@@ -6,8 +6,6 @@ import { useSession } from 'next-auth/react';
 import FloatingStudioLayout from './FloatingStudioLayout';
 import SidebarStudioPanel from './SidebarStudioPanel';
 import ComprehensiveATSAnalyzer from './ComprehensiveATSAnalyzer';
-import DraggableSections from './DraggableSections';
-import CVSectionsAndOrdering from './CVSectionsAndOrdering';
 import DesignContent from './DesignContent';
 import CoverLetterDesignContent from './CoverLetterDesignContent';
 import TemplateContent from './TemplateContent';
@@ -2038,9 +2036,11 @@ const CVStudio: React.FC<CVStudioProps> = ({
                   if (cvResponse.ok) {
                     const cvResult = await cvResponse.json();
                     const loadedCvData = cvResult.data?.cv?.cvData || cvResult.cv?.cvData;
+                    const templateId = cvResult.data?.cv?.templateId || cvResult.cv?.templateId;
                     if (loadedCvData) {
                       console.log('✅ CVStudio - CV loaded from journey:', loadedCvData);
-                      setCvData(loadedCvData);
+                      // Use setCvDataWithStructure to ensure structure is initialized
+                      await setCvDataWithStructure(loadedCvData, templateId);
                       setCvTitle(cvResult.data?.cv?.title || cvResult.cv?.title || 'Untitled CV');
                     }
                   }
@@ -2098,13 +2098,15 @@ const CVStudio: React.FC<CVStudioProps> = ({
                   // Data is already in unified format
                   convertedData = sessionCVData.cvData;
                   console.log('Session CV data:', convertedData);
-                  setCvData(convertedData);
+                  // Use setCvDataWithStructure to ensure structure is initialized
+                  await setCvDataWithStructure(convertedData, sessionCVData.templateId);
                   cvResult = sessionCVData;
                 } else {
                   // Fallback to API call using unified service
                   const unifiedCV = await UnifiedCVService.getCV(cvId, userId);
                   console.log('Unified API CV data:', unifiedCV.cvData);
                   await setCvDataWithStructure(unifiedCV.cvData, unifiedCV.templateId);
+                  cvResult = unifiedCV;
                 }
 
                 // Set template if available
@@ -2123,7 +2125,8 @@ const CVStudio: React.FC<CVStudioProps> = ({
                 cvResult = await CVService.getCV(cvId, userId);
                 convertedData = cvResult.cvData;
                 console.log('Error fallback CV data:', convertedData);
-                setCvData(convertedData);
+                // Use setCvDataWithStructure to ensure structure is initialized
+                await setCvDataWithStructure(convertedData, cvResult.templateId);
 
                 // Set CV title from the result
                 if (cvResult.title) {
@@ -2154,7 +2157,8 @@ const CVStudio: React.FC<CVStudioProps> = ({
                   convertedData = cvDataFromStorage;
                   
                   console.log('✅ Master CV data loaded from sessionStorage:', convertedData);
-                  setCvData(convertedData);
+                  // Use setCvDataWithStructure to ensure structure is initialized
+                  await setCvDataWithStructure(convertedData, masterCV?.templateId);
                   setCvTitle(masterCV?.title || 'Master CV');
                   setIsMasterCV(true);
                   
@@ -2162,6 +2166,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
                   cvResult = {
                     title: masterCV?.title || 'Master CV',
                     cvData: convertedData,
+                    templateId: masterCV?.templateId,
                     isMaster: true
                   };
                 }
@@ -2178,7 +2183,8 @@ const CVStudio: React.FC<CVStudioProps> = ({
                 cvResult = await CVService.getCV(cvId, userId);
                 convertedData = cvResult.cvData;
                 console.log('Error fallback CV data:', convertedData);
-                setCvData(convertedData);
+                // Use setCvDataWithStructure to ensure structure is initialized
+                await setCvDataWithStructure(convertedData, cvResult.templateId);
               }
             } else {
               // Load existing CV from API
@@ -2198,7 +2204,8 @@ const CVStudio: React.FC<CVStudioProps> = ({
                     console.log('✅ CVStudio - Master CV loaded from master API');
                     cvResult = masterResult.data.masterCV;
                     convertedData = cvResult.cvData;
-                    setCvData(convertedData);
+                    // Use setCvDataWithStructure to ensure structure is initialized
+                    await setCvDataWithStructure(convertedData, cvResult.templateId);
                     setIsMasterCV(true);
                     
                     // Set CV title from the result
@@ -2241,7 +2248,8 @@ const CVStudio: React.FC<CVStudioProps> = ({
                     console.log('🔍 CVStudio - First work item summary type:', typeof convertedData.work[0]?.summary);
                     console.log('🔍 CVStudio - First work item summary length:', convertedData.work[0]?.summary?.length);
                   }
-                  setCvData(convertedData);
+                  // Use setCvDataWithStructure to ensure structure is initialized
+                  await setCvDataWithStructure(convertedData, cvResult.templateId);
 
                   // Set CV title from the result
                   if (cvResult.title) {
@@ -2340,59 +2348,94 @@ const CVStudio: React.FC<CVStudioProps> = ({
           }
 
           // Set template - FIXED: Properly load saved template from CV
-          if (cvResult && cvResult.templateId) {
-            console.log('🔍 Studio - Loading saved template:', cvResult.templateId);
-            const templateIdToMatch = cvResult.templateId.toString();
+          // Also check templateData from CV if available (for faster loading)
+          if (cvResult) {
+            let templateIdToMatch: string | null = null;
             
-            // First, try to find in database templates
-            let template = templatesResult.find((t: any) =>
-              t.id === templateIdToMatch ||
-              t._id === templateIdToMatch ||
-              t.id?.toString() === templateIdToMatch ||
-              t._id?.toString() === templateIdToMatch
-            );
-
-            // If not found in database, check hardcoded templates
-            if (!template) {
-              const { HARDCODED_TEMPLATES } = await import('@/lib/templates/hardcoded-templates');
-              template = HARDCODED_TEMPLATES.find((t: any) =>
+            // Priority 1: Get templateId from cvResult
+            if (cvResult.templateId) {
+              templateIdToMatch = cvResult.templateId.toString();
+            }
+            
+            // Priority 2: Try to get templateId from API response if available
+            if (!templateIdToMatch && cvId) {
+              try {
+                const cvResponse = await fetch(`/api/cvs/${cvId}?userId=${userId}`);
+                if (cvResponse.ok) {
+                  const cvApiResult = await cvResponse.json();
+                  const apiTemplateId = cvApiResult.data?.cv?.templateId || cvApiResult.cv?.templateId;
+                  if (apiTemplateId) {
+                    templateIdToMatch = apiTemplateId.toString();
+                    console.log('🔍 Studio - Got templateId from API response:', templateIdToMatch);
+                  }
+                  
+                  // Also check for templateData in API response (faster loading)
+                  const apiTemplateData = cvApiResult.data?.cv?.templateData || cvApiResult.cv?.templateData;
+                  if (apiTemplateData && !templateIdToMatch) {
+                    // Use templateData directly if available
+                    console.log('✅ Studio - Using templateData from API response');
+                    setSelectedTemplate(apiTemplateData);
+                    templateIdToMatch = apiTemplateData.id || apiTemplateData._id;
+                  }
+                }
+              } catch (error) {
+                console.error('❌ Studio - Failed to fetch template from API:', error);
+              }
+            }
+            
+            if (templateIdToMatch && !selectedTemplate) {
+              console.log('🔍 Studio - Loading saved template:', templateIdToMatch);
+              
+              // First, try to find in database templates
+              let template = templatesResult.find((t: any) =>
                 t.id === templateIdToMatch ||
                 t._id === templateIdToMatch ||
-                t.name.toLowerCase().replace(/\s+/g, '-') === templateIdToMatch.toLowerCase() ||
-                templateIdToMatch.toLowerCase().includes(t.name.toLowerCase().replace(/\s+/g, '-'))
+                t.id?.toString() === templateIdToMatch ||
+                t._id?.toString() === templateIdToMatch
               );
-            }
 
-            if (template) {
-              console.log('✅ Studio - Loaded saved template:', template.name);
-              setSelectedTemplate(template);
-            } else {
-              console.warn('⚠️ Studio - Saved template not found, using Executive Professional as fallback');
-              // Fallback to Executive Professional template
+              // If not found in database, check hardcoded templates
+              if (!template) {
+                const { HARDCODED_TEMPLATES } = await import('@/lib/templates/hardcoded-templates');
+                template = HARDCODED_TEMPLATES.find((t: any) =>
+                  t.id === templateIdToMatch ||
+                  t._id === templateIdToMatch ||
+                  t.name.toLowerCase().replace(/\s+/g, '-') === templateIdToMatch.toLowerCase() ||
+                  templateIdToMatch.toLowerCase().includes(t.name.toLowerCase().replace(/\s+/g, '-'))
+                );
+              }
+
+              if (template) {
+                console.log('✅ Studio - Loaded saved template:', template.name);
+                setSelectedTemplate(template);
+              } else {
+                console.warn('⚠️ Studio - Saved template not found, using Executive Professional as fallback');
+                // Fallback to Executive Professional template
+                const { HARDCODED_TEMPLATES } = await import('@/lib/templates/hardcoded-templates');
+                const executiveProfessional = HARDCODED_TEMPLATES.find((t: any) => 
+                  t.id === 'executive-professional-layout-template' || 
+                  t.name === 'Executive Professional'
+                );
+                if (executiveProfessional) {
+                  console.log('✅ Studio - Using Executive Professional as fallback');
+                  setSelectedTemplate(executiveProfessional);
+                } else if (templatesResult.length > 0) {
+                  setSelectedTemplate(templatesResult[0]);
+                }
+              }
+            } else if (!selectedTemplate) {
+              // No saved template, use Executive Professional as default
+              console.log('🔍 Studio - No saved template, using Executive Professional as default');
               const { HARDCODED_TEMPLATES } = await import('@/lib/templates/hardcoded-templates');
               const executiveProfessional = HARDCODED_TEMPLATES.find((t: any) => 
                 t.id === 'executive-professional-layout-template' || 
                 t.name === 'Executive Professional'
               );
               if (executiveProfessional) {
-                console.log('✅ Studio - Using Executive Professional as fallback');
                 setSelectedTemplate(executiveProfessional);
               } else if (templatesResult.length > 0) {
                 setSelectedTemplate(templatesResult[0]);
               }
-            }
-          } else if (!selectedTemplate) {
-            // No saved template, use Executive Professional as default
-            console.log('🔍 Studio - No saved template, using Executive Professional as default');
-            const { HARDCODED_TEMPLATES } = await import('@/lib/templates/hardcoded-templates');
-            const executiveProfessional = HARDCODED_TEMPLATES.find((t: any) => 
-              t.id === 'executive-professional-layout-template' || 
-              t.name === 'Executive Professional'
-            );
-            if (executiveProfessional) {
-              setSelectedTemplate(executiveProfessional);
-            } else if (templatesResult.length > 0) {
-              setSelectedTemplate(templatesResult[0]);
             }
           }
           

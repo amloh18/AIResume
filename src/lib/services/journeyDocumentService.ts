@@ -132,17 +132,28 @@ export async function createJourneyDocuments(
             console.log('✅ Journey Document Service - Using Executive Professional template as default');
           }
           
+          // Deep copy cvData to preserve structure/content map
+          // This ensures structure and content are properly preserved during duplication
+          const duplicatedCvData = masterCV.cvData ? JSON.parse(JSON.stringify(masterCV.cvData)) : masterCV.cvData;
+          
+          // Ensure structure and content are preserved
+          if (duplicatedCvData && !duplicatedCvData.structure) {
+            // If master CV doesn't have structure, it will be initialized in studio
+            // But we preserve all existing data
+            console.log('⚠️ Journey Document Service - Master CV missing structure, will be initialized in studio');
+          }
+          
           const duplicatedCV = new CV({
             title: cvTitle,
-            cvData: masterCV.cvData,
-            data: masterCV.data,
+            cvData: duplicatedCvData, // Deep copied to preserve structure/content map
+            data: masterCV.data ? JSON.parse(JSON.stringify(masterCV.data)) : masterCV.data, // Deep copy legacy data
             status: 'draft',
             isMaster: false,
             journeyId: currentJourney._id.toString(),
             templateId: templateId,
             templateName: templateName,
-            templateData: templateData || masterCV.templateData,
-            styling: masterCV.styling,
+            templateData: templateData ? JSON.parse(JSON.stringify(templateData)) : templateData, // Deep copy template data
+            styling: masterCV.styling ? JSON.parse(JSON.stringify(masterCV.styling)) : masterCV.styling, // Deep copy styling
             userId: new mongoose.Types.ObjectId(userId),
             metadata: {
               ...masterCV.metadata,
@@ -157,7 +168,13 @@ export async function createJourneyDocuments(
           const savedCV = await duplicatedCV.save();
           cvId = savedCV._id.toString();
           
-          console.log('✅ Journey Document Service - CV created:', cvId);
+          console.log('✅ Journey Document Service - CV created with preserved structure:', {
+            cvId,
+            hasStructure: !!(savedCV.cvData?.structure),
+            hasContent: !!(savedCV.cvData?.content),
+            templateId: savedCV.templateId,
+            templateName: savedCV.templateName
+          });
           // Note: Thumbnail will be generated when CV is opened in studio and exited
         }
       } else {
