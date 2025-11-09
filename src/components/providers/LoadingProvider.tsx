@@ -95,7 +95,7 @@ export const LoadingProvider: React.FC<{ children: React.ReactNode }> = React.me
         {isLoading && (
           <motion.div
             key="loading"
-            className="fixed inset-0 z-[9999]"
+            className="fixed inset-0 z-[9999] pointer-events-none"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}

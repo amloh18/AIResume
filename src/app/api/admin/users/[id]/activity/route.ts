@@ -7,7 +7,7 @@ import User from '@/models/User';
 import CV from '@/models/CV';
 import CoverLetter from '@/models/CoverLetter';
 import Job from '@/models/Job';
-import ApplicationJourney from '@/models/ApplicationJourney';
+import { ApplicationJourney } from '@/models/ApplicationJourney';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -65,7 +65,7 @@ export async function GET(
     }
 
     // Convert userId to string for queries
-    const userId = user._id?.toString() || user._id;
+    const userId = (user as any)._id?.toString() || (user as any)._id;
 
     // Count documents
     const [cvCount, masterCVExists, coverLetterCount, jobCount, journeyCount] = await Promise.all([
@@ -138,7 +138,7 @@ export async function GET(
           })),
         },
       },
-    });
+    }, { headers: { 'Cache-Control': 'no-store' } });
 
   } catch (error: any) {
     console.error('❌ Get user activity error:', error);
@@ -151,4 +151,3 @@ export async function GET(
     );
   }
 }
-

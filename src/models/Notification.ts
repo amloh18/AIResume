@@ -172,14 +172,13 @@ const notificationSchema = new Schema<INotification>(
 );
 
 // Compound indexes for common queries
-notificationSchema.index({ userId: 1, read: 1, createdAt: -1 });
+notificationSchema.index({ userId: 1, read: 1 }); // createdAt index handled by timestamps: true
 notificationSchema.index({ userId: 1, type: 1, read: 1 });
 notificationSchema.index({ expiresAt: 1, persistent: 1 });
-notificationSchema.index({ createdAt: -1 });
+// createdAt index handled by timestamps: true
 
 const Notification =
   mongoose.models.Notification ||
   mongoose.model<INotification>('Notification', notificationSchema);
 
 export default Notification;
-

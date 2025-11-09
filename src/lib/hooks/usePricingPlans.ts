@@ -61,6 +61,31 @@ interface UsePricingPlansResult {
   hasPromotionalPricing: (plan: DatabasePricingPlan) => boolean;
 }
 
+// Simple cache for pricing data to prevent duplicate API calls across components
+interface PricingCacheEntry {
+  plans: DatabasePricingPlan[];
+  promotionalOffers: any[];
+  timestamp: number;
+}
+
+// Cache with TTL (Time To Live) of 5 minutes
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
+const pricingCache = new Map<string, PricingCacheEntry>();
+
+// Generate cache key from options
+function getCacheKey(options: UsePricingPlansOptions): string {
+  return JSON.stringify({
+    publicOnly: options.publicOnly || false,
+    excludeFree: options.excludeFree || false,
+    includeInactive: options.includeInactive || false,
+  });
+}
+
+// Check if cache entry is still valid
+function isCacheValid(entry: PricingCacheEntry): boolean {
+  return Date.now() - entry.timestamp < CACHE_TTL;
+}
+
 export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricingPlansResult {
   const [plans, setPlans] = useState<DatabasePricingPlan[]>([]);
   const [promotionalOffers, setPromotionalOffers] = useState<any[]>([]);
@@ -105,10 +130,22 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
     detectLocation();
   }, []);
 
-  // Fetch pricing plans and promotional offers
+  // Fetch pricing plans and promotional offers with caching
   useEffect(() => {
     const fetchData = async () => {
       try {
+        const cacheKey = getCacheKey(options);
+        const cachedEntry = pricingCache.get(cacheKey);
+
+        // Check if we have valid cached data and not forcing a refresh
+        if (cachedEntry && isCacheValid(cachedEntry) && refreshTrigger === 0) {
+          console.log('Using cached pricing data');
+          setPlans(cachedEntry.plans);
+          setPromotionalOffers(cachedEntry.promotionalOffers);
+          setLoading(false);
+          return;
+        }
+
         // Build API URL with query parameters
         const params = new URLSearchParams();
         if (options.publicOnly) {
@@ -124,11 +161,14 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
           fetch('/api/promotional-offers/active?userType=all')
         ]);
 
+        let fetchedPlans: DatabasePricingPlan[] = [];
+        let fetchedOffers: any[] = [];
+
         if (plansResponse.ok) {
           const responseData = await plansResponse.json();
           
           // Extract plans from response - API returns { plans: [...], region: {...} }
-          let fetchedPlans = Array.isArray(responseData) 
+          fetchedPlans = Array.isArray(responseData) 
             ? responseData 
             : (responseData?.plans || []);
           
@@ -162,10 +202,21 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
         if (offersResponse.ok) {
           const offersData = await offersResponse.json();
           if (offersData.success) {
-            setPromotionalOffers(offersData.offers);
+            fetchedOffers = offersData.offers || [];
+            setPromotionalOffers(fetchedOffers);
           }
         } else {
           console.error('Error fetching promotional offers:', offersResponse.status);
+        }
+
+        // Update cache with fetched data
+        if (fetchedPlans.length > 0 || fetchedOffers.length > 0) {
+          pricingCache.set(cacheKey, {
+            plans: fetchedPlans,
+            promotionalOffers: fetchedOffers,
+            timestamp: Date.now(),
+          });
+          console.log('Cached pricing data for key:', cacheKey);
         }
       } catch (error) {
         console.error('Error fetching pricing data:', error);
@@ -178,8 +229,10 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
     fetchData();
   }, [options.publicOnly, options.excludeFree, options.includeInactive, refreshTrigger]);
 
-  // Refetch function
+  // Refetch function - invalidates cache and forces fresh fetch
   const refetch = () => {
+    const cacheKey = getCacheKey(options);
+    pricingCache.delete(cacheKey); // Clear cache for this key
     setRefreshTrigger(prev => prev + 1);
   };
 

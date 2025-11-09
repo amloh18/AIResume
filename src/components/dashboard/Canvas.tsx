@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
 import { safeJsonParse } from '@/lib/utils/safeJsonParse';
@@ -378,6 +379,7 @@ const CleanUnlinkedButton: React.FC<CleanUnlinkedButtonProps> = ({
 
 const Canvas: React.FC = () => {
   const { user, loading: authLoading, isAuthenticated } = useUnifiedAuth();
+  const router = useRouter();
   const { createCV } = useCreateCV();
   const { isOpen: isMobileMenuOpen, toggleSidebar } = useMobileSidebar();
   const { userData, loading: userLoading, error: userError } = useUserData();
@@ -498,7 +500,7 @@ const Canvas: React.FC = () => {
       sessionStorage.setItem('editingCVData', JSON.stringify(masterCV.cvData));
       
       // Navigate to studio with master CV
-      window.location.href = `/studio?cvId=${masterCV.id}&master=true`;
+      router.push(`/studio?cvId=${masterCV.id}&master=true`);
     } catch (error) {
       // Removed notification:'error', 'Failed to open master CV');
     }
@@ -524,7 +526,7 @@ const Canvas: React.FC = () => {
         const duplicatedCVId = duplicateResult.data.cvId;
         
         // Navigate to studio with duplicated CV (freestanding, ready for job linking)
-        window.location.href = `/studio?cvId=${duplicatedCVId}&mode=document-first`;
+        router.push(`/studio?cvId=${duplicatedCVId}&mode=document-first`);
         
         // Removed notification:'success', 'Master CV duplicated successfully! You can now link it to a job.');
       } else {
@@ -828,9 +830,9 @@ const Canvas: React.FC = () => {
       console.log('🔍 Canvas - Loading CVs with user ID:', userIdToUse);
       
       // Use unified service to get CVs
-      // Use 'full' projection to include cvData and template needed for preview rendering
+      // Use 'summary' projection for performance - avoid loading massive Base64 thumbnails
       console.log('🔍 Canvas - Calling UnifiedCVService.getCVs...');
-      const result = await UnifiedCVService.getCVs(userIdToUse, { projection: 'full' });
+      const result = await UnifiedCVService.getCVs(userIdToUse, { projection: 'summary' });
       console.log('🔍 Canvas - UnifiedCVService.getCVs result:', result);
       console.log('🔍 Canvas - Result type:', typeof result, 'Is array:', Array.isArray(result), 'Length:', result?.length);
       
@@ -1406,10 +1408,10 @@ const Canvas: React.FC = () => {
         throw new Error('Failed to delete cover letter');
       }
       
-      const result = await response.json().catch(() => ({}));
+        const result = await response.json().catch(() => ({}));
       if (!result.success) {
         throw new Error(result.error || 'Unknown error');
-      }
+        }
       
       console.log(`Successfully deleted cover letter: ${coverLetter.title}`);
     } catch (error) {
@@ -1478,8 +1480,8 @@ const Canvas: React.FC = () => {
       // Delete each unlinked cover letter
       for (const coverLetter of unlinkedCoverLetters) {
         // Ensure we have a valid ID - check both id and _id fields (declared outside try for catch block access)
-        const coverLetterId = coverLetter.id || coverLetter._id;
-        const coverLetterTitle = coverLetter.title || coverLetter.name || 'Unknown Cover Letter';
+          const coverLetterId = coverLetter.id || coverLetter._id;
+          const coverLetterTitle = coverLetter.title || coverLetter.name || 'Unknown Cover Letter';
         
         try {
           
@@ -1592,9 +1594,9 @@ const Canvas: React.FC = () => {
   const toggleCoverLetterStar = async (coverLetterId: string) => {
     // Store original state for rollback
     const originalCoverLetters = [...coverLetters];
-    const coverLetter = coverLetters.find(cl => cl.id === coverLetterId);
-    if (!coverLetter) return;
-    
+      const coverLetter = coverLetters.find(cl => cl.id === coverLetterId);
+      if (!coverLetter) return;
+
     const newStarredState = !coverLetter.isStarred;
     
     // Optimistic update: Update UI immediately
@@ -2112,6 +2114,8 @@ const Canvas: React.FC = () => {
             filteredAndSortedCVs.length > 0 ? (
               filteredAndSortedCVs.map((cv, index) => {
                 console.log('🔍 Canvas - Rendering CV Card:', { index, id: cv.id, title: cv.title });
+                // Find linked journey for this CV (performance optimization - no API call per card)
+                const linkedJourney = journeys.find(journey => journey.cvId === cv.id) || null;
                 return (
                   <CVCardOverlay
                     key={cv.id || `cv-${index}`}
@@ -2132,6 +2136,7 @@ const Canvas: React.FC = () => {
                       atsScore: cv.atsScore,
                       metadata: cv.metadata
                     }}
+                    linkedJourney={linkedJourney}
                     onEdit={(cv) => { handleCVClick(cv as any); }}
                     onDownload={(cv) => { handleDownloadCV(cv as any); }}
                     onDelete={(cv) => { handleDeleteCV(cv as any); }}
@@ -2300,7 +2305,7 @@ const Canvas: React.FC = () => {
                         thumbnail: coverLetter.thumbnail || '',
                         metadata: coverLetter.metadata
                       }}
-                      onEdit={(cl) => { window.location.href = `/studio?type=cover_letter&coverLetterId=${cl.id}`; }}
+                      onEdit={(cl) => { router.push(`/studio?type=cover_letter&coverLetterId=${cl.id}`); }}
                       onDownload={handleDownloadCoverLetter}
                       onDelete={handleDeleteCoverLetter}
                       onToggleStar={toggleCoverLetterStar}
@@ -2493,4 +2498,4 @@ const Canvas: React.FC = () => {
   );
 };
 
-export default Canvas;
+export default React.memo(Canvas);

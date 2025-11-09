@@ -20,6 +20,21 @@ export class CVS3Service {
     template?: any
   ): Promise<string | null> {
     try {
+      // Check if S3 is configured before attempting to use it
+      const requiredVars = [
+        'AWS_S3_REGION',
+        'AWS_S3_BUCKET_NAME',
+        'AWS_ACCESS_KEY_ID',
+        'AWS_SECRET_ACCESS_KEY',
+      ];
+      
+      const missing = requiredVars.filter(varName => !process.env[varName]);
+      if (missing.length > 0) {
+        // Silently skip S3 backup if not configured (non-critical feature)
+        console.log('⚠️ CVS3Service - S3 not configured, skipping backup:', missing.join(', '));
+        return null;
+      }
+      
       const s3Client = getS3Client();
       
       // Prepare CV document with template

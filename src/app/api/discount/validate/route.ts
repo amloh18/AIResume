@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getConnection } from '@/lib/database';
 import { getAdminDiscountCode, getAdminPricingPlan } from '@/models/admin-models';
+import { LocationService } from '@/lib/payment/locationService';
 
 export async function POST(request: NextRequest) {
   try {
@@ -44,17 +45,45 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Check minimum order value
-    if (discountCode.minimumOrderValue && amount < discountCode.minimumOrderValue) {
+    // Ensure discount type has a valid value, default to 'percentage' if not set
+    if (!discountCode.discountType) {
+      discountCode.discountType = 'percentage';
+    }
+
+    if (!['percentage', 'fixed'].includes(discountCode.discountType)) {
       return NextResponse.json({
         success: false,
-        error: `Minimum order value of ${discountCode.minimumOrderValue} ${discountCode.currency} required`
+        error: 'Invalid discount code configuration'
       });
+    }
+
+    // Get user location for currency conversion
+    const userLocation = await LocationService.getLocationData();
+
+    // Check minimum order value (convert to user's currency if needed)
+    if (discountCode.minimumOrderValue) {
+      let minimumAmount = discountCode.minimumOrderValue;
+      if (discountCode.currency !== userLocation.currency) {
+        // Convert minimum order value to user's currency
+        const converted = LocationService.convertPrice(
+          discountCode.minimumOrderValue,
+          discountCode.currency,
+          userLocation.currency
+        );
+        minimumAmount = converted.convertedPrice;
+      }
+
+      if (amount < minimumAmount) {
+        return NextResponse.json({
+          success: false,
+          error: `Minimum order value of ${Math.round(minimumAmount)} ${userLocation.currencySymbol} required`
+        });
+      }
     }
 
     // Check if code applies to this plan
     // Support both plan IDs and plan keys
-    if (discountCode.applicablePlans.length > 0) {
+    if (discountCode.applicablePlans && discountCode.applicablePlans.length > 0) {
       const PricingPlan = await getAdminPricingPlan();
       const plan = await PricingPlan.findById(planId);
       
@@ -96,7 +125,17 @@ export async function POST(request: NextRequest) {
     if (discountCode.discountType === 'percentage') {
       discountAmount = (amount * discountCode.discountValue) / 100;
     } else {
-      discountAmount = discountCode.discountValue;
+      // For fixed discounts, convert to user's currency if needed
+      if (discountCode.currency === userLocation.currency) {
+        discountAmount = discountCode.discountValue;
+      } else {
+        const converted = LocationService.convertPrice(
+          discountCode.discountValue,
+          discountCode.currency,
+          userLocation.currency
+        );
+        discountAmount = converted.convertedPrice;
+      }
     }
 
     // Don't discount more than the order value

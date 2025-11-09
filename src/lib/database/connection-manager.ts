@@ -187,11 +187,14 @@ class DatabaseConnectionManager {
       ...this.config.options,
     };
 
-    console.log('🔗 Attempting to connect to MongoDB...');
-    console.log(
-      '🔍 Connection URI:',
-      this.config.uri.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')
-    );
+    // Only log connection attempts in development or if not already connected
+    if (process.env.NODE_ENV === 'development' || mongoose.connection.readyState === 0) {
+      console.log('🔗 Attempting to connect to MongoDB...');
+      console.log(
+        '🔍 Connection URI:',
+        this.config.uri.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')
+      );
+    }
 
     const mongooseInstance = await mongoose.connect(this.config.uri, options);
 
@@ -225,13 +228,16 @@ class DatabaseConnectionManager {
     // Verify connection is actually working with a ping
     try {
       await mongooseInstance.connection.db?.admin().ping();
-      console.log('✅ Connected to MongoDB successfully');
-      console.log(
-        `📊 Database: ${mongooseInstance.connection.db?.databaseName || 'unknown'}`
-      );
-      console.log(
-        `🌐 Host: ${mongooseInstance.connection.host}:${mongooseInstance.connection.port}`
-      );
+      // Only log successful connections in development or first connection
+      if (process.env.NODE_ENV === 'development') {
+        console.log('✅ Connected to MongoDB successfully');
+        console.log(
+          `📊 Database: ${mongooseInstance.connection.db?.databaseName || 'unknown'}`
+        );
+        console.log(
+          `🌐 Host: ${mongooseInstance.connection.host}:${mongooseInstance.connection.port}`
+        );
+      }
     } catch (pingError) {
       throw new Error(`MongoDB connection ping failed: ${pingError}`);
     }

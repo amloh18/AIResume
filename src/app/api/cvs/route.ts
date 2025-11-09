@@ -219,6 +219,19 @@ export async function GET(request: NextRequest) {
         fullMetadata: cv.metadata
       });
       
+      // For list/summary projections, exclude heavy fields like thumbnailUrl and cvData
+      const baseMetadata = projection === 'list' || projection === 'summary' 
+        ? {
+            ...cv.metadata,
+            // Exclude Base64 thumbnail for list views - only include URL if it's a regular URL
+            thumbnailUrl: cv.metadata?.thumbnailUrl && !cv.metadata.thumbnailUrl.startsWith('data:')
+              ? cv.metadata.thumbnailUrl
+              : undefined,
+            // Exclude other heavy fields
+            thumbnailGeneratedAt: undefined
+          }
+        : cv.metadata;
+      
       return {
         id: cv._id,
         title: cv.title,
@@ -230,7 +243,7 @@ export async function GET(request: NextRequest) {
         downloadCount: cv.metadata?.downloadCount || 0,
         createdAt: cv.createdAt,
         updatedAt: cv.updatedAt,
-        metadata: cv.metadata, // Always include metadata
+        metadata: baseMetadata, // Use filtered metadata for list views
         ...(projection === 'full' && {
           cvData: cv.cvData,
           templateId: cv.templateId,
@@ -242,7 +255,14 @@ export async function GET(request: NextRequest) {
           styling: cv.styling
         }),
         ...(projection === 'summary' && {
-          cvData: cv.cvData,
+          // For summary, include minimal cvData (no full structure)
+          cvData: cv.cvData ? {
+            basics: cv.cvData.basics ? {
+              name: cv.cvData.basics.name,
+              label: cv.cvData.basics.label,
+              email: cv.cvData.basics.email
+            } : undefined
+          } : undefined,
           templateId: cv.templateId,
           templateName: cv.templateName,
           templateData: cv.templateData, // Include saved template data
@@ -265,7 +285,7 @@ export async function GET(request: NextRequest) {
       id: String(cv.id),
       userId: userId, // Use the userId from authResult
       title: cv.title,
-      cvData: cv.cvData,
+      cvData: cv.cvData, // Only included for 'full' projection
       templateId: cv.templateId,
       status: cv.status,
       version: 1, // Default version
@@ -279,8 +299,15 @@ export async function GET(request: NextRequest) {
         downloadCount: cv.downloadCount,
         atsScore: cv.metadata?.atsScore,
         atsScoreDate: cv.metadata?.atsScoreDate,
-        thumbnailUrl: cv.metadata?.thumbnailUrl,
-        thumbnailGeneratedAt: cv.metadata?.thumbnailGeneratedAt,
+        // Only include thumbnailUrl if it's not a Base64 data URL (for list views)
+        thumbnailUrl: projection === 'list' || projection === 'summary'
+          ? (cv.metadata?.thumbnailUrl && !cv.metadata.thumbnailUrl.startsWith('data:')
+              ? cv.metadata.thumbnailUrl
+              : undefined)
+          : cv.metadata?.thumbnailUrl,
+        thumbnailGeneratedAt: projection === 'list' || projection === 'summary' 
+          ? undefined 
+          : cv.metadata?.thumbnailGeneratedAt,
         starred: cv.starred
       },
       createdAt: cv.createdAt,
