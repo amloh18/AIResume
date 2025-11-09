@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { getAuthenticatedUser } from '@/lib/auth-helpers';
-import { CV, Job, ApplicationJourney } from '@/models';
-import { User as UserModel } from '@/models/User';
+import { CV, JobApplication, ApplicationJourney } from '@/models';
+import UserModel from '@/models/User';
 import mongoose from 'mongoose';
 
 /**
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
       
       // Fetch jobs (conditional)
       includeJobs
-        ? Job.find({ userId: userObjectId })
+        ? JobApplication.find({ userId: userObjectId })
             .select('jobTitle company status location salary deadline createdAt updatedAt')
             .sort({ updatedAt: -1 })
             .limit(100)
@@ -101,7 +101,7 @@ export async function GET(request: NextRequest) {
 
     // Calculate usage limits and counts
     const cvCount = includeCVs ? await CV.countDocuments({ userId: userObjectId }) : 0;
-    const jobCount = includeJobs ? await Job.countDocuments({ userId: userObjectId }) : 0;
+    const jobCount = includeJobs ? await JobApplication.countDocuments({ userId: userObjectId }) : 0;
 
     // Construct response
     const responseData = {

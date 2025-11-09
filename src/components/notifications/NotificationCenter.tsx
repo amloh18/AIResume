@@ -18,6 +18,23 @@ export default function NotificationCenter() {
   const isAuthenticated = status === 'authenticated' && !!session?.user;
   const { notifications, unreadCount, markAsRead, markAllAsRead, handleNotificationAction } = useNotifications();
   
+  // Helper function to safely convert _id to string
+  const getIdAsString = (id: any): string => {
+    if (!id) return '';
+    if (typeof id === 'string') return id;
+    if (typeof id === 'number') return String(id);
+    // Safely check for toString method - ensure id is an object first
+    if (typeof id === 'object' && id !== null && 'toString' in id && typeof id.toString === 'function') {
+      try {
+        return id.toString();
+      } catch (error) {
+        console.warn('Error calling toString on id:', error);
+        return String(id);
+      }
+    }
+    return String(id);
+  };
+  
   // Don't render notification center if user is not authenticated or on admin routes
   if (!isAuthenticated || isAdminRoute) {
     return null;
@@ -26,20 +43,43 @@ export default function NotificationCenter() {
   const [activeTab, setActiveTab] = useState<'unread' | 'read'>('unread');
 
   // Filter notifications based on tab
+  // Note: We don't filter out notifications without _id here because they might still be valid
+  // The getIdAsString helper will handle missing _id safely
   const filteredNotifications = notifications.filter((n) => {
     if (activeTab === 'unread') return !n.read;
     return n.read;
   });
 
   // Separate persistent and time-sensitive
-  const persistentNotifications = filteredNotifications.filter((n) => n.persistent);
-  const timeSensitiveNotifications = filteredNotifications.filter((n) => !n.persistent);
+  // Handle cases where persistent might be undefined/null
+  const persistentNotifications = filteredNotifications.filter((n) => n.persistent === true);
+  const timeSensitiveNotifications = filteredNotifications.filter((n) => n.persistent !== true);
+  
+  // Debug: Log filtered notifications to help diagnose issues
+  if (process.env.NODE_ENV === 'development' && filteredNotifications.length === 0 && unreadCount > 0) {
+    console.log('Debug: No filtered notifications but unreadCount > 0', {
+      totalNotifications: notifications.length,
+      unreadCount,
+      activeTab,
+      notifications: notifications.map(n => ({
+        _id: n._id,
+        read: n.read,
+        title: n.title
+      }))
+    });
+  }
 
   const handleNotificationClick = async (notification: INotification) => {
+    const notificationId = getIdAsString(notification._id);
+    if (!notificationId) {
+      console.error('Notification missing _id:', notification);
+      return;
+    }
+    
     if (notification.interactive && notification.actionType) {
-      await handleNotificationAction(notification._id.toString(), notification.actionType);
+      await handleNotificationAction(notificationId, notification.actionType);
     } else {
-      await markAsRead(notification._id.toString());
+      await markAsRead(notificationId);
     }
     setIsOpen(false);
   };
@@ -160,28 +200,40 @@ export default function NotificationCenter() {
               ) : (
                 <div className="divide-y divide-gray-200 dark:divide-gray-700">
                   {/* Persistent notifications first */}
-                  {persistentNotifications.map((notification) => (
-                    <NotificationItem
-                      key={notification._id.toString()}
-                      notification={notification}
-                      onClick={() => handleNotificationClick(notification)}
-                      onMarkRead={() => markAsRead(notification._id.toString())}
-                      getIcon={getNotificationIcon}
-                      getPriorityColor={getPriorityColor}
-                    />
-                  ))}
+                  {persistentNotifications.map((notification, index) => {
+                    const notificationId = getIdAsString(notification._id) || `persistent-${index}`;
+                    return (
+                      <NotificationItem
+                        key={notificationId}
+                        notification={notification}
+                        onClick={() => handleNotificationClick(notification)}
+                        onMarkRead={() => {
+                          const id = getIdAsString(notification._id);
+                          if (id) markAsRead(id);
+                        }}
+                        getIcon={getNotificationIcon}
+                        getPriorityColor={getPriorityColor}
+                      />
+                    );
+                  })}
                   
                   {/* Time-sensitive notifications */}
-                  {timeSensitiveNotifications.map((notification) => (
-                    <NotificationItem
-                      key={notification._id.toString()}
-                      notification={notification}
-                      onClick={() => handleNotificationClick(notification)}
-                      onMarkRead={() => markAsRead(notification._id.toString())}
-                      getIcon={getNotificationIcon}
-                      getPriorityColor={getPriorityColor}
-                    />
-                  ))}
+                  {timeSensitiveNotifications.map((notification, index) => {
+                    const notificationId = getIdAsString(notification._id) || `time-sensitive-${index}`;
+                    return (
+                      <NotificationItem
+                        key={notificationId}
+                        notification={notification}
+                        onClick={() => handleNotificationClick(notification)}
+                        onMarkRead={() => {
+                          const id = getIdAsString(notification._id);
+                          if (id) markAsRead(id);
+                        }}
+                        getIcon={getNotificationIcon}
+                        getPriorityColor={getPriorityColor}
+                      />
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -235,13 +287,38 @@ function NotificationItem({
               <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-500">
                 <span className="flex items-center gap-1">
                   <Clock className="h-3 w-3" />
-                  {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+                  {(() => {
+                    try {
+                      if (!notification.createdAt) return 'Recently';
+                      const createdAt = new Date(notification.createdAt);
+                      if (isNaN(createdAt.getTime())) {
+                        console.warn('Invalid createdAt date:', notification.createdAt);
+                        return 'Recently';
+                      }
+                      return formatDistanceToNow(createdAt, { addSuffix: true });
+                    } catch (error) {
+                      console.error('Error formatting createdAt:', error, notification);
+                      return 'Recently';
+                    }
+                  })()}
                 </span>
-                {notification.expiresAt && !notification.persistent && (
-                  <span className="text-orange-600 dark:text-orange-400">
-                    Expires {formatDistanceToNow(new Date(notification.expiresAt), { addSuffix: true })}
-                  </span>
-                )}
+                {notification.expiresAt && !notification.persistent && (() => {
+                  try {
+                    const expiresAt = new Date(notification.expiresAt);
+                    if (isNaN(expiresAt.getTime())) {
+                      console.warn('Invalid expiresAt date:', notification.expiresAt);
+                      return null;
+                    }
+                    return (
+                      <span className="text-orange-600 dark:text-orange-400">
+                        Expires {formatDistanceToNow(expiresAt, { addSuffix: true })}
+                      </span>
+                    );
+                  } catch (error) {
+                    console.error('Error formatting expiresAt:', error, notification);
+                    return null;
+                  }
+                })()}
               </div>
               {notification.interactive && notification.actionType && (
                 <div className="mt-2">

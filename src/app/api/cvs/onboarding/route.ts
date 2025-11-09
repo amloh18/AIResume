@@ -5,6 +5,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import AdminTemplateService from '@/lib/services/adminTemplateService';
 import mongoose from 'mongoose';
+import { migrateLegacyCV, hasStructure } from '@/lib/migrations/cv-structure-migration';
+import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 
 /**
  * POST /api/cvs/onboarding
@@ -139,6 +141,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate template exists in admin database
+    let templateData = null;
     try {
       const template = await AdminTemplateService.getTemplateById(finalTemplateId);
       if (!template) {
@@ -148,6 +151,8 @@ export async function POST(request: NextRequest) {
           { status: 400, headers }
         );
       }
+      // Store template data for faster loading
+      templateData = template;
     } catch (templateError) {
       console.error('❌ Error validating template:', templateError);
       return NextResponse.json(
@@ -156,12 +161,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Ensure CV data has structure initialized
+    let processedCvData: UnifiedCVDataStructure = cvData;
+    if (!hasStructure(processedCvData)) {
+      console.log('🔄 Onboarding API - Migrating CV data to structure format');
+      try {
+        processedCvData = migrateLegacyCV(processedCvData);
+        console.log('✅ Onboarding API - CV data migrated to structure format');
+      } catch (migrationError) {
+        console.error('❌ Onboarding API - Migration error:', migrationError);
+        // Continue with original data if migration fails
+      }
+    } else {
+      console.log('✅ Onboarding API - CV data already has structure');
+    }
+
+    // Get template name for storage
+    const templateName = templateData?.name || 'Executive Professional';
+
     // Create CV with new relational schema
     const cvDoc = {
       userId: authContext.mongoUserId,
       title,
-      cvData,
+      cvData: processedCvData, // Use processed CV data with structure
       templateId: finalTemplateId,
+      templateName: templateName,
+      templateData: templateData, // Store template data for faster loading
       metadata: {
         isMaster: metadata?.isMaster || true, // Default to master for onboarding
         lastModified: new Date(),

@@ -481,98 +481,398 @@ const Canvas: React.FC = () => {
     };
   }, [showSortDropdown]);
 
-  // Handle CV creation
-  const handleCreateCV = async () => {
+  // Helper function to get user ID from localStorage
+  const getUserIdFromLocalStorage = (): string | null => {
     try {
-      const userId = getUserIdForAPI(user);
-      if (userId) {
-        await createCV({ userId });
+      const userData = localStorage.getItem('user');
+      if (userData) {
+        const parsedUser = safeJsonParse(userData);
+        if (!parsedUser) return null;
+        // Only return ID if it's a Firebase user
+        if (parsedUser.firebaseUid) {
+          return parsedUser.id || parsedUser._id;
+        }
       }
     } catch (error) {
-      // Removed notification:'error', 'Failed to create CV');
+      // Silent fail - localStorage parsing failed
     }
+    return null;
   };
 
-  // Master CV handlers
-  const handleEditMasterCV = async (masterCV: any) => {
-    try {
-      // Store master CV data in sessionStorage for studio to access
-      sessionStorage.setItem('editingMasterCV', JSON.stringify(masterCV));
-      sessionStorage.setItem('editingCVId', masterCV.id);
-      sessionStorage.setItem('editingCVTitle', masterCV.title);
-      sessionStorage.setItem('editingCVData', JSON.stringify(masterCV.cvData));
+  // Helper functions for calculating completion percentage (must be before loadCVs)
+  const calculatePersonalInfoScore = (basics: any): number => {
+    let score = 0;
+    let maxScore = 5;
+    
+    if (basics.name && basics.name.trim()) score += 1;
+    if (basics.email && basics.email.trim()) score += 1;
+    if (basics.phone && basics.phone.trim()) score += 1;
+    if (basics.location && (basics.location.city || basics.location.address)) score += 1;
+    if (basics.summary && basics.summary.trim()) score += 1;
+    
+    return (score / maxScore) * 100;
+  };
+  
+  const calculateExperienceScore = (work: any[]): number => {
+    if (!Array.isArray(work) || work.length === 0) return 0;
+    
+    let totalScore = 0;
+    const maxEntries = 3; // Consider up to 3 most recent experiences
+    
+    work.slice(0, maxEntries).forEach(entry => {
+      let entryScore = 0;
+      let maxEntryScore = 4;
       
-      // Navigate to studio with master CV
-      router.push(`/studio?cvId=${masterCV.id}&master=true`);
-    } catch (error) {
-      // Removed notification:'error', 'Failed to open master CV');
-    }
+      if (entry.name && entry.name.trim()) entryScore += 1;
+      if (entry.position && entry.position.trim()) entryScore += 1;
+      if (entry.startDate && entry.startDate.trim()) entryScore += 1;
+      if (entry.summary && entry.summary.trim()) entryScore += 1;
+      
+      totalScore += (entryScore / maxEntryScore) * 100;
+    });
+    
+    return Math.min(100, totalScore / Math.min(work.length, maxEntries));
+  };
+  
+  const calculateEducationScore = (education: any[]): number => {
+    if (!Array.isArray(education) || education.length === 0) return 0;
+    
+    let totalScore = 0;
+    const maxEntries = 2; // Consider up to 2 most recent education entries
+    
+    education.slice(0, maxEntries).forEach(entry => {
+      let entryScore = 0;
+      let maxEntryScore = 3;
+      
+      if (entry.institution && entry.institution.trim()) entryScore += 1;
+      if (entry.area && entry.area.trim()) entryScore += 1;
+      if (entry.startDate && entry.startDate.trim()) entryScore += 1;
+      
+      totalScore += (entryScore / maxEntryScore) * 100;
+    });
+    
+    return Math.min(100, totalScore / Math.min(education.length, maxEntries));
+  };
+  
+  const calculateSkillsScore = (skills: any[]): number => {
+    if (!Array.isArray(skills) || skills.length === 0) return 0;
+    return Math.min(100, (skills.length / 10) * 100); // 10 skills = 100%
+  };
+  
+  const calculateProjectsScore = (projects: any[]): number => {
+    if (!Array.isArray(projects) || projects.length === 0) return 0;
+    
+    let totalScore = 0;
+    const maxEntries = 2; // Consider up to 2 most recent projects
+    
+    projects.slice(0, maxEntries).forEach(project => {
+      let projectScore = 0;
+      let maxProjectScore = 3;
+      
+      if (project.name && project.name.trim()) projectScore += 1;
+      if (project.description && project.description.trim()) projectScore += 1;
+      if (project.url && project.url.trim()) projectScore += 1;
+      
+      totalScore += (projectScore / maxProjectScore) * 100;
+    });
+    
+    return Math.min(100, totalScore / Math.min(projects.length, maxEntries));
   };
 
-  const handleDuplicateMasterCV = async (masterCV: any) => {
+  const calculateCompletionPercentage = (cv: any): number => {
+    // If CV is published, it's considered complete
+    if (cv.status === 'published') return 100;
+    
+    // If CV is archived, return 0
+    if (cv.status === 'archived') return 0;
+    
+    // Calculate completion based on CV sections
+    let totalScore = 0;
+    let maxScore = 0;
+    
+    // Section weights (total = 100)
+    const sectionWeights = {
+      personalInfo: 25,    // Name, email, phone, location, summary
+      experience: 30,      // Work experience entries
+      education: 20,       // Education entries
+      skills: 15,          // Skills and competencies
+      projects: 10         // Projects and achievements
+    };
+    
+    // Check personal info section
+    if (cv.cvData?.basics) {
+      const basics = cv.cvData.basics;
+      const personalInfoScore = calculatePersonalInfoScore(basics);
+      totalScore += (personalInfoScore * sectionWeights.personalInfo) / 100;
+    }
+    maxScore += sectionWeights.personalInfo;
+    
+    // Check experience section
+    if (cv.cvData?.work) {
+      const experienceScore = calculateExperienceScore(cv.cvData.work);
+      totalScore += (experienceScore * sectionWeights.experience) / 100;
+    }
+    maxScore += sectionWeights.experience;
+    
+    // Check education section
+    if (cv.cvData?.education) {
+      const educationScore = calculateEducationScore(cv.cvData.education);
+      totalScore += (educationScore * sectionWeights.education) / 100;
+    }
+    maxScore += sectionWeights.education;
+    
+    // Check skills section
+    if (cv.cvData?.skills) {
+      const skillsScore = calculateSkillsScore(cv.cvData.skills);
+      totalScore += (skillsScore * sectionWeights.skills) / 100;
+    }
+    maxScore += sectionWeights.skills;
+    
+    // Check projects section
+    if (cv.cvData?.projects) {
+      const projectsScore = calculateProjectsScore(cv.cvData.projects);
+      totalScore += (projectsScore * sectionWeights.projects) / 100;
+    }
+    maxScore += sectionWeights.projects;
+    
+    // Calculate final percentage
+    const completionPercentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
+    
+    // Ensure percentage is between 0 and 100
+    return Math.max(0, Math.min(100, completionPercentage));
+  };
+
+  // CRITICAL FIX: Load functions must be defined before they're used in useEffect and handlers
+  // Load CVs function
+  const loadCVs = useCallback(async (userId?: string) => {
     try {
+      const userIdToUse = userId || getUserIdForAPI(user);
       
-      const userId = getUserIdForAPI(user) || getUserIdFromLocalStorage();
-      if (!userId) {
-        // Removed notification:'error', 'User not authenticated');
+      if (!userIdToUse) {
+        console.log('❌ Canvas - No user ID available for loading CVs');
+        setCvs([]);
+        setMasterCVs([]);
         return;
       }
 
-      // Use ApplicationPackageService to properly duplicate CV
-      const duplicateResult = await ApplicationPackageService.duplicateCV({
-        sourceCvId: masterCV.id,
-        userId,
-        newTitle: `${masterCV.title} (Copy)`
-      });
-
-      if (duplicateResult.success && duplicateResult.data?.cvId) {
-        const duplicatedCVId = duplicateResult.data.cvId;
-        
-        // Navigate to studio with duplicated CV (freestanding, ready for job linking)
-        router.push(`/studio?cvId=${duplicatedCVId}&mode=document-first`);
-        
-        // Removed notification:'success', 'Master CV duplicated successfully! You can now link it to a job.');
-      } else {
-        throw new Error(duplicateResult.message || 'Failed to duplicate master CV');
-      }
-    } catch (error) {
-      // Removed notification:'error', 'Failed to duplicate master CV');
-    }
-  };
-
-  // CV Card handlers
-  const handleDuplicateCV = async (cv: CV) => {
-    try {
-      
-      const userId = getUserIdForAPI(user) || getUserIdFromLocalStorage();
-      if (!userId) {
-        // Removed notification:'error', 'User not authenticated');
+      // Prevent re-fetching on tab switch - only fetch if user ID changed or first load
+      if (hasLoadedCVsRef.current && lastUserIdRef.current === userIdToUse) {
+        console.log('⏭️ Canvas - Skipping CV reload (data already loaded for this user)');
         return;
       }
 
-      // Use ApplicationPackageService to properly duplicate CV
-      const duplicateResult = await ApplicationPackageService.duplicateCV({
-        sourceCvId: cv.id,
-        userId,
-        newTitle: `${cv.title} (Copy)`
-      });
+      // Mark as loading for this user
+      hasLoadedCVsRef.current = true;
+      lastUserIdRef.current = userIdToUse;
 
-      if (duplicateResult.success && duplicateResult.data?.cvId) {
-        // Refresh CVs list to show the new freestanding duplicate
-        loadCVs();
-        // Removed notification:'success', 'CV duplicated successfully! The copy is ready to be linked to a new job.');
+      setLoading(true);
+      console.log('🔍 Canvas - Loading CVs with user ID:', userIdToUse);
+      
+      // Use unified service to get CVs
+      // Use 'summary' projection for performance - avoid loading massive Base64 thumbnails
+      console.log('🔍 Canvas - Calling UnifiedCVService.getCVs...');
+      const result = await UnifiedCVService.getCVs(userIdToUse, { projection: 'summary' });
+      console.log('🔍 Canvas - UnifiedCVService.getCVs result:', result);
+      console.log('🔍 Canvas - Result type:', typeof result, 'Is array:', Array.isArray(result), 'Length:', result?.length);
+      
+      if (result && Array.isArray(result) && result.length > 0) {
+        // Process CVs with unified data structure
+        const enrichedCVs = result.map((cv: any) => {
+          
+          return {
+            id: cv.id,
+            title: cv.title || 'Untitled CV',
+            lastModified: cv.metadata?.lastModified || cv.updatedAt || cv.createdAt,
+            updatedAt: cv.updatedAt || cv.metadata?.lastModified || cv.createdAt || new Date().toISOString(),
+            status: cv.status || 'draft',
+            views: cv.metadata?.viewCount || 0,
+            isStarred: cv.metadata?.starred || false,
+            thumbnail: cv.metadata?.thumbnailUrl || '',
+            description: cv.description || '',
+            cvData: cv.cvData || null, // Include CV data for preview
+            template: cv.template || cv.templateData || (cv.templateId ? { _id: cv.templateId, name: cv.templateName || 'Default Template' } : null), // Include template data for preview - prioritize saved templateData
+            templateId: cv.templateId,
+            templateName: cv.templateName,
+            templateData: cv.templateData, // Include saved template data
+            journeyId: cv.journeyId,
+            completionPercentage: calculateCompletionPercentage(cv),
+            isMaster: cv.metadata?.isMaster || cv.isMaster || false, // Include master flag - handle both formats
+            atsScore: cv.metadata?.atsScore, // Include ATS score
+            metadata: cv.metadata // Include full metadata
+          } as CV;
+        });
         
-        // If the source CV was linked to a journey, inform user about the duplication principle
-        if (cv.journeyId) {
-          // Removed notification:'info', 'A new freestanding copy was created. You can now link it to a different job application.', 5000);
+        // Separate Master CVs from regular CVs based on isMaster metadata
+        console.log('🔍 Canvas - All CVs before filtering:', enrichedCVs.map(cv => ({ 
+          id: cv.id, 
+          title: cv.title, 
+          isMaster: cv.isMaster,
+          metadataIsMaster: cv.metadata?.isMaster 
+        })));
+        
+        // Filter CVs based on isMaster - handle both old and new formats
+        const masterCVs = enrichedCVs.filter(cv => {
+          const isMasterAtRoot = cv.isMaster === true;
+          const metadataIsMaster = cv.metadata?.isMaster;
+          const isMasterInMetadata = metadataIsMaster === true || 
+            (typeof metadataIsMaster === 'string' && metadataIsMaster === 'true');
+          return isMasterAtRoot || isMasterInMetadata;
+        });
+        const regularCVs = enrichedCVs.filter(cv => {
+          const isMasterAtRoot = cv.isMaster === true;
+          const metadataIsMaster = cv.metadata?.isMaster;
+          const isMasterInMetadata = metadataIsMaster === true || 
+            (typeof metadataIsMaster === 'string' && metadataIsMaster === 'true');
+          return !isMasterAtRoot && !isMasterInMetadata;
+        });
+        
+        console.log('🔍 Canvas - Master CVs:', masterCVs.length);
+        console.log('🔍 Canvas - Regular CVs:', regularCVs.length);
+        console.log('🔍 Canvas - First CV sample:', regularCVs[0]);
+        console.log('🔍 Canvas - Master CVs data:', masterCVs);
+        console.log('🔍 Canvas - First Master CV:', masterCVs[0]);
+        
+        // Store both Master CVs and regular CVs
+        setCvs(regularCVs);
+        setMasterCVs(masterCVs);
+        console.log('✅ Canvas - CVs loaded successfully:', { regular: regularCVs.length, master: masterCVs.length });
+        
+        // Performance optimization: Load journeys in batch for all CVs
+        // This eliminates N+1 query problem (one API call instead of N calls)
+        if (regularCVs.length > 0 || masterCVs.length > 0) {
+          const allCVIds = [...regularCVs, ...masterCVs].map(cv => cv.id).filter(Boolean);
+          if (allCVIds.length > 0) {
+            console.log('🔍 Canvas - Batch loading journeys for CVs:', allCVIds.length);
+            try {
+              const journeysMap = await CVJourneyLookupService.findJourneysByCVIds(allCVIds, userIdToUse);
+              // Convert map to array format expected by Canvas
+              const journeysArray = Array.from(journeysMap.values());
+              if (journeysArray.length > 0) {
+                console.log('✅ Canvas - Batch loaded journeys:', journeysArray.length);
+                setJourneys(journeysArray);
+              }
+            } catch (error) {
+              console.error('❌ Canvas - Error batch loading journeys:', error);
+              // Fallback: Load journeys individually if batch fails (will be called separately)
+              // Don't call loadJourneys here to avoid circular dependency
+            }
+          }
         }
       } else {
-        throw new Error(duplicateResult.message || 'Failed to duplicate CV');
+        console.log('🔍 Canvas - No CVs found for user:', userIdToUse);
+        console.log('🔍 Canvas - Result was:', result);
+        setCvs([]);
+        setMasterCVs([]);
+      }
+    } catch (error: any) {
+      console.error('❌ Error loading CVs:', error);
+      console.error('❌ Error details:', error.message, error.stack);
+      // Don't clear CVs on error - keep existing ones if any
+      // setCvs([]);
+      // setMasterCVs([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  // Load Cover Letters function
+  const loadCoverLetters = useCallback(async () => {
+    try {
+      console.log('🔍 Canvas - Loading Cover Letters...');
+      const userId = getUserIdForAPI(user);
+      if (!userId) {
+        console.log('🔍 Canvas - No user ID, skipping Cover Letter load');
+        return;
+      }
+
+      const response = await authenticatedFetch(`/api/cover-letters?userId=${userId}`);
+      const result = await response.json();
+      
+      console.log('🔍 Canvas - Cover Letter API response:', result);
+      
+      if (result.success && result.data?.coverLetters) {
+        const enrichedCoverLetters = result.data.coverLetters.map((cl: any) => ({
+          ...cl,
+          id: cl.id || cl._id,
+          lastModified: formatTimeAgo(new Date(cl.metadata?.lastModified || cl.updatedAt || cl.createdAt)),
+          views: cl.views || 0,
+          isStarred: cl.isStarred || false,
+          thumbnail: '/api/cover-letters/thumbnail/' + (cl.id || cl._id),
+          description: cl.metadata?.targetCompany ? `For ${cl.metadata.targetCompany}` : 'Cover letter',
+          coverLetterData: cl.content,
+          content: cl.content, // Add content field for the overlay component
+          // connectedJobs removed - relationships now managed through CVJourney
+          completionPercentage: cl.completionPercentage || 0
+        }));
+        
+        console.log('🔍 Canvas - Setting Cover Letters:', enrichedCoverLetters.length);
+        console.log('🔍 Canvas - First Cover Letter sample:', enrichedCoverLetters[0]);
+        setCoverLetters(enrichedCoverLetters);
+      } else {
+        console.log('🔍 Canvas - Cover Letter API returned success: false');
+        setCoverLetters([]);
       }
     } catch (error) {
-      // Removed notification:'error', 'Failed to duplicate CV');
+      console.error('Error loading Cover Letters:', error);
+      setCoverLetters([]);
     }
-  };
+  }, [user]);
+
+  // Load Journeys function
+  const loadJourneys = useCallback(async () => {
+    try {
+      console.log('🔍 Canvas - Loading Journeys...');
+      const userId = getUserIdForAPI(user);
+      if (!userId) {
+        console.log('🔍 Canvas - No user ID, skipping Journey load');
+        return;
+      }
+
+      const response = await authenticatedFetch(`/api/journeys?userId=${userId}`);
+      const result = await response.json();
+      
+      console.log('🔍 Canvas - Journey API response:', result);
+      
+      if (result.success && result.data?.journeys) {
+        console.log('🔍 Canvas - Setting Journeys:', result.data.journeys.length);
+        setJourneys(result.data.journeys);
+      } else {
+        console.log('🔍 Canvas - Journey API returned success: false');
+        setJourneys([]);
+      }
+    } catch (error) {
+      console.error('Error loading Journeys:', error);
+      setJourneys([]);
+    }
+  }, [user]);
+
+  // Load Available Jobs function
+  const fetchAvailableJobs = useCallback(async () => {
+    try {
+      console.log('🔍 Canvas - Loading Available Jobs...');
+      const userId = getUserIdForAPI(user);
+      if (!userId) {
+        console.log('🔍 Canvas - No user ID, skipping Jobs load');
+        return;
+      }
+
+      const response = await authenticatedFetch(`/api/jobs?userId=${userId}`);
+      const result = await response.json();
+      
+      console.log('🔍 Canvas - Jobs API response:', result);
+      
+      if (result.success && result.data?.jobs) {
+        console.log('🔍 Canvas - Setting Available Jobs:', result.data.jobs.length);
+        setAvailableJobs(result.data.jobs);
+      } else {
+        console.log('🔍 Canvas - Jobs API returned success: false');
+        setAvailableJobs([]);
+      }
+    } catch (error) {
+      console.error('Error loading Available Jobs:', error);
+      setAvailableJobs([]);
+    }
+  }, [user]);
 
   const [downloadModalOpen, setDownloadModalOpen] = useState(false);
   const [selectedCVForDownload, setSelectedCVForDownload] = useState<CV | null>(null);
@@ -779,8 +1079,6 @@ const Canvas: React.FC = () => {
     setModalConfig(prev => ({ ...prev, isOpen: false }));
   };
 
-
-
   // Load CVs and Cover Letters from API
   useEffect(() => {
     // Check if user is returning from onboarding
@@ -813,384 +1111,100 @@ const Canvas: React.FC = () => {
     loadCoverLetters();
     loadJourneys();
     fetchAvailableJobs();
-  }, [user?.id, loadCVs, loadCoverLetters, loadJourneys]); // Use user.id instead of user object
+  }, [user?.id, loadCVs, loadCoverLetters, loadJourneys, fetchAvailableJobs]); // Use user.id instead of user object
 
-  const getUserIdFromLocalStorage = (): string | null => {
+  // Handle CV creation (moved after load functions to avoid initialization issues)
+  const handleCreateCV = async () => {
     try {
-      const userData = localStorage.getItem('user');
-      if (userData) {
-        const parsedUser = safeJsonParse(userData);
-        if (!parsedUser) return null;
-        // Only return ID if it's a Firebase user
-        if (parsedUser.firebaseUid) {
-          return parsedUser.id || parsedUser._id;
-        }
+      const userId = getUserIdForAPI(user);
+      if (userId) {
+        await createCV({ userId });
       }
     } catch (error) {
-      // Silent fail - localStorage parsing failed
+      // Removed notification:'error', 'Failed to create CV');
     }
-    return null;
   };
 
-  const loadCVs = useCallback(async (userId?: string) => {
+  // Master CV handlers (moved after load functions)
+  const handleEditMasterCV = async (masterCV: any) => {
     try {
-      const userIdToUse = userId || getUserIdForAPI(user);
+      // Store master CV data in sessionStorage for studio to access
+      sessionStorage.setItem('editingMasterCV', JSON.stringify(masterCV));
+      sessionStorage.setItem('editingCVId', masterCV.id);
+      sessionStorage.setItem('editingCVTitle', masterCV.title);
+      sessionStorage.setItem('editingCVData', JSON.stringify(masterCV.cvData));
       
-      if (!userIdToUse) {
-        console.log('❌ Canvas - No user ID available for loading CVs');
-        setCvs([]);
-        setMasterCVs([]);
+      // Navigate to studio with master CV
+      router.push(`/studio?cvId=${masterCV.id}&master=true`);
+    } catch (error) {
+      // Removed notification:'error', 'Failed to open master CV');
+    }
+  };
+
+  const handleDuplicateMasterCV = async (masterCV: any) => {
+    try {
+      
+      const userId = getUserIdForAPI(user) || getUserIdFromLocalStorage();
+      if (!userId) {
+        // Removed notification:'error', 'User not authenticated');
         return;
       }
 
-      // Prevent re-fetching on tab switch - only fetch if user ID changed or first load
-      if (hasLoadedCVsRef.current && lastUserIdRef.current === userIdToUse) {
-        console.log('⏭️ Canvas - Skipping CV reload (data already loaded for this user)');
+      // Use ApplicationPackageService to properly duplicate CV
+      const duplicateResult = await ApplicationPackageService.duplicateCV({
+        sourceCvId: masterCV.id,
+        userId,
+        newTitle: `${masterCV.title} (Copy)`
+      });
+
+      if (duplicateResult.success && duplicateResult.data?.cvId) {
+        const duplicatedCVId = duplicateResult.data.cvId;
+        
+        // Navigate to studio with duplicated CV (freestanding, ready for job linking)
+        router.push(`/studio?cvId=${duplicatedCVId}&mode=document-first`);
+        
+        // Removed notification:'success', 'Master CV duplicated successfully! You can now link it to a job.');
+      } else {
+        throw new Error(duplicateResult.message || 'Failed to duplicate master CV');
+      }
+    } catch (error) {
+      // Removed notification:'error', 'Failed to duplicate master CV');
+    }
+  };
+
+  // CV Card handlers (moved after load functions and wrapped in useCallback to ensure loadCVs is available)
+  const handleDuplicateCV = useCallback(async (cv: CV) => {
+    try {
+      
+      const userId = getUserIdForAPI(user) || getUserIdFromLocalStorage();
+      if (!userId) {
+        // Removed notification:'error', 'User not authenticated');
         return;
       }
 
-      // Mark as loading for this user
-      hasLoadedCVsRef.current = true;
-      lastUserIdRef.current = userIdToUse;
+      // Use ApplicationPackageService to properly duplicate CV
+      const duplicateResult = await ApplicationPackageService.duplicateCV({
+        sourceCvId: cv.id,
+        userId,
+        newTitle: `${cv.title} (Copy)`
+      });
 
-      setLoading(true);
-      console.log('🔍 Canvas - Loading CVs with user ID:', userIdToUse);
-      
-      // Use unified service to get CVs
-      // Use 'summary' projection for performance - avoid loading massive Base64 thumbnails
-      console.log('🔍 Canvas - Calling UnifiedCVService.getCVs...');
-      const result = await UnifiedCVService.getCVs(userIdToUse, { projection: 'summary' });
-      console.log('🔍 Canvas - UnifiedCVService.getCVs result:', result);
-      console.log('🔍 Canvas - Result type:', typeof result, 'Is array:', Array.isArray(result), 'Length:', result?.length);
-      
-      if (result && Array.isArray(result) && result.length > 0) {
-        // Process CVs with unified data structure
-        const enrichedCVs = result.map((cv: any) => {
-          
-          return {
-            id: cv.id,
-            title: cv.title || 'Untitled CV',
-            lastModified: cv.metadata?.lastModified || cv.updatedAt || cv.createdAt,
-            updatedAt: cv.updatedAt || cv.metadata?.lastModified || cv.createdAt || new Date().toISOString(),
-            status: cv.status || 'draft',
-            views: cv.metadata?.viewCount || 0,
-            isStarred: cv.metadata?.starred || false,
-            thumbnail: cv.metadata?.thumbnailUrl || '',
-            description: cv.description || '',
-            cvData: cv.cvData || null, // Include CV data for preview
-            template: cv.template || cv.templateData || (cv.templateId ? { _id: cv.templateId, name: cv.templateName || 'Default Template' } : null), // Include template data for preview - prioritize saved templateData
-            templateId: cv.templateId,
-            templateName: cv.templateName,
-            templateData: cv.templateData, // Include saved template data
-            journeyId: cv.journeyId,
-            completionPercentage: calculateCompletionPercentage(cv),
-            isMaster: cv.metadata?.isMaster || cv.isMaster || false, // Include master flag - handle both formats
-            atsScore: cv.metadata?.atsScore, // Include ATS score
-            metadata: cv.metadata // Include full metadata
-          } as CV;
-        });
+      if (duplicateResult.success && duplicateResult.data?.cvId) {
+        // Refresh CVs list to show the new freestanding duplicate
+        loadCVs();
+        // Removed notification:'success', 'CV duplicated successfully! The copy is ready to be linked to a new job.');
         
-        // Separate Master CVs from regular CVs based on isMaster metadata
-        console.log('🔍 Canvas - All CVs before filtering:', enrichedCVs.map(cv => ({ 
-          id: cv.id, 
-          title: cv.title, 
-          isMaster: cv.isMaster,
-          metadataIsMaster: cv.metadata?.isMaster 
-        })));
-        
-        // Filter CVs based on isMaster - handle both old and new formats
-        const masterCVs = enrichedCVs.filter(cv => {
-          const isMasterAtRoot = cv.isMaster === true;
-          const metadataIsMaster = cv.metadata?.isMaster;
-          const isMasterInMetadata = metadataIsMaster === true || 
-            (typeof metadataIsMaster === 'string' && metadataIsMaster === 'true');
-          return isMasterAtRoot || isMasterInMetadata;
-        });
-        const regularCVs = enrichedCVs.filter(cv => {
-          const isMasterAtRoot = cv.isMaster === true;
-          const metadataIsMaster = cv.metadata?.isMaster;
-          const isMasterInMetadata = metadataIsMaster === true || 
-            (typeof metadataIsMaster === 'string' && metadataIsMaster === 'true');
-          return !isMasterAtRoot && !isMasterInMetadata;
-        });
-        
-        console.log('🔍 Canvas - Master CVs:', masterCVs.length);
-        console.log('🔍 Canvas - Regular CVs:', regularCVs.length);
-        console.log('🔍 Canvas - First CV sample:', regularCVs[0]);
-        console.log('🔍 Canvas - Master CVs data:', masterCVs);
-        console.log('🔍 Canvas - First Master CV:', masterCVs[0]);
-        
-        // Store both Master CVs and regular CVs
-        setCvs(regularCVs);
-        setMasterCVs(masterCVs);
-        console.log('✅ Canvas - CVs loaded successfully:', { regular: regularCVs.length, master: masterCVs.length });
-        
-        // Performance optimization: Load journeys in batch for all CVs
-        // This eliminates N+1 query problem (one API call instead of N calls)
-        if (regularCVs.length > 0 || masterCVs.length > 0) {
-          const allCVIds = [...regularCVs, ...masterCVs].map(cv => cv.id).filter(Boolean);
-          if (allCVIds.length > 0) {
-            console.log('🔍 Canvas - Batch loading journeys for CVs:', allCVIds.length);
-            try {
-              const journeysMap = await CVJourneyLookupService.findJourneysByCVIds(allCVIds, userIdToUse);
-              // Convert map to array format expected by Canvas
-              const journeysArray = Array.from(journeysMap.values());
-              if (journeysArray.length > 0) {
-                console.log('✅ Canvas - Batch loaded journeys:', journeysArray.length);
-                setJourneys(journeysArray);
-              }
-            } catch (error) {
-              console.error('❌ Canvas - Error batch loading journeys:', error);
-              // Fallback: Load journeys individually if batch fails (will be called separately)
-              // Don't call loadJourneys here to avoid circular dependency
-            }
-          }
+        // If the source CV was linked to a journey, inform user about the duplication principle
+        if (cv.journeyId) {
+          // Removed notification:'info', 'A new freestanding copy was created. You can now link it to a different job application.', 5000);
         }
       } else {
-        console.log('🔍 Canvas - No CVs found for user:', userIdToUse);
-        console.log('🔍 Canvas - Result was:', result);
-        setCvs([]);
-        setMasterCVs([]);
-      }
-    } catch (error: any) {
-      console.error('❌ Error loading CVs:', error);
-      console.error('❌ Error details:', error.message, error.stack);
-      // Don't clear CVs on error - keep existing ones if any
-      // setCvs([]);
-      // setMasterCVs([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
-
-  const loadCoverLetters = useCallback(async () => {
-    try {
-      console.log('🔍 Canvas - Loading Cover Letters...');
-      const userId = getUserIdForAPI(user);
-      if (!userId) {
-        console.log('🔍 Canvas - No user ID, skipping Cover Letter load');
-        return;
-      }
-
-      const response = await authenticatedFetch(`/api/cover-letters?userId=${userId}`);
-      const result = await response.json();
-      
-      console.log('🔍 Canvas - Cover Letter API response:', result);
-      
-      if (result.success && result.data?.coverLetters) {
-        const enrichedCoverLetters = result.data.coverLetters.map((cl: any) => ({
-          ...cl,
-          id: cl.id || cl._id,
-          lastModified: formatTimeAgo(new Date(cl.metadata?.lastModified || cl.updatedAt || cl.createdAt)),
-          views: cl.views || 0,
-          isStarred: cl.isStarred || false,
-          thumbnail: '/api/cover-letters/thumbnail/' + (cl.id || cl._id),
-          description: cl.metadata?.targetCompany ? `For ${cl.metadata.targetCompany}` : 'Cover letter',
-          coverLetterData: cl.content,
-          content: cl.content, // Add content field for the overlay component
-          // connectedJobs removed - relationships now managed through CVJourney
-          completionPercentage: cl.completionPercentage || 0
-        }));
-        
-        console.log('🔍 Canvas - Setting Cover Letters:', enrichedCoverLetters.length);
-        console.log('🔍 Canvas - First Cover Letter sample:', enrichedCoverLetters[0]);
-        setCoverLetters(enrichedCoverLetters);
-      } else {
-        console.log('🔍 Canvas - Cover Letter API returned success: false');
-        setCoverLetters([]);
+        throw new Error(duplicateResult.message || 'Failed to duplicate CV');
       }
     } catch (error) {
-      console.error('Error loading Cover Letters:', error);
-      setCoverLetters([]);
+      // Removed notification:'error', 'Failed to duplicate CV');
     }
-  }, [user]);
-
-  const loadJourneys = useCallback(async () => {
-    try {
-      console.log('🔍 Canvas - Loading Journeys...');
-      const userId = getUserIdForAPI(user);
-      if (!userId) {
-        console.log('🔍 Canvas - No user ID, skipping Journey load');
-        return;
-      }
-
-      const response = await authenticatedFetch(`/api/journeys?userId=${userId}`);
-      const result = await response.json();
-      
-      console.log('🔍 Canvas - Journey API response:', result);
-      
-      if (result.success && result.data?.journeys) {
-        console.log('🔍 Canvas - Setting Journeys:', result.data.journeys.length);
-        setJourneys(result.data.journeys);
-      } else {
-        console.log('🔍 Canvas - Journey API returned success: false');
-        setJourneys([]);
-      }
-    } catch (error) {
-      console.error('Error loading Journeys:', error);
-      setJourneys([]);
-    }
-  }, [user]);
-
-  const calculateCompletionPercentage = (cv: any): number => {
-    // If CV is published, it's considered complete
-    if (cv.status === 'published') return 100;
-    
-    // If CV is archived, return 0
-    if (cv.status === 'archived') return 0;
-    
-    // Calculate completion based on CV sections
-    let totalScore = 0;
-    let maxScore = 0;
-    
-    // Section weights (total = 100)
-    const sectionWeights = {
-      personalInfo: 25,    // Name, email, phone, location, summary
-      experience: 30,      // Work experience entries
-      education: 20,       // Education entries
-      skills: 15,          // Skills and competencies
-      projects: 10         // Projects and achievements
-    };
-    
-    // Check personal info section
-    if (cv.cvData?.basics) {
-      const basics = cv.cvData.basics;
-      const personalInfoScore = calculatePersonalInfoScore(basics);
-      totalScore += (personalInfoScore * sectionWeights.personalInfo) / 100;
-    }
-    maxScore += sectionWeights.personalInfo;
-    
-    // Check experience section
-    if (cv.cvData?.work) {
-      const experienceScore = calculateExperienceScore(cv.cvData.work);
-      totalScore += (experienceScore * sectionWeights.experience) / 100;
-    }
-    maxScore += sectionWeights.experience;
-    
-    // Check education section
-    if (cv.cvData?.education) {
-      const educationScore = calculateEducationScore(cv.cvData.education);
-      totalScore += (educationScore * sectionWeights.education) / 100;
-    }
-    maxScore += sectionWeights.education;
-    
-    // Check skills section
-    if (cv.cvData?.skills) {
-      const skillsScore = calculateSkillsScore(cv.cvData.skills);
-      totalScore += (skillsScore * sectionWeights.skills) / 100;
-    }
-    maxScore += sectionWeights.skills;
-    
-    // Check projects section
-    if (cv.cvData?.projects) {
-      const projectsScore = calculateProjectsScore(cv.cvData.projects);
-      totalScore += (projectsScore * sectionWeights.projects) / 100;
-    }
-    maxScore += sectionWeights.projects;
-    
-    // Calculate final percentage
-    const completionPercentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
-    
-    // Ensure percentage is between 0 and 100
-    return Math.max(0, Math.min(100, completionPercentage));
-  };
-  
-  // Helper functions to calculate section scores
-  const calculatePersonalInfoScore = (basics: any): number => {
-    let score = 0;
-    let maxScore = 5;
-    
-    if (basics.name && basics.name.trim()) score += 1;
-    if (basics.email && basics.email.trim()) score += 1;
-    if (basics.phone && basics.phone.trim()) score += 1;
-    if (basics.location && (basics.location.city || basics.location.address)) score += 1;
-    if (basics.summary && basics.summary.trim()) score += 1;
-    
-    return (score / maxScore) * 100;
-  };
-  
-  const calculateExperienceScore = (work: any[]): number => {
-    if (!Array.isArray(work) || work.length === 0) return 0;
-    
-    let totalScore = 0;
-    const maxEntries = 3; // Consider up to 3 most recent experiences
-    
-    work.slice(0, maxEntries).forEach(entry => {
-      let entryScore = 0;
-      let maxEntryScore = 4;
-      
-      if (entry.name && entry.name.trim()) entryScore += 1;
-      if (entry.position && entry.position.trim()) entryScore += 1;
-      if (entry.startDate && entry.startDate.trim()) entryScore += 1;
-      if (entry.summary && entry.summary.trim()) entryScore += 1;
-      
-      totalScore += (entryScore / maxEntryScore) * 100;
-    });
-    
-    return Math.min(100, totalScore / Math.min(work.length, maxEntries));
-  };
-  
-  const calculateEducationScore = (education: any[]): number => {
-    if (!Array.isArray(education) || education.length === 0) return 0;
-    
-    let totalScore = 0;
-    const maxEntries = 2; // Consider up to 2 most recent education entries
-    
-    education.slice(0, maxEntries).forEach(entry => {
-      let entryScore = 0;
-      let maxEntryScore = 4;
-      
-      if (entry.institution && entry.institution.trim()) entryScore += 1;
-      if (entry.area && entry.area.trim()) entryScore += 1;
-      if (entry.studyType && entry.studyType.trim()) entryScore += 1;
-      if (entry.startDate && entry.startDate.trim()) entryScore += 1;
-      
-      totalScore += (entryScore / maxEntryScore) * 100;
-    });
-    
-    return Math.min(100, totalScore / Math.min(education.length, maxEntries));
-  };
-  
-  const calculateSkillsScore = (skills: any[]): number => {
-    if (!Array.isArray(skills) || skills.length === 0) return 0;
-    
-    let totalScore = 0;
-    const maxSkills = 5; // Consider up to 5 skill categories
-    
-    skills.slice(0, maxSkills).forEach(skill => {
-      let skillScore = 0;
-      let maxSkillScore = 2;
-      
-      if (skill.name && skill.name.trim()) skillScore += 1;
-      if (skill.keywords && Array.isArray(skill.keywords) && skill.keywords.length > 0) skillScore += 1;
-      
-      totalScore += (skillScore / maxSkillScore) * 100;
-    });
-    
-    return Math.min(100, totalScore / Math.min(skills.length, maxSkills));
-  };
-  
-  const calculateProjectsScore = (projects: any[]): number => {
-    if (!Array.isArray(projects) || projects.length === 0) return 0;
-    
-    let totalScore = 0;
-    const maxProjects = 2; // Consider up to 2 most recent projects
-    
-    projects.slice(0, maxProjects).forEach(project => {
-      let projectScore = 0;
-      let maxProjectScore = 3;
-      
-      if (project.name && project.name.trim()) projectScore += 1;
-      if (project.description && project.description.trim()) projectScore += 1;
-      if (project.url && project.url.trim()) projectScore += 1;
-      
-      totalScore += (projectScore / maxProjectScore) * 100;
-    });
-    
-    return Math.min(100, totalScore / Math.min(projects.length, maxProjects));
-  };
-
-  
+  }, [user, loadCVs]);
 
   const formatTimeAgo = (date: Date) => {
     return formatCardTime(date);
@@ -1767,23 +1781,6 @@ const Canvas: React.FC = () => {
     }
   };
 
-  // Fetch available jobs for linking
-  const fetchAvailableJobs = async () => {
-    try {
-      const userId = getUserIdForAPI(user);
-      if (!userId) return;
-
-      const response = await authenticatedFetch(`/api/jobs?userId=${userId}`);
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success && result.jobs) {
-          setAvailableJobs(result.jobs);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching available jobs:', error);
-    }
-  };
 
   // User profile is now handled by the useUserData hook
 

@@ -33,6 +33,60 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
   designSettings,
   sectionConfig
 }) => {
+  // CRITICAL FIX: All hooks must be called BEFORE any conditional returns (Rules of Hooks)
+  const isDark = theme === 'dark';
+  
+  // Get visible sections using centralized selector (respects structure visibility)
+  // Always call useMemo, even if cvData is null (will return empty array)
+  const visibleSectionsList = useMemo(
+    () => cvData ? getVisibleCVSections(cvData, 'cv') : [],
+    [cvData]
+  );
+
+  // Create fast lookup Set for section visibility
+  const visibleSectionTypes = useMemo(
+    () => new Set(visibleSectionsList.map(s => s.type)),
+    [visibleSectionsList]
+  );
+  
+  // State hooks must be called unconditionally
+  const [totalPages, setTotalPages] = useState(1);
+  const [contentHeight, setContentHeight] = useState(0);
+  const contentRef = useRef<HTMLDivElement>(null);
+  
+  // Effect hooks must be called unconditionally
+  useEffect(() => {
+    if (!cvData || !contentRef.current) {
+      setContentHeight(0);
+      setTotalPages(1);
+      return;
+    }
+    
+    const height = contentRef.current.scrollHeight;
+    setContentHeight(height);
+    
+    if (height > 0) {
+      // Check if this is a single-page template
+      const isSinglePageTemplate = templateName?.toLowerCase().includes('tech pro blue') ||
+                                   templateName?.toLowerCase().includes('executive professional');
+      
+      if (isSinglePageTemplate) {
+        setTotalPages(1);
+      } else if (templateName?.toLowerCase().includes('letter')) {
+        // Letter page height: 11" = 1056px (at 96 DPI)
+        const pageHeight = 1056 - pagePadding.top - pagePadding.bottom;
+        const pages = Math.ceil(height / pageHeight);
+        setTotalPages(Math.max(1, pages));
+      } else {
+        // A4 page height: 297mm = 1123px (at 96 DPI)
+        const pageHeight = 1123 - pagePadding.top - pagePadding.bottom;
+        const pages = Math.ceil(height / pageHeight);
+        setTotalPages(Math.max(1, pages));
+      }
+    }
+  }, [cvData, sectionOrder, sectionVisibility, pagePadding, templateName]);
+  
+  // NOW we can conditionally return - all hooks have been called
   // IMPORTANT: Never use sample/hardcoded data - only use actual cvData
   // If cvData is null, return early to prevent rendering with empty data
   if (!cvData) {
@@ -45,20 +99,6 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
       </div>
     );
   }
-
-  const isDark = theme === 'dark';
-  
-  // Get visible sections using centralized selector (respects structure visibility)
-  const visibleSectionsList = useMemo(
-    () => getVisibleCVSections(cvData, 'cv'),
-    [cvData]
-  );
-
-  // Create fast lookup Set for section visibility
-  const visibleSectionTypes = useMemo(
-    () => new Set(visibleSectionsList.map(s => s.type)),
-    [visibleSectionsList]
-  );
   
   // Helper function to check if a section should be visible
   // Use centralized selector when structure exists, fallback to prop for legacy CVs
@@ -111,56 +151,6 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
 
   const layoutType = getTemplateLayout();
   const templateStyle = applyDesignSettings();
-
-  // Calculate content height and determine if we need multiple pages
-  const [contentHeight, setContentHeight] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
-  const contentRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (contentRef.current) {
-      const height = contentRef.current.scrollHeight;
-      setContentHeight(height);
-      
-      // Check if this is a single-page template
-      const isSinglePageTemplate = templateName?.toLowerCase().includes('tech pro blue') ||
-                                   templateName?.toLowerCase().includes('executive professional');
-      
-      if (isSinglePageTemplate) {
-        setTotalPages(1);
-      } else {
-        // A4 page height: 297mm = 1123px (at 96 DPI)
-        const pageHeight = 1123 - pagePadding.top - pagePadding.bottom; // Account for padding
-        const pages = Math.ceil(height / pageHeight);
-        setTotalPages(Math.max(1, pages));
-      }
-    }
-  }, [cvData, sectionOrder, sectionVisibility, pagePadding, templateName]);
-
-  // Early return if no CV data
-  if (!cvData) {
-    return (
-      <div className="space-y-8 relative">
-        <div className={`${isDark ? 'bg-[#1a230f]' : 'bg-white'} p-8`} style={{ 
-          width: '210mm', 
-          height: '297mm',
-          overflow: 'hidden',
-          ...templateStyle
-        }}>
-          <div className="h-full flex items-center justify-center">
-            <div className="text-center">
-              <h3 className="text-xl font-semibold text-gray-500 dark:text-gray-400 mb-2">
-                No CV Data Available
-              </h3>
-              <p className="text-gray-400 dark:text-gray-500">
-                Start adding your information to see a preview
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   const themeClasses = {
     page: isDark ? 'bg-[#1a230f]' : 'bg-white',

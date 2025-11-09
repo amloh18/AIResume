@@ -5,7 +5,7 @@ import { getAuthenticatedUser } from '@/lib/auth-helpers';
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authResult = await getAuthenticatedUser();
@@ -15,8 +15,9 @@ export async function PUT(
 
     await getConnection();
 
+    const { id } = await params;
     const notification = await Notification.findOne({
-      _id: params.id,
+      _id: id,
       userId: authResult.userId,
     });
 
