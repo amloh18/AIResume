@@ -30,7 +30,15 @@ import PricingPlanEditModal from '@/components/admin/PricingPlanEditModal';
 import PromotionalOfferManager from '@/components/admin/PromotionalOfferManager';
 import DiscountCodeManager from '@/components/admin/DiscountCodeManager';
 import RevenueManager from '@/components/admin/RevenueManager';
-import { REGIONAL_PRICING, RegionalPricing } from '@/lib/pricing/regionalPricing';
+// RegionalPricing interface (from database)
+interface RegionalPricing {
+  currency: string;
+  currencySymbol: string;
+  dayPass: number;
+  monthly: number;
+  quarterly: number;
+  yearly: number;
+}
 
 interface PricingPlan {
   _id: string;
@@ -73,6 +81,9 @@ const PricingPlanManager: React.FC = () => {
   const [allPromotionalOffers, setAllPromotionalOffers] = useState<any[]>([]);
   const [loadingOffers, setLoadingOffers] = useState(false);
   const [regionalFilter, setRegionalFilter] = useState<string>('all');
+  const [priceRegions, setPriceRegions] = useState<any[]>([]);
+  const [countryMappings, setCountryMappings] = useState<any[]>([]);
+  const [loadingPricing, setLoadingPricing] = useState(true);
 
   // Use the shared pricing hook
   const { plans, loading, refetch, promotionalOffers } = usePricingPlans({ includeInactive: true });
@@ -84,7 +95,7 @@ const PricingPlanManager: React.FC = () => {
   // Calculate metrics for dashboard overview
   const activePlans = safePlans.filter(p => p.status === 'active').length;
   const activePromotions = safePromotionalOffers.filter((offer: any) => offer.isActive).length;
-  const regionsWithCustomPricing = 5; // This would come from regional pricing data
+  const regionsWithCustomPricing = priceRegions.length; // From database
   
   // Calculate monthly changes (placeholder - would need historical data)
   const activePlansChange = 2; // Would calculate from historical data
@@ -108,6 +119,28 @@ const PricingPlanManager: React.FC = () => {
       }
     };
     fetchAllOffers();
+  }, []);
+
+  // Fetch pricing regions and country mappings from database
+  useEffect(() => {
+    const fetchPricingData = async () => {
+      setLoadingPricing(true);
+      try {
+        const response = await fetch('/api/admin/pricing-regions');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setPriceRegions(data.priceRegions || []);
+            setCountryMappings(data.countryMappings || []);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching pricing regions:', error);
+      } finally {
+        setLoadingPricing(false);
+      }
+    };
+    fetchPricingData();
   }, []);
 
   const handleRowClick = (plan: PricingPlan) => {
@@ -524,7 +557,7 @@ const PricingPlanManager: React.FC = () => {
                     className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-lime-500"
                   >
                     <option value="all">All Currencies</option>
-                    {Array.from(new Set(Object.values(REGIONAL_PRICING).map(p => p.currency)))
+                    {Array.from(new Set(priceRegions.map(r => r.currency)))
                       .sort()
                       .map(currency => (
                         <option key={currency} value={currency}>{currency}</option>
@@ -551,16 +584,52 @@ const PricingPlanManager: React.FC = () => {
                     </thead>
                     <tbody>
                       {(() => {
-                        // Filter regional pricing based on selected currency
-                        let filteredRegions = Object.entries(REGIONAL_PRICING);
-                        
-                        // Filter by currency
-                        if (regionalFilter !== 'all') {
-                          filteredRegions = filteredRegions.filter(([_, pricing]) => 
-                            pricing.currency === regionalFilter
+                        if (loadingPricing) {
+                          return (
+                            <tr>
+                              <td colSpan={6} className="p-8 text-center text-gray-400">
+                                Loading pricing data...
+                              </td>
+                            </tr>
                           );
                         }
-                        
+
+                        // Build a map of country codes to their pricing regions
+                        const countryToRegionMap = new Map<string, any>();
+                        countryMappings.forEach(mapping => {
+                          countryToRegionMap.set(mapping.countryCode, mapping.regionId);
+                        });
+
+                        // Build a map of region IDs to price regions
+                        const regionMap = new Map<string, any>();
+                        priceRegions.forEach(region => {
+                          regionMap.set(region.regionId, region);
+                        });
+
+                        // Get unique currencies for filter
+                        const uniqueCurrencies = Array.from(new Set(priceRegions.map(r => r.currency))).sort();
+
+                        // Create display data: country code -> pricing info
+                        const displayData: Array<{ countryCode: string; regionId: string; pricing: any }> = [];
+                        countryMappings.forEach(mapping => {
+                          const region = regionMap.get(mapping.regionId);
+                          if (region) {
+                            displayData.push({
+                              countryCode: mapping.countryCode,
+                              regionId: mapping.regionId,
+                              pricing: region,
+                            });
+                          }
+                        });
+
+                        // Filter by currency
+                        let filteredData = displayData;
+                        if (regionalFilter !== 'all') {
+                          filteredData = displayData.filter(item => 
+                            item.pricing.currency === regionalFilter
+                          );
+                        }
+
                         // Helper function to get flag emoji from country code
                         const getCountryFlag = (countryCode: string): string => {
                           const codePoints = countryCode
@@ -569,8 +638,19 @@ const PricingPlanManager: React.FC = () => {
                             .map(char => 127397 + char.charCodeAt(0));
                           return String.fromCodePoint(...codePoints);
                         };
-                        
-                        if (filteredRegions.length === 0) {
+
+                        // Helper to get country name from code (simplified - could use a library)
+                        const getCountryName = (code: string): string => {
+                          const names: Record<string, string> = {
+                            'GB': 'United Kingdom', 'US': 'United States', 'CA': 'Canada', 'AU': 'Australia',
+                            'DE': 'Germany', 'FR': 'France', 'IT': 'Italy', 'ES': 'Spain', 'NL': 'Netherlands',
+                            'BE': 'Belgium', 'AT': 'Austria', 'FI': 'Finland', 'IE': 'Ireland', 'PT': 'Portugal',
+                            'GR': 'Greece', 'PL': 'Poland', 'IN': 'India', 'PK': 'Pakistan',
+                          };
+                          return names[code] || code;
+                        };
+
+                        if (filteredData.length === 0) {
                           return (
                             <tr>
                               <td colSpan={6} className="p-8 text-center text-gray-400">
@@ -579,37 +659,40 @@ const PricingPlanManager: React.FC = () => {
                             </tr>
                           );
                         }
-                        
-                        return filteredRegions.map(([countryCode, pricing]: [string, RegionalPricing], index) => (
-                          <tr 
-                            key={countryCode}
-                            className={`border-b border-gray-700 hover:bg-gray-750 transition-colors ${
-                              index % 2 === 0 ? 'bg-gray-800' : 'bg-gray-800/50'
-                            }`}
-                          >
-                            <td className="p-4">
-                              <div className="flex items-center gap-2">
-                                <span className="text-2xl" role="img" aria-label={pricing.country}>
-                                  {getCountryFlag(countryCode)}
-                                </span>
-                                <div>
-                                  <div className="font-medium text-white">{pricing.country}</div>
-                                  <div className="text-xs text-gray-400">{countryCode}</div>
+
+                        return filteredData.map((item, index) => {
+                          const { countryCode, pricing } = item;
+                          return (
+                            <tr 
+                              key={countryCode}
+                              className={`border-b border-gray-700 hover:bg-gray-750 transition-colors ${
+                                index % 2 === 0 ? 'bg-gray-800' : 'bg-gray-800/50'
+                              }`}
+                            >
+                              <td className="p-4">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-2xl" role="img" aria-label={getCountryName(countryCode)}>
+                                    {getCountryFlag(countryCode)}
+                                  </span>
+                                  <div>
+                                    <div className="font-medium text-white">{getCountryName(countryCode)}</div>
+                                    <div className="text-xs text-gray-400">{countryCode}</div>
+                                  </div>
                                 </div>
-                              </div>
-                            </td>
-                            <td className="p-4">
-                              <div>
-                                <div className="text-white font-medium">{pricing.currency}</div>
-                                <div className="text-xs text-gray-400">{pricing.currencySymbol}</div>
-                              </div>
-                            </td>
-                            <td className="p-4 text-gray-300">{pricing.dayPass}</td>
-                            <td className="p-4 text-gray-300">{pricing.monthly}</td>
-                            <td className="p-4 text-gray-300">{pricing.quarterly}</td>
-                            <td className="p-4 text-gray-300">{pricing.yearly}</td>
-                          </tr>
-                        ));
+                              </td>
+                              <td className="p-4">
+                                <div>
+                                  <div className="text-white font-medium">{pricing.currency}</div>
+                                  <div className="text-xs text-gray-400">{pricing.currencySymbol}</div>
+                                </div>
+                              </td>
+                              <td className="p-4 text-gray-300">{pricing.currencySymbol}{pricing.plans.dayPass}</td>
+                              <td className="p-4 text-gray-300">{pricing.currencySymbol}{pricing.plans.monthly}</td>
+                              <td className="p-4 text-gray-300">{pricing.currencySymbol}{pricing.plans.quarterly}</td>
+                              <td className="p-4 text-gray-300">{pricing.currencySymbol}{pricing.plans.yearly.toLocaleString()}</td>
+                            </tr>
+                          );
+                        });
                       })()}
                     </tbody>
                   </table>

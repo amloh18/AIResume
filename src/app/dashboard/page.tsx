@@ -2,17 +2,16 @@
 
 import React, { Suspense } from 'react';
 import dynamic from 'next/dynamic';
-import { AnalyticsSkeleton } from '@/components/ui/OptimizedSkeletons';
 
 // Dynamically import Analytics component for code splitting
+// Removed loading skeleton - dashboard loads without animation
 const Analytics = dynamic(() => import('@/components/dashboard/Analytics'), {
-  loading: () => <AnalyticsSkeleton />,
   ssr: false,
 });
 
 const Dashboard: React.FC = () => {
   return (
-    <Suspense fallback={<AnalyticsSkeleton />}>
+    <Suspense fallback={null}>
       <Analytics />
     </Suspense>
   );

@@ -360,10 +360,34 @@ export const consoleLogger = new ConsoleLogger();
 
 /**
  * Hook to use console logger with notifications
+ * 
+ * FIXED: Hooks must be called unconditionally (Rules of Hooks)
+ * Cannot return early before calling useCallback
  */
 export function useConsoleLogger() {
-  // Safety check for server-side rendering
+  // CRITICAL FIX: Call useCallback unconditionally (Rules of Hooks)
+  // Cannot return early before calling hooks - this was causing "Cannot read properties of null (reading 'useState')"
+  const showToastNotification = useCallback((entry: ConsoleLogEntry) => {
+    // Notification functionality removed
+    // Only execute logic if in browser
+    if (typeof window === 'undefined') {
+      return;
+    }
+    // Notification logic here if needed
+  }, []);
+
+  const showInlineMessage = useCallback((entry: ConsoleLogEntry) => {
+    // This will be handled by the auth page components
+    // We'll create a custom hook for this
+    if (typeof window === 'undefined') {
+      return entry;
+    }
+    return entry;
+  }, []);
+
+  // Return appropriate values based on environment, but hooks are always called
   if (typeof window === 'undefined') {
+    // Server-side: return no-op functions but hooks were still called
     return {
       showToastNotification: () => {},
       logToConsole: () => {},
@@ -371,19 +395,10 @@ export function useConsoleLogger() {
       logWarning: () => {},
       logInfo: () => {},
       logSuccess: () => {},
-      logDebug: () => {}
+      logDebug: () => {},
+      showInlineMessage: () => {}
     };
   }
-
-  const showToastNotification = useCallback((entry: ConsoleLogEntry) => {
-    // Notification functionality removed
-  }, []);
-
-  const showInlineMessage = (entry: ConsoleLogEntry) => {
-    // This will be handled by the auth page components
-    // We'll create a custom hook for this
-    return entry;
-  };
 
   return {
     showToastNotification,

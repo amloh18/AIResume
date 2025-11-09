@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Users, 
   FileText, 
@@ -56,10 +56,22 @@ const AdminKPIs: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
   const [timeRange, setTimeRange] = useState('today');
+  // Track last fetch to prevent duplicate calls
+  const lastFetchRef = useRef<{ timeRange: string; timestamp: number } | null>(null);
 
   useEffect(() => {
-    fetchKPIData();
-    fetchChartData();
+    // Prevent duplicate calls if timeRange hasn't actually changed or was just called
+    const now = Date.now();
+    if (lastFetchRef.current && 
+        lastFetchRef.current.timeRange === timeRange && 
+        (now - lastFetchRef.current.timestamp) < 1000) {
+      return; // Skip if same timeRange was fetched less than 1 second ago
+    }
+    
+    lastFetchRef.current = { timeRange, timestamp: now };
+    
+    // Fetch both in parallel for better performance
+    Promise.all([fetchKPIData(), fetchChartData()]);
   }, [timeRange]);
 
   const fetchKPIData = async () => {

@@ -4,6 +4,8 @@ export { default as JobApplication, type IJobApplication } from './JobApplicatio
 
 export { default as Template, type ITemplate, type ISectionBlueprint } from './Template';
 export { default as PricingPlan, type IPricingPlan } from './PricingPlan';
+export { default as PriceRegion, type IPriceRegion } from './PriceRegion';
+export { default as CountryMapping, type ICountryMapping } from './CountryMapping';
 export { default as DiscountCode, type IDiscountCode } from './DiscountCode';
 export { default as Subscription, type ISubscription } from './Subscription';
 export { default as PaymentMethod, type IPaymentMethod } from './PaymentMethod';

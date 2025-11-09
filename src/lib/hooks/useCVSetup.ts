@@ -81,8 +81,9 @@ export const useCVSetup = () => {
         console.log('🔍 useCVSetup - Session status:', status);
         
         if (userId) {
-          console.log('🔍 useCVSetup - Making API call to:', `/api/cvs?userId=${userId}&projection=full`);
-          const response = await fetch(`/api/cvs?userId=${userId}&projection=full`);
+          // Use summary projection for performance - we only need to check if master CV exists
+          console.log('🔍 useCVSetup - Making API call to:', `/api/cvs?userId=${userId}&projection=summary`);
+          const response = await fetch(`/api/cvs?userId=${userId}&projection=summary`);
           console.log('🔍 useCVSetup - CV API response status:', response.status);
           
           if (response.ok) {

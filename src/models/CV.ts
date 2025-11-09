@@ -211,6 +211,8 @@ const cvSchema = new Schema<ICV>({
 });
 
 // Indexes for better query performance
+// CRITICAL: Simple userId index for fast lookups (most common query pattern)
+cvSchema.index({ userId: 1 }); // Primary index for user queries - should reduce query time from 1400ms to <100ms
 cvSchema.index({ userId: 1, createdAt: -1 }); // User's CVs by date
 cvSchema.index({ userId: 1, 'metadata.isMaster': 1 }); // Index for master CV queries
 cvSchema.index({ journeyId: 1, userId: 1 }); // Unique CV per journey (prevents duplicates)

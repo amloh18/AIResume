@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AdminUserManagementSkeleton } from './AdminSkeletons';
 import { 
   Users, 
@@ -90,10 +90,22 @@ const UserManagement: React.FC = () => {
     planDisplayNames: {}
   });
 
+  // Track initial fetch to prevent duplicate calls
+  const hasInitializedRef = useRef(false);
+
   useEffect(() => {
-    fetchUsers(true);
-    fetchMetrics();
-    fetchPlanConfig();
+    // Prevent duplicate initialization calls
+    if (hasInitializedRef.current) {
+      return;
+    }
+    hasInitializedRef.current = true;
+
+    // Run all initial fetches in parallel for better performance
+    Promise.all([
+      fetchUsers(true),
+      fetchMetrics(),
+      fetchPlanConfig()
+    ]);
   }, []);
 
   // Debounce search to reduce API calls

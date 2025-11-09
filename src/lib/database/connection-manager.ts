@@ -125,6 +125,10 @@ class DatabaseConnectionManager {
     if (this.mongooseConnection && mongoose.connection.readyState === 1) {
       try {
         await mongoose.connection.db?.admin().ping();
+        // Connection reused - only log in development for debugging
+        if (process.env.NODE_ENV === 'development') {
+          console.log('♻️  Reusing existing MongoDB connection (cached)');
+        }
         return this.mongooseConnection;
       } catch (pingError) {
         // Connection is stale, reset it
@@ -177,7 +181,7 @@ class DatabaseConnectionManager {
     const options: ConnectOptions = {
       bufferCommands: true,
       maxPoolSize: 10,
-      minPoolSize: 2,
+      minPoolSize: 5, // Increased from 2 to 5 for better connection pooling
       serverSelectionTimeoutMS: 30000,
       socketTimeoutMS: 45000,
       connectTimeoutMS: 30000,
@@ -187,13 +191,16 @@ class DatabaseConnectionManager {
       ...this.config.options,
     };
 
-    // Only log connection attempts in development or if not already connected
-    if (process.env.NODE_ENV === 'development' || mongoose.connection.readyState === 0) {
-      console.log('🔗 Attempting to connect to MongoDB...');
-      console.log(
-        '🔍 Connection URI:',
-        this.config.uri.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')
-      );
+    // Only log on cold start (first connection) to reduce log spam
+    const isColdStart = !this.mongooseConnection && mongoose.connection.readyState === 0;
+    if (isColdStart) {
+      console.log('🔗 Cold start - connecting to MongoDB...');
+      if (process.env.NODE_ENV === 'development') {
+        console.log(
+          '🔍 Connection URI:',
+          this.config.uri.replace(/\/\/[^:]+:[^@]+@/, '//***:***@')
+        );
+      }
     }
 
     const mongooseInstance = await mongoose.connect(this.config.uri, options);

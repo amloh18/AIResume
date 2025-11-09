@@ -46,7 +46,16 @@ export default function AdminDashboard() {
   const menuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
+  // Track if we've already verified to prevent duplicate calls
+  const hasVerifiedRef = useRef(false);
+
   useEffect(() => {
+    // Prevent duplicate verification calls
+    if (hasVerifiedRef.current) {
+      return;
+    }
+    hasVerifiedRef.current = true;
+
     const verifyAdmin = async () => {
       try {
         const response = await fetch('/api/admin/verify');
@@ -65,8 +74,8 @@ export default function AdminDashboard() {
       }
     };
 
-    verifyAdmin();
-    fetchActivityCount();
+    // Run both in parallel for better performance
+    Promise.all([verifyAdmin(), fetchActivityCount()]);
   }, [router]);
 
   const fetchActivityCount = async () => {
@@ -124,16 +133,8 @@ export default function AdminDashboard() {
     };
   }, [isMenuOpen]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading admin dashboard...</p>
-        </div>
-      </div>
-    );
-  }
+  // Don't show loading spinner - render content immediately
+  // Components will handle their own loading states
 
   if (!user) {
     return null; // Will redirect

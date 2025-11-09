@@ -53,7 +53,8 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
     const sort = searchParams.get('sort') || 'updatedAt';
     const limit = searchParams.get('limit');
-    const projection = searchParams.get('projection') || 'full';
+    // Default to 'summary' for performance - only use 'full' when explicitly requested
+    const projection = searchParams.get('projection') || 'summary';
     const starred = searchParams.get('starred');
     const published = searchParams.get('published');
     const searchTerm = searchParams.get('search');

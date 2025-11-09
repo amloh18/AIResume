@@ -124,6 +124,9 @@ const CareerReportPage: React.FC = () => {
   const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  // Track if data has been loaded to prevent re-fetching on tab switch
+  const hasLoadedRef = useRef(false);
+  const lastUserIdRef = useRef<string | null>(null);
 
   // Load analysis for a specific CV - only fetch cached, don't generate
   const loadAnalysisForCV = useCallback(async (cv: CVDocument) => {
@@ -159,12 +162,25 @@ const CareerReportPage: React.FC = () => {
     const fetchAllCVs = async () => {
       if (!user?.id) return;
 
+      // Prevent re-fetching on tab switch - only fetch if user ID changed or first load
+      const currentUserId = user.id;
+      if (hasLoadedRef.current && lastUserIdRef.current === currentUserId) {
+        console.log('⏭️ Career Report - Skipping reload (data already loaded for this user)');
+        return;
+      }
+
+      // Reset refs if user ID actually changed (different user logged in)
+      if (lastUserIdRef.current && lastUserIdRef.current !== currentUserId) {
+        console.log('🔄 Career Report - User ID changed, resetting load state');
+        hasLoadedRef.current = false;
+      }
+
       try {
         setLoading(true);
         setError(null);
         setLoadingMessage('Loading your CVs...');
         
-        const response = await fetch(`/api/cvs?userId=${user.id}`);
+        const response = await fetch(`/api/cvs?userId=${currentUserId}`);
         const result = await response.json();
         
         if (result.success && result.data?.cvs) {
@@ -212,6 +228,10 @@ const CareerReportPage: React.FC = () => {
           } else {
             setError('No CVs found. Please create a CV first.');
           }
+
+          // Mark as loaded
+          hasLoadedRef.current = true;
+          lastUserIdRef.current = currentUserId;
         }
       } catch (error) {
         console.error('❌ Career Report - Error fetching CVs:', error);
@@ -222,7 +242,7 @@ const CareerReportPage: React.FC = () => {
     };
 
     fetchAllCVs();
-  }, [user, loadAnalysisForCV]);
+  }, [user?.id, loadAnalysisForCV]); // Use user.id instead of user object to prevent unnecessary re-runs
 
   // Handle CV selection
   const handleCVSelect = async (cv: CVDocument) => {

@@ -13,14 +13,13 @@ import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
 import { useCreateCV } from '@/lib/utils/cvCreationUtils';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
 import { useUserData, getUserDisplayName, getUserEmail, getUserAvatar } from '@/lib/hooks/useUserData';
+import { useDashboardData } from '@/contexts/DashboardDataContext';
 import AnalyticsJourneyWidget from './AnalyticsJourneyWidget';
 import ProgressTrackingWidget from './ProgressTrackingWidget';
 import ApplicationStatsWidget from './ApplicationStatsWidget';
 import PageHeader from './PageHeader';
 import MasterCVBadge from './MasterCVBadge';
 import { authenticatedFetch } from '@/lib/utils/apiUtils';
-import { useParallelDataFetching } from '@/lib/hooks/useOptimizedDataFetching';
-import { AnalyticsSkeleton } from '@/components/ui/OptimizedSkeletons';
 import { usePerformanceMonitor } from '@/lib/utils/performanceMonitor';
 import UniversalPaymentModal from '@/components/payment/UniversalPaymentModal';
 import ComprehensiveATSAnalyzer from '@/components/studio/ComprehensiveATSAnalyzer';
@@ -1077,9 +1076,21 @@ const Analytics: React.FC = () => {
   const searchParams = useSearchParams();
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedPlanKey, setSelectedPlanKey] = useState<string | null>(null);
+  const router = useRouter();
+  
+  // Use centralized dashboard data context
+  const {
+    cvs,
+    coverLetters,
+    jobs,
+    analytics: analyticsData,
+    loading: dataLoading,
+    error: dataError,
+    refreshAll
+  } = useDashboardData();
   
   // Performance monitoring
-  const { startPageLoad, endPageLoad, startDataFetch, endDataFetch } = usePerformanceMonitor('Analytics');
+  const { startPageLoad, endPageLoad } = usePerformanceMonitor('Analytics');
   
   // Handle URL parameters for payment modal
   useEffect(() => {
@@ -1095,72 +1106,12 @@ const Analytics: React.FC = () => {
   // Get user ID for data fetching using unified authentication
   const userId = getUserIdForAPI(user);
   
-  // Memoize performance monitoring functions to prevent re-renders
-  const memoizedStartDataFetch = useCallback(() => startDataFetch(), [startDataFetch]);
-  const memoizedEndDataFetch = useCallback(() => endDataFetch(), [endDataFetch]);
-
-  // Memoize fetchers with priority-based loading
-  const fetchers = useMemo(() => ({
-    // High priority - essential for Analytics page
-    cvs: () => {
-      memoizedStartDataFetch();
-      return authenticatedFetch('/api/cvs?projection=summary').then(res => {
-        memoizedEndDataFetch();
-        return res.json();
-      });
-    },
-    jobs: () => {
-      memoizedStartDataFetch();
-      return authenticatedFetch('/api/jobs').then(res => {
-        memoizedEndDataFetch();
-        return res.json();
-      });
-    },
-    // Medium priority - analytics data
-    analytics: () => {
-      memoizedStartDataFetch();
-      return authenticatedFetch(`/api/analytics/progress?userId=${userId}&period=${selectedPeriod}`).then(res => {
-        memoizedEndDataFetch();
-        return res.json();
-      }).catch(() => {
-        memoizedEndDataFetch();
-        return { success: false, data: null };
-      });
-    },
-    // Low priority - optional data
-    drafts: () => {
-      memoizedStartDataFetch();
-      return authenticatedFetch('/api/drafts').then(res => {
-        memoizedEndDataFetch();
-        return res.json();
-      }).catch(() => {
-        memoizedEndDataFetch();
-        return { success: false, data: { drafts: [] } };
-      });
-    }
-  }), [userId, selectedPeriod, memoizedStartDataFetch, memoizedEndDataFetch]);
-  
-  // Optimized parallel data fetching with priority
-  const {
-    data: dashboardData,
-    loading,
-    errors,
-    refetch
-  } = useParallelDataFetching(
-    fetchers,
-    {
-      cacheDuration: 300000, // 5 minutes
-      staleWhileRevalidate: true,
-      retryAttempts: 2 // Retry failed requests twice
-    }
-  );
-
   // Use standardized user data from hook
   const userProfile = userData;
-  const jobs = (dashboardData as any)?.jobs?.success ? (dashboardData as any).jobs.data?.jobs || [] : [];
-  const cvs = (dashboardData as any)?.cvs?.success ? (dashboardData as any).cvs.data?.cvs || [] : [];
-  const analyticsData = (dashboardData as any)?.analytics?.success ? (dashboardData as any).analytics.data : null;
-  const drafts = (dashboardData as any)?.drafts?.success ? (dashboardData as any).drafts.data?.drafts || [] : [];
+  
+  // No need for separate fetchers - data comes from context
+  const loading = dataLoading;
+  const drafts: any[] = []; // Drafts removed from context for now
 
   const handleUpdateMonthlyGoal = async (newGoal: number) => {
     try {
@@ -1169,8 +1120,8 @@ const Analytics: React.FC = () => {
         body: JSON.stringify({ monthlyGoal: newGoal }),
       });
       if (response.ok) {
-        // Refresh data using the optimized data fetching system
-        refetch();
+        // Refresh data using the centralized context
+        await refreshAll();
       }
     } catch (error) {
       console.error('Error updating monthly goal:', error);
@@ -1184,8 +1135,8 @@ const Analytics: React.FC = () => {
         body: JSON.stringify({ cvId }),
       });
       if (response.ok) {
-        // Refresh data using the optimized data fetching system
-        refetch();
+        // Refresh data using the centralized context
+        await refreshAll();
       }
     } catch (error) {
       console.error('Error setting master CV:', error);
@@ -1307,17 +1258,8 @@ const Analytics: React.FC = () => {
     };
   }, [startPageLoad, endPageLoad]);
 
-  // Show skeleton until either data resolves or we have any critical data to fill the layout
-  const hasCriticalData = userProfile && (cvs.length > 0 || jobs.length > 0);
-  const showPartialData = !loading || hasCriticalData;
-
-  if (!showPartialData) {
-    return (
-      <div className="dashboard-page space-y-4 pb-0">
-        <AnalyticsSkeleton />
-      </div>
-    );
-  }
+  // Removed skeleton loading - dashboard shows content immediately
+  // Data will populate as it loads without blocking the UI
 
   return (
     <div className="dashboard-page space-y-4 pb-0">

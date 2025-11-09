@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
@@ -58,7 +58,6 @@ import CVCardOverlay from './CVCardOverlay';
 import CoverLetterCardOverlay from './CoverLetterCardOverlay';
 import JobModal from './JobModal';
 import { useOptimizedDataFetching } from '@/lib/hooks/useOptimizedDataFetching';
-import { CanvasSkeleton } from '@/components/ui/OptimizedSkeletons';
 import { formatCardTime } from '@/lib/utils/timeUtils';
 import DownloadModal, { DocumentType, FormatType } from '@/components/ui/DownloadModal';
 import { CVJourneyLookupService } from '@/lib/services/cvJourneyLookupService';
@@ -387,6 +386,10 @@ const Canvas: React.FC = () => {
   const [masterCVs, setMasterCVs] = useState<CV[]>([]);
   const [mongoDBUserId, setMongoDBUserId] = useState<string | null>(null);
   const [journeys, setJourneys] = useState<any[]>([]);
+  
+  // Track if CVs have been loaded to prevent re-fetching on tab switch
+  const hasLoadedCVsRef = useRef(false);
+  const lastUserIdRef = useRef<string | null>(null);
   
   // JobModal state
   const [showJourneyModal, setShowJourneyModal] = useState(false);
@@ -788,15 +791,29 @@ const Canvas: React.FC = () => {
     
     // Use unified authentication
     const userId = getUserIdForAPI(user);
-    if (userId) {
-      loadCVs(userId);
-      loadCoverLetters();
-      loadJourneys();
-      fetchAvailableJobs();
-    } else {
+    if (!userId) {
       setLoading(false);
+      return;
     }
-  }, [user]);
+
+    // Prevent re-fetching on tab switch - only fetch if user ID changed or first load
+    if (hasLoadedCVsRef.current && lastUserIdRef.current === userId) {
+      console.log('⏭️ Canvas - Skipping reload on tab switch (data already loaded)');
+      return;
+    }
+
+    // Reset refs if user ID actually changed (different user logged in)
+    if (lastUserIdRef.current && lastUserIdRef.current !== userId) {
+      console.log('🔄 Canvas - User ID changed, resetting load state');
+      hasLoadedCVsRef.current = false;
+    }
+
+    // Load data for this user
+    loadCVs(userId);
+    loadCoverLetters();
+    loadJourneys();
+    fetchAvailableJobs();
+  }, [user?.id, loadCVs, loadCoverLetters, loadJourneys]); // Use user.id instead of user object
 
   const getUserIdFromLocalStorage = (): string | null => {
     try {
@@ -817,7 +834,6 @@ const Canvas: React.FC = () => {
 
   const loadCVs = useCallback(async (userId?: string) => {
     try {
-      setLoading(true);
       const userIdToUse = userId || getUserIdForAPI(user);
       
       if (!userIdToUse) {
@@ -826,7 +842,18 @@ const Canvas: React.FC = () => {
         setMasterCVs([]);
         return;
       }
-      
+
+      // Prevent re-fetching on tab switch - only fetch if user ID changed or first load
+      if (hasLoadedCVsRef.current && lastUserIdRef.current === userIdToUse) {
+        console.log('⏭️ Canvas - Skipping CV reload (data already loaded for this user)');
+        return;
+      }
+
+      // Mark as loading for this user
+      hasLoadedCVsRef.current = true;
+      lastUserIdRef.current = userIdToUse;
+
+      setLoading(true);
       console.log('🔍 Canvas - Loading CVs with user ID:', userIdToUse);
       
       // Use unified service to get CVs
@@ -897,6 +924,28 @@ const Canvas: React.FC = () => {
         setCvs(regularCVs);
         setMasterCVs(masterCVs);
         console.log('✅ Canvas - CVs loaded successfully:', { regular: regularCVs.length, master: masterCVs.length });
+        
+        // Performance optimization: Load journeys in batch for all CVs
+        // This eliminates N+1 query problem (one API call instead of N calls)
+        if (regularCVs.length > 0 || masterCVs.length > 0) {
+          const allCVIds = [...regularCVs, ...masterCVs].map(cv => cv.id).filter(Boolean);
+          if (allCVIds.length > 0) {
+            console.log('🔍 Canvas - Batch loading journeys for CVs:', allCVIds.length);
+            try {
+              const journeysMap = await CVJourneyLookupService.findJourneysByCVIds(allCVIds, userIdToUse);
+              // Convert map to array format expected by Canvas
+              const journeysArray = Array.from(journeysMap.values());
+              if (journeysArray.length > 0) {
+                console.log('✅ Canvas - Batch loaded journeys:', journeysArray.length);
+                setJourneys(journeysArray);
+              }
+            } catch (error) {
+              console.error('❌ Canvas - Error batch loading journeys:', error);
+              // Fallback: Load journeys individually if batch fails (will be called separately)
+              // Don't call loadJourneys here to avoid circular dependency
+            }
+          }
+        }
       } else {
         console.log('🔍 Canvas - No CVs found for user:', userIdToUse);
         console.log('🔍 Canvas - Result was:', result);

@@ -2,7 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import { LocationService, LocationData, PricingData } from '@/lib/payment/locationService';
-import { getRegionalPricing, isEUCountry, getEUPricing, RegionalPricing } from '@/lib/pricing/regionalPricing';
+
+// RegionalPricing interface (matches database format)
+export interface RegionalPricing {
+  currency: string;
+  currencySymbol: string;
+  dayPass: string;
+  monthly: string;
+  quarterly: string;
+  yearly: string;
+}
 
 export interface DatabasePricingPlan {
   _id: string;
@@ -96,7 +105,7 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
   const [error, setError] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // Fetch location and set regional pricing
+  // Fetch location and set regional pricing from database
   useEffect(() => {
     const detectLocation = async () => {
       try {
@@ -107,23 +116,56 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
         setLocationData(location);
         setSelectedCurrency(location.currency);
         
-        // Get regional pricing based on country
-        let pricing: RegionalPricing;
-        if (isEUCountry(location.countryCode)) {
-          pricing = getEUPricing();
-        } else {
-          pricing = getRegionalPricing(location.countryCode);
+        // Get regional pricing from database API
+        try {
+          const response = await fetch(`/api/pricing/regional?countryCode=${location.countryCode}`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.pricing) {
+              console.log('Regional pricing from database:', data.pricing);
+              setRegionalPricing(data.pricing);
+            } else {
+              throw new Error('Invalid pricing data');
+            }
+          } else {
+            throw new Error('Failed to fetch pricing');
+          }
+        } catch (pricingError) {
+          console.error('Error fetching pricing from database:', pricingError);
+          // Fallback: try to get default pricing
+          try {
+            const defaultResponse = await fetch('/api/pricing/regional');
+            if (defaultResponse.ok) {
+              const defaultData = await defaultResponse.json();
+              if (defaultData.success && defaultData.pricing) {
+                console.log('Using default pricing from database');
+                setRegionalPricing(defaultData.pricing);
+              } else {
+                throw new Error('No default pricing available');
+              }
+            }
+          } catch (fallbackError) {
+            console.error('Error fetching default pricing:', fallbackError);
+            // Last resort: set empty pricing (components should handle this gracefully)
+            setRegionalPricing(null);
+          }
         }
-        
-        console.log('Regional pricing set:', pricing);
-        setRegionalPricing(pricing);
       } catch (error) {
         console.error('Error detecting location:', error);
-        // Fallback to India pricing if error (more likely in development)
-        const fallbackPricing = getRegionalPricing('IN');
-        console.log('Using fallback pricing (India):', fallbackPricing);
-        setRegionalPricing(fallbackPricing);
-        setSelectedCurrency('INR');
+        // Try to get default pricing
+        try {
+          const defaultResponse = await fetch('/api/pricing/regional');
+          if (defaultResponse.ok) {
+            const defaultData = await defaultResponse.json();
+            if (defaultData.success && defaultData.pricing) {
+              setRegionalPricing(defaultData.pricing);
+              setSelectedCurrency(defaultData.pricing.currency);
+            }
+          }
+        } catch (fallbackError) {
+          console.error('Error fetching default pricing:', fallbackError);
+          setRegionalPricing(null);
+        }
       }
     };
 
