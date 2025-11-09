@@ -35,8 +35,17 @@ const RecentActivity: React.FC = () => {
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isClientSide, setIsClientSide] = useState(false);
+
+  // CRITICAL FIX: Mark as client-side to prevent hydration issues with random activities
+  useEffect(() => {
+    setIsClientSide(true);
+  }, []);
 
   const fetchActivities = async () => {
+    // Only fetch on client side to prevent hydration mismatches
+    if (typeof window === 'undefined') return;
+    
     try {
       setError(null);
       const response = await fetch('/api/admin/activity?limit=20');
@@ -56,6 +65,7 @@ const RecentActivity: React.FC = () => {
   };
 
   // Generate dynamic activity data (fallback for demo purposes)
+  // CRITICAL FIX: This will only run on client side now
   const generateDynamicActivities = (): ActivityItem[] => {
     const activityTypes = [
       {
@@ -189,15 +199,18 @@ const RecentActivity: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchActivities();
-
-    // Refresh activities every 5 minutes
-    const interval = setInterval(() => {
+    // Only fetch on client side after hydration
+    if (isClientSide) {
       fetchActivities();
-    }, 5 * 60 * 1000);
 
-    return () => clearInterval(interval);
-  }, []);
+      // Refresh activities every 5 minutes
+      const interval = setInterval(() => {
+        fetchActivities();
+      }, 5 * 60 * 1000);
+
+      return () => clearInterval(interval);
+    }
+  }, [isClientSide]);
 
   const getStatusColor = (status?: string) => {
     switch (status) {

@@ -24,14 +24,24 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const [eventSource, setEventSource] = useState<EventSource | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
   const pathname = usePathname();
+  // Track if we've already fetched to prevent duplicate calls
+  const hasFetchedRef = useRef(false);
+  const lastFetchTimeRef = useRef<number>(0);
   
   // Check if we're on admin route - skip session logic if so
   const isAdminRoute = pathname ? pathname.startsWith('/admin') : false;
   
-  // Use useSession - this component must be rendered inside SessionProvider
+  // Ensure we're mounted before using session (prevents SSR/hydration issues)
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+  
+  // Use useSession - must be called unconditionally (React hook rule)
+  // SessionProvider should always be available since NotificationProvider is inside it in ClientProviders
   const { data: session, status } = useSession();
-  const isAuthenticated = !isAdminRoute && status === 'authenticated' && !!session?.user;
+  const isAuthenticated = isMounted && !isAdminRoute && status === 'authenticated' && !!session?.user;
 
   // Filter out expired time-sensitive notifications
   const filterExpiredNotifications = useCallback((notifs: INotification[]) => {
@@ -54,8 +64,19 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
     if (!isAuthenticated) {
       setNotifications([]);
       setIsLoading(false);
+      hasFetchedRef.current = false; // Reset on logout
       return;
     }
+
+    // Prevent duplicate calls within 2 seconds (debounce)
+    const now = Date.now();
+    if (hasFetchedRef.current && (now - lastFetchTimeRef.current) < 2000) {
+      console.log('⏭️ NotificationContext - Skipping duplicate fetch (debounced)');
+      return;
+    }
+
+    hasFetchedRef.current = true;
+    lastFetchTimeRef.current = now;
 
     try {
       const response = await fetch('/api/notifications', { cache: 'no-store' });
@@ -79,6 +100,8 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
           variant: 'destructive',
         });
       }
+      // Reset fetch flag on error so we can retry
+      hasFetchedRef.current = false;
     } finally {
       setIsLoading(false);
     }
@@ -200,6 +223,11 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
           const filtered = filterExpiredNotifications([notification]);
           if (filtered.length > 0) {
             setNotifications((prev) => {
+              // Ensure prev is an array
+              if (!prev || !Array.isArray(prev)) {
+                return [notification];
+              }
+              
               // Check if notification already exists (avoid duplicates)
               const exists = prev.some((n) => (n._id as any).toString() === (notification._id as any).toString());
               if (exists) return prev;
@@ -308,8 +336,16 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
       return; // Don't fetch while session is loading
     }
     
+    // Only fetch if authenticated and we haven't fetched yet (or user just logged in)
+    if (isAuthenticated && (!hasFetchedRef.current || status === 'authenticated')) {
     fetchNotifications();
-  }, [fetchNotifications, status]);
+    } else if (!isAuthenticated) {
+      // Reset on logout
+      hasFetchedRef.current = false;
+      setNotifications([]);
+      setIsLoading(false);
+    }
+  }, [isAuthenticated, status, fetchNotifications]);
 
 
   // Calculate unread count (only non-expired notifications)
@@ -334,8 +370,30 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
 
 // Outer provider - provides a default context for routes that don't use notifications
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
-  // Always render NotificationProviderWithSession
-  // It will handle session availability internally
+  // Check if we're in a browser environment
+  const isBrowser = typeof window !== 'undefined';
+  
+  // If not in browser, provide a minimal context (SSR)
+  if (!isBrowser) {
+    return (
+      <NotificationContext.Provider
+        value={{
+          notifications: [],
+          unreadCount: 0,
+          isLoading: false,
+          markAsRead: async () => {},
+          markAllAsRead: async () => {},
+          handleNotificationAction: async () => {},
+          refreshNotifications: async () => {},
+        }}
+      >
+        {children}
+      </NotificationContext.Provider>
+    );
+  }
+  
+  // In browser, render the full provider with session
+  // This assumes SessionProvider is available in the component tree
   return <NotificationProviderWithSession>{children}</NotificationProviderWithSession>;
 }
 

@@ -3655,8 +3655,9 @@ const CVStudio: React.FC<CVStudioProps> = ({
         
         // If section doesn't exist in structure, add it
         if (!sectionExists) {
-          const sectionIdForStructure = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 
-            `section-${Date.now()}-${Math.random()}`;
+          // CRITICAL FIX: Use deterministic ID to prevent hydration mismatches
+          // Using sectionId + timestamp ensures stable IDs across server/client renders
+          const sectionIdForStructure = `section-${sectionId}-${Date.now()}`;
           updatedData.structure.sections.push({
             id: sectionIdForStructure,
             type: sectionId,

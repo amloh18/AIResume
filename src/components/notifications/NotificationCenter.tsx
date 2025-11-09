@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useSession } from 'next-auth/react';
+import { usePathname } from 'next/navigation';
 import { Bell, X, Check, CheckCheck, ExternalLink, Clock } from 'lucide-react';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { INotification } from '@/models/Notification';
@@ -12,11 +13,13 @@ import { formatDistanceToNow } from 'date-fns';
 
 export default function NotificationCenter() {
   const { data: session, status } = useSession();
+  const pathname = usePathname();
+  const isAdminRoute = pathname ? pathname.startsWith('/admin') : false;
   const isAuthenticated = status === 'authenticated' && !!session?.user;
   const { notifications, unreadCount, markAsRead, markAllAsRead, handleNotificationAction } = useNotifications();
   
-  // Don't render notification center if user is not authenticated
-  if (!isAuthenticated) {
+  // Don't render notification center if user is not authenticated or on admin routes
+  if (!isAuthenticated || isAdminRoute) {
     return null;
   }
   const [isOpen, setIsOpen] = useState(false);

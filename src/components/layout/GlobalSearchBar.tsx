@@ -497,6 +497,12 @@ const GlobalSearchBar: React.FC = () => {
                 setIsOpen(true);
               }
             }}
+            onKeyDown={(e) => {
+              // Prevent form submission on Enter key
+              if (e.key === 'Enter') {
+                e.preventDefault();
+              }
+            }}
             className="w-[300px] md:w-[350px] lg:w-[400px] xl:w-[450px] pl-10 pr-10 py-2 rounded-2xl bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all text-sm"
           />
           {query && (
@@ -566,6 +572,12 @@ const GlobalSearchBar: React.FC = () => {
                     onFocus={() => {
                       if (query.length >= 2) {
                         setIsOpen(true);
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      // Prevent form submission on Enter key
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
                       }
                     }}
                     autoFocus

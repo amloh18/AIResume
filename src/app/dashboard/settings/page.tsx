@@ -150,6 +150,50 @@ interface Invoice {
   createdAt: string;
 }
 
+// --- SKELETON LOADERS ---
+// Skeleton components for better loading UX (no full-page spinners)
+
+const AccountProfileSkeleton = () => (
+  <div className="p-8 h-full overflow-y-auto">
+    <div className="space-y-8 animate-pulse">
+      <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded"></div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {[...Array(6)].map((_, i) => (
+          <div key={i} className="space-y-2">
+            <div className="h-4 w-24 bg-gray-200 dark:bg-gray-700 rounded"></div>
+            <div className="h-10 w-full bg-gray-200 dark:bg-gray-700 rounded"></div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
+const SecuritySkeleton = () => (
+  <div className="p-8 h-full overflow-y-auto">
+    <div className="space-y-8 animate-pulse">
+      <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded"></div>
+      <div className="space-y-4">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="h-16 w-full bg-gray-200 dark:bg-gray-700 rounded"></div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
+const MembershipSkeleton = () => (
+  <div className="p-8 h-full overflow-y-auto">
+    <div className="space-y-8 animate-pulse">
+      <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded"></div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="h-48 w-full bg-gray-200 dark:bg-gray-700 rounded-xl"></div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
 
 // Account & Profile Component
 const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User) => void }) => {
@@ -1532,420 +1576,7 @@ const MembershipBilling = ({ user }: { user: User }) => {
   );
 };
 
-// Referrals & Rewards Component - REMOVED
-const ReferralsRewards_OLD = () => {
-  const [referralStats, setReferralStats] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [copied, setCopied] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  
-  // Toast notification state
-
-  const showToastNotification = (type: 'success' | 'error' | 'info', message: string) => {
-    // Notification removed
-  };
-
-  useEffect(() => {
-    const fetchReferralStats = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const response = await fetch('/api/user/referrals');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success) {
-            setReferralStats(data.stats);
-          } else {
-            setError(data.error || 'Failed to load referral data');
-          }
-        } else {
-          setError('Failed to load referral data');
-        }
-      } catch (error) {
-        console.error('Error fetching referral stats:', error);
-        setError('Network error loading referral data');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchReferralStats();
-  }, []);
-
-  const copyReferralLink = async () => {
-    if (referralStats?.referralLink) {
-      try {
-        await navigator.clipboard.writeText(referralStats.referralLink);
-        setCopied(true);
-        showToastNotification('success', 'Referral link copied to clipboard!');
-        setTimeout(() => setCopied(false), 2000);
-      } catch (error) {
-        console.error('Failed to copy referral link:', error);
-        showToastNotification('error', 'Failed to copy referral link');
-      }
-    } else {
-      showToastNotification('error', 'No referral link available');
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-2xl shadow-lg border border-gray-200/50 dark:border-gray-700/50 p-8 h-full">
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-lime-500"></div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="p-8 h-full overflow-y-auto">
-      <div className="space-y-8">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Referrals & Rewards</h3>
-          <p className="text-gray-600 dark:text-gray-300">
-            Invite friends and earn rewards for successful referrals.
-          </p>
-        </div>
-
-        {/* Error Display */}
-        {error && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-            <div className="flex items-center gap-2">
-              <XCircle className="w-5 h-5 text-red-500" />
-              <p className="text-red-700 dark:text-red-300 text-sm">
-                {error}
-              </p>
-            </div>
-            <button 
-              className="mt-2 text-red-600 dark:text-red-400 text-sm hover:underline"
-              onClick={() => {
-                setError(null);
-                // Retry fetch
-                const fetchReferralStats = async () => {
-                  try {
-                    setLoading(true);
-                    const response = await fetch('/api/user/referrals');
-                    if (response.ok) {
-                      const data = await response.json();
-                      if (data.success) {
-                        setReferralStats(data.stats);
-                      } else {
-                        setError(data.error || 'Failed to load referral data');
-                      }
-                    } else {
-                      setError('Failed to load referral data');
-                    }
-                  } catch (error) {
-                    console.error('Error fetching referral stats:', error);
-                    setError('Network error loading referral data');
-                  } finally {
-                    setLoading(false);
-                  }
-                };
-                fetchReferralStats();
-              }}
-            >
-              Retry
-            </button>
-          </div>
-        )}
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-gradient-to-r from-lime-50 to-lime-100 dark:from-lime-400/10 dark:to-lime-500/10 border border-lime-200 dark:border-lime-400/20 rounded-xl p-6">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-lime-500 rounded-lg flex items-center justify-center">
-                <Users className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {referralStats?.totalInvites || 0}
-                </p>
-                <p className="text-sm text-gray-600 dark:text-gray-300">Total Invites</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-400/10 dark:to-blue-500/10 border border-blue-200 dark:border-blue-400/20 rounded-xl p-6">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
-                <User className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {referralStats?.successfulSignups || 0}
-                </p>
-                <p className="text-sm text-gray-600 dark:text-gray-300">Successful Signups</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 dark:from-yellow-400/10 dark:to-yellow-500/10 border border-yellow-200 dark:border-yellow-400/20 rounded-xl p-6">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-yellow-500 rounded-lg flex items-center justify-center">
-                <Gift className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  ${referralStats?.rewardsEarned || 0}
-                </p>
-                <p className="text-sm text-gray-600 dark:text-gray-300">Rewards Earned</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Referral Link */}
-        <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-6">
-          <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Your Referral Link</h4>
-          <div className="flex gap-3">
-            <input
-              type="text"
-              value={referralStats?.referralLink || ''}
-              readOnly
-              className="flex-1 px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white"
-            />
-            <button
-              onClick={copyReferralLink}
-              className={`px-6 py-3 rounded-lg font-medium transition-all duration-300 ${
-                copied 
-                  ? 'bg-green-500 text-white' 
-                  : 'bg-gradient-to-r from-lime-500 to-lime-600 hover:from-lime-600 hover:to-lime-700 text-white shadow-lg hover:shadow-xl'
-              }`}
-            >
-              {copied ? 'Copied!' : 'Copy Link'}
-            </button>
-          </div>
-          <p className="text-sm text-gray-600 dark:text-gray-300 mt-3">
-            Share this link with friends to earn rewards when they sign up and upgrade to a paid plan.
-          </p>
-        </div>
-
-        {/* How it Works */}
-        <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-6">
-          <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">How Referrals Work</h4>
-          <div className="space-y-3">
-            <div className="flex items-start gap-3">
-              <div className="w-6 h-6 bg-lime-500 rounded-full flex items-center justify-center text-white text-sm font-bold">1</div>
-              <p className="text-gray-600 dark:text-gray-300">Share your unique referral link with friends and colleagues</p>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="w-6 h-6 bg-lime-500 rounded-full flex items-center justify-center text-white text-sm font-bold">2</div>
-              <p className="text-gray-600 dark:text-gray-300">They sign up using your link and create their account</p>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="w-6 h-6 bg-lime-500 rounded-full flex items-center justify-center text-white text-sm font-bold">3</div>
-              <p className="text-gray-600 dark:text-gray-300">When they upgrade to a paid plan, you both earn rewards!</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Toast Notifications */}
-    </div>
-  );
-};
-
-// Connected Apps & Integrations Component - REMOVED
-const ConnectedAppsIntegrations_OLD = () => {
-  const [connectedApps, setConnectedApps] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [userSettings, setUserSettings] = useState<any>(null);
-
-  useEffect(() => {
-    const fetchConnectedApps = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch('/api/user/integrations');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success) {
-            setConnectedApps(data.apps);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching connected apps:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    const fetchUserSettings = async () => {
-      try {
-        const response = await fetch('/api/user/settings');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success) {
-            setUserSettings(data.settings);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching user settings:', error);
-      }
-    };
-
-    fetchConnectedApps();
-    fetchUserSettings();
-  }, []);
-
-  const getProviderIcon = (provider: string) => {
-    switch (provider) {
-      case 'google':
-        return '🔍';
-      case 'microsoft':
-        return '🏢';
-      case 'slack':
-        return '💬';
-      default:
-        return '🔗';
-    }
-  };
-
-  const getProviderColor = (provider: string) => {
-    switch (provider) {
-      case 'google':
-        return 'from-red-50 to-red-100 dark:from-red-400/10 dark:to-red-500/10 border-red-200 dark:border-red-400/20';
-      case 'microsoft':
-        return 'from-blue-50 to-blue-100 dark:from-blue-400/10 dark:to-blue-500/10 border-blue-200 dark:border-blue-400/20';
-      case 'slack':
-        return 'from-purple-50 to-purple-100 dark:from-purple-400/10 dark:to-purple-500/10 border-purple-200 dark:border-purple-400/20';
-      default:
-        return 'from-gray-50 to-gray-100 dark:from-gray-400/10 dark:to-gray-500/10 border-gray-200 dark:border-gray-400/20';
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-2xl shadow-lg border border-gray-200/50 dark:border-gray-700/50 p-8 h-full">
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-lime-500"></div>
-        </div>
-      </div>
-    );
-  }
-
-  const handleUpdateSettings = async (updatedSettings: any) => {
-    try {
-      const response = await fetch('/api/user/settings', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updatedSettings),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setUserSettings(updatedSettings);
-        }
-      }
-    } catch (error) {
-      console.error('Error updating settings:', error);
-    }
-  };
-
-  return (
-    <div className="p-8 h-full overflow-y-auto">
-      <div className="space-y-8">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Connected Apps & Integrations</h3>
-          <p className="text-gray-600 dark:text-gray-300">
-            Manage your connected applications and third-party integrations.
-          </p>
-        </div>
-
-        {/* Calendar Sync Settings */}
-        {userSettings && (
-          <CalendarSyncSettings 
-            userSettings={userSettings}
-            onUpdateSettings={handleUpdateSettings}
-          />
-        )}
-
-        {/* Connected Apps List */}
-        <div className="space-y-4">
-          {connectedApps.map((app) => (
-            <div
-              key={app.id}
-              className={`bg-gradient-to-r ${getProviderColor(app.provider)} border rounded-xl p-6`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="text-3xl">
-                    {getProviderIcon(app.provider)}
-                  </div>
-                  <div>
-                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
-                      {app.name}
-                    </h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
-                      {app.connected ? (
-                        <>
-                          Connected • Last synced: {app.lastSynced ? new Date(app.lastSynced).toLocaleDateString() : 'Never'}
-                        </>
-                      ) : (
-                        'Not connected'
-                      )}
-                    </p>
-                    {app.scopes && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Permissions: {app.scopes.join(', ')}
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  {app.connected ? (
-                    <>
-                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                      <button className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm font-medium">
-                        Disconnect
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
-                      <button className="px-4 py-2 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black rounded-lg font-medium transition-all duration-300 shadow-lg hover:shadow-xl text-sm">
-                        Connect
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Add New Integration */}
-        <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-6">
-          <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Add New Integration</h4>
-          <p className="text-gray-600 dark:text-gray-300 mb-4">
-            Connect more apps to streamline your workflow and sync your data across platforms.
-          </p>
-          <button className="px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium">
-            Browse Integrations
-          </button>
-        </div>
-
-        {/* Security Notice */}
-        <div className="bg-yellow-50 dark:bg-yellow-400/10 border border-yellow-200 dark:border-yellow-400/20 rounded-xl p-6">
-          <div className="flex items-start gap-3">
-            <Shield className="w-6 h-6 text-yellow-600 dark:text-yellow-400 mt-0.5" />
-            <div>
-              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Security & Privacy</h4>
-              <p className="text-gray-600 dark:text-gray-300 text-sm">
-                We use industry-standard security measures to protect your data. You can revoke access to any connected app at any time. 
-                Review the permissions carefully before connecting new applications.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
+// Legacy components removed - ReferralsRewards_OLD and ConnectedAppsIntegrations_OLD
 
 // Settings tabs configuration
 const settingsTabs = [
@@ -2066,23 +1697,16 @@ const SettingsContent = () => {
   };
 
   const renderTabContent = () => {
-    if (loading || !userData) {
-      return (
-        <div className="p-8 h-full">
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-lime-500"></div>
-          </div>
-        </div>
-      );
-    }
-
+    // Don't block rendering with a full-page spinner
+    // Show skeleton loaders or cached data instead for better UX
+    
     switch (activeTab) {
       case 'account':
-        return <AccountProfile user={userData} onSave={handleSaveUser} />;
+        return loading || !userData ? <AccountProfileSkeleton /> : <AccountProfile user={userData} onSave={handleSaveUser} />;
       case 'security':
-        return <SecurityAndNotifications user={userData} />;
+        return loading || !userData ? <SecuritySkeleton /> : <SecurityAndNotifications user={userData} />;
       case 'membership':
-        return <MembershipBilling user={userData} />;
+        return loading || !userData ? <MembershipSkeleton /> : <MembershipBilling user={userData} />;
       case 'integrations':
         return (
           <div className="p-8 h-full">
@@ -2189,11 +1813,7 @@ const SettingsContent = () => {
 export default function SettingsPage() {
   return (
     <ErrorBoundary>
-      <Suspense fallback={
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
-        </div>
-      }>
+      <Suspense fallback={null}>
         <SettingsContent />
       </Suspense>
     </ErrorBoundary>

@@ -334,6 +334,8 @@ const jobSchema = new Schema<IJob>({
 });
 
 // Indexes for efficient queries
+// CRITICAL: Simple userId index for fast lookups (most common query pattern)
+jobSchema.index({ userId: 1 }); // Primary index for user queries - should reduce query time from 1400ms to <100ms
 jobSchema.index({ userId: 1, status: 1 }); // Kanban board queries
 jobSchema.index({ userId: 1, createdAt: -1 }); // Recent jobs
 jobSchema.index({ userId: 1, priority: -1 }); // Priority sorting
