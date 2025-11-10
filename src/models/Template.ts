@@ -284,7 +284,8 @@ const templateSchema = new Schema<ITemplate>({
   },
   isDefault: { 
     type: Boolean, 
-    default: false 
+    default: false
+    // Index defined separately below to avoid duplicate
   },
   isPublished: {
     type: Boolean,

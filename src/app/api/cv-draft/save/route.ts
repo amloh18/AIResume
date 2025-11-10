@@ -29,6 +29,62 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // CRITICAL: Validate that all CV sections are present before saving
+    const requiredSections = ['basics', 'work', 'education', 'skills', 'projects'];
+    const missingSections = requiredSections.filter(section => !cvData[section]);
+    
+    if (missingSections.length > 0) {
+      console.error('❌ CV draft save: Missing required sections:', missingSections);
+      console.error('📋 Received CV data structure:', {
+        hasBasics: !!cvData.basics,
+        hasWork: !!cvData.work,
+        hasEducation: !!cvData.education,
+        hasSkills: !!cvData.skills,
+        hasProjects: !!cvData.projects,
+        workCount: Array.isArray(cvData.work) ? cvData.work.length : 'not array',
+        educationCount: Array.isArray(cvData.education) ? cvData.education.length : 'not array',
+        skillsCount: Array.isArray(cvData.skills) ? cvData.skills.length : 'not array',
+        projectsCount: Array.isArray(cvData.projects) ? cvData.projects.length : 'not array',
+        allKeys: Object.keys(cvData)
+      });
+    }
+
+    // Ensure all sections exist (even if empty arrays) to prevent data loss
+    const validatedCVData = {
+      ...cvData,
+      basics: cvData.basics || {
+        name: '',
+        label: '',
+        image: '',
+        email: '',
+        phone: '',
+        url: '',
+        summary: '',
+        location: { address: '', postalCode: '', city: '', countryCode: '', region: '' },
+        profiles: []
+      },
+      work: Array.isArray(cvData.work) ? cvData.work : [],
+      education: Array.isArray(cvData.education) ? cvData.education : [],
+      skills: Array.isArray(cvData.skills) ? cvData.skills : [],
+      projects: Array.isArray(cvData.projects) ? cvData.projects : [],
+      volunteer: Array.isArray(cvData.volunteer) ? cvData.volunteer : [],
+      awards: Array.isArray(cvData.awards) ? cvData.awards : [],
+      certificates: Array.isArray(cvData.certificates) ? cvData.certificates : [],
+      publications: Array.isArray(cvData.publications) ? cvData.publications : [],
+      languages: Array.isArray(cvData.languages) ? cvData.languages : [],
+      interests: Array.isArray(cvData.interests) ? cvData.interests : [],
+      references: Array.isArray(cvData.references) ? cvData.references : []
+    };
+
+    // Log section counts for debugging
+    console.log('💾 Saving CV draft with sections:', {
+      work: validatedCVData.work.length,
+      education: validatedCVData.education.length,
+      skills: validatedCVData.skills.length,
+      projects: validatedCVData.projects.length,
+      hasBasics: !!validatedCVData.basics?.name
+    });
+
     await getConnection();
 
     // Get or create session ID for anonymous users
@@ -47,8 +103,8 @@ export async function POST(request: NextRequest) {
     let draft = await TemporaryCVDraft.findOne(query);
 
     if (draft) {
-      // Update existing draft
-      draft.cvData = cvData;
+      // Update existing draft with validated data
+      draft.cvData = validatedCVData;
       draft.aiAnalysis = aiAnalysis !== undefined ? aiAnalysis : draft.aiAnalysis;
       draft.currentStep = currentStep || draft.currentStep;
       draft.jobId = jobId || draft.jobId;
@@ -66,11 +122,11 @@ export async function POST(request: NextRequest) {
       
       await draft.save();
     } else {
-      // Create new draft
+      // Create new draft with validated data
       draft = new TemporaryCVDraft({
         userId: session?.user?.id || undefined,
         sessionId,
-        cvData,
+        cvData: validatedCVData,
         aiAnalysis,
         currentStep: currentStep || 1,
         jobId,

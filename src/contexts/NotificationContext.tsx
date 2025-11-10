@@ -40,8 +40,16 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
   
   // Use useSession - must be called unconditionally (React hook rule)
   // SessionProvider should always be available since NotificationProvider is inside it in ClientProviders
-  const { data: session, status } = useSession();
-  const isAuthenticated = isMounted && !isAdminRoute && status === 'authenticated' && !!session?.user;
+  // Safely handle potential null/undefined returns
+  const sessionResult = useSession();
+  const session = sessionResult?.data || null;
+  const status = sessionResult?.status || 'loading';
+  
+  // Safely check authentication - handle null/undefined cases
+  const isAuthenticated = isMounted && 
+                          !isAdminRoute && 
+                          status === 'authenticated' && 
+                          !!session?.user;
 
   // Filter out expired time-sensitive notifications
   const filterExpiredNotifications = useCallback((notifs: INotification[]) => {

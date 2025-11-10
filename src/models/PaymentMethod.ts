@@ -63,6 +63,7 @@ const paymentMethodSchema = new Schema<IPaymentMethod>({
   isDefault: {
     type: Boolean,
     default: false
+    // Index defined separately below to avoid duplicate
   },
   isActive: {
     type: Boolean,

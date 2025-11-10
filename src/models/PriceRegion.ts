@@ -27,7 +27,7 @@ const priceRegionSchema = new Schema<IPriceRegion>(
     isDefault: {
       type: Boolean,
       default: false,
-      index: true,
+      // Index defined separately below to avoid duplicate
     },
     currency: {
       type: String,
