@@ -498,6 +498,23 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
       )
     );
 
+    // Don't show error if still initializing or auth is loading
+    if (authStatus === 'loading' || !isInitialized) {
+      return (
+        <div className="min-h-screen bg-[#1A201A] flex items-center justify-center">
+          <div className="text-center">
+            <motion.div
+              className="w-16 h-16 border-4 border-[#80FF00] border-t-transparent rounded-full animate-spin mx-auto mb-6"
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            />
+            <h2 className="text-2xl font-bold text-white mb-4">Loading Your Data</h2>
+            <p className="text-white/70">Please wait while we prepare your career analysis...</p>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen bg-[#1A201A] flex items-center justify-center">
         <div className="text-center max-w-md p-8">

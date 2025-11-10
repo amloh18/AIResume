@@ -1,8 +1,5 @@
 'use client';
 
-// Force dynamic rendering to prevent SSR issues
-export const dynamic = 'force-dynamic';
-
 import React, { useState, useEffect, Suspense } from 'react';
 import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
 import { useRouter, useSearchParams } from 'next/navigation';

@@ -1,9 +1,6 @@
 'use client';
 
 import React from 'react';
-
-// Force dynamic rendering to prevent SSR issues
-export const dynamic = 'force-dynamic';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { AlertCircle, ArrowLeft } from 'lucide-react';

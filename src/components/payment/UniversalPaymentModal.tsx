@@ -635,34 +635,34 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
+        className="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm z-[95] flex items-center justify-center p-4"
         onClick={(e) => e.target === e.currentTarget && onClose()}
       >
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
-        className="bg-white dark:bg-[#141810] rounded-xl shadow-2xl w-[90%] max-w-6xl max-h-[85vh] overflow-hidden flex flex-col"
+        className="bg-white dark:bg-[#141810] rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 w-[95%] sm:w-[90%] max-w-6xl max-h-[95vh] sm:max-h-[85vh] overflow-hidden flex flex-col"
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-            <div>
-              <div className="flex items-center gap-3">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+        <div className="flex items-start sm:items-center justify-between p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+            <div className="flex-1 min-w-0 pr-2">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
                   {adminMode ? 'Grant Plan' : previewMode ? 'Preview Plans' : 'Choose Your Plan'}
                 </h2>
                 {adminMode && (
-                  <span className="bg-lime-100 dark:bg-lime-900/20 text-lime-800 dark:text-lime-300 text-xs font-medium px-2 py-1 rounded-full">
+                  <span className="bg-lime-100 dark:bg-lime-900/20 text-lime-800 dark:text-lime-300 text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap">
                     Admin Mode
                   </span>
                 )}
                 {previewMode && (
-                  <span className="bg-lime-100 dark:bg-lime-900/20 text-lime-800 dark:text-lime-300 text-xs font-medium px-2 py-1 rounded-full">
+                  <span className="bg-lime-100 dark:bg-lime-900/20 text-lime-800 dark:text-lime-300 text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap">
                     Preview
                   </span>
                 )}
               </div>
-              <p className="text-gray-600 dark:text-gray-400 mt-1">
+              <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">
                 {adminMode 
                   ? 'Grant a plan to the selected user'
                   : previewMode 
@@ -673,18 +673,18 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
             </div>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors flex-shrink-0"
             >
-              <X className="w-6 h-6 text-gray-500" />
+              <X className="w-5 h-5 sm:w-6 sm:h-6 text-gray-500" />
             </button>
           </div>
 
-          <div className="p-6 overflow-y-auto flex-1 min-h-0">
+          <div className="p-4 sm:p-6 overflow-y-auto flex-1 min-h-0">
             {step === 1 && (
               <>
                 {/* Category Toggle - Matching Landing Page */}
-                <div className="flex justify-center mb-8">
-                  <div className="relative bg-white/5 dark:bg-gray-800 backdrop-blur-sm border border-white/10 dark:border-gray-700 rounded-full p-1 inline-flex">
+                <div className="flex justify-center mb-6 sm:mb-8">
+                  <div className="relative bg-white/5 dark:bg-gray-800 backdrop-blur-sm border border-white/10 dark:border-gray-700 rounded-full p-1 inline-flex w-full sm:w-auto">
                     {/* Sliding background indicator */}
                     <motion.div
                       className="absolute top-1 bottom-1 bg-lime-400 rounded-full shadow-lg z-0"
@@ -706,7 +706,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                     
                     <button
                       onClick={() => setSelectedCategory('essential')}
-                      className={`relative z-10 min-w-[140px] px-6 py-3 rounded-full font-medium text-sm transition-colors duration-300 ${
+                      className={`relative z-10 flex-1 sm:flex-none min-w-[120px] sm:min-w-[140px] px-4 sm:px-6 py-2.5 sm:py-3 rounded-full font-medium text-xs sm:text-sm transition-colors duration-300 ${
                         selectedCategory === 'essential'
                           ? 'text-black'
                           : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
@@ -716,7 +716,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                     </button>
                     <button
                       onClick={() => setSelectedCategory('professional')}
-                      className={`relative z-10 min-w-[140px] px-6 py-3 rounded-full font-medium text-sm transition-colors duration-300 ${
+                      className={`relative z-10 flex-1 sm:flex-none min-w-[120px] sm:min-w-[140px] px-4 sm:px-6 py-2.5 sm:py-3 rounded-full font-medium text-xs sm:text-sm transition-colors duration-300 ${
                         selectedCategory === 'professional'
                           ? 'text-black'
                           : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
@@ -990,208 +990,218 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                 {/* Back Button */}
                 <button
                   onClick={() => setStep(1)}
-                  className="flex items-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-6"
+                  className="flex items-center text-sm sm:text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-4 sm:mb-6"
                 >
-                  ← Back to Plans
+                  <span className="hidden sm:inline">← Back to Plans</span>
+                  <span className="sm:hidden">← Back</span>
                 </button>
 
-                {/* Selected Plan Summary */}
-                <div className="bg-white/5 dark:bg-gray-800/50 backdrop-blur-sm border border-white/10 dark:border-gray-700 rounded-lg p-6 mb-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                        {selectedPlan.name}
-                      </h3>
-                      <p className="text-gray-600 dark:text-gray-400">
-                        {selectedPlan.description}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      {(() => {
-                        const regionalPrice = (selectedPlan as any).regionalPricing;
-                        const currencySymbol = regionalPrice?.currencySymbol || regionalPricing?.currencySymbol || getCurrencySymbol();
-                        const durationInfo = (selectedPlan as any).durationInfo;
-                        const price = getPlanPrice(selectedPlan);
-                        
-                        return (
-                          <>
-                            <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                              {currencySymbol}{price}
-                            </div>
-                            <div className="text-sm text-gray-600 dark:text-gray-400">
-                              {selectedPlan.billingCycle === 'one-time' || selectedPlan.key === 'day_pass'
-                                ? 'one-time payment'
-                                : `per ${getBillingInterval(selectedPlan)}`}
-                            </div>
-                            {durationInfo && (
-                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                {durationInfo.displayText} access
-                              </div>
-                            )}
-                            {regionalPrice && regionalPrice.regionName && (
-                              <div className="text-xs text-gray-500 dark:text-gray-400 italic mt-1">
-                                Price for {regionalPrice.regionName}
-                              </div>
-                            )}
-                          </>
-                        );
-                      })()}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Discount Code Section */}
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-900 dark:text-gray-300 mb-2">
-                    Coupon Code
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={discountCode}
-                      onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
-                      placeholder="Enter coupon code"
-                      className="flex-1 px-3 py-2 border border-white/10 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-lime-500 focus:border-transparent bg-white/5 dark:bg-gray-800/50 dark:text-white text-gray-900"
-                    />
-                    <button
-                      onClick={applyDiscountCode}
-                      disabled={!discountCode.trim() || loading}
-                      className="px-4 py-2 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium"
-                    >
-                      Apply
-                    </button>
-                  </div>
-                  
-                  {appliedDiscount && (
-                    <div className="mt-2 flex items-center justify-between bg-lime-50 dark:bg-lime-900/20 border border-lime-200 dark:border-lime-800 rounded-lg p-3">
-                      <div className="flex items-center">
-                        <Gift className="w-4 h-4 text-lime-500 mr-2" />
-                        <span className="text-sm text-lime-700 dark:text-lime-300">
-                          {appliedDiscount.description}
+                {/* Two Column Layout */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                  {/* Left Column - Placeholder Image */}
+                  <div className="relative order-2 lg:order-1">
+                    {/* Placeholder Image */}
+                    <div className="relative w-full h-full min-h-[300px] sm:min-h-[400px] lg:min-h-[500px] rounded-xl overflow-hidden">
+                      <img
+                        src="/images/paymentsummary.png"
+                        alt="Payment Summary"
+                        className="w-full h-full object-cover rounded-xl"
+                      />
+                      {/* Logo and CVCircle Overlay - Top Left */}
+                      <div className="absolute top-3 left-3 sm:top-4 sm:left-4 flex items-center gap-1.5 sm:gap-2 z-10 bg-black/30 backdrop-blur-sm px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg">
+                        <img
+                          src="/images/logo.png"
+                          alt="CVCircle Logo"
+                          className="w-6 h-6 sm:w-8 sm:h-8 object-contain"
+                        />
+                        <span className="text-white font-bold text-sm sm:text-lg drop-shadow-lg">
+                          CVCircle
                         </span>
                       </div>
-                      <button
-                        onClick={removeDiscountCode}
-                        className="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-200"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
                     </div>
-                  )}
+                  </div>
+
+                  {/* Right Column - Order Summary */}
+                  <div className="p-4 sm:p-6 flex flex-col order-1 lg:order-2 bg-gray-50 dark:bg-[rgb(20,24,16)] rounded-xl">
+                    {/* Title */}
+                    <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6">
+                      Complete Your Order
+                    </h2>
+
+                    {/* Plan Details Box */}
+                    <div className="rounded-lg p-3 sm:p-4 mb-4 sm:mb-6 bg-lime-50 dark:bg-[rgb(34,43,34)] border border-lime-200 dark:border-transparent">
+                      <div className="mb-2">
+                        <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-1">
+                          {(() => {
+                            if (selectedPlan.key === 'pro_yearly') return 'Pro Annual Plan';
+                            if (selectedPlan.key === 'pro_quarterly') return 'Pro Quarterly Plan';
+                            if (selectedPlan.key === 'pro_monthly') return 'Pro Monthly Plan';
+                            if (selectedPlan.key === 'day_pass') return 'Day Pass';
+                            return selectedPlan.name;
+                          })()}
+                        </h3>
+                        <p className="text-gray-600 dark:text-white/70 text-xs sm:text-sm">
+                          {(() => {
+                            const billingInterval = getBillingInterval(selectedPlan);
+                            if (billingInterval === 'one-time') {
+                              return 'One-time payment. Access to all premium features.';
+                            } else if (billingInterval === 'yearly') {
+                              return 'Billed once yearly. Access to all premium features.';
+                            } else if (billingInterval === 'quarterly') {
+                              return 'Billed once quarterly. Access to all premium features.';
+                            } else {
+                              return 'Billed monthly. Access to all premium features.';
+                            }
+                          })()}
+                        </p>
+                      </div>
+                      <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                        {(() => {
+                          const regionalPrice = (selectedPlan as any).regionalPricing;
+                          const currencySymbol = regionalPrice?.currencySymbol || regionalPricing?.currencySymbol || getCurrencySymbol();
+                          return `${currencySymbol}${getPlanPrice(selectedPlan).toFixed(2)}`;
+                        })()}
+                      </div>
+                    </div>
+
+                    {/* Coupon Code Section */}
+                    <div className="mb-4 sm:mb-6">
+                      <p className="text-gray-900 dark:text-white mb-2 sm:mb-3 text-xs sm:text-sm font-medium">Have a coupon code?</p>
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <input
+                          type="text"
+                          value={discountCode}
+                          onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+                          placeholder="Enter code here"
+                          className="flex-1 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-sm sm:text-base bg-white dark:bg-[rgb(26,26,26)] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 border border-gray-300 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-lime-500 focus:border-lime-500 transition-colors"
+                        />
+                        <button
+                          onClick={applyDiscountCode}
+                          disabled={!discountCode.trim() || loading}
+                          className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-2.5 bg-gray-800 dark:bg-[rgb(34,43,34)] hover:bg-gray-700 dark:hover:bg-[rgb(40,50,40)] text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm sm:text-base"
+                        >
+                          Apply
+                        </button>
+                      </div>
+                  
+                      {appliedDiscount && (
+                        <div className="mt-3 flex items-center justify-between rounded-lg p-3 bg-lime-50 dark:bg-lime-900/20 border border-lime-300 dark:border-lime-700">
+                          <div className="flex items-center">
+                            <Gift className="w-4 h-4 mr-2 text-lime-600 dark:text-lime-400" />
+                            <span className="text-sm text-lime-700 dark:text-lime-300">
+                              {appliedDiscount.description}
+                            </span>
+                          </div>
+                          <button
+                            onClick={removeDiscountCode}
+                            className="text-lime-600 dark:text-lime-400 hover:opacity-80 transition-opacity"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      )}
                   
                   {discountError && (
-                    <div className="mt-2 text-sm text-red-600 dark:text-red-400">
+                        <div className="mt-2 text-sm text-red-400">
                       {discountError}
                     </div>
                   )}
                 </div>
 
-                {/* Payment Summary */}
-                <div className="bg-white/5 dark:bg-gray-800/50 backdrop-blur-sm border border-white/10 dark:border-gray-700 rounded-lg p-6 mb-6">
-                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                    Payment Summary
-                  </h4>
-                  
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600 dark:text-gray-400">
-                        {selectedPlan.name}
-                        {(selectedPlan as any).durationInfo && (
-                          <span className="text-xs ml-2">({(selectedPlan as any).durationInfo.displayText})</span>
-                        )}
-                      </span>
-                      <span className="text-gray-900 dark:text-white">
-                        {(() => {
-                          const regionalPrice = (selectedPlan as any).regionalPricing;
-                          const currencySymbol = regionalPrice?.currencySymbol || regionalPricing?.currencySymbol || getCurrencySymbol();
-                          return `${currencySymbol}${getPlanPrice(selectedPlan)}`;
-                        })()}
-                      </span>
-                    </div>
-                    
-                    {appliedDiscount && (
-                      <div className="flex justify-between text-lime-600 dark:text-lime-400">
-                        <span>Discount ({appliedDiscount.code})</span>
+                    {/* Price Summary */}
+                    <div className="mb-4 sm:mb-6 space-y-2 sm:space-y-3">
+                      <div className="flex justify-between text-gray-900 dark:text-white text-sm sm:text-base">
+                        <span>Subtotal</span>
                         <span>
-                          -{(() => {
-                            const regionalPrice = selectedPlan ? (selectedPlan as any).regionalPricing : null;
+                          {(() => {
+                            const regionalPrice = (selectedPlan as any).regionalPricing;
                             const currencySymbol = regionalPrice?.currencySymbol || regionalPricing?.currencySymbol || getCurrencySymbol();
-                            return `${currencySymbol}${getPlanPrice(selectedPlan) - getFinalPrice()}`;
+                            return `${currencySymbol}${getPlanPrice(selectedPlan).toFixed(2)}`;
                           })()}
                         </span>
                       </div>
-                    )}
-                    
-                    <div className="border-t border-white/10 dark:border-gray-600 pt-2">
-                      <div className="flex justify-between text-lg font-semibold">
-                        <span className="text-gray-900 dark:text-white">Total</span>
-                        <span className="text-gray-900 dark:text-white">
+                      
+                      <div className="flex justify-between text-gray-900 dark:text-white text-sm sm:text-base">
+                        <span>Discount</span>
+                        <span className={appliedDiscount ? 'text-lime-600 dark:text-lime-400' : 'text-gray-600 dark:text-white'}>
+                          {appliedDiscount ? (
+                            <>
+                              -{(() => {
+                                const regionalPrice = selectedPlan ? (selectedPlan as any).regionalPricing : null;
+                                const currencySymbol = regionalPrice?.currencySymbol || regionalPricing?.currencySymbol || getCurrencySymbol();
+                                const discountAmount = getPlanPrice(selectedPlan) - getFinalPrice();
+                                return `${currencySymbol}${discountAmount.toFixed(2)}`;
+                              })()}
+                            </>
+                          ) : (
+                            <>
+                              -{(() => {
+                                const regionalPrice = selectedPlan ? (selectedPlan as any).regionalPricing : null;
+                                const currencySymbol = regionalPrice?.currencySymbol || regionalPricing?.currencySymbol || getCurrencySymbol();
+                                return `${currencySymbol}0.00`;
+                              })()}
+                            </>
+                          )}
+                        </span>
+                      </div>
+                      
+                      <div className="flex justify-between text-gray-900 dark:text-white font-bold text-base sm:text-lg pt-2 border-t border-gray-200 dark:border-white/10">
+                        <span>Total</span>
+                        <span className="text-lime-600 dark:text-[rgb(129,255,0)]">
                           {(() => {
                             const regionalPrice = selectedPlan ? (selectedPlan as any).regionalPricing : null;
                             const currencySymbol = regionalPrice?.currencySymbol || regionalPricing?.currencySymbol || getCurrencySymbol();
-                            return `${currencySymbol}${getFinalPrice()}`;
+                            return `${currencySymbol}${getFinalPrice().toFixed(2)}`;
                           })()}
                         </span>
                       </div>
                     </div>
+
+                    {/* Proceed to Payment Button */}
+                    <button
+                      onClick={handlePayment}
+                      disabled={loading}
+                      className="w-full py-3 sm:py-3.5 bg-lime-500 hover:bg-lime-600 dark:bg-[rgb(129,255,0)] dark:hover:bg-[rgb(110,230,0)] text-white font-bold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 mt-auto text-sm sm:text-base"
+                    >
+                      {loading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          <span className="hidden sm:inline">Processing...</span>
+                          <span className="sm:hidden">Processing</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="hidden sm:inline">Proceed to Payment</span>
+                          <span className="sm:hidden">Proceed</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </>
+                      )}
+                    </button>
+
+                    {/* Terms and Conditions */}
+                    <div className="mt-4 text-center">
+                      <p className="text-xs text-gray-600 dark:text-white/60">
+                        By proceeding, you agree to our{' '}
+                        <a 
+                          href="/terms" 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-lime-600 dark:text-[rgb(129,255,0)] hover:underline"
+                        >
+                          Terms of Service
+                        </a>
+                        {' '}and{' '}
+                        <a 
+                          href="/privacy-policy" 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-lime-600 dark:text-[rgb(129,255,0)] hover:underline"
+                        >
+                          Privacy Policy
+                        </a>
+                      </p>
+                    </div>
                   </div>
-                </div>
-
-                {/* Payment Method Selection - Hidden for regular users, auto-selected based on location */}
-                {/* Payment provider is automatically selected based on user's location */}
-
-                {/* Terms and Conditions */}
-                <div className="text-center mb-4">
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    By proceeding, you agree to our{' '}
-                    <a 
-                      href="/terms" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-blue-600 dark:text-blue-400 hover:underline"
-                    >
-                      Terms of Service
-                    </a>
-                    {' '}and{' '}
-                    <a 
-                      href="/privacy-policy" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-blue-600 dark:text-blue-400 hover:underline"
-                    >
-                      Privacy Policy
-                    </a>
-                  </p>
-                </div>
-
-                {/* Payment Button */}
-                <div className="flex justify-center">
-                  <button
-                    onClick={handlePayment}
-                    disabled={loading}
-                    className="px-8 py-3 bg-lime-500 text-white rounded-lg font-medium hover:bg-lime-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex items-center"
-                  >
-                    {loading ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        <CreditCard className="w-4 h-4 mr-2" />
-                        {adminMode 
-                          ? `Grant ${selectedPlan.name} Plan`
-                          : selectedPlan.key === 'free' 
-                            ? 'Activate Free Plan' 
-                            : (() => {
-                                const regionalPrice = (selectedPlan as any).regionalPricing;
-                                const currencySymbol = regionalPrice?.currencySymbol || regionalPricing?.currencySymbol || getCurrencySymbol();
-                                return `Pay ${currencySymbol}${getFinalPrice()}`;
-                              })()
-                        }
-                      </>
-                    )}
-                  </button>
                 </div>
               </>
             )}

@@ -105,6 +105,66 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Update user profile from CV data if available
+    if (validatedCVData.basics) {
+      const basics = validatedCVData.basics;
+      let profileUpdated = false;
+
+      // Update name (split full name into firstName and lastName)
+      if (basics.name && (!user.firstName || !user.lastName || user.firstName === 'User' || user.lastName === 'User')) {
+        const nameParts = basics.name.trim().split(/\s+/);
+        if (nameParts.length >= 2) {
+          user.firstName = nameParts[0];
+          user.lastName = nameParts.slice(1).join(' ');
+          profileUpdated = true;
+        } else if (nameParts.length === 1) {
+          user.firstName = nameParts[0];
+          user.lastName = '';
+          profileUpdated = true;
+        }
+      }
+
+      // Update phone
+      if (basics.phone && !user.phone) {
+        user.phone = basics.phone.trim();
+        profileUpdated = true;
+      }
+
+      // Update website
+      if (basics.url && !user.website) {
+        user.website = basics.url.trim();
+        profileUpdated = true;
+      }
+
+      // Update LinkedIn from profiles array
+      if (basics.profiles && Array.isArray(basics.profiles) && !user.linkedin) {
+        const linkedinProfile = basics.profiles.find((p: any) => 
+          p.network && p.network.toLowerCase() === 'linkedin' && p.url
+        );
+        if (linkedinProfile && linkedinProfile.url) {
+          user.linkedin = linkedinProfile.url.trim();
+          profileUpdated = true;
+        }
+      }
+
+      // Update summary
+      if (basics.summary && !user.summary) {
+        user.summary = basics.summary.trim();
+        profileUpdated = true;
+      }
+
+      // Save user if any profile fields were updated
+      if (profileUpdated) {
+        try {
+          await user.save();
+          console.log('✅ Updated user profile from CV data');
+        } catch (profileError) {
+          console.error('⚠️ Failed to update user profile:', profileError);
+          // Don't fail the entire request if profile update fails
+        }
+      }
+    }
+
     // Check if Master CV already exists
     const existingMasterCV = await CV.findOne({
       userId: user._id,
@@ -129,32 +189,56 @@ export async function POST(request: NextRequest) {
       existingMasterCV.markModified('metadata'); // Tell Mongoose the metadata changed
       await existingMasterCV.save();
 
-      // Verify data was saved correctly by re-fetching
-      const verifyCV = await CV.findById(existingMasterCV._id).lean();
-      console.log('✅ Verification after save - Master CV sections:', {
-        work: verifyCV?.cvData?.work?.length || 0,
-        education: verifyCV?.cvData?.education?.length || 0,
-        skills: verifyCV?.cvData?.skills?.length || 0,
-        projects: verifyCV?.cvData?.projects?.length || 0,
-        hasBasics: !!verifyCV?.cvData?.basics?.name
-      });
+    // Verify data was saved correctly by re-fetching
+    const verifyCV = await CV.findById(existingMasterCV._id).lean();
+    console.log('✅ Verification after save - Master CV sections:', {
+      work: verifyCV?.cvData?.work?.length || 0,
+      education: verifyCV?.cvData?.education?.length || 0,
+      skills: verifyCV?.cvData?.skills?.length || 0,
+      projects: verifyCV?.cvData?.projects?.length || 0,
+      hasBasics: !!verifyCV?.cvData?.basics?.name
+    });
 
-      if (!verifyCV?.cvData?.work?.length && validatedCVData.work.length > 0) {
-        console.error('❌ CRITICAL: Work experience was lost during save!');
-        console.error('Expected work count:', validatedCVData.work.length);
-        console.error('Actual work count:', verifyCV?.cvData?.work?.length || 0);
+    if (!verifyCV?.cvData?.work?.length && validatedCVData.work.length > 0) {
+      console.error('❌ CRITICAL: Work experience was lost during save!');
+      console.error('Expected work count:', validatedCVData.work.length);
+      console.error('Actual work count:', verifyCV?.cvData?.work?.length || 0);
+    }
+
+    // Verify all sections are migrated before deleting draft
+    const allSectionsMigrated = !!(
+      verifyCV?.cvData?.basics &&
+      Array.isArray(verifyCV.cvData.work) &&
+      Array.isArray(verifyCV.cvData.education) &&
+      Array.isArray(verifyCV.cvData.skills) &&
+      Array.isArray(verifyCV.cvData.projects)
+    );
+
+    if (allSectionsMigrated) {
+      // Delete the temporary draft after successful conversion
+      try {
+        await TemporaryCVDraft.deleteOne({ _id: draft._id });
+        console.log('✅ Deleted temporary CV draft after successful conversion');
+      } catch (deleteError) {
+        console.error('⚠️ Failed to delete temporary draft:', deleteError);
+        // Mark as converted even if deletion fails
+        draft.convertedAt = new Date();
+        draft.conversionMethod = 'user';
+        await draft.save();
       }
-
-      // Mark draft as converted (don't delete immediately - keep for admin tracking)
+    } else {
+      // Mark draft as converted but don't delete if sections aren't fully migrated
+      console.warn('⚠️ Not all sections migrated, keeping draft for reference');
       draft.convertedAt = new Date();
       draft.conversionMethod = 'user';
       await draft.save();
+    }
 
-      return NextResponse.json({
-        success: true,
-        cv: existingMasterCV,
-        message: 'Master CV updated successfully'
-      });
+    return NextResponse.json({
+      success: true,
+      cv: existingMasterCV,
+      message: 'Master CV updated successfully'
+    });
     }
 
     // Create new Master CV with validated data
@@ -202,17 +286,46 @@ export async function POST(request: NextRequest) {
         { $set: { cvData: validatedCVData } }
       );
       console.log('🔄 Attempted recovery with direct update');
+      
+      // Re-fetch after recovery
+      const recoveredCV = await CV.findById(masterCV._id).lean();
+      verifyCV = recoveredCV;
     }
 
-    // Mark draft as converted (don't delete immediately - keep for admin tracking)
-    draft.convertedAt = new Date();
-    draft.conversionMethod = 'user';
-    await draft.save();
+    // Verify all sections are migrated before deleting draft
+    const allSectionsMigrated = !!(
+      verifyCV?.cvData?.basics &&
+      Array.isArray(verifyCV.cvData.work) &&
+      Array.isArray(verifyCV.cvData.education) &&
+      Array.isArray(verifyCV.cvData.skills) &&
+      Array.isArray(verifyCV.cvData.projects)
+    );
+
+    if (allSectionsMigrated) {
+      // Delete the temporary draft after successful conversion
+      try {
+        await TemporaryCVDraft.deleteOne({ _id: draft._id });
+        console.log('✅ Deleted temporary CV draft after successful conversion');
+      } catch (deleteError) {
+        console.error('⚠️ Failed to delete temporary draft:', deleteError);
+        // Mark as converted even if deletion fails
+        draft.convertedAt = new Date();
+        draft.conversionMethod = 'user';
+        await draft.save();
+      }
+    } else {
+      // Mark draft as converted but don't delete if sections aren't fully migrated
+      console.warn('⚠️ Not all sections migrated, keeping draft for reference');
+      draft.convertedAt = new Date();
+      draft.conversionMethod = 'user';
+      await draft.save();
+    }
 
     console.log('✅ Converted draft to Master CV:', {
       draftId: draft._id.toString(),
       cvId: masterCV._id.toString(),
-      userId: user._id.toString()
+      userId: user._id.toString(),
+      allSectionsMigrated
     });
 
     return NextResponse.json({

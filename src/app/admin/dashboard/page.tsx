@@ -1,8 +1,5 @@
 'use client';
 
-// Force dynamic rendering to prevent SSR issues
-export const dynamic = 'force-dynamic';
-
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';

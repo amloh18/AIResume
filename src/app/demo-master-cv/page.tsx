@@ -1,9 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-
-// Force dynamic rendering to prevent SSR issues
-export const dynamic = 'force-dynamic';
 import { motion } from 'framer-motion';
 import { Sparkles, ArrowRight, CheckCircle, User, Briefcase, Award, Eye } from 'lucide-react';
 import Link from 'next/link';

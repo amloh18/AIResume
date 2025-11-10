@@ -1,9 +1,6 @@
 'use client';
 
 import React, { useEffect } from 'react';
-
-// Force dynamic rendering to prevent SSR issues
-export const dynamic = 'force-dynamic';
 import { signOut } from 'next-auth/react';
 import Hero from '@/components/landing/Hero';
 import Features from '@/components/landing/Features';

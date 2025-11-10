@@ -1,8 +1,5 @@
 'use client';
 
-// Force dynamic rendering to prevent SSR issues
-export const dynamic = 'force-dynamic';
-
 import React, { useState, Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
@@ -601,11 +598,11 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
     <div className="p-8 h-full">
       <div className="space-y-8">
         {/* Avatar Section */}
-        <div className="py-6 border-b border-gray-200 dark:border-gray-700">
+        <div className="py-4 sm:py-6 border-b border-gray-200 dark:border-gray-700">
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
             <div className="flex-1">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Avatar</h3>
-              <p className="text-gray-600 dark:text-gray-300 text-sm">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-2">Avatar</h3>
+              <p className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm">
                 Choose an image that best reflects your identity or brand.
               </p>
               <p className="text-gray-500 dark:text-gray-500 text-xs mt-2">
@@ -613,7 +610,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
               </p>
             </div>
             <div className="flex flex-col md:flex-row md:items-center gap-3">
-              <div className="w-16 h-16 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center overflow-hidden mx-auto md:mx-0">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center overflow-hidden mx-auto md:mx-0">
                 {avatar ? (
                   <img 
                     src={avatar} 
@@ -707,42 +704,43 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
         </div>
 
         {/* Personal Information */}
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Personal Information</h3>
+        <div className="space-y-4 sm:space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Personal Information</h3>
             {masterCVData && (
               <button
                 onClick={refreshFromMasterCV}
-                className="flex items-center gap-2 px-3 py-2 text-sm bg-lime-100 dark:bg-lime-400/20 text-lime-700 dark:text-lime-400 border border-lime-300 dark:border-lime-400/30 rounded-lg hover:bg-lime-200 dark:hover:bg-lime-400/30 transition-colors"
+                className="flex items-center justify-center gap-2 px-3 py-2 text-xs sm:text-sm bg-lime-100 dark:bg-lime-400/20 text-lime-700 dark:text-lime-400 border border-lime-300 dark:border-lime-400/30 rounded-lg hover:bg-lime-200 dark:hover:bg-lime-400/30 transition-colors w-full sm:w-auto"
               >
                 <RefreshCw size={14} />
-                Sync from Master CV
+                <span className="hidden sm:inline">Sync from Master CV</span>
+                <span className="sm:hidden">Sync from CV</span>
               </button>
             )}
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">
                 First Name
               </label>
               <input
                 type="text"
                 value={formData.firstName}
                 onChange={(e) => handleInputChange('firstName', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-500 focus:border-transparent"
+                className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-500 focus:border-transparent"
               />
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">
                 Last Name
               </label>
               <input
                 type="text"
                 value={formData.lastName}
                 onChange={(e) => handleInputChange('lastName', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-500 focus:border-transparent"
+                className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-500 focus:border-transparent"
               />
             </div>
             
@@ -956,7 +954,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
         <div className="space-y-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Preferences</h3>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Language
@@ -1232,7 +1230,7 @@ const MembershipBilling = ({ user }: { user: User }) => {
         <div className="space-y-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Subscription Plans</h3>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             {/* Current Plan Card */}
             {loading ? (
               <div className="bg-gradient-to-r from-lime-50 to-lime-100 dark:from-lime-400/10 dark:to-lime-500/10 border border-lime-200 dark:border-lime-400/20 rounded-xl p-6 relative animate-pulse">
@@ -1709,12 +1707,12 @@ const SettingsContent = () => {
         return loading || !userData ? <MembershipSkeleton /> : <MembershipBilling user={userData} />;
       case 'integrations':
         return (
-          <div className="p-8 h-full">
+          <div className="p-4 sm:p-6 lg:p-8 h-full">
             <div className="max-w-7xl mx-auto">
-              <div className="text-center py-12">
-                <Link size={48} className="mx-auto mb-4 text-gray-400 dark:text-gray-500" />
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Coming Soon</h3>
-                <p className="text-gray-600 dark:text-gray-300">
+              <div className="text-center py-8 sm:py-12">
+                <Link size={40} className="sm:w-12 sm:h-12 mx-auto mb-4 text-gray-400 dark:text-gray-500" />
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-2">Coming Soon</h3>
+                <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 px-4">
                   Connected apps and integrations are currently in development.
                 </p>
               </div>
@@ -1723,12 +1721,12 @@ const SettingsContent = () => {
         );
       case 'workspace':
         return (
-          <div className="p-8 h-full">
+          <div className="p-4 sm:p-6 lg:p-8 h-full">
             <div className="max-w-7xl mx-auto">
-              <div className="text-center py-12">
-                <Users size={48} className="mx-auto mb-4 text-gray-400 dark:text-gray-500" />
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Coming Soon</h3>
-                <p className="text-gray-600 dark:text-gray-300">
+              <div className="text-center py-8 sm:py-12">
+                <Users size={40} className="sm:w-12 sm:h-12 mx-auto mb-4 text-gray-400 dark:text-gray-500" />
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-2">Coming Soon</h3>
+                <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 px-4">
                   Team collaboration features are currently in development.
                 </p>
               </div>
@@ -1737,10 +1735,10 @@ const SettingsContent = () => {
         );
       default:
         return (
-          <div className="p-8 h-full">
+          <div className="p-4 sm:p-6 lg:p-8 h-full">
             <div className="max-w-7xl mx-auto">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Coming Soon</h3>
-              <p className="text-gray-600 dark:text-gray-300">This section is currently under development.</p>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-4">Coming Soon</h3>
+              <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300">This section is currently under development.</p>
             </div>
           </div>
         );
