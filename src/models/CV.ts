@@ -71,116 +71,32 @@ const cvSchema = new Schema<ICV>({
     default: 1
   },
   cvData: {
-    // Structure and Content Map (new architecture) - Optional for backward compatibility
-    structure: {
-      type: Schema.Types.Mixed, // Use Mixed to allow flexible structure
-      required: false
-    },
-    content: { 
-      type: Schema.Types.Mixed, 
-      required: false 
-    }, // Content map keyed by section IDs
-    templateId: { 
-      type: Schema.Types.Mixed, 
-      required: false 
-    }, // Template ID for structure initialization
-    
-    // Legacy arrays kept for backward compatibility during migration
-    basics: {
-      name: { type: String, default: '' },
-      label: { type: String, default: '' },
-      image: { type: String, default: '' },
-      email: { type: String, default: '' },
-      phone: { type: String, default: '' },
-      url: { type: String, default: '' },
-      summary: { type: String, default: '' },
-      location: {
-        address: { type: String, default: '' },
-        postalCode: { type: String, default: '' },
-        city: { type: String, default: '' },
-        countryCode: { type: String, default: '' },
-        region: { type: String, default: '' }
+    type: Schema.Types.Mixed,
+    required: true,
+    default: {
+      basics: {
+        name: '',
+        label: '',
+        image: '',
+        email: '',
+        phone: '',
+        url: '',
+        summary: '',
+        location: { address: '', postalCode: '', city: '', countryCode: '', region: '' },
+        profiles: []
       },
-      profiles: [{
-        network: { type: String },
-        username: { type: String },
-        url: { type: String }
-      }]
-    },
-    work: [{
-      name: { type: String },
-      position: { type: String },
-      url: { type: String },
-      startDate: { type: String },
-      endDate: { type: String },
-      summary: { type: String },
-      highlights: [{ type: String }]
-    }],
-    volunteer: [{
-      organization: { type: String },
-      position: { type: String },
-      url: { type: String },
-      startDate: { type: String },
-      endDate: { type: String },
-      summary: { type: String },
-      highlights: [{ type: String }]
-    }],
-    education: [{
-      institution: { type: String },
-      url: { type: String },
-      area: { type: String },
-      studyType: { type: String },
-      startDate: { type: String },
-      endDate: { type: String },
-      score: { type: String },
-      courses: [{ type: String }],  // Optional field
-      description: { type: String }
-    }],
-    awards: [{
-      title: { type: String },
-      date: { type: String },
-      awarder: { type: String },
-      summary: { type: String }
-    }],
-    certificates: [{
-      name: { type: String },
-      date: { type: String },
-      issuer: { type: String },
-      url: { type: String },
-      description: { type: String }
-    }],
-    publications: [{
-      name: { type: String },
-      publisher: { type: String },
-      releaseDate: { type: String },
-      url: { type: String },
-      summary: { type: String }
-    }],
-    skills: [{
-      category: { type: String },
-      skills: [{ type: String }]
-    }],
-    languages: [{
-      language: { type: String },
-      fluency: { type: String }
-    }],
-    interests: [{
-      name: { type: String },
-      keywords: [{ type: String }]
-    }],
-    references: [{
-      name: { type: String },
-      reference: { type: String }
-    }],
-    projects: [{
-      name: { type: String },
-      startDate: { type: String },
-      endDate: { type: String },
-      description: { type: String },
-      highlights: [{ type: String }],  // Optional field
-      keywords: [{ type: String }],
-      url: { type: String }
-    }]
+      work: [],
+      volunteer: [],
+      education: [],
+      awards: [],
+      certificates: [],
+      publications: [],
+      skills: [],
+      languages: [],
+      interests: [],
+      references: [],
+      projects: []
+    }
   },
   metadata: {
     isMaster: { type: Boolean, default: false },

@@ -120,7 +120,18 @@ export async function POST(request: NextRequest) {
         console.log('✅ Linking draft to authenticated user:', session.user.id);
       }
       
+      // CRITICAL FIX: Mark cvData as modified for Mongoose Mixed type
+      draft.markModified('cvData');
       await draft.save();
+      
+      // Verify data was saved correctly by re-fetching
+      const verifyDraft = await TemporaryCVDraft.findById(draft._id).lean();
+      console.log('✅ Verification after save - Draft sections:', {
+        work: verifyDraft?.cvData?.work?.length || 0,
+        education: verifyDraft?.cvData?.education?.length || 0,
+        skills: verifyDraft?.cvData?.skills?.length || 0,
+        projects: verifyDraft?.cvData?.projects?.length || 0
+      });
     } else {
       // Create new draft with validated data
       draft = new TemporaryCVDraft({
@@ -137,7 +148,18 @@ export async function POST(request: NextRequest) {
         isForMasterCV: true // Mark as Master CV draft
       });
       
+      // CRITICAL FIX: Mark cvData as modified for Mongoose Mixed type
+      draft.markModified('cvData');
       await draft.save();
+      
+      // Verify data was saved correctly by re-fetching
+      const verifyDraft = await TemporaryCVDraft.findById(draft._id).lean();
+      console.log('✅ Verification after save - Draft sections:', {
+        work: verifyDraft?.cvData?.work?.length || 0,
+        education: verifyDraft?.cvData?.education?.length || 0,
+        skills: verifyDraft?.cvData?.skills?.length || 0,
+        projects: verifyDraft?.cvData?.projects?.length || 0
+      });
     }
 
     // Set session ID cookie for anonymous users (7 days expiry)
