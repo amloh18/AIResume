@@ -218,7 +218,6 @@ const nextConfig: NextConfig = {
     return config;
   },
   images: {
-    domains: ['ui-avatars.com', 'placehold.co', 'lh3.googleusercontent.com', 'logo.clearbit.com'],
     remotePatterns: [
       {
         protocol: 'https',
@@ -227,6 +226,22 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: '*.s3.amazonaws.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'ui-avatars.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'placehold.co',
+      },
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'logo.clearbit.com',
       },
     ],
     // Enable modern image formats for better performance
