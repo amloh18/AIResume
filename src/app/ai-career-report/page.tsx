@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
-import dynamicImport from 'next/dynamic';
-import { Suspense } from 'react';
+import AICareerReportWrapper from '@/components/ai-career-report/AICareerReportWrapper';
 
 // Force dynamic rendering to prevent SSR issues
 export const dynamic = 'force-dynamic';
@@ -67,22 +66,6 @@ export const metadata: Metadata = {
   },
 }
 
-// Dynamically import the client component to avoid SSR issues
-const AICareerReportClient = dynamicImport(
-  () => import('@/components/ai-career-report/AICareerReportClient'),
-  { 
-    ssr: false,
-    loading: () => (
-      <div className="min-h-screen bg-[#1A261A] flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-2 border-[#80FF00] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-white/60">Loading Master CV...</p>
-        </div>
-      </div>
-    )
-  }
-);
-
 export default function AICareerReportPage() {
   // Structured data for AI Career Guide / ATS Analysis Tool
   const structuredData = {
@@ -126,16 +109,7 @@ export default function AICareerReportPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
-      <Suspense fallback={
-        <div className="min-h-screen bg-[#1A261A] flex items-center justify-center">
-          <div className="text-center">
-            <div className="w-8 h-8 border-2 border-[#80FF00] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-white/60">Loading Master CV...</p>
-          </div>
-        </div>
-      }>
-        <AICareerReportClient />
-      </Suspense>
+      <AICareerReportWrapper />
     </>
   );
 }
