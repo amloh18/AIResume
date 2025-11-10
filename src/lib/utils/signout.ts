@@ -34,7 +34,9 @@ export const comprehensiveSignOut = async (): Promise<void> => {
       'onboarding-completed',
       'temp_password',
       'jobJourneyState',
-      'needsCVSetup'
+      'needsCVSetup',
+      'ai-career-report-data',
+      'cv-data'
     ];
     
     additionalKeys.forEach(key => {
@@ -44,6 +46,38 @@ export const comprehensiveSignOut = async (): Promise<void> => {
         console.warn(`⚠️ Could not remove ${key} from localStorage`);
       }
     });
+    
+    // Clear session cookies related to CV data
+    if (typeof document !== 'undefined') {
+      const cookiesToClear = ['cv-draft-session-id'];
+      const currentDomain = window.location.hostname;
+      const isSecure = window.location.protocol === 'https:';
+      
+      cookiesToClear.forEach(cookieName => {
+        // Clear with various configurations to ensure deletion
+        const domains = [currentDomain, `.${currentDomain}`, ''];
+        const paths = ['/', ''];
+        const sameSites = ['strict', 'lax', 'none', ''];
+        
+        domains.forEach(domain => {
+          paths.forEach(path => {
+            sameSites.forEach(sameSite => {
+              try {
+                let cookieString = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; max-age=0`;
+                if (path) cookieString += `; path=${path}`;
+                if (domain) cookieString += `; domain=${domain}`;
+                if (sameSite) cookieString += `; samesite=${sameSite}`;
+                if (isSecure) cookieString += '; secure';
+                document.cookie = cookieString;
+              } catch (e) {
+                // Ignore errors for invalid combinations
+              }
+            });
+          });
+        });
+      });
+      console.log('✅ Cleared CV-related cookies');
+    }
     
     // Restore cookie consent after clearing
     if (cookieConsent) {
@@ -85,6 +119,36 @@ export const comprehensiveSignOut = async (): Promise<void> => {
     try {
       localStorage.clear();
       sessionStorage.clear();
+      
+      // Clear session cookies related to CV data
+      if (typeof document !== 'undefined') {
+        const cookiesToClear = ['cv-draft-session-id'];
+        const currentDomain = window.location.hostname;
+        const isSecure = window.location.protocol === 'https:';
+        
+        cookiesToClear.forEach(cookieName => {
+          const domains = [currentDomain, `.${currentDomain}`, ''];
+          const paths = ['/', ''];
+          const sameSites = ['strict', 'lax', 'none', ''];
+          
+          domains.forEach(domain => {
+            paths.forEach(path => {
+              sameSites.forEach(sameSite => {
+                try {
+                  let cookieString = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; max-age=0`;
+                  if (path) cookieString += `; path=${path}`;
+                  if (domain) cookieString += `; domain=${domain}`;
+                  if (sameSite) cookieString += `; samesite=${sameSite}`;
+                  if (isSecure) cookieString += '; secure';
+                  document.cookie = cookieString;
+                } catch (e) {
+                  // Ignore errors
+                }
+              });
+            });
+          });
+        });
+      }
       
       // Restore cookie consent after clearing
       if (cookieConsent) {

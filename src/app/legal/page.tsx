@@ -18,8 +18,6 @@ import TermsContent from './TermsContent';
 import CookiePolicyContent from './CookiePolicyContent';
 import SupportContent from './SupportContent';
 
-export const dynamic = 'force-dynamic';
-
 type TabType = 'privacy' | 'terms' | 'cookies' | 'support';
 
 const LegalCenter: React.FC = () => {
