@@ -21,4 +21,7 @@ export { default as EmailCampaign, type IEmailCampaign } from './admin/EmailCamp
 
 // Notification models
 export { default as Notification, type INotification, type NotificationType, type NotificationChannel, type NotificationPriority } from './Notification';
-export { default as NotificationQueue, type INotificationQueue, type QueueTaskType, type QueueTaskStatus } from './NotificationQueue'; 
+export { default as NotificationQueue, type INotificationQueue, type QueueTaskType, type QueueTaskStatus } from './NotificationQueue';
+
+// Draft models
+export { default as TemporaryCVDraft, type ITemporaryCVDraft } from './TemporaryCVDraft'; 

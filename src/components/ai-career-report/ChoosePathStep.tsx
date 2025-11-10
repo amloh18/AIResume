@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, FileText, ArrowRight, Sparkles, X, Eye, Save } from 'lucide-react';
 import { useAICareerReport } from '@/contexts/AICareerReportContext';
@@ -8,6 +8,70 @@ import { useAICareerReport } from '@/contexts/AICareerReportContext';
 interface ChoosePathStepProps {
   onNext: () => void;
 }
+
+// Parsing progress messages component with random interval display
+const ParsingProgressMessages: React.FC = () => {
+  const [visibleMessages, setVisibleMessages] = useState<Set<number>>(new Set());
+  const messages = [
+    'Extracting text from your document...',
+    'Analyzing work experience and education...',
+    'Identifying skills and achievements...',
+    'Structuring your data for analysis...'
+  ];
+
+  useEffect(() => {
+    // Show messages at random intervals
+    const intervals: NodeJS.Timeout[] = [];
+    
+    messages.forEach((_, index) => {
+      // Random delay between 0.5s and 2.5s for each message
+      const delay = 500 + Math.random() * 2000;
+      
+      const timeout = setTimeout(() => {
+        setVisibleMessages(prev => new Set([...prev, index]));
+      }, delay);
+      
+      intervals.push(timeout);
+    });
+
+    return () => {
+      intervals.forEach(interval => clearTimeout(interval));
+    };
+  }, []);
+
+  return (
+    <div className="p-6 bg-[#80FF00]/10 border border-[#80FF00]/30 rounded-xl text-[#80FF00] backdrop-blur-sm">
+      <div className="flex flex-col items-center gap-4">
+        <div className="flex items-center justify-center gap-3">
+          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#80FF00]"></div>
+          <span className="font-medium text-lg">Processing your CV...</span>
+        </div>
+        
+        {/* Processing Steps - Show messages at random intervals */}
+        <div className="w-full space-y-3 mt-4">
+          {messages.map((message, index) => (
+            <AnimatePresence key={index}>
+              {visibleMessages.has(index) && (
+                <motion.div
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -10 }}
+                  transition={{ duration: 0.3 }}
+                  className="flex items-center gap-3 text-sm"
+                >
+                  <div className="w-2 h-2 rounded-full bg-[#80FF00] animate-pulse"></div>
+                  <span className="text-white/80">{message}</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          ))}
+        </div>
+        
+        <p className="text-white/50 text-xs mt-2">This usually takes 5-10 seconds</p>
+      </div>
+    </div>
+  );
+};
 
 export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
   const { state, dispatch } = useAICareerReport();
@@ -322,56 +386,7 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
                   )}
 
                   {state.isUploading && (
-                    <div className="p-6 bg-[#80FF00]/10 border border-[#80FF00]/30 rounded-xl text-[#80FF00] backdrop-blur-sm">
-                      <div className="flex flex-col items-center gap-4">
-                        <div className="flex items-center justify-center gap-3">
-                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#80FF00]"></div>
-                          <span className="font-medium text-lg">Processing your CV...</span>
-                        </div>
-                        
-                        {/* Processing Steps */}
-                        <div className="w-full space-y-3 mt-4">
-                          <motion.div
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.2 }}
-                            className="flex items-center gap-3 text-sm"
-                          >
-                            <div className="w-2 h-2 rounded-full bg-[#80FF00] animate-pulse"></div>
-                            <span className="text-white/80">Extracting text from your document...</span>
-                          </motion.div>
-                          <motion.div
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.5 }}
-                            className="flex items-center gap-3 text-sm"
-                          >
-                            <div className="w-2 h-2 rounded-full bg-[#80FF00] animate-pulse" style={{ animationDelay: '0.3s' }}></div>
-                            <span className="text-white/80">Analyzing work experience and education...</span>
-                          </motion.div>
-                          <motion.div
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.8 }}
-                            className="flex items-center gap-3 text-sm"
-                          >
-                            <div className="w-2 h-2 rounded-full bg-[#80FF00] animate-pulse" style={{ animationDelay: '0.6s' }}></div>
-                            <span className="text-white/80">Identifying skills and achievements...</span>
-                          </motion.div>
-                          <motion.div
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 1.1 }}
-                            className="flex items-center gap-3 text-sm"
-                          >
-                            <div className="w-2 h-2 rounded-full bg-[#80FF00] animate-pulse" style={{ animationDelay: '0.9s' }}></div>
-                            <span className="text-white/80">Structuring your data for analysis...</span>
-                          </motion.div>
-                        </div>
-                        
-                        <p className="text-white/50 text-xs mt-2">This usually takes 10-30 seconds</p>
-                      </div>
-                    </div>
+                    <ParsingProgressMessages />
                   )}
                 </div>
               )}

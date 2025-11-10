@@ -315,6 +315,10 @@ function CVStructureSections({
       // Get default item for the section type
       const defaultItem = getDefaultItemForSection(sectionType);
       updatedData[sectionType as keyof UnifiedCVDataStructure] = [...section, defaultItem] as any;
+    } else if (!section) {
+      // If section doesn't exist, initialize it with the default item
+      const defaultItem = getDefaultItemForSection(sectionType);
+      updatedData[sectionType as keyof UnifiedCVDataStructure] = [defaultItem] as any;
     }
 
     onUpdateCV(updatedData);
@@ -383,6 +387,7 @@ function CVStructureSections({
         return {
           organization: '',
           position: '',
+          url: '',
           startDate: '',
           endDate: '',
           summary: '',
@@ -518,10 +523,11 @@ function renderSectionContent(
       );
     
     case 'volunteer':
+    case 'volunteer_experience': // Handle potential mismatch in structure
       return (
         <VolunteerSection
           data={cvData.volunteer || []}
-          onUpdate={updateCVField}
+          onUpdate={(data: any[]) => updateCVField('volunteer', data)}
           onAdd={() => addSection('volunteer')}
           onRemove={(index) => removeSection('volunteer', index)}
         />
@@ -531,7 +537,7 @@ function renderSectionContent(
       return (
         <EducationSection
           data={cvData.education || []}
-          onUpdate={updateCVField}
+          onUpdate={(data: any[]) => updateCVField('education', data)}
           onAdd={() => addSection('education')}
           onRemove={(index) => removeSection('education', index)}
           jobData={jobContext}
@@ -553,7 +559,7 @@ function renderSectionContent(
       return (
         <CertificatesSection
           data={cvData.certificates || []}
-          onUpdate={updateCVField}
+          onUpdate={(data: any[]) => updateCVField('certificates', data)}
           onAdd={() => addSection('certificates')}
           onRemove={(index) => removeSection('certificates', index)}
         />
@@ -563,7 +569,7 @@ function renderSectionContent(
       return (
         <PublicationsSection
           data={cvData.publications || []}
-          onUpdate={updateCVField}
+          onUpdate={(data: any[]) => updateCVField('publications', data)}
           onAdd={() => addSection('publications')}
           onRemove={(index) => removeSection('publications', index)}
         />
@@ -573,7 +579,7 @@ function renderSectionContent(
       return (
         <SkillsSection
           data={cvData.skills || []}
-          onUpdate={updateCVField}
+          onUpdate={(data: any[]) => updateCVField('skills', data)}
           onAdd={() => addSection('skills')}
           onRemove={(index) => removeSection('skills', index)}
         />
@@ -583,7 +589,7 @@ function renderSectionContent(
       return (
         <LanguagesSection
           data={cvData.languages || []}
-          onUpdate={updateCVField}
+          onUpdate={(data: any[]) => updateCVField('languages', data)}
           onAdd={() => addSection('languages')}
           onRemove={(index) => removeSection('languages', index)}
         />
@@ -593,7 +599,7 @@ function renderSectionContent(
       return (
         <InterestsSection
           data={cvData.interests || []}
-          onUpdate={updateCVField}
+          onUpdate={(data: any[]) => updateCVField('interests', data)}
           onAdd={() => addSection('interests')}
           onRemove={(index) => removeSection('interests', index)}
         />
@@ -603,7 +609,7 @@ function renderSectionContent(
       return (
         <ReferencesSection
           data={cvData.references || []}
-          onUpdate={updateCVField}
+          onUpdate={(data: any[]) => updateCVField('references', data)}
           onAdd={() => addSection('references')}
           onRemove={(index) => removeSection('references', index)}
         />
@@ -613,7 +619,7 @@ function renderSectionContent(
       return (
         <ProjectsSection
           data={cvData.projects || []}
-          onUpdate={updateCVField}
+          onUpdate={(data: any[]) => updateCVField('projects', data)}
           onAdd={() => addSection('projects')}
           onRemove={(index) => removeSection('projects', index)}
         />

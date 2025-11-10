@@ -15,16 +15,64 @@ export async function POST(request: NextRequest) {
     headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
     headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     
+    // Parse request body with error handling
+    let body;
+    try {
+      body = await request.json();
+    } catch (parseError: any) {
+      console.error('❌ Failed to parse request body:', parseError);
+      return NextResponse.json(
+        { success: false, error: 'Invalid JSON in request body' },
+        { status: 400, headers }
+      );
+    }
+
     const { cvData, jobData, jobId }: { 
       cvData: UnifiedCVDataStructure; 
       jobData?: any; 
       jobId?: string; 
-    } = await request.json();
+    } = body;
+
+    console.log('📊 Received request body:', {
+      hasCvData: !!cvData,
+      cvDataType: typeof cvData,
+      cvDataKeys: cvData ? Object.keys(cvData) : [],
+      workCount: cvData?.work?.length || 0,
+      educationCount: cvData?.education?.length || 0,
+      hasBasics: !!cvData?.basics,
+      basicsName: cvData?.basics?.name || 'N/A',
+      bodySize: JSON.stringify(body).length
+    });
 
     if (!cvData) {
       console.log('❌ No CV data provided');
       return NextResponse.json(
         { success: false, error: 'CV data is required' },
+        { status: 400, headers }
+      );
+    }
+
+    // Validate cvData structure
+    if (typeof cvData !== 'object' || Array.isArray(cvData)) {
+      console.log('❌ Invalid CV data structure - not an object');
+      return NextResponse.json(
+        { success: false, error: 'CV data must be an object' },
+        { status: 400, headers }
+      );
+    }
+
+    // Check if CV data has any meaningful content
+    const hasMeaningfulData = !!(
+      cvData.work?.length > 0 || 
+      cvData.education?.length > 0 || 
+      cvData.projects?.length > 0 ||
+      cvData.basics?.name
+    );
+
+    if (!hasMeaningfulData) {
+      console.log('❌ CV data is empty or lacks meaningful content');
+      return NextResponse.json(
+        { success: false, error: 'CV data is empty. Please provide work experience, education, or basic information.' },
         { status: 400, headers }
       );
     }

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useReducer, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, ReactNode, useEffect, useState } from 'react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 
 // Types
@@ -112,67 +112,166 @@ type AICareerReportAction =
   | { type: 'ADD_SECTION'; payload: any }
   | { type: 'RESET_STATE' };
 
-// LocalStorage utilities
+// LocalStorage utilities (fallback)
 const STORAGE_KEY = 'ai-career-report-data';
 
-const saveToStorage = (state: AICareerReportState) => {
+const saveToStorage = async (state: AICareerReportState) => {
+  try {
+    // Only save if we have meaningful data
+    const hasData = state.cvData && (
+      state.cvData.basics?.name ||
+      state.cvData.basics?.email ||
+      state.cvData.work?.length > 0 ||
+      state.cvData.education?.length > 0 ||
+      state.cvData.projects?.length > 0 ||
+      state.currentStep > 1 ||
+      state.aiAnalysis !== null
+    );
+
+    if (!hasData && state.currentStep <= 1 && !state.aiAnalysis) {
+      return; // Don't save empty state
+    }
+
+    // Try database first
+    try {
+      const response = await fetch('/api/cv-draft/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cvData: state.cvData,
+          aiAnalysis: state.aiAnalysis,
+          currentStep: state.currentStep,
+          jobId: state.jobId,
+          jobData: state.jobData,
+          completedSteps: state.completedSteps,
+          activeSection: state.activeSection,
+          availableSections: state.availableSections
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('💾 Saved CV draft to database:', {
+          draftId: result.draftId,
+          step: state.currentStep
+        });
+        return; // Success, no need for fallback
+      } else {
+        console.warn('⚠️ Failed to save CV draft to database, using localStorage fallback');
+      }
+    } catch (apiError) {
+      console.warn('⚠️ Database save failed, using localStorage fallback:', apiError);
+    }
+
+    // Fallback to localStorage if API fails
+    fallbackToLocalStorage(state);
+  } catch (error) {
+    console.warn('⚠️ Failed to save CV draft:', error);
+    // Last resort: try localStorage
+    fallbackToLocalStorage(state);
+  }
+};
+
+const fallbackToLocalStorage = (state: AICareerReportState) => {
   if (typeof window !== 'undefined') {
     try {
-      // Save CV data and important state - also save step 3 data to preserve after sign-in
       const dataToSave = {
         currentStep: state.currentStep,
         cvData: state.cvData,
-        // Save AI analysis if it exists (for step 3 restoration)
         aiAnalysis: state.aiAnalysis,
-        uploadedFile: state.uploadedFile ? {
-          name: state.uploadedFile.name,
-          size: state.uploadedFile.size,
-          type: state.uploadedFile.type,
-          lastModified: state.uploadedFile.lastModified
-        } : null,
         completedSteps: state.completedSteps,
         activeSection: state.activeSection,
-        isUploading: state.isUploading,
-        uploadError: state.uploadError,
         availableSections: state.availableSections,
         jobId: state.jobId,
         jobData: state.jobData,
         lastSaved: Date.now()
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
-    } catch (error) {
-      console.warn('Failed to save AI Career Report data to localStorage:', error);
+      console.log('💾 Fallback: Saved to localStorage');
+    } catch (localError) {
+      console.error('❌ Failed to save to localStorage fallback:', localError);
     }
   }
 };
 
-const loadFromStorage = (): Partial<AICareerReportState> | null => {
+const loadFromStorage = async (): Promise<Partial<AICareerReportState> | null> => {
+  try {
+    // Try database first
+    try {
+      const response = await fetch('/api/cv-draft/load', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.data) {
+          console.log('📦 Loaded CV draft from database:', {
+            currentStep: result.data.currentStep,
+            hasCvData: !!result.data.cvData,
+            hasAiAnalysis: !!result.data.aiAnalysis
+          });
+          return result.data;
+        }
+      } else {
+        console.warn('⚠️ Failed to load CV draft from database, trying localStorage fallback');
+      }
+    } catch (apiError) {
+      console.warn('⚠️ Database load failed, trying localStorage fallback:', apiError);
+    }
+
+    // Fallback to localStorage
+    return loadFromLocalStorage();
+  } catch (error) {
+    console.warn('⚠️ Failed to load CV draft:', error);
+    return loadFromLocalStorage();
+  }
+};
+
+const loadFromLocalStorage = (): Partial<AICareerReportState> | null => {
   if (typeof window !== 'undefined') {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        // Check if data is not too old (24 hours)
         if (parsed.lastSaved && (Date.now() - parsed.lastSaved) < 24 * 60 * 60 * 1000) {
+          console.log('📦 Fallback: Loaded from localStorage');
           return parsed;
         } else {
           // Clear old data
           localStorage.removeItem(STORAGE_KEY);
+          sessionStorage.removeItem('ai-career-report-backup');
         }
       }
     } catch (error) {
-      console.warn('Failed to load AI Career Report data from localStorage:', error);
+      console.warn('⚠️ Failed to load from localStorage:', error);
     }
   }
   return null;
 };
 
-const clearStorage = () => {
+const clearStorage = async () => {
+  try {
+    // Try database first
+    try {
+      await fetch('/api/cv-draft/delete', {
+        method: 'DELETE'
+      });
+      console.log('🗑️ Deleted CV draft from database');
+    } catch (error) {
+      console.warn('⚠️ Failed to delete CV draft from database:', error);
+    }
+  } catch (error) {
+    console.warn('⚠️ Failed to delete CV draft:', error);
+  }
+  
+  // Also clear localStorage fallback
   if (typeof window !== 'undefined') {
     try {
       localStorage.removeItem(STORAGE_KEY);
+      sessionStorage.removeItem('ai-career-report-backup');
     } catch (error) {
-      console.warn('Failed to clear AI Career Report data from localStorage:', error);
+      console.warn('⚠️ Failed to clear localStorage:', error);
     }
   }
 };
@@ -211,7 +310,9 @@ const getDefaultCVData = (): UnifiedCVDataStructure => ({
 
 // Initial State
 const getInitialState = (): AICareerReportState => {
-  const savedData = loadFromStorage();
+  // Note: loadFromStorage is now async, but we can't use async in getInitialState
+  // The provider will handle loading from database on mount
+  const savedData = null;
   
   // Log what we're restoring for debugging
   if (savedData) {
@@ -437,34 +538,85 @@ const AICareerReportContext = createContext<{
 // Provider
 export function AICareerReportProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(aiCareerReportReducer, getInitialState());
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Save to localStorage whenever state changes (keep saving for step 3 until CV is actually saved)
+  // Load data from database on mount
   useEffect(() => {
-    // Always save CV data to localStorage, even in step 3, until Master CV is saved
-    // This ensures data persists if user needs to sign in
-    if (typeof window !== 'undefined') {
-      const masterCVCreated = sessionStorage.getItem('masterCVCreated');
-      if (masterCVCreated !== 'true') {
-        // Only save if we have meaningful data (not just empty defaults)
-        const hasData = state.cvData && (
-          state.cvData.basics?.name ||
-          state.cvData.basics?.email ||
-          state.cvData.work?.length > 0 ||
-          state.cvData.education?.length > 0 ||
-          state.currentStep > 1
-        );
+    const loadData = async () => {
+      setIsLoading(true);
+      const savedData = await loadFromStorage();
+      
+      if (savedData) {
+        // Restore CV data
+        if (savedData.cvData) {
+          dispatch({ type: 'SET_CV_DATA', payload: savedData.cvData });
+        }
         
-        if (hasData || state.currentStep > 1) {
-          saveToStorage(state);
-          console.log('💾 Saved AI Career Report data to localStorage:', {
-            step: state.currentStep,
-            workCount: state.cvData.work?.length || 0,
-            educationCount: state.cvData.education?.length || 0
+        // Restore AI analysis
+        if (savedData.aiAnalysis) {
+          dispatch({ type: 'SET_AI_ANALYSIS', payload: savedData.aiAnalysis });
+        }
+        
+        // Restore other state
+        if (savedData.currentStep) {
+          dispatch({ type: 'SET_CURRENT_STEP', payload: savedData.currentStep });
+        }
+        
+        if (savedData.jobId) {
+          dispatch({ type: 'SET_JOB_ID', payload: savedData.jobId });
+        }
+        
+        if (savedData.jobData) {
+          dispatch({ type: 'SET_JOB_DATA', payload: savedData.jobData });
+        }
+
+        if (savedData.completedSteps) {
+          savedData.completedSteps.forEach((step: number) => {
+            dispatch({ type: 'SET_COMPLETED_STEP', payload: step });
           });
+        }
+
+        if (savedData.activeSection) {
+          dispatch({ type: 'SET_ACTIVE_SECTION', payload: savedData.activeSection });
+        }
+
+        if (savedData.availableSections) {
+          dispatch({ type: 'SET_AVAILABLE_SECTIONS', payload: savedData.availableSections });
+        }
+      }
+      
+      setIsLoading(false);
+    };
+
+    loadData();
+  }, []);
+
+  // Save to database whenever state changes (keep saving for step 3 until CV is actually saved)
+  useEffect(() => {
+    if (!isLoading) {
+      // Always save CV data to database, even in step 3, until Master CV is saved
+      // This ensures data persists if user needs to sign in
+      if (typeof window !== 'undefined') {
+        const masterCVCreated = sessionStorage.getItem('masterCVCreated');
+        if (masterCVCreated !== 'true') {
+          // Only save if we have meaningful data (not just empty defaults)
+          const hasData = state.cvData && (
+            state.cvData.basics?.name ||
+            state.cvData.basics?.email ||
+            state.cvData.work?.length > 0 ||
+            state.cvData.education?.length > 0 ||
+            state.cvData.projects?.length > 0 ||
+            state.currentStep > 1 ||
+            state.aiAnalysis !== null // Always save if AI analysis exists
+          );
+          
+          if (hasData || state.currentStep > 1 || state.aiAnalysis !== null) {
+            saveToStorage(state);
+          }
         }
       }
     }
-  }, [state]);
+  }, [state, isLoading]);
 
   // Don't clear storage when reaching step 3 - keep it until CV is actually saved
   // Storage will be cleared when the Master CV is successfully created

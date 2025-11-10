@@ -19,6 +19,7 @@ import CVJourneyKPIs from '@/components/admin/CVJourneyKPIs';
 import TemplateManager from '@/components/admin/TemplateManager';
 import UserManagement from '@/components/admin/UserManagement';
 import EmailCampaignManager from '@/components/admin/EmailCampaignManager';
+import DraftManagement from '@/components/admin/DraftManagement';
 import NotificationManager from '@/components/admin/NotificationManager';
 import SystemHealth from '@/components/admin/SystemHealth';
 import PricingPlanManager from '@/components/admin/PricingPlanManager';
@@ -67,7 +68,7 @@ export default function AdminDashboard() {
           router.push('/admin/signin');
         }
       } catch (error) {
-        console.error('Admin verification error:', error);
+        console.error('Admin verification error:', error instanceof Error ? error.message : String(error));
         router.push('/admin/signin');
       } finally {
         setLoading(false);
@@ -86,7 +87,7 @@ export default function AdminDashboard() {
         setActivityCount(data.total || 0);
       }
     } catch (error) {
-      console.error('Error fetching activity count:', error);
+      console.error('Error fetching activity count:', error instanceof Error ? error.message : String(error));
     }
   };
 
@@ -104,8 +105,9 @@ export default function AdminDashboard() {
         setActivitiesError(`Failed to fetch activities: ${errorData.error || 'Unknown error'}`);
       }
     } catch (error) {
-      console.error('Error fetching activities:', error);
-      setActivitiesError(`Network error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Error fetching activities:', errorMessage);
+      setActivitiesError(`Network error: ${errorMessage}`);
     } finally {
       setActivitiesLoading(false);
     }
@@ -342,6 +344,10 @@ export default function AdminDashboard() {
                     <Bell className="h-4 w-4 mr-2" />
                     Notifications
                   </TabsTrigger>
+                  <TabsTrigger value="drafts" className="data-[state=active]:bg-gray-700 data-[state=active]:text-white text-gray-300 rounded-none px-6 py-3">
+                    <FileText className="h-4 w-4 mr-2" />
+                    CV Drafts
+                  </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="users" className="mt-6">
@@ -354,6 +360,10 @@ export default function AdminDashboard() {
 
                 <TabsContent value="notifications" className="mt-6">
                   <NotificationManager />
+                </TabsContent>
+
+                <TabsContent value="drafts" className="mt-6">
+                  <DraftManagement />
                 </TabsContent>
               </Tabs>
             </TabsContent>

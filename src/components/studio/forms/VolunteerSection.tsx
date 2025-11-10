@@ -1,47 +1,114 @@
 'use client';
 
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Plus, Trash2, Copy } from 'lucide-react';
 import WYSIWYGEditor, { WYSIWYGToolbar } from '@/components/ui/WYSIWYGEditor';
 
 interface VolunteerSectionProps {
-  data: any[];
+  data?: any[];
   onUpdate: (data: any[]) => void;
-  onAdd: () => void;
-  onRemove: (index: number) => void;
+  onAdd?: () => void;
+  onRemove?: (index: number) => void;
 }
 
 const VolunteerSection: React.FC<VolunteerSectionProps> = ({
-  data,
+  data = [],
   onUpdate,
   onAdd,
   onRemove
 }) => {
   // Ensure we have proper data structure
-  const safeData = Array.isArray(data) ? data : [];
+  const safeData = useMemo(() => Array.isArray(data) ? data : [], [data]);
 
-  const updateVolunteer = (index: number, field: string, value: any) => {
-    const updatedData = [...safeData];
-    if (!updatedData[index]) {
-      updatedData[index] = { organization: '', position: '', url: '', startDate: '', endDate: '', summary: '', highlights: [] };
+  // Safety wrapper for onAdd
+  const handleAdd = useCallback(() => {
+    try {
+      if (onAdd && typeof onAdd === 'function') {
+        onAdd();
+      } else {
+        console.warn('onAdd callback is not provided, using fallback');
+        // Fallback: add a default volunteer entry directly
+        const defaultVolunteer = {
+          organization: '',
+          position: '',
+          url: '',
+          startDate: '',
+          endDate: '',
+          summary: '',
+          highlights: []
+        };
+        onUpdate([...safeData, defaultVolunteer]);
+      }
+    } catch (error) {
+      console.error('Error in handleAdd:', error);
+      // Fallback on error
+      const defaultVolunteer = {
+        organization: '',
+        position: '',
+        url: '',
+        startDate: '',
+        endDate: '',
+        summary: '',
+        highlights: []
+      };
+      onUpdate([...safeData, defaultVolunteer]);
     }
-    updatedData[index] = { ...updatedData[index], [field]: value };
-    onUpdate(updatedData);
-  };
+  }, [onAdd, onUpdate, safeData]);
 
-  const duplicateVolunteer = (index: number) => {
-    const volunteerToDuplicate = safeData[index];
-    if (volunteerToDuplicate) {
-      const duplicated = JSON.parse(JSON.stringify(volunteerToDuplicate));
-      const updatedData = [...safeData];
-      updatedData.splice(index + 1, 0, duplicated);
+  // Safety wrapper for onRemove
+  const handleRemove = useCallback((index: number) => {
+    try {
+      if (onRemove && typeof onRemove === 'function') {
+        onRemove(index);
+      } else {
+        // Fallback: remove directly via onUpdate
+        const updatedData = safeData.filter((_, i) => i !== index);
+        onUpdate(updatedData);
+      }
+    } catch (error) {
+      console.error('Error in handleRemove:', error);
+      // Fallback on error
+      const updatedData = safeData.filter((_, i) => i !== index);
       onUpdate(updatedData);
     }
-  };
+  }, [onRemove, onUpdate, safeData]);
+
+  const updateVolunteer = useCallback((index: number, field: string, value: any) => {
+    try {
+      const updatedData = [...safeData];
+      if (!updatedData[index]) {
+        updatedData[index] = { organization: '', position: '', url: '', startDate: '', endDate: '', summary: '', highlights: [] };
+      }
+      updatedData[index] = { ...updatedData[index], [field]: value };
+      onUpdate(updatedData);
+    } catch (error) {
+      console.error('Error in updateVolunteer:', error);
+    }
+  }, [safeData, onUpdate]);
+
+  const duplicateVolunteer = useCallback((index: number) => {
+    try {
+      const volunteerToDuplicate = safeData[index];
+      if (volunteerToDuplicate) {
+        const duplicated = JSON.parse(JSON.stringify(volunteerToDuplicate));
+        const updatedData = [...safeData];
+        updatedData.splice(index + 1, 0, duplicated);
+        onUpdate(updatedData);
+      }
+    } catch (error) {
+      console.error('Error in duplicateVolunteer:', error);
+    }
+  }, [safeData, onUpdate]);
 
   return (
     <>
-      {safeData.map((volunteer, index) => (
+      {safeData.map((volunteer, index) => {
+        // Safety check: ensure volunteer is an object
+        if (!volunteer || typeof volunteer !== 'object') {
+          return null;
+        }
+        
+        return (
         <div key={index} className="bg-white/5 rounded-xl p-6 border border-white/10 mb-6">
           <div className="flex items-center justify-between mb-4">
             <h4 className="text-lg font-semibold text-white">{volunteer.organization || 'Organization'}</h4>
@@ -54,10 +121,7 @@ const VolunteerSection: React.FC<VolunteerSectionProps> = ({
                 <Copy size={16} />
               </button>
               <button
-                onClick={() => {
-                  const updatedData = safeData.filter((_, i) => i !== index);
-                  onUpdate(updatedData);
-                }}
+                onClick={() => handleRemove(index)}
                 className="text-red-400 hover:text-red-300 transition-colors"
                 title="Delete this volunteer experience"
               >
@@ -125,10 +189,11 @@ const VolunteerSection: React.FC<VolunteerSectionProps> = ({
             />
           </div>
         </div>
-      ))}
+        );
+      })}
       
       <button
-        onClick={addVolunteer}
+        onClick={handleAdd}
         className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/60 hover:text-[#80FF00] rounded-xl transition-colors flex items-center justify-center gap-2"
       >
         <Plus size={20} />
