@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
+import Image from 'next/image';
 import { Menu, X } from 'lucide-react';
 import './CardNav.css';
 
@@ -72,27 +73,20 @@ const CardNav = ({
             type="button"
           >
             <div className="logo-image-wrapper">
-              <img 
+              <Image 
                 src="/images/logo.png" 
                 alt="CVCircle Logo" 
                 width={32}
                 height={32}
                 className="logo-image"
-                loading="eager"
-                onError={(e) => {
-                  // Fallback to a data URL or text if image fails
-                  const target = e.target as HTMLImageElement;
-                  if (target) {
-                    target.style.display = 'none';
-                    const parent = target.parentElement;
-                    if (parent && !parent.querySelector('.logo-fallback')) {
-                      const fallback = document.createElement('div');
-                      fallback.className = 'logo-fallback';
-                      fallback.textContent = 'CV';
-                      fallback.style.cssText = 'width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: #80FF00; color: black; border-radius: 4px; font-weight: bold;';
-                      parent.appendChild(fallback);
-                    }
-                  }
+                priority
+                quality={90}
+                unoptimized={true}
+                onError={() => {
+                  console.error('Logo image failed to load');
+                }}
+                onLoad={() => {
+                  console.log('Logo image loaded successfully');
                 }}
               />
             </div>

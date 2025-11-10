@@ -36,6 +36,63 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // CRITICAL: Validate and ensure all CV sections are present before conversion
+    const draftCVData = draft.cvData || {};
+    const requiredSections = ['basics', 'work', 'education', 'skills', 'projects'];
+    const missingSections = requiredSections.filter(section => !draftCVData[section]);
+    
+    if (missingSections.length > 0) {
+      console.error('❌ Convert to Master CV: Missing required sections:', missingSections);
+      console.error('📋 Draft CV data structure:', {
+        hasBasics: !!draftCVData.basics,
+        hasWork: !!draftCVData.work,
+        hasEducation: !!draftCVData.education,
+        hasSkills: !!draftCVData.skills,
+        hasProjects: !!draftCVData.projects,
+        workCount: Array.isArray(draftCVData.work) ? draftCVData.work.length : 'not array',
+        educationCount: Array.isArray(draftCVData.education) ? draftCVData.education.length : 'not array',
+        skillsCount: Array.isArray(draftCVData.skills) ? draftCVData.skills.length : 'not array',
+        projectsCount: Array.isArray(draftCVData.projects) ? draftCVData.projects.length : 'not array',
+        allKeys: Object.keys(draftCVData)
+      });
+    }
+
+    // Ensure all sections exist (even if empty arrays) to prevent data loss
+    const validatedCVData = {
+      ...draftCVData,
+      basics: draftCVData.basics || {
+        name: '',
+        label: '',
+        image: '',
+        email: '',
+        phone: '',
+        url: '',
+        summary: '',
+        location: { address: '', postalCode: '', city: '', countryCode: '', region: '' },
+        profiles: []
+      },
+      work: Array.isArray(draftCVData.work) ? draftCVData.work : [],
+      education: Array.isArray(draftCVData.education) ? draftCVData.education : [],
+      skills: Array.isArray(draftCVData.skills) ? draftCVData.skills : [],
+      projects: Array.isArray(draftCVData.projects) ? draftCVData.projects : [],
+      volunteer: Array.isArray(draftCVData.volunteer) ? draftCVData.volunteer : [],
+      awards: Array.isArray(draftCVData.awards) ? draftCVData.awards : [],
+      certificates: Array.isArray(draftCVData.certificates) ? draftCVData.certificates : [],
+      publications: Array.isArray(draftCVData.publications) ? draftCVData.publications : [],
+      languages: Array.isArray(draftCVData.languages) ? draftCVData.languages : [],
+      interests: Array.isArray(draftCVData.interests) ? draftCVData.interests : [],
+      references: Array.isArray(draftCVData.references) ? draftCVData.references : []
+    };
+
+    // Log section counts for debugging
+    console.log('🔄 Converting draft to Master CV with sections:', {
+      work: validatedCVData.work.length,
+      education: validatedCVData.education.length,
+      skills: validatedCVData.skills.length,
+      projects: validatedCVData.projects.length,
+      hasBasics: !!validatedCVData.basics?.name
+    });
+
     // Find user
     const user = await User.findById(session.user.id);
     if (!user) {
@@ -57,8 +114,8 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingMasterCV) {
-      // Update existing Master CV instead of creating new one
-      existingMasterCV.cvData = draft.cvData;
+      // Update existing Master CV instead of creating new one with validated data
+      existingMasterCV.cvData = validatedCVData;
       existingMasterCV.metadata = {
         ...existingMasterCV.metadata,
         aiAnalysis: draft.aiAnalysis,
@@ -78,11 +135,11 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Create new Master CV
+    // Create new Master CV with validated data
     const masterCV = new CV({
       userId: user._id,
-      title: `${draft.cvData.basics?.name || 'User'}'s Master CV`,
-      cvData: draft.cvData,
+      title: `${validatedCVData.basics?.name || 'User'}'s Master CV`,
+      cvData: validatedCVData,
       templateId: 'default',
       status: 'draft',
       metadata: {
