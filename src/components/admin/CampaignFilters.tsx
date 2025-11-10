@@ -10,7 +10,10 @@ interface FilterProps {
 }
 
 export default function CampaignFilters({ filters, onChange, twoColumn = false }: FilterProps) {
-  const [localFilters, setLocalFilters] = useState(filters || {});
+  const [localFilters, setLocalFilters] = useState(() => ({
+    ...(filters || {}),
+    usageMetrics: filters?.usageMetrics || {},
+  }));
   const [availablePlans, setAvailablePlans] = useState<string[]>([]);
 
   useEffect(() => {
@@ -79,7 +82,7 @@ export default function CampaignFilters({ filters, onChange, twoColumn = false }
       ...localFilters,
       usageMetrics: {
         ...(localFilters.usageMetrics || {}),
-        [field]: value || undefined,
+        [field]: value && !isNaN(value) ? value : undefined,
       },
     });
   };
@@ -130,7 +133,7 @@ export default function CampaignFilters({ filters, onChange, twoColumn = false }
         <div className="grid grid-cols-2 gap-3">
           {availablePlans.length > 0 ? (
             availablePlans.map((plan) => {
-            const isChecked = localFilters.membershipPlans?.includes(plan);
+            const isChecked = localFilters.membershipPlans?.includes(plan) ?? false;
             return (
               <label
                 key={plan}
@@ -251,8 +254,8 @@ export default function CampaignFilters({ filters, onChange, twoColumn = false }
             <input
               type="number"
               min="0"
-              value={localFilters.usageMetrics?.minCVsCreated || ''}
-              onChange={(e) => handleUsageMetricChange('minCVsCreated', parseInt(e.target.value))}
+              value={localFilters.usageMetrics?.minCVsCreated ?? ''}
+              onChange={(e) => handleUsageMetricChange('minCVsCreated', parseInt(e.target.value) || 0)}
               className="w-full px-3 py-2 bg-white/5 border border-white/10 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-400/50"
               placeholder="0"
             />
@@ -262,8 +265,8 @@ export default function CampaignFilters({ filters, onChange, twoColumn = false }
             <input
               type="number"
               min="0"
-              value={localFilters.usageMetrics?.maxCVsCreated || ''}
-              onChange={(e) => handleUsageMetricChange('maxCVsCreated', parseInt(e.target.value))}
+              value={localFilters.usageMetrics?.maxCVsCreated ?? ''}
+              onChange={(e) => handleUsageMetricChange('maxCVsCreated', parseInt(e.target.value) || 0)}
               className="w-full px-3 py-2 bg-white/5 border border-white/10 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-400/50"
               placeholder="999"
             />
@@ -273,8 +276,8 @@ export default function CampaignFilters({ filters, onChange, twoColumn = false }
             <input
               type="number"
               min="0"
-              value={localFilters.usageMetrics?.minJourneysCompleted || ''}
-              onChange={(e) => handleUsageMetricChange('minJourneysCompleted', parseInt(e.target.value))}
+              value={localFilters.usageMetrics?.minJourneysCompleted ?? ''}
+              onChange={(e) => handleUsageMetricChange('minJourneysCompleted', parseInt(e.target.value) || 0)}
               className="w-full px-3 py-2 bg-white/5 border border-white/10 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-400/50"
               placeholder="0"
             />
@@ -284,8 +287,8 @@ export default function CampaignFilters({ filters, onChange, twoColumn = false }
             <input
               type="number"
               min="0"
-              value={localFilters.usageMetrics?.maxJourneysCompleted || ''}
-              onChange={(e) => handleUsageMetricChange('maxJourneysCompleted', parseInt(e.target.value))}
+              value={localFilters.usageMetrics?.maxJourneysCompleted ?? ''}
+              onChange={(e) => handleUsageMetricChange('maxJourneysCompleted', parseInt(e.target.value) || 0)}
               className="w-full px-3 py-2 bg-white/5 border border-white/10 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-400/50"
               placeholder="999"
             />

@@ -340,6 +340,119 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
 
         default: {
           // Handle other verification types (email-verification)
+          // For email-verification, use atomic signup endpoint directly (no double verification)
+          if (verificationType === 'email-verification') {
+            console.log('🔐 Starting atomic verify-and-signin for:', email);
+            
+            try {
+              // Data is already stored in database via session ID, no need to preserve localStorage
+              // The draft will automatically link to the user when they authenticate
+
+              // Step 1: Verify code and mark user as verified (atomic-signup)
+              const atomicSignupResponse = await fetch('/api/auth/atomic-signup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, code }),
+              });
+
+              if (!atomicSignupResponse.ok) {
+                const errorData = await atomicSignupResponse.json();
+                setError(errorData.message || 'Invalid or expired code. Please try again.');
+                setRemainingAttempts(errorData.remainingAttempts || 0);
+                setIsLoading(false);
+                return;
+              }
+
+              const atomicSignupResult = await atomicSignupResponse.json();
+
+              if (!atomicSignupResult.success || !atomicSignupResult.user) {
+                setError('Verification failed. Please try again.');
+                setIsLoading(false);
+                return;
+              }
+
+              console.log('✅ User verified:', atomicSignupResult.user.id);
+
+              // Step 2: Create session server-side (more reliable than client-side signIn)
+              setSuccess('Email verified! Creating session...');
+              
+              const sessionResponse = await fetch('/api/auth/create-session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: atomicSignupResult.user.id }),
+                credentials: 'include' // Important: include cookies
+              });
+
+              if (!sessionResponse.ok) {
+                const errorData = await sessionResponse.json();
+                console.error('❌ Session creation failed:', errorData);
+                
+                // Fallback: Try client-side NextAuth signIn as backup
+                console.log('🔄 Falling back to client-side NextAuth sign-in...');
+                
+                const signInResult = await Promise.race([
+                  signIn('passwordless', {
+                    email,
+                    verificationCode: atomicSignupResult.sessionToken || 'fallback',
+                    preVerified: 'true',
+                    redirect: false
+                  } as any),
+                  new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Sign-in timed out')), 10000)
+                  )
+                ]) as any;
+
+                if (signInResult?.ok) {
+                  setSuccess('Signed in! Redirecting...');
+                  setTimeout(() => {
+                    window.location.href = callbackUrl;
+                  }, 500);
+                } else {
+                  setError('Verification succeeded but sign-in failed. Please try signing in manually.');
+                  setTimeout(() => {
+                    setMode('signin');
+                    setError('');
+                  }, 2000);
+                }
+                setIsLoading(false);
+                return;
+              }
+
+              const sessionResult = await sessionResponse.json();
+
+              if (sessionResult.success) {
+                console.log('✅ Session created server-side, user signed in');
+                setSuccess('Signed in! Redirecting...');
+                
+                // Force a page reload to pick up the new session cookie
+                // This ensures NextAuth recognizes the session
+                setTimeout(() => {
+                  window.location.href = callbackUrl;
+                }, 500);
+              } else {
+                setError('Failed to create session. Please try signing in manually.');
+              }
+
+            } catch (signupError: any) {
+              console.error('❌ Atomic verify-and-signin error:', signupError);
+              
+              // Check if it's a network error
+              if (signupError instanceof TypeError && signupError.message.includes('Failed to fetch')) {
+                setError('Network error: Unable to connect to server. Please check your internet connection and try again.');
+              } else if (signupError.message?.includes('timed out')) {
+                setError('Request timed out. Please try again.');
+              } else if (signupError.message) {
+                setError(signupError.message);
+              } else {
+                setError('Failed to verify and sign in. Please try again.');
+              }
+            } finally {
+              setIsLoading(false);
+            }
+            return; // Exit early since we handled the signup
+          }
+
+          // For other verification types (password-reset), use verify-and-signin
           const response = await fetch('/api/auth/verify-and-signin', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -354,17 +467,10 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
 
           if (result.success) {
             setSuccess(result.message || 'Code verified successfully!');
-
-            // Handle based on verification type
-            if (verificationType === 'email-verification') {
-              // Email verified - redirect to sign in
-              setTimeout(() => {
-                setMode('signin');
-                setSuccess('');
-                setError('');
-                setEmail('');
-              }, 2000);
-            }
+            // Redirect to callbackUrl
+            setTimeout(() => {
+              window.location.href = callbackUrl;
+            }, 1500);
           } else {
             setError(result.message || 'Invalid verification code.');
             setRemainingAttempts(result.remainingAttempts || 0);

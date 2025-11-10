@@ -20,6 +20,7 @@ import SkillsSection from './forms/SkillsSection';
 import ProjectsSection from './forms/ProjectsSection';
 import CertificatesSection from './forms/CertificatesSection';
 import LanguagesSection from './forms/LanguagesSection';
+import VolunteerSection from './forms/VolunteerSection';
 import MasterCVCard from './MasterCVCard';
 import {
   User,
@@ -1054,6 +1055,10 @@ const CVStudio: React.FC<CVStudioProps> = ({
         
         // Update legacy array
         newData[sectionType] = [...section, defaultItem] as any;
+      } else if (!section) {
+        // If section doesn't exist, initialize it with default item
+        const defaultItem = item || getDefaultItemForSection(sectionType);
+        newData[sectionType] = [defaultItem] as any;
 
         // Update structure and content map if using new architecture
         if (newData.structure && newData.content) {
@@ -1211,6 +1216,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
         return {
           organization: '',
           position: '',
+          url: '',
           startDate: '',
           endDate: '',
           summary: '',
@@ -3416,9 +3422,12 @@ const CVStudio: React.FC<CVStudioProps> = ({
         />
       ),
       volunteer: (
-        <div className="p-4 text-center text-gray-500 dark:text-gray-400">
-          <p>Volunteer Experience section - Coming soon</p>
-        </div>
+        <VolunteerSection
+          data={cvData?.volunteer || []}
+          onUpdate={(data: any[]) => updateCVField('volunteer', data)}
+          onAdd={() => addSection('volunteer')}
+          onRemove={(index) => removeSection('volunteer', index)}
+        />
       ),
       awards: (
         <div className="p-4 text-center text-gray-500 dark:text-gray-400">
