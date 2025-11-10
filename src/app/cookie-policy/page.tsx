@@ -1,9 +1,6 @@
 'use client';
 
 import React from 'react';
-
-// Force dynamic rendering to prevent SSR issues
-export const dynamic = 'force-dynamic';
 import { motion } from 'framer-motion';
 import { Cookie, Settings, Shield, Eye, BarChart3, Users, Globe, Clock, AlertTriangle, Mail } from 'lucide-react';
 import Link from 'next/link';

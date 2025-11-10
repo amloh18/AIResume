@@ -3,9 +3,6 @@
 import { useEffect, useState } from 'react';
 import { signOut } from 'next-auth/react';
 
-// Force dynamic rendering to prevent SSR issues
-export const dynamic = 'force-dynamic';
-
 export default function ForceLogoutPage() {
   const [status, setStatus] = useState<string[]>(['Starting forced logout...']);
 
