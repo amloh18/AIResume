@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import Image from 'next/image';
 import Typewriter from '../ui/Typewriter';
 import { Play, ArrowRight, Sparkles } from 'lucide-react';
 
@@ -18,9 +17,15 @@ const Hero = () => {
   const [currentItem, setCurrentItem] = useState('');
   const [isTypingAction, setIsTypingAction] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [imageSrc, setImageSrc] = useState(
-    process.env.NEXT_PUBLIC_HERO_BANNER_S3_URL || '/images/herobanner.png'
-  );
+  // Ensure we use the correct image path - prioritize local path for reliability
+  const [imageSrc, setImageSrc] = useState(() => {
+    // In production, always use local path first for reliability
+    if (typeof window !== 'undefined') {
+      return '/images/herobanner.png';
+    }
+    // For SSR, use env var if available, otherwise local
+    return process.env.NEXT_PUBLIC_HERO_BANNER_S3_URL || '/images/herobanner.png';
+  });
 
   // Typewriter effect
   useEffect(() => {
@@ -224,26 +229,38 @@ const Hero = () => {
               willChange: 'transform'
             }}
           >
-            <div className="relative w-full h-[600px] rounded-2xl overflow-hidden">
-              <Image
+            <div className="relative w-full h-[600px] rounded-2xl overflow-hidden bg-gradient-to-br from-gray-800 to-gray-900">
+              <img
                 src={imageSrc}
                 alt="CV Circle Dashboard"
-                fill
-                className="object-cover object-top"
-                priority
-                unoptimized
+                className="absolute inset-0 w-full h-full object-cover object-top"
+                loading="eager"
                 style={{
                   transform: `translateY(${Math.min(scrollY * 0.3, 200)}px)`,
                   filter: 'drop-shadow(0 10px 20px rgba(132, 204, 22, 0.2))',
                 }}
-                onError={() => {
-                  // Fallback to local image if S3 URL fails
+                onError={(e) => {
+                  // Fallback handling
+                  const target = e.target as HTMLImageElement;
                   const localPath = '/images/herobanner.png';
+                  
                   if (imageSrc !== localPath) {
                     console.warn('Hero banner image failed to load, falling back to local image');
                     setImageSrc(localPath);
                   } else {
-                    console.error('Hero banner image failed to load from both S3 and local path');
+                    console.error('Hero banner image failed to load from local path');
+                    // Hide image and show placeholder
+                    if (target) {
+                      target.style.display = 'none';
+                      const parent = target.parentElement;
+                      if (parent && !parent.querySelector('.hero-fallback')) {
+                        const fallback = document.createElement('div');
+                        fallback.className = 'hero-fallback';
+                        fallback.style.cssText = 'width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); color: #80FF00; font-size: 2rem; font-weight: bold;';
+                        fallback.textContent = 'CV Circle';
+                        parent.appendChild(fallback);
+                      }
+                    }
                   }
                 }}
               />
