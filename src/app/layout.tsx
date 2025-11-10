@@ -19,21 +19,29 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: 'CVCircle - AI-Powered CV Builder',
+    default: 'CVCircle - AI-Powered CV Builder & ATS Resume Optimizer',
     template: '%s | CVCircle'
   },
-  description: 'Create stunning CVs with AI assistance. Professional templates, ATS optimization, and real-time analytics. Build your perfect resume in minutes.',
+  description: 'Create ATS-optimized CVs with AI assistance. Free AI career guide, professional templates, resume analysis, and real-time analytics. Build your perfect resume in minutes and land your dream job.',
   keywords: [
     'CV builder',
     'resume builder',
-    'AI CV',
+    'AI CV builder',
     'ATS optimization',
+    'ATS resume checker',
     'professional CV',
     'CV templates',
     'resume templates',
     'career tools',
     'job application',
-    'CV maker'
+    'CV maker',
+    'resume maker',
+    'AI career guide',
+    'resume analyzer',
+    'CV analyzer',
+    'ATS resume optimizer',
+    'free resume builder',
+    'online CV builder'
   ],
   authors: [{ name: 'CVCircle Team' }],
   creator: 'CVCircle',
@@ -50,23 +58,23 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: '/',
-    title: 'CVCircle - AI-Powered CV Builder',
-    description: 'Create stunning CVs with AI assistance. Professional templates, ATS optimization, and real-time analytics.',
+    url: 'https://cvcircle.io',
+    title: 'CVCircle - AI-Powered CV Builder & ATS Resume Optimizer',
+    description: 'Create ATS-optimized CVs with AI assistance. Free AI career guide, professional templates, resume analysis, and real-time analytics. Build your perfect resume in minutes.',
     siteName: 'CVCircle',
     images: [
       {
         url: '/images/og-image.png',
         width: 1200,
         height: 630,
-        alt: 'CVCircle - AI-Powered CV Builder',
+        alt: 'CVCircle - AI-Powered CV Builder & ATS Resume Optimizer',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'CVCircle - AI-Powered CV Builder',
-    description: 'Create stunning CVs with AI assistance. Professional templates, ATS optimization, and real-time analytics.',
+    title: 'CVCircle - AI-Powered CV Builder & ATS Resume Optimizer',
+    description: 'Create ATS-optimized CVs with AI assistance. Free AI career guide, professional templates, and resume analysis.',
     images: ['/images/twitter-image.png'],
     creator: '@cvcircle',
   },

@@ -57,10 +57,13 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Deep clone the draft CV data to prevent reference issues
+    const clonedDraftData = JSON.parse(JSON.stringify(draftCVData));
+    
     // Ensure all sections exist (even if empty arrays) to prevent data loss
     const validatedCVData = {
-      ...draftCVData,
-      basics: draftCVData.basics || {
+      ...clonedDraftData,
+      basics: clonedDraftData.basics || {
         name: '',
         label: '',
         image: '',
@@ -71,17 +74,17 @@ export async function POST(request: NextRequest) {
         location: { address: '', postalCode: '', city: '', countryCode: '', region: '' },
         profiles: []
       },
-      work: Array.isArray(draftCVData.work) ? draftCVData.work : [],
-      education: Array.isArray(draftCVData.education) ? draftCVData.education : [],
-      skills: Array.isArray(draftCVData.skills) ? draftCVData.skills : [],
-      projects: Array.isArray(draftCVData.projects) ? draftCVData.projects : [],
-      volunteer: Array.isArray(draftCVData.volunteer) ? draftCVData.volunteer : [],
-      awards: Array.isArray(draftCVData.awards) ? draftCVData.awards : [],
-      certificates: Array.isArray(draftCVData.certificates) ? draftCVData.certificates : [],
-      publications: Array.isArray(draftCVData.publications) ? draftCVData.publications : [],
-      languages: Array.isArray(draftCVData.languages) ? draftCVData.languages : [],
-      interests: Array.isArray(draftCVData.interests) ? draftCVData.interests : [],
-      references: Array.isArray(draftCVData.references) ? draftCVData.references : []
+      work: Array.isArray(clonedDraftData.work) ? clonedDraftData.work : [],
+      education: Array.isArray(clonedDraftData.education) ? clonedDraftData.education : [],
+      skills: Array.isArray(clonedDraftData.skills) ? clonedDraftData.skills : [],
+      projects: Array.isArray(clonedDraftData.projects) ? clonedDraftData.projects : [],
+      volunteer: Array.isArray(clonedDraftData.volunteer) ? clonedDraftData.volunteer : [],
+      awards: Array.isArray(clonedDraftData.awards) ? clonedDraftData.awards : [],
+      certificates: Array.isArray(clonedDraftData.certificates) ? clonedDraftData.certificates : [],
+      publications: Array.isArray(clonedDraftData.publications) ? clonedDraftData.publications : [],
+      languages: Array.isArray(clonedDraftData.languages) ? clonedDraftData.languages : [],
+      interests: Array.isArray(clonedDraftData.interests) ? clonedDraftData.interests : [],
+      references: Array.isArray(clonedDraftData.references) ? clonedDraftData.references : []
     };
 
     // Log section counts for debugging
@@ -114,14 +117,33 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingMasterCV) {
+      // CRITICAL FIX: Use markModified to ensure Mongoose saves the Mixed type field
       // Update existing Master CV instead of creating new one with validated data
       existingMasterCV.cvData = validatedCVData;
+      existingMasterCV.markModified('cvData'); // Tell Mongoose the Mixed field changed
       existingMasterCV.metadata = {
         ...existingMasterCV.metadata,
         aiAnalysis: draft.aiAnalysis,
         lastModified: new Date()
       };
+      existingMasterCV.markModified('metadata'); // Tell Mongoose the metadata changed
       await existingMasterCV.save();
+
+      // Verify data was saved correctly by re-fetching
+      const verifyCV = await CV.findById(existingMasterCV._id).lean();
+      console.log('✅ Verification after save - Master CV sections:', {
+        work: verifyCV?.cvData?.work?.length || 0,
+        education: verifyCV?.cvData?.education?.length || 0,
+        skills: verifyCV?.cvData?.skills?.length || 0,
+        projects: verifyCV?.cvData?.projects?.length || 0,
+        hasBasics: !!verifyCV?.cvData?.basics?.name
+      });
+
+      if (!verifyCV?.cvData?.work?.length && validatedCVData.work.length > 0) {
+        console.error('❌ CRITICAL: Work experience was lost during save!');
+        console.error('Expected work count:', validatedCVData.work.length);
+        console.error('Actual work count:', verifyCV?.cvData?.work?.length || 0);
+      }
 
       // Mark draft as converted (don't delete immediately - keep for admin tracking)
       draft.convertedAt = new Date();
@@ -155,7 +177,32 @@ export async function POST(request: NextRequest) {
       }
     });
 
+    // CRITICAL FIX: Mark cvData as modified for Mongoose Mixed type
+    masterCV.markModified('cvData');
     await masterCV.save();
+
+    // Verify data was saved correctly by re-fetching
+    const verifyCV = await CV.findById(masterCV._id).lean();
+    console.log('✅ Verification after save - Master CV sections:', {
+      work: verifyCV?.cvData?.work?.length || 0,
+      education: verifyCV?.cvData?.education?.length || 0,
+      skills: verifyCV?.cvData?.skills?.length || 0,
+      projects: verifyCV?.cvData?.projects?.length || 0,
+      hasBasics: !!verifyCV?.cvData?.basics?.name
+    });
+
+    if (!verifyCV?.cvData?.work?.length && validatedCVData.work.length > 0) {
+      console.error('❌ CRITICAL: Work experience was lost during save!');
+      console.error('Expected work count:', validatedCVData.work.length);
+      console.error('Actual work count:', verifyCV?.cvData?.work?.length || 0);
+      
+      // Attempt recovery by directly updating the document
+      await CV.updateOne(
+        { _id: masterCV._id },
+        { $set: { cvData: validatedCVData } }
+      );
+      console.log('🔄 Attempted recovery with direct update');
+    }
 
     // Mark draft as converted (don't delete immediately - keep for admin tracking)
     draft.convertedAt = new Date();

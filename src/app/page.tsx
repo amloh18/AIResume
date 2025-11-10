@@ -70,10 +70,50 @@ function LandingPageContent() {
     window.location.href = '/sign-in';
   };
 
+  // Structured data for main landing page
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "CVCircle",
+    "description": "AI-powered CV builder with ATS optimization, professional templates, and free career analysis tools",
+    "url": "https://cvcircle.io",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD",
+      "description": "Free tier available with premium options"
+    },
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "4.8",
+      "reviewCount": "150"
+    },
+    "featureList": [
+      "AI-Powered CV Builder",
+      "ATS Optimization",
+      "Free AI Career Guide",
+      "Professional Templates",
+      "Job Application Tracker",
+      "Real-time Analytics"
+    ],
+    "provider": {
+      "@type": "Organization",
+      "name": "CVCircle",
+      "url": "https://cvcircle.io"
+    }
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900">
-      {/* Launch Offer Banner */}
-      <LaunchBanner />
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900">
+        {/* Launch Offer Banner */}
+        <LaunchBanner />
       
       {/* Navigation */}
       <CardNav 
@@ -114,7 +154,8 @@ function LandingPageContent() {
       
       {/* Footer */}
       <Footer />
-    </div>
+      </div>
+    </>
   );
 }
 

@@ -26,7 +26,8 @@
     "init-credits-schema": "npx tsx scripts/add-credits-schema-to-users.ts",
     "cleanup-users": "npx tsx scripts/cleanup-users.ts",
     "test:step3-auth": "npx tsx scripts/test-step3-auth-init.ts",
-    "test:auth-verify-signin": "npx tsx scripts/test-auth-verify-signin.ts"
+    "test:auth-verify-signin": "npx tsx scripts/test-auth-verify-signin.ts",
+    "verify:cv-data-fix": "npx tsx scripts/verify-cv-data-fix.ts"
   },
   "keywords": [
     "cv",
