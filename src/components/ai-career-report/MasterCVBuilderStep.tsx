@@ -61,6 +61,7 @@ const SECTION_TYPE_TO_ID: Record<string, string> = {
   'certificates': 'certifications',
   'languages': 'languages',
   'volunteer': 'volunteer',
+  'volunteer_experience': 'volunteer', // Handle potential mismatch
   'awards': 'awards',
   'publications': 'publications',
   'interests': 'interests',
@@ -403,9 +404,12 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
     console.log('Adding new section:', sectionType);
     
     // Initialize CV data for the new section
+    let newSectionData: any = null;
+    let fieldName: string = sectionType;
+    
     switch (sectionType) {
       case 'volunteer':
-        updateCVData('volunteer', [...(state.cvData.volunteer || []), {
+        newSectionData = [...(state.cvData.volunteer || []), {
           organization: '',
           position: '',
           url: '',
@@ -413,48 +417,61 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
           endDate: '',
           summary: '',
           highlights: []
-        }]);
+        }];
+        fieldName = 'volunteer';
         break;
       case 'publications':
-        updateCVData('publications', [...(state.cvData.publications || []), {
+        newSectionData = [...(state.cvData.publications || []), {
           name: '',
           publisher: '',
           releaseDate: '',
           url: '',
           summary: ''
-        }]);
+        }];
+        fieldName = 'publications';
         break;
       case 'languages':
-        updateCVData('languages', [...(state.cvData.languages || []), {
+        newSectionData = [...(state.cvData.languages || []), {
           language: '',
           fluency: 'Native'
-        }]);
+        }];
+        fieldName = 'languages';
         break;
       case 'interests':
-        updateCVData('interests', [...(state.cvData.interests || []), {
+        newSectionData = [...(state.cvData.interests || []), {
           name: '',
           keywords: []
-        }]);
+        }];
+        fieldName = 'interests';
         break;
       case 'references':
-        updateCVData('references', [...(state.cvData.references || []), {
+        newSectionData = [...(state.cvData.references || []), {
           name: '',
           reference: ''
-        }]);
+        }];
+        fieldName = 'references';
         break;
       case 'awards':
-        updateCVData('awards', [...(state.cvData.awards || []), {
+        newSectionData = [...(state.cvData.awards || []), {
           title: '',
           date: '',
           awarder: '',
           summary: ''
-        }]);
+        }];
+        fieldName = 'awards';
         break;
       case 'certificates':
-        addCertification();
+        newSectionData = [...(state.cvData.certificates || []), {
+          name: '',
+          issuer: '',
+          date: '',
+          url: '',
+          description: ''
+        }];
+        fieldName = 'certificates';
         break;
       case 'projects':
-        updateCVData('projects', [...(state.cvData.projects || []), {
+        newSectionData = [...(state.cvData.projects || []), {
           name: '',
           startDate: '',
           endDate: '',
@@ -462,30 +479,78 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
           highlights: [],
           keywords: [],
           url: ''
-        }]);
+        }];
+        fieldName = 'projects';
         break;
       case 'skills':
-        updateCVData('skills', [...(state.cvData.skills || []), { category: '', skills: [] }]);
+        newSectionData = [...(state.cvData.skills || []), { category: '', skills: [] }];
+        fieldName = 'skills';
         break;
       case 'education':
-        addEducation();
+        newSectionData = [...(state.cvData.education || []), {
+          institution: '',
+          url: '',
+          area: '',
+          studyType: '',
+          startDate: '',
+          endDate: '',
+          score: '',
+          description: ''
+        }];
+        fieldName = 'education';
         break;
       case 'work_experience':
-        addWorkExperience();
+        newSectionData = [...(state.cvData.work || []), {
+          name: '',
+          position: '',
+          url: '',
+          startDate: '',
+          endDate: '',
+          summary: '',
+          highlights: []
+        }];
+        fieldName = 'work';
         break;
     }
     
-    // Update structure to make section visible
-    if (state.cvData && state.cvData.structure) {
-      const updatedStructure = { ...state.cvData.structure };
-      const sectionIndex = updatedStructure.sections.findIndex(s => s.type === sectionType);
+    // Update both CV data and structure in a single dispatch
+    if (newSectionData !== null && fieldName) {
+      // Prepare structure update
+      let updatedStructure = state.cvData.structure || { sections: [] };
+      
+      // Ensure structure has sections array
+      if (!updatedStructure.sections) {
+        updatedStructure = { ...updatedStructure, sections: [] };
+      }
+      
+      // Clone sections array to avoid mutations
+      const sections = [...updatedStructure.sections];
+      const sectionIndex = sections.findIndex(s => s.type === sectionType);
+      
       if (sectionIndex >= 0) {
-        updatedStructure.sections[sectionIndex] = {
-          ...updatedStructure.sections[sectionIndex],
+        // Section exists in structure - mark as visible
+        sections[sectionIndex] = {
+          ...sections[sectionIndex],
           visible: true
         };
-        updateCVData('structure', updatedStructure);
+      } else {
+        // Section doesn't exist in structure - add it
+        const sectionId = `section-${sectionType}-${Date.now()}`;
+        sections.push({
+          id: sectionId,
+          type: sectionType,
+          visible: true
+        });
       }
+      
+      // Update both CV data field and structure in a single dispatch
+      dispatch({
+        type: 'UPDATE_CV_DATA',
+        payload: {
+          [fieldName]: newSectionData,
+          structure: { ...updatedStructure, sections }
+        }
+      });
     }
     
     console.log('CV data after adding section:', state.cvData);
@@ -664,6 +729,7 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
 
       // Additional sections
       case 'volunteer':
+      case 'volunteer_experience': // Handle potential mismatch in structure
         return (
           <VolunteerSection
             data={state.cvData.volunteer || []}

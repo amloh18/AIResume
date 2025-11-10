@@ -83,6 +83,18 @@ export interface ParsedCVData {
     endDate: string;
     current: boolean;
   }>;
+  volunteer?: Array<{
+    organization?: string;
+    name?: string; // Alternative field name
+    position: string;
+    url?: string;
+    startDate: string;
+    endDate: string;
+    current?: boolean;
+    summary?: string;
+    description?: string; // Alternative field name
+    highlights?: string[];
+  }>;
 }
 
 // Master CV Onboarding data format
@@ -217,20 +229,136 @@ export function adaptParsedCVToUnified(parsedData: ParsedCVData): UnifiedCVDataS
         startDate: exp.startDate || '',
         endDate: hasCurrent && exp.current ? '' : (exp.endDate || ''),
         summary: (() => {
-          // Combine description and summary into a single work summary field
+          // Helper function to clean text for ATS compatibility
+          const cleanTextForATS = (text: string): string => {
+            if (!text || typeof text !== 'string') return '';
+            
+            let cleaned = text
+              // Remove bullet point characters
+              .replace(/[●•▪▫◦‣⁃⁌⁍∙◘◙◉○◯◐◑◒◓◔◕◖◗◗◘◙◚◛◜◝◞◟◠◡]/g, '')
+              .replace(/^[\s]*[-*→▶▸▹►▻▼▽▪▫]\s*/gm, '')
+              .replace(/^[\s]*[•◦‣]\s*/gm, '')
+              .replace(/^[\s]*[0-9]+[.)]\s*/gm, '')
+              .replace(/^[\s]*[a-z][.)]\s*/gm, '')
+              // Replace special dashes with regular hyphens
+              .replace(/[—–]/g, '-')
+              // Replace smart quotes
+              .replace(/[""'']/g, '"')
+              .replace(/['']/g, "'")
+              // Fix multiple spaces
+              .replace(/[ \t]+/g, ' ')
+              .replace(/[ \t]*\n[ \t]*/g, '\n')
+              .replace(/\n{3,}/g, '\n\n')
+              .split('\n')
+              .map(line => line.trim())
+              .filter(line => line.length > 0)
+              .join('\n')
+              // Fix common spelling mistakes
+              .replace(/\bupto\b/gi, 'up to')
+              .replace(/\balot\b/gi, 'a lot')
+              .replace(/\bteh\b/gi, 'the')
+              .replace(/\badn\b/gi, 'and')
+              .replace(/\btaht\b/gi, 'that')
+              .replace(/\brecieve\b/gi, 'receive')
+              .replace(/\bseperate\b/gi, 'separate')
+              .replace(/\boccured\b/gi, 'occurred')
+              .replace(/\bbegining\b/gi, 'beginning')
+              .replace(/\bexistance\b/gi, 'existence')
+              // Remove remaining special characters
+              .replace(/[^\w\s.,;:!?()\-'"/\n]/g, ' ')
+              .replace(/[ \t]+/g, ' ')
+              .trim();
+            
+            return cleaned;
+          };
+
+          // Combine description, summary, achievements, and all related content into a single work summary field
           const description = ('description' in exp ? exp.description : '') || '';
           const summary = ('summary' in exp ? exp.summary : '') || '';
-          // If both exist, combine them with a newline
-          if (description && summary) {
-            return `${description}\n${summary}`.trim();
+          const achievements = ('achievements' in exp && Array.isArray(exp.achievements) ? exp.achievements : []) || [];
+          const highlights = ('highlights' in exp && Array.isArray(exp.highlights) ? exp.highlights : []) || [];
+          
+          // Build the complete summary
+          let fullSummary = '';
+          
+          // Add description if it exists (clean it)
+          if (description) {
+            fullSummary += cleanTextForATS(description);
           }
-          // Otherwise, use whichever exists
-          return description || summary;
+          
+          // Add summary if it exists and is different from description (clean it)
+          if (summary && summary !== description) {
+            if (fullSummary) {
+              fullSummary += '\n\n';
+            }
+            fullSummary += cleanTextForATS(summary);
+          }
+          
+          // Add achievements/highlights if they exist and aren't already in the summary
+          const allAchievements = [...achievements, ...highlights].filter(Boolean);
+          if (allAchievements.length > 0) {
+            // Check if achievements are already included in summary/description
+            const achievementsText = allAchievements.join('\n');
+            const summaryLower = fullSummary.toLowerCase();
+            const achievementsLower = achievementsText.toLowerCase();
+            
+            // Only add if not already present (to avoid duplication)
+            if (!summaryLower.includes(achievementsLower.substring(0, 50))) {
+              if (fullSummary) {
+                fullSummary += '\n\n';
+              }
+              // Add "Key achievements" heading if not present
+              if (!fullSummary.toLowerCase().includes('achievement')) {
+                fullSummary += 'Key achievements\n';
+              }
+              // Clean each achievement and add without bullet points
+              fullSummary += allAchievements.map(a => cleanTextForATS(String(a))).join('\n');
+            }
+          }
+          
+          // Final clean of the entire summary
+          return cleanTextForATS(fullSummary || description || summary);
         })(),
-        highlights: ('achievements' in exp ? exp.achievements : []) || ('highlights' in exp ? exp.highlights : []) || []
+        highlights: (() => {
+          // Clean highlights for ATS compatibility
+          const cleanTextForATS = (text: string): string => {
+            if (!text || typeof text !== 'string') return '';
+            return text
+              .replace(/[●•▪▫◦‣⁃⁌⁍∙◘◙◉○◯◐◑◒◓◔◕◖◗◗◘◙◚◛◜◝◞◟◠◡]/g, '')
+              .replace(/^[\s]*[-*→▶▸▹►▻▼▽▪▫]\s*/gm, '')
+              .replace(/^[\s]*[•◦‣]\s*/gm, '')
+              .replace(/[—–]/g, '-')
+              .replace(/[""'']/g, '"')
+              .replace(/['']/g, "'")
+              .replace(/[ \t]+/g, ' ')
+              .replace(/[^\w\s.,;:!?()\-'"]/g, ' ')
+              .trim();
+          };
+          
+          const achievements = ('achievements' in exp && Array.isArray(exp.achievements) ? exp.achievements : []) || [];
+          const highlights = ('highlights' in exp && Array.isArray(exp.highlights) ? exp.highlights : []) || [];
+          const all = [...achievements, ...highlights].filter(Boolean);
+          
+          // Clean each highlight item
+          return all.map((item: any) => cleanTextForATS(String(item))).filter((item: string) => item.length > 0);
+        })()
       };
     }),
-    volunteer: [],
+    volunteer: (parsedData.volunteer || []).map(vol => {
+      // Handle both old format and new format
+      const hasOrganization = vol && 'organization' in vol;
+      const hasCurrent = vol && 'current' in vol;
+      
+      return {
+        organization: hasOrganization ? (vol.organization || '') : (vol.name || ''),
+        position: vol.position || '',
+        url: vol.url || '',
+        startDate: vol.startDate || '',
+        endDate: hasCurrent && vol.current ? '' : (vol.endDate || ''),
+        summary: vol.summary || vol.description || '',
+        highlights: Array.isArray(vol.highlights) ? vol.highlights : []
+      };
+    }),
     education: (parsedData.education || []).map(edu => ({
       institution: edu.institution || '',
       url: '',

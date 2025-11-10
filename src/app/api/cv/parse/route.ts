@@ -9,6 +9,77 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 
+// ============================================================================
+// TEXT CLEANING UTILITY - ATS Compatible
+// ============================================================================
+
+/**
+ * Cleans text for ATS compatibility by removing special characters and fixing formatting
+ */
+function cleanTextForATS(text: string | null | undefined): string {
+  if (!text || typeof text !== 'string') {
+    return '';
+  }
+
+  let cleaned = text;
+
+  // Remove bullet point characters (common Unicode bullet points)
+  // Important: Only remove bullets at the start of lines, not numbers/content in the middle
+  cleaned = cleaned
+    .replace(/[●•▪▫◦‣⁃⁌⁍∙◘◙◉○◯◐◑◒◓◔◕◖◗◗◘◙◚◛◜◝◞◟◠◡]/g, '') // Various bullet characters anywhere
+    .replace(/^[\s]*[-*→▶▸▹►▻▼▽▪▫]\s*/gm, '') // Bullet at start of line (with optional whitespace)
+    .replace(/^[\s]*[•◦‣]\s*/gm, '') // More bullet variants at start of line
+    .replace(/^[\s]*[0-9]+[.)]\s+/gm, '') // Numbered bullets at start (1. 2. etc.) - note: requires space after
+    .replace(/^[\s]*[a-z][.)]\s+/gmi, '') // Lettered bullets at start (a. b. etc.) - note: requires space after
+    .replace(/^[\s]*[ivx]+[.)]\s+/gmi, ''); // Roman numeral bullets at start - note: requires space after
+
+  // Remove em dashes, en dashes, and replace with regular hyphens
+  cleaned = cleaned
+    .replace(/[—–]/g, '-') // Em dash and en dash to hyphen
+    .replace(/[""'']/g, '"') // Smart quotes to regular quotes
+    .replace(/['']/g, "'") // Smart apostrophes to regular apostrophe
+    .replace(/[…]/g, '...') // Ellipsis to three dots
+    .replace(/[©®™]/g, ''); // Copyright symbols
+
+  // Fix multiple spaces and whitespace
+  cleaned = cleaned
+    .replace(/[ \t]+/g, ' ') // Multiple spaces/tabs to single space
+    .replace(/[ \t]*\n[ \t]*/g, '\n') // Clean line breaks
+    .replace(/\n{3,}/g, '\n\n') // Multiple newlines to double newline
+    .split('\n')
+    .map(line => line.trim()) // Trim each line
+    .filter(line => line.length > 0) // Remove empty lines
+    .join('\n'); // Rejoin with single newlines
+
+  // Fix common spelling mistakes (basic corrections)
+  const spellingFixes: Record<string, string> = {
+    'upto': 'up to',
+    'alot': 'a lot',
+    'teh': 'the',
+    'adn': 'and',
+    'taht': 'that',
+    'recieve': 'receive',
+    'seperate': 'separate',
+    'occured': 'occurred',
+    'begining': 'beginning',
+    'existance': 'existence',
+  };
+
+  Object.entries(spellingFixes).forEach(([wrong, correct]) => {
+    const regex = new RegExp(`\\b${wrong}\\b`, 'gi');
+    cleaned = cleaned.replace(regex, correct);
+  });
+
+  // Final cleanup: remove any remaining special characters that might affect ATS
+  // Keep only alphanumeric, basic punctuation, and whitespace
+  cleaned = cleaned
+    .replace(/[^\w\s.,;:!?()\-'"/\n]/g, ' ') // Remove special chars, keep basic punctuation
+    .replace(/[ \t]+/g, ' ') // Clean up spaces again
+    .trim();
+
+  return cleaned;
+}
+
 // Static imports for libraries that work without issues
 import mammoth from 'mammoth';
 import Tesseract from 'tesseract.js';
@@ -537,14 +608,145 @@ from the resume text and return **only** a valid JSON object.
 - For URL fields: Use a valid URL string, or \`null\` if not found, or empty string \`""\` if explicitly empty.
 - For string fields: Use a string value, or \`null\` if not found. Never omit fields or use undefined.
 - For arrays: Use an empty array \`[]\` if no items found, never null or undefined.
-- **IMPORTANT**: The "courses" field in education and "highlights" field in projects are optional. If no data is found, you may omit them or use empty arrays \`[]\`.
+- **IMPORTANT**: The "courses" field in education and "highlights" field in projects/volunteer are optional. If no data is found, you may omit them or use empty arrays \`[]\`.
 - **REQUIRED FIELDS**: All other fields must be present. Missing fields will cause validation errors.
 - Date formatting: Use YYYY-MM format (e.g., "2023-05"). If only a year is known, use "YYYY". If date is "Present" or "Current", leave endDate as empty string ("").
 - Do NOT output textual words like "Present" in date fields.
 - Clean all text: Remove dates, extra whitespace, and formatting artifacts from titles.
 - Skills should be categorized appropriately (e.g., "Technical Skills", "Programming Languages", "Soft Skills").
 - Extract URLs and links properly (GitHub, LinkedIn, personal websites).
-- **IMPORTANT for work experience**: The "summary" field should contain the complete job description/responsibilities. If the work experience has both a description and summary, combine them into a single "summary" field. Do not split work experience details into separate fields.`;
+
+**SECTION-SPECIFIC EXTRACTION GUIDELINES:**
+
+**BASICS (Personal Information):**
+- "name": Extract full name (first + last). If only first or last is available, use what's provided.
+- "label": Extract professional title, job title, or role (e.g., "Software Engineer", "Marketing Manager").
+- "email": Extract email address exactly as written.
+- "phone": Extract phone number in any format (will be normalized later).
+- "url": Extract personal website or portfolio URL.
+- "summary": Extract professional summary, objective, or profile statement. Include ALL paragraphs if multiple exist.
+- "location": Extract address components:
+  * "city": City name
+  * "region": State, province, or region
+  * "countryCode": ISO country code if available, otherwise country name
+  * "address": Full street address if available
+  * "postalCode": ZIP/postal code if available
+- "profiles": Extract social media profiles:
+  * "network": Platform name (LinkedIn, GitHub, Twitter, etc.)
+  * "username": Username or handle
+  * "url": Full profile URL
+
+**WORK EXPERIENCE:**
+- "name": Company/organization name
+- "position": Job title or role
+- "url": Company website URL if available
+- "startDate": Start date in YYYY-MM format
+- "endDate": End date in YYYY-MM format, or "" if current/ongoing
+- "summary": COMPLETE job description including:
+  * ALL responsibilities and duties
+  * ALL achievements and accomplishments
+  * ALL key contributions
+  * Include content from "Key Achievements", "Highlights", "Responsibilities" sections
+  * DO NOT truncate - read until next work entry or section break
+  * Remove bullet characters but preserve content
+- "highlights": Array of key achievements or notable accomplishments (optional, can be empty array)
+
+**VOLUNTEER EXPERIENCE:**
+- "organization": Name of the organization where volunteer work was performed
+- "position": Volunteer role or title (e.g., "Volunteer Coordinator", "Tutor", "Event Organizer", "Board Member")
+- "url": Organization website URL if available
+- "startDate": Start date in YYYY-MM format
+- "endDate": End date in YYYY-MM format, or "" if ongoing
+- "summary": Full description of volunteer responsibilities, impact, and contributions
+- "highlights": Array of key achievements or notable contributions (optional, can be empty array)
+- IMPORTANT: Treat volunteer work with same detail as work experience - extract ALL information
+
+**EDUCATION:**
+- "institution": School, university, or educational institution name
+- "url": Institution website URL if available
+- "area": Field of study or major (e.g., "Computer Science", "Business Administration")
+- "studyType": Degree type (e.g., "Bachelor", "Master", "PhD", "Associate", "Certificate")
+- "startDate": Start date in YYYY-MM format
+- "endDate": End date in YYYY-MM format, or "" if current/ongoing
+- "score": GPA, grade, or academic achievement if mentioned
+- "courses": Array of relevant courses taken (optional, can be empty array)
+- "description": Additional details about the education (honors, thesis, etc.)
+
+**PROJECTS:**
+- "name": Project name or title
+- "startDate": Start date in YYYY-MM format
+- "endDate": End date in YYYY-MM format, or "" if ongoing
+- "description": Complete project description including purpose, technologies used, and outcomes
+- "highlights": Array of key features, technologies, or achievements (optional, can be empty array)
+- "keywords": Array of relevant keywords or tags (optional, can be empty array)
+- "url": Project URL (GitHub, live demo, portfolio link, etc.)
+
+**SKILLS:**
+- "category": Skill category (e.g., "Programming Languages", "Frameworks", "Tools", "Soft Skills", "Languages")
+- "skills": Array of specific skills within that category
+- IMPORTANT: Group related skills into categories. Avoid creating too many single-skill categories.
+
+**AWARDS:**
+- "title": Award name or title
+- "date": Date received in YYYY-MM format
+- "awarder": Organization or entity that gave the award
+- "summary": Description of the award or achievement
+
+**CERTIFICATES:**
+- "name": Certificate name or title
+- "date": Date issued in YYYY-MM format
+- "issuer": Issuing organization or authority
+- "url": Certificate verification URL if available
+- "description": Additional details about the certificate
+
+**PUBLICATIONS:**
+- "name": Publication title
+- "publisher": Publisher name or journal/conference name
+- "releaseDate": Publication date in YYYY-MM format
+- "url": Publication URL if available
+- "summary": Abstract or brief description
+
+**LANGUAGES:**
+- "language": Language name (e.g., "English", "Spanish", "French")
+- "fluency": Proficiency level (e.g., "Native", "Fluent", "Conversational", "Basic", "Intermediate", "Advanced")
+
+**INTERESTS:**
+- "name": Interest or hobby name
+- "keywords": Array of related keywords or sub-interests (optional, can be empty array)
+
+**REFERENCES:**
+- "name": Reference person's name
+- "reference": Contact information or relationship description
+
+- **CRITICAL TEXT CLEANING FOR ATS COMPATIBILITY** (applies to ALL text fields):
+  * DO NOT include bullet point characters in your output: ●, •, -, *, →, ▶, ▸, ▹, ►, ▻, ▼, ▽, ▪, ▫, etc.
+  * Replace em dashes (—) and en dashes (–) with regular hyphens (-)
+  * Replace smart quotes ("") with regular quotes (")
+  * Replace smart apostrophes ('') with regular apostrophes (')
+  * Fix common spelling mistakes: "upto" → "up to", "alot" → "a lot", "recieve" → "receive", "seperate" → "separate", etc.
+  * Use plain text only - no special Unicode formatting characters
+  * Convert multiple consecutive spaces to single spaces
+  * Remove leading/trailing whitespace from each line
+  * Keep only alphanumeric characters, basic punctuation (.,;:!?()-'"), and whitespace
+  * Preserve structure: Use \\n for line breaks, \\n\\n for paragraph breaks, but WITHOUT any bullet characters
+  * When you see "●Text..." extract it as "Text..." (remove the bullet character)
+  * When in doubt, include MORE content rather than less - it's better to have the full description than a truncated one
+
+- **CRITICAL for work experience - READ CAREFULLY**: The "summary" field must contain the COMPLETE and FULL work description:
+  * DO NOT truncate or stop reading at the first paragraph
+  * Include ALL paragraphs of the job description/responsibilities - read until you reach the next work entry, education section, or clear section break
+  * Include ALL bullet points and achievements - but DO NOT include bullet characters in the output
+  * Include ALL "Key achievements", "Achievements", "Highlights", "Responsibilities", or similar sections - even if they appear after the main description
+  * Include ALL content that describes what the person did in this role - continue reading past paragraph breaks
+  * If you see a heading like "Key achievements:" followed by bullet points, include BOTH the heading AND all achievements, but remove the bullet characters from each achievement line
+  * Example format (note: NO bullet characters): "Responsible for training ML models...\\n\\nKey achievements\\nImproved efficiency by 20-25%...\\nCreated algorithm to determine weight...\\nDeveloped MLOps pipeline..."
+  * If the work experience spans multiple paragraphs with achievements, include EVERYTHING - do not stop reading
+  * The "highlights" array can contain individual achievement items (also cleaned), but the "summary" MUST contain the complete text with all content
+
+- **CRITICAL for volunteer experience**: Apply the same detailed extraction rules as work experience:
+  * Extract COMPLETE volunteer descriptions including all responsibilities and impact
+  * Include ALL achievements and contributions
+  * Treat volunteer work with the same level of detail as paid work experience`;
 
   const prompt = `Here is the resume text:\n\n${rawText}`;
 
@@ -552,11 +754,12 @@ from the resume text and return **only** a valid JSON object.
     console.log('📡 Calling AI API for text structuring...');
     
     // Use AI API helper with fallback
+    // Increased maxTokens to ensure full work summaries with achievements are captured
     const aiResponse = await callAIWithFallback({
       prompt: `${systemInstruction}\n\n${prompt}`,
       systemPrompt: systemInstruction,
       temperature: 0.2,
-      maxTokens: 4096
+      maxTokens: 8192 // Increased to handle long work summaries with multiple achievements
     });
 
     console.log(`✅ AI API call successful with ${aiResponse.provider}!`);
@@ -674,6 +877,15 @@ async function robustDocumentParser(
               } else if (!Array.isArray(value)) {
                 value = [];
               }
+              // Clean each item in highlights array for ATS compatibility
+              if (key === 'highlights' && Array.isArray(value)) {
+                value = value.map((item: any) => {
+                  if (typeof item === 'string') {
+                    return cleanTextForATS(item);
+                  }
+                  return item;
+                });
+              }
               value = normalizeUndefinedToNull(value, `${parentKey}.${key}`);
             }
             // Sanitize URL fields: convert invalid/empty URLs to empty string
@@ -697,6 +909,10 @@ async function robustDocumentParser(
                   value = '';
                 }
               }
+            }
+            // Clean text fields for ATS compatibility (especially work summaries)
+            else if ((key === 'summary' || key === 'description') && typeof value === 'string' && value.trim()) {
+              value = cleanTextForATS(value);
             }
             // Recursively normalize nested objects
             else {
@@ -931,14 +1147,14 @@ async function robustDocumentParser(
         keywords: p.keywords || [],
         url: nullToEmpty(p.url),
       })),
-      volunteer: validatedData.volunteer.map(v => ({
-        organization: nullToEmpty(v.organization),
-        position: nullToEmpty(v.position),
-        url: nullToEmpty(v.url),
-        startDate: nullToEmpty(v.startDate),
-        endDate: nullToEmpty(v.endDate),
-        summary: nullToEmpty(v.summary),
-        highlights: v.highlights || [],
+      volunteer: (validatedData.volunteer || []).map(v => ({
+        organization: nullToEmpty(v.organization || v.name || ''),
+        position: nullToEmpty(v.position || ''),
+        url: nullToEmpty(v.url || ''),
+        startDate: nullToEmpty(v.startDate || ''),
+        endDate: nullToEmpty(v.endDate || ''),
+        summary: nullToEmpty(v.summary || v.description || ''),
+        highlights: Array.isArray(v.highlights) ? v.highlights : [],
       })),
       awards: validatedData.awards.map(a => ({
         title: nullToEmpty(a.title),

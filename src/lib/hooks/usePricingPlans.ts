@@ -117,6 +117,7 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
         setSelectedCurrency(location.currency);
         
         // Get regional pricing from database API
+        let pricingSet = false;
         try {
           const response = await fetch(`/api/pricing/regional?countryCode=${location.countryCode}`);
           if (response.ok) {
@@ -124,15 +125,19 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
             if (data.success && data.pricing) {
               console.log('Regional pricing from database:', data.pricing);
               setRegionalPricing(data.pricing);
+              pricingSet = true;
             } else {
-              throw new Error('Invalid pricing data');
+              console.warn('Invalid pricing data received, trying fallback');
             }
           } else {
-            throw new Error('Failed to fetch pricing');
+            console.warn(`Failed to fetch pricing (status: ${response.status}), trying fallback`);
           }
         } catch (pricingError) {
           console.error('Error fetching pricing from database:', pricingError);
-          // Fallback: try to get default pricing
+        }
+        
+        // Fallback: try to get default pricing if regional pricing wasn't set
+        if (!pricingSet) {
           try {
             const defaultResponse = await fetch('/api/pricing/regional');
             if (defaultResponse.ok) {
@@ -141,8 +146,12 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
                 console.log('Using default pricing from database');
                 setRegionalPricing(defaultData.pricing);
               } else {
-                throw new Error('No default pricing available');
+                console.warn('No default pricing available');
+                setRegionalPricing(null);
               }
+            } else {
+              console.warn(`Failed to fetch default pricing (status: ${defaultResponse.status})`);
+              setRegionalPricing(null);
             }
           } catch (fallbackError) {
             console.error('Error fetching default pricing:', fallbackError);

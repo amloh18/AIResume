@@ -103,29 +103,95 @@ export class UnifiedAuthService {
           credentials: {
             email: { type: 'email' },
             verificationCode: { type: 'text' },
+            preVerified: { type: 'text' }, // Flag to skip code verification (user already verified)
           },
           async authorize(credentials) {
-            if (!credentials?.email || !credentials?.verificationCode) {
-              console.error('❌ Passwordless login: Missing credentials', {
+            if (!credentials?.email) {
+              console.error('❌ Passwordless login: Missing email');
+              return null;
+            }
+
+            // If preVerified flag is set, skip code verification (code was already verified and burned)
+            const isPreVerified = credentials.preVerified === 'true';
+
+            if (!isPreVerified && !credentials?.verificationCode) {
+              console.error('❌ Passwordless login: Missing verification code', {
                 hasEmail: !!credentials?.email,
-                hasCode: !!credentials?.verificationCode
+                hasCode: !!credentials?.verificationCode,
+                preVerified: isPreVerified
               });
               return null;
             }
 
             try {
-              console.log('🔐 Passwordless login: Starting authorization for', credentials.email);
+              console.log('🔐 Passwordless login: Starting authorization for', credentials.email, isPreVerified ? '(pre-verified)' : '');
               await getConnection();
 
-              // Verify the code first
-              const verificationResult = await VerificationToken.verifyCode(
-                credentials.verificationCode,
+              // If preVerified, skip ALL code verification and just find the user
+              // This is used when code was already verified by atomic-signup
+              if (isPreVerified) {
+                console.log('✅ Passwordless login: Pre-verified flow - skipping code verification');
+                
+                // User was already verified by atomic-signup
+                // Just find them and return user data
+                const user = await User.findOne({
+                  email: credentials.email.toLowerCase(),
+                }).lean().exec();
+
+                const userDoc = Array.isArray(user) ? user[0] : user;
+
+                if (!userDoc) {
+                  console.error('❌ Passwordless login: User not found for pre-verified sign-in');
+                  return null;
+                }
+
+                // Verify user is actually verified
+                if (!userDoc.isEmailVerified) {
+                  console.error('❌ Passwordless login: User not verified despite preVerified flag');
+                  return null;
+                }
+
+                // Update last login
+                await User.findByIdAndUpdate((userDoc._id as any).toString(), { lastLogin: new Date() });
+
+                const userData = {
+                  id: (userDoc._id as any).toString(),
+                  email: userDoc.email,
+                  name: `${userDoc.firstName || ''} ${userDoc.lastName || ''}`.trim() || 'User',
+                  image: userDoc.avatar || null,
+                };
+
+                console.log('✅ Passwordless login: Pre-verified authorization successful for user', userData.id);
+                return userData;
+              }
+
+              // Normal flow: verify code (for regular passwordless login)
+              if (!credentials?.verificationCode) {
+                console.error('❌ Passwordless login: Missing verification code');
+                return null;
+              }
+
+              // Verify the code - try passwordless-login first, then email-verification
+              // This allows email verification codes to be used for automatic sign-in after signup
+              let verificationResult = await VerificationToken.verifyCode(
+                credentials.verificationCode!,
                 credentials.email.toLowerCase(),
                 'passwordless-login'
               );
 
+              // If passwordless-login type fails, try email-verification type
+              // This allows email verification codes to be used for sign-in
               if (!verificationResult.valid) {
-                console.error('❌ Passwordless login: Code verification failed:', verificationResult.message);
+                console.log('🔍 Trying email-verification type for code...');
+                verificationResult = await VerificationToken.verifyCode(
+                  credentials.verificationCode!,
+                  credentials.email.toLowerCase(),
+                  'email-verification'
+                );
+              }
+
+              if (!verificationResult.valid) {
+                console.error('❌ Passwordless login: Code verification failed for both types:', verificationResult.message);
                 return null;
               }
 

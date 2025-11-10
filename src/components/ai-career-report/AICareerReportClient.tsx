@@ -157,15 +157,116 @@ function AICareerReportContent() {
     }
   }, [state.cvData, state.currentStep]);
 
+  // CRITICAL SECURITY: Prevent unauthenticated users from accessing dashboard
+  // This guards against browser navigation, errors, and race conditions
+  useEffect(() => {
+    // Don't check if session is still loading
+    if (status === 'loading') {
+      return;
+    }
+
+    // Check on mount if we're on dashboard without auth
+    if (typeof window !== 'undefined') {
+      const currentPath = window.location.pathname;
+      if (currentPath.startsWith('/dashboard')) {
+        // CRITICAL: Check both status and session object
+        if (status !== 'authenticated' || !session?.user?.id) {
+          console.warn('🚫 Security: Unauthenticated user on dashboard, redirecting to home', {
+            status,
+            hasSession: !!session,
+            hasUserId: !!session?.user?.id
+          });
+          router.replace('/');
+        }
+      }
+    }
+
+    // Handle browser back/forward navigation
+    const handlePopState = () => {
+      // Use setTimeout to check after navigation completes
+      setTimeout(() => {
+        const currentPath = window.location.pathname;
+        if (currentPath.startsWith('/dashboard')) {
+          // CRITICAL: Check both status and session object
+          if (status !== 'authenticated' || !session?.user?.id) {
+            console.warn('🚫 Security: Unauthenticated user attempted to access dashboard via browser navigation', {
+              status,
+              hasSession: !!session,
+              hasUserId: !!session?.user?.id
+            });
+            router.replace('/');
+          }
+        }
+      }, 0);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    
+    // Periodic security check to catch any edge cases
+    const securityCheckInterval = setInterval(() => {
+      if (typeof window !== 'undefined') {
+        const currentPath = window.location.pathname;
+        if (currentPath.startsWith('/dashboard')) {
+          if (status !== 'authenticated' || !session?.user?.id) {
+            console.warn('🚫 Security: Periodic check detected unauthenticated user on dashboard');
+            router.replace('/');
+          }
+        }
+      }
+    }, 2000); // Check every 2 seconds
+    
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      clearInterval(securityCheckInterval);
+    };
+  }, [session, status, router]);
+
+
+  // Safe back handler that checks authentication
+  const handleSafeBack = () => {
+    if (state.currentStep > 1) {
+      prevStep();
+    } else {
+      // If on step 1 and user presses back, redirect based on auth status
+      // CRITICAL SECURITY: Never redirect to dashboard if session is not fully authenticated
+      if (status === 'authenticated' && session?.user?.id) {
+        router.push('/dashboard');
+      } else {
+        router.push('/');
+      }
+    }
+  };
+
+  // Safe complete handler that checks authentication
+  const handleSafeComplete = () => {
+    // CRITICAL SECURITY: Never redirect to dashboard if session is not fully authenticated
+    // Check both session status and user object to prevent race conditions
+    if (status === 'loading') {
+      console.warn('🚫 Security: Session still loading, cannot redirect to dashboard');
+      router.push('/');
+      return;
+    }
+
+    if (status === 'authenticated' && session?.user?.id) {
+      // Double-check: Verify session is actually authenticated before redirecting
+      console.log('✅ Safe redirect to dashboard - user authenticated:', session.user.id);
+      router.push('/dashboard');
+    } else {
+      // Unauthenticated users should NEVER access dashboard
+      // Redirect to landing page or sign-in
+      console.warn('🚫 Security: Unauthenticated user attempted dashboard redirect, redirecting to home');
+      router.push('/');
+    }
+  };
 
   const renderStep = () => {
     switch (state.currentStep) {
       case 1:
         return <ChoosePathStep onNext={nextStep} />;
       case 2:
-        return <MasterCVBuilderStep onNext={nextStep} onBack={prevStep} />;
+        return <MasterCVBuilderStep onNext={nextStep} onBack={handleSafeBack} />;
       case 3:
-        return <AICareerReportStep onComplete={() => router.push('/dashboard')} onBack={prevStep} session={session} />;
+        return <AICareerReportStep onComplete={handleSafeComplete} onBack={handleSafeBack} session={session} />;
       default:
         return <ChoosePathStep onNext={nextStep} />;
     }
@@ -183,7 +284,26 @@ function AICareerReportContent() {
               {/* Back Button */}
               {state.currentStep > 1 && (
                 <motion.button
-                  onClick={prevStep}
+                  onClick={handleSafeBack}
+                  className="flex items-center gap-2 text-gray-600 dark:text-white/60 hover:text-gray-900 dark:hover:text-white transition-colors"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  whileHover={{ x: -5 }}
+                >
+                  <ArrowLeft size={20} />
+                </motion.button>
+              )}
+              {/* Back to Home for Step 1 */}
+              {state.currentStep === 1 && (
+                <motion.button
+                  onClick={() => {
+                    // CRITICAL SECURITY: Never redirect to dashboard if session is not fully authenticated
+                    if (status === 'authenticated' && session?.user?.id) {
+                      router.push('/dashboard');
+                    } else {
+                      router.push('/');
+                    }
+                  }}
                   className="flex items-center gap-2 text-gray-600 dark:text-white/60 hover:text-gray-900 dark:hover:text-white transition-colors"
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
