@@ -421,10 +421,10 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
             <div className="right-column">
               
               <img 
-                src={basics?.image || 'https://i.imgur.com/example.jpg'} // Placeholder URL, replace with a real one or user's
+                src={basics?.image || '/images/default-avatar.png'} 
                 alt={basics?.name || 'Profile Picture'} 
                 className="profile-picture"
-                onError={(e) => (e.currentTarget.src = 'https://i.imgur.com/QmWd5vY.png')} // Generic placeholder
+                onError={(e) => (e.currentTarget.src = '/images/default-avatar.png')}
               />
               
               <section className="education-section right-section">
