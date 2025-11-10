@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
 
     const userId = user._id.toString();
 
-    // Create SSE stream
+    // Create SSE stream with timeout handling
     const stream = new ReadableStream({
       start(controller) {
         // Store connection
@@ -61,11 +61,48 @@ export async function GET(request: NextRequest) {
           }
         }, 5000); // Check every 5 seconds
 
+        // Set up heartbeat to keep connection alive and detect disconnects
+        let heartbeatCount = 0;
+        const heartbeatInterval = setInterval(() => {
+          try {
+            heartbeatCount++;
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'heartbeat', count: heartbeatCount, timestamp: Date.now() })}\n\n`));
+          } catch (error) {
+            // Connection closed, cleanup
+            console.log(`💔 SSE heartbeat failed for user ${userId}, connection closed`);
+            clearInterval(interval);
+            clearInterval(heartbeatInterval);
+            clearTimeout(connectionTimeout);
+            connections.delete(userId);
+          }
+        }, 10000); // Send heartbeat every 10 seconds
+
+        // Set connection timeout (25 seconds before Vercel's 30s limit)
+        const connectionTimeout = setTimeout(() => {
+          console.log(`⏱️ SSE connection timeout for user ${userId}, closing gracefully`);
+          clearInterval(interval);
+          clearInterval(heartbeatInterval);
+          connections.delete(userId);
+          try {
+            controller.close();
+          } catch (error) {
+            // Connection may already be closed
+            console.warn('Error closing SSE connection:', error);
+          }
+        }, 25000); // 25 seconds
+
         // Cleanup on close
         request.signal.addEventListener('abort', () => {
+          console.log(`🔌 SSE connection aborted for user ${userId}`);
           clearInterval(interval);
+          clearInterval(heartbeatInterval);
+          clearTimeout(connectionTimeout);
           connections.delete(userId);
-          controller.close();
+          try {
+            controller.close();
+          } catch (error) {
+            // Connection may already be closed
+          }
         });
       },
     });

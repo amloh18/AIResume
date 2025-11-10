@@ -51,11 +51,12 @@ export default function ClientProviders({ children, session }: ClientProvidersPr
       <AuthProvider>
         <AdminAuthProvider>
           {/* NotificationProvider must be inside SessionProvider to use useSession */}
-          <NotificationProvider>
-            <ClientErrorBoundary>
+          {/* Wrap NotificationProvider in error boundary to prevent crashes */}
+          <ClientErrorBoundary>
+            <NotificationProvider>
               <ConditionalProviders>{children}</ConditionalProviders>
-            </ClientErrorBoundary>
-          </NotificationProvider>
+            </NotificationProvider>
+          </ClientErrorBoundary>
         </AdminAuthProvider>
       </AuthProvider>
     </SessionProvider>
