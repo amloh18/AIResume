@@ -23,6 +23,17 @@ export function useUserPlan() {
 
         // Fetch user data including plan information
         const response = await fetch('/api/user');
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          console.error('User plan response is not JSON. Content-Type:', contentType);
+          setError('Invalid response format from server');
+          setUserPlan({
+            currentPlanKey: 'free',
+            subscription: { planKey: 'free', status: 'active' }
+          });
+          return;
+        }
+        
         const data = await response.json();
 
         if (data.success && data.user) {

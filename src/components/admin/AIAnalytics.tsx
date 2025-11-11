@@ -75,6 +75,11 @@ const AIAnalytics: React.FC = () => {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Invalid response format from server');
+      }
+      
       const data = await response.json();
       
       if (data.error) {

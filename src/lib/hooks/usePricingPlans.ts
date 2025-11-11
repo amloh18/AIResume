@@ -121,13 +121,18 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
         try {
           const response = await fetch(`/api/pricing/regional?countryCode=${location.countryCode}`);
           if (response.ok) {
-            const data = await response.json();
-            if (data.success && data.pricing) {
-              console.log('Regional pricing from database:', data.pricing);
-              setRegionalPricing(data.pricing);
-              pricingSet = true;
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+              const data = await response.json();
+              if (data.success && data.pricing) {
+                console.log('Regional pricing from database:', data.pricing);
+                setRegionalPricing(data.pricing);
+                pricingSet = true;
+              } else {
+                console.warn('Invalid pricing data received, trying fallback');
+              }
             } else {
-              console.warn('Invalid pricing data received, trying fallback');
+              console.warn('Regional pricing response is not JSON. Content-Type:', contentType);
             }
           } else {
             console.warn(`Failed to fetch pricing (status: ${response.status}), trying fallback`);
@@ -216,12 +221,18 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
         let fetchedOffers: any[] = [];
 
         if (plansResponse.ok) {
-          const responseData = await plansResponse.json();
-          
-          // Extract plans from response - API returns { plans: [...], region: {...} }
-          fetchedPlans = Array.isArray(responseData) 
-            ? responseData 
-            : (responseData?.plans || []);
+          const contentType = plansResponse.headers.get('content-type');
+          if (!contentType || !contentType.includes('application/json')) {
+            console.error('Pricing plans response is not JSON. Content-Type:', contentType);
+            setError('Invalid response format from server');
+            setPlans([]);
+          } else {
+            const responseData = await plansResponse.json();
+            
+            // Extract plans from response - API returns { plans: [...], region: {...} }
+            fetchedPlans = Array.isArray(responseData) 
+              ? responseData 
+              : (responseData?.plans || []);
           
           // Ensure fetchedPlans is always an array
           if (!Array.isArray(fetchedPlans)) {
@@ -243,7 +254,8 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
             );
           }
           
-          setPlans(fetchedPlans);
+            setPlans(fetchedPlans);
+          }
         } else {
           console.error('Error fetching pricing plans:', plansResponse.status);
           setError('Failed to load pricing plans');
@@ -251,10 +263,15 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
         }
 
         if (offersResponse.ok) {
-          const offersData = await offersResponse.json();
-          if (offersData.success) {
-            fetchedOffers = offersData.offers || [];
-            setPromotionalOffers(fetchedOffers);
+          const contentType = offersResponse.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const offersData = await offersResponse.json();
+            if (offersData.success) {
+              fetchedOffers = offersData.offers || [];
+              setPromotionalOffers(fetchedOffers);
+            }
+          } else {
+            console.error('Promotional offers response is not JSON. Content-Type:', contentType);
           }
         } else {
           console.error('Error fetching promotional offers:', offersResponse.status);

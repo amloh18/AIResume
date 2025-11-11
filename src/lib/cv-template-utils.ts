@@ -12,7 +12,6 @@ import { HARDCODED_TEMPLATES } from '@/lib/templates/hardcoded-templates';
 export interface CVWithTemplate {
   _id: string;
   userId: mongoose.Types.ObjectId;
-  firebaseUid: string;
   title: string;
   cvData: any;
   templateId: mongoose.Types.ObjectId;
@@ -264,7 +263,6 @@ export async function validateTemplate(templateId: string): Promise<boolean> {
 export async function createCVWithTemplate(
   cvData: any,
   userId: mongoose.Types.ObjectId,
-  firebaseUid: string,
   templateId?: string
 ): Promise<any> {
   // Get template (default if not specified)
@@ -291,7 +289,6 @@ export async function createCVWithTemplate(
   // Create CV with required fields
   const newCV = new CV({
     userId,
-    firebaseUid,
     templateId: (template as any)._id || templateId,
     ...cvData
   });

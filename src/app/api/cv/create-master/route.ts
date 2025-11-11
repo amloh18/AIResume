@@ -27,7 +27,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Check if Master CV already exists (limit: 1 per user)
+    // CRITICAL FIX: Check if Master CV already exists - prevent duplicate creation
+    // Master CV should only be created via ai-career-report convert-to-master endpoint
     const existingMasterCV = await CV.findOne({
       userId: user._id,
       $or: [
@@ -39,13 +40,25 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingMasterCV) {
-      return NextResponse.json(
-        { 
-          error: 'Master CV already exists. You can only have one Master CV. Please edit your existing Master CV instead.',
-          existingMasterCVId: existingMasterCV._id
+      // Update existing master CV instead of creating new one
+      existingMasterCV.cvData = cvData;
+      existingMasterCV.markModified('cvData');
+      existingMasterCV.metadata = {
+        ...existingMasterCV.metadata,
+        lastModified: new Date()
+      };
+      existingMasterCV.markModified('metadata');
+      await existingMasterCV.save();
+      
+      return NextResponse.json({ 
+        success: true, 
+        cv: {
+          id: existingMasterCV._id,
+          title: existingMasterCV.title,
+          isMaster: existingMasterCV.metadata.isMaster
         },
-        { status: 409 } // 409 Conflict
-      );
+        message: 'Master CV updated successfully'
+      });
     }
 
     // Create Master CV
@@ -53,10 +66,18 @@ export async function POST(request: NextRequest) {
       userId: user._id,
       title: 'Master CV',
       cvData,
-      isMaster: true,
       journeyId: null, // Master CV is not tied to any specific journey
       templateId: 'default', // Use default template
-      status: 'draft'
+      status: 'draft',
+      metadata: {
+        isMaster: true, // Set isMaster in metadata, not top-level
+        lastModified: new Date(),
+        tags: ['master-cv'],
+        isPublic: false,
+        viewCount: 0,
+        downloadCount: 0,
+        starred: false
+      }
     });
 
     await masterCV.save();
@@ -76,7 +97,7 @@ export async function POST(request: NextRequest) {
       cv: {
         id: masterCV._id,
         title: masterCV.title,
-        isMaster: masterCV.isMaster
+        isMaster: masterCV.metadata.isMaster
       }
     });
 

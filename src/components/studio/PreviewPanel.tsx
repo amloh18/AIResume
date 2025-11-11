@@ -43,6 +43,7 @@ interface PreviewPanelProps {
   onDocumentTypeChange?: (type: 'cv' | 'cover-letter') => void;
   isMasterCV?: boolean;
   coverLetterData?: any;
+  isLoading?: boolean; // Add loading prop to show loading state
 }
 
 const PreviewPanel = React.forwardRef<HTMLDivElement, PreviewPanelProps>(({
@@ -60,9 +61,11 @@ const PreviewPanel = React.forwardRef<HTMLDivElement, PreviewPanelProps>(({
   setPagePadding,
   onDocumentTypeChange,
   isMasterCV = false,
-  coverLetterData
+  coverLetterData,
+  isLoading = false // Add loading prop with default
 }, ref) => {
-  // Removed console log to prevent toast notifications
+  // CRITICAL: All hooks must be called unconditionally, before any conditional returns
+  // This ensures consistent hook order and prevents "Rendered fewer hooks than expected" errors
   
   const { theme } = useTheme();
   const [currentPage, setCurrentPage] = useState(1);
@@ -358,9 +361,20 @@ const PreviewPanel = React.forwardRef<HTMLDivElement, PreviewPanelProps>(({
           paddingBottom: '1rem'
         }}
       >
-        <div ref={internalRef} className="flex items-start justify-center w-full">
-          {documentType === 'cv' ? renderCVPreview() : renderCoverLetterPreview()}
-        </div>
+        {isLoading ? (
+          <div className="flex items-center justify-center w-full h-full">
+            <div className="bg-white dark:bg-[#1a230f] rounded-lg border border-gray-200 dark:border-white/10 p-6 animate-pulse w-full max-w-2xl">
+              <div className="space-y-4">
+                <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-48 mb-6"></div>
+                <div className="aspect-[8.5/11] bg-gray-200 dark:bg-gray-700 rounded"></div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div ref={internalRef} className="flex items-start justify-center w-full">
+            {documentType === 'cv' ? renderCVPreview() : renderCoverLetterPreview()}
+          </div>
+        )}
       </div>
     </div>
   );

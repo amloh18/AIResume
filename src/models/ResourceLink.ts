@@ -14,26 +14,26 @@ const resourceLinkSchema = new Schema<IResourceLink>({
   parentType: {
     type: String,
     enum: ['job', 'journey'],
-    required: true,
-    index: true
+    required: true
+    // Note: Index defined in compound indexes below
   },
   parentId: {
     type: Schema.Types.ObjectId,
     required: true,
-    index: true,
     refPath: 'parentType'
+    // Note: Index defined in compound indexes below
   },
   childType: {
     type: String,
     enum: ['cv', 'coverLetter'],
-    required: true,
-    index: true
+    required: true
+    // Note: Index defined in compound indexes below
   },
   childId: {
     type: Schema.Types.ObjectId,
     required: true,
-    index: true,
     refPath: 'childType'
+    // Note: Index defined in compound indexes below
   },
   isRequired: {
     type: Boolean,

@@ -63,8 +63,8 @@ const notificationQueueSchema = new Schema<INotificationQueue>(
         'broadcast',
         'targeted',
       ],
-      required: true,
-      index: true,
+      required: true
+      // Note: Index defined in compound index below
     },
     payload: {
       type: Schema.Types.Mixed,
@@ -73,19 +73,19 @@ const notificationQueueSchema = new Schema<INotificationQueue>(
     priority: {
       type: String,
       enum: ['low', 'medium', 'high', 'urgent'],
-      default: 'medium',
-      index: true,
+      default: 'medium'
+      // Note: Index defined in compound indexes below
     },
     scheduledFor: {
       type: Date,
-      default: Date.now,
-      index: true,
+      default: Date.now
+      // Note: Index defined in compound index below
     },
     status: {
       type: String,
       enum: ['pending', 'processing', 'completed', 'failed', 'cancelled'],
-      default: 'pending',
-      index: true,
+      default: 'pending'
+      // Note: Index defined in compound indexes below
     },
     retries: {
       type: Number,

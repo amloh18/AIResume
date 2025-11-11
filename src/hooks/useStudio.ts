@@ -92,7 +92,7 @@ export function useStudio(): UseStudioReturn {
     console.log('🔗 Initializing Journey Mode:', params.journeyId);
 
     // 1. Fetch ApplicationJourney
-    const journeyResponse = await fetch(`/api/application-journeys/${params.journeyId}`);
+    const journeyResponse = await fetch(`/api/application-journey/${params.journeyId}`);
     if (!journeyResponse.ok) {
       throw new Error('Application journey not found');
     }
@@ -464,7 +464,7 @@ export function useStudio(): UseStudioReturn {
 
   const navigateToJourney = useCallback(() => {
     if (state.sessionContext.mode === 'journey' && state.sessionContext.journeyId) {
-      router.push(`/dashboard/application-journeys/${state.sessionContext.journeyId}`);
+      router.push(`/dashboard/application-tracker?journeyId=${state.sessionContext.journeyId}`);
     }
   }, [state.sessionContext, router]);
 
@@ -604,7 +604,7 @@ async function createStandaloneCoverLetter(userId: string): Promise<{ newCoverLe
 async function updateApplicationJourneyDocument(journeyId: string, documentType: DocumentType, documentId: string) {
   const field = documentType === 'cv' ? 'cvId' : 'coverLetterId';
   
-  const response = await fetch(`/api/application-journeys/${journeyId}`, {
+  const response = await fetch(`/api/application-journey/${journeyId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

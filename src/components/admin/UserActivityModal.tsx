@@ -70,8 +70,17 @@ export default function UserActivityModal({
       const response = await fetch(`/api/admin/users/${userId}/activity`);
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to fetch user activity');
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          try {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to fetch user activity');
+          } catch {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+        } else {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
       }
 
       const contentType = response.headers.get('content-type');

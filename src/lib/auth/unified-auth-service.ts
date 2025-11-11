@@ -97,6 +97,110 @@ export class UnifiedAuthService {
           },
         }),
 
+        // Admin Credentials Provider
+        CredentialsProvider({
+          id: 'admin-credentials',
+          name: 'Admin Login',
+          credentials: {
+            email: { type: 'email' },
+            password: { type: 'password' },
+          },
+          async authorize(credentials, req) {
+            if (!credentials?.email || !credentials?.password) {
+              console.log('Admin auth: Missing credentials');
+              return null;
+            }
+
+            try {
+              // Get database connection
+              await getConnection();
+              
+              // Dynamically import AdminAuth model to avoid circular dependencies
+              const AdminAuth = (await import('@/models/AdminAuth')).default;
+              
+              // Find admin user by email
+              const adminUser = await AdminAuth.findOne({ 
+                email: credentials.email.toLowerCase().trim()
+              }).select('+password');
+              
+              if (!adminUser) {
+                console.log('Admin user not found:', credentials.email);
+                // Log failed login attempt
+                try {
+                  const { ActivityLogService } = await import('@/lib/services/activityLogService');
+                  await ActivityLogService.logAdminAction({
+                    adminUserId: 'unknown',
+                    adminEmail: credentials.email,
+                    action: 'admin_login_failed',
+                    actionType: 'authentication',
+                    status: 'failed',
+                    metadata: {
+                      reason: 'user_not_found',
+                      provider: 'admin-credentials'
+                    }
+                  });
+                } catch (logError) {
+                  console.error('Failed to log admin login failure:', logError);
+                }
+                return null;
+              }
+
+              // Verify password
+              const isPasswordValid = await adminUser.comparePassword(credentials.password);
+              
+              if (!isPasswordValid) {
+                console.log('Invalid password for admin:', credentials.email);
+                // Log failed login attempt
+                try {
+                  const { ActivityLogService } = await import('@/lib/services/activityLogService');
+                  await ActivityLogService.logAdminAction({
+                    adminUserId: adminUser._id.toString(),
+                    adminEmail: credentials.email,
+                    action: 'admin_login_failed',
+                    actionType: 'authentication',
+                    status: 'failed',
+                    metadata: {
+                      reason: 'invalid_password',
+                      provider: 'admin-credentials'
+                    }
+                  });
+                } catch (logError) {
+                  console.error('Failed to log admin login failure:', logError);
+                }
+                return null;
+              }
+
+              // Update last login (don't fail if this fails)
+              try {
+                adminUser.lastLogin = new Date();
+                await adminUser.save();
+              } catch (saveError) {
+                console.warn('Failed to update admin last login:', saveError);
+                // Continue anyway - this is not critical
+              }
+
+              // Return admin user with role
+              return {
+                id: adminUser._id.toString(),
+                email: adminUser.email,
+                name: adminUser.email.split('@')[0],
+                role: adminUser.role || 'admin',
+                type: 'admin',
+              };
+            } catch (error: any) {
+              // Log error but don't expose details to client
+              console.error('Admin authentication error:', {
+                message: error?.message || 'Unknown error',
+                name: error?.name || 'Error',
+                // Don't log full stack in production
+                ...(process.env.NODE_ENV === 'development' && { stack: error?.stack })
+              });
+              // Always return null on error - never throw
+              return null;
+            }
+          },
+        }),
+
         CredentialsProvider({
           id: 'passwordless',
           name: 'Passwordless Login',
@@ -279,36 +383,8 @@ export class UnifiedAuthService {
             }
           },
         }),
-
-        CredentialsProvider({
-          id: 'admin-credentials',
-          name: 'Admin Login',
-          credentials: {
-            email: { type: 'email' },
-            password: { type: 'password' },
-          },
-          async authorize(credentials, req) {
-            if (!credentials?.email || !credentials?.password) {
-              return null;
-            }
-
-            const result = await UserService.authenticateAdmin(
-              credentials.email,
-              credentials.password
-            );
-
-            if (!result.user || result.error) {
-              return null;
-            }
-
-            return {
-              id: result.user.id,
-              email: result.user.email,
-              name: result.user.name,
-              image: result.user.image || undefined,
-            };
-          },
-        }),
+        // NOTE: admin-credentials provider is defined above (line 101)
+        // Removed duplicate provider that was using UserService.authenticateAdmin
       ],
 
       callbacks: {
@@ -342,44 +418,66 @@ export class UnifiedAuthService {
           if (user) {
             token.id = user.id || '';
             token.email = user.email || '';
+            // Preserve admin type and role from authorize function
+            if ((user as any).type === 'admin') {
+              token.type = 'admin';
+              token.role = (user as any).role || 'admin';
+              token.name = user.name || (user.email as string)?.split('@')[0] || 'Admin';
+            }
           }
 
           return token;
         },
 
         async session({ session, token }) {
-          // Fetch fresh user data from cache or DB on each session check
-          // IMPORTANT: Only store minimal data in session to prevent cookie size issues
-          if (token && session?.user && token.id) {
-            try {
-            const userData = await UnifiedAuthService.fetchUserData(token.id as string);
+          // Check if this is an admin user first
+          const isAdmin = token.type === 'admin' || token.role === 'admin' || token.role === 'superadmin';
+          
+          if (isAdmin) {
+            // Admin user - use token data directly (don't fetch from User model)
+            session.user.id = (token.id as string) || '';
+            session.user.email = (token.email as string) || '';
+            session.user.name = (token.name as string) || (token.email as string)?.split('@')[0] || 'Admin';
+            (session.user as any).role = (token.role as string) || 'admin';
+            (session.user as any).type = 'admin';
+            (session.user as any).planKey = 'admin';
+            (session.user as any).subscriptionStatus = 'active';
+          } else {
+            // Regular user - fetch fresh user data from cache or DB
+            // IMPORTANT: Only store minimal data in session to prevent cookie size issues
+            if (token && session?.user && token.id) {
+              try {
+                const userData = await UnifiedAuthService.fetchUserData(token.id as string);
 
-            if (userData) {
-                // Store only essential fields - keep session minimal
-              session.user.id = userData.id;
-                session.user.email = userData.email || (token.email as string) || '';
-                session.user.name = userData.name || '';
-              session.user.image = userData.image ?? undefined;
-                (session.user as any).role = userData.role || 'user';
-              (session.user as any).type = 'user';
-                (session.user as any).planKey = userData.planKey || 'free';
-                (session.user as any).subscriptionStatus = userData.subscriptionStatus || 'inactive';
-            } else {
-              // Fallback to token data if user not found
+                if (userData) {
+                  // Store only essential fields - keep session minimal
+                  session.user.id = userData.id;
+                  session.user.email = userData.email || (token.email as string) || '';
+                  session.user.name = userData.name || '';
+                  session.user.image = userData.image ?? undefined;
+                  (session.user as any).role = userData.role || 'user';
+                  (session.user as any).type = 'user';
+                  (session.user as any).planKey = userData.planKey || 'free';
+                  (session.user as any).subscriptionStatus = userData.subscriptionStatus || 'inactive';
+                } else {
+                  // Fallback to token data if user not found
+                  session.user.id = (token.id as string) || '';
+                  session.user.email = (token.email as string) || '';
+                  session.user.name = '';
+                  (session.user as any).role = 'user';
+                  (session.user as any).type = 'user';
+                  (session.user as any).planKey = 'free';
+                  (session.user as any).subscriptionStatus = 'inactive';
+                }
+              } catch (error) {
+                console.error('❌ Error in session callback:', error);
+                // Fallback to minimal token data on error
                 session.user.id = (token.id as string) || '';
                 session.user.email = (token.email as string) || '';
                 session.user.name = '';
                 (session.user as any).role = 'user';
                 (session.user as any).type = 'user';
-                (session.user as any).planKey = 'free';
-                (session.user as any).subscriptionStatus = 'inactive';
               }
-            } catch (error) {
-              console.error('❌ Error in session callback:', error);
-              // Fallback to minimal token data on error
-              session.user.id = (token.id as string) || '';
-              session.user.email = (token.email as string) || '';
-              session.user.name = '';
             }
           }
 
@@ -391,10 +489,10 @@ export class UnifiedAuthService {
               email: String(session.user?.email || ''),
               name: String(session.user?.name || ''),
               image: session.user?.image ? String(session.user.image).substring(0, 500) : undefined, // Limit image URL length
-              role: String((session.user as any)?.role || 'user'),
-              type: String((session.user as any)?.type || 'user'),
-              planKey: String((session.user as any)?.planKey || 'free'),
-              subscriptionStatus: String((session.user as any)?.subscriptionStatus || 'inactive'),
+              role: String((session.user as any)?.role || (isAdmin ? 'admin' : 'user')),
+              type: String((session.user as any)?.type || (isAdmin ? 'admin' : 'user')),
+              planKey: String((session.user as any)?.planKey || (isAdmin ? 'admin' : 'free')),
+              subscriptionStatus: String((session.user as any)?.subscriptionStatus || (isAdmin ? 'active' : 'inactive')),
             },
             expires: session.expires
           };
@@ -419,7 +517,41 @@ export class UnifiedAuthService {
 
       events: {
         async signIn({ user, account, profile, isNewUser }) {
-          // User sign-in event logging
+          // Log sign-in events to activity logs
+          try {
+            const { ActivityLogService } = await import('@/lib/services/activityLogService');
+            const isAdmin = (user as any)?.type === 'admin' || (user as any)?.role === 'admin' || (user as any)?.role === 'superadmin';
+            
+            if (isAdmin) {
+              // Log admin login
+              await ActivityLogService.logAdminAction({
+                adminUserId: user.id || '',
+                adminEmail: user.email || undefined,
+                action: 'admin_login_success',
+                actionType: 'authentication',
+                status: 'success',
+                metadata: {
+                  provider: account?.provider || 'unknown',
+                  isNewUser: isNewUser || false
+                }
+              });
+            } else {
+              // Log regular user login
+              await ActivityLogService.logUserAction({
+                userId: user.id || '',
+                userEmail: user.email || undefined,
+                action: 'user_login_success',
+                status: 'success',
+                metadata: {
+                  provider: account?.provider || 'unknown',
+                  isNewUser: isNewUser || false
+                }
+              });
+            }
+          } catch (error) {
+            // Don't fail sign-in if logging fails
+            console.error('Failed to log sign-in event:', error);
+          }
         },
         async signOut({ token }) {
           // Invalidate user cache on sign out

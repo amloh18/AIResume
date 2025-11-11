@@ -738,14 +738,24 @@ const CVStudio: React.FC<CVStudioProps> = ({
               }
             }
 
-            // Create new CV
+            // CRITICAL FIX: Never create new master CVs in studio
+            // Master CVs should only be created via ai-career-report
+            if (isMasterCV) {
+              console.error('❌ CVStudio - Attempted to create master CV in studio - this should not happen');
+              console.error('❌ Master CVs should only be created via ai-career-report convert-to-master endpoint');
+              setError('Cannot create Master CV here. Please use the AI Career Report to create your Master CV.');
+              setSaveStatus('error');
+              return;
+            }
+
+            // Create new CV (only for non-master CVs)
             const newCV = await CVService.createCV({
               title: cvTitle || 'Untitled CV',
               cvData: data,
               templateId: selectedTemplate?._id?.toString() || selectedTemplate?.id?.toString() || '',
               journeyId: journeyId || journeyInfo?.journeyId,
               metadata: {
-                isMaster: isMasterCV
+                isMaster: false // Never create master CVs here
               }
             }, userId || '');
 
@@ -2198,10 +2208,31 @@ const CVStudio: React.FC<CVStudioProps> = ({
               console.log('🔍 CVStudio - User ID type:', typeof userId, 'Length:', userId?.length);
               console.log('🔍 CVStudio - CV ID type:', typeof cvId, 'Length:', cvId?.length);
               
-              // Check if this is a Master CV and try the master CV API first
-              const isMasterCV = new URLSearchParams(window.location.search).get('master') === 'true';
+              // CRITICAL FIX: Check if this is a Master CV first, then use master CV API
+              // Check URL parameter first, then check CV metadata
+              const isMasterFromURL = new URLSearchParams(window.location.search).get('master') === 'true';
+              
+              // Try to load CV first to check if it's a master CV
+              let isMasterCV = isMasterFromURL;
+              if (!isMasterCV && cvId) {
+                try {
+                  // Quick check: fetch CV metadata to see if it's a master CV
+                  const cvCheckResponse = await fetch(`/api/cvs/${cvId}?userId=${userId}`);
+                  if (cvCheckResponse.ok) {
+                    const cvCheckData = await cvCheckResponse.json();
+                    const metadataIsMaster = cvCheckData.data?.cv?.metadata?.isMaster;
+                    const rootIsMaster = cvCheckData.data?.cv?.isMaster;
+                    isMasterCV = metadataIsMaster === true || metadataIsMaster === 'true' || rootIsMaster === true || rootIsMaster === 'true';
+                    console.log('🔍 CVStudio - CV master status check:', { isMasterCV, metadataIsMaster, rootIsMaster });
+                  }
+                } catch (checkError) {
+                  console.warn('⚠️ CVStudio - Could not check CV master status, will try master API if URL param is set:', checkError);
+                }
+              }
+              
+              // If this is a master CV (from URL or metadata), use master CV API
               if (isMasterCV) {
-                console.log('🔍 CVStudio - Detected Master CV, trying master API first');
+                console.log('🔍 CVStudio - Detected Master CV, using master API (single source of truth)');
                 try {
                   const masterResponse = await fetch(`/api/cvs/master?userId=${userId}`);
                   const masterResult = await masterResponse.json();
@@ -2210,9 +2241,29 @@ const CVStudio: React.FC<CVStudioProps> = ({
                     console.log('✅ CVStudio - Master CV loaded from master API');
                     cvResult = masterResult.data.masterCV;
                     convertedData = cvResult.cvData;
+                    
+                    // CRITICAL: Verify basics section is complete
+                    if (!convertedData.basics || !convertedData.basics.name) {
+                      console.warn('⚠️ CVStudio - Master CV basics section incomplete, ensuring structure');
+                      convertedData.basics = {
+                        name: convertedData.basics?.name || '',
+                        label: convertedData.basics?.label || '',
+                        image: convertedData.basics?.image || '',
+                        email: convertedData.basics?.email || '',
+                        phone: convertedData.basics?.phone || '',
+                        url: convertedData.basics?.url || '',
+                        summary: convertedData.basics?.summary || '',
+                        location: convertedData.basics?.location || {
+                          address: '', postalCode: '', city: '', countryCode: '', region: ''
+                        },
+                        profiles: Array.isArray(convertedData.basics?.profiles) ? convertedData.basics.profiles : []
+                      };
+                    }
+                    
                     // Use setCvDataWithStructure to ensure structure is initialized
                     await setCvDataWithStructure(convertedData, cvResult.templateId);
                     setIsMasterCV(true);
+                    setCurrentMasterCV({ id: cvResult.id, title: cvResult.title });
                     
                     // Set CV title from the result
                     if (cvResult.title) {
@@ -2222,19 +2273,27 @@ const CVStudio: React.FC<CVStudioProps> = ({
                       setCvTitle(generatedTitle);
                     }
                     
-                    // Skip the CVService call since we got the data from master API
+                    // CRITICAL: Set cvId to master CV ID to prevent creating new CVs
+                    if (cvResult.id) {
+                      setCvId(cvResult.id);
+                    }
+                    
                     console.log('✅ CVStudio - Master CV loaded successfully from master API');
+                    // Skip the CVService call since we got the data from master API
+                    return; // Exit early to prevent fallback
                   } else {
-                    console.log('❌ CVStudio - Master CV not found in master API, falling back to CVService');
-                    throw new Error('Master CV not found in master API');
+                    console.error('❌ CVStudio - Master CV not found in master API');
+                    setError('Master CV not found. Please create your Master CV through the AI Career Report first.');
+                    return; // Don't fall through to create new CV
                   }
                 } catch (masterError) {
-                  console.error('❌ CVStudio - Master API failed, falling back to CVService:', masterError);
-                  // Fall through to CVService call below
+                  console.error('❌ CVStudio - Master API failed:', masterError);
+                  setError('Failed to load Master CV. Please try again or create your Master CV through the AI Career Report.');
+                  return; // Don't fall through to create new CV
                 }
               }
               
-              // If not a master CV or master API failed, use CVService
+              // If not a master CV, use CVService
               if (!cvResult) {
                 try {
                   console.log('🔍 CVStudio - Fetching CV using CVService with cvId:', cvId, 'userId:', userId);
@@ -2266,31 +2325,19 @@ const CVStudio: React.FC<CVStudioProps> = ({
                     setCvTitle(generatedTitle);
                   }
 
-                  // Check if this is a master CV from the API response
-                  // We need to fetch the full CV data to check isMaster field
-                  const cvResponse = await fetch(`/api/cvs/${cvId}?userId=${userId}`);
-                  if (cvResponse.ok) {
-                    const cvData = await cvResponse.json();
-                    const isMasterCV = cvData.data?.cv?.metadata?.isMaster || false;
-                    
-                    if (isMasterCV) {
-                      setIsMasterCV(true);
-                      setCurrentMasterCV({ id: cvId, title: cvResult.title || cvTitle });
-                      console.log('🔍 Master CV detected from API response');
-                    } else {
-                      setIsMasterCV(false);
-                      setCurrentMasterCV(null);
-                      console.log('🔍 Tailored CV detected from API response');
-                    }
+                  // Check if this is a master CV from the CVService response
+                  const metadataIsMaster = cvResult.metadata?.isMaster;
+                  const rootIsMaster = (cvResult as any)?.isMaster;
+                  const isMasterFromResponse = metadataIsMaster === true || metadataIsMaster === 'true' || rootIsMaster === true || rootIsMaster === 'true';
+                  
+                  if (isMasterFromResponse) {
+                    setIsMasterCV(true);
+                    setCurrentMasterCV({ id: cvId, title: cvResult.title || cvTitle });
+                    console.log('🔍 Master CV detected from CVService response');
                   } else {
-                    // Fallback: Check URL parameters if API call fails
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const isMasterFromURL = urlParams.get('master') === 'true';
-                    if (isMasterFromURL) {
-                      setIsMasterCV(true);
-                      setCurrentMasterCV({ id: cvId, title: cvResult.title || cvTitle });
-                      console.log('🔍 Master CV detected from URL parameters (fallback)');
-                    }
+                    setIsMasterCV(false);
+                    setCurrentMasterCV(null);
+                    console.log('🔍 Tailored CV detected from CVService response');
                   }
                 } catch (error) {
                   console.error('❌ CVStudio - Failed to fetch CV:', error);
@@ -4029,33 +4076,25 @@ const CVStudio: React.FC<CVStudioProps> = ({
           />
         }
         rightPanel={
-          isLoading ? (
-            <div className="bg-white dark:bg-[#1a230f] rounded-lg border border-gray-200 dark:border-white/10 p-6 animate-pulse">
-              <div className="space-y-4">
-                <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-48 mb-6"></div>
-                <div className="aspect-[8.5/11] bg-gray-200 dark:bg-gray-700 rounded"></div>
-              </div>
-            </div>
-          ) : (
-            <PreviewPanel
-              ref={previewRef}
-              cvData={debouncedCvData}
-              template={selectedTemplate}
-              jobData={currentJob}
-              zoom={zoom}
-              setZoom={setZoom}
-              paperSize={paperSize}
-              setPaperSize={setPaperSize}
-              documentType={documentType}
-              sectionOrder={sectionOrder}
-              sectionVisibility={sectionVisibility}
-              pagePadding={pagePadding}
-              setPagePadding={setPagePadding}
-              onDocumentTypeChange={handleDocumentTypeChange}
-              isMasterCV={isMasterCV}
-              coverLetterData={coverLetterData}
-            />
-          )
+          <PreviewPanel
+            ref={previewRef}
+            cvData={debouncedCvData}
+            template={selectedTemplate}
+            jobData={currentJob}
+            zoom={zoom}
+            setZoom={setZoom}
+            paperSize={paperSize}
+            setPaperSize={setPaperSize}
+            documentType={documentType}
+            sectionOrder={sectionOrder}
+            sectionVisibility={sectionVisibility}
+            pagePadding={pagePadding}
+            setPagePadding={setPagePadding}
+            onDocumentTypeChange={handleDocumentTypeChange}
+            isMasterCV={isMasterCV}
+            coverLetterData={coverLetterData}
+            isLoading={isLoading}
+          />
         }
       />
 

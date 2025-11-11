@@ -1,24 +1,31 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { NextRequest } from 'next/server';
 import { getConnection } from '@/lib/database';
 import User from '@/models/User';
 import notificationService from '@/lib/services/notificationService';
-import { NotificationType, NotificationChannel } from '@/models/Notification';
+import { NotificationType } from '@/models/Notification';
+import { withAdminAuth } from '@/lib/middleware/admin-auth';
+import { withValidation, successResponse } from '@/lib/validation/api-validator';
+import { z } from 'zod';
 
-export async function POST(request: NextRequest) {
-  try {
-    // Check admin authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+const sendNotificationSchema = z.object({
+  type: z.string().min(1, 'Notification type is required'),
+  title: z.string().min(1, 'Title is required').max(200),
+  message: z.string().min(1, 'Message is required').max(1000),
+  targetAudience: z.enum(['all', 'free', 'paid', 'new']).optional(),
+  planFilter: z.string().optional(),
+  channels: z.array(z.string()).optional().default(['in-app']),
+  persistent: z.boolean().optional().default(false),
+  expiresAt: z.string().datetime().optional(),
+});
 
-    // TODO: Add admin role check here
-
+/**
+ * POST /api/admin/notifications/send
+ * Send notifications to users (admin only)
+ */
+export const POST = withAdminAuth(
+  withValidation(sendNotificationSchema, async (request, validatedData) => {
     await getConnection();
 
-    const body = await request.json();
     const {
       type,
       title,
@@ -28,7 +35,7 @@ export async function POST(request: NextRequest) {
       channels,
       persistent,
       expiresAt,
-    } = body;
+    } = validatedData;
 
     // Determine target users
     let userQuery: any = {};
@@ -46,7 +53,7 @@ export async function POST(request: NextRequest) {
       userQuery.currentPlanKey = planFilter;
     }
 
-    const users = await User.find(userQuery).select('_id firebaseUid');
+    const users = await User.find(userQuery).select('_id');
 
     // Enqueue notification for each user
     let enqueued = 0;
@@ -55,7 +62,6 @@ export async function POST(request: NextRequest) {
         taskType: type as NotificationType,
         payload: {
           userId: user._id.toString(),
-          firebaseUid: user.firebaseUid,
           notificationType: type,
           title,
           message,
@@ -68,17 +74,9 @@ export async function POST(request: NextRequest) {
       enqueued++;
     }
 
-    return NextResponse.json({
-      success: true,
+    return successResponse({
       message: `Notification enqueued for ${enqueued} users`,
       enqueued,
     });
-  } catch (error: any) {
-    console.error('Error sending notification:', error);
-    return NextResponse.json(
-      { error: 'Failed to send notification', message: error.message },
-      { status: 500 }
-    );
-  }
-}
-
+  }) as (request: NextRequest) => Promise<NextResponse>
+);

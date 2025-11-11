@@ -1,45 +1,46 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import DraftManagement from '@/components/admin/DraftManagement';
 
 export default function AdminDraftsPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const { data: session, status } = useSession();
+
+  // Extract admin user from session
+  const user = session?.user as any;
+  const isAdmin = user?.type === 'admin' || user?.role === 'admin' || user?.role === 'superadmin';
 
   useEffect(() => {
-    const verifyAdmin = async () => {
-      try {
-        const response = await fetch('/api/admin/verify');
-        const data = await response.json();
+    // Redirect if not authenticated or not an admin
+    if (status === 'unauthenticated') {
+      router.push('/admin/signin');
+      return;
+    }
 
-        if (data.success) {
-          setIsAdmin(true);
-        } else {
-          router.push('/admin/signin');
-        }
-      } catch (error) {
-        console.error('Admin verification error:', error);
-        router.push('/admin/signin');
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (status === 'authenticated' && !isAdmin) {
+      console.error('User is not an admin');
+      router.push('/sign-in');
+      return;
+    }
+  }, [status, isAdmin, router]);
 
-    verifyAdmin();
-  }, [router]);
-
-  if (loading) {
+  // Show loading state while checking authentication
+  if (status === 'loading') {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-white">Loading...</div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p className="text-gray-400">Loading admin drafts...</p>
+        </div>
       </div>
     );
   }
 
-  if (!isAdmin) {
+  // Don't render if not authenticated or not admin
+  if (!user || !isAdmin) {
     return null; // Will redirect
   }
 

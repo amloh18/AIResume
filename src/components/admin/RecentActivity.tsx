@@ -49,12 +49,29 @@ const RecentActivity: React.FC = () => {
     try {
       setError(null);
       const response = await fetch('/api/admin/activity?limit=20');
+      
+      // Check content type before parsing
+      const contentType = response.headers.get('content-type');
+      const isJson = contentType && contentType.includes('application/json');
+      
       if (response.ok) {
+        if (!isJson) {
+          throw new Error('Server returned non-JSON response');
+        }
         const data = await response.json();
         setActivities(data.activities || []);
       } else {
-        const errorData = await response.json();
-        setError(`Failed to fetch activities: ${errorData.error || 'Unknown error'}`);
+        // Try to parse error if JSON, otherwise use status text
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        if (isJson) {
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+          } catch {
+            // If JSON parse fails, use default error message
+          }
+        }
+        setError(`Failed to fetch activities: ${errorMessage}`);
       }
     } catch (error) {
       console.error('Error fetching activities:', error);

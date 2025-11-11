@@ -114,8 +114,11 @@ const PromotionalOfferManager: React.FC = () => {
     try {
       const response = await fetch('/api/admin/promotional-offers');
       if (response.ok) {
-        const data = await response.json();
-        setOffers(data);
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await response.json();
+          setOffers(data);
+        }
       }
     } catch (error) {
       console.error('Error fetching promotional offers:', error);
@@ -128,10 +131,13 @@ const PromotionalOfferManager: React.FC = () => {
     try {
       const response = await fetch('/api/pricing-plans?includeInactive=true');
       if (response.ok) {
-        const data = await response.json();
-        // Extract plans from response - API returns { plans: [...], region: {...} }
-        const plans = Array.isArray(data) ? data : (data?.plans || []);
-        setPricingPlans(Array.isArray(plans) ? plans : []);
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await response.json();
+          // Extract plans from response - API returns { plans: [...], region: {...} }
+          const plans = Array.isArray(data) ? data : (data?.plans || []);
+          setPricingPlans(Array.isArray(plans) ? plans : []);
+        }
       }
     } catch (error) {
       console.error('Error fetching pricing plans:', error);
@@ -161,8 +167,17 @@ const PromotionalOfferManager: React.FC = () => {
         resetForm();
         alert(editingOffer ? 'Promotional offer updated!' : 'Promotional offer created!');
       } else {
-        const errorData = await response.json();
-        alert(`Error: ${errorData.error || 'Failed to save offer'}`);
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          try {
+            const errorData = await response.json();
+            alert(`Error: ${errorData.error || 'Failed to save offer'}`);
+          } catch {
+            alert('Failed to save offer');
+          }
+        } else {
+          alert('Failed to save offer');
+        }
       }
     } catch (error) {
       console.error('Error saving promotional offer:', error);

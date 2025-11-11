@@ -29,23 +29,13 @@ export async function POST(request: NextRequest) {
     await getConnection();
     
     // Get user identifier
-    const userIdentifier = session.user.firebaseUid 
-      ? { type: 'firebase', id: session.user.firebaseUid }
-      : { type: 'userId', id: session.user.id };
+    const userId = session.user.id;
 
     // Fetch job applications (excluding 'created' status)
-    let jobs;
-    if (userIdentifier.type === 'firebase') {
-      jobs = await Job.find({ 
-        firebaseUid: userIdentifier.id,
-        status: { $ne: 'created' }
-      }).sort({ updatedAt: -1 });
-    } else {
-      jobs = await Job.find({ 
-        userId: userIdentifier.id,
-        status: { $ne: 'created' }
-      }).sort({ updatedAt: -1 });
-    }
+    const jobs = await Job.find({ 
+      userId,
+      status: { $ne: 'created' }
+    }).sort({ updatedAt: -1 });
 
     // Convert jobs to calendar events format
     const jobApplications = jobs.map(job => ({

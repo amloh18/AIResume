@@ -1,0 +1,30 @@
+// DEPRECATED: This file is no longer used
+// Admin authentication now uses NextAuth with the 'admin-credentials' provider
+// See: src/lib/auth/unified-auth-service.ts (lines 100-152)
+// 
+// Migration completed: November 10, 2025
+// This file can be deleted after confirming all admin logins work correctly
+//
+// Original functionality:
+// - Custom JWT token generation
+// - Cookie-based authentication
+// - AdminAuth model password verification
+//
+// New implementation:
+// - NextAuth 'admin-credentials' provider
+// - Secure session management
+// - Same AdminAuth model for password verification
+// - Better security with built-in CSRF protection
+
+import { NextRequest, NextResponse } from 'next/server';
+
+export async function POST(request: NextRequest) {
+  return NextResponse.json(
+    { 
+      success: false, 
+      error: 'This endpoint is deprecated. Please use NextAuth signin with admin-credentials provider.' 
+    },
+    { status: 410 } // Gone
+  );
+}
+

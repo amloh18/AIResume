@@ -61,6 +61,7 @@ import { useOptimizedDataFetching } from '@/lib/hooks/useOptimizedDataFetching';
 import { formatCardTime } from '@/lib/utils/timeUtils';
 import DownloadModal, { DocumentType, FormatType } from '@/components/ui/DownloadModal';
 import { CVJourneyLookupService } from '@/lib/services/cvJourneyLookupService';
+import { filterMasterCVs, filterRegularCVs } from '@/lib/utils/cvFilterUtils';
 
 interface CV {
   id: string;
@@ -384,8 +385,8 @@ const Canvas: React.FC = () => {
   const { userData, loading: userLoading, error: userError } = useUserData();
   const [cvs, setCvs] = useState<CV[]>([]);
   const [masterCVs, setMasterCVs] = useState<CV[]>([]);
-  const [mongoDBUserId, setMongoDBUserId] = useState<string | null>(null);
   const [journeys, setJourneys] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true); // CRITICAL: Define loading state early, before functions that use it
   
   // Track if CVs have been loaded to prevent re-fetching on tab switch
   const hasLoadedCVsRef = useRef(false);
@@ -396,68 +397,10 @@ const Canvas: React.FC = () => {
   const [selectedJobForJourney, setSelectedJobForJourney] = useState<any>(null);
   const [journeysForSelectedJob, setJourneysForSelectedJob] = useState<any[]>([]);
   
-  // Helper function to resolve MongoDB user ID using unified authentication
-  const resolveMongoDBUserId = async (userId: string): Promise<string | null> => {
-    try {
-      console.log('🔍 Canvas - Resolving MongoDB user ID for:', userId);
-      
-      // Check if it's already a MongoDB ObjectId
-      if (/^[0-9a-fA-F]{24}$/.test(userId)) {
-        console.log('✅ Canvas - User ID is already MongoDB ObjectId');
-        return userId;
-      } else {
-        console.log('🔍 Canvas - User ID is not MongoDB ObjectId, fetching from server...');
-        // Try to get MongoDB user ID from server
-        const userResponse = await fetch('/api/user/current');
-        console.log('🔍 Canvas - User API response status:', userResponse.status);
-        
-        if (userResponse.ok) {
-          const userData = await userResponse.json();
-          console.log('🔍 Canvas - User API response data:', userData);
-          
-          if (userData.success && userData.user && userData.user.id) {
-            console.log('✅ Canvas - Found MongoDB user ID:', userData.user.id);
-            return userData.user.id;
-          } else {
-            console.log('❌ Canvas - User API response missing required fields');
-          }
-        } else {
-          console.log('❌ Canvas - User API request failed with status:', userResponse.status);
-        }
-      }
-    } catch (error) {
-      console.error('❌ Canvas - Error resolving MongoDB user ID:', error);
-    }
-    console.log('❌ Canvas - Failed to resolve MongoDB user ID');
-    return null;
-  };
-  
   // Search and sort state
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'lastModified' | 'title' | 'status'>('lastModified');
   const [showSortDropdown, setShowSortDropdown] = useState(false);
-  
-  // Resolve MongoDB userId when session changes
-  useEffect(() => {
-    const initializeUserId = async () => {
-      console.log('🔍 Canvas - Initializing user ID...');
-      console.log('🔍 Canvas - User object:', user);
-      
-      const userId = getUserIdForAPI(user);
-      console.log('🔍 Canvas - getUserIdForAPI result:', userId);
-      
-      if (userId) {
-        const resolvedUserId = await resolveMongoDBUserId(userId);
-        console.log('🔍 Canvas - Resolved user ID:', resolvedUserId);
-        setMongoDBUserId(resolvedUserId);
-      } else {
-        console.log('❌ Canvas - No user ID available from getUserIdForAPI');
-        setMongoDBUserId(null);
-      }
-    };
-    
-    initializeUserId();
-  }, [user]);
   
   // CVs state monitoring
   useEffect(() => {
@@ -488,10 +431,8 @@ const Canvas: React.FC = () => {
       if (userData) {
         const parsedUser = safeJsonParse(userData);
         if (!parsedUser) return null;
-        // Only return ID if it's a Firebase user
-        if (parsedUser.firebaseUid) {
-          return parsedUser.id || parsedUser._id;
-        }
+        // Return user ID
+        return parsedUser.id || parsedUser._id;
       }
     } catch (error) {
       // Silent fail - localStorage parsing failed
@@ -643,21 +584,20 @@ const Canvas: React.FC = () => {
   };
 
   // CRITICAL FIX: Load functions must be defined before they're used in useEffect and handlers
-  // Load CVs function
-  const loadCVs = useCallback(async (userId?: string) => {
+  // Unified function to load all document data (CVs, journeys, and cover letters in one batch)
+  const loadAllCVData = useCallback(async (userId?: string) => {
     try {
       const userIdToUse = userId || getUserIdForAPI(user);
       
       if (!userIdToUse) {
-        console.log('❌ Canvas - No user ID available for loading CVs');
         setCvs([]);
         setMasterCVs([]);
+        setCoverLetters([]);
         return;
       }
 
       // Prevent re-fetching on tab switch - only fetch if user ID changed or first load
       if (hasLoadedCVsRef.current && lastUserIdRef.current === userIdToUse) {
-        console.log('⏭️ Canvas - Skipping CV reload (data already loaded for this user)');
         return;
       }
 
@@ -666,19 +606,17 @@ const Canvas: React.FC = () => {
       lastUserIdRef.current = userIdToUse;
 
       setLoading(true);
-      console.log('🔍 Canvas - Loading CVs with user ID:', userIdToUse);
       
-      // Use unified service to get CVs
-      // Use 'summary' projection for performance - avoid loading massive Base64 thumbnails
-      console.log('🔍 Canvas - Calling UnifiedCVService.getCVs...');
-      const result = await UnifiedCVService.getCVs(userIdToUse, { projection: 'summary' });
-      console.log('🔍 Canvas - UnifiedCVService.getCVs result:', result);
-      console.log('🔍 Canvas - Result type:', typeof result, 'Is array:', Array.isArray(result), 'Length:', result?.length);
+      // Load CVs and cover letters in parallel for better performance
+      const [cvsResult, coverLettersResponse] = await Promise.allSettled([
+        UnifiedCVService.getCVs(userIdToUse, { projection: 'summary' }),
+        authenticatedFetch(`/api/cover-letters?userId=${userIdToUse}`)
+      ]);
       
-      if (result && Array.isArray(result) && result.length > 0) {
+      // Process CVs
+      if (cvsResult.status === 'fulfilled' && cvsResult.value && Array.isArray(cvsResult.value) && cvsResult.value.length > 0) {
         // Process CVs with unified data structure
-        const enrichedCVs = result.map((cv: any) => {
-          
+        const enrichedCVs = cvsResult.value.map((cv: any) => {
           return {
             id: cv.id,
             title: cv.title || 'Untitled CV',
@@ -702,170 +640,103 @@ const Canvas: React.FC = () => {
           } as CV;
         });
         
-        // Separate Master CVs from regular CVs based on isMaster metadata
-        console.log('🔍 Canvas - All CVs before filtering:', enrichedCVs.map(cv => ({ 
-          id: cv.id, 
-          title: cv.title, 
-          isMaster: cv.isMaster,
-          metadataIsMaster: cv.metadata?.isMaster 
-        })));
-        
-        // Filter CVs based on isMaster - handle both old and new formats
-        const masterCVs = enrichedCVs.filter(cv => {
-          const isMasterAtRoot = cv.isMaster === true;
-          const metadataIsMaster = cv.metadata?.isMaster;
-          const isMasterInMetadata = metadataIsMaster === true || 
-            (typeof metadataIsMaster === 'string' && metadataIsMaster === 'true');
-          return isMasterAtRoot || isMasterInMetadata;
-        });
-        const regularCVs = enrichedCVs.filter(cv => {
-          const isMasterAtRoot = cv.isMaster === true;
-          const metadataIsMaster = cv.metadata?.isMaster;
-          const isMasterInMetadata = metadataIsMaster === true || 
-            (typeof metadataIsMaster === 'string' && metadataIsMaster === 'true');
-          return !isMasterAtRoot && !isMasterInMetadata;
-        });
-        
-        console.log('🔍 Canvas - Master CVs:', masterCVs.length);
-        console.log('🔍 Canvas - Regular CVs:', regularCVs.length);
-        console.log('🔍 Canvas - First CV sample:', regularCVs[0]);
-        console.log('🔍 Canvas - Master CVs data:', masterCVs);
-        console.log('🔍 Canvas - First Master CV:', masterCVs[0]);
+        // Use utility functions to filter Master CVs and regular CVs
+        const masterCVs = filterMasterCVs(enrichedCVs);
+        const regularCVs = filterRegularCVs(enrichedCVs);
         
         // Store both Master CVs and regular CVs
         setCvs(regularCVs);
         setMasterCVs(masterCVs);
-        console.log('✅ Canvas - CVs loaded successfully:', { regular: regularCVs.length, master: masterCVs.length });
         
         // Performance optimization: Load journeys in batch for all CVs
         // This eliminates N+1 query problem (one API call instead of N calls)
         if (regularCVs.length > 0 || masterCVs.length > 0) {
           const allCVIds = [...regularCVs, ...masterCVs].map(cv => cv.id).filter(Boolean);
           if (allCVIds.length > 0) {
-            console.log('🔍 Canvas - Batch loading journeys for CVs:', allCVIds.length);
             try {
               const journeysMap = await CVJourneyLookupService.findJourneysByCVIds(allCVIds, userIdToUse);
               // Convert map to array format expected by Canvas
               const journeysArray = Array.from(journeysMap.values());
               if (journeysArray.length > 0) {
-                console.log('✅ Canvas - Batch loaded journeys:', journeysArray.length);
                 setJourneys(journeysArray);
               }
             } catch (error) {
-              console.error('❌ Canvas - Error batch loading journeys:', error);
-              // Fallback: Load journeys individually if batch fails (will be called separately)
-              // Don't call loadJourneys here to avoid circular dependency
+              console.error('Error batch loading journeys:', error);
             }
           }
         }
       } else {
-        console.log('🔍 Canvas - No CVs found for user:', userIdToUse);
-        console.log('🔍 Canvas - Result was:', result);
         setCvs([]);
         setMasterCVs([]);
       }
+      
+      // Process Cover Letters
+      if (coverLettersResponse.status === 'fulfilled' && coverLettersResponse.value) {
+        try {
+          const result = await coverLettersResponse.value.json();
+          
+          if (result.success && result.data?.coverLetters) {
+            const coverLettersArray = Array.isArray(result.data.coverLetters) 
+              ? result.data.coverLetters 
+              : [];
+            
+            const enrichedCoverLetters = coverLettersArray.map((cl: any) => {
+              const rawDate = new Date(cl.metadata?.lastModified || cl.updatedAt || cl.createdAt);
+              return {
+                ...cl,
+                id: cl.id || cl._id,
+                lastModified: formatCardTime(rawDate), // Formatted string for display
+                lastModifiedDate: rawDate, // Raw date for sorting
+                views: cl.views || 0,
+                isStarred: cl.isStarred || false,
+                thumbnail: '/api/cover-letters/thumbnail/' + (cl.id || cl._id),
+                description: cl.metadata?.targetCompany ? `For ${cl.metadata.targetCompany}` : 'Cover letter',
+                coverLetterData: cl.content,
+                content: cl.content, // Add content field for the overlay component
+                // connectedJobs removed - relationships now managed through CVJourney
+                completionPercentage: cl.completionPercentage || 0
+              };
+            });
+            
+            setCoverLetters(enrichedCoverLetters);
+          } else {
+            setCoverLetters([]);
+          }
+        } catch (error) {
+          console.error('Error processing cover letters:', error);
+          setCoverLetters([]);
+        }
+      } else if (coverLettersResponse.status === 'rejected') {
+        console.error('Error loading cover letters:', coverLettersResponse.reason);
+        setCoverLetters([]);
+      }
     } catch (error: any) {
-      console.error('❌ Error loading CVs:', error);
-      console.error('❌ Error details:', error.message, error.stack);
-      // Don't clear CVs on error - keep existing ones if any
-      // setCvs([]);
-      // setMasterCVs([]);
+      console.error('Error loading document data:', error);
+      // Don't clear data on error - keep existing ones if any
     } finally {
       setLoading(false);
     }
   }, [user]);
 
-  // Load Cover Letters function
-  const loadCoverLetters = useCallback(async () => {
-    try {
-      console.log('🔍 Canvas - Loading Cover Letters...');
-      const userId = getUserIdForAPI(user);
-      if (!userId) {
-        console.log('🔍 Canvas - No user ID, skipping Cover Letter load');
-        return;
-      }
 
-      const response = await authenticatedFetch(`/api/cover-letters?userId=${userId}`);
-      const result = await response.json();
-      
-      console.log('🔍 Canvas - Cover Letter API response:', result);
-      
-      if (result.success && result.data?.coverLetters) {
-        const enrichedCoverLetters = result.data.coverLetters.map((cl: any) => ({
-          ...cl,
-          id: cl.id || cl._id,
-          lastModified: formatTimeAgo(new Date(cl.metadata?.lastModified || cl.updatedAt || cl.createdAt)),
-          views: cl.views || 0,
-          isStarred: cl.isStarred || false,
-          thumbnail: '/api/cover-letters/thumbnail/' + (cl.id || cl._id),
-          description: cl.metadata?.targetCompany ? `For ${cl.metadata.targetCompany}` : 'Cover letter',
-          coverLetterData: cl.content,
-          content: cl.content, // Add content field for the overlay component
-          // connectedJobs removed - relationships now managed through CVJourney
-          completionPercentage: cl.completionPercentage || 0
-        }));
-        
-        console.log('🔍 Canvas - Setting Cover Letters:', enrichedCoverLetters.length);
-        console.log('🔍 Canvas - First Cover Letter sample:', enrichedCoverLetters[0]);
-        setCoverLetters(enrichedCoverLetters);
-      } else {
-        console.log('🔍 Canvas - Cover Letter API returned success: false');
-        setCoverLetters([]);
-      }
-    } catch (error) {
-      console.error('Error loading Cover Letters:', error);
-      setCoverLetters([]);
-    }
-  }, [user]);
 
-  // Load Journeys function
-  const loadJourneys = useCallback(async () => {
-    try {
-      console.log('🔍 Canvas - Loading Journeys...');
-      const userId = getUserIdForAPI(user);
-      if (!userId) {
-        console.log('🔍 Canvas - No user ID, skipping Journey load');
-        return;
-      }
-
-      const response = await authenticatedFetch(`/api/journeys?userId=${userId}`);
-      const result = await response.json();
-      
-      console.log('🔍 Canvas - Journey API response:', result);
-      
-      if (result.success && result.data?.journeys) {
-        console.log('🔍 Canvas - Setting Journeys:', result.data.journeys.length);
-        setJourneys(result.data.journeys);
-      } else {
-        console.log('🔍 Canvas - Journey API returned success: false');
-        setJourneys([]);
-      }
-    } catch (error) {
-      console.error('Error loading Journeys:', error);
-      setJourneys([]);
-    }
-  }, [user]);
-
+  // Available Jobs state
+  const [availableJobs, setAvailableJobs] = useState<Job[]>([]);
+  
   // Load Available Jobs function
   const fetchAvailableJobs = useCallback(async () => {
     try {
-      console.log('🔍 Canvas - Loading Available Jobs...');
       const userId = getUserIdForAPI(user);
       if (!userId) {
-        console.log('🔍 Canvas - No user ID, skipping Jobs load');
         return;
       }
 
       const response = await authenticatedFetch(`/api/jobs?userId=${userId}`);
       const result = await response.json();
       
-      console.log('🔍 Canvas - Jobs API response:', result);
-      
       if (result.success && result.data?.jobs) {
-        console.log('🔍 Canvas - Setting Available Jobs:', result.data.jobs.length);
         setAvailableJobs(result.data.jobs);
       } else {
-        console.log('🔍 Canvas - Jobs API returned success: false');
         setAvailableJobs([]);
       }
     } catch (error) {
@@ -1042,7 +913,7 @@ const Canvas: React.FC = () => {
     }
   };
 
-  const [loading, setLoading] = useState(true);
+  // loading state is already defined above (line ~392) before functions that use it
   const [editingCVId, setEditingCVId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
   const [deletingCVId, setDeletingCVId] = useState<string | null>(null);
@@ -1052,7 +923,7 @@ const Canvas: React.FC = () => {
   const [editingCoverLetterTitle, setEditingCoverLetterTitle] = useState('');
   const [activeTab, setActiveTab] = useState<'cv' | 'coverLetter'>('cv');
   const [coverLetters, setCoverLetters] = useState<CoverLetter[]>([]);
-  const [availableJobs, setAvailableJobs] = useState<Job[]>([]);
+  // availableJobs is already defined above (line 850) before fetchAvailableJobs
   const [linkingJobCVId, setLinkingJobCVId] = useState<string | null>(null);
   
   // Modal state
@@ -1081,8 +952,13 @@ const Canvas: React.FC = () => {
 
   // Load CVs and Cover Letters from API
   useEffect(() => {
+    // Guard: Ensure we're in browser environment
+    if (typeof window === 'undefined') {
+      return;
+    }
+
     // Check if user is returning from onboarding
-    const fromOnboarding = typeof window !== 'undefined' && sessionStorage.getItem('fromOnboarding') === 'true';
+    const fromOnboarding = sessionStorage.getItem('fromOnboarding') === 'true';
     if (fromOnboarding) {
       sessionStorage.removeItem('fromOnboarding'); // Clear the flag
     }
@@ -1096,22 +972,46 @@ const Canvas: React.FC = () => {
 
     // Prevent re-fetching on tab switch - only fetch if user ID changed or first load
     if (hasLoadedCVsRef.current && lastUserIdRef.current === userId) {
-      console.log('⏭️ Canvas - Skipping reload on tab switch (data already loaded)');
       return;
     }
 
     // Reset refs if user ID actually changed (different user logged in)
     if (lastUserIdRef.current && lastUserIdRef.current !== userId) {
-      console.log('🔄 Canvas - User ID changed, resetting load state');
       hasLoadedCVsRef.current = false;
     }
 
-    // Load data for this user
-    loadCVs(userId);
-    loadCoverLetters();
-    loadJourneys();
-    fetchAvailableJobs();
-  }, [user?.id, loadCVs, loadCoverLetters, loadJourneys, fetchAvailableJobs]); // Use user.id instead of user object
+    // Load data for this user with error handling
+    // Use Promise.allSettled to prevent one failure from blocking others
+    let isMounted = true;
+    
+    const loadData = async () => {
+      try {
+        // Load CVs, journeys, and cover letters together (unified function)
+        await loadAllCVData(userId).catch(err => {
+          console.error('Error loading document data:', err);
+        });
+        
+        // Load jobs in parallel
+        if (isMounted) {
+          await fetchAvailableJobs().catch(err => {
+            console.error('Error loading jobs:', err);
+          });
+        }
+      } catch (error) {
+        console.error('Error in loadData:', error);
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadData();
+    
+    // Cleanup function to prevent state updates after unmount
+    return () => {
+      isMounted = false;
+    };
+  }, [user?.id, loadAllCVData, fetchAvailableJobs]);
 
   // Handle CV creation (moved after load functions to avoid initialization issues)
   const handleCreateCV = async () => {
@@ -1191,7 +1091,7 @@ const Canvas: React.FC = () => {
 
       if (duplicateResult.success && duplicateResult.data?.cvId) {
         // Refresh CVs list to show the new freestanding duplicate
-        loadCVs();
+        loadAllCVData();
         // Removed notification:'success', 'CV duplicated successfully! The copy is ready to be linked to a new job.');
         
         // If the source CV was linked to a journey, inform user about the duplication principle
@@ -1204,7 +1104,7 @@ const Canvas: React.FC = () => {
     } catch (error) {
       // Removed notification:'error', 'Failed to duplicate CV');
     }
-  }, [user, loadCVs]);
+  }, [user, loadAllCVData]);
 
   const formatTimeAgo = (date: Date) => {
     return formatCardTime(date);
@@ -1272,8 +1172,6 @@ const Canvas: React.FC = () => {
   };
 
   const handleCVClick = async (cv: CV) => {
-    console.log('🔍 Canvas - CV clicked:', cv.id);
-    console.log('🔍 Canvas - CV data:', cv.cvData);
     
     try {
       // Find the journey associated with this CV
@@ -1327,7 +1225,7 @@ const Canvas: React.FC = () => {
         if (userData) {
           try {
             const parsedUser = safeJsonParse(userData);
-            if (parsedUser.firebaseUid) {
+            if (parsedUser.id || parsedUser._id) {
               userId = parsedUser.id || parsedUser._id;
             }
           } catch (error) {
@@ -1401,7 +1299,7 @@ const Canvas: React.FC = () => {
         if (userData) {
           try {
             const parsedUser = safeJsonParse(userData);
-            if (parsedUser.firebaseUid) {
+            if (parsedUser.id || parsedUser._id) {
               userId = parsedUser.id || parsedUser._id;
             }
           } catch (error) {
@@ -1499,17 +1397,34 @@ const Canvas: React.FC = () => {
 
       // Delete each unlinked CV
       for (const cv of unlinkedCVs) {
-        const response = await authenticatedFetch(`/api/cvs/${cv.id}?userId=${userId}`, {
-          method: 'DELETE',
-        });
+        try {
+          const response = await authenticatedFetch(`/api/cvs/${cv.id}?userId=${userId}`, {
+            method: 'DELETE',
+          });
 
-        if (!response.ok) {
-          console.error(`Failed to delete CV: ${cv.title}`);
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+            console.error(`Failed to delete CV: ${cv.title}`, {
+              cvId: cv.id,
+              status: response.status,
+              statusText: response.statusText,
+              error: errorData.error || errorData.message || 'Unknown error',
+              response: errorData
+            });
+          } else {
+            console.log(`✅ Successfully deleted CV: ${cv.title}`);
+          }
+        } catch (error) {
+          console.error(`Error deleting CV: ${cv.title}`, {
+            cvId: cv.id,
+            error: error instanceof Error ? error.message : 'Unknown error',
+            stack: error instanceof Error ? error.stack : undefined
+          });
         }
       }
 
       // Refresh CVs list
-      await loadCVs(userId);
+      await loadAllCVData(userId);
       // Removed notification:'success', `Successfully deleted ${unlinkedCVs.length} unlinked CVs`);
     } catch (error) {
       console.error('Clean unlinked CVs error:', error);
@@ -1640,7 +1555,7 @@ const Canvas: React.FC = () => {
       }
 
       // Refresh cover letters list
-      await loadCoverLetters();
+      await loadAllCVData();
       
       if (deletedCount > 0) {
         console.log(`Successfully deleted ${deletedCount} unlinked cover letter(s)`);
@@ -1702,7 +1617,7 @@ const Canvas: React.FC = () => {
         if (userData) {
           try {
             const parsedUser = safeJsonParse(userData);
-            if (parsedUser.firebaseUid) {
+            if (parsedUser.id || parsedUser._id) {
               userId = parsedUser.id || parsedUser._id;
               console.log('🔍 Delete - Parsed user ID from localStorage:', userId);
             }
@@ -1799,7 +1714,7 @@ const Canvas: React.FC = () => {
 
       if (result.success) {
         // Refresh CVs to show updated job links
-        loadCVs();
+        loadAllCVData();
         setLinkingJobCVId(null);
         showModalDialog({
           title: 'Success',
@@ -1958,7 +1873,10 @@ const Canvas: React.FC = () => {
           return a.status.localeCompare(b.status);
         case 'lastModified':
         default:
-          return new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime();
+          // Use raw date for sorting if available, otherwise try to parse the formatted string
+          const dateA = (a as any).lastModifiedDate || new Date(a.lastModified);
+          const dateB = (b as any).lastModifiedDate || new Date(b.lastModified);
+          return dateB.getTime() - dateA.getTime();
       }
     });
   }, [coverLetters, searchQuery, sortBy]);
@@ -2099,31 +2017,10 @@ const Canvas: React.FC = () => {
 
         <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5">
           {/* Master CV Card - Always First */}
-          {(() => {
-            console.log('🔍 Canvas - Rendering CV Grid:', {
-              activeTab,
-              loading,
-              cvsLength: cvs.length,
-              masterCVsLength: masterCVs.length,
-              filteredAndSortedCVsLength: filteredAndSortedCVs.length,
-              mongoDBUserId,
-              userIdFromAPI: getUserIdForAPI(user),
-              masterCVs: masterCVs.map(m => ({ 
-                id: m.id, 
-                title: m.title,
-                hasCvData: !!m.cvData,
-                hasTemplate: !!m.template,
-                templateType: typeof m.template,
-                templateKeys: m.template ? Object.keys(m.template) : []
-              })),
-              filteredCVs: filteredAndSortedCVs.map(cv => ({ id: cv.id, title: cv.title }))
-            });
-            return null;
-          })()}
           <MasterCVCardOverlay
             onEditMasterCV={handleEditMasterCV}
             onDuplicateMasterCV={handleDuplicateMasterCV}
-            userId={mongoDBUserId || getUserIdForAPI(user) || ''}
+            userId={getUserIdForAPI(user) || ''}
             onToggleStar={toggleStar}
             masterCVData={masterCVs.length > 0 ? {
               id: masterCVs[0].id,
@@ -2159,7 +2056,6 @@ const Canvas: React.FC = () => {
             // CV Cards with Overlay Design
             filteredAndSortedCVs.length > 0 ? (
               filteredAndSortedCVs.map((cv, index) => {
-                console.log('🔍 Canvas - Rendering CV Card:', { index, id: cv.id, title: cv.title });
                 // Find linked journey for this CV (performance optimization - no API call per card)
                 const linkedJourney = journeys.find(journey => journey.cvId === cv.id) || null;
                 return (
@@ -2536,7 +2432,7 @@ const Canvas: React.FC = () => {
               }
             }
             // Also refresh CVs to update any changes
-            loadCVs();
+            loadAllCVData();
           }}
         />
       )}
@@ -2544,4 +2440,8 @@ const Canvas: React.FC = () => {
   );
 };
 
-export default React.memo(Canvas);
+// Export component with memo for performance, but ensure React is available
+const MemoizedCanvas = React.memo(Canvas);
+MemoizedCanvas.displayName = 'Canvas';
+
+export default MemoizedCanvas;

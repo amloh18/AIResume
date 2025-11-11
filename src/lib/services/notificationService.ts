@@ -14,7 +14,6 @@ import emailNotificationService from './emailNotificationService';
 
 export interface CreateNotificationParams {
   userId: string | any;
-  firebaseUid?: string;
   type: NotificationType;
   title: string;
   message: string;
@@ -118,7 +117,6 @@ class NotificationService {
     // Create notification
     const notification = new Notification({
       userId: params.userId,
-      firebaseUid: params.firebaseUid,
       type: params.type,
       title: params.title,
       message: params.message,
@@ -295,7 +293,6 @@ class NotificationService {
           // Handle single user notification
           await this.createNotification({
             userId: task.payload.userId,
-            firebaseUid: task.payload.firebaseUid,
             type: task.taskType as NotificationType,
             title: task.payload.title,
             message: task.payload.message,

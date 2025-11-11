@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
                           !email.includes('@google.com');
     
     // Check if user has Google OAuth data
-    const hasGoogleAuth = user.firebaseUid || user.authProviderId;
+    const hasGoogleAuth = !!user.authProviderId;
     
     // Debug logging
     console.log('🔍 Password reset debug for:', email);
@@ -50,7 +50,6 @@ export async function POST(request: NextRequest) {
     console.log('   Password field value:', user.password ? 'EXISTS' : 'NULL/UNDEFINED');
     console.log('   Password length:', user.password ? user.password.length : 0);
     console.log('   Auth provider:', user.authProvider);
-    console.log('   Firebase UID:', user.firebaseUid || 'None');
     console.log('   Auth Provider ID:', user.authProviderId || 'None');
     console.log('   Has password:', hasPassword);
     console.log('   Is custom domain:', isCustomDomain);

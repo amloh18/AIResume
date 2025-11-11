@@ -27,10 +27,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { cvData, jobData, jobId }: { 
+    const { cvData, jobData, jobId, userId, userEmail }: { 
       cvData: UnifiedCVDataStructure; 
       jobData?: any; 
-      jobId?: string; 
+      jobId?: string;
+      userId?: string;
+      userEmail?: string;
     } = body;
 
     console.log('📊 Received request body:', {
@@ -150,6 +152,35 @@ export async function POST(request: NextRequest) {
     };
 
     console.log('✅ AI analysis completed successfully');
+
+    // Log AI usage activity
+    try {
+      const { ActivityLogService } = await import('@/lib/services/activityLogService');
+      
+      // Estimate tokens (rough approximation: 1 token ≈ 4 characters)
+      const promptLength = JSON.stringify(cvData).length + (jobData ? JSON.stringify(jobData).length : 0);
+      const responseLength = JSON.stringify(analysis).length;
+      const estimatedTokens = Math.ceil((promptLength + responseLength) / 4);
+      // Estimate cost (Gemini 2.5 Flash Lite: ~$0.075 per 1M input tokens, ~$0.30 per 1M output tokens)
+      const estimatedCost = (promptLength / 4 / 1000000 * 0.075) + (responseLength / 4 / 1000000 * 0.30);
+      
+      await ActivityLogService.logAI({
+        userId: userId,
+        userEmail: userEmail,
+        model: 'gemini-2.5-flash-lite',
+        tokensUsed: estimatedTokens,
+        cost: estimatedCost,
+        responseLength: responseLength,
+        action: 'career_analysis',
+        status: 'success',
+        metadata: {
+          jobId: jobId
+        }
+      });
+    } catch (logError) {
+      console.error('Failed to log AI usage:', logError);
+      // Don't fail the request if logging fails
+    }
 
     return NextResponse.json({
       success: true,

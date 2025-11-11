@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database/connection-manager';
 import { getRegionalPricingFromDB, getDefaultPricingFromDB } from '@/lib/services/pricingService';
+import { createErrorResponse } from '@/lib/api/error-handler';
 
 /**
  * GET /api/pricing/regional
  * Get regional pricing for a country code
  * Query params: countryCode (optional, defaults to default pricing)
+ * 
+ * IMPORTANT: This route MUST always return JSON, never HTML
  */
 export async function GET(request: NextRequest) {
   try {
@@ -16,21 +19,37 @@ export async function GET(request: NextRequest) {
 
     let pricingData;
 
-    if (countryCode) {
-      pricingData = await getRegionalPricingFromDB(countryCode);
-      
-      // Fallback to default if country not found
-      if (!pricingData) {
+    try {
+      if (countryCode) {
+        pricingData = await getRegionalPricingFromDB(countryCode);
+        
+        // Fallback to default if country not found
+        if (!pricingData) {
+          pricingData = await getDefaultPricingFromDB();
+        }
+      } else {
+        // Return default pricing if no country code provided
         pricingData = await getDefaultPricingFromDB();
       }
-    } else {
-      // Return default pricing if no country code provided
-      pricingData = await getDefaultPricingFromDB();
+    } catch (dbError) {
+      console.error('Database error fetching pricing:', dbError);
+      // Return JSON error, never HTML
+      return NextResponse.json(
+        { 
+          success: false,
+          error: 'Failed to fetch pricing data from database',
+          message: dbError instanceof Error ? dbError.message : 'Unknown database error'
+        },
+        { status: 500 }
+      );
     }
 
     if (!pricingData) {
       return NextResponse.json(
-        { error: 'Pricing data not found' },
+        { 
+          success: false,
+          error: 'Pricing data not found' 
+        },
         { status: 404 }
       );
     }
@@ -54,11 +73,9 @@ export async function GET(request: NextRequest) {
       raw: pricingData, // Also return raw numeric values for calculations
     });
   } catch (error) {
+    // CRITICAL: Always return JSON, never let Next.js return HTML
     console.error('Error fetching regional pricing:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch regional pricing' },
-      { status: 500 }
-    );
+    return createErrorResponse(error);
   }
 }
 

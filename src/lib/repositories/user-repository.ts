@@ -45,11 +45,12 @@ export class UserRepository extends BaseRepository<IUser> {
   }
 
   /**
-   * Find user by Firebase UID
+   * Find user by Firebase UID (deprecated - use findByAuthProviderId instead)
+   * @deprecated Use findByAuthProviderId instead
    */
   async findByFirebaseUid(firebaseUid: string): Promise<IUser | null> {
     return this.findOne(
-      { firebaseUid } as FilterQuery<IUser>,
+      { authProviderId: firebaseUid, authProvider: 'firebase' } as FilterQuery<IUser>,
       { lean: true }
     );
   }

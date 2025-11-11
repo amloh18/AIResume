@@ -2,7 +2,6 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IInvoice extends Document {
   userId: mongoose.Types.ObjectId | string;
-  firebaseUid?: string; // Firebase UID for user identification
   invoiceNumber: string;
   amount: number;
   currency: string;
@@ -25,11 +24,6 @@ const invoiceSchema = new Schema<IInvoice>({
   userId: {
     type: Schema.Types.Mixed, // Allow both ObjectId and string
     required: [true, 'User ID is required']
-  },
-  firebaseUid: {
-    type: String,
-    sparse: true, // Allows multiple null values
-    index: true // Index for efficient Firebase UID queries
   },
   invoiceNumber: {
     type: String,

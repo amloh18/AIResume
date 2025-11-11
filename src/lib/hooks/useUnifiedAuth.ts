@@ -9,8 +9,6 @@ interface UnifiedUser {
   name: string;
   username?: string;
   image?: string;
-  firebaseUid?: string;
-  isFirebaseUser: boolean;
   isNextAuthUser: boolean;
 }
 
@@ -43,8 +41,6 @@ export const useUnifiedAuth = (): UseUnifiedAuthReturn => {
         email: session.user.email || '',
         name: session.user.name || session.user.email?.split('@')[0] || 'User',
         image: session.user.image,
-        firebaseUid: undefined,
-        isFirebaseUser: false,
         isNextAuthUser: true
       };
     }
@@ -93,25 +89,15 @@ export const useUnifiedAuth = (): UseUnifiedAuthReturn => {
  */
 export const getUserIdForAPI = (user: UnifiedUser | null): string | null => {
   if (!user) return null;
-  
-  // For NextAuth users, use the session user ID
-  if (user.isNextAuthUser) {
-    return user.id;
-  }
-  
-  // For Firebase users, use the Firebase UID
-  if (user.isFirebaseUser) {
-    return user.firebaseUid || user.id;
-  }
-  
   return user.id;
 };
 
 /**
  * Helper function to check if user is Firebase user
+ * @deprecated All users now use NextAuth
  */
 export const isFirebaseUser = (user: UnifiedUser | null): boolean => {
-  return user?.isFirebaseUser || false;
+  return false; // All users now use NextAuth
 };
 
 /**

@@ -19,6 +19,8 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import DraftDetailModal from './DraftDetailModal';
+import { DRAFT_STATUSES, DEFAULT_PAGE_SIZE } from '@/lib/config/adminConstants';
+import { ADMIN_THEME } from '@/lib/config/adminTheme';
 
 interface Draft {
   id: string;
@@ -66,7 +68,7 @@ const DraftManagement: React.FC = () => {
 
       const params = new URLSearchParams({
         page: page.toString(),
-        limit: '20'
+        limit: DEFAULT_PAGE_SIZE.toString()
       });
 
       if (filterStatus !== 'all') {
@@ -79,6 +81,13 @@ const DraftManagement: React.FC = () => {
       }
 
       const response = await fetch(`/api/admin/drafts?${params.toString()}`);
+      
+      // Check content type before parsing
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Invalid response format from server');
+      }
+      
       const data = await response.json();
 
       if (data.success) {
@@ -114,6 +123,12 @@ const DraftManagement: React.FC = () => {
         method: 'DELETE'
       });
 
+      // Check content type before parsing
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Invalid response format from server');
+      }
+
       const data = await response.json();
 
       if (data.success) {
@@ -128,24 +143,28 @@ const DraftManagement: React.FC = () => {
   };
 
   const getStatusBadge = (status: string) => {
+    if (!DRAFT_STATUSES.includes(status as any)) {
+      return <Badge className={ADMIN_THEME.badge.info}>{status}</Badge>;
+    }
+    
     switch (status) {
       case 'converted':
-        return <Badge className="bg-green-600 text-white"><CheckCircle className="w-3 h-3 mr-1" />Converted</Badge>;
+        return <Badge className={ADMIN_THEME.badge.success}><CheckCircle className="w-3 h-3 mr-1" />Converted</Badge>;
       case 'linked':
-        return <Badge className="bg-blue-600 text-white"><User className="w-3 h-3 mr-1" />Linked</Badge>;
+        return <Badge className={ADMIN_THEME.badge.info}><User className="w-3 h-3 mr-1" />Linked</Badge>;
       case 'anonymous':
-        return <Badge className="bg-gray-600 text-white"><AlertCircle className="w-3 h-3 mr-1" />Anonymous</Badge>;
+        return <Badge className={ADMIN_THEME.badge.inactive}><AlertCircle className="w-3 h-3 mr-1" />Anonymous</Badge>;
       default:
-        return <Badge>{status}</Badge>;
+        return <Badge className={ADMIN_THEME.badge.inactive}>{status}</Badge>;
     }
   };
 
   if (loading && drafts.length === 0) {
     return (
-      <Card>
+      <Card className={ADMIN_THEME.card.base}>
         <CardHeader>
-          <CardTitle>CV Draft Management</CardTitle>
-          <CardDescription>Loading drafts...</CardDescription>
+          <CardTitle className={ADMIN_THEME.text.primary}>CV Draft Management</CardTitle>
+          <CardDescription className={ADMIN_THEME.text.secondary}>Loading drafts...</CardDescription>
         </CardHeader>
       </Card>
     );
@@ -153,13 +172,13 @@ const DraftManagement: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+      <Card className={ADMIN_THEME.card.base}>
+        <CardHeader className={ADMIN_THEME.card.header}>
+          <CardTitle className={`flex items-center gap-2 ${ADMIN_THEME.text.primary}`}>
             <FileText className="w-5 h-5" />
             CV Draft Management
           </CardTitle>
-          <CardDescription>
+          <CardDescription className={ADMIN_THEME.text.secondary}>
             Manage temporary CV drafts from AI Career Report flow
           </CardDescription>
         </CardHeader>
@@ -188,12 +207,14 @@ const DraftManagement: React.FC = () => {
                 setFilterStatus(e.target.value);
                 setPage(1);
               }}
-              className="px-4 py-2 border border-gray-600 rounded-md bg-gray-800 text-white"
+              className={`px-4 py-2 ${ADMIN_THEME.input.base} ${ADMIN_THEME.border.primary} rounded-md ${ADMIN_THEME.input.focus}`}
             >
               <option value="all">All Status</option>
-              <option value="anonymous">Anonymous</option>
-              <option value="linked">Linked</option>
-              <option value="converted">Converted</option>
+              {DRAFT_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                </option>
+              ))}
             </select>
             <Button onClick={fetchDrafts} variant="outline" size="sm">
               <RefreshCw className="w-4 h-4 mr-2" />
@@ -202,7 +223,7 @@ const DraftManagement: React.FC = () => {
           </div>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-900 border border-red-700 rounded text-red-200">
+            <div className={`mb-4 p-3 ${ADMIN_THEME.badge.error} border ${ADMIN_THEME.border.primary} rounded`}>
               {error}
             </div>
           )}
@@ -211,41 +232,41 @@ const DraftManagement: React.FC = () => {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-700">
-                  <th className="text-left p-3 text-gray-300">User</th>
-                  <th className="text-left p-3 text-gray-300">CV Preview</th>
-                  <th className="text-left p-3 text-gray-300">Step</th>
-                  <th className="text-left p-3 text-gray-300">Status</th>
-                  <th className="text-left p-3 text-gray-300">Created</th>
-                  <th className="text-left p-3 text-gray-300">Actions</th>
+                <tr className={`border-b ${ADMIN_THEME.border.primary}`}>
+                  <th className={`text-left p-3 ${ADMIN_THEME.text.secondary}`}>User</th>
+                  <th className={`text-left p-3 ${ADMIN_THEME.text.secondary}`}>CV Preview</th>
+                  <th className={`text-left p-3 ${ADMIN_THEME.text.secondary}`}>Step</th>
+                  <th className={`text-left p-3 ${ADMIN_THEME.text.secondary}`}>Status</th>
+                  <th className={`text-left p-3 ${ADMIN_THEME.text.secondary}`}>Created</th>
+                  <th className={`text-left p-3 ${ADMIN_THEME.text.secondary}`}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {drafts.map((draft) => (
-                  <tr key={draft.id} className="border-b border-gray-800 hover:bg-gray-800/50">
+                  <tr key={draft.id} className={`${ADMIN_THEME.table.row} border-b ${ADMIN_THEME.border.primary}`}>
                     <td className="p-3">
                       {draft.userEmail ? (
                         <div>
-                          <div className="text-white">{draft.userName || draft.userEmail}</div>
-                          <div className="text-sm text-gray-400">{draft.userEmail}</div>
+                          <div className={ADMIN_THEME.text.primary}>{draft.userName || draft.userEmail}</div>
+                          <div className={`text-sm ${ADMIN_THEME.text.tertiary}`}>{draft.userEmail}</div>
                         </div>
                       ) : (
-                        <div className="text-gray-400">
+                        <div className={ADMIN_THEME.text.tertiary}>
                           <div>Anonymous</div>
-                          <div className="text-xs text-gray-500">{draft.sessionId.substring(0, 8)}...</div>
+                          <div className={`text-xs ${ADMIN_THEME.text.muted}`}>{draft.sessionId.substring(0, 8)}...</div>
                         </div>
                       )}
                     </td>
                     <td className="p-3">
-                      <div className="text-white">{draft.cvDataPreview.name}</div>
-                      <div className="text-sm text-gray-400">
+                      <div className={ADMIN_THEME.text.primary}>{draft.cvDataPreview.name}</div>
+                      <div className={`text-sm ${ADMIN_THEME.text.tertiary}`}>
                         {draft.cvDataPreview.workCount} work, {draft.cvDataPreview.educationCount} edu
                         {draft.hasAiAnalysis && <span className="ml-2 text-blue-400">• AI Analysis</span>}
                       </div>
                     </td>
-                    <td className="p-3 text-gray-300">Step {draft.currentStep}</td>
+                    <td className={`p-3 ${ADMIN_THEME.text.secondary}`}>Step {draft.currentStep}</td>
                     <td className="p-3">{getStatusBadge(draft.status)}</td>
-                    <td className="p-3 text-gray-400 text-sm">
+                    <td className={`p-3 ${ADMIN_THEME.text.tertiary} text-sm`}>
                       {new Date(draft.createdAt).toLocaleDateString()}
                     </td>
                     <td className="p-3">
@@ -254,6 +275,7 @@ const DraftManagement: React.FC = () => {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleViewDetails(draft)}
+                          className={ADMIN_THEME.button.ghost}
                         >
                           <Eye className="w-4 h-4" />
                         </Button>
@@ -299,7 +321,7 @@ const DraftManagement: React.FC = () => {
           )}
 
           {drafts.length === 0 && !loading && (
-            <div className="text-center py-8 text-gray-400">
+            <div className={`text-center py-8 ${ADMIN_THEME.text.tertiary}`}>
               No drafts found
             </div>
           )}

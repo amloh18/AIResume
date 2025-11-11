@@ -9,7 +9,7 @@ import {
   CAMPAIGN_STATUSES,
   PAYMENT_PROVIDERS,
   SUPPORTED_CURRENCIES
-} from '@/lib/config/adminConfig';
+} from '@/lib/config/adminConstants';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';

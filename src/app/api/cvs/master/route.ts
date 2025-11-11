@@ -36,27 +36,43 @@ export async function GET(request: NextRequest) {
     
     console.log('🔍 Master CV API - User ID:', userId);
 
-    // Build query condition - handle both old format (isMaster at root) and new format (metadata.isMaster)
-    const queryCondition: Record<string, any> = {
+    // CRITICAL: Master CV is ONLY identified by ai-career-report creation
+    // First, try to find the master CV created via ai-career-report (the authoritative source)
+    let masterCV = await CV.findOne({
       userId: new mongoose.Types.ObjectId(userId),
       $or: [
-        { 'metadata.isMaster': true },
-        { 'metadata.isMaster': 'true' },
-        { isMaster: true },
-        { isMaster: 'true' }
+        { 'metadata.createdVia': 'ai-career-report' },
+        { 'metadata.tags': { $in: ['ai-career-report'] } }
       ]
-    };
+    }).sort({ createdAt: -1 }).lean() as any;
 
-    console.log('🔍 Master CV API - Query condition:', queryCondition);
+    // FALLBACK: If no ai-career-report master CV found, use oldest CV by creation date
+    if (!masterCV) {
+      console.log('🔍 Master CV API - No ai-career-report master CV found, using oldest CV as fallback');
+      const allCVs = await CV.find({
+        userId: new mongoose.Types.ObjectId(userId)
+      }).sort({ createdAt: 1 }).lean() as any[]; // Sort ascending (oldest first)
 
-    const masterCV = await CV.findOne(queryCondition).lean() as any;
+      if (allCVs && allCVs.length > 0) {
+        masterCV = allCVs[0]; // Get the oldest CV
+        console.log('🔍 Master CV API - Using oldest CV as master CV fallback:', {
+          id: masterCV._id,
+          title: masterCV.title,
+          createdAt: masterCV.createdAt
+        });
+      }
+    }
     console.log('🔍 Master CV API - Query executed, result:', {
       found: !!masterCV,
       masterCVId: masterCV?._id,
       masterCVUserId: masterCV?.userId,
       masterCVTitle: masterCV?.title,
       isMaster: masterCV?.isMaster,
-      metadataIsMaster: masterCV?.metadata?.isMaster
+      metadataIsMaster: masterCV?.metadata?.isMaster,
+      createdVia: masterCV?.metadata?.createdVia,
+      hasBasics: !!masterCV?.cvData?.basics,
+      basicsName: masterCV?.cvData?.basics?.name,
+      basicsKeys: masterCV?.cvData?.basics ? Object.keys(masterCV.cvData.basics) : []
     });
 
     // Also check all CVs for this user to see what's in the database
@@ -94,7 +110,7 @@ export async function GET(request: NextRequest) {
           title: cv.title,
           cvData: cv.cvData,
           status: cv.status,
-          isMaster: cv.metadata?.isMaster || cv.isMaster || true, // Handle both formats
+          // CRITICAL: Master CV is identified ONLY by createdVia, not isMaster flag
           createdAt: cv.createdAt,
           updatedAt: cv.updatedAt,
           templateId: cv.templateId,
@@ -135,18 +151,32 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { jobTitle, company, jobId } = body;
 
-    // Find the master CV - handle both old format (isMaster at root) and new format (metadata.isMaster)
-    const masterCVQuery: Record<string, any> = {
+    // CRITICAL: Master CV is ONLY identified by ai-career-report creation
+    // Find the master CV created via ai-career-report
+    let masterCV = await CV.findOne({
       userId: new mongoose.Types.ObjectId(userId),
       $or: [
-        { 'metadata.isMaster': true },
-        { 'metadata.isMaster': 'true' },
-        { isMaster: true },
-        { isMaster: 'true' }
+        { 'metadata.createdVia': 'ai-career-report' },
+        { 'metadata.tags': { $in: ['ai-career-report'] } }
       ]
-    };
+    }).sort({ createdAt: -1 });
 
-    const masterCV = await CV.findOne(masterCVQuery);
+    // FALLBACK: If no ai-career-report master CV found, use oldest CV by creation date
+    if (!masterCV) {
+      console.log('🔍 Master CV POST API - No ai-career-report master CV found, using oldest CV as fallback');
+      const allCVs = await CV.find({
+        userId: new mongoose.Types.ObjectId(userId)
+      }).sort({ createdAt: 1 }); // Sort ascending (oldest first)
+
+      if (allCVs && allCVs.length > 0) {
+        masterCV = allCVs[0]; // Get the oldest CV
+        console.log('🔍 Master CV POST API - Using oldest CV as master CV fallback:', {
+          id: masterCV._id,
+          title: masterCV.title,
+          createdAt: masterCV.createdAt
+        });
+      }
+    }
 
     if (!masterCV) {
       return NextResponse.json(

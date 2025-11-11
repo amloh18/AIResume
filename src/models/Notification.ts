@@ -17,7 +17,6 @@ export type NotificationPriority = 'low' | 'medium' | 'high' | 'urgent';
 
 export interface INotification extends Document {
   userId: mongoose.Types.ObjectId | string;
-  firebaseUid?: string;
   type: NotificationType;
   title: string;
   message: string;
@@ -67,13 +66,8 @@ const notificationSchema = new Schema<INotification>(
     userId: {
       type: Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
-      index: true,
-    },
-    firebaseUid: {
-      type: String,
-      sparse: true,
-      index: true,
+      required: true
+      // Note: Index defined in compound indexes below
     },
     type: {
       type: String,
@@ -89,8 +83,8 @@ const notificationSchema = new Schema<INotification>(
         'system_update',
         'achievement',
       ],
-      required: true,
-      index: true,
+      required: true
+      // Note: Index defined in compound index below
     },
     title: {
       type: String,
@@ -114,8 +108,8 @@ const notificationSchema = new Schema<INotification>(
     },
     read: {
       type: Boolean,
-      default: false,
-      index: true,
+      default: false
+      // Note: Index defined in compound indexes below
     },
     readAt: {
       type: Date,
@@ -127,17 +121,17 @@ const notificationSchema = new Schema<INotification>(
     priority: {
       type: String,
       enum: ['low', 'medium', 'high', 'urgent'],
-      default: 'medium',
-      index: true,
+      default: 'medium'
+      // Note: Index not needed - not used in queries
     },
     expiresAt: {
-      type: Date,
-      index: true,
+      type: Date
+      // Note: Index defined in compound index below
     },
     persistent: {
       type: Boolean,
-      default: false,
-      index: true,
+      default: false
+      // Note: Index defined in compound index below
     },
     channels: {
       type: [String],

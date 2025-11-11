@@ -111,8 +111,17 @@ const PricingPlanEditModal: React.FC<PricingPlanEditModalProps> = ({
           onSave();
         }, 1500);
       } else {
-        const errorData = await response.json();
-        setError(errorData.error || 'Failed to update plan');
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          try {
+            const errorData = await response.json();
+            setError(errorData.error || 'Failed to update plan');
+          } catch {
+            setError(`HTTP ${response.status}: Failed to update plan`);
+          }
+        } else {
+          setError(`HTTP ${response.status}: Failed to update plan`);
+        }
       }
     } catch (err) {
       setError('Network error occurred');

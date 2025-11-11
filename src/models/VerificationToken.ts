@@ -55,22 +55,22 @@ export interface IVerificationTokenModel extends Model<IVerificationToken> {
 const verificationTokenSchema = new Schema<IVerificationToken>({
   userId: {
     type: Schema.Types.Mixed, // Allow both ObjectId and string
-    required: false, // Make optional for code-based verification
-    index: true
+    required: false // Make optional for code-based verification
+    // Note: Index defined in compound index below
   },
   token: {
     type: String,
     required: false,
     unique: true,
     sparse: true, // Only enforce uniqueness for non-null values
-    trim: true,
-    index: true
+    trim: true
+    // Note: Unique constraint creates its own index; also in compound index
   },
   type: {
     type: String,
     required: [true, 'Token type is required'],
-    enum: ['email', 'password', 'email-verification', 'passwordless-login', 'password-reset'],
-    index: true
+    enum: ['email', 'password', 'email-verification', 'passwordless-login', 'password-reset']
+    // Note: Index defined in compound indexes below
   },
   code: {
     type: String,
@@ -94,8 +94,8 @@ const verificationTokenSchema = new Schema<IVerificationToken>({
     type: String,
     required: [true, 'Email is required'],
     lowercase: true,
-    trim: true,
-    index: true
+    trim: true
+    // Note: Index defined in compound indexes below
   },
   expiresAt: {
     type: Date,

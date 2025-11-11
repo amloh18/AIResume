@@ -30,6 +30,8 @@ import PricingPlanEditModal from '@/components/admin/PricingPlanEditModal';
 import PromotionalOfferManager from '@/components/admin/PromotionalOfferManager';
 import DiscountCodeManager from '@/components/admin/DiscountCodeManager';
 import RevenueManager from '@/components/admin/RevenueManager';
+import { getCountryName, getCountryFlag, DEFAULT_PLAN_KEY, TIME_RANGES } from '@/lib/config/adminConstants';
+import { useRouter } from 'next/navigation';
 // RegionalPricing interface (from database)
 interface RegionalPricing {
   currency: string;
@@ -70,6 +72,7 @@ interface PricingPlan {
 }
 
 const PricingPlanManager: React.FC = () => {
+  const router = useRouter();
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [selectedPlanForPreview, setSelectedPlanForPreview] = useState<PricingPlan | null>(null);
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
@@ -91,11 +94,15 @@ const PricingPlanManager: React.FC = () => {
   // Ensure plans is always an array to prevent filter errors
   const safePlans = Array.isArray(plans) ? plans : [];
   const safePromotionalOffers = Array.isArray(promotionalOffers) ? promotionalOffers : [];
+  
+  // Ensure pricing data is always an array to prevent errors
+  const safePriceRegions = Array.isArray(priceRegions) ? priceRegions : [];
+  const safeCountryMappings = Array.isArray(countryMappings) ? countryMappings : [];
 
   // Calculate metrics for dashboard overview
   const activePlans = safePlans.filter(p => p.status === 'active').length;
   const activePromotions = safePromotionalOffers.filter((offer: any) => offer.isActive).length;
-  const regionsWithCustomPricing = priceRegions.length; // From database
+  const regionsWithCustomPricing = safePriceRegions.length; // From database
   
   // Calculate monthly changes (placeholder - would need historical data)
   const activePlansChange = 2; // Would calculate from historical data
@@ -109,11 +116,18 @@ const PricingPlanManager: React.FC = () => {
       try {
         const response = await fetch('/api/admin/promotional-offers');
         if (response.ok) {
-          const data = await response.json();
-          setAllPromotionalOffers(data);
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const data = await response.json();
+            setAllPromotionalOffers(data);
+          }
         }
       } catch (error) {
-        console.error('Error fetching promotional offers:', error);
+        if (error instanceof Error) {
+          console.error('Error fetching promotional offers:', error.message);
+        } else if (error && typeof error === 'object' && !('target' in error)) {
+          console.error('Error fetching promotional offers:', String(error));
+        }
       } finally {
         setLoadingOffers(false);
       }
@@ -128,14 +142,21 @@ const PricingPlanManager: React.FC = () => {
       try {
         const response = await fetch('/api/admin/pricing-regions');
         if (response.ok) {
-          const data = await response.json();
-          if (data.success) {
-            setPriceRegions(data.priceRegions || []);
-            setCountryMappings(data.countryMappings || []);
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const data = await response.json();
+            if (data.success) {
+              setPriceRegions(data.priceRegions || []);
+              setCountryMappings(data.countryMappings || []);
+            }
           }
         }
       } catch (error) {
-        console.error('Error fetching pricing regions:', error);
+        if (error instanceof Error) {
+          console.error('Error fetching pricing regions:', error.message);
+        } else if (error && typeof error === 'object' && !('target' in error)) {
+          console.error('Error fetching pricing regions:', String(error));
+        }
       } finally {
         setLoadingPricing(false);
       }
@@ -200,7 +221,11 @@ const PricingPlanManager: React.FC = () => {
         refetch(); // Refresh plans
       }
     } catch (error) {
-      console.error('Error toggling plan status:', error);
+      if (error instanceof Error) {
+        console.error('Error toggling plan status:', error.message);
+      } else if (error && typeof error === 'object' && !('target' in error)) {
+        console.error('Error toggling plan status:', String(error));
+      }
     }
   };
 
@@ -211,20 +236,30 @@ const PricingPlanManager: React.FC = () => {
 
   const handleGenerateCheckoutLink = async (plan: PricingPlan) => {
     try {
-      const response = await fetch(`/api/admin/plans/${plan.key}/checkout-link`, {
+      const response = await fetch('/api/admin/plans/checkout-link', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ planKey: plan.key })
       });
 
       if (response.ok) {
-        const data = await response.json();
-        // Copy to clipboard
-        navigator.clipboard.writeText(data.checkoutUrl);
-        alert('Checkout link copied to clipboard!');
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await response.json();
+          // Copy to clipboard
+          navigator.clipboard.writeText(data.checkoutUrl);
+          alert('Checkout link copied to clipboard!');
+        } else {
+          alert('Invalid response from server');
+        }
       }
     } catch (error) {
-      console.error('Error generating checkout link:', error);
+      if (error instanceof Error) {
+        console.error('Error generating checkout link:', error.message);
+      } else if (error && typeof error === 'object' && !('target' in error)) {
+        console.error('Error generating checkout link:', String(error));
+      }
+      alert('Failed to generate checkout link');
     }
   };
 
@@ -240,7 +275,7 @@ const PricingPlanManager: React.FC = () => {
   };
 
   const getPlanPrice = (plan: PricingPlan) => {
-    if (plan.key === 'free') return 0;
+    if (plan.key === DEFAULT_PLAN_KEY) return 0;
     if (plan.key === 'day_pass') return plan.price_one_time || 0;
     if (plan.key === 'pro_monthly') return plan.price_monthly || 0;
     if (plan.key === 'pro_quarterly') return plan.price_quarterly || 0;
@@ -249,7 +284,7 @@ const PricingPlanManager: React.FC = () => {
   };
 
   const getBillingCycle = (plan: PricingPlan) => {
-    if (plan.key === 'free') return 'N/A';
+    if (plan.key === DEFAULT_PLAN_KEY) return 'N/A';
     if (plan.key === 'day_pass') return 'One-time';
     if (plan.price_monthly) return 'Monthly';
     if (plan.price_quarterly) return 'Quarterly';
@@ -265,7 +300,7 @@ const PricingPlanManager: React.FC = () => {
       razorpayDetails: ''
     };
 
-    if (plan.key === 'free') {
+    if (plan.key === DEFAULT_PLAN_KEY) {
       readiness.stripe = true;
       readiness.razorpay = true;
       readiness.stripeDetails = 'Free plan';
@@ -297,10 +332,19 @@ const PricingPlanManager: React.FC = () => {
     return readiness;
   };
 
+  // Add error boundary wrapper
+  if (loading && safePlans.length === 0) {
+    return (
+      <div className="space-y-6">
+        <AdminPricingPlanSkeleton />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Tabs Navigation */}
-      <Tabs defaultValue="pricing" className="w-full">
+      <Tabs defaultValue="pricing" className="w-full" key="pricing-manager-tabs">
         <TabsList className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 rounded-none p-0 h-auto w-full justify-start">
           <TabsTrigger 
             value="pricing" 
@@ -344,9 +388,18 @@ const PricingPlanManager: React.FC = () => {
           <div className="space-y-6">
             {/* Dashboard Overview Section */}
             <div className="mb-8">
-              <div className="mb-4">
-                <h2 className="text-2xl font-bold text-white">Dashboard Overview</h2>
-                <p className="text-gray-400 mt-1">A summary of key pricing metrics.</p>
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-white">Dashboard Overview</h2>
+                  <p className="text-gray-400 mt-1">A summary of key pricing metrics.</p>
+                </div>
+                <Button
+                  onClick={() => router.push('/admin/pricing-plans')}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <Settings className="w-4 h-4 mr-2" />
+                  Manage Regional Pricing
+                </Button>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -432,7 +485,7 @@ const PricingPlanManager: React.FC = () => {
                       {safePlans.map((plan) => {
                         const price = getPlanPrice(plan);
                         const billingCycle = getBillingCycle(plan);
-                        const priceDisplay = plan.key === 'free' 
+                        const priceDisplay = plan.key === DEFAULT_PLAN_KEY 
                           ? 'Free' 
                           : price === 0 
                             ? 'Contact Us' 
@@ -541,214 +594,34 @@ const PricingPlanManager: React.FC = () => {
         {/* Regional Settings Tab */}
         <TabsContent value="regional" className="mt-6">
           <div className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-bold text-white">Regional Settings</h2>
-              <p className="text-gray-400 mt-1">View and manage pricing for different regions and currencies</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-white">Regional Settings</h2>
+                <p className="text-gray-400 mt-1">Regional pricing is now managed per plan. Use the dedicated pricing plans page to edit regional pricing.</p>
+              </div>
+              <Button
+                onClick={() => router.push('/admin/pricing-plans')}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <Settings className="w-4 h-4 mr-2" />
+                Manage Regional Pricing
+              </Button>
             </div>
-
-            {/* Filters */}
+            
             <Card className="bg-gray-800 border-gray-700">
               <CardContent className="p-6">
-                <div className="max-w-md">
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Filter by Currency</label>
-                  <select
-                    value={regionalFilter}
-                    onChange={(e) => setRegionalFilter(e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-lime-500"
+                <div className="text-center py-8">
+                  <Globe className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold text-white mb-2">Regional Pricing Management</h3>
+                  <p className="text-gray-400 mb-6">
+                    Regional pricing is now stored directly in each pricing plan. Click the button above to manage regional pricing for all plans.
+                  </p>
+                  <Button
+                    onClick={() => router.push('/admin/pricing-plans')}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
                   >
-                    <option value="all">All Currencies</option>
-                    {Array.from(new Set(priceRegions.map(r => r.currency)))
-                      .sort()
-                      .map(currency => (
-                        <option key={currency} value={currency}>{currency}</option>
-                      ))}
-                  </select>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Regional Pricing Table */}
-            <Card className="bg-gray-800 border-gray-700">
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-gray-700">
-                        <th className="text-left p-4 text-sm font-semibold text-gray-300">COUNTRY</th>
-                        <th className="text-left p-4 text-sm font-semibold text-gray-300">CURRENCY</th>
-                        <th className="text-left p-4 text-sm font-semibold text-gray-300">DAY PASS</th>
-                        <th className="text-left p-4 text-sm font-semibold text-gray-300">MONTHLY</th>
-                        <th className="text-left p-4 text-sm font-semibold text-gray-300">QUARTERLY</th>
-                        <th className="text-left p-4 text-sm font-semibold text-gray-300">YEARLY</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(() => {
-                        if (loadingPricing) {
-                          return (
-                            <tr>
-                              <td colSpan={6} className="p-8 text-center text-gray-400">
-                                Loading pricing data...
-                              </td>
-                            </tr>
-                          );
-                        }
-
-                        // Build a map of country codes to their pricing regions
-                        const countryToRegionMap = new Map<string, any>();
-                        countryMappings.forEach(mapping => {
-                          countryToRegionMap.set(mapping.countryCode, mapping.regionId);
-                        });
-
-                        // Build a map of region IDs to price regions
-                        const regionMap = new Map<string, any>();
-                        priceRegions.forEach(region => {
-                          regionMap.set(region.regionId, region);
-                        });
-
-                        // Get unique currencies for filter
-                        const uniqueCurrencies = Array.from(new Set(priceRegions.map(r => r.currency))).sort();
-
-                        // Create display data: country code -> pricing info
-                        const displayData: Array<{ countryCode: string; regionId: string; pricing: any }> = [];
-                        countryMappings.forEach(mapping => {
-                          const region = regionMap.get(mapping.regionId);
-                          if (region) {
-                            displayData.push({
-                              countryCode: mapping.countryCode,
-                              regionId: mapping.regionId,
-                              pricing: region,
-                            });
-                          }
-                        });
-
-                        // Filter by currency
-                        let filteredData = displayData;
-                        if (regionalFilter !== 'all') {
-                          filteredData = displayData.filter(item => 
-                            item.pricing.currency === regionalFilter
-                          );
-                        }
-
-                        // Helper function to get flag emoji from country code
-                        const getCountryFlag = (countryCode: string): string => {
-                          const codePoints = countryCode
-                            .toUpperCase()
-                            .split('')
-                            .map(char => 127397 + char.charCodeAt(0));
-                          return String.fromCodePoint(...codePoints);
-                        };
-
-                        // Helper to get country name from code (simplified - could use a library)
-                        const getCountryName = (code: string): string => {
-                          const names: Record<string, string> = {
-                            'GB': 'United Kingdom', 'US': 'United States', 'CA': 'Canada', 'AU': 'Australia',
-                            'DE': 'Germany', 'FR': 'France', 'IT': 'Italy', 'ES': 'Spain', 'NL': 'Netherlands',
-                            'BE': 'Belgium', 'AT': 'Austria', 'FI': 'Finland', 'IE': 'Ireland', 'PT': 'Portugal',
-                            'GR': 'Greece', 'PL': 'Poland', 'IN': 'India', 'PK': 'Pakistan',
-                          };
-                          return names[code] || code;
-                        };
-
-                        if (filteredData.length === 0) {
-                          return (
-                            <tr>
-                              <td colSpan={6} className="p-8 text-center text-gray-400">
-                                No regions found matching your filters.
-                              </td>
-                            </tr>
-                          );
-                        }
-
-                        return filteredData.map((item, index) => {
-                          const { countryCode, pricing } = item;
-                          return (
-                            <tr 
-                              key={countryCode}
-                              className={`border-b border-gray-700 hover:bg-gray-750 transition-colors ${
-                                index % 2 === 0 ? 'bg-gray-800' : 'bg-gray-800/50'
-                              }`}
-                            >
-                              <td className="p-4">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-2xl" role="img" aria-label={getCountryName(countryCode)}>
-                                    {getCountryFlag(countryCode)}
-                                  </span>
-                                  <div>
-                                    <div className="font-medium text-white">{getCountryName(countryCode)}</div>
-                                    <div className="text-xs text-gray-400">{countryCode}</div>
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="p-4">
-                                <div>
-                                  <div className="text-white font-medium">{pricing.currency}</div>
-                                  <div className="text-xs text-gray-400">{pricing.currencySymbol}</div>
-                                </div>
-                              </td>
-                              <td className="p-4 text-gray-300">{pricing.currencySymbol}{pricing.plans.dayPass}</td>
-                              <td className="p-4 text-gray-300">{pricing.currencySymbol}{pricing.plans.monthly}</td>
-                              <td className="p-4 text-gray-300">{pricing.currencySymbol}{pricing.plans.quarterly}</td>
-                              <td className="p-4 text-gray-300">{pricing.currencySymbol}{pricing.plans.yearly.toLocaleString()}</td>
-                            </tr>
-                          );
-                        });
-                      })()}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Summary Statistics */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card className="bg-gray-800 border-gray-700">
-                <CardContent className="p-6">
-                  <div className="text-3xl font-bold text-white mb-2">
-                    {(() => {
-                      let filtered = Object.entries(REGIONAL_PRICING);
-                      if (regionalFilter !== 'all') {
-                        filtered = filtered.filter(([_, p]) => p.currency === regionalFilter);
-                      }
-                      return filtered.length;
-                    })()}
-                  </div>
-                  <div className="text-gray-400 text-sm">
-                    {regionalFilter !== 'all' ? 'Filtered Regions' : 'Total Regions'}
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="bg-gray-800 border-gray-700">
-                <CardContent className="p-6">
-                  <div className="text-3xl font-bold text-white mb-2">
-                    {new Set(Object.values(REGIONAL_PRICING).map(p => p.currency)).size}
-                  </div>
-                  <div className="text-gray-400 text-sm">Unique Currencies</div>
-                </CardContent>
-              </Card>
-              <Card className="bg-gray-800 border-gray-700">
-                <CardContent className="p-6">
-                  <div className="text-3xl font-bold text-white mb-2">
-                    {Object.values(REGIONAL_PRICING).filter(p => p.currency === 'EUR').length}
-                  </div>
-                  <div className="text-gray-400 text-sm">EU Countries</div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Info Card */}
-            <Card className="bg-blue-900/20 border-blue-700">
-              <CardContent className="p-6">
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <h4 className="text-white font-semibold mb-2">About Regional Pricing</h4>
-                    <p className="text-gray-300 text-sm leading-relaxed">
-                      Regional pricing is automatically applied based on the user's detected location. 
-                      Prices are displayed in the local currency and payment provider (Stripe or Razorpay) 
-                      is automatically selected based on the region. EU countries share the same EUR pricing structure.
-                    </p>
-                  </div>
+                    Go to Pricing Plans Management
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -776,7 +649,7 @@ const PricingPlanManager: React.FC = () => {
         <UniversalPaymentModal
           isOpen={isPreviewModalOpen}
           onClose={() => setIsPreviewModalOpen(false)}
-          currentUserPlan="free"
+          currentUserPlan={DEFAULT_PLAN_KEY}
           preselectedPlanKey={selectedPlanForPreview.key}
           onSuccess={() => setIsPreviewModalOpen(false)}
           adminMode={true}
@@ -847,7 +720,7 @@ const PricingPlanManager: React.FC = () => {
                         <div className="text-xl font-bold text-white">${selectedPlanForDetails.price_one_time.toFixed(2)}</div>
                       </div>
                     )}
-                    {selectedPlanForDetails.key === 'free' && (
+                    {selectedPlanForDetails.key === DEFAULT_PLAN_KEY && (
                       <div className="bg-gray-700 p-4 rounded-lg">
                         <div className="text-sm text-gray-400">Price</div>
                         <div className="text-xl font-bold text-white">Free</div>

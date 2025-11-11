@@ -2,8 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { PricingPlan } from '@/models';
 import { detectUserRegion } from '@/lib/services/regionDetectionService';
-import { getRegionalPricingFromDB, getDefaultPricingFromDB } from '@/lib/services/pricingService';
 import { getAdminPricingPlan } from '@/models/admin-models';
+import { createErrorResponse } from '@/lib/api/error-handler';
+
+// Helper to get currency symbol
+function getCurrencySymbol(currency: string): string {
+  const symbols: Record<string, string> = {
+    'USD': '$',
+    'EUR': '€',
+    'GBP': '£',
+    'INR': '₹',
+  };
+  return symbols[currency.toUpperCase()] || currency;
+}
 
 // In-memory cache for pricing plans (static data that rarely changes)
 interface CacheEntry {
@@ -261,15 +272,6 @@ export async function GET(request: NextRequest) {
       plans = fallbackPlans;
     }
 
-    // Get regional pricing from database once (shared across all plans)
-    let regionalPricingData = null;
-    if (regionInfo?.countryCode) {
-      regionalPricingData = await getRegionalPricingFromDB(regionInfo.countryCode);
-    }
-    if (!regionalPricingData) {
-      regionalPricingData = await getDefaultPricingFromDB();
-    }
-
     // Add promotional pricing, regional pricing, and computed fields
     const currentDate = new Date();
     const enhancedPlans = plans.map(plan => {
@@ -278,12 +280,43 @@ export async function GET(request: NextRequest) {
       const isPromotionActive = (plan as any).promotionValidFrom && (plan as any).promotionValidUntil &&
         new Date((plan as any).promotionValidFrom) <= currentDate && new Date((plan as any).promotionValidUntil) >= currentDate;
 
-      // Calculate effective prices (use regional pricing from database if available, otherwise use plan defaults)
+      // Get regional pricing from plan's regionalPricing array
+      const planRegionalPricing = (plan as any).regionalPricing || [];
+      
+      // Find regional pricing entries for the user's region
+      const userRegionPricings = planRegionalPricing.filter((rp: any) => 
+        rp.region === regionInfo?.countryCode
+      );
+
+      // Helper to get regional price for a specific billing cycle
+      const getRegionalPriceForCycle = (cycle: 'monthly' | 'quarterly' | 'yearly' | 'oneTime') => {
+        // Map our cycle names to the billing cycle enum
+        const cycleMap: Record<string, string> = {
+          'monthly': 'monthly',
+          'quarterly': 'quarterly',
+          'yearly': 'yearly',
+          'oneTime': 'one-time'
+        };
+        const mappedCycle = cycleMap[cycle];
+        
+        // First try to find a specific entry for this cycle
+        const cycleSpecific = userRegionPricings.find((rp: any) => 
+          rp.billingCycle === mappedCycle
+        );
+        if (cycleSpecific) return cycleSpecific.price;
+        
+        // If no cycle-specific entry, look for one without billingCycle (applies to all)
+        const general = userRegionPricings.find((rp: any) => !rp.billingCycle);
+        if (general) return general.price;
+        
+        return null;
+      };
+
       const basePrice = {
-        monthly: regionalPricingData?.monthly || plan.price_monthly,
-        quarterly: regionalPricingData?.quarterly || plan.price_quarterly,
-        yearly: regionalPricingData?.yearly || plan.price_yearly,
-        oneTime: regionalPricingData?.dayPass || plan.price_one_time
+        monthly: getRegionalPriceForCycle('monthly') || plan.price_monthly,
+        quarterly: getRegionalPriceForCycle('quarterly') || plan.price_quarterly,
+        yearly: getRegionalPriceForCycle('yearly') || plan.price_yearly,
+        oneTime: getRegionalPriceForCycle('oneTime') || plan.price_one_time
       };
 
       const effectivePrice = {
@@ -340,31 +373,34 @@ export async function GET(request: NextRequest) {
         // Add computed fields for backward compatibility
         price: plan.price_monthly || plan.price_one_time || 0,
         billingCycle: plan.billingCycle,
-        // Regional pricing info
-        regionalPricing: regionalPricingData ? {
-          region: regionInfo.countryCode,
-          regionName: regionInfo.countryName,
-          currency: regionalPricingData.currency,
-          currencySymbol: regionalPricingData.currencySymbol,
-          price: basePrice.monthly, // For backward compatibility
-          displayPrice: `${regionalPricingData.currencySymbol}${basePrice.monthly}`
-        } : {
-          region: regionInfo.countryCode,
-          regionName: regionInfo.countryName,
-          currency: regionInfo.currency,
-          currencySymbol: regionInfo.currencySymbol,
-          price: plan.price_monthly || 0,
-          displayPrice: `${regionInfo.currencySymbol}${plan.price_monthly || 0}`
-        },
+        // Regional pricing info - use monthly pricing for display
+        regionalPricing: (() => {
+          const monthlyRegional = userRegionPricings.find((rp: any) => rp.billingCycle === 'monthly' || !rp.billingCycle) || userRegionPricings[0];
+          return monthlyRegional ? {
+            region: monthlyRegional.region,
+            regionName: regionInfo.countryName,
+            currency: monthlyRegional.currency,
+            currencySymbol: getCurrencySymbol(monthlyRegional.currency),
+            price: monthlyRegional.price,
+            displayPrice: monthlyRegional.displayPrice || `${getCurrencySymbol(monthlyRegional.currency)}${monthlyRegional.price}`,
+            stripePriceId: monthlyRegional.stripePriceId,
+            razorpayPlanId: monthlyRegional.razorpayPlanId
+          } : {
+            region: regionInfo.countryCode,
+            regionName: regionInfo.countryName,
+            currency: plan.currency || regionInfo.currency,
+            currencySymbol: getCurrencySymbol(plan.currency || regionInfo.currency),
+            price: plan.price_monthly || 0,
+            displayPrice: `${getCurrencySymbol(plan.currency || regionInfo.currency)}${plan.price_monthly || 0}`
+          };
+        })(),
         // Time-based metadata
         durationInfo,
         // Add promotional fields
         isPromotionActive,
         effectivePrice,
         // Add days remaining for promotion
-        promotionDaysRemaining: isPromotionActive && (plan as any).promotionValidUntil
-          ? Math.ceil((new Date((plan as any).promotionValidUntil).getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24))
-          : null
+        promotionDaysRemaining: isPromotionActive && (plan as any).promotionValidUntil ? Math.ceil((new Date((plan as any).promotionValidUntil).getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24)) : null
       };
     });
 
@@ -402,17 +438,27 @@ export async function GET(request: NextRequest) {
       }
     });
   } catch (error) {
+    // CRITICAL: Always return JSON, never let Next.js return HTML
     console.error('Error fetching pricing plans:', error);
-    // Return fallback plans even on error
-    return NextResponse.json({
-      plans: fallbackPlans,
-      region: {
-        countryCode: 'US',
-        countryName: 'United States',
-        currency: 'USD',
-        currencySymbol: '$',
-        paymentPartner: 'stripe'
-      }
-    });
+    
+    // Return fallback plans even on error, but ensure it's JSON
+    try {
+      return NextResponse.json({
+        success: true,
+        plans: fallbackPlans,
+        region: {
+          countryCode: 'US',
+          countryName: 'United States',
+          currency: 'USD',
+          currencySymbol: '$',
+          paymentPartner: 'stripe'
+        },
+        _fallback: true,
+        _error: error instanceof Error ? error.message : 'Unknown error'
+      }, { status: 200 }); // Return 200 with fallback data
+    } catch (jsonError) {
+      // If even JSON creation fails, use error handler
+      return createErrorResponse(error);
+    }
   }
 }

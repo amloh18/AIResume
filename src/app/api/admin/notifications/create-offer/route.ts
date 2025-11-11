@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
       userQuery.currentPlanKey = planFilter;
     }
 
-    const users = await User.find(userQuery).select('_id firebaseUid');
+    const users = await User.find(userQuery).select('_id');
 
     // Create discount offer notification for each user
     let enqueued = 0;
@@ -51,7 +51,6 @@ export async function POST(request: NextRequest) {
         taskType: 'discount_offer',
         payload: {
           userId: user._id.toString(),
-          firebaseUid: user.firebaseUid,
           notificationType: 'discount_offer',
           title: title || `Special Offer: ${discountType === 'percentage' ? `${value}%` : `$${value}`} Off!`,
           message: message || `Use code ${code} to get ${discountType === 'percentage' ? `${value}%` : `$${value}`} off!`,

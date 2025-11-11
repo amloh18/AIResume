@@ -58,6 +58,12 @@ export function useUsageLimits() {
 
     try {
       const response = await fetch('/api/user/usage-limits');
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('Usage limits response is not JSON. Content-Type:', contentType);
+        return;
+      }
+
       const data = await response.json();
 
       if (response.ok && data.success) {
@@ -99,6 +105,12 @@ export function useUsageLimits() {
           deviceFingerprint
         })
       });
+
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('Usage check response is not JSON. Content-Type:', contentType);
+        return { canProceed: false, reason: 'Invalid response format' };
+      }
 
       const data = await response.json();
 

@@ -1,0 +1,71 @@
+// DEPRECATED: This context is no longer used
+// Admin authentication now uses NextAuth directly via useSession() hook
+// 
+// Migration completed: November 10, 2025
+// This file can be deleted after confirming all admin components work correctly
+//
+// Original functionality:
+// - Custom admin authentication context
+// - Cookie-based JWT tokens
+// - Manual verification API calls
+//
+// New implementation:
+// - NextAuth useSession() hook
+// - Built-in session management
+// - Automatic token refresh
+// - Better security with CSRF protection
+//
+// Migration guide for components:
+// OLD:
+//   import { useAdminAuth } from '@/contexts/AdminAuthContext';
+//   const { user, loading, signOut } = useAdminAuth();
+//
+// NEW:
+//   import { useSession, signOut } from 'next-auth/react';
+//   const { data: session, status } = useSession();
+//   const user = session?.user;
+//   const loading = status === 'loading';
+//   const isAdmin = user?.type === 'admin' || user?.role === 'admin';
+
+'use client';
+
+import React, { createContext, useContext, ReactNode } from 'react';
+import { useSession } from 'next-auth/react';
+
+interface AdminUser {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  type: string;
+}
+
+interface AdminAuthContextType {
+  user: AdminUser | null;
+  loading: boolean;
+  signOut: () => void;
+}
+
+const AdminAuthContext = createContext<AdminAuthContextType | undefined>(undefined);
+
+export function AdminAuthProvider({ children }: { children: ReactNode }) {
+  console.warn('⚠️ AdminAuthProvider is deprecated. Please use NextAuth useSession() directly.');
+  
+  // Return children without wrapping in deprecated context
+  return <>{children}</>;
+}
+
+export function useAdminAuth() {
+  console.warn('⚠️ useAdminAuth is deprecated. Please use NextAuth useSession() hook instead.');
+  
+  const { data: session, status } = useSession();
+  
+  return {
+    user: session?.user as AdminUser | null,
+    loading: status === 'loading',
+    signOut: () => {
+      console.warn('⚠️ Use signOut from next-auth/react directly');
+    }
+  };
+}
+

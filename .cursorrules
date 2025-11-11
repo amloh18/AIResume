@@ -1,0 +1,71 @@
+# Cursor Rules for CVCircle.io
+
+## Update Guide Command
+
+When the user types "update guide", you must:
+
+1. **Read the current guide file** at `public/.guide/guide.md`
+2. **Analyze the codebase** to understand:
+   - All routes and pages in `src/app/`
+   - Main functions and their logic
+   - Service implementations
+   - Component structures
+   - Data flow patterns
+
+3. **Update the guide** with:
+   - Current function logic and working
+   - Organized by sitemap structure (from `src/app/sitemap.ts`)
+   - Tier 1: Main Landing Page (/)
+   - Tier 2: Core Product Pages (/ai-career-report, /features, /templates)
+   - Tier 3: Conversion Pages (/sign-up, /sign-in)
+   - Tier 4: Legal/Support Pages (/privacy-policy, /terms, /cookie-policy)
+   - Protected Routes: Dashboard (/dashboard/*)
+   - Protected Routes: Studio (/studio)
+   - Core Functions & Services
+
+4. **Document for each section**:
+   - File location
+   - Purpose
+   - Key functions with logic flow
+   - Dependencies
+   - State management
+   - Error handling
+   - Performance optimizations
+
+5. **Maintain organization**:
+   - Follow sitemap priority structure
+   - Group related functions together
+   - Include code examples where helpful
+   - Document data flow patterns
+   - Note any important implementation details
+
+6. **Save the updated guide** to `public/.guide/guide.md`
+
+## Code Style Guidelines
+
+- Use TypeScript strictly
+- Follow Next.js App Router conventions
+- Use React hooks properly (Rules of Hooks)
+- Implement proper error handling
+- Optimize for performance (code splitting, lazy loading)
+- Use unified authentication system
+- Follow MongoDB best practices
+
+## File Organization
+
+- Pages: `src/app/[route]/page.tsx`
+- Components: `src/components/[category]/[Component].tsx`
+- Services: `src/lib/services/[Service].ts`
+- Hooks: `src/lib/hooks/[hook].ts`
+- Utils: `src/lib/utils/[util].ts`
+- Models: `src/models/[Model].ts`
+- API Routes: `src/app/api/[route]/route.ts`
+
+## Important Patterns
+
+- **Data Loading**: Sequential for critical data, parallel for secondary data
+- **Error Handling**: Use Promise.allSettled for parallel operations
+- **Authentication**: Always use unified auth system
+- **State Management**: Use React Context for global state, local state for component-specific
+- **Performance**: Code split heavy components, use 'summary' projections for lists
+

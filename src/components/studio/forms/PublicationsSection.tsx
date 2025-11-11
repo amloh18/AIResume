@@ -1,24 +1,32 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Plus, Trash2, Copy } from 'lucide-react';
 import WYSIWYGEditor, { WYSIWYGToolbar } from '@/components/ui/WYSIWYGEditor';
+import { AISuggestionsPanel } from '../AISuggestionsPanel';
 
 interface PublicationsSectionProps {
   data: any[];
   onUpdate: (data: any[]) => void;
   onAdd: () => void;
   onRemove: (index: number) => void;
+  jobData?: any;
+  userId?: string;
 }
 
 const PublicationsSection: React.FC<PublicationsSectionProps> = ({
   data,
   onUpdate,
   onAdd,
-  onRemove
+  onRemove,
+  jobData,
+  userId
 }) => {
   // Ensure we have proper data structure
   const safeData = Array.isArray(data) ? data : [];
+  const [showSuggestions, setShowSuggestions] = useState<{ [key: number]: boolean }>({});
+  const [suggestions, setSuggestions] = useState<{ [key: number]: Array<{ method: string; content: string }> }>({});
+  const [loadingSuggestions, setLoadingSuggestions] = useState<{ [key: number]: boolean }>({});
 
   const updatePublication = (index: number, field: string, value: any) => {
     const updatedData = [...safeData];
@@ -37,6 +45,47 @@ const PublicationsSection: React.FC<PublicationsSectionProps> = ({
       updatedData.splice(index + 1, 0, duplicated);
       onUpdate(updatedData);
     }
+  };
+
+  const generateAISuggestions = async (index: number, publicationItem: any) => {
+    if (!userId) return;
+    
+    setLoadingSuggestions({ ...loadingSuggestions, [index]: true });
+    setShowSuggestions({ ...showSuggestions, [index]: true });
+    
+    try {
+      const response = await fetch('/api/ai/generate-suggestions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId,
+          jobData,
+          sectionData: publicationItem,
+          sectionType: 'publication',
+          currentText: publicationItem.summary || '',
+          cvData: {}
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate suggestions');
+      }
+
+      const result = await response.json();
+      setSuggestions({ ...suggestions, [index]: result.suggestions });
+    } catch (error) {
+      console.error('Error generating AI suggestions:', error);
+      setShowSuggestions({ ...showSuggestions, [index]: false });
+    } finally {
+      setLoadingSuggestions({ ...loadingSuggestions, [index]: false });
+    }
+  };
+
+  const handleSelectSuggestion = (index: number, content: string) => {
+    updatePublication(index, 'summary', content);
+    setShowSuggestions({ ...showSuggestions, [index]: false });
   };
 
   return (
@@ -115,8 +164,20 @@ const PublicationsSection: React.FC<PublicationsSectionProps> = ({
           <div className="mt-4">
             <div className="flex items-center justify-between mb-2">
               <label className="block text-white/80 text-sm font-medium">Summary</label>
-              <WYSIWYGToolbar />
+              <WYSIWYGToolbar
+                showAIButton={true}
+                fieldType="other"
+                onAISuggestions={() => generateAISuggestions(index, publication)}
+                isGenerating={loadingSuggestions[index] || false}
+              />
             </div>
+            <AISuggestionsPanel
+              isVisible={showSuggestions[index] || false}
+              suggestions={suggestions[index] || []}
+              isLoading={loadingSuggestions[index] || false}
+              onSelect={(content) => handleSelectSuggestion(index, content)}
+              onClose={() => setShowSuggestions({ ...showSuggestions, [index]: false })}
+            />
             <WYSIWYGEditor
               value={publication.summary || ''}
               onChange={(value) => updatePublication(index, 'summary', value)}

@@ -84,23 +84,23 @@ const activityLogSchema = new Schema<IActivityLog>({
   logType: {
     type: String,
     required: true,
-    enum: ['api', 'ai', 'user_action', 'system', 'payment', 'export', 'admin_action'],
-    index: true
+    enum: ['api', 'ai', 'user_action', 'system', 'payment', 'export', 'admin_action']
+    // Note: Index defined in compound indexes below
   },
   timestamp: {
     type: Date,
     required: true,
-    default: Date.now,
-    index: true
+    default: Date.now
+    // Note: Index defined in compound indexes below (and TTL index)
   },
   userId: {
     type: Schema.Types.ObjectId,
-    ref: 'User',
-    index: true
+    ref: 'User'
+    // Note: Index defined in compound index below
   },
   userEmail: {
-    type: String,
-    index: true
+    type: String
+    // Note: Index defined in text search index below
   },
   sessionId: String,
   ipAddress: String,
@@ -118,8 +118,8 @@ const activityLogSchema = new Schema<IActivityLog>({
   },
   action: {
     type: String,
-    required: true,
-    index: true
+    required: true
+    // Note: Index defined in compound index and text search below
   },
   aiMetadata: {
     model: String,
@@ -161,8 +161,8 @@ const activityLogSchema = new Schema<IActivityLog>({
   status: {
     type: String,
     required: true,
-    enum: ['success', 'failed', 'warning'],
-    index: true
+    enum: ['success', 'failed', 'warning']
+    // Note: Index defined in compound index below
   },
   errorMessage: String,
   metadata: {

@@ -60,40 +60,59 @@ export async function POST(request: NextRequest) {
     // Deep clone the draft CV data to prevent reference issues
     const clonedDraftData = JSON.parse(JSON.stringify(draftCVData));
     
-    // Ensure all sections exist (even if empty arrays) to prevent data loss
+    // CRITICAL FIX: Ensure ALL sections are fully preserved with ALL fields (including null)
+    // Preserve original values including null, don't convert to empty strings
+    const preserveField = (value: any, defaultValue: any = null) => {
+      return value !== undefined ? value : defaultValue;
+    };
+
+    // Preserve basics section with all fields including null values
+    const basicsData = clonedDraftData.basics || {};
+    const validatedBasics = {
+      name: preserveField(basicsData.name, null),
+      label: preserveField(basicsData.label, null),
+      image: preserveField(basicsData.image, null),
+      email: preserveField(basicsData.email, null),
+      phone: preserveField(basicsData.phone, null),
+      url: preserveField(basicsData.url, null),
+      summary: preserveField(basicsData.summary, null),
+      location: basicsData.location ? {
+        address: preserveField(basicsData.location.address, null),
+        postalCode: preserveField(basicsData.location.postalCode, null),
+        city: preserveField(basicsData.location.city, null),
+        countryCode: preserveField(basicsData.location.countryCode, null),
+        region: preserveField(basicsData.location.region, null)
+      } : null,
+      profiles: Array.isArray(basicsData.profiles) ? basicsData.profiles : []
+    };
+
+    // Preserve all sections with all fields including null values
+    // Use preserveField to maintain null values instead of converting to empty strings/arrays
     const validatedCVData = {
       ...clonedDraftData,
-      basics: clonedDraftData.basics || {
-        name: '',
-        label: '',
-        image: '',
-        email: '',
-        phone: '',
-        url: '',
-        summary: '',
-        location: { address: '', postalCode: '', city: '', countryCode: '', region: '' },
-        profiles: []
-      },
-      work: Array.isArray(clonedDraftData.work) ? clonedDraftData.work : [],
-      education: Array.isArray(clonedDraftData.education) ? clonedDraftData.education : [],
-      skills: Array.isArray(clonedDraftData.skills) ? clonedDraftData.skills : [],
-      projects: Array.isArray(clonedDraftData.projects) ? clonedDraftData.projects : [],
-      volunteer: Array.isArray(clonedDraftData.volunteer) ? clonedDraftData.volunteer : [],
-      awards: Array.isArray(clonedDraftData.awards) ? clonedDraftData.awards : [],
-      certificates: Array.isArray(clonedDraftData.certificates) ? clonedDraftData.certificates : [],
-      publications: Array.isArray(clonedDraftData.publications) ? clonedDraftData.publications : [],
-      languages: Array.isArray(clonedDraftData.languages) ? clonedDraftData.languages : [],
-      interests: Array.isArray(clonedDraftData.interests) ? clonedDraftData.interests : [],
-      references: Array.isArray(clonedDraftData.references) ? clonedDraftData.references : []
+      basics: validatedBasics,
+      work: Array.isArray(clonedDraftData.work) ? clonedDraftData.work : (clonedDraftData.work === null ? null : []),
+      education: Array.isArray(clonedDraftData.education) ? clonedDraftData.education : (clonedDraftData.education === null ? null : []),
+      skills: Array.isArray(clonedDraftData.skills) ? clonedDraftData.skills : (clonedDraftData.skills === null ? null : []),
+      projects: Array.isArray(clonedDraftData.projects) ? clonedDraftData.projects : (clonedDraftData.projects === null ? null : []),
+      volunteer: Array.isArray(clonedDraftData.volunteer) ? clonedDraftData.volunteer : (clonedDraftData.volunteer === null ? null : []),
+      awards: Array.isArray(clonedDraftData.awards) ? clonedDraftData.awards : (clonedDraftData.awards === null ? null : []),
+      certificates: Array.isArray(clonedDraftData.certificates) ? clonedDraftData.certificates : (clonedDraftData.certificates === null ? null : []),
+      publications: Array.isArray(clonedDraftData.publications) ? clonedDraftData.publications : (clonedDraftData.publications === null ? null : []),
+      languages: Array.isArray(clonedDraftData.languages) ? clonedDraftData.languages : (clonedDraftData.languages === null ? null : []),
+      interests: Array.isArray(clonedDraftData.interests) ? clonedDraftData.interests : (clonedDraftData.interests === null ? null : []),
+      references: Array.isArray(clonedDraftData.references) ? clonedDraftData.references : (clonedDraftData.references === null ? null : [])
     };
 
     // Log section counts for debugging
     console.log('🔄 Converting draft to Master CV with sections:', {
-      work: validatedCVData.work.length,
-      education: validatedCVData.education.length,
-      skills: validatedCVData.skills.length,
-      projects: validatedCVData.projects.length,
-      hasBasics: !!validatedCVData.basics?.name
+      work: Array.isArray(validatedCVData.work) ? validatedCVData.work.length : (validatedCVData.work === null ? 'null' : 'not array'),
+      education: Array.isArray(validatedCVData.education) ? validatedCVData.education.length : (validatedCVData.education === null ? 'null' : 'not array'),
+      skills: Array.isArray(validatedCVData.skills) ? validatedCVData.skills.length : (validatedCVData.skills === null ? 'null' : 'not array'),
+      projects: Array.isArray(validatedCVData.projects) ? validatedCVData.projects.length : (validatedCVData.projects === null ? 'null' : 'not array'),
+      hasBasics: !!validatedCVData.basics,
+      basicsName: validatedCVData.basics?.name,
+      basicsFieldsPreserved: validatedBasics ? Object.keys(validatedBasics).length : 0
     });
 
     // Find user
@@ -165,25 +184,49 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Check if Master CV already exists
-    const existingMasterCV = await CV.findOne({
+    // CRITICAL: Master CV is ONLY identified by ai-career-report creation
+    // Check if Master CV already exists (created via ai-career-report)
+    let existingMasterCV = await CV.findOne({
       userId: user._id,
       $or: [
-        { 'metadata.isMaster': true },
-        { 'metadata.isMaster': 'true' },
-        { isMaster: true },
-        { isMaster: 'true' }
+        { 'metadata.createdVia': 'ai-career-report' },
+        { 'metadata.tags': { $in: ['ai-career-report'] } }
       ]
     });
+
+    // FALLBACK: If no ai-career-report master CV, use oldest CV by creation date
+    if (!existingMasterCV) {
+      console.log('🔍 Convert to Master CV - No ai-career-report master CV found, checking for oldest CV as fallback');
+      const allCVs = await CV.find({
+        userId: user._id
+      }).sort({ createdAt: 1 }); // Sort ascending (oldest first)
+
+      if (allCVs && allCVs.length > 0) {
+        existingMasterCV = allCVs[0]; // Get the oldest CV
+        console.log('🔍 Convert to Master CV - Using oldest CV as master CV fallback:', {
+          id: existingMasterCV._id,
+          title: existingMasterCV.title,
+          createdAt: existingMasterCV.createdAt
+        });
+      }
+    }
 
     if (existingMasterCV) {
       // CRITICAL FIX: Use markModified to ensure Mongoose saves the Mixed type field
       // Update existing Master CV instead of creating new one with validated data
-      existingMasterCV.cvData = validatedCVData;
+      // Ensure ALL sections including basics are fully preserved with all fields (including null)
+      existingMasterCV.cvData = {
+        ...validatedCVData,
+        basics: validatedBasics // Ensure basics is fully preserved with all fields including null
+      };
       existingMasterCV.markModified('cvData'); // Tell Mongoose the Mixed field changed
       existingMasterCV.metadata = {
         ...existingMasterCV.metadata,
         aiAnalysis: draft.aiAnalysis,
+        createdVia: 'ai-career-report', // Ensure this is set
+        tags: existingMasterCV.metadata?.tags?.includes('ai-career-report') 
+          ? existingMasterCV.metadata.tags 
+          : [...(existingMasterCV.metadata?.tags || []), 'ai-career-report'],
         lastModified: new Date()
       };
       existingMasterCV.markModified('metadata'); // Tell Mongoose the metadata changed
@@ -242,18 +285,22 @@ export async function POST(request: NextRequest) {
     }
 
     // Create new Master CV with validated data
+    // CRITICAL: Ensure basics section is fully preserved
     const masterCV = new CV({
       userId: user._id,
-      title: `${validatedCVData.basics?.name || 'User'}'s Master CV`,
-      cvData: validatedCVData,
+      title: `${validatedBasics.name || 'User'}'s Master CV`,
+      cvData: {
+        ...validatedCVData,
+        basics: validatedBasics // Ensure basics is fully preserved
+      },
       templateId: 'default',
       status: 'draft',
       metadata: {
-        isMaster: true,
+        // CRITICAL: Master CV is identified ONLY by createdVia, not isMaster flag
         tags: ['master-cv', 'ai-career-report'],
         isPublic: false,
         aiAnalysis: draft.aiAnalysis,
-        createdVia: 'ai-career-report',
+        createdVia: 'ai-career-report', // CRITICAL: This is the ONLY identifier for master CV
         lastModified: new Date(),
         viewCount: 0,
         downloadCount: 0,
@@ -266,7 +313,7 @@ export async function POST(request: NextRequest) {
     await masterCV.save();
 
     // Verify data was saved correctly by re-fetching
-    const verifyCV = await CV.findById(masterCV._id).lean();
+    let verifyCV = await CV.findById(masterCV._id).lean();
     console.log('✅ Verification after save - Master CV sections:', {
       work: verifyCV?.cvData?.work?.length || 0,
       education: verifyCV?.cvData?.education?.length || 0,
@@ -287,9 +334,8 @@ export async function POST(request: NextRequest) {
       );
       console.log('🔄 Attempted recovery with direct update');
       
-      // Re-fetch after recovery
-      const recoveredCV = await CV.findById(masterCV._id).lean();
-      verifyCV = recoveredCV;
+      // Re-fetch after recovery and update verifyCV
+      verifyCV = await CV.findById(masterCV._id).lean();
     }
 
     // Verify all sections are migrated before deleting draft

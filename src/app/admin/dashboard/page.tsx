@@ -1,7 +1,9 @@
 'use client';
 
+import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
+import { useSession, signOut } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -24,17 +26,8 @@ import TestimonialManager from '@/components/admin/TestimonialManager';
 import AIAnalytics from '@/components/admin/AIAnalytics';
 import LogsViewer from '@/components/admin/LogsViewer';
 
-interface AdminUser {
-  id: string;
-  email: string;
-  name: string;
-  role: string;
-  type: string;
-}
-
 export default function AdminDashboard() {
-  const [user, setUser] = useState<AdminUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: session, status } = useSession();
   const [isActivityPanelOpen, setIsActivityPanelOpen] = useState(false);
   const [activityCount, setActivityCount] = useState(0);
   const [activities, setActivities] = useState<any[]>([]);
@@ -44,47 +37,76 @@ export default function AdminDashboard() {
   const menuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
-  // Track if we've already verified to prevent duplicate calls
-  const hasVerifiedRef = useRef(false);
+  // Track if we've already fetched to prevent duplicate calls
+  const hasFetchedRef = useRef(false);
+
+  // Extract admin user from session
+  const user = session?.user as any;
+  const isAdmin = user?.type === 'admin' || user?.role === 'admin' || user?.role === 'superadmin';
 
   useEffect(() => {
-    // Prevent duplicate verification calls
-    if (hasVerifiedRef.current) {
+    // Redirect if not authenticated or not an admin
+    if (status === 'unauthenticated') {
+      router.push('/admin/signin');
       return;
     }
-    hasVerifiedRef.current = true;
 
-    const verifyAdmin = async () => {
-      try {
-        const response = await fetch('/api/admin/verify');
-        const data = await response.json();
+    if (status === 'authenticated' && !isAdmin) {
+      console.warn('Non-admin user attempted to access admin dashboard');
+      router.push('/sign-in');
+      return;
+    }
 
-        if (data.success) {
-          setUser(data.user);
-        } else {
-          router.push('/admin/signin');
-        }
-      } catch (error) {
-        console.error('Admin verification error:', error instanceof Error ? error.message : String(error));
-        router.push('/admin/signin');
-      } finally {
-        setLoading(false);
-      }
-    };
+    // Prevent duplicate calls
+    if (hasFetchedRef.current || status === 'loading' || !isAdmin) {
+      return;
+    }
+    hasFetchedRef.current = true;
 
-    // Run both in parallel for better performance
-    Promise.all([verifyAdmin(), fetchActivityCount()]);
-  }, [router]);
+    // Fetch activity count only if authenticated and admin
+    if (status === 'authenticated' && isAdmin) {
+      fetchActivityCount();
+    }
+  }, [status, isAdmin, router]);
 
   const fetchActivityCount = async () => {
     try {
       const response = await fetch('/api/admin/activity?limit=1');
       if (response.ok) {
-        const data = await response.json();
-        setActivityCount(data.total || 0);
+        // Check content-type before parsing JSON
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await response.json();
+          setActivityCount(data.total || 0);
+        } else {
+          // Response is not JSON (might be HTML error page)
+          console.warn('Activity count API returned non-JSON response:', contentType);
+          setActivityCount(0);
+        }
+      } else {
+        // Handle non-OK responses gracefully
+        console.warn('Failed to fetch activity count:', response.status, response.statusText);
+        setActivityCount(0);
       }
     } catch (error) {
-      console.error('Error fetching activity count:', error instanceof Error ? error.message : String(error));
+      // Only log if it's a real error, not an Event object
+      if (error instanceof Error) {
+        // Check if it's a JSON parsing error
+        if (error.message.includes('JSON') || error.message.includes('DOCTYPE')) {
+          console.warn('Activity count API returned invalid JSON (likely HTML error page)');
+        } else {
+          console.error('Error fetching activity count:', error.message);
+        }
+      } else if (error && typeof error === 'object' && !('target' in error)) {
+        // Only log if it's not an Event object
+        const errorStr = String(error);
+        if (errorStr.includes('JSON') || errorStr.includes('DOCTYPE')) {
+          console.warn('Activity count API returned invalid response format');
+        } else {
+          console.error('Error fetching activity count:', errorStr);
+        }
+      }
+      setActivityCount(0);
     }
   };
 
@@ -94,25 +116,49 @@ export default function AdminDashboard() {
       setActivitiesLoading(true);
       const response = await fetch('/api/admin/activity?limit=15');
       if (response.ok) {
-        const data = await response.json();
-        setActivities(data.activities || []);
-        setActivityCount(data.total || 0);
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await response.json();
+          setActivities(data.activities || []);
+          setActivityCount(data.total || 0);
+        } else {
+          // Response is not JSON (might be HTML error page)
+          setActivitiesError('Invalid response format from server');
+        }
       } else {
-        const errorData = await response.json();
-        setActivitiesError(`Failed to fetch activities: ${errorData.error || 'Unknown error'}`);
+        // Try to parse error, but handle non-JSON responses
+        try {
+          const errorData = await response.json();
+          setActivitiesError(`Failed to fetch activities: ${errorData.error || 'Unknown error'}`);
+        } catch {
+          setActivitiesError(`Failed to fetch activities: ${response.status} ${response.statusText}`);
+        }
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error('Error fetching activities:', errorMessage);
-      setActivitiesError(`Network error: ${errorMessage}`);
+      // Only log if it's a real error, not an Event object
+      if (error instanceof Error) {
+        console.error('Error fetching activities:', error.message);
+        setActivitiesError(`Network error: ${error.message}`);
+      } else if (error && typeof error === 'object' && !('target' in error && 'preventDefault' in error)) {
+        // Only log if it's not an Event object
+        const errorMessage = String(error);
+        console.error('Error fetching activities:', errorMessage);
+        setActivitiesError(`Network error: ${errorMessage}`);
+      } else {
+        setActivitiesError('An unexpected error occurred');
+      }
     } finally {
       setActivitiesLoading(false);
     }
   };
 
-  const handleSignOut = () => {
-    document.cookie = 'admin-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-    router.push('/admin/signin');
+  const handleSignOut = async () => {
+    try {
+      await signOut({ callbackUrl: '/admin/signin', redirect: true });
+    } catch (error) {
+      console.error('Sign out error:', error);
+      router.push('/admin/signin');
+    }
   };
 
   // Close menu when clicking outside
@@ -132,10 +178,20 @@ export default function AdminDashboard() {
     };
   }, [isMenuOpen]);
 
-  // Don't show loading spinner - render content immediately
-  // Components will handle their own loading states
+  // Show loading state while checking authentication
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p className="text-gray-400">Loading admin dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
-  if (!user) {
+  // Don't render if not authenticated or not admin
+  if (!user || !isAdmin) {
     return null; // Will redirect
   }
 
@@ -172,7 +228,7 @@ export default function AdminDashboard() {
                     <div className="p-4 border-b border-gray-700">
                       <div className="flex items-center gap-2 mb-2">
                         <Badge variant="outline" className="text-sm bg-gray-700 border-gray-600 text-white">
-                          {user.role}
+                          {user.role || 'admin'}
                         </Badge>
                       </div>
                       <p className="text-sm text-gray-300">{user.email}</p>
@@ -366,8 +422,10 @@ export default function AdminDashboard() {
             </TabsContent>
 
             {/* Pricing Tab */}
-            <TabsContent value="pricing" className="mt-6">
-              <PricingPlanManager />
+            <TabsContent value="pricing" className="mt-6 space-y-6">
+              <div className="w-full min-h-[400px]">
+                <PricingPlanManager />
+              </div>
             </TabsContent>
 
             {/* User Info Card */}
@@ -387,11 +445,11 @@ export default function AdminDashboard() {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-400">Role</p>
-                    <p className="text-sm text-white">{user.role}</p>
+                    <p className="text-sm text-white">{user.role || 'admin'}</p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-400">Type</p>
-                    <p className="text-sm text-white">{user.type}</p>
+                    <p className="text-sm text-white">{user.type || 'admin'}</p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-400">User ID</p>

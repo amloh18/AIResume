@@ -3,7 +3,6 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getConnection } from '@/lib/database';
 import { ApplicationJourney } from '@/models';
-import { extractUserIdentifier } from '@/lib/firebase-uid-utils';
 import mongoose from 'mongoose';
 
 /**
@@ -28,24 +27,21 @@ export async function PUT(
       );
     }
 
-    // Extract user identifier
-    const userIdentifier = extractUserIdentifier(request, session);
-    
-    if (!userIdentifier.id || !userIdentifier.type) {
+    // Get user ID from session
+    if (!session?.user?.id) {
       return NextResponse.json(
         { success: false, error: 'User identification failed' },
         { status: 401 }
       );
     }
 
+    const userId = session.user.id;
+
     // Find the journey with user validation
-    let journeyQuery: Record<string, any> = { _id: journeyId };
-    
-    if (userIdentifier.type === 'firebase') {
-      journeyQuery.firebaseUid = userIdentifier.id;
-    } else {
-      journeyQuery.userId = userIdentifier.id;
-    }
+    const journeyQuery: Record<string, any> = { 
+      _id: journeyId,
+      userId 
+    };
 
     const journey = await ApplicationJourney.findOne(journeyQuery);
     

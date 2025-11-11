@@ -46,13 +46,13 @@ const temporaryCVDraftSchema = new Schema<ITemporaryCVDraft>({
   userId: {
     type: Schema.Types.ObjectId,
     ref: 'User',
-    required: false,
-    index: true
+    required: false
+    // Note: Index defined in compound index below
   },
   sessionId: {
     type: String,
-    required: true,
-    index: true
+    required: true
+    // Note: Index defined in compound index below
   },
   cvData: {
     type: Schema.Types.Mixed,
@@ -91,8 +91,8 @@ const temporaryCVDraftSchema = new Schema<ITemporaryCVDraft>({
   },
   isForMasterCV: {
     type: Boolean,
-    default: true, // Default to true for AI Career Report flow
-    index: true
+    default: true // Default to true for AI Career Report flow
+    // Note: Index defined in compound indexes below
   },
   convertedAt: {
     type: Date,
@@ -127,8 +127,8 @@ const temporaryCVDraftSchema = new Schema<ITemporaryCVDraft>({
   },
   lastAccessedAt: {
     type: Date,
-    default: Date.now,
-    index: true
+    default: Date.now
+    // Note: Index not needed - accessed via compound indexes
   }
 }, {
   timestamps: true

@@ -52,8 +52,11 @@ export default function RevenueManager() {
     try {
       const response = await fetch(`/api/admin/revenue?period=${period}`);
       if (response.ok) {
-        const data = await response.json();
-        setRevenueData(data);
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await response.json();
+          setRevenueData(data);
+        }
       } else {
         console.error('Failed to fetch revenue data');
       }
@@ -77,8 +80,13 @@ export default function RevenueManager() {
           body: JSON.stringify({ userId })
         });
         if (response.ok) {
-          const data = await response.json();
-          alert('Invoice sent successfully!');
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const data = await response.json();
+            alert('Invoice sent successfully!');
+          } else {
+            alert('Invoice sent, but received invalid response');
+          }
         } else {
           alert('Failed to send invoice');
         }

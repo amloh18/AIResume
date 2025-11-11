@@ -179,10 +179,30 @@ export default async function middleware(req: NextRequest) {
   return NextResponse.next()
 }
 
+/**
+ * Middleware Configuration
+ * 
+ * IMPORTANT: The matcher only includes specific API routes, but the middleware
+ * logic also checks protected page routes (dashboard, admin, profile, studio).
+ * 
+ * This is intentional:
+ * - Matcher limits middleware execution to specific API routes for performance
+ * - However, Next.js middleware runs on ALL routes by default when exported
+ * - The middleware function itself checks both API and page routes
+ * - Page route protection happens inline (lines 118-171)
+ * 
+ * If you need to protect additional routes:
+ * 1. Add them to protectedRoutes array (line 8) or adminRoutes array (line 14)
+ * 2. The middleware will automatically check them
+ * 3. No need to add page routes to the matcher - they're handled by the middleware function
+ * 
+ * To add API route protection:
+ * 1. Add the route pattern to the matcher array below
+ * 2. The middleware will check authentication for that route
+ */
 export const config = {
   matcher: [
-    // Only run for specific API routes that need authentication
-        // Explicitly exclude /studio and other page routes from middleware
+    // API routes that need authentication checking
     '/api/dashboard/(.*)',
     '/api/profile/(.*)',
     '/api/cv/create',
@@ -191,5 +211,7 @@ export const config = {
     '/api/cv/list',
     '/api/jobs/(.*)',
     '/api/cover-letters/(.*)',
+    // Note: Page routes (dashboard, admin, profile, studio) are protected
+    // by the middleware function itself, not by the matcher
   ],
 }
