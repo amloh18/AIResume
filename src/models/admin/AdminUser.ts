@@ -57,15 +57,15 @@ const AdminUserSchema = new Schema<IAdminUser>(
     mainUserId: {
       type: Schema.Types.ObjectId,
       required: true,
-      unique: true,
-      index: true,
+      unique: true
+      // Note: Unique constraint creates its own index
     },
     email: {
       type: String,
       required: true,
       lowercase: true,
-      trim: true,
-      index: true,
+      trim: true
+      // Note: Index not needed - unique constraint on mainUserId is sufficient
     },
     firstName: {
       type: String,
@@ -88,14 +88,14 @@ const AdminUserSchema = new Schema<IAdminUser>(
     },
     currentPlanKey: {
       type: String,
-      default: 'free',
-      index: true,
+      default: 'free'
+      // Note: Index defined in compound indexes below
     },
     subscriptionStatus: {
       type: String,
       enum: ['active', 'inactive', 'cancelled', 'past_due'],
-      default: 'inactive',
-      index: true,
+      default: 'inactive'
+      // Note: Index defined in compound index below
     },
     subscriptionStartDate: Date,
     subscriptionEndDate: Date,
@@ -122,13 +122,13 @@ const AdminUserSchema = new Schema<IAdminUser>(
       },
     },
     lastActiveAt: {
-      type: Date,
-      index: true,
+      type: Date
+      // Note: Index defined as standalone below
     },
     registrationDate: {
       type: Date,
-      required: true,
-      index: true,
+      required: true
+      // Note: Index defined in compound indexes below
     },
     emailCampaigns: {
       received: {
@@ -151,8 +151,8 @@ const AdminUserSchema = new Schema<IAdminUser>(
     },
     isDeleted: {
       type: Boolean,
-      default: false,
-      index: true,
+      default: false
+      // Note: Index defined in compound indexes below
     },
     deletedAt: Date,
     lastSyncedAt: {

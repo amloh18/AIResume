@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     
     const [users, totalCount] = await Promise.all([
       User.find(query)
-        .select('-password -firebaseUid')
+        .select('-password')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)

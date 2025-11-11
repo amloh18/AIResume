@@ -14,14 +14,14 @@ const countryMappingSchema = new Schema<ICountryMapping>(
       required: [true, 'Country code is required'],
       unique: true,
       trim: true,
-      uppercase: true,
-      index: true,
+      uppercase: true
+      // Note: Unique constraint creates its own index
     },
     regionId: {
       type: String,
       required: [true, 'Region ID is required'],
-      trim: true,
-      index: true,
+      trim: true
+      // Note: Index only if needed for queries by regionId
     },
   },
   {

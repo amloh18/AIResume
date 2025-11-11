@@ -22,6 +22,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import CampaignEditor from './CampaignEditor';
 import CampaignFilters from './CampaignFilters';
 import { formatDate } from '@/lib/utils';
+import { CAMPAIGN_STATUSES } from '@/lib/config/adminConstants';
 
 interface Campaign {
   _id: string;
@@ -62,6 +63,13 @@ export default function EmailCampaignManager() {
       const response = await fetch(
         `/api/admin/email-campaigns?status=${statusFilter}&limit=50`
       );
+      
+      // Check content type before parsing
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Invalid response format from server');
+      }
+      
       const data = await response.json();
       
       if (data.success) {
@@ -69,6 +77,7 @@ export default function EmailCampaignManager() {
       }
     } catch (error) {
       console.error('Failed to fetch campaigns:', error);
+      setCampaigns([]);
     } finally {
       setLoading(false);
     }
@@ -142,8 +151,15 @@ export default function EmailCampaignManager() {
         }
       }
     } catch (error: any) {
-      console.error('Failed to sync users:', error);
-      alert('Failed to sync users: ' + (error.message || 'Unknown error'));
+      if (error instanceof Error) {
+        console.error('Failed to sync users:', error.message);
+        alert('Failed to sync users: ' + error.message);
+      } else if (error && typeof error === 'object' && !('target' in error)) {
+        console.error('Failed to sync users:', String(error));
+        alert('Failed to sync users: Unknown error');
+      } else {
+        alert('Failed to sync users: Unknown error');
+      }
     } finally {
       setSyncing(false);
     }
@@ -170,8 +186,17 @@ export default function EmailCampaignManager() {
       if (response.ok) {
         fetchCampaigns();
       } else {
-        const data = await response.json();
-        alert('Failed to delete campaign: ' + data.error);
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          try {
+            const data = await response.json();
+            alert('Failed to delete campaign: ' + data.error);
+          } catch {
+            alert('Failed to delete campaign');
+          }
+        } else {
+          alert('Failed to delete campaign');
+        }
       }
     } catch (error) {
       alert('Failed to delete campaign');
@@ -267,7 +292,7 @@ export default function EmailCampaignManager() {
             {/* Create Campaign Button */}
             <button
               onClick={handleCreateCampaign}
-              className="flex items-center gap-2 px-4 py-2 bg-lime-500 hover:bg-lime-600 text-black font-semibold rounded-lg transition-all"
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-all"
             >
               <Plus className="w-4 h-4" />
               New Campaign
@@ -285,7 +310,7 @@ export default function EmailCampaignManager() {
               placeholder="Search by campaign, subject..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 text-white placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-400/50"
+              className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 text-white placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400/50"
             />
           </div>
 
@@ -293,13 +318,14 @@ export default function EmailCampaignManager() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2.5 bg-white/5 border border-white/10 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-400/50"
+            className="px-4 py-2.5 bg-white/5 border border-white/10 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50"
           >
             <option value="all">All Status</option>
-            <option value="draft">Draft</option>
-            <option value="scheduled">Scheduled</option>
-            <option value="sent">Sent</option>
-            <option value="cancelled">Cancelled</option>
+            {CAMPAIGN_STATUSES.map((status) => (
+              <option key={status} value={status}>
+                {status.charAt(0).toUpperCase() + status.slice(1)}
+              </option>
+            ))}
           </select>
         </div>
       </div>
@@ -308,7 +334,7 @@ export default function EmailCampaignManager() {
       <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
         {loading ? (
           <div className="p-12 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lime-400 mx-auto mb-4"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
             <p className="text-gray-400">Loading campaigns...</p>
           </div>
         ) : filteredCampaigns.length === 0 ? (
@@ -317,7 +343,7 @@ export default function EmailCampaignManager() {
             <p className="text-gray-400 mb-2">No campaigns found</p>
             <button
               onClick={handleCreateCampaign}
-              className="text-lime-400 hover:text-lime-300 text-sm"
+              className="text-blue-400 hover:text-blue-300 text-sm"
             >
               Create your first campaign
             </button>
@@ -376,7 +402,7 @@ export default function EmailCampaignManager() {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleEditCampaign(campaign)}
-                          className="text-lime-400 hover:text-lime-300 transition-colors"
+                          className="text-blue-400 hover:text-blue-300 transition-colors"
                           title="Edit"
                         >
                           <Edit className="w-4 h-4" />

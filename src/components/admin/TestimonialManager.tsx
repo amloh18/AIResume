@@ -54,8 +54,11 @@ const TestimonialManager: React.FC = () => {
     try {
       const response = await fetch('/api/admin/testimonials');
       if (response.ok) {
-        const data = await response.json();
-        setTestimonials(data.testimonials || []);
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await response.json();
+          setTestimonials(data.testimonials || []);
+        }
       }
     } catch (error) {
       console.error('Error fetching testimonials:', error);
@@ -85,8 +88,17 @@ const TestimonialManager: React.FC = () => {
         resetForm();
         setIsModalOpen(false);
       } else {
-        const error = await response.json();
-        alert(error.error || 'Failed to save testimonial');
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          try {
+            const error = await response.json();
+            alert(error.error || 'Failed to save testimonial');
+          } catch {
+            alert('Failed to save testimonial');
+          }
+        } else {
+          alert('Failed to save testimonial');
+        }
       }
     } catch (error) {
       console.error('Error saving testimonial:', error);

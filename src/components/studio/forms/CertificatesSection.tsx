@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Plus, Trash2, Copy } from 'lucide-react';
 import WYSIWYGEditor, { WYSIWYGToolbar } from '@/components/ui/WYSIWYGEditor';
+import { AISuggestionsPanel } from '../AISuggestionsPanel';
 
 interface CertificatesSectionProps {
   data: any[];
@@ -22,6 +23,9 @@ const CertificatesSection: React.FC<CertificatesSectionProps> = ({
   userId
 }) => {
   const [generatingIndex, setGeneratingIndex] = useState<number | null>(null);
+  const [showSuggestions, setShowSuggestions] = useState<{ [key: number]: boolean }>({});
+  const [suggestions, setSuggestions] = useState<{ [key: number]: Array<{ method: string; content: string }> }>({});
+  const [loadingSuggestions, setLoadingSuggestions] = useState<{ [key: number]: boolean }>({});
   
   // Ensure we have proper data structure
   const safeData = Array.isArray(data) ? data : [];
@@ -74,6 +78,60 @@ const CertificatesSection: React.FC<CertificatesSectionProps> = ({
     } finally {
       setGeneratingIndex(null);
     }
+  };
+
+  const generateAISuggestions = async (index: number, certificateItem: any) => {
+    if (!userId) {
+      console.error('❌ CertificatesSection - No userId provided for AI suggestions');
+      return;
+    }
+    
+    // Show panel immediately and set loading state using functional updates
+    setShowSuggestions(prev => ({ ...prev, [index]: true }));
+    setLoadingSuggestions(prev => ({ ...prev, [index]: true }));
+    
+    try {
+      const response = await fetch('/api/ai/generate-suggestions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId,
+          jobData,
+          sectionData: certificateItem,
+          sectionType: 'certificate',
+          currentText: certificateItem.description || '',
+          cvData: {}
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to generate suggestions: ${response.status} ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ CertificatesSection - AI suggestions received:', result);
+      
+      // Ensure we have suggestions array
+      if (result.suggestions && Array.isArray(result.suggestions) && result.suggestions.length > 0) {
+        setSuggestions(prev => ({ ...prev, [index]: result.suggestions }));
+      } else {
+        console.error('❌ CertificatesSection - Invalid suggestions format:', result);
+        setShowSuggestions(prev => ({ ...prev, [index]: false }));
+      }
+    } catch (error) {
+      console.error('❌ CertificatesSection - Error generating AI suggestions:', error);
+      setShowSuggestions(prev => ({ ...prev, [index]: false }));
+    } finally {
+      setLoadingSuggestions(prev => ({ ...prev, [index]: false }));
+    }
+  };
+
+  const handleSelectSuggestion = (index: number, content: string) => {
+    updateCertificate(index, 'description', content);
+    setShowSuggestions(prev => ({ ...prev, [index]: false }));
   };
 
   return (
@@ -152,8 +210,20 @@ const CertificatesSection: React.FC<CertificatesSectionProps> = ({
           <div className="mt-4">
             <div className="flex items-center justify-between mb-2">
               <label className="block text-white/80 text-sm font-medium">Description</label>
-              <WYSIWYGToolbar />
+              <WYSIWYGToolbar
+                showAIButton={true}
+                fieldType="other"
+                onAISuggestions={() => generateAISuggestions(index, certificate)}
+                isGenerating={loadingSuggestions[index] || false}
+              />
             </div>
+            <AISuggestionsPanel
+              isVisible={showSuggestions[index] || false}
+              suggestions={suggestions[index] || []}
+              isLoading={loadingSuggestions[index] || false}
+              onSelect={(content) => handleSelectSuggestion(index, content)}
+              onClose={() => setShowSuggestions({ ...showSuggestions, [index]: false })}
+            />
             <WYSIWYGEditor
               value={certificate.description || ''}
               onChange={(value) => updateCertificate(index, 'description', value)}

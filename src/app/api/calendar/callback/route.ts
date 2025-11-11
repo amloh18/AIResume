@@ -33,9 +33,7 @@ export async function GET(request: NextRequest) {
     const tokens = await CalendarService.getTokensFromCode(code);
     
     // Get user identifier
-    const userIdentifier = session.user.firebaseUid 
-      ? { type: 'firebase', id: session.user.firebaseUid }
-      : { type: 'userId', id: session.user.id };
+    const userId = session.user.id;
 
     // Update user settings with calendar integration
     const updateData: any = {
@@ -47,20 +45,11 @@ export async function GET(request: NextRequest) {
       'advanced.integrations.calendar.syncEnabled': true,
     };
 
-    let userSettings;
-    if (userIdentifier.type === 'firebase') {
-      userSettings = await UserSettings.findOneAndUpdate(
-        { firebaseUid: userIdentifier.id },
-        { $set: updateData },
-        { upsert: true, new: true }
-      );
-    } else {
-      userSettings = await UserSettings.findOneAndUpdate(
-        { userId: userIdentifier.id },
-        { $set: updateData },
-        { upsert: true, new: true }
-      );
-    }
+    const userSettings = await UserSettings.findOneAndUpdate(
+      { userId },
+      { $set: updateData },
+      { upsert: true, new: true }
+    );
 
     if (!userSettings) {
       return NextResponse.json(

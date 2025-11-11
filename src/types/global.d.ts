@@ -45,7 +45,6 @@ declare module 'next-auth' {
   interface Session {
     user: {
       id: string; // MongoDB user ID
-      firebaseUid?: string; // Firebase UID (optional - legacy)
       firstName?: string;
       lastName?: string;
       role?: string;
@@ -58,7 +57,6 @@ declare module 'next-auth' {
 
   interface User {
     id: string; // MongoDB user ID
-    firebaseUid?: string; // Firebase UID (optional - legacy)
     firstName?: string;
     lastName?: string;
     role?: string;
@@ -72,7 +70,6 @@ declare module 'next-auth' {
 declare module 'next-auth/jwt' {
   interface JWT {
     sub?: string; // Subject (user ID)
-    firebaseUid?: string; // Firebase UID (optional - legacy)
     firstName?: string;
     lastName?: string;
     role?: string;

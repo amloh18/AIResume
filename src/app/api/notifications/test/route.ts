@@ -23,7 +23,6 @@ export async function POST(request: NextRequest) {
     // Create test notification
     const notification = await notificationService.createNotification({
       userId: user._id,
-      firebaseUid: user.firebaseUid,
       type: (type as NotificationType) || 'system_update',
       title: title || 'Test Notification',
       message: message || 'This is a test notification to verify the notification system is working correctly.',

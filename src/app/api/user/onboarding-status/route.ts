@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     const isNewUser = user.createdAt > fiveMinutesAgo;
 
     // Check if user has a Master CV
-    const masterCV = await CV.findOne({ userId: user._id, isMasterCV: true });
+    const masterCV = await CV.findOne({ userId: user._id, 'metadata.isMaster': true });
     const hasMasterCV = !!masterCV;
 
     // Get welcome status from user settings

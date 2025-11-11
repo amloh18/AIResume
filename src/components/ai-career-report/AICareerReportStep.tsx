@@ -1040,19 +1040,95 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Identified Specialization</h3>
               <div className="bg-green-500/20 border border-green-500/30 rounded-lg p-4">
-                <h4 className="text-green-400 font-semibold mb-2">🎯 {industrySpecialization?.specialization || 'General'} Specialist</h4>
+                <h4 className="text-green-400 font-semibold mb-2">🎯 {
+                  industrySpecialization?.specialization || 
+                  (typeof industrySpecialization?.identified === 'string' ? industrySpecialization.identified : 'General')
+                } Specialist</h4>
                 <p className="text-gray-600 text-sm mb-3">
-                  {industrySpecialization?.specialization ? 
-                    `Your specialization in ${industrySpecialization.specialization} is a major asset!` :
+                  {industrySpecialization?.specialization || (typeof industrySpecialization?.identified === 'string' ? industrySpecialization.identified : null) ? 
+                    `Your specialization in ${industrySpecialization?.specialization || (typeof industrySpecialization?.identified === 'string' ? industrySpecialization.identified : '')} is a major asset!` :
                     'Consider developing a specialization to stand out to recruiters.'
                   }
                 </p>
                 <p className="text-gray-900/70 text-sm">
-                  {industrySpecialization?.specialization ? 
+                  {industrySpecialization?.specialization || (typeof industrySpecialization?.identified === 'string' ? industrySpecialization.identified : null) ? 
                     'Recruiters often screen for specific industry keywords before general skills.' :
                     'Focus on building expertise in a specific industry or technology stack.'
                   }
                 </p>
+                {/* Handle identified object if it contains target_industries and alignment_notes */}
+                {industrySpecialization?.identified && typeof industrySpecialization.identified === 'object' && !Array.isArray(industrySpecialization.identified) && (
+                  <div className="mt-4 pt-4 border-t border-green-500/30">
+                    {industrySpecialization.identified.target_industries && (
+                      <div className="mb-2">
+                        <p className="text-gray-700 text-xs font-semibold mb-1">Target Industries:</p>
+                        <p className="text-gray-600 text-xs">
+                          {Array.isArray(industrySpecialization.identified.target_industries) 
+                            ? industrySpecialization.identified.target_industries.join(', ')
+                            : String(industrySpecialization.identified.target_industries)}
+                        </p>
+                      </div>
+                    )}
+                    {industrySpecialization.identified.alignment_notes && (
+                      <div>
+                        <p className="text-gray-700 text-xs font-semibold mb-1">Alignment Notes:</p>
+                        <p className="text-gray-600 text-xs">
+                          {typeof industrySpecialization.identified.alignment_notes === 'string'
+                            ? industrySpecialization.identified.alignment_notes
+                            : String(industrySpecialization.identified.alignment_notes)}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {/* Handle industryAlignment object if present */}
+                {industrySpecialization?.industryAlignment && typeof industrySpecialization.industryAlignment === 'object' && !Array.isArray(industrySpecialization.industryAlignment) && (
+                  <div className="mt-4 pt-4 border-t border-green-500/30">
+                    {industrySpecialization.industryAlignment.target_industries && (
+                      <div className="mb-2">
+                        <p className="text-gray-700 text-xs font-semibold mb-1">Target Industries:</p>
+                        <p className="text-gray-600 text-xs">
+                          {Array.isArray(industrySpecialization.industryAlignment.target_industries) 
+                            ? industrySpecialization.industryAlignment.target_industries.join(', ')
+                            : String(industrySpecialization.industryAlignment.target_industries)}
+                        </p>
+                      </div>
+                    )}
+                    {industrySpecialization.industryAlignment.alignment_notes && (
+                      <div>
+                        <p className="text-gray-700 text-xs font-semibold mb-1">Alignment Notes:</p>
+                        <p className="text-gray-600 text-xs">
+                          {typeof industrySpecialization.industryAlignment.alignment_notes === 'string'
+                            ? industrySpecialization.industryAlignment.alignment_notes
+                            : String(industrySpecialization.industryAlignment.alignment_notes)}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {/* Handle target_industries and alignment_notes at top level if present */}
+                {industrySpecialization?.target_industries && (
+                  <div className="mt-4 pt-4 border-t border-green-500/30">
+                    <div className="mb-2">
+                      <p className="text-gray-700 text-xs font-semibold mb-1">Target Industries:</p>
+                      <p className="text-gray-600 text-xs">
+                        {Array.isArray(industrySpecialization.target_industries) 
+                          ? industrySpecialization.target_industries.join(', ')
+                          : String(industrySpecialization.target_industries)}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                {industrySpecialization?.alignment_notes && (
+                  <div className="mt-2">
+                    <p className="text-gray-700 text-xs font-semibold mb-1">Alignment Notes:</p>
+                    <p className="text-gray-600 text-xs">
+                      {typeof industrySpecialization.alignment_notes === 'string'
+                        ? industrySpecialization.alignment_notes
+                        : String(industrySpecialization.alignment_notes)}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1062,11 +1138,15 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {industrySpecialization?.keywords && industrySpecialization.keywords.length > 0 ? (
-                  industrySpecialization.keywords.map((keyword: string, index: number) => (
-                    <div key={index} className="bg-[#80FF00]/10 border border-[#80FF00]/20 rounded-lg p-2 text-center">
-                      <span className="text-[#80FF00] text-sm font-medium">{keyword}</span>
-                    </div>
-                  ))
+                  industrySpecialization.keywords.map((keyword: any, index: number) => {
+                    // Handle both string and object formats
+                    const keywordText = typeof keyword === 'string' ? keyword : (keyword?.keyword || keyword?.name || JSON.stringify(keyword));
+                    return (
+                      <div key={index} className="bg-[#80FF00]/10 border border-[#80FF00]/20 rounded-lg p-2 text-center">
+                        <span className="text-[#80FF00] text-sm font-medium">{keywordText}</span>
+                      </div>
+                    );
+                  })
                 ) : (
                   <div className="col-span-4 text-center py-4 text-gray-500">No specific keywords identified</div>
                 )}
@@ -1094,6 +1174,27 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
               <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
                 <h4 className="text-green-400 font-semibold mb-2">✅ Contact Details Look Professional</h4>
                 <p className="text-gray-600 text-sm">Your contact information appears professional and appropriate for senior roles.</p>
+              </div>
+            )}
+
+            {/* Industry Recommendations */}
+            {industrySpecialization?.recommendations && industrySpecialization.recommendations.length > 0 && (
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                <h3 className="text-lg font-bold text-gray-900 mb-4">Industry Recommendations</h3>
+                <ul className="space-y-2">
+                  {industrySpecialization.recommendations.map((recommendation: any, index: number) => {
+                    // Handle both string and object formats
+                    const recommendationText = typeof recommendation === 'string' 
+                      ? recommendation 
+                      : (recommendation?.text || recommendation?.recommendation || recommendation?.message || JSON.stringify(recommendation));
+                    return (
+                      <li key={index} className="flex items-start gap-2">
+                        <span className="text-[#80FF00] mt-1">•</span>
+                        <span className="text-gray-600 text-sm">{recommendationText}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
               </div>
             )}
           </div>

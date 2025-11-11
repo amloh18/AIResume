@@ -45,10 +45,11 @@ export interface IPricingPlan extends Document {
   // Time-based fields
   durationInDays?: number; // 1, 30, 90, 365
   durationType?: 'hour' | 'day' | 'month' | 'year';
-  // Regional pricing
+  // Regional pricing - supports multiple prices per region for different billing cycles
   regionalPricing?: Array<{
     region: string; // 'IN', 'US', 'EU', 'GB', etc.
     currency: string;
+    billingCycle?: 'monthly' | 'quarterly' | 'yearly' | 'one-time'; // Optional: if not specified, applies to all cycles
     price: number;
     displayPrice: string;
     stripePriceId?: string; // Region-specific Stripe price ID
@@ -226,7 +227,7 @@ const pricingPlanSchema = new Schema<IPricingPlan>({
     enum: ['hour', 'day', 'month', 'year'],
     default: 'day'
   },
-  // Regional pricing
+  // Regional pricing - supports multiple prices per region for different billing cycles
   regionalPricing: [{
     region: {
       type: String,
@@ -237,6 +238,11 @@ const pricingPlanSchema = new Schema<IPricingPlan>({
       type: String,
       required: true,
       trim: true
+    },
+    billingCycle: {
+      type: String,
+      enum: ['monthly', 'quarterly', 'yearly', 'one-time'],
+      required: false // Optional: if not specified, applies to all cycles
     },
     price: {
       type: Number,

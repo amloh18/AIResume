@@ -1,11 +1,17 @@
 /**
- * Admin Panel Configuration
- * Centralized configuration for admin panel components
- * Fetches dynamic values from database to avoid hardcoding
+ * Admin Panel Configuration (Server-Only)
+ * Server-side functions for fetching dynamic values from database
+ * 
+ * NOTE: This file is server-only and cannot be imported in client components.
+ * For client-safe constants, use '@/lib/config/adminConstants' instead.
  */
 
+import 'server-only';
 import PricingPlan from '@/models/PricingPlan';
 import getConnection from '@/lib/database';
+
+// Re-export constants for convenience (these are client-safe)
+export * from './adminConstants';
 
 // Cache configuration for performance
 let configCache: {
@@ -109,36 +115,4 @@ export function invalidateConfigCache(): void {
   configCache = null;
 }
 
-/**
- * Status values
- */
-export const SUBSCRIPTION_STATUSES = ['active', 'inactive', 'cancelled', 'expired'] as const;
-export type SubscriptionStatus = typeof SUBSCRIPTION_STATUSES[number];
-
-export const USER_ROLES = ['user', 'admin', 'superadmin'] as const;
-export type UserRole = typeof USER_ROLES[number];
-
-export const TEMPLATE_TIERS = ['free', 'premium'] as const;
-export type TemplateTier = typeof TEMPLATE_TIERS[number];
-
-export const CAMPAIGN_STATUSES = ['draft', 'scheduled', 'sent', 'cancelled'] as const;
-export type CampaignStatus = typeof CAMPAIGN_STATUSES[number];
-
-/**
- * Currency options
- */
-export const SUPPORTED_CURRENCIES = ['EUR', 'USD', 'INR'] as const;
-export type SupportedCurrency = typeof SUPPORTED_CURRENCIES[number];
-
-/**
- * Payment providers
- */
-export const PAYMENT_PROVIDERS = ['stripe', 'razorpay', 'admin', 'none'] as const;
-export type PaymentProvider = typeof PAYMENT_PROVIDERS[number];
-
-/**
- * Default values
- */
-export const DEFAULT_CURRENCY: SupportedCurrency = 'EUR';
-export const DEFAULT_PLAN_KEY = 'free';
 

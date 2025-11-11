@@ -30,7 +30,6 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (user: User, token?: string) => void; // Kept for backward compatibility, but not used
   logout: () => Promise<void>;
   checkAuth: () => boolean;
   status: 'loading' | 'authenticated' | 'unauthenticated';
@@ -80,13 +79,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return status === 'authenticated';
   };
 
-  // Deprecated - kept for backward compatibility
-  // New code should use NextAuth's signIn directly
-  const login = (userData: User, token?: string) => {
-    console.warn('⚠️ AuthContext.login is deprecated. Please use NextAuth signIn directly.');
-    // Do nothing - NextAuth handles login through signIn()
-  };
-
   const logout = async () => {
     try {
       console.log('🚪 Logging out via NextAuth...');
@@ -108,7 +100,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     user,
     isLoading: status === 'loading',
     isAuthenticated: status === 'authenticated',
-    login,
     logout,
     checkAuth,
     status,

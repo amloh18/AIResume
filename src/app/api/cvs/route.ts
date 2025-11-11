@@ -534,9 +534,9 @@ export async function POST(request: NextRequest) {
       templateName: templateName,
       cvData,
       status: status || 'draft',
-      isMaster: isMaster || false,
       journeyId: journeyId || undefined, // Store journeyId if provided
       metadata: {
+        isMaster: isMaster || metadata?.isMaster || false, // Set isMaster in metadata, not top-level
         lastModified: new Date(),
         tags: metadata?.tags || [],
         isPublic: metadata?.isPublic || false,
@@ -549,7 +549,7 @@ export async function POST(request: NextRequest) {
     console.log('🚀 CV POST API - CV data prepared:', {
       title, 
       status: cvDataToCreate.status,
-      isMaster: cvDataToCreate.isMaster,
+      isMaster: cvDataToCreate.metadata.isMaster,
       userId,
       journeyId: cvDataToCreate.journeyId
     });
@@ -563,6 +563,29 @@ export async function POST(request: NextRequest) {
     });
 
     await newCV.save();
+
+    // Log CV creation activity
+    try {
+      const { ActivityLogService } = await import('@/lib/services/activityLogService');
+      await ActivityLogService.logUserAction({
+        userId: userId,
+        userEmail: authResult.userEmail,
+        action: isCreatingMasterCV ? 'master_cv_created' : 'cv_created',
+        resourceType: 'cv',
+        resourceId: newCV._id.toString(),
+        resourceName: title,
+        status: 'success',
+        metadata: {
+          templateId: finalTemplateId?.toString(),
+          templateName: templateName,
+          isMaster: isCreatingMasterCV,
+          journeyId: journeyId
+        }
+      });
+    } catch (logError) {
+      console.error('Failed to log CV creation:', logError);
+      // Don't fail the request if logging fails
+    }
 
     // Note: Credit spending removed - CV creation is unlimited
     // Credits are only spent at job creation

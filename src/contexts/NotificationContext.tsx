@@ -89,13 +89,27 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
     try {
       const response = await fetch('/api/notifications', { cache: 'no-store' });
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        const errorMessage = errorData.error || errorData.message || `HTTP ${response.status}`;
+        const contentType = response.headers.get('content-type');
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        if (contentType && contentType.includes('application/json')) {
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorData.message || errorMessage;
+          } catch {
+            // JSON parse failed, use default error message
+          }
+        }
         throw new Error(`Failed to fetch notifications: ${errorMessage}`);
       }
-      const data = await response.json();
-      const filtered = filterExpiredNotifications(data.notifications || []);
-      setNotifications(filtered);
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const data = await response.json();
+        const filtered = filterExpiredNotifications(data.notifications || []);
+        setNotifications(filtered);
+      } else {
+        console.error('Notifications response is not JSON. Content-Type:', contentType);
+        setNotifications([]);
+      }
     } catch (error) {
       console.error('Error fetching notifications:', error);
       // Set empty array on error to prevent UI issues
@@ -185,6 +199,12 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
         body: JSON.stringify({ actionType }),
       });
       if (!response.ok) throw new Error('Failed to handle action');
+      
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('Notification action response is not JSON. Content-Type:', contentType);
+        return;
+      }
       
       const data = await response.json();
       

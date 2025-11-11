@@ -84,9 +84,12 @@ const DiscountCodeManager: React.FC = () => {
     try {
       const response = await fetch('/api/admin/config/statuses');
       if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.currencies) {
-          setAvailableCurrencies(data.currencies);
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await response.json();
+          if (data.success && data.currencies) {
+            setAvailableCurrencies(data.currencies);
+          }
         }
       }
     } catch (error) {
@@ -103,8 +106,11 @@ const DiscountCodeManager: React.FC = () => {
     try {
       const response = await fetch('/api/admin/discount-codes');
       if (response.ok) {
-        const data = await response.json();
-        setDiscountCodes(data);
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await response.json();
+          setDiscountCodes(data);
+        }
       }
     } catch (error) {
       console.error('Error fetching discount codes:', error);
@@ -115,10 +121,13 @@ const DiscountCodeManager: React.FC = () => {
     try {
       const response = await fetch('/api/pricing-plans?includeInactive=true');
       if (response.ok) {
-        const data = await response.json();
-        // Extract plans from response - API returns { plans: [...], region: {...} }
-        const plans = Array.isArray(data) ? data : (data?.plans || []);
-        setPricingPlans(Array.isArray(plans) ? plans : []);
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await response.json();
+          // Extract plans from response - API returns { plans: [...], region: {...} }
+          const plans = Array.isArray(data) ? data : (data?.plans || []);
+          setPricingPlans(Array.isArray(plans) ? plans : []);
+        }
       }
     } catch (error) {
       console.error('Error fetching pricing plans:', error);
@@ -150,8 +159,17 @@ const DiscountCodeManager: React.FC = () => {
         await fetchDiscountCodes();
         resetForm();
       } else {
-        const error = await response.json();
-        alert(error.error || 'Failed to save discount code');
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          try {
+            const error = await response.json();
+            alert(error.error || 'Failed to save discount code');
+          } catch {
+            alert('Failed to save discount code');
+          }
+        } else {
+          alert('Failed to save discount code');
+        }
       }
     } catch (error) {
       console.error('Error saving discount code:', error);
@@ -188,8 +206,17 @@ const DiscountCodeManager: React.FC = () => {
       if (response.ok) {
         await fetchDiscountCodes();
       } else {
-        const error = await response.json();
-        alert(error.error || 'Failed to delete discount code');
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          try {
+            const error = await response.json();
+            alert(error.error || 'Failed to delete discount code');
+          } catch {
+            alert('Failed to delete discount code');
+          }
+        } else {
+          alert('Failed to delete discount code');
+        }
       }
     } catch (error) {
       console.error('Error deleting discount code:', error);

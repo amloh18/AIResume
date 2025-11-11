@@ -59,11 +59,16 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
         loadingStates.current.set('cvs', true);
         console.log('🔍 DashboardData - Fetching CVs');
         const response = await authenticatedFetch(endpoint);
-        const result = await response.json();
-        
-        if (result.success && result.data?.cvs) {
-          console.log(`✅ DashboardData - CVs loaded: ${result.data.cvs.length} items`);
-          setCvs(result.data.cvs);
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const result = await response.json();
+          
+          if (result.success && result.data?.cvs) {
+            console.log(`✅ DashboardData - CVs loaded: ${result.data.cvs.length} items`);
+            setCvs(result.data.cvs);
+          }
+        } else {
+          console.error('CVs response is not JSON. Content-Type:', contentType);
         }
       } catch (err: any) {
         console.error('❌ DashboardData - Error fetching CVs:', err);
@@ -88,11 +93,16 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
         loadingStates.current.set('coverLetters', true);
         console.log('🔍 DashboardData - Fetching cover letters');
         const response = await authenticatedFetch(endpoint);
-        const result = await response.json();
-        
-        if (result.success && result.data?.coverLetters) {
-          console.log(`✅ DashboardData - Cover letters loaded: ${result.data.coverLetters.length} items`);
-          setCoverLetters(result.data.coverLetters);
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const result = await response.json();
+          
+          if (result.success && result.data?.coverLetters) {
+            console.log(`✅ DashboardData - Cover letters loaded: ${result.data.coverLetters.length} items`);
+            setCoverLetters(result.data.coverLetters);
+          }
+        } else {
+          console.error('Cover letters response is not JSON. Content-Type:', contentType);
         }
       } catch (err: any) {
         console.error('❌ DashboardData - Error fetching cover letters:', err);
@@ -117,11 +127,16 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
         loadingStates.current.set('jobs', true);
         console.log('🔍 DashboardData - Fetching jobs');
         const response = await authenticatedFetch(endpoint);
-        const result = await response.json();
-        
-        if (result.success && result.data?.jobs) {
-          console.log(`✅ DashboardData - Jobs loaded: ${result.data.jobs.length} items`);
-          setJobs(result.data.jobs);
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const result = await response.json();
+          
+          if (result.success && result.data?.jobs) {
+            console.log(`✅ DashboardData - Jobs loaded: ${result.data.jobs.length} items`);
+            setJobs(result.data.jobs);
+          }
+        } else {
+          console.error('Jobs response is not JSON. Content-Type:', contentType);
         }
       } catch (err: any) {
         console.error('❌ DashboardData - Error fetching jobs:', err);
@@ -146,11 +161,16 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
         loadingStates.current.set('analytics', true);
         console.log('🔍 DashboardData - Fetching analytics');
         const response = await authenticatedFetch(endpoint);
-        const result = await response.json();
-        
-        if (result.success) {
-          console.log('✅ DashboardData - Analytics loaded');
-          setAnalytics(result.data);
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const result = await response.json();
+          
+          if (result.success) {
+            console.log('✅ DashboardData - Analytics loaded');
+            setAnalytics(result.data);
+          }
+        } else {
+          console.error('Analytics response is not JSON. Content-Type:', contentType);
         }
       } catch (err: any) {
         console.error('❌ DashboardData - Error fetching analytics:', err);

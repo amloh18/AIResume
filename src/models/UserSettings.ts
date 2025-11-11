@@ -2,7 +2,6 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IUserSettings extends Document {
   userId: mongoose.Types.ObjectId | string;
-  firebaseUid?: string; // Firebase UID for user identification
   
   // Security Settings
   security: {
@@ -174,11 +173,6 @@ const userSettingsSchema = new Schema<IUserSettings>({
     type: Schema.Types.Mixed, // Allow both ObjectId and string
     required: [true, 'User ID is required'],
     unique: true
-  },
-  firebaseUid: {
-    type: String,
-    sparse: true, // Allows multiple null values
-    index: true // Index for efficient Firebase UID queries
   },
   
   security: {

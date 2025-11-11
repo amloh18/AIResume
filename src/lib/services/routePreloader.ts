@@ -87,9 +87,6 @@ class RoutePreloader {
         case 'canvas':
           component = await import('@/components/dashboard/Canvas');
           break;
-        case 'application-journey':
-          component = await import('@/app/dashboard/application-journey/page');
-          break;
         case 'settings':
           component = await import('@/app/dashboard/settings/page');
           break;

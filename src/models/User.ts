@@ -5,7 +5,6 @@ export interface IUser extends Document {
   // SINGLE SOURCE OF TRUTH: Authentication linking
   authProviderId: string; // The unique string ID from NextAuth
   authProvider: 'nextauth' | 'local' | 'firebase';
-  firebaseUid?: string; // Firebase UID for linking with Firebase users
   
   // Core user information
   email: string;
@@ -21,7 +20,8 @@ export interface IUser extends Document {
   // Note: Authentication tokens are now stored in separate VerificationToken collection
   
   // Subscription and usage tracking
-  currentPlanKey: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly' | 'yearly pro' | 'monthly pro' | 'quarterly pro';
+  // STANDARDIZED: All plan keys use underscore format for consistency
+  currentPlanKey: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly';
   monthlyGoal?: number;
   usage: {
     cvJourneyCount: number;
@@ -152,23 +152,15 @@ const userSchema = new Schema<IUser>({
     required: false, // Make optional for NextAuth compatibility
     unique: true,
     sparse: true, // Allow multiple null values
-    trim: true,
-    index: true // Primary index for fast lookups
+    trim: true
+    // Note: Index defined in compound index below for better performance
   },
   authProvider: {
     type: String,
     enum: ['nextauth', 'local', 'firebase'],
     required: false, // Make optional for NextAuth compatibility
-    default: 'nextauth',
-    index: true
-  },
-  firebaseUid: {
-    type: String,
-    required: false,
-    unique: true,
-    sparse: true, // Allow multiple null values
-    trim: true,
-    index: true // Index for Firebase UID lookups
+    default: 'nextauth'
+    // Note: Index defined in compound index below for better performance
   },
   
   email: {
@@ -225,9 +217,10 @@ const userSchema = new Schema<IUser>({
     default: false
   },
   // Token fields removed - now handled by VerificationToken collection
+  // STANDARDIZED: Consistent plan key format across all models
   currentPlanKey: {
     type: String,
-    enum: ['free', 'day_pass', 'pro_monthly', 'pro_quarterly', 'pro_yearly', 'yearly pro', 'monthly pro', 'quarterly pro'],
+    enum: ['free', 'day_pass', 'pro_monthly', 'pro_quarterly', 'pro_yearly'],
     default: 'free'
   },
   monthlyGoal: {
@@ -605,7 +598,7 @@ userSchema.methods.comparePassword = async function(candidatePassword: string): 
 };
 
 // Critical indexes for performance
-// Note: authProviderId, email, and firebaseUid indexes are already defined in field definitions above
+// Note: authProviderId and email indexes are already defined in field definitions above
 userSchema.index({ authProvider: 1, authProviderId: 1 });
 userSchema.index({ 'subscription.status': 1 });
 userSchema.index({ email: 1, authProvider: 1 }); // For NextAuth lookups

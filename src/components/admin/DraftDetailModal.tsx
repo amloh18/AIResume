@@ -61,6 +61,12 @@ const DraftDetailModal: React.FC<DraftDetailModalProps> = ({ draftId, isOpen, on
       setError(null);
 
       const response = await fetch(`/api/admin/drafts/${draftId}`);
+      
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Invalid response format from server');
+      }
+      
       const data = await response.json();
 
       if (data.success) {
@@ -87,6 +93,11 @@ const DraftDetailModal: React.FC<DraftDetailModalProps> = ({ draftId, isOpen, on
         method: 'POST'
       });
 
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Invalid response format from server');
+      }
+
       const data = await response.json();
 
       if (data.success) {
@@ -112,6 +123,11 @@ const DraftDetailModal: React.FC<DraftDetailModalProps> = ({ draftId, isOpen, on
       const response = await fetch(`/api/admin/drafts/${draftId}`, {
         method: 'DELETE'
       });
+
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Invalid response format from server');
+      }
 
       const data = await response.json();
 

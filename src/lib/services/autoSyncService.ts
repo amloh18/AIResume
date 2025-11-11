@@ -7,14 +7,13 @@ export class AutoSyncService {
   /**
    * Sync job applications to calendar for a specific user
    */
-  static async syncUserJobApplications(userId: string, firebaseUid?: string): Promise<void> {
+  static async syncUserJobApplications(userId: string): Promise<void> {
     try {
       await getConnection();
       
       // Get user settings
-      const userSettings = await UserSettings.findOne(
-        firebaseUid ? { firebaseUid } : { userId }
-      ).select('+advanced.integrations.calendar.accessToken +advanced.integrations.calendar.refreshToken');
+      const userSettings = await UserSettings.findOne({ userId })
+        .select('+advanced.integrations.calendar.accessToken +advanced.integrations.calendar.refreshToken');
 
       if (!userSettings?.advanced?.integrations?.calendar?.connected || 
           !userSettings?.advanced?.integrations?.calendar?.syncEnabled) {
@@ -31,10 +30,7 @@ export class AutoSyncService {
 
       // Get job applications (excluding 'created' status)
       const jobs = await Job.find({
-        $or: [
-          { userId },
-          ...(firebaseUid ? [{ firebaseUid }] : [])
-        ],
+        userId,
         status: { $ne: 'created' }
       }).sort({ updatedAt: -1 });
 
@@ -66,7 +62,7 @@ export class AutoSyncService {
 
       // Update last sync time
       await UserSettings.findOneAndUpdate(
-        firebaseUid ? { firebaseUid } : { userId },
+        { userId },
         { 'advanced.integrations.calendar.lastSync': new Date() }
       );
 
@@ -88,17 +84,16 @@ export class AutoSyncService {
       const usersWithCalendarSync = await UserSettings.find({
         'advanced.integrations.calendar.connected': true,
         'advanced.integrations.calendar.syncEnabled': true
-      }).select('userId firebaseUid');
+      }).select('userId');
 
       console.log(`Found ${usersWithCalendarSync.length} users with calendar sync enabled`);
 
       // Sync for each user
       for (const user of usersWithCalendarSync) {
         const userId = user.userId?.toString();
-        const firebaseUid = user.firebaseUid;
         
-        if (userId || firebaseUid) {
-          await this.syncUserJobApplications(userId || '', firebaseUid);
+        if (userId) {
+          await this.syncUserJobApplications(userId);
         }
       }
     } catch (error) {
@@ -109,13 +104,11 @@ export class AutoSyncService {
   /**
    * Check if user has calendar sync enabled
    */
-  static async isCalendarSyncEnabled(userId: string, firebaseUid?: string): Promise<boolean> {
+  static async isCalendarSyncEnabled(userId: string): Promise<boolean> {
     try {
       await getConnection();
       
-      const userSettings = await UserSettings.findOne(
-        firebaseUid ? { firebaseUid } : { userId }
-      );
+      const userSettings = await UserSettings.findOne({ userId });
 
       return !!(
         userSettings?.advanced?.integrations?.calendar?.connected &&

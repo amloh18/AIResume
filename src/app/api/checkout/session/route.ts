@@ -7,7 +7,31 @@ import User from '@/models/User';
 import { stripe } from '@/lib/payment/stripe';
 import { razorpay } from '@/lib/payment/razorpay';
 import { detectUserRegion } from '@/lib/services/regionDetectionService';
-import { getRegionalPricingFromDB, getDefaultPricingFromDB } from '@/lib/services/pricingService';
+// Helper to get regional pricing from plan's regionalPricing array
+function getRegionalPricingFromPlan(plan: any, regionCode: string, billingCycle?: 'monthly' | 'quarterly' | 'yearly' | 'one-time') {
+  const regionalPricing = plan.regionalPricing || [];
+  
+  // Find entries for this region
+  const regionEntries = regionalPricing.filter((rp: any) => rp.region === regionCode);
+  
+  if (regionEntries.length === 0) {
+    return null;
+  }
+  
+  // If billing cycle specified, find specific entry
+  if (billingCycle) {
+    const cycleEntry = regionEntries.find((rp: any) => rp.billingCycle === billingCycle);
+    if (cycleEntry) return cycleEntry;
+    
+    // Fallback to general entry (no billingCycle)
+    const generalEntry = regionEntries.find((rp: any) => !rp.billingCycle);
+    if (generalEntry) return generalEntry;
+  }
+  
+  // Return first entry (or general entry if exists)
+  const generalEntry = regionEntries.find((rp: any) => !rp.billingCycle);
+  return generalEntry || regionEntries[0];
+}
 import Coupon from '@/models/Coupon';
 
 export async function POST(request: NextRequest) {
@@ -119,23 +143,15 @@ async function handleDayPassPayment(
   regionInfo: any,
   couponDiscount?: any
 ) {
-  // Get regional pricing from database
-  let regionalPricingData = null;
-  if (regionInfo?.countryCode) {
-    regionalPricingData = await getRegionalPricingFromDB(regionInfo.countryCode);
-  }
-  
-  // Fallback to default pricing if region not found
-  if (!regionalPricingData) {
-    regionalPricingData = await getDefaultPricingFromDB();
-  }
+  // Get regional pricing from plan's regionalPricing array
+  const regionalPricing = getRegionalPricingFromPlan(plan, regionInfo?.countryCode || 'US', 'one-time');
   
   // Use regional pricing if available, otherwise fallback to database price
   let amount: number;
   let currency: string;
-  if (regionalPricingData) {
-    amount = regionalPricingData.dayPass * 100; // Convert to cents/paisa
-    currency = regionalPricingData.currency;
+  if (regionalPricing) {
+    amount = regionalPricing.price * 100; // Convert to cents/paisa
+    currency = regionalPricing.currency;
   } else {
     amount = (plan.price_one_time || 0) * 100;
     currency = plan.currency || 'USD';
@@ -216,7 +232,7 @@ async function handleDayPassPayment(
     }
     try {
       // Use region-specific Razorpay plan ID if available, otherwise create order
-      const razorpayPlanId = regionalPrice?.razorpayPlanId;
+      const razorpayPlanId = regionalPricing?.razorpayPlanId;
       
       if (razorpayPlanId) {
         // Create Razorpay subscription for one-time payment (total_count: 1)
@@ -288,16 +304,8 @@ async function handleProPlanPayment(
   regionInfo?: any,
   couponDiscount?: any
 ) {
-  // Get regional pricing from database
-  let regionalPricingData = null;
-  if (regionInfo?.countryCode) {
-    regionalPricingData = await getRegionalPricingFromDB(regionInfo.countryCode);
-  }
-  
-  // Fallback to default pricing if region not found
-  if (!regionalPricingData) {
-    regionalPricingData = await getDefaultPricingFromDB();
-  }
+  // Get regional pricing from plan's regionalPricing array
+  const regionalPricing = getRegionalPricingFromPlan(plan, regionInfo?.countryCode || 'US', interval as any);
   
   // Determine the correct price based on interval - use database pricing
   let priceId: string | undefined;
@@ -311,32 +319,30 @@ async function handleProPlanPayment(
   }
 
   if (provider === 'stripe') {
-    // Use regional pricing from database if available, otherwise fallback to plan prices
+    // Use regional pricing from plan if available, otherwise fallback to plan prices
     if (interval === 'monthly') {
-      priceId = plan.stripePriceId_monthly;
-      if (regionalPricingData) {
-        amount = regionalPricingData.monthly * 100;
-        currency = regionalPricingData.currency;
+      priceId = regionalPricing?.stripePriceId || plan.stripePriceId_monthly;
+      if (regionalPricing) {
+        amount = regionalPricing.price * 100;
+        currency = regionalPricing.currency;
       } else {
         amount = (plan.price_monthly || 0) * 100;
         currency = plan.currency || 'USD';
       }
     } else if (interval === 'quarterly') {
-      priceId = plan.stripePriceId_quarterly;
-      if (regionalPricingData) {
-        // Use FULL quarterly price from database (e.g., ₹549)
-        amount = regionalPricingData.quarterly * 100;
-        currency = regionalPricingData.currency;
+      priceId = regionalPricing?.stripePriceId || plan.stripePriceId_quarterly;
+      if (regionalPricing) {
+        amount = regionalPricing.price * 100;
+        currency = regionalPricing.currency;
       } else {
         amount = (plan.price_quarterly || 0) * 100;
         currency = plan.currency || 'USD';
       }
     } else if (interval === 'yearly') {
-      priceId = plan.stripePriceId_yearly;
-      if (regionalPricingData) {
-        // Use FULL yearly price from database (e.g., ₹1,999)
-        amount = regionalPricingData.yearly * 100;
-        currency = regionalPricingData.currency;
+      priceId = regionalPricing?.stripePriceId || plan.stripePriceId_yearly;
+      if (regionalPricing) {
+        amount = regionalPricing.price * 100;
+        currency = regionalPricing.currency;
       } else {
         amount = (plan.price_yearly || 0) * 100;
         currency = plan.currency || 'USD';
@@ -480,28 +486,29 @@ async function handleProPlanPayment(
   } else if (provider === 'razorpay') {
     // For Razorpay, use database pricing
     // Calculate amount based on interval using regional pricing from database
+    // Get regional pricing for Razorpay
+    const regionalPricingRazorpay = getRegionalPricingFromPlan(plan, regionInfo?.countryCode || 'IN', interval as any);
+    
     if (interval === 'monthly') {
-      if (regionalPricingData) {
-        amount = regionalPricingData.monthly * 100; // Convert to paise
-        currency = regionalPricingData.currency;
+      if (regionalPricingRazorpay) {
+        amount = regionalPricingRazorpay.price * 100; // Convert to paise
+        currency = regionalPricingRazorpay.currency;
       } else {
         amount = (plan.price_monthly || 0) * 100;
         currency = plan.currency || 'INR';
       }
     } else if (interval === 'quarterly') {
-      if (regionalPricingData) {
-        // Use FULL quarterly price from database (e.g., ₹549)
-        amount = regionalPricingData.quarterly * 100;
-        currency = regionalPricingData.currency;
+      if (regionalPricingRazorpay) {
+        amount = regionalPricingRazorpay.price * 100;
+        currency = regionalPricingRazorpay.currency;
       } else {
         amount = (plan.price_quarterly || 0) * 100;
         currency = plan.currency || 'INR';
       }
     } else if (interval === 'yearly') {
-      if (regionalPricingData) {
-        // Use FULL yearly price from database (e.g., ₹1,999)
-        amount = regionalPricingData.yearly * 100;
-        currency = regionalPricingData.currency;
+      if (regionalPricingRazorpay) {
+        amount = regionalPricingRazorpay.price * 100;
+        currency = regionalPricingRazorpay.currency;
       } else {
         amount = (plan.price_yearly || 0) * 100;
         currency = plan.currency || 'INR';

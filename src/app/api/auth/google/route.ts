@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
     await getConnection();
     
     const body = await request.json();
-    const { email, name, image, provider, firebaseUid, authProviderId } = body;
+    const { email, name, image, provider, authProviderId } = body;
 
     if (!email) {
       return NextResponse.json(
@@ -31,7 +31,6 @@ export async function POST(request: NextRequest) {
         firstName,
         lastName,
         avatar: image,
-        firebaseUid: firebaseUid || undefined, // Store Firebase UID if provided
         authProviderId: authProviderId || undefined, // Store authProviderId if provided
         isEmailVerified: true, // Google OAuth users are pre-verified
         role: 'user',
@@ -75,9 +74,6 @@ export async function POST(request: NextRequest) {
     } else {
       // Update existing user
       user.avatar = image || user.avatar;
-      if (firebaseUid && !user.firebaseUid) {
-        user.firebaseUid = firebaseUid;
-      }
       if (authProviderId && !user.authProviderId) {
         user.authProviderId = authProviderId;
       }

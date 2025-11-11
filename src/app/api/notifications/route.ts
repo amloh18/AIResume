@@ -1,15 +1,22 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { NextRequest } from 'next/server';
 import { getConnection } from '@/lib/database';
 import Notification from '@/models/Notification';
 import { getAuthenticatedUser } from '@/lib/auth-helpers';
+import { withAdminAuth } from '@/lib/middleware/admin-auth';
+import { withErrorHandling, successResponse, errorResponse } from '@/lib/validation/api-validator';
+import { withValidation } from '@/lib/validation/api-validator';
+import { createNotificationSchema } from '@/lib/validation/schemas';
+import { z } from 'zod';
 
-export async function GET(request: NextRequest) {
-  try {
+const updateNotificationSchema = z.object({
+  action: z.enum(['mark-all-read', 'mark-read']),
+  notificationIds: z.array(z.string()).optional(),
+});
+
+export const GET = withErrorHandling(async (request: NextRequest) => {
     const authResult = await getAuthenticatedUser();
     if (!authResult) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return errorResponse('UNAUTHORIZED', 'Authentication required', undefined, 401);
     }
 
     await getConnection();
@@ -46,63 +53,43 @@ export async function GET(request: NextRequest) {
 
     const total = await Notification.countDocuments(query);
 
-    return NextResponse.json({
-      success: true,
+  return successResponse({
       notifications,
       total,
       limit,
       offset,
     });
-  } catch (error: any) {
-    console.error('Error fetching notifications:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch notifications', message: error.message },
-      { status: 500 }
-    );
-  }
-}
+});
 
-export async function POST(request: NextRequest) {
-  try {
-    // Check if user is admin (for creating notifications)
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // TODO: Add admin check here if needed
-
+/**
+ * POST /api/notifications
+ * Create a notification (admin only)
+ */
+export const POST = withAdminAuth(
+  withValidation(createNotificationSchema, async (request, validatedData) => {
     await getConnection();
 
-    const body = await request.json();
     const notificationService = (await import('@/lib/services/notificationService')).default;
+    const notification = await notificationService.createNotification(validatedData);
 
-    const notification = await notificationService.createNotification(body);
+    return successResponse({ notification });
+  }) as (request: NextRequest) => Promise<NextResponse>
+);
 
-    return NextResponse.json({
-      success: true,
-      notification,
-    });
-  } catch (error: any) {
-    console.error('Error creating notification:', error);
-    return NextResponse.json(
-      { error: 'Failed to create notification', message: error.message },
-      { status: 500 }
-    );
-  }
-}
-
-export async function PUT(request: NextRequest) {
-  try {
+/**
+ * PUT /api/notifications
+ * Update notifications (mark as read)
+ */
+export const PUT = withErrorHandling(
+  withValidation(updateNotificationSchema, async (request, validatedData) => {
     const authResult = await getAuthenticatedUser();
     if (!authResult) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return errorResponse('UNAUTHORIZED', 'Authentication required', undefined, 401);
     }
 
     await getConnection();
 
-    const body = await request.json();
-    const { action, notificationIds } = body;
+    const { action, notificationIds } = validatedData;
 
     if (action === 'mark-all-read') {
       const userId = authResult.userId;
@@ -111,10 +98,7 @@ export async function PUT(request: NextRequest) {
         { $set: { read: true, readAt: new Date() } }
       );
 
-      return NextResponse.json({
-        success: true,
-        message: 'All notifications marked as read',
-      });
+      return successResponse({ message: 'All notifications marked as read' });
     }
 
     if (action === 'mark-read' && notificationIds && Array.isArray(notificationIds)) {
@@ -123,19 +107,10 @@ export async function PUT(request: NextRequest) {
         { $set: { read: true, readAt: new Date() } }
       );
 
-      return NextResponse.json({
-        success: true,
-        message: 'Notifications marked as read',
-      });
+      return successResponse({ message: 'Notifications marked as read' });
     }
 
-    return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
-  } catch (error: any) {
-    console.error('Error updating notifications:', error);
-    return NextResponse.json(
-      { error: 'Failed to update notifications', message: error.message },
-      { status: 500 }
-    );
-  }
-}
+    return errorResponse('VALIDATION_ERROR', 'Invalid action', undefined, 400);
+  })
+);
 

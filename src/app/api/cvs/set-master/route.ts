@@ -71,11 +71,11 @@ export async function PUT(request: NextRequest) {
     // First, unset any existing master CV for this user
     await CV.updateMany(
       { userId: cvToSetMaster.userId, _id: { $ne: objectIdCvId } },
-      { $set: { isMaster: false } }
+      { $set: { 'metadata.isMaster': false } }
     );
 
-    // Set the selected CV as master
-    cvToSetMaster.isMaster = true;
+    // Set the selected CV as master (use metadata.isMaster, not top-level isMaster)
+    cvToSetMaster.metadata.isMaster = true;
     await cvToSetMaster.save();
 
     console.log('🔍 Set Master CV API - Successfully set master CV');
@@ -87,7 +87,7 @@ export async function PUT(request: NextRequest) {
         cv: {
           id: cvToSetMaster._id,
           title: cvToSetMaster.title,
-          isMaster: cvToSetMaster.isMaster
+          isMaster: cvToSetMaster.metadata.isMaster
         }
       }
     });

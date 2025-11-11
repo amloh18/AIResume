@@ -368,6 +368,8 @@ export default function RestructuredStudioLayout({
                       onUpdateCV?.({ ...cvData, projects: newProjects });
                     }
                   }}
+                  jobData={jobContext}
+                  userId={userId}
                 />
               </CollapsibleContent>
             </div>
@@ -544,6 +546,8 @@ export default function RestructuredStudioLayout({
                       onUpdateCV?.({ ...cvData, volunteer: newVolunteer });
                     }
                   }}
+                  jobData={jobContext}
+                  userId={userId}
                 />
               </CollapsibleContent>
             </div>
@@ -602,6 +606,8 @@ export default function RestructuredStudioLayout({
                       onUpdateCV?.({ ...cvData, awards: newAwards });
                     }
                   }}
+                  jobData={jobContext}
+                  userId={userId}
                 />
               </CollapsibleContent>
             </div>
@@ -660,6 +666,8 @@ export default function RestructuredStudioLayout({
                       onUpdateCV?.({ ...cvData, publications: newPublications });
                     }
                   }}
+                  jobData={jobContext}
+                  userId={userId}
                 />
               </CollapsibleContent>
             </div>

@@ -159,13 +159,30 @@ async function handleCheckoutSessionCompleted(session: any) {
       paymentMethodType: 'stripe',
       paymentMethodLast4: session.payment_intent ? '****' : 'N/A',
       paidAt: new Date(),
-      description: `${plan.name} - ${interval || 'monthly'} subscription`,
+      description: `${plan?.name || planKey} - ${interval || 'monthly'} subscription`,
       metadata: {
         stripeSessionId: session.id,
         stripeSubscriptionId: session.subscription,
         stripeCustomerId: session.customer
       }
     });
+
+    // Log payment activity
+    try {
+      const { ActivityLogService } = await import('@/lib/services/activityLogService');
+      await ActivityLogService.logPayment({
+        userId: userId,
+        userEmail: user.email,
+        amount: session.amount_total / 100,
+        currency: session.currency.toUpperCase(),
+        provider: 'stripe',
+        transactionId: session.payment_intent || session.subscription || session.id,
+        planKey: planKey,
+        status: 'success'
+      });
+    } catch (logError) {
+      console.error('Failed to log payment:', logError);
+    }
 
     console.log(`✅ User ${user.email} subscription activated: ${planKey}`);
   } catch (error) {
