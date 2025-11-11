@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Plus, Trash2, Copy } from 'lucide-react';
 import WYSIWYGEditor, { WYSIWYGToolbar } from '@/components/ui/WYSIWYGEditor';
+import { AISuggestionsPanel } from '../AISuggestionsPanel';
 
 interface WorkExperienceSectionProps {
   data: any[];
@@ -18,6 +19,9 @@ const WorkExperienceSection: React.FC<WorkExperienceSectionProps> = ({
   userId
 }) => {
   const [generatingIndex, setGeneratingIndex] = useState<number | null>(null);
+  const [showSuggestions, setShowSuggestions] = useState<{ [key: number]: boolean }>({});
+  const [suggestions, setSuggestions] = useState<{ [key: number]: Array<{ method: string; content: string }> }>({});
+  const [loadingSuggestions, setLoadingSuggestions] = useState<{ [key: number]: boolean }>({});
   
   // Debug logging to understand data structure
   console.log('🔍 WorkExperienceSection - received data:', data);
@@ -101,6 +105,60 @@ const WorkExperienceSection: React.FC<WorkExperienceSectionProps> = ({
     }
   };
 
+  const generateAISuggestions = async (index: number, workItem: any) => {
+    if (!userId) {
+      console.error('❌ WorkExperienceSection - No userId provided for AI suggestions');
+      return;
+    }
+    
+    // Show panel immediately and set loading state using functional updates
+    setShowSuggestions(prev => ({ ...prev, [index]: true }));
+    setLoadingSuggestions(prev => ({ ...prev, [index]: true }));
+    
+    try {
+      const response = await fetch('/api/ai/generate-suggestions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId,
+          jobData,
+          sectionData: workItem,
+          sectionType: 'work_experience',
+          currentText: workItem.summary || '',
+          cvData: {} // Can be passed from parent if needed
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to generate suggestions: ${response.status} ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ WorkExperienceSection - AI suggestions received:', result);
+      
+      // Ensure we have suggestions array
+      if (result.suggestions && Array.isArray(result.suggestions) && result.suggestions.length > 0) {
+        setSuggestions(prev => ({ ...prev, [index]: result.suggestions }));
+      } else {
+        console.error('❌ WorkExperienceSection - Invalid suggestions format:', result);
+        setShowSuggestions(prev => ({ ...prev, [index]: false }));
+      }
+    } catch (error) {
+      console.error('❌ WorkExperienceSection - Error generating AI suggestions:', error);
+      setShowSuggestions(prev => ({ ...prev, [index]: false }));
+    } finally {
+      setLoadingSuggestions(prev => ({ ...prev, [index]: false }));
+    }
+  };
+
+  const handleSelectSuggestion = (index: number, content: string) => {
+    updateWorkItem(index, 'summary', content);
+    setShowSuggestions(prev => ({ ...prev, [index]: false }));
+  };
+
 
   return (
     <>
@@ -176,10 +234,17 @@ const WorkExperienceSection: React.FC<WorkExperienceSectionProps> = ({
               <WYSIWYGToolbar
                 showAIButton={true}
                 fieldType="experience"
-            onAIGenerate={() => generateAIDescription(index, work)}
-            isGenerating={generatingIndex === index}
-          />
+                onAISuggestions={() => generateAISuggestions(index, work)}
+                isGenerating={loadingSuggestions[index] || false}
+              />
             </div>
+            <AISuggestionsPanel
+              isVisible={showSuggestions[index] || false}
+              suggestions={suggestions[index] || []}
+              isLoading={loadingSuggestions[index] || false}
+              onSelect={(content) => handleSelectSuggestion(index, content)}
+              onClose={() => setShowSuggestions({ ...showSuggestions, [index]: false })}
+            />
             <WYSIWYGEditor
               key={`work-summary-${index}`}
               value={work?.summary || ''}

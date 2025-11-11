@@ -5,7 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import { 
-  BarChart3, Target, Route, FileText,
+  BarChart3, Target, FileText,
   Sparkles, Bell, Sun, Moon, Menu, X, Shield, Settings, LogOut, User, ChevronDown, Clock, Zap, AlertCircle
 } from 'lucide-react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
@@ -105,7 +105,6 @@ const OptimizedNavigation: React.FC = () => {
       '/dashboard/career-report',
       '/dashboard/application-tracker',
       '/dashboard/canvas',
-      '/dashboard/application-journey',
       '/dashboard/settings'
     ];
     
@@ -125,8 +124,6 @@ const OptimizedNavigation: React.FC = () => {
       setActiveSection('application-tracker');
     } else if (pathname.includes('/canvas')) {
       setActiveSection('canvas');
-    } else if (pathname.includes('/application-journey')) {
-      setActiveSection('application-journey');
     } else if (pathname.includes('/settings')) {
       setActiveSection('settings');
     }
@@ -148,7 +145,6 @@ const OptimizedNavigation: React.FC = () => {
       'career-report': '/dashboard/career-report',
       'application-tracker': '/dashboard/application-tracker',
       'canvas': '/dashboard/canvas',
-      'application-journey': '/dashboard/application-journey',
       'settings': '/dashboard/settings'
     };
     
@@ -206,13 +202,6 @@ const OptimizedNavigation: React.FC = () => {
       icon: Target, 
       description: 'Manage jobs with integrated CV journeys',
       route: '/dashboard/application-tracker'
-    },
-    { 
-      id: 'application-journey', 
-      name: 'Application Journey', 
-      icon: Route, 
-      description: 'Guided Application Process',
-      route: '/dashboard/application-journey'
     },
     { 
       id: 'canvas', 

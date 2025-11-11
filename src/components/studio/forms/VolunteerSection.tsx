@@ -1,24 +1,32 @@
 'use client';
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Plus, Trash2, Copy } from 'lucide-react';
 import WYSIWYGEditor, { WYSIWYGToolbar } from '@/components/ui/WYSIWYGEditor';
+import { AISuggestionsPanel } from '../AISuggestionsPanel';
 
 interface VolunteerSectionProps {
   data?: any[];
   onUpdate: (data: any[]) => void;
   onAdd?: () => void;
   onRemove?: (index: number) => void;
+  jobData?: any;
+  userId?: string;
 }
 
 const VolunteerSection: React.FC<VolunteerSectionProps> = ({
   data = [],
   onUpdate,
   onAdd,
-  onRemove
+  onRemove,
+  jobData,
+  userId
 }) => {
   // Ensure we have proper data structure
   const safeData = useMemo(() => Array.isArray(data) ? data : [], [data]);
+  const [showSuggestions, setShowSuggestions] = useState<{ [key: number]: boolean }>({});
+  const [suggestions, setSuggestions] = useState<{ [key: number]: Array<{ method: string; content: string }> }>({});
+  const [loadingSuggestions, setLoadingSuggestions] = useState<{ [key: number]: boolean }>({});
 
   // Safety wrapper for onAdd
   const handleAdd = useCallback(() => {
@@ -100,6 +108,47 @@ const VolunteerSection: React.FC<VolunteerSectionProps> = ({
     }
   }, [safeData, onUpdate]);
 
+  const generateAISuggestions = useCallback(async (index: number, volunteerItem: any) => {
+    if (!userId) return;
+    
+    setLoadingSuggestions(prev => ({ ...prev, [index]: true }));
+    setShowSuggestions(prev => ({ ...prev, [index]: true }));
+    
+    try {
+      const response = await fetch('/api/ai/generate-suggestions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId,
+          jobData,
+          sectionData: volunteerItem,
+          sectionType: 'volunteer',
+          currentText: volunteerItem.summary || '',
+          cvData: {}
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate suggestions');
+      }
+
+      const result = await response.json();
+      setSuggestions(prev => ({ ...prev, [index]: result.suggestions }));
+    } catch (error) {
+      console.error('Error generating AI suggestions:', error);
+      setShowSuggestions(prev => ({ ...prev, [index]: false }));
+    } finally {
+      setLoadingSuggestions(prev => ({ ...prev, [index]: false }));
+    }
+  }, [userId, jobData]);
+
+  const handleSelectSuggestion = useCallback((index: number, content: string) => {
+    updateVolunteer(index, 'summary', content);
+    setShowSuggestions(prev => ({ ...prev, [index]: false }));
+  }, [updateVolunteer]);
+
   return (
     <>
       {safeData.map((volunteer, index) => {
@@ -179,8 +228,20 @@ const VolunteerSection: React.FC<VolunteerSectionProps> = ({
           <div className="mt-4">
             <div className="flex items-center justify-between mb-2">
               <label className="block text-white/80 text-sm font-medium">Description</label>
-              <WYSIWYGToolbar />
+              <WYSIWYGToolbar
+                showAIButton={true}
+                fieldType="other"
+                onAISuggestions={() => generateAISuggestions(index, volunteer)}
+                isGenerating={loadingSuggestions[index] || false}
+              />
             </div>
+            <AISuggestionsPanel
+              isVisible={showSuggestions[index] || false}
+              suggestions={suggestions[index] || []}
+              isLoading={loadingSuggestions[index] || false}
+              onSelect={(content) => handleSelectSuggestion(index, content)}
+              onClose={() => setShowSuggestions(prev => ({ ...prev, [index]: false }))}
+            />
             <WYSIWYGEditor
               value={volunteer.summary || ''}
               onChange={(value) => updateVolunteer(index, 'summary', value)}

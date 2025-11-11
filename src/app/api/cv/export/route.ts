@@ -36,6 +36,28 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Unsupported format' }, { status: 400 });
     }
 
+    // Log export activity
+    try {
+      const { ActivityLogService } = await import('@/lib/services/activityLogService');
+      await ActivityLogService.logExport({
+        userId: session.user.id,
+        userEmail: session.user.email,
+        format: format as 'pdf' | 'docx' | 'txt',
+        fileSize: exportResult.buffer.length,
+        resourceType: 'cv',
+        resourceId: cvId || 'unknown',
+        resourceName: cvData.basics?.name || 'CV',
+        status: 'success',
+        metadata: {
+          templateId: template?.id || template?._id,
+          jobId: jobId
+        }
+      });
+    } catch (logError) {
+      console.error('Failed to log export:', logError);
+      // Don't fail the request if logging fails
+    }
+
     // Return the file as a blob with proper headers
     return new NextResponse(exportResult.buffer, {
       headers: {

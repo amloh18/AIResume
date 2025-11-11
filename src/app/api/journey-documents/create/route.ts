@@ -3,7 +3,6 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getConnection } from '@/lib/database';
 import { ApplicationJourney } from '@/models';
-import { extractUserIdentifier } from '@/lib/firebase-uid-utils';
 import mongoose from 'mongoose';
 import { createJourneyDocuments } from '@/lib/services/journeyDocumentService';
 
@@ -24,15 +23,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Extract user identifier
-    const userIdentifier = extractUserIdentifier(request, session);
-    
-    if (!userIdentifier.id || !userIdentifier.type) {
+    // Get user ID from session
+    if (!session?.user?.id) {
       return NextResponse.json(
         { success: false, error: 'User identification failed' },
         { status: 401 }
       );
     }
+
+    const userId = session.user.id;
 
     const body = await request.json();
     const { journeyId } = body;
@@ -51,24 +50,10 @@ export async function POST(request: NextRequest) {
       // First, try with ObjectId
       journey = await ApplicationJourney.findById(journeyId);
       
-      // Verify ownership - check userId only (no Firebase)
+      // Verify ownership - check userId only
       if (journey) {
         const journeyUserId = journey.userId?.toString();
-        const requestUserId = userIdentifier.type === 'objectid' ? userIdentifier.id : null;
-        
-        // If we don't have a request userId, try to get it from User collection
-        if (!requestUserId && userIdentifier.id) {
-          const { User } = await import('@/models');
-          const user = await User.findOne({ 
-            $or: [
-              { _id: userIdentifier.id },
-              { email: session?.user?.email }
-            ]
-          }).lean();
-          if (user && journeyUserId !== (user as any)._id.toString()) {
-            journey = null; // Ownership doesn't match
-          }
-        } else if (requestUserId && journeyUserId !== requestUserId) {
+        if (journeyUserId !== userId) {
           journey = null; // Ownership doesn't match
         }
       }
@@ -76,29 +61,16 @@ export async function POST(request: NextRequest) {
       console.error('❌ Journey Documents API - Error finding journey by ID:', error);
     }
     
-    // If not found, try query approach with userId only
+    // If not found, try query approach with userId
     if (!journey) {
-      const { User } = await import('@/models');
-      let mongoUserId = userIdentifier.id;
-      
-      // If userIdentifier is not a valid ObjectId, find user by email
-      if (userIdentifier.type !== 'objectid' || !mongoose.Types.ObjectId.isValid(userIdentifier.id)) {
-        if (session?.user?.email) {
-          const user = await User.findOne({ email: session.user.email }).lean();
-          if (user) {
-            mongoUserId = (user as any)._id.toString();
-          }
-        }
-      }
-      
       journey = await ApplicationJourney.findOne({ 
         _id: journeyId,
-        userId: mongoUserId
+        userId
       });
     }
     
     if (!journey) {
-      console.error('❌ Journey Documents API - Journey not found:', { journeyId, userIdentifier });
+      console.error('❌ Journey Documents API - Journey not found:', { journeyId, userId });
       return NextResponse.json(
         { success: false, error: 'Journey not found' },
         { status: 404 }
@@ -144,39 +116,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get MongoDB userId from journey or resolve from userIdentifier (Next Auth only)
-    let userId: string;
-    if (journey.userId) {
-      userId = journey.userId.toString();
-    } else {
-      // Resolve userId from User collection by email (Next Auth)
-      const { User } = await import('@/models');
-      let user = null;
-      
-      if (userIdentifier.type === 'objectid' && mongoose.Types.ObjectId.isValid(userIdentifier.id)) {
-        user = await User.findById(userIdentifier.id).lean();
-      }
-      
-      if (!user && session?.user?.email) {
-        user = await User.findOne({ email: session.user.email }).lean();
-      }
-      
-      if (!user) {
-        console.error('❌ Journey Documents API - User not found:', { userIdentifier, email: session?.user?.email });
-        journey.status = 'creation_failed';
-        journey.metadata.updatedAt = new Date();
-        await journey.save();
-        
-        return NextResponse.json(
-          { success: false, error: 'User not found' },
-          { status: 404 }
-        );
-      }
-      userId = (user as any)._id.toString();
-    }
+    // Get MongoDB userId from journey
+    const mongoUserId = journey.userId?.toString() || userId;
 
     // Use the service function to create documents
-    const result = await createJourneyDocuments(journeyId, userId);
+    const result = await createJourneyDocuments(journeyId, mongoUserId);
 
     if (result.success) {
       return NextResponse.json({

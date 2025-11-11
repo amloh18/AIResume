@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import UniversalPaymentModal from '@/components/payment/UniversalPaymentModal';
 import UserActivityModal from './UserActivityModal';
+import { USER_ROLES, DEFAULT_PAGINATION_LIMIT, DEFAULT_SEARCH_DEBOUNCE_MS, PAYMENT_PROVIDERS } from '@/lib/config/adminConstants';
 
 interface User {
   _id: string;
@@ -68,7 +69,7 @@ const UserManagement: React.FC = () => {
   const [filterRole, setFilterRole] = useState('all');
   const [filterPlan, setFilterPlan] = useState('all');
   const [page, setPage] = useState(1);
-  const [limit] = useState(50);
+  const [limit] = useState(DEFAULT_PAGINATION_LIMIT);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
@@ -110,7 +111,7 @@ const UserManagement: React.FC = () => {
 
   // Debounce search to reduce API calls
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(searchTerm.trim()), 300);
+    const t = setTimeout(() => setDebouncedSearch(searchTerm.trim()), DEFAULT_SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(t);
   }, [searchTerm]);
 
@@ -118,12 +119,15 @@ const UserManagement: React.FC = () => {
     try {
       const response = await fetch('/api/admin/config/plans');
       if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setPlanConfig({
-            plans: data.plans || [],
-            planDisplayNames: data.planDisplayNames || {}
-          });
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await response.json();
+          if (data.success) {
+            setPlanConfig({
+              plans: data.plans || [],
+              planDisplayNames: data.planDisplayNames || {}
+            });
+          }
         }
       }
     } catch (error) {
@@ -146,7 +150,14 @@ const UserManagement: React.FC = () => {
       const response = await fetch(url, { cache: 'no-store' });
       console.log('📥 Response status:', response.status);
       
+      // Check content type before parsing
+      const contentType = response.headers.get('content-type');
+      const isJson = contentType && contentType.includes('application/json');
+      
       if (response.ok) {
+        if (!isJson) {
+          throw new Error('Server returned non-JSON response');
+        }
         const data = await response.json();
         console.log('📥 Response data:', data);
         console.log('👥 Users found:', data.users ? data.users.length : 0);
@@ -165,11 +176,20 @@ const UserManagement: React.FC = () => {
         setHasMore(Boolean(data.pagination && nextPage < data.pagination.pages));
         setError(null);
       } else {
-        const errorData = await response.json();
-        console.error('❌ API Error:', errorData);
+        // Try to parse error if JSON, otherwise use status text
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        if (isJson) {
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+          } catch {
+            // If JSON parse fails, use default error message
+          }
+        }
+        console.error('❌ API Error:', errorMessage);
         console.error('❌ Response status:', response.status);
         setUsers([]);
-        setError(`Failed to fetch users: ${errorData.error || 'Unknown error'}`);
+        setError(`Failed to fetch users: ${errorMessage}`);
       }
     } catch (error) {
       console.error('❌ Error fetching users:', error);
@@ -204,14 +224,17 @@ const UserManagement: React.FC = () => {
     try {
       const response = await fetch('/api/metrics');
       if (response.ok) {
-        const data = await response.json();
-        // Parse the metrics from the API response
-        setMetrics({
-          totalUsers: users.length,
-          activeUsers: parseInt(data.activeUsers.replace(/[^\d]/g, '')) || 0,
-          jobsLanded: parseInt(data.jobsLanded.replace(/[^\d]/g, '')) || 0,
-          successRate: parseInt(data.successRate.replace(/[^\d]/g, '')) || 0
-        });
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await response.json();
+          // Parse the metrics from the API response
+          setMetrics({
+            totalUsers: users.length,
+            activeUsers: parseInt(data.activeUsers?.replace(/[^\d]/g, '') || '0') || 0,
+            jobsLanded: parseInt(data.jobsLanded?.replace(/[^\d]/g, '') || '0') || 0,
+            successRate: parseInt(data.successRate?.replace(/[^\d]/g, '') || '0') || 0
+          });
+        }
       }
     } catch (error) {
       console.error('Error fetching metrics:', error);
@@ -243,7 +266,7 @@ const UserManagement: React.FC = () => {
   };
 
   const handleCompPlan = async (user: User) => {
-    const planKey = prompt('Enter plan key (free, day_pass, pro_monthly, pro_quarterly, pro_yearly):');
+    const planKey = prompt(`Enter plan key (available plans: ${planConfig.plans.join(', ')}):`);
     const note = prompt('Enter reason for complimentary plan:');
     
     if (planKey && note) {
@@ -297,15 +320,19 @@ const UserManagement: React.FC = () => {
   };
 
   const getProviderIcon = (provider: string) => {
+    if (!PAYMENT_PROVIDERS.includes(provider as any)) {
+      return <AlertCircle size={14} className="text-gray-400" />;
+    }
+    
     switch (provider) {
       case 'stripe':
-        return <CreditCard size={14} className="text-blue-600" />;
+        return <CreditCard size={14} className="text-blue-400" />;
       case 'razorpay':
-        return <ExternalLink size={14} className="text-orange-600" />;
+        return <ExternalLink size={14} className="text-orange-400" />;
       case 'none':
-        return <Crown size={14} className="text-gray-600" />;
+        return <Crown size={14} className="text-gray-400" />;
       default:
-        return <AlertCircle size={14} className="text-gray-600" />;
+        return <AlertCircle size={14} className="text-gray-400" />;
     }
   };
 
@@ -471,11 +498,14 @@ const UserManagement: React.FC = () => {
         <select
           value={filterRole}
           onChange={(e) => setFilterRole(e.target.value)}
-          className="px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="px-3 py-2 border border-gray-600 bg-gray-700 text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         >
           <option value="all">All Roles</option>
-          <option value="user">User</option>
-          <option value="admin">Admin</option>
+          {USER_ROLES.map((role) => (
+            <option key={role} value={role}>
+              {role.charAt(0).toUpperCase() + role.slice(1)}
+            </option>
+          ))}
         </select>
         <select
           value={filterPlan}
@@ -615,8 +645,13 @@ const UserManagement: React.FC = () => {
                         Change Plan
                       </button>
                       <button
-                        onClick={() => handleSendCheckoutLink(user, 'pro_monthly')}
-                        className="text-green-600 hover:text-green-900 flex items-center gap-1"
+                        onClick={() => {
+                          const planKey = prompt(`Enter plan key to send checkout link (available: ${planConfig.plans.join(', ')}):`);
+                          if (planKey && planConfig.plans.includes(planKey)) {
+                            handleSendCheckoutLink(user, planKey);
+                          }
+                        }}
+                        className="text-green-400 hover:text-green-300 flex items-center gap-1"
                       >
                         <Send size={14} />
                         Send Link

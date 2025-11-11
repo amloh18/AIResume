@@ -21,8 +21,8 @@ const priceRegionSchema = new Schema<IPriceRegion>(
       type: String,
       required: [true, 'Region ID is required'],
       unique: true,
-      trim: true,
-      index: true,
+      trim: true
+      // Note: Unique constraint creates its own index
     },
     isDefault: {
       type: Boolean,

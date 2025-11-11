@@ -16,6 +16,7 @@ interface WYSIWYGToolbarProps {
   showAIButton?: boolean;
   fieldType?: 'summary' | 'experience' | 'other';
   onAIGenerate?: () => void;
+  onAISuggestions?: () => void;
   isGenerating?: boolean;
 }
 
@@ -32,6 +33,7 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
   showAIButton = false,
   fieldType = 'other',
   onAIGenerate,
+  onAISuggestions,
   isGenerating = false
 }) => {
   const [currentFormatState, setCurrentFormatState] = React.useState(formatState);
@@ -391,17 +393,17 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
         <Redo2 size={16} className="text-white/80" />
       </button>
 
-      {showAIButton && (fieldType === 'summary' || fieldType === 'experience') && (
+      {showAIButton && (
         <>
           <div className="w-px h-4 bg-white/20 mx-0.5" />
           <button
             type="button"
-            onClick={onAIGenerate}
+            onClick={onAISuggestions || onAIGenerate}
             disabled={isGenerating}
             className={`p-1 hover:opacity-70 transition-opacity opacity-60 ${
               isGenerating ? 'opacity-50 cursor-not-allowed' : ''
             }`}
-            title={fieldType === 'experience' ? 'AI: Convert to STAR method bullet points' : 'AI: Fix and improve sentences'}
+            title="AI: Generate 4 writing method suggestions"
           >
             <Sparkles 
               size={16} 

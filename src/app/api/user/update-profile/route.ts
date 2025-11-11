@@ -29,63 +29,69 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Update CV data with profile information
-    let cv = await CV.findOne({ userId: user._id, isMaster: true });
-    
+    // CRITICAL: Master CV is ONLY identified by ai-career-report creation
+    // Find master CV created via ai-career-report
+    let cv = await CV.findOne({
+      userId: user._id,
+      $or: [
+        { 'metadata.createdVia': 'ai-career-report' },
+        { 'metadata.tags': { $in: ['ai-career-report'] } }
+      ]
+    }).sort({ createdAt: -1 });
+
+    // FALLBACK: If no ai-career-report master CV found, use oldest CV by creation date
     if (!cv) {
-      // Create new master CV if it doesn't exist
-      cv = new CV({
-        userId: user._id,
-        title: 'Master CV',
-        cvData: {
-          basics: {
-            name: `${user.firstName} ${user.lastName}`,
-            label: jobTitle || 'Professional',
-            summary: professionalSummary || `${user.firstName} ${user.lastName} is a professional with experience in their field.`,
-            location: location ? {
-              city: location.split(',')[0]?.trim() || '',
-              region: location.split(',')[1]?.trim() || ''
-            } : undefined
-          },
-          work: [],
-          education: [],
-          skills: [],
-          projects: []
-        },
-        status: 'draft',
-        version: 1,
-        isMaster: true,
-        styling: {
-          primaryColor: '#84cc16',
-          secondaryColor: '#22c55e',
-          fontFamily: 'Inter',
-          fontSize: 'medium',
-          spacing: 1.5
-        },
-        metadata: {
-          lastModified: new Date(),
-          tags: [],
-          isPublic: false,
-          viewCount: 0,
-          downloadCount: 0,
-          starred: false
-        }
-      });
-    } else {
-      // Update existing CV data
-      if (!cv.cvData.basics) {
-        cv.cvData.basics = {};
-      }
-      
-      if (jobTitle) cv.cvData.basics.label = jobTitle;
-      if (professionalSummary) cv.cvData.basics.summary = professionalSummary;
-      if (location) {
-        cv.cvData.basics.location = {
-          city: location.split(',')[0]?.trim() || '',
-          region: location.split(',')[1]?.trim() || ''
-        };
+      console.log('🔍 Update Profile - No ai-career-report master CV found, using oldest CV as fallback');
+      const allCVs = await CV.find({
+        userId: user._id
+      }).sort({ createdAt: 1 }); // Sort ascending (oldest first)
+
+      if (allCVs && allCVs.length > 0) {
+        cv = allCVs[0]; // Get the oldest CV
+        console.log('🔍 Update Profile - Using oldest CV as master CV fallback:', {
+          id: cv._id,
+          title: cv.title,
+          createdAt: cv.createdAt
+        });
       }
     }
+    
+    if (!cv) {
+      // CRITICAL: Don't create master CV here - it should be created by ai-career-report
+      // Return error to prevent duplicate master CV creation
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Master CV not found. Please create your Master CV through the AI Career Report first.',
+          shouldCreateMasterCV: true
+        },
+        { status: 404 }
+      );
+    }
+    
+    // Update existing CV data - ensure basics section is fully preserved
+    if (!cv.cvData) {
+      cv.cvData = {};
+    }
+    if (!cv.cvData.basics) {
+      cv.cvData.basics = {};
+    }
+    
+    // Preserve all existing basics fields while updating
+    cv.cvData.basics = {
+      ...cv.cvData.basics,
+      name: cv.cvData.basics.name || `${user.firstName} ${user.lastName}`,
+      label: jobTitle || cv.cvData.basics.label || '',
+      summary: professionalSummary || cv.cvData.basics.summary || '',
+      location: location ? {
+        ...cv.cvData.basics.location,
+        city: location.split(',')[0]?.trim() || cv.cvData.basics.location?.city || '',
+        region: location.split(',')[1]?.trim() || cv.cvData.basics.location?.region || ''
+      } : (cv.cvData.basics.location || {})
+    };
+    
+    // Mark cvData as modified for Mongoose Mixed type
+    cv.markModified('cvData');
 
     await cv.save();
 

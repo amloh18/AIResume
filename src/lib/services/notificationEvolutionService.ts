@@ -33,7 +33,6 @@ class NotificationEvolutionService {
           // Create new persistent "deadline missed" notification
           await notificationService.createNotification({
             userId: notification.userId.toString(),
-            firebaseUid: notification.firebaseUid,
             type: 'deadline_missed',
             title: 'Deadline Missed',
             message: `The application deadline for ${notification.metadata?.jobTitle || 'a job'} has passed.`,
@@ -65,7 +64,6 @@ class NotificationEvolutionService {
           // Create new persistent "membership expired" notification
           await notificationService.createNotification({
             userId: notification.userId.toString(),
-            firebaseUid: notification.firebaseUid,
             type: 'membership_expired',
             title: 'Membership Expired',
             message: `Your ${notification.metadata?.planKey || 'membership'} has expired. Renew now to restore access.`,

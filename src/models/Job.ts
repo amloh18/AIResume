@@ -136,8 +136,8 @@ const jobSchema = new Schema<IJob>({
     type: String,
     enum: ['created', 'applied', 'screening', 'interview', 'offer', 'rejected', 'accepted', 'withdrawn'],
     default: 'created',
-    required: true,
-    index: true // Index for Kanban board queries
+    required: true
+    // Note: Index defined in compound index below for Kanban board queries
   },
   priority: {
     type: String,
@@ -374,12 +374,11 @@ jobSchema.post('save', async function(doc) {
       
       // Get user identifier
       const userId = doc.userId?.toString();
-      const firebaseUid = (doc as any).firebaseUid;
       
-      if (userId || firebaseUid) {
+      if (userId) {
         // Run sync in background to avoid blocking the save operation
         setImmediate(() => {
-          AutoSyncService.syncUserJobApplications(userId || '', firebaseUid).catch(error => {
+          AutoSyncService.syncUserJobApplications(userId).catch(error => {
             console.error('Background calendar sync failed:', error);
           });
         });

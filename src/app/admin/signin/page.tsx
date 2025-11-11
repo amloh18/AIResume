@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { signIn } from 'next-auth/react';
+import { signIn, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,6 +24,7 @@ export default function AdminSignInPage() {
   const [error, setError] = useState('');
 
   const router = useRouter();
+  const { data: session, update } = useSession();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -39,34 +40,54 @@ export default function AdminSignInPage() {
     setError('');
 
     try {
-      console.log('🔐 Attempting admin sign-in...');
+      console.log('🔐 Attempting admin sign-in via NextAuth...');
       
-      // Use simple admin authentication API
-      const response = await fetch('/api/admin/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-        }),
+      // Use NextAuth signIn with admin-credentials provider
+      const result = await signIn('admin-credentials', {
+        email: formData.email,
+        password: formData.password,
+        redirect: false, // Don't redirect automatically
       });
 
-      const data = await response.json();
-
-      if (data.success) {
-        console.log('✅ Admin sign-in successful, redirecting to admin dashboard...');
-        // Redirect to admin dashboard
-        router.push('/admin/dashboard');
+      // Handle the result
+      if (result) {
+        if (result.error) {
+          console.error('❌ Admin sign-in failed:', result.error);
+          // Provide more specific error messages
+          if (result.error === 'CredentialsSignin') {
+            setError('Invalid email or password. Please check your credentials.');
+          } else if (result.error.includes('JSON') || result.error.includes('DOCTYPE')) {
+            setError('Server error: Invalid response format. Please try again or contact support.');
+          } else {
+            setError('Invalid admin credentials or access denied');
+          }
+        } else if (result.ok) {
+          console.log('✅ Admin sign-in successful, updating session and redirecting...');
+          // Update session to ensure it's fresh
+          await update();
+          // Refresh router to get latest session
+          router.refresh();
+          // Redirect to admin dashboard
+          router.push('/admin/dashboard');
+        } else {
+          setError('An unexpected error occurred. Please try again.');
+        }
       } else {
-        console.error('❌ Admin sign-in failed:', data.error);
-        setError(data.error || 'Invalid admin credentials or access denied');
+        // No result returned - might be a network or server error
+        setError('No response from server. Please check your connection and try again.');
       }
 
     } catch (error: any) {
       console.error('❌ Admin sign in error:', error);
-      setError(error.message || 'Failed to sign in. Please try again.');
+      
+      // Handle different error types
+      if (error instanceof TypeError && error.message.includes('JSON')) {
+        setError('Server error: Invalid response. Please try again or contact support.');
+      } else if (error instanceof Error) {
+        setError(error.message || 'Failed to sign in. Please try again.');
+      } else {
+        setError('An unexpected error occurred. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

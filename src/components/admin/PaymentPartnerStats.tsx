@@ -62,8 +62,14 @@ const PaymentPartnerStats: React.FC<PaymentPartnerStatsProps> = ({ selectedCurre
       const response = await fetch(`/api/admin/payment-stats?range=${timeRange}&currency=${selectedCurrency}`);
       
       if (response.ok) {
-        const data = await response.json();
-        setStats(data);
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await response.json();
+          setStats(data);
+        } else {
+          // Use mock data if response is not JSON
+          setStats(generateMockStats());
+        }
       } else {
         // Use mock data for demonstration
         setStats(generateMockStats());

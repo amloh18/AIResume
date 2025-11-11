@@ -3,7 +3,7 @@
 import { ReactNode, useEffect } from 'react';
 import SessionProvider from './SessionProvider';
 import { AuthProvider } from '@/contexts/AuthContext';
-import { AdminAuthProvider } from '@/contexts/AdminAuthContext';
+// AdminAuthProvider removed - use NextAuth useSession() directly
 import { ThemeProvider } from '@/lib/contexts/ThemeContext';
 import PerformanceMonitor from '@/components/ui/PerformanceMonitor';
 import { PaymentModalProvider } from '@/contexts/PaymentModalContext';
@@ -15,6 +15,7 @@ import { setupEventErrorHandling } from '@/lib/utils/errorHandler';
 import { Toaster } from '@/components/ui/toaster';
 import { Session } from 'next-auth';
 import ClientErrorBoundary from './ClientErrorBoundary';
+import { FeedbackPrompt } from '@/components/feedback/FeedbackPrompt';
 
 interface ClientProvidersProps {
   children: ReactNode;
@@ -30,6 +31,7 @@ function ConditionalProviders({ children }: ClientProvidersProps) {
           <CookieConsent />
           <SessionCleanup />
           <Toaster />
+          <FeedbackPrompt />
           {children}
         </ConsoleLoggerProvider>
       </PaymentModalProvider>
@@ -48,16 +50,16 @@ export default function ClientProviders({ children, session }: ClientProvidersPr
 
   return (
     <SessionProvider session={session}>
+      {/* REFACTORED: Flattened provider nesting from 6 levels to 4 levels */}
+      {/* Removed AdminAuthProvider - now deprecated, use useSession() directly */}
       <AuthProvider>
-        <AdminAuthProvider>
-          {/* NotificationProvider must be inside SessionProvider to use useSession */}
-          {/* Wrap NotificationProvider in error boundary to prevent crashes */}
-          <ClientErrorBoundary>
-            <NotificationProvider>
-              <ConditionalProviders>{children}</ConditionalProviders>
-            </NotificationProvider>
-          </ClientErrorBoundary>
-        </AdminAuthProvider>
+        {/* NotificationProvider must be inside SessionProvider to use useSession */}
+        {/* Wrap NotificationProvider in error boundary to prevent crashes */}
+        <ClientErrorBoundary>
+          <NotificationProvider>
+            <ConditionalProviders>{children}</ConditionalProviders>
+          </NotificationProvider>
+        </ClientErrorBoundary>
       </AuthProvider>
     </SessionProvider>
   );

@@ -14,6 +14,12 @@ export class AICVParser {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
+    
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      throw new Error('Invalid response format from server');
+    }
+    
     const json = await response.json();
     if (!response.ok || !json.success) {
       throw new Error(json.error || 'Failed to parse CV with AI');

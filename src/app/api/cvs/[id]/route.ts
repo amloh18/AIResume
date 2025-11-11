@@ -268,6 +268,12 @@ export async function PUT(
             certificates: Array.isArray(updateData[field]?.certificates),
             projects: Array.isArray(updateData[field]?.projects)
           });
+        } else if (field === 'metadata') {
+          // CRITICAL: Merge metadata instead of replacing it to preserve master CV status
+          updateData[field] = {
+            ...cv.metadata,
+            ...body[field]
+          };
         } else {
           updateData[field] = body[field];
         }
@@ -295,6 +301,12 @@ export async function PUT(
       }
     }
 
+    // CRITICAL: Preserve master CV status - check if CV is currently a master CV
+    const isCurrentlyMasterCV = cv.metadata?.isMaster === true || 
+                                 cv.metadata?.isMaster === 'true' ||
+                                 cv.isMaster === true ||
+                                 cv.isMaster === 'true';
+    
     // Handle metadata updates properly
     if (body.isMaster !== undefined) {
       // If isMaster is provided at root level, update metadata
@@ -302,6 +314,30 @@ export async function PUT(
         updateData.metadata = { ...cv.metadata };
       }
       updateData.metadata.isMaster = body.isMaster;
+    } else if (body.metadata?.isMaster !== undefined) {
+      // If isMaster is provided in metadata object, use that
+      if (!updateData.metadata) {
+        updateData.metadata = { ...cv.metadata };
+      }
+      updateData.metadata.isMaster = body.metadata.isMaster;
+    } else {
+      // CRITICAL FIX: Preserve master CV status if not being changed
+      // If CV is currently a master CV and no isMaster flag is provided, preserve it
+      if (isCurrentlyMasterCV) {
+        if (!updateData.metadata) {
+          updateData.metadata = { ...cv.metadata };
+        }
+        // Ensure isMaster is preserved - check both merged metadata and existing metadata
+        const mergedIsMaster = updateData.metadata.isMaster;
+        const existingIsMaster = cv.metadata?.isMaster;
+        if (mergedIsMaster === undefined && existingIsMaster === undefined) {
+          // If somehow both are undefined but CV is master, set it explicitly
+          updateData.metadata.isMaster = true;
+        } else if (mergedIsMaster === undefined && (existingIsMaster === true || existingIsMaster === 'true')) {
+          // If merged doesn't have it but existing does, preserve it
+          updateData.metadata.isMaster = true;
+        }
+      }
     }
     
     // Update metadata.lastModified
@@ -309,6 +345,11 @@ export async function PUT(
       updateData.metadata = { ...cv.metadata };
     }
     updateData.metadata.lastModified = new Date();
+    
+    // Final safety check: if CV was a master CV, ensure it stays that way unless explicitly changed
+    if (isCurrentlyMasterCV && updateData.metadata.isMaster !== false && updateData.metadata.isMaster !== 'false') {
+      updateData.metadata.isMaster = true;
+    }
 
     console.log('🔍 CV UPDATE API - Updating CV with data:', Object.keys(updateData));
     console.log('🔍 CV UPDATE API - Update data values:', updateData);
@@ -316,6 +357,27 @@ export async function PUT(
     // Update CV
     Object.assign(cv, updateData);
     await cv.save();
+    
+    // Log CV update activity
+    try {
+      const { ActivityLogService } = await import('@/lib/services/activityLogService');
+      await ActivityLogService.logUserAction({
+        userId: session.user.id,
+        userEmail: session.user.email,
+        action: 'cv_updated',
+        resourceType: 'cv',
+        resourceId: cv._id.toString(),
+        resourceName: cv.title,
+        status: 'success',
+        metadata: {
+          templateId: cv.templateId?.toString(),
+          status: cv.status
+        }
+      });
+    } catch (logError) {
+      console.error('Failed to log CV update:', logError);
+      // Don't fail the request if logging fails
+    }
     
     // Save CV with template to S3 as backup
     try {
@@ -443,8 +505,33 @@ export async function DELETE(
     }
 
     console.log('✅ CV DELETE API - CV found, deleting...');
+    
+    // Store CV info before deletion for logging
+    const cvTitle = cv.title;
+    const cvTemplateId = cv.templateId?.toString();
+    
     await CV.deleteOne({ _id: cvId });
     console.log('✅ CV DELETE API - CV deleted successfully');
+    
+    // Log CV deletion activity
+    try {
+      const { ActivityLogService } = await import('@/lib/services/activityLogService');
+      await ActivityLogService.logUserAction({
+        userId: session.user.id,
+        userEmail: session.user.email,
+        action: 'cv_deleted',
+        resourceType: 'cv',
+        resourceId: cvId.toString(),
+        resourceName: cvTitle,
+        status: 'success',
+        metadata: {
+          templateId: cvTemplateId
+        }
+      });
+    } catch (logError) {
+      console.error('Failed to log CV deletion:', logError);
+      // Don't fail the request if logging fails
+    }
 
     return NextResponse.json({
       success: true,

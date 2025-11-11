@@ -102,8 +102,19 @@ const CVUpload: React.FC<CVUploadProps> = ({ onCVParsed, onClose }) => {
       });
       
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to parse CV');
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to parse CV');
+        } else {
+          throw new Error(`Failed to parse CV: HTTP ${response.status}`);
+        }
+      }
+      
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('CV parse response is not JSON. Content-Type:', contentType);
+        throw new Error('Invalid response format from server');
       }
       
       const result = await response.json();

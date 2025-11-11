@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { User, Mail, Phone, Globe, MapPin, Plus, Trash2, Sparkles, RefreshCw } from 'lucide-react';
 import RichTextEditor from '@/components/ui/RichTextEditor';
 import WYSIWYGEditor, { WYSIWYGToolbar } from '@/components/ui/WYSIWYGEditor';
+import { AISuggestionsPanel } from '../AISuggestionsPanel';
 import { validateStringValue } from '@/lib/utils/eventHandlers';
 
 interface PersonalInfoFormProps {
@@ -43,6 +44,9 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
   userId
 }) => {
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestions, setSuggestions] = useState<Array<{ method: string; content: string }>>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   
   // Debug logging to understand data structure
   console.log('🔍 PersonalInfoForm - data:', data);
@@ -144,6 +148,47 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
     }
   };
 
+  const generateAISuggestions = async () => {
+    if (!userId) return;
+    
+    setLoadingSuggestions(true);
+    setShowSuggestions(true);
+    
+    try {
+      const response = await fetch('/api/ai/generate-suggestions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId,
+          jobData,
+          sectionData: safePersonalInfo,
+          sectionType: 'summary',
+          currentText: safePersonalInfo.summary || '',
+          cvData
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate suggestions');
+      }
+
+      const result = await response.json();
+      setSuggestions(result.suggestions);
+    } catch (error) {
+      console.error('Error generating AI suggestions:', error);
+      setShowSuggestions(false);
+    } finally {
+      setLoadingSuggestions(false);
+    }
+  };
+
+  const handleSelectSuggestion = (content: string) => {
+    handleFieldChange('summary', content);
+    setShowSuggestions(false);
+  };
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       {/* Name and Title */}
@@ -233,10 +278,17 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
           <WYSIWYGToolbar
             showAIButton={true}
             fieldType="summary"
-            onAIGenerate={generateAISummary}
-            isGenerating={isGeneratingSummary}
+            onAISuggestions={generateAISuggestions}
+            isGenerating={loadingSuggestions}
           />
         </div>
+        <AISuggestionsPanel
+          isVisible={showSuggestions}
+          suggestions={suggestions}
+          isLoading={loadingSuggestions}
+          onSelect={handleSelectSuggestion}
+          onClose={() => setShowSuggestions(false)}
+        />
         <WYSIWYGEditor
           value={safePersonalInfo.summary}
           onChange={(value) => handleFieldChange('summary', value)}

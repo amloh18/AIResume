@@ -156,6 +156,11 @@ export class UnifiedCVService {
       throw new Error(`Failed to create CV: ${response.status} ${errorText}`);
     }
     
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      throw new Error('Invalid response format from server');
+    }
+    
     const result: UnifiedCVAPIResponse = await response.json();
     
     if (!result.success || !result.data?.cv) {
@@ -186,6 +191,11 @@ export class UnifiedCVService {
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`Failed to update CV: ${response.status} ${errorText}`);
+    }
+    
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      throw new Error('Invalid response format from server');
     }
     
     const result: UnifiedCVAPIResponse = await response.json();
@@ -235,6 +245,11 @@ export class UnifiedCVService {
       throw new Error(`Failed to fetch master CV: ${response.status} ${errorText}`);
     }
     
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      throw new Error('Invalid response format from server');
+    }
+    
     const result: UnifiedCVAPIResponse = await response.json();
     
     if (!result.success || !result.data?.cv) {
@@ -262,6 +277,11 @@ export class UnifiedCVService {
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`Failed to set master CV: ${response.status} ${errorText}`);
+    }
+    
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      throw new Error('Invalid response format from server');
     }
     
     const result: UnifiedCVAPIResponse = await response.json();
@@ -293,6 +313,11 @@ export class UnifiedCVService {
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`Failed to duplicate CV: ${response.status} ${errorText}`);
+    }
+    
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      throw new Error('Invalid response format from server');
     }
     
     const result: UnifiedCVAPIResponse = await response.json();

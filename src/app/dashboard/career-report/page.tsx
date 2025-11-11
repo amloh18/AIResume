@@ -37,6 +37,7 @@ import SkillsGapAnalysisCard from '@/components/career-report/widgets/SkillsGapA
 import StrategicRecommendationsCard from '@/components/career-report/widgets/StrategicRecommendationsCard';
 import CareerReportDownloadModal, { ReportFormatType } from '@/components/career-report/CareerReportDownloadModal';
 import { personalizeCareerAnalysis, makeShareableCareerAnalysis } from '@/lib/utils/career-report-transform';
+import { Skeleton } from '@/components/ui/SkeletonLoader';
 
 interface CareerAnalysis {
   experienceLevel: {
@@ -175,7 +176,7 @@ const CareerReportPage: React.FC = () => {
       try {
         setLoading(true);
         setError(null);
-        setLoadingMessage('Loading your CVs...');
+        setLoadingMessage('Loading Career Report...');
         
         const response = await fetch(`/api/cvs?userId=${currentUserId}`);
         const result = await response.json();
@@ -590,33 +591,23 @@ const CareerReportPage: React.FC = () => {
     // The useEffect will automatically retry when loading state changes
   };
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <PageHeader
-          title="Career Report"
-          description="AI-powered career insights and recommendations"
-          user={{
-            name: getUserDisplayName(userData),
-            email: getUserEmail(userData),
-            username: userData?.username || '',
-            profilePhoto: getUserAvatar(userData),
-            designation: userData?.role || '',
-          }}
-          showSettings={true}
-          onMobileMenuToggle={toggleSidebar}
-          isMobileMenuOpen={isOpen}
-        />
-        
-        <div className="flex items-center justify-center py-20">
-          <div className="text-center">
-            <div className="w-8 h-8 border-2 border-lime-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-gray-600 dark:text-gray-400">{loadingMessage}</p>
-          </div>
+  // Skeleton loader for report cards
+  const ReportCardSkeleton = () => (
+    <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-6 animate-pulse">
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <Skeleton variant="rounded" height={24} width="40%" />
+          <Skeleton variant="circular" width={48} height={48} />
+        </div>
+        <Skeleton variant="rounded" height={120} width="100%" />
+        <div className="space-y-2">
+          <Skeleton variant="text" height={16} width="100%" />
+          <Skeleton variant="text" height={16} width="80%" />
+          <Skeleton variant="text" height={16} width="60%" />
         </div>
       </div>
-    );
-  }
+    </div>
+  );
 
   if (error) {
     return (
@@ -836,7 +827,7 @@ const CareerReportPage: React.FC = () => {
           <motion.button
             onClick={handleRegenerateAnalysis}
             disabled={isGenerating || !selectedCV}
-            className="flex items-center justify-center gap-2 px-3 py-1.5 text-sm h-[32px] bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black rounded-md font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+            className="flex items-center justify-center gap-2 px-3 py-1.5 text-sm h-[32px] bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black rounded-md font-medium border border-transparent transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
             whileHover={{ scale: isGenerating ? 1 : 1.05 }}
             whileTap={{ scale: isGenerating ? 1 : 0.95 }}
           >
@@ -847,7 +838,33 @@ const CareerReportPage: React.FC = () => {
       </div>
 
       {/* Main Content */}
-      {careerAnalysis && (
+      {loading ? (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+            {/* Column 1 - Skeleton Loaders */}
+            <div className="flex flex-col gap-4 md:gap-6">
+              <ReportCardSkeleton />
+              <ReportCardSkeleton />
+              <ReportCardSkeleton />
+              <ReportCardSkeleton />
+            </div>
+            {/* Column 2 - Skeleton Loaders */}
+            <div className="flex flex-col gap-4 md:gap-6">
+              <ReportCardSkeleton />
+              <ReportCardSkeleton />
+              <ReportCardSkeleton />
+              <ReportCardSkeleton />
+              <ReportCardSkeleton />
+            </div>
+          </div>
+          {/* Career Trajectory Skeleton */}
+          <div className="w-full mt-6">
+            <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-6 animate-pulse">
+              <Skeleton variant="rounded" height={300} width="100%" />
+            </div>
+          </div>
+        </>
+      ) : careerAnalysis && (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             {/* Column 1 */}

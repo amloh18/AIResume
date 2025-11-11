@@ -3,7 +3,6 @@ import mongoose, { Schema, Document } from 'mongoose';
 export interface IApplicationJourney extends Document {
   journeyId?: string; // Unique journey identifier
   userId: string;
-  firebaseUid?: string; // Firebase UID for user identification
   jobId: string;
   cvId?: string; // Single source of truth for CV-Job relationship
   coverLetterId?: string; // Single source of truth for CoverLetter-Job relationship
@@ -48,36 +47,32 @@ export interface IApplicationJourney extends Document {
 
 const ApplicationJourneySchema = new Schema<IApplicationJourney>({
   journeyId: {
-    type: String,
-    index: true
+    type: String
+    // Note: Index not needed here - not used in compound indexes
   },
   userId: {
     type: String,
     required: true
-  },
-  firebaseUid: {
-    type: String,
-    sparse: true, // Allows multiple null values
-    index: true // Index for efficient Firebase UID queries
+    // Note: Index defined in compound indexes below
   },
   jobId: {
     type: String,
-    required: true,
-    index: true
+    required: true
+    // Note: Index defined in compound index below
   },
   cvId: {
-    type: String,
-    index: true
+    type: String
+    // Note: Index can be added if needed for specific queries
   },
   coverLetterId: {
-    type: String,
-    index: true
+    type: String
+    // Note: Index can be added if needed for specific queries
   },
   status: {
     type: String,
     enum: ['in-progress', 'completed', 'paused', 'processing_documents', 'creation_failed', 'ready'],
-    default: 'in-progress',
-    index: true
+    default: 'in-progress'
+    // Note: Index defined in compound indexes below
   },
   currentStep: {
     type: Number,
@@ -108,8 +103,8 @@ const ApplicationJourneySchema = new Schema<IApplicationJourney>({
   journeyType: {
     type: String,
     enum: ['standard', 'creative', 'technical', 'leadership', 'custom'],
-    default: 'standard',
-    index: true
+    default: 'standard'
+    // Note: Index only if needed for filtering queries
   },
   steps: [{
     stepId: {
@@ -134,13 +129,13 @@ const ApplicationJourneySchema = new Schema<IApplicationJourney>({
   }],
   // New fields for journey completion system
   completedAt: {
-    type: Date,
-    index: true
+    type: Date
+    // Note: Index defined in compound index below
   },
   lastWorkedOn: {
     type: Date,
-    default: Date.now,
-    index: true
+    default: Date.now
+    // Note: Index defined in compound index below
   },
   atsScoreHistory: [{
     score: {
@@ -175,8 +170,8 @@ const ApplicationJourneySchema = new Schema<IApplicationJourney>({
     min: 0
   },
   applicationDate: {
-    type: Date,
-    index: true
+    type: Date
+    // Note: Index defined as standalone below
   },
   metadata: {
     createdAt: {
@@ -208,7 +203,6 @@ const ApplicationJourneySchema = new Schema<IApplicationJourney>({
 // Optimized indexes for better query performance
 ApplicationJourneySchema.index({ userId: 1, status: 1 }); // Compound index for common queries (without updatedAt since timestamps: true handles it)
 ApplicationJourneySchema.index({ userId: 1, jobId: 1 }); // Index for performance, uniqueness handled in API
-ApplicationJourneySchema.index({ firebaseUid: 1, status: 1 }); // For Firebase user queries
 // Removed duplicate { status: 1 } index - already covered by { userId: 1, status: 1 } compound index
 ApplicationJourneySchema.index({ userId: 1, completedAt: -1 }); // For completed journeys queries
 ApplicationJourneySchema.index({ userId: 1, lastWorkedOn: -1 }); // For inactivity detection

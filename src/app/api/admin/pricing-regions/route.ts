@@ -1,26 +1,23 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { NextRequest } from 'next/server';
 import { getConnection } from '@/lib/database/connection-manager';
 import PriceRegion from '@/models/PriceRegion';
 import CountryMapping from '@/models/CountryMapping';
+import { withAdminAuth } from '@/lib/middleware/admin-auth';
+import { withErrorHandling, successResponse, errorResponse } from '@/lib/validation/api-validator';
+import { withValidation } from '@/lib/validation/api-validator';
+import {
+  createPriceRegionSchema,
+  updatePriceRegionSchema,
+  deletePriceRegionSchema,
+} from '@/lib/validation/schemas';
+import { z } from 'zod';
 
 /**
  * GET /api/admin/pricing-regions
  * Get all price regions and country mappings
+ * Requires admin authentication
  */
-export async function GET(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // TODO: Add admin check
-    // if (!isAdmin(session.user.email)) {
-    //   return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    // }
-
+export const GET = withAdminAuth(async (request: NextRequest) => {
     await getConnection();
 
     const [priceRegions, countryMappings] = await Promise.all([
@@ -28,44 +25,19 @@ export async function GET(request: NextRequest) {
       CountryMapping.find({}).sort({ countryCode: 1 }),
     ]);
 
-    return NextResponse.json({
-      success: true,
-      priceRegions,
-      countryMappings,
-    });
-  } catch (error) {
-    console.error('Error fetching pricing regions:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch pricing regions' },
-      { status: 500 }
-    );
-  }
-}
+  return successResponse({ priceRegions, countryMappings });
+});
 
 /**
  * POST /api/admin/pricing-regions
  * Create or update a price region
+ * Requires admin authentication
  */
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // TODO: Add admin check
-
+export const POST = withAdminAuth(
+  withValidation(createPriceRegionSchema, async (request, validatedData) => {
     await getConnection();
 
-    const body = await request.json();
-    const { regionId, isDefault, currency, currencySymbol, plans } = body;
-
-    if (!regionId || !currency || !currencySymbol || !plans) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
-    }
+    const { regionId, isDefault, currency, currencySymbol, plans } = validatedData;
 
     // If setting as default, unset other defaults
     if (isDefault) {
@@ -92,43 +64,20 @@ export async function POST(request: NextRequest) {
       { upsert: true, new: true }
     );
 
-    return NextResponse.json({
-      success: true,
-      priceRegion,
-    });
-  } catch (error) {
-    console.error('Error creating/updating price region:', error);
-    return NextResponse.json(
-      { error: 'Failed to create/update price region' },
-      { status: 500 }
-    );
-  }
-}
+    return successResponse({ priceRegion });
+  }) as (request: NextRequest) => Promise<NextResponse>
+);
 
 /**
  * PUT /api/admin/pricing-regions
  * Update a price region
+ * Requires admin authentication
  */
-export async function PUT(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // TODO: Add admin check
-
+export const PUT = withAdminAuth(
+  withValidation(updatePriceRegionSchema, async (request, validatedData) => {
     await getConnection();
 
-    const body = await request.json();
-    const { regionId, isDefault, currency, currencySymbol, plans } = body;
-
-    if (!regionId) {
-      return NextResponse.json(
-        { error: 'Region ID is required' },
-        { status: 400 }
-      );
-    }
+    const { regionId, isDefault, currency, currencySymbol, plans } = validatedData;
 
     // If setting as default, unset other defaults
     if (isDefault) {
@@ -158,80 +107,60 @@ export async function PUT(request: NextRequest) {
     );
 
     if (!priceRegion) {
-      return NextResponse.json(
-        { error: 'Price region not found' },
-        { status: 404 }
-      );
+      return errorResponse('NOT_FOUND', 'Price region not found', undefined, 404);
     }
 
-    return NextResponse.json({
-      success: true,
-      priceRegion,
-    });
-  } catch (error) {
-    console.error('Error updating price region:', error);
-    return NextResponse.json(
-      { error: 'Failed to update price region' },
-      { status: 500 }
-    );
-  }
-}
+    return successResponse({ priceRegion });
+  }) as (request: NextRequest) => Promise<NextResponse>
+);
 
 /**
  * DELETE /api/admin/pricing-regions
  * Delete a price region
+ * Requires admin authentication
  */
-export async function DELETE(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // TODO: Add admin check
-
+export const DELETE = withAdminAuth(async (request: NextRequest) => {
     await getConnection();
 
     const { searchParams } = new URL(request.url);
-    const regionId = searchParams.get('regionId');
+  const regionIdParam = searchParams.get('regionId');
 
-    if (!regionId) {
-      return NextResponse.json(
-        { error: 'Region ID is required' },
-        { status: 400 }
-      );
+  if (!regionIdParam) {
+    return errorResponse('VALIDATION_ERROR', 'Region ID is required', undefined, 400);
     }
+
+  // Validate region ID
+  const deleteSchema = z.object({
+    regionId: z.string().min(1, 'Region ID is required'),
+  });
+
+  try {
+    const { regionId } = deleteSchema.parse({ regionId: regionIdParam });
 
     // Check if region is default
     const region = await PriceRegion.findOne({ regionId });
     if (region?.isDefault) {
-      return NextResponse.json(
-        { error: 'Cannot delete default region' },
-        { status: 400 }
-      );
+      return errorResponse('VALIDATION_ERROR', 'Cannot delete default region', undefined, 400);
     }
 
     // Check if any country mappings use this region
     const mappingsCount = await CountryMapping.countDocuments({ regionId });
     if (mappingsCount > 0) {
-      return NextResponse.json(
-        { error: `Cannot delete region: ${mappingsCount} country mapping(s) still reference it` },
-        { status: 400 }
+      return errorResponse(
+        'VALIDATION_ERROR',
+        `Cannot delete region: ${mappingsCount} country mapping(s) still reference it`,
+        undefined,
+        400
       );
     }
 
     await PriceRegion.deleteOne({ regionId });
 
-    return NextResponse.json({
-      success: true,
-      message: 'Price region deleted successfully',
-    });
+    return successResponse({ message: 'Price region deleted successfully' });
   } catch (error) {
-    console.error('Error deleting price region:', error);
-    return NextResponse.json(
-      { error: 'Failed to delete price region' },
-      { status: 500 }
-    );
+    if (error instanceof z.ZodError) {
+      return errorResponse('VALIDATION_ERROR', 'Invalid region ID format', undefined, 400);
   }
-}
-
+    throw error;
+  }
+});

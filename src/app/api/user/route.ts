@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
     } else if (firebaseUserId) {
       // Firebase user - get user by Firebase UID
       dbConnection = await getConnection();
-      const firebaseUser = await User.findOne({ firebaseUid: firebaseUserId });
+      const firebaseUser = await User.findOne({ authProviderId: firebaseUserId });
       if (firebaseUser) {
         userEmail = firebaseUser.email;
         userId = firebaseUser._id.toString();
@@ -161,7 +161,7 @@ export async function PUT(request: NextRequest) {
     } else if (firebaseUserId) {
       // Firebase user - get user by Firebase UID
       await getConnection();
-      const firebaseUser = await User.findOne({ firebaseUid: firebaseUserId });
+      const firebaseUser = await User.findOne({ authProviderId: firebaseUserId });
       if (firebaseUser) {
         userEmail = firebaseUser.email;
       }

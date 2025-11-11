@@ -1340,15 +1340,15 @@ const Analytics: React.FC = () => {
         <div className="flex-1 h-full">
           <AnalyticsJourneyWidget
             onResumeJourney={(journey) => {
-              // Navigate to Application Journey page and resume the specific journey
-              router.push(`/dashboard/application-journey?resume=${journey.id}`);
+              // Navigate to Application Tracker to view the journey
+              router.push(`/dashboard/application-tracker?journeyId=${journey.id}`);
             }}
             onDeleteJourney={(journeyId) => {
               // TODO: Implement delete journey functionality
             }}
             onViewJourney={(journey) => {
-              // TODO: Implement view journey functionality
-              router.push(`/dashboard/application-journey`);
+              // Navigate to Application Tracker to view the journey
+              router.push(`/dashboard/application-tracker?journeyId=${journey.id}`);
             }}
           />
         </div>

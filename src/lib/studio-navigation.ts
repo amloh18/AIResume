@@ -41,8 +41,8 @@ export function navigateToStudioFromJourney(
     params.set('userId', userId);
   }
 
-  // Set return URL to journey page
-  params.set('returnUrl', `/dashboard/application-journeys/${journeyId}`);
+  // Set return URL to application tracker page
+  params.set('returnUrl', `/dashboard/application-tracker?journeyId=${journeyId}`);
 
   return `/studio?${params.toString()}`;
 }
@@ -273,12 +273,12 @@ export function generateStudioBreadcrumbs(params: StudioNavigationParams): Array
   
   if (params.journeyId) {
     breadcrumbs.push({
-      label: 'Application Journeys',
-      href: '/dashboard/application-journeys'
+      label: 'Application Tracker',
+      href: '/dashboard/application-tracker'
     });
     breadcrumbs.push({
       label: `Journey ${params.journeyId.slice(-6)}`,
-      href: `/dashboard/application-journeys/${params.journeyId}`
+      href: `/dashboard/application-tracker?journeyId=${params.journeyId}`
     });
   }
   

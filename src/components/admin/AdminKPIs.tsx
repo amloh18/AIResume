@@ -29,6 +29,7 @@ import {
   Pie,
   Cell
 } from 'recharts';
+import { TIME_RANGES, type TimeRange } from '@/lib/config/adminConstants';
 
 interface KPIData {
   totalUsers?: number;
@@ -55,7 +56,7 @@ const AdminKPIs: React.FC = () => {
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [loading, setLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(true);
-  const [timeRange, setTimeRange] = useState('today');
+  const [timeRange, setTimeRange] = useState<TimeRange>('today');
   // Track last fetch to prevent duplicate calls
   const lastFetchRef = useRef<{ timeRange: string; timestamp: number } | null>(null);
 
@@ -81,6 +82,12 @@ const AdminKPIs: React.FC = () => {
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      // Check content type before parsing
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Invalid response format from server');
       }
       
       const data = await response.json();
@@ -111,6 +118,13 @@ const AdminKPIs: React.FC = () => {
   const fetchChartData = async () => {
     try {
       const response = await fetch(`/api/admin/charts?range=${timeRange}`);
+      
+      // Check content type before parsing
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Invalid response format from server');
+      }
+      
       const data = await response.json();
       setChartData(data);
     } catch (error) {
@@ -371,14 +385,18 @@ const AdminKPIs: React.FC = () => {
         <div className="flex items-center space-x-2">
           <select
             value={timeRange}
-            onChange={(e) => setTimeRange(e.target.value)}
-            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+            onChange={(e) => setTimeRange(e.target.value as TimeRange)}
+            className="px-3 py-2 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-700 text-white"
           >
-            <option value="today">Today</option>
-            <option value="7d">Last 7 days</option>
-            <option value="30d">Last 30 days</option>
-            <option value="90d">Last 90 days</option>
-            <option value="1y">Last year</option>
+            {TIME_RANGES.map((range) => (
+              <option key={range} value={range}>
+                {range === 'today' ? 'Today' :
+                 range === '7d' ? 'Last 7 days' :
+                 range === '30d' ? 'Last 30 days' :
+                 range === '90d' ? 'Last 90 days' :
+                 range === '1y' ? 'Last year' : range}
+              </option>
+            ))}
           </select>
         </div>
       </div>

@@ -1,13 +1,12 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface ISubscription extends Document {
-  userId: mongoose.Types.ObjectId | string;
-  firebaseUid?: string; // Firebase UID for user identification
+  userId: mongoose.Types.ObjectId; // FIXED: Enforce ObjectId type only
   planId: mongoose.Types.ObjectId;
   status: 'active' | 'inactive' | 'cancelled' | 'past_due' | 'unpaid';
   startDate: Date;
   endDate: Date;
-  billingCycle: 'monthly' | 'yearly' | 'one-time';
+  billingCycle: 'monthly' | 'quarterly' | 'yearly' | 'one-time'; // FIXED: Added quarterly
   amount: number;
   currency: string;
   paymentMethod: 'stripe' | 'razorpay';
@@ -32,14 +31,12 @@ export interface ISubscription extends Document {
 }
 
 const subscriptionSchema = new Schema<ISubscription>({
+  // FIXED: Enforce ObjectId type for proper database relationships
   userId: {
-    type: Schema.Types.Mixed, // Allow both ObjectId and string
+    type: Schema.Types.ObjectId,
+    ref: 'User',
     required: [true, 'User ID is required']
-  },
-  firebaseUid: {
-    type: String,
-    sparse: true, // Allows multiple null values
-    index: true // Index for efficient Firebase UID queries
+    // Note: Index defined in compound index below for better performance
   },
   planId: {
     type: Schema.Types.ObjectId,
@@ -61,10 +58,11 @@ const subscriptionSchema = new Schema<ISubscription>({
     type: Date,
     required: [true, 'End date is required']
   },
+  // FIXED: Added 'quarterly' to match actual subscription plans
   billingCycle: {
     type: String,
     required: [true, 'Billing cycle is required'],
-    enum: ['monthly', 'yearly', 'one-time'],
+    enum: ['monthly', 'quarterly', 'yearly', 'one-time'],
     default: 'monthly'
   },
   amount: {
@@ -72,11 +70,12 @@ const subscriptionSchema = new Schema<ISubscription>({
     required: [true, 'Amount is required'],
     min: [0, 'Amount cannot be negative']
   },
+  // EXPANDED: Support all regional currencies
   currency: {
     type: String,
     required: [true, 'Currency is required'],
-    default: 'EUR',
-    enum: ['EUR', 'USD', 'INR']
+    default: 'GBP',
+    enum: ['EUR', 'USD', 'GBP', 'CAD', 'AUD', 'INR', 'PKR', 'PLN']
   },
   paymentMethod: {
     type: String,

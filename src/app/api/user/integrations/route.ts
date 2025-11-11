@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
         id: '1',
         name: 'Google',
         provider: 'google',
-        connected: !!user.firebaseUid, // Check if user has Firebase UID (Google auth)
+        connected: user.authProvider === 'nextauth' && !!user.authProviderId, // Check if user has Google auth via NextAuth
         lastSynced: user.updatedAt?.toISOString(),
         scopes: ['profile', 'email'],
       },

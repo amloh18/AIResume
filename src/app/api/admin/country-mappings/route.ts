@@ -1,72 +1,42 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { NextRequest } from 'next/server';
 import { getConnection } from '@/lib/database/connection-manager';
 import CountryMapping from '@/models/CountryMapping';
 import PriceRegion from '@/models/PriceRegion';
+import { withAdminAuth } from '@/lib/middleware/admin-auth';
+import { withErrorHandling, successResponse, errorResponse } from '@/lib/validation/api-validator';
+import { withValidation } from '@/lib/validation/api-validator';
+import { createCountryMappingSchema, deleteCountryMappingSchema } from '@/lib/validation/schemas';
+import { validateQuery } from '@/lib/validation/api-validator';
+import { z } from 'zod';
 
 /**
  * GET /api/admin/country-mappings
  * Get all country mappings
+ * Requires admin authentication
  */
-export async function GET(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // TODO: Add admin check
-
+export const GET = withAdminAuth(async (request: NextRequest) => {
     await getConnection();
 
     const countryMappings = await CountryMapping.find({}).sort({ countryCode: 1 });
 
-    return NextResponse.json({
-      success: true,
-      countryMappings,
-    });
-  } catch (error) {
-    console.error('Error fetching country mappings:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch country mappings' },
-      { status: 500 }
-    );
-  }
-}
+  return successResponse({ countryMappings });
+});
 
 /**
  * POST /api/admin/country-mappings
  * Create or update a country mapping
+ * Requires admin authentication
  */
-export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // TODO: Add admin check
-
+export const POST = withAdminAuth(
+  withValidation(createCountryMappingSchema, async (request, validatedData) => {
     await getConnection();
 
-    const body = await request.json();
-    const { countryCode, regionId } = body;
-
-    if (!countryCode || !regionId) {
-      return NextResponse.json(
-        { error: 'Country code and region ID are required' },
-        { status: 400 }
-      );
-    }
+    const { countryCode, regionId } = validatedData;
 
     // Verify region exists
     const region = await PriceRegion.findOne({ regionId });
     if (!region) {
-      return NextResponse.json(
-        { error: 'Price region not found' },
-        { status: 404 }
-      );
+      return errorResponse('NOT_FOUND', 'Price region not found', undefined, 404);
     }
 
     const countryMapping = await CountryMapping.findOneAndUpdate(
@@ -75,56 +45,39 @@ export async function POST(request: NextRequest) {
       { upsert: true, new: true }
     );
 
-    return NextResponse.json({
-      success: true,
-      countryMapping,
-    });
-  } catch (error) {
-    console.error('Error creating/updating country mapping:', error);
-    return NextResponse.json(
-      { error: 'Failed to create/update country mapping' },
-      { status: 500 }
-    );
-  }
-}
+    return successResponse({ countryMapping });
+  }) as (request: NextRequest) => Promise<NextResponse>
+);
 
 /**
  * DELETE /api/admin/country-mappings
  * Delete a country mapping
+ * Requires admin authentication
  */
-export async function DELETE(request: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // TODO: Add admin check
-
+export const DELETE = withAdminAuth(async (request: NextRequest) => {
     await getConnection();
 
     const { searchParams } = new URL(request.url);
-    const countryCode = searchParams.get('countryCode');
+  const countryCodeParam = searchParams.get('countryCode');
 
-    if (!countryCode) {
-      return NextResponse.json(
-        { error: 'Country code is required' },
-        { status: 400 }
-      );
-    }
+  if (!countryCodeParam) {
+    return errorResponse('VALIDATION_ERROR', 'Country code is required', undefined, 400);
+  }
 
+  // Validate country code format
+  const deleteSchema = z.object({
+    countryCode: z.string().length(2, 'Country code must be 2 characters').toUpperCase(),
+  });
+
+  try {
+    const { countryCode } = deleteSchema.parse({ countryCode: countryCodeParam });
     await CountryMapping.deleteOne({ countryCode: countryCode.toUpperCase() });
 
-    return NextResponse.json({
-      success: true,
-      message: 'Country mapping deleted successfully',
-    });
+    return successResponse({ message: 'Country mapping deleted successfully' });
   } catch (error) {
-    console.error('Error deleting country mapping:', error);
-    return NextResponse.json(
-      { error: 'Failed to delete country mapping' },
-      { status: 500 }
-    );
+    if (error instanceof z.ZodError) {
+      return errorResponse('VALIDATION_ERROR', 'Invalid country code format', undefined, 400);
   }
-}
-
+    throw error;
+  }
+});

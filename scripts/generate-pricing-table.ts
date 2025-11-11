@@ -1,9 +1,12 @@
 /**
  * Script to generate pricing table with region, country, plan code, plan with price, and pay type
+ * UPDATED: Now fetches pricing from database instead of hardcoded values
  * Run with: npx tsx scripts/generate-pricing-table.ts
  */
 
-import { REGIONAL_PRICING } from '../src/lib/pricing/regionalPricing';
+import { getConnection } from '../src/lib/database/connection-manager';
+import PriceRegion from '../src/models/PriceRegion';
+import CountryMapping from '../src/models/CountryMapping';
 
 interface PricingTableRow {
   region: string;
@@ -40,25 +43,78 @@ const PLAN_CONFIG = [
   }
 ];
 
-function generatePricingTable(): PricingTableRow[] {
+async function generatePricingTable(): Promise<PricingTableRow[]> {
   const table: PricingTableRow[] = [];
 
-  // Iterate through all regions
-  for (const [regionCode, pricing] of Object.entries(REGIONAL_PRICING)) {
-    // For each plan type
-    for (const plan of PLAN_CONFIG) {
-      const price = pricing[plan.priceKey];
-      table.push({
-        region: regionCode,
-        country: pricing.country,
-        planCode: plan.code,
-        planWithPrice: `${plan.name} - ${price}`,
-        payType: plan.payType
-      });
-    }
-  }
+  try {
+    // Connect to database
+    await getConnection();
 
-  return table;
+    // Fetch all price regions and country mappings
+    const priceRegions = await PriceRegion.find({});
+    const countryMappings = await CountryMapping.find({});
+
+    // Build region map for quick lookup
+    const regionMap = new Map();
+    priceRegions.forEach(region => {
+      regionMap.set(region.regionId, region);
+    });
+
+    // Iterate through all country mappings
+    for (const mapping of countryMappings) {
+      const region = regionMap.get(mapping.regionId);
+      if (!region) continue;
+
+      // For each plan type
+      for (const plan of PLAN_CONFIG) {
+        let price: number;
+        switch (plan.priceKey) {
+          case 'dayPass':
+            price = region.plans.dayPass;
+            break;
+          case 'monthly':
+            price = region.plans.monthly;
+            break;
+          case 'quarterly':
+            price = region.plans.quarterly;
+            break;
+          case 'yearly':
+            price = region.plans.yearly;
+            break;
+          default:
+            price = 0;
+        }
+
+        const priceString = `${region.currencySymbol}${price}`;
+        
+        table.push({
+          region: mapping.countryCode,
+          country: getCountryName(mapping.countryCode),
+          planCode: plan.code,
+          planWithPrice: `${plan.name} - ${priceString}`,
+          payType: plan.payType
+        });
+      }
+    }
+
+    return table;
+  } catch (error) {
+    console.error('Error generating pricing table:', error);
+    throw error;
+  }
+}
+
+// Helper function to get country name from code
+function getCountryName(code: string): string {
+  const names: Record<string, string> = {
+    'GB': 'United Kingdom', 'US': 'United States', 'CA': 'Canada', 
+    'AU': 'Australia', 'DE': 'Germany', 'FR': 'France', 
+    'IT': 'Italy', 'ES': 'Spain', 'NL': 'Netherlands',
+    'BE': 'Belgium', 'AT': 'Austria', 'FI': 'Finland', 
+    'IE': 'Ireland', 'PT': 'Portugal', 'GR': 'Greece', 
+    'PL': 'Poland', 'IN': 'India', 'PK': 'Pakistan',
+  };
+  return names[code] || code;
 }
 
 function formatAsMarkdownTable(rows: PricingTableRow[]): string {
@@ -88,7 +144,7 @@ function formatAsJSON(rows: PricingTableRow[]): string {
 
 // Main execution
 if (require.main === module) {
-  const table = generatePricingTable();
+  generatePricingTable().then(table => {
 
   console.log('=== Pricing Table ===\n');
   console.log(`Total rows: ${table.length}\n`);
@@ -123,6 +179,12 @@ if (require.main === module) {
   console.log(`\nRegions: ${Array.from(regions).sort().join(', ')}`);
   console.log(`Plan Codes: ${Array.from(planCodes).sort().join(', ')}`);
   console.log(`Pay Types: ${Array.from(payTypes).sort().join(', ')}`);
+  
+  process.exit(0);
+  }).catch(error => {
+    console.error('Fatal error:', error);
+    process.exit(1);
+  });
 }
 
 export { generatePricingTable, formatAsMarkdownTable, formatAsCSV, formatAsJSON };

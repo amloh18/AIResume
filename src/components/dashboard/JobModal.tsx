@@ -680,24 +680,24 @@ ${userName}`
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 bg-black/70 dark:bg-black/70 backdrop-blur-md flex items-center justify-center p-4"
+        className="fixed inset-0 z-50 bg-black/70 dark:bg-black/70 backdrop-blur-md flex items-center justify-center p-2 sm:p-4"
         onClick={onClose}
       >
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
-          className="bg-white dark:bg-[#1A201A] rounded-2xl shadow-2xl border border-gray-200 dark:border-white/10 w-[90%] max-w-6xl max-h-[85vh] overflow-hidden flex flex-col"
+          className="bg-white dark:bg-[#1A201A] rounded-2xl shadow-2xl border border-gray-200 dark:border-white/10 w-full sm:w-[95%] md:w-[90%] lg:w-[90%] max-w-6xl max-h-[90vh] sm:max-h-[85vh] overflow-hidden flex flex-col mx-auto"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-white/10 flex-shrink-0">
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{job.jobTitle || job.title}</h2>
-              <span className="text-gray-500 dark:text-gray-400">at</span>
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{job.company}</h2>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 p-4 sm:p-6 border-b border-gray-200 dark:border-white/10 flex-shrink-0">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-2 min-w-0 flex-1">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white truncate">{job.jobTitle || job.title}</h2>
+              <span className="text-gray-500 dark:text-gray-400 hidden sm:inline">at</span>
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white truncate">{job.company}</h2>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
               <motion.button
                 onClick={handleOpenEditModal}
                 className="flex items-center gap-2 px-3 py-2 bg-lime-100 dark:bg-[#80FF00]/20 hover:bg-lime-200 dark:hover:bg-[#80FF00]/30 border border-lime-300 dark:border-[#80FF00]/30 text-lime-700 dark:text-[#80FF00] rounded-full transition-colors"
@@ -780,97 +780,144 @@ ${userName}`
             )}
           </div>
 
-          {/* Main Content - Two Column Layout */}
-          <div className="flex flex-1 overflow-hidden">
-            {/* Left Column - Main Content */}
-            <div className="flex-1 p-6 overflow-y-auto min-h-0">
-              <div className="space-y-2">
-                {/* Job Description */}
-                <div className="p-4">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Job Description</h3>
-                  <div className="text-gray-700 dark:text-gray-300 text-sm space-y-3 max-h-48 overflow-y-auto scrollbar-hide">
-                    {job.jobDescription ? (
-                      <div className="whitespace-pre-wrap">
-                        {job.jobDescription}
+          {/* Follow-up & Templates Section - Full Width */}
+          {(isFollowUpNeeded(job) || job.status === 'applied' || job.status === 'screening' || job.status === 'interview' || job.status === 'offer' || job.status === 'accepted' || job.status === 'rejected') && (
+            <div className="px-6 py-4">
+              <div className="bg-gray-50 dark:bg-[#232f1c] border border-gray-200 dark:border-lime-500/20 rounded-2xl p-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <Mail size={16} className="text-lime-600 dark:text-[#80FF00]" />
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Follow-up & Templates</h3>
+                </div>
+                
+                <div className="space-y-4">
+                  {/* Follow-up Suggestion */}
+                  {isFollowUpNeeded(job) && (
+                    <div className="bg-lime-50 dark:bg-lime-500/10 border border-lime-200 dark:border-lime-500/30 rounded-lg p-3">
+                      <div className="flex items-start gap-2">
+                        <AlertCircle size={16} className="text-lime-600 dark:text-lime-400 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-lime-700 dark:text-lime-200 text-sm">
+                            {getFollowUpSuggestion(job, getDaysSinceLastUpdate(job))}
+                          </p>
+                        </div>
                       </div>
-                    ) : (
-                      <div className="text-center py-8">
-                        <FileText size={48} className="text-gray-500 mx-auto mb-4" />
-                        <p className="text-gray-500 text-sm">
-                          No job description provided yet.
-                        </p>
-                        <p className="text-gray-600 text-xs mt-2">
-                          Add a job description in the job details to see it here.
-                        </p>
+                    </div>
+                  )}
+
+                  {/* Email Template */}
+                  {getEmailTemplate(job) && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-medium text-gray-700 dark:text-white/80">Email Template</h4>
+                        <button
+                          onClick={() => setShowEmailTemplate(!showEmailTemplate)}
+                          className="text-xs text-lime-600 dark:text-[#80FF00] hover:text-lime-700 dark:hover:text-[#80FF00]/80 transition-colors flex items-center gap-1"
+                        >
+                          {showEmailTemplate ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                          {showEmailTemplate ? 'Hide' : 'Show'}
+                        </button>
                       </div>
-                    )}
+
+                      {showEmailTemplate && (
+                        <div className="space-y-3">
+                          {/* Subject Line */}
+                          <div className="bg-white dark:bg-[#1A201A] rounded-lg p-3 border border-gray-200 dark:border-white/10">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-xs text-gray-600 dark:text-white/60">Subject</span>
+                              <motion.button
+                                onClick={() => handleCopyToClipboard(getEmailSubject(job), 'subject')}
+                                className="text-xs text-lime-600 dark:text-[#80FF00] hover:text-lime-700 dark:hover:text-[#80FF00]/80 transition-colors flex items-center gap-1"
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                              >
+                                <Copy size={12} />
+                                {copiedField === 'subject' ? 'Copied!' : 'Copy'}
+                              </motion.button>
+                            </div>
+                            <p className="text-sm text-gray-900 dark:text-white font-medium">{getEmailSubject(job)}</p>
+                          </div>
+
+                          {/* Email Body */}
+                          <div className="bg-white dark:bg-[#1A201A] rounded-lg p-3 border border-gray-200 dark:border-white/10">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-xs text-gray-600 dark:text-white/60">Email Body</span>
+                              <motion.button
+                                onClick={() => handleCopyToClipboard(getEmailTemplate(job), 'email')}
+                                className="text-xs text-lime-600 dark:text-[#80FF00] hover:text-lime-700 dark:hover:text-[#80FF00]/80 transition-colors flex items-center gap-1"
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                              >
+                                <Copy size={12} />
+                                {copiedField === 'email' ? 'Copied!' : 'Copy'}
+                              </motion.button>
+                            </div>
+                            <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap max-h-60 overflow-y-auto">
+                              {getEmailTemplate(job)}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Follow-up Timeline */}
+                  <div className="bg-white dark:bg-[#1A201A] rounded-lg p-3 border border-gray-200 dark:border-white/10">
+                    <h4 className="text-sm font-medium text-gray-700 dark:text-white/80 mb-3">Follow-up Timeline</h4>
+                    <div className="space-y-2 text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600 dark:text-white/60">1 Day</span>
+                        <span className="text-gray-900 dark:text-white">Initial Application</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600 dark:text-white/60">3-5 Days</span>
+                        <span className="text-gray-900 dark:text-white">Send initial follow-up</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600 dark:text-white/60">7-10 Days</span>
+                        <span className="text-gray-900 dark:text-white">Second follow-up if no response</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          )}
 
-                {/* Core Details */}
-                <div className="p-4">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Core Details</h3>
-                  <div className="space-y-3">
-                    {/* First Row */}
-                    <div className="border-t border-lime-500/20 dark:border-lime-500/20 pt-3">
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div className="flex items-center gap-2">
-                          <MapPin size={16} className="text-gray-500 dark:text-gray-400" />
-                          <span className="text-gray-700 dark:text-gray-300">{job.location || fallbacks.defaultLocation}</span>
+          {/* Main Content - Two Column Layout */}
+          <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
+            {/* Left Column - Main Content */}
+            <div className="flex-1 min-w-0 p-4 sm:p-6 overflow-y-auto min-h-0">
+              <div className="space-y-6">
+                {/* Job Description */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Job Description</h3>
+                  <div className="bg-gray-50 dark:bg-[#232f1c] border border-gray-200 dark:border-lime-500/20 rounded-2xl p-4">
+                    <div className="text-gray-700 dark:text-gray-300 text-sm space-y-3 max-h-96 overflow-y-auto scrollbar-hide">
+                      {job.jobDescription ? (
+                        <div className="whitespace-pre-wrap font-mono text-xs">
+                          {job.jobDescription}
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Calendar size={16} className="text-gray-500 dark:text-gray-400" />
-                          <span className="text-gray-700 dark:text-gray-300">
-                            Applied on {formatJobDate(job.applicationDate, fallbacks.defaultApplicationDate)}
-                          </span>
+                      ) : (
+                        <div className="text-center py-8">
+                          <FileText size={48} className="text-gray-500 mx-auto mb-4" />
+                          <p className="text-gray-500 text-sm">
+                            No job description provided yet.
+                          </p>
+                          <p className="text-gray-600 text-xs mt-2">
+                            Add a job description in the job details to see it here.
+                          </p>
                         </div>
-                      </div>
-                    </div>
-                    
-                    {/* Second Row */}
-                    <div className="border-t border-lime-500/20 dark:border-lime-500/20 pt-3">
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div className="flex items-center gap-2">
-                          <ExternalLink size={16} className="text-gray-500 dark:text-gray-400" />
-                          <a href={job.jobUrl} target="_blank" rel="noopener noreferrer" className="text-lime-600 dark:text-lime-400 hover:underline">
-                            {formatJobUrl(job.jobUrl, fallbacks.defaultJobUrl)}
-                          </a>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Clock size={16} className="text-gray-500 dark:text-gray-400" />
-                          <span className="text-gray-700 dark:text-gray-300">
-                            Deadline: {formatJobDate(job.deadline, fallbacks.defaultDeadline)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Third Row - Contact Details */}
-                    <div className="border-t border-lime-500/20 dark:border-lime-500/20 pt-3">
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div className="flex items-center gap-2">
-                          <User size={16} className="text-gray-500 dark:text-gray-400" />
-                          <span className="text-gray-700 dark:text-gray-300">
-                            Contact: {job.contactDetails?.name || fallbacks.defaultContactName}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Mail size={16} className="text-gray-500 dark:text-gray-400" />
-                          <span className="text-gray-700 dark:text-gray-300">
-                            {job.contactDetails?.email || fallbacks.defaultContactEmail}
-                          </span>
-                        </div>
-                      </div>
+                      )}
                     </div>
                   </div>
                 </div>
 
                 {/* Notes Section */}
-                <div className="p-4">
+                <div>
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Notes</h3>
-                  <div className="bg-gray-50 dark:bg-[#232f1c] border border-lime-500/20 dark:border-lime-500/20 rounded-2xl p-3">
+                  <div className="bg-gray-50 dark:bg-[#232f1c] border border-gray-200 dark:border-lime-500/20 rounded-2xl p-4">
                     {job.notes ? (
-                      <p className="text-gray-700 dark:text-gray-300 text-sm">{job.notes}</p>
+                      <p className="text-gray-700 dark:text-gray-300 text-sm whitespace-pre-wrap">{job.notes}</p>
                     ) : (
                       <p className="text-gray-500 dark:text-gray-500 text-sm italic">No notes added yet</p>
                     )}
@@ -881,11 +928,13 @@ ${userName}`
             </div>
 
             {/* Right Column - Sidebar */}
-            <div className="w-80 p-6 overflow-y-auto min-h-0">
+            <div className="w-full lg:w-72 xl:w-80 flex-shrink-0 p-4 sm:p-6 overflow-y-auto min-h-0 border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-white/10">
               <div className="space-y-6">
-                {/* Application Status */}
-                <div className="bg-gray-50 dark:bg-[#232f1c] border border-gray-200 dark:border-lime-500/20 rounded-2xl p-4">
-                  <div className="space-y-4">
+                {/* Application Insights */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Application Insights</h3>
+                  <div className="bg-gray-50 dark:bg-[#232f1c] border border-gray-200 dark:border-lime-500/20 rounded-2xl p-4">
+                    <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <span className="text-gray-600 dark:text-white/60">Status</span>
                       <span className={`px-3 py-1 rounded-full text-sm font-medium ${
@@ -943,163 +992,45 @@ ${userName}`
                       </div>
                     )}
                   </div>
+                  </div>
                 </div>
 
                 {/* Job Insights */}
-                <div className="bg-gray-50 dark:bg-[#232f1c] border border-gray-200 dark:border-lime-500/20 rounded-2xl p-4">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Star size={16} className="text-lime-600 dark:text-[#80FF00]" />
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Job Insights</h3>
-                  </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Job Insights</h3>
+                  <div className="bg-gray-50 dark:bg-[#232f1c] border border-gray-200 dark:border-lime-500/20 rounded-2xl p-4">
                   
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-600 dark:text-white/60">Keyword Match Score</span>
-                      <span className="text-lime-600 dark:text-[#80FF00] font-semibold">
-                        {insightsLoading ? '...' : `${insights?.keywordMatchScore || 0}%`}
-                      </span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-600 dark:text-white/60">Company Hiring Trend</span>
-                      <span className="text-gray-900 dark:text-white">
-                        {insightsLoading ? '...' : insights?.companyHiringTrend || 'Unknown'}
-                      </span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-600 dark:text-white/60">Skills Gap</span>
-                      <span className="text-gray-900 dark:text-white">
-                        {insightsLoading ? '...' : insights?.skillsGap || 'Unable to analyze'}
-                      </span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-500 dark:text-gray-400">Market Competition</span>
-                      <span className="text-gray-900 dark:text-white">
-                        {insightsLoading ? '...' : insights?.marketCompetitiveness || 'Unknown'}
-                      </span>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600 dark:text-white/60">Keyword Match Score</span>
+                        <span className="text-lime-600 dark:text-[#80FF00] font-semibold">
+                          {insightsLoading ? '...' : `${insights?.keywordMatchScore || 0}%`}
+                        </span>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600 dark:text-white/60">Company Hiring Trend</span>
+                        <span className="text-gray-900 dark:text-white">
+                          {insightsLoading ? '...' : insights?.companyHiringTrend || 'Unknown'}
+                        </span>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600 dark:text-white/60">Skills Gap</span>
+                        <span className="text-gray-900 dark:text-white">
+                          {insightsLoading ? '...' : insights?.skillsGap || 'Unable to analyze'}
+                        </span>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-500 dark:text-gray-400">Market Competition</span>
+                        <span className="text-gray-900 dark:text-white">
+                          {insightsLoading ? '...' : insights?.marketCompetitiveness || 'Unknown'}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
-
-                {/* Follow-up & Templates Section */}
-                {(isFollowUpNeeded(job) || job.status === 'applied' || job.status === 'screening' || job.status === 'interview' || job.status === 'offer' || job.status === 'accepted' || job.status === 'rejected') && (
-                  <div className="bg-gray-50 dark:bg-[#232f1c] border border-gray-200 dark:border-lime-500/20 rounded-2xl p-4">
-                    <div className="flex items-center gap-2 mb-4">
-                      <Mail size={16} className="text-lime-600 dark:text-[#80FF00]" />
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Follow-up & Templates</h3>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      {/* Follow-up Suggestion */}
-                      {isFollowUpNeeded(job) && (
-                        <div className="bg-lime-50 dark:bg-lime-500/10 border border-lime-200 dark:border-lime-500/30 rounded-lg p-3">
-                          <div className="flex items-start gap-2">
-                            <AlertCircle size={16} className="text-lime-600 dark:text-lime-400 mt-0.5 flex-shrink-0" />
-                            <div className="flex-1">
-                              <p className="text-lime-700 dark:text-lime-200 text-sm">
-                                {getFollowUpSuggestion(job, getDaysSinceLastUpdate(job))}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Email Template */}
-                      {getEmailTemplate(job) && (
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <h4 className="text-sm font-medium text-gray-700 dark:text-white/80">Email Template</h4>
-                            <button
-                              onClick={() => setShowEmailTemplate(!showEmailTemplate)}
-                              className="text-xs text-lime-600 dark:text-[#80FF00] hover:text-lime-700 dark:hover:text-[#80FF00]/80 transition-colors flex items-center gap-1"
-                            >
-                              {showEmailTemplate ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                              {showEmailTemplate ? 'Hide' : 'Show'}
-                            </button>
-                          </div>
-
-                          {showEmailTemplate && (
-                            <div className="space-y-3">
-                              {/* Subject Line */}
-                              <div className="bg-white dark:bg-[#1A201A] rounded-lg p-3 border border-gray-200 dark:border-white/10">
-                                <div className="flex items-center justify-between mb-2">
-                                  <span className="text-xs text-gray-600 dark:text-white/60">Subject</span>
-                                  <motion.button
-                                    onClick={() => handleCopyToClipboard(getEmailSubject(job), 'subject')}
-                                    className="p-1.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded transition-colors"
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                  >
-                                    {copiedField === 'subject' ? (
-                                      <CheckCircle size={14} className="text-lime-600 dark:text-lime-400" />
-                                    ) : (
-                                      <Copy size={14} className="text-gray-500 dark:text-white/60" />
-                                    )}
-                                  </motion.button>
-                                </div>
-                                <p className="text-gray-900 dark:text-white text-sm">{getEmailSubject(job)}</p>
-                              </div>
-
-                              {/* Email Body */}
-                              <div className="bg-white dark:bg-[#1A201A] rounded-lg p-3 border border-gray-200 dark:border-white/10">
-                                <div className="flex items-center justify-between mb-2">
-                                  <span className="text-xs text-gray-600 dark:text-white/60">Email Body</span>
-                                  <motion.button
-                                    onClick={() => handleCopyToClipboard(getEmailTemplate(job), 'body')}
-                                    className="p-1.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded transition-colors"
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                  >
-                                    {copiedField === 'body' ? (
-                                      <CheckCircle size={14} className="text-lime-600 dark:text-lime-400" />
-                                    ) : (
-                                      <Copy size={14} className="text-gray-500 dark:text-white/60" />
-                                    )}
-                                  </motion.button>
-                                </div>
-                                <pre className="text-gray-900 dark:text-white text-xs whitespace-pre-wrap font-sans max-h-48 overflow-y-auto">
-                                  {getEmailTemplate(job)}
-                                </pre>
-                              </div>
-
-                              {/* Contact Email (if available) */}
-                              {job.contactDetails?.email && (
-                                <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-white/60">
-                                  <Mail size={12} />
-                                  <span>Send to: {job.contactDetails.email}</span>
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Follow-up Timeline */}
-                      {getFollowUpTimeline(job).length > 0 && (
-                        <div className="space-y-2">
-                          <h4 className="text-sm font-medium text-gray-700 dark:text-white/80">Follow-up Timeline</h4>
-                          <div className="space-y-2">
-                            {getFollowUpTimeline(job).map((item, index) => (
-                              <div key={index} className="flex items-start gap-3 text-xs">
-                                <div className="flex-shrink-0 mt-1">
-                                  <div className="w-6 h-6 rounded-full bg-lime-100 dark:bg-[#80FF00]/20 flex items-center justify-center border border-lime-300 dark:border-[#80FF00]/30">
-                                    <span className="text-lime-600 dark:text-[#80FF00] font-semibold">{index + 1}</span>
-                                  </div>
-                                </div>
-                                <div className="flex-1 pt-0.5">
-                                  <p className="text-gray-700 dark:text-white/80 font-medium">{item.day}</p>
-                                  <p className="text-gray-600 dark:text-white/60">{item.action}</p>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
 
                 {/* Delete Application Button */}
                 <div className="flex justify-end">
@@ -1117,7 +1048,6 @@ ${userName}`
               </div>
             </div>
           </div>
-
           </div>
         </motion.div>
       </motion.div>

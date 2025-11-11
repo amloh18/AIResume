@@ -62,6 +62,12 @@ export function useUserData(): UseUserDataReturn {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('User data response is not JSON. Content-Type:', contentType);
+        throw new Error('Invalid response format from server');
+      }
+
       const result = await response.json();
 
       if (result.success && result.user) {

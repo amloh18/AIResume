@@ -24,20 +24,10 @@ export async function GET(request: NextRequest) {
     const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
 
     // Fetch all jobs for the user
-    // Handle both MongoDB ObjectId and Firebase UID
-    const jobQuery = userId.length === 24 && /^[0-9a-fA-F]{24}$/.test(userId)
-      ? { userId: userId } // MongoDB ObjectId
-      : { firebaseUid: userId }; // Firebase UID
-
-    const allJobs = await Job.find(jobQuery);
+    const allJobs = await Job.find({ userId });
 
     // Fetch CV journeys for the user
-    // Handle both MongoDB ObjectId and Firebase UID
-    const journeyQuery = userId.length === 24 && /^[0-9a-fA-F]{24}$/.test(userId)
-      ? { userId: userId } // MongoDB ObjectId
-      : { firebaseUid: userId }; // Firebase UID
-
-    const journeys = await ApplicationJourney.find(journeyQuery);
+    const journeys = await ApplicationJourney.find({ userId });
 
     // Calculate application stats
     const totalApplications = allJobs.length;
