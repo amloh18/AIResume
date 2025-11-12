@@ -66,18 +66,19 @@ function StudioPageContent() {
       console.log('🔍 Studio Page - Loading journey data for:', primaryJourneyId);
       
       try {
-        const response = await fetch(`/api/application-journey?userId=${user.id}&jobId=${primaryJourneyId}`);
+        // Use the correct endpoint that accepts journeyId as a path parameter
+        const response = await fetch(`/api/application-journey/${primaryJourneyId}`);
         console.log('🔍 Studio Page - API response status:', response.status);
         
         if (response.ok) {
           const journeyData = await response.json();
           console.log('🔍 Studio Page - Journey data received:', journeyData);
           
-          if (journeyData.success && journeyData.data && journeyData.data.journeys && journeyData.data.journeys.length > 0) {
-            // Get the first journey from the array
-            const journey = journeyData.data.journeys[0];
+          if (journeyData.success && journeyData.data && journeyData.data.journey) {
+            // Get the journey from the response (single journey object, not array)
+            const journey = journeyData.data.journey;
             const journeyInfo = {
-              id: journey.journeyId,
+              id: journey.journeyId || journey.id,
               jobId: journey.jobId,
               jobTitle: journey.jobTitle,
               company: journey.company,
@@ -95,7 +96,8 @@ function StudioPageContent() {
             console.warn('🔍 Studio Page - No journey data found in response');
           }
         } else {
-          console.error('🔍 Studio Page - API request failed:', response.status, response.statusText);
+          const errorData = await response.json().catch(() => ({}));
+          console.error('🔍 Studio Page - API request failed:', response.status, response.statusText, errorData);
         }
       } catch (error) {
         console.error('🔍 Studio Page - Error loading current journey:', error);

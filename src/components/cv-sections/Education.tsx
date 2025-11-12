@@ -21,15 +21,23 @@ const Education: React.FC<EducationProps> = ({
 
 
   return (
-    <section className="education-section">
-      <h2 className="section-header">
+    <section 
+      className="education-section section-content"
+      data-section-id="education"
+      data-section-type="education"
+    >
+      <h2 className="section-header cv-section-header">
         {sectionConfig.displayName || 'Education'}
       </h2>
       
       <div className="education-list">
         {data.map((education, index) => (
-          <div key={index} className="education-item">
-            <div className="item-header">
+          <div 
+            key={index} 
+            className="education-item cv-entry-item"
+            data-entry-index={index}
+          >
+            <div className="item-header entry-header">
               <div className="item-title-group">
                 <h3 className="item-title">
                   {education.studyType && education.area 
@@ -47,7 +55,7 @@ const Education: React.FC<EducationProps> = ({
             </div>
 
             {education.description && (
-              <div className="education-description">
+              <div className="education-description entry-content item-content">
                 <div 
                   dangerouslySetInnerHTML={{ __html: parseFormattedText(education.description) }}
                 />

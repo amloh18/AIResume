@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import FloatingStudioLayout from './FloatingStudioLayout';
 import SidebarStudioPanel from './SidebarStudioPanel';
-import ComprehensiveATSAnalyzer from './ComprehensiveATSAnalyzer';
+import StudioAIReport from './StudioAIReport';
 import DesignContent from './DesignContent';
 import CoverLetterDesignContent from './CoverLetterDesignContent';
 import TemplateContent from './TemplateContent';
@@ -497,11 +497,12 @@ const CVStudio: React.FC<CVStudioProps> = ({
   // Reduced debounce time from 2000ms to 1000ms for better responsiveness
   const debouncedSave = useCallback(
     debounce(async (data: UnifiedCVDataStructure) => {
+      let saveTimeout: NodeJS.Timeout | null = null;
       try {
         setSaveStatus('saving');
 
         // Add timeout protection
-        const saveTimeout = setTimeout(() => {
+        saveTimeout = setTimeout(() => {
           console.error('❌ Studio - Save operation timed out');
           setSaveStatus('error');
         }, 10000); // 10 second timeout
@@ -745,6 +746,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
             if (isMasterCV) {
               console.error('❌ CVStudio - Attempted to create master CV in studio - this should not happen');
               console.error('❌ Master CVs should only be created via ai-career-report convert-to-master endpoint');
+              clearTimeout(saveTimeout);
               setError('Cannot create Master CV here. Please use the AI Career Report to create your Master CV.');
               setSaveStatus('error');
               return;
@@ -801,7 +803,16 @@ const CVStudio: React.FC<CVStudioProps> = ({
         }
       } catch (err) {
         console.error('❌ Studio - Error saving document:', err);
+        // Clear timeout in case of error
+        if (saveTimeout) {
+          clearTimeout(saveTimeout);
+        }
         setSaveStatus('error');
+      } finally {
+        // Ensure timeout is always cleared
+        if (saveTimeout) {
+          clearTimeout(saveTimeout);
+        }
       }
     }, 3000), // Increased from 1000ms to 3000ms
     [cvId, coverLetterId, selectedJobId, selectedTemplate, userId, justCreated, documentType, coverLetterTitle]
@@ -1618,10 +1629,10 @@ const CVStudio: React.FC<CVStudioProps> = ({
       if (journeyInfo.jobId && !currentJob) {
         try {
           console.log('🔍 CVStudio - Loading job from journey:', journeyInfo.jobId);
-          const jobResponse = await fetch(`/api/jobs?userId=${userId}&jobId=${journeyInfo.jobId}`);
+          const jobResponse = await fetch(`/api/jobs/${journeyInfo.jobId}`);
           if (jobResponse.ok) {
             const jobResult = await jobResponse.json();
-            const loadedJob = jobResult.data?.jobs?.find((job: any) => job.id === journeyInfo.jobId) || jobResult.job || jobResult;
+            const loadedJob = jobResult.data?.job || jobResult.job || jobResult;
             if (loadedJob) {
               console.log('✅ CVStudio - Job loaded from journey:', loadedJob);
               setCurrentJob(loadedJob);
@@ -1951,7 +1962,8 @@ const CVStudio: React.FC<CVStudioProps> = ({
               journeyId: primaryJourneyId, 
               jobId: targetJobId 
             });
-            const jobResponse = await fetch(`/api/jobs?userId=${userId}&jobId=${targetJobId}`);
+            // Use the single job endpoint for better reliability
+            const jobResponse = await fetch(`/api/jobs/${targetJobId}`);
             if (!jobResponse.ok) {
               throw new Error('Failed to fetch job');
             }
@@ -1959,12 +1971,13 @@ const CVStudio: React.FC<CVStudioProps> = ({
 
             // Extract job data from the response
             let jobData;
-            if (jobResult.data?.jobs) {
-              // If we got a list of jobs, find the specific one
-              jobData = jobResult.data.jobs.find((job: any) => job.id === targetJobId || job._id === targetJobId);
+            if (jobResult.success && jobResult.data?.job) {
+              jobData = jobResult.data.job;
+            } else if (jobResult.job) {
+              // Fallback for backwards compatibility
+              jobData = jobResult.job;
             } else {
-              // If we got a single job directly
-              jobData = jobResult.job || jobResult;
+              throw new Error('Job not found in response');
             }
 
             if (!jobData) {
@@ -2094,10 +2107,10 @@ const CVStudio: React.FC<CVStudioProps> = ({
                 if (loadedJourneyInfo.jobId) {
                   try {
                     console.log('🔍 CVStudio - Loading job from journey:', loadedJourneyInfo.jobId);
-                    const jobResponse = await fetch(`/api/jobs?userId=${userId}&jobId=${loadedJourneyInfo.jobId}`);
+                    const jobResponse = await fetch(`/api/jobs/${loadedJourneyInfo.jobId}`);
                     if (jobResponse.ok) {
                       const jobResult = await jobResponse.json();
-                      const loadedJob = jobResult.data?.jobs?.find((job: any) => job.id === loadedJourneyInfo.jobId) || jobResult.job || jobResult;
+                      const loadedJob = jobResult.data?.job || jobResult.job || jobResult;
                       if (loadedJob) {
                         console.log('✅ CVStudio - Job loaded:', loadedJob);
                         setCurrentJob(loadedJob);
@@ -2148,10 +2161,10 @@ const CVStudio: React.FC<CVStudioProps> = ({
                   console.log('🔍 CVStudio - Auto-loading linked job:', coverLetter.jobId);
                   setSelectedJobId(coverLetter.jobId);
                   try {
-                    const jobResponse = await fetch(`/api/jobs?userId=${userId}&jobId=${coverLetter.jobId}`);
+                    const jobResponse = await fetch(`/api/jobs/${coverLetter.jobId}`);
                     if (jobResponse.ok) {
                       const jobResult = await jobResponse.json();
-                      const loadedJob = jobResult.data?.jobs?.find((job: any) => job.id === coverLetter.jobId) || jobResult.job || jobResult;
+                      const loadedJob = jobResult.data?.job || jobResult.job || jobResult;
                       if (loadedJob) {
                         setCurrentJob(loadedJob);
                       }
@@ -2196,10 +2209,10 @@ const CVStudio: React.FC<CVStudioProps> = ({
               // Load job data if we have jobId
               if (journeyInfo.jobId && !currentJob) {
                 try {
-                  const jobResponse = await fetch(`/api/jobs?userId=${userId}&jobId=${journeyInfo.jobId}`);
+                  const jobResponse = await fetch(`/api/jobs/${journeyInfo.jobId}`);
                   if (jobResponse.ok) {
                     const jobResult = await jobResponse.json();
-                    const loadedJob = jobResult.data?.jobs?.find((job: any) => job.id === journeyInfo.jobId) || jobResult.job || jobResult;
+                    const loadedJob = jobResult.data?.job || jobResult.job || jobResult;
                     if (loadedJob) {
                       console.log('✅ CVStudio - Job loaded from journey:', loadedJob);
                       setCurrentJob(loadedJob);
@@ -2935,9 +2948,9 @@ const CVStudio: React.FC<CVStudioProps> = ({
     setSelectedJobId(jobId);
     if (jobId) {
       try {
-        // Fetch job data with userId
+        // Fetch job data using single job endpoint
         console.log('🎯 CVStudio - Loading job data for jobId:', jobId);
-        const response = await fetch(`/api/jobs?userId=${userId}&jobId=${jobId}`);
+        const response = await fetch(`/api/jobs/${jobId}`);
         if (!response.ok) {
           throw new Error('Failed to fetch job');
         }
@@ -2945,12 +2958,13 @@ const CVStudio: React.FC<CVStudioProps> = ({
 
         // Extract job data from the response
         let jobData;
-        if (data.data?.jobs) {
-          // If we got a list of jobs, find the specific one
-          jobData = data.data.jobs.find((job: any) => job.id === jobId || job._id === jobId);
+        if (data.success && data.data?.job) {
+          jobData = data.data.job;
+        } else if (data.job) {
+          // Fallback for backwards compatibility
+          jobData = data.job;
         } else {
-          // If we got a single job directly
-          jobData = data.job || data;
+          throw new Error('Job not found in response');
         }
 
         if (!jobData) {
@@ -3155,10 +3169,10 @@ const CVStudio: React.FC<CVStudioProps> = ({
     if (currentJobId && userId) {
       try {
         console.log('🔄 Reloading job data from journey:', currentJobId);
-        const jobResponse = await fetch(`/api/jobs?userId=${userId}&jobId=${currentJobId}`);
+        const jobResponse = await fetch(`/api/jobs/${currentJobId}`);
         if (jobResponse.ok) {
           const jobResult = await jobResponse.json();
-          const loadedJob = jobResult.data?.jobs?.find((job: any) => job.id === currentJobId) || jobResult.job || jobResult;
+          const loadedJob = jobResult.data?.job || jobResult.job || jobResult;
           if (loadedJob) {
             console.log('✅ Job data reloaded for switching:', loadedJob.title || loadedJob.jobTitle);
             setCurrentJob(loadedJob);
@@ -4298,14 +4312,13 @@ const CVStudio: React.FC<CVStudioProps> = ({
             }
             aiReportContent={
               documentType === 'cv' && cvData ? (
-                <ComprehensiveATSAnalyzer
-                  selectedJobId={selectedJobId}
-                  onJobSelection={handleJobSelection}
-                  userId={userId}
+                <StudioAIReport
                   cvData={cvData}
                   jobData={currentJob}
                   cvId={cvId || undefined}
-                  onUpdateField={updateCVField}
+                  userId={userId}
+                  selectedJobId={selectedJobId}
+                  onJobSelection={handleJobSelection}
                   onScoreUpdate={(score) => {
                     updateAtsScore(score);
                     if (score >= 60) {

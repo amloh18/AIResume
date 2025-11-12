@@ -276,8 +276,13 @@ const CleanUnlinkedButton: React.FC<CleanUnlinkedButtonProps> = ({
       }
       
       // Check if item is linked to any journey
-      // Convert item.id to string for comparison
-      return !linkedItemIds.has(String(item.id));
+      // Convert item.id or item._id to string for comparison
+      const itemId = item.id || item._id;
+      if (!itemId) {
+        // If item has no ID, consider it unlinked (should be deleted)
+        return true;
+      }
+      return !linkedItemIds.has(String(itemId));
     });
     
     setUnlinkedItems(unlinked);
@@ -890,16 +895,21 @@ const Canvas: React.FC = () => {
 
   const handleEditJourney = async (cv: CV, journey: any) => {
     try {
+      const userId = getUserIdForAPI(user);
+      if (!userId) {
+        console.error('User not authenticated');
+        return;
+      }
       
-      // Fetch the job details for the journey
-      const jobResponse = await fetch(`/api/jobs/${journey.jobId}`);
+      // Fetch the job details for the journey using authenticatedFetch
+      const jobResponse = await authenticatedFetch(`/api/jobs/${journey.jobId}`);
       if (jobResponse.ok) {
         const jobResult = await jobResponse.json();
         if (jobResult.success) {
           setSelectedJobForJourney(jobResult.data);
           
-          // Fetch journeys for this job
-          const journeysResponse = await fetch(`/api/application-journey?jobId=${journey.jobId}`);
+          // Fetch journeys for this job using authenticatedFetch
+          const journeysResponse = await authenticatedFetch(`/api/application-journey?jobId=${journey.jobId}`);
           if (journeysResponse.ok) {
             const journeysResult = await journeysResponse.json();
             if (journeysResult.success) {
@@ -909,13 +919,14 @@ const Canvas: React.FC = () => {
           
           setShowJourneyModal(true);
         } else {
-          // Removed notification:'error', 'Failed to load job details');
+          console.error('Failed to load job details:', jobResult.error);
         }
       } else {
-        // Removed notification:'error', 'Failed to load job details');
+        const errorData = await jobResponse.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('Failed to load job details:', errorData);
       }
     } catch (error) {
-      // Removed notification:'error', 'Failed to open journey details');
+      console.error('Failed to open journey details:', error);
     }
   };
 
@@ -1177,9 +1188,9 @@ const Canvas: React.FC = () => {
       // Find the journey associated with this CV
       const associatedJourney = journeys.find(journey => journey.cvId === cv.id);
       
-      if (associatedJourney) {
+      if (associatedJourney && associatedJourney.journeyId) {
         // Navigate directly to studio in journey mode (new architecture)
-        router.push(`/studio?journeyId=${associatedJourney.id}&documentType=cv&mode=cvedit`);
+        router.push(`/studio?journeyId=${associatedJourney.journeyId}&documentType=cv&mode=cvedit`);
       } else {
         // If no journey found, navigate directly to studio in standalone mode (new architecture)
         router.push(`/studio?cvId=${cv.id}`);
@@ -1371,44 +1382,104 @@ const Canvas: React.FC = () => {
     try {
       const userId = getUserIdForAPI(user);
       if (!userId) {
-        // Removed notification:'error', 'User not authenticated');
+        console.error('User not authenticated for CV deletion');
         return;
       }
 
+      console.log('🔍 handleCleanUnlinkedCVs - Starting deletion', {
+        count: unlinkedCVs.length,
+        userId,
+        cvs: unlinkedCVs.map(cv => ({
+          id: cv.id || cv._id,
+          title: cv.title,
+          hasId: !!cv.id,
+          has_id: !!cv._id
+        }))
+      });
+
+      let deletedCount = 0;
+      let failedCount = 0;
+
       // Delete each unlinked CV
       for (const cv of unlinkedCVs) {
+        // Ensure we have a valid ID - check both id and _id fields
+        const cvId = cv.id || cv._id;
+        const cvTitle = cv.title || cv.name || 'Unknown CV';
+        
         try {
-          const response = await authenticatedFetch(`/api/cvs/${cv.id}?userId=${userId}`, {
+          if (!cvId) {
+            console.error(`CV missing ID: ${cvTitle}`, {
+              hasTitle: !!cv.title,
+              hasName: !!cv.name,
+              hasId: !!cv.id,
+              has_id: !!cv._id
+            });
+            failedCount++;
+            continue;
+          }
+
+          // Validate ObjectId format before making request (MongoDB ObjectId is 24 hex characters)
+          const objectIdRegex = /^[0-9a-fA-F]{24}$/;
+          if (!objectIdRegex.test(cvId)) {
+            console.error(`Invalid CV ID format: ${cvId}`, {
+              cvTitle: cvTitle,
+              cvId: cvId
+            });
+            failedCount++;
+            continue;
+          }
+
+          const response = await authenticatedFetch(`/api/cvs/${cvId}?userId=${userId}`, {
             method: 'DELETE',
           });
 
           if (!response.ok) {
             const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-            console.error(`Failed to delete CV: ${cv.title}`, {
-              cvId: cv.id,
+            console.error(`Failed to delete CV: ${cvTitle}`, {
+              cvId: cvId,
+              userId,
               status: response.status,
               statusText: response.statusText,
               error: errorData.error || errorData.message || 'Unknown error',
               response: errorData
             });
+            failedCount++;
           } else {
-            console.log(`✅ Successfully deleted CV: ${cv.title}`);
+            const result = await response.json().catch(() => ({ success: false }));
+            if (result.success !== false) {
+              deletedCount++;
+              console.log(`✅ Successfully deleted CV: ${cvTitle}`, {
+                cvId: cvId
+              });
+            } else {
+              console.error(`Failed to delete CV: ${cvTitle}`, {
+                cvId: cvId,
+                error: result.error || 'Unknown error'
+              });
+              failedCount++;
+            }
           }
         } catch (error) {
-          console.error(`Error deleting CV: ${cv.title}`, {
-            cvId: cv.id,
+          console.error(`Error deleting CV: ${cvTitle}`, {
+            cvId: cvId,
             error: error instanceof Error ? error.message : 'Unknown error',
             stack: error instanceof Error ? error.stack : undefined
           });
+          failedCount++;
         }
       }
 
       // Refresh CVs list
       await loadAllCVData(userId);
-      // Removed notification:'success', `Successfully deleted ${unlinkedCVs.length} unlinked CVs`);
+      
+      if (deletedCount > 0) {
+        console.log(`✅ Successfully deleted ${deletedCount} unlinked CV(s)`);
+      }
+      if (failedCount > 0) {
+        console.warn(`⚠️ Failed to delete ${failedCount} CV(s)`);
+      }
     } catch (error) {
       console.error('Clean unlinked CVs error:', error);
-      // Removed notification:'error', 'Failed to clean unlinked CVs');
     }
   };
 

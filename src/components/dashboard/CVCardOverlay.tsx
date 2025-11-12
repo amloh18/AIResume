@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Edit, 
   Download, 
-  Trash2, 
   Star,
   Pencil,
   Check,
@@ -19,6 +18,7 @@ import { CVJourneyLookupService } from '@/lib/services/cvJourneyLookupService';
 import { CVProgressService } from '@/lib/services/cvProgressService';
 import { useSession } from 'next-auth/react';
 import { formatDetailedTime } from '@/lib/utils/timeUtils';
+import { authenticatedFetch } from '@/lib/utils/apiUtils';
 // CVPreviewThumbnail removed - using S3 thumbnails only
 
 interface CV {
@@ -142,18 +142,102 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
 
   // Track if we've attempted to fetch thumbnail to prevent loops
   const thumbnailFetchAttemptedRef = useRef<string | null>(null);
+  const thumbnailGenerationInProgressRef = useRef(false);
 
   // Reset attempted flag when CV changes
   useEffect(() => {
     if (cv?.id && thumbnailFetchAttemptedRef.current !== cv.id) {
       thumbnailFetchAttemptedRef.current = null;
+      thumbnailGenerationInProgressRef.current = false;
     }
   }, [cv.id]);
 
-  // REMOVED: Thumbnail generation on page load
-  // Thumbnails should be generated when leaving studio, not on every page load
-  // This was causing performance issues with POST requests during initial render
-  // Now we just use whatever thumbnail URL is already available in cv.thumbnail or cv.metadata.thumbnailUrl
+  // Generate thumbnail on-demand when missing
+  useEffect(() => {
+    // Skip if:
+    // - Already have a thumbnail
+    // - Already attempted generation for this CV
+    // - Generation already in progress
+    // - No CV ID
+    // - No session (can't authenticate)
+    if (
+      thumbnailUrl ||
+      thumbnailFetchAttemptedRef.current === cv.id ||
+      thumbnailGenerationInProgressRef.current ||
+      !cv.id ||
+      !session?.user?.id ||
+      thumbnailLoading
+    ) {
+      // Log why we're skipping (for debugging)
+      if (!thumbnailUrl && cv.id && !thumbnailFetchAttemptedRef.current && !thumbnailGenerationInProgressRef.current) {
+        if (!session?.user?.id) {
+          console.log('🖼️ CVCardOverlay - Skipping thumbnail generation: No session');
+        }
+        if (!cv.cvData) {
+          console.log('🖼️ CVCardOverlay - Skipping thumbnail generation: No cvData for CV:', cv.id);
+        }
+      }
+      return;
+    }
+
+    // Mark as attempted to prevent duplicate requests
+    thumbnailFetchAttemptedRef.current = cv.id;
+    thumbnailGenerationInProgressRef.current = true;
+    setThumbnailLoading(true);
+
+    console.log('🖼️ CVCardOverlay - Generating thumbnail on-demand for CV:', {
+      cvId: cv.id,
+      hasCvData: !!cv.cvData,
+      cvDataKeys: cv.cvData ? Object.keys(cv.cvData) : 'none',
+      userId: session?.user?.id
+    });
+
+    // Trigger thumbnail generation using authenticated fetch
+    authenticatedFetch(`/api/cv/${cv.id}/generate-thumbnail`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const errorText = await res.text();
+          let errorData;
+          try {
+            errorData = JSON.parse(errorText);
+          } catch {
+            errorData = { error: errorText || `HTTP ${res.status}` };
+          }
+          console.error('❌ CVCardOverlay - API error:', {
+            status: res.status,
+            statusText: res.statusText,
+            error: errorData
+          });
+          throw new Error(errorData.error || `HTTP ${res.status}: ${res.statusText}`);
+        }
+        return res.json();
+      })
+      .then((data) => {
+        if (data.success && data.thumbnailUrl) {
+          console.log('✅ CVCardOverlay - Thumbnail generated successfully:', data.thumbnailUrl);
+          setThumbnailUrl(data.thumbnailUrl);
+        } else {
+          console.warn('⚠️ CVCardOverlay - Thumbnail generation returned no URL:', data);
+        }
+      })
+      .catch((error) => {
+        console.error('❌ CVCardOverlay - Failed to generate thumbnail:', {
+          cvId: cv.id,
+          error: error.message,
+          stack: error.stack
+        });
+        // Reset the attempted flag so we can retry later
+        thumbnailFetchAttemptedRef.current = null;
+        // Don't set thumbnailUrl to null - keep existing state
+      })
+      .finally(() => {
+        setThumbnailLoading(false);
+        thumbnailGenerationInProgressRef.current = false;
+      });
+  }, [cv.id, thumbnailUrl, thumbnailLoading, session?.user?.id]);
 
   const formatDate = (dateString: string) => {
     return formatDetailedTime(dateString);
@@ -188,17 +272,33 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
              backgroundColor: getRandomColor(cv.id)
            }}>
         {/* CV Preview - Inner smaller preview */}
-        <div className="w-full h-full bg-center bg-no-repeat bg-cover rounded-xl relative shadow-lg"
-             style={{
-               backgroundImage: thumbnailUrl ? `url(${thumbnailUrl})` : 'none'
-             }}>
+        <div 
+          className="w-full h-full bg-center bg-no-repeat bg-cover rounded-xl relative shadow-lg cursor-pointer"
+          style={{
+            backgroundImage: thumbnailUrl ? `url(${thumbnailUrl})` : 'none'
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            // If CV is linked to a journey, open job modal
+            if (linkedJourney && onEditJourney) {
+              onEditJourney(cv, linkedJourney);
+            }
+          }}
+        >
           {/* CV Preview - Use S3 thumbnail only (no live rendering) */}
           {thumbnailUrl ? (
             <img
               src={thumbnailUrl}
               alt={`CV Preview: ${cv.title}`}
-              className="w-full h-full object-cover rounded-xl"
+              className="w-full h-full object-cover rounded-xl cursor-pointer"
               loading="lazy"
+              onClick={(e) => {
+                e.stopPropagation();
+                // If CV is linked to a journey, open job modal
+                if (linkedJourney && onEditJourney) {
+                  onEditJourney(cv, linkedJourney);
+                }
+              }}
               onError={(e) => {
                 // If S3 URL fails, try to get presigned URL
                 const target = e.target as HTMLImageElement;
@@ -231,7 +331,16 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
             />
           ) : thumbnailLoading ? (
             /* Loading state */
-            <div className="w-full h-full flex items-center justify-center rounded-xl">
+            <div 
+              className="w-full h-full flex items-center justify-center rounded-xl cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                // If CV is linked to a journey, open job modal
+                if (linkedJourney && onEditJourney) {
+                  onEditJourney(cv, linkedJourney);
+                }
+              }}
+            >
               <div className="text-center text-gray-500">
                 <Loader2 size={32} className="mx-auto mb-2 animate-spin opacity-50" />
                 <p className="text-sm font-medium">Generating preview...</p>
@@ -240,7 +349,16 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
             </div>
           ) : (
             /* Fallback when no preview available */
-            <div className="w-full h-full flex items-center justify-center rounded-xl">
+            <div 
+              className="w-full h-full flex items-center justify-center rounded-xl cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                // If CV is linked to a journey, open job modal
+                if (linkedJourney && onEditJourney) {
+                  onEditJourney(cv, linkedJourney);
+                }
+              }}
+            >
               <div className="text-center text-gray-500">
                 <FileText size={48} className="mx-auto mb-2 opacity-50" />
                 <p className="text-sm font-medium">{cv.title}</p>
@@ -342,19 +460,6 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
             title="Download CV"
           >
             <Download size={16} />
-          </motion.button>
-
-          <motion.button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDelete();
-            }}
-            className="hover:text-lime-500 dark:hover:text-lime-400 transition-all duration-200"
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            title="Delete CV"
-          >
-            <Trash2 size={16} />
           </motion.button>
 
           <motion.button

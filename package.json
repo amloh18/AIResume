@@ -1,6 +1,6 @@
 {
   "name": "cvcircle-app",
-  "version": "0.9.6.1",
+  "version": "0.9.9",
   "description": "Circle CV Application - A modern CV builder and management system",
   "private": true,
   "scripts": {

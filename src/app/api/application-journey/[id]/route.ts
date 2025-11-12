@@ -38,10 +38,19 @@ export async function GET(
     const userId = session.user.id;
 
     // Find the journey with user validation
-    const journey = await ApplicationJourney.findOne({
-      _id: journeyId,
+    // Support both MongoDB _id and custom journeyId field
+    const isObjectId = mongoose.Types.ObjectId.isValid(journeyId) && journeyId.length === 24;
+    const journeyQuery: any = {
       userId: new mongoose.Types.ObjectId(userId)
-    }).lean();
+    };
+    
+    if (isObjectId) {
+      journeyQuery._id = journeyId;
+    } else {
+      journeyQuery.journeyId = journeyId;
+    }
+    
+    const journey = await ApplicationJourney.findOne(journeyQuery).lean();
     
     if (!journey) {
       return NextResponse.json(

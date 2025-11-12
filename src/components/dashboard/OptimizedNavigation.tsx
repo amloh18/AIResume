@@ -651,7 +651,7 @@ const OptimizedNavigation: React.FC = () => {
           <div className="p-4 xl:p-3 2xl:p-4">
             <motion.button
               onClick={() => setIsUserMenuExpanded(!isUserMenuExpanded)}
-              className="w-full flex items-center gap-3 lg:justify-center lg:gap-0 xl:justify-start xl:gap-3 focus:outline-none rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors p-2"
+              className="w-full flex items-center gap-3 lg:justify-center lg:gap-0 2xl:justify-start 2xl:gap-3 focus:outline-none rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors p-2"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -659,10 +659,10 @@ const OptimizedNavigation: React.FC = () => {
                 src={getUserAvatar(userData)}
                 name={getUserDisplayName(userData)}
                 size="md"
-                className="cursor-pointer hover:ring-2 hover:ring-lime-500 transition-all flex-shrink-0 lg:mx-auto xl:mx-0"
+                className="cursor-pointer hover:ring-2 hover:ring-lime-500 transition-all flex-shrink-0 lg:mx-auto 2xl:mx-0"
               />
-              {/* User Info - Show on xl+ */}
-              <div className="flex-1 min-w-0 hidden xl:block">
+              {/* User Info - Only show when sidebar is fully expanded (2xl) */}
+              <div className="flex-1 min-w-0 hidden 2xl:block">
                 <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
                   {getUserDisplayName(userData)}
                 </div>
@@ -670,11 +670,11 @@ const OptimizedNavigation: React.FC = () => {
                   {userData?.email || ''}
                 </div>
               </div>
-              {/* Chevron Icon */}
+              {/* Chevron Icon - Only show when sidebar is fully expanded (2xl) */}
               <motion.div
                 animate={{ rotate: isUserMenuExpanded ? 180 : 0 }}
                 transition={{ duration: 0.2 }}
-                className="flex-shrink-0 hidden xl:block"
+                className="flex-shrink-0 hidden 2xl:block"
               >
                 <ChevronDown className="w-4 h-4 text-gray-500 dark:text-gray-400" />
               </motion.div>
