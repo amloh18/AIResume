@@ -2,17 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import DiscountCode from '@/models/DiscountCode';
 
-interface RouteParams {
-  params: {
-    id: string;
-  };
-}
-
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     await getConnection();
 
-    const discountCode = await DiscountCode.findById(params.id)
+    const discountCode = await DiscountCode.findById(id)
       .populate('applicablePlans', 'name key')
       .lean();
 
@@ -34,14 +29,15 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-export async function PUT(request: NextRequest, { params }: RouteParams) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     await getConnection();
 
     const updateData = await request.json();
 
     const discountCode = await DiscountCode.findByIdAndUpdate(
-      params.id,
+      id,
       updateData,
       { new: true, runValidators: true }
     ).populate('applicablePlans', 'name key');
@@ -64,11 +60,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     await getConnection();
 
-    const result = await DiscountCode.findByIdAndDelete(params.id);
+    const result = await DiscountCode.findByIdAndDelete(id);
 
     if (!result) {
       return NextResponse.json(

@@ -1,5 +1,5 @@
 import React, { memo, useMemo } from 'react';
-import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { UnifiedCVDataStructure, DEFAULT_UNIFIED_CV_DATA } from '@/types/unified-cv-schema';
 import { ITemplate } from '@/types/template';
 import { ISectionBlueprint } from '@/models/Template';
 import { generateTemplateCSS } from './default-template';
@@ -114,6 +114,11 @@ const TemplateRendererComponent: React.FC<TemplateRendererProps> = ({
     if (!template?.globalStyles) return '';
     return generateTemplateCSS(template.globalStyles);
   }, [template?.globalStyles]);
+  
+  // Memoize combined CSS to prevent recalculation (must be before conditional returns)
+  const combinedCSS = useMemo(() => {
+    return templateCSS + (template?.globalStyles?.customCSS || '');
+  }, [templateCSS, template?.globalStyles?.customCSS]);
   
   // NEW: Get sections from cvData.structure if it exists, otherwise fall back to legacy props
   const sectionsFromStructure = useMemo(() => {
@@ -238,11 +243,6 @@ const TemplateRendererComponent: React.FC<TemplateRendererProps> = ({
     
     return false;
   };
-
-  // Memoize combined CSS to prevent recalculation
-  const combinedCSS = useMemo(() => {
-    return templateCSS + (template?.globalStyles?.customCSS || '');
-  }, [templateCSS, template?.globalStyles?.customCSS]);
 
   return (
     <>
@@ -409,84 +409,29 @@ export function validateTemplateData(cvData: UnifiedCVDataStructure, template: I
 }
 
 // Template preview generator
+// Returns empty CV data structure - no hardcoded sample data
 export function generateTemplatePreview(template: ITemplate): UnifiedCVDataStructure {
-  return {
-    basics: template.templateData?.sampleBasics || {
-      name: 'Jane Doe',
-      label: 'Software Engineer',
-      image: '',
-      email: 'jane.doe@email.com',
-      phone: '+1 (555) 123-4567',
-      url: 'https://janedoe.dev',
-      summary: 'Passionate software engineer with experience in modern web technologies.',
-      location: {
-        address: '',
-        postalCode: '',
-        city: 'San Francisco',
-        countryCode: 'US',
-        region: 'CA'
-      },
-      profiles: [
-        { network: 'LinkedIn', username: 'janedoe', url: 'https://linkedin.com/in/janedoe' },
-        { network: 'GitHub', username: 'janedoe', url: 'https://github.com/janedoe' }
-      ]
-    },
-    work: template.templateData?.sampleWork || [
-      {
-        name: 'Tech Company',
-        position: 'Software Engineer',
-        url: 'https://techcompany.com',
-        startDate: '2021-01',
-        endDate: '',
-        summary: 'Developing innovative software solutions.',
-        highlights: [
-          'Built scalable web applications',
-          'Collaborated with cross-functional teams'
-        ]
-      }
-    ],
-    volunteer: template.templateData?.sampleVolunteer || [],
-    education: template.templateData?.sampleEducation || [
-      {
-        institution: 'University of Technology',
-        url: '',
-        area: 'Computer Science',
-        studyType: 'Bachelor of Science',
-        startDate: '2017-09',
-        endDate: '2021-05',
-        score: '3.8 GPA',
-        courses: []
-      }
-    ],
-    awards: template.templateData?.sampleAwards || [],
-    certificates: template.templateData?.sampleCertificates || [],
-    publications: template.templateData?.samplePublications || [],
-    skills: template.templateData?.sampleSkills || [
-      {
-        name: 'Programming',
-        level: 'Advanced',
-        keywords: ['JavaScript', 'TypeScript', 'React', 'Node.js']
-      }
-    ],
-    languages: template.templateData?.sampleLanguages || [
-      { language: 'English', fluency: 'Native' },
-      { language: 'Spanish', fluency: 'Intermediate' }
-    ],
-    interests: template.templateData?.sampleInterests || [
-      { name: 'Technology', keywords: ['AI', 'Web Development'] }
-    ],
-    references: template.templateData?.sampleReferences || [],
-    projects: template.templateData?.sampleProjects || [
-      {
-        name: 'Portfolio Website',
-        startDate: '2023-01',
-        endDate: '2023-03',
-        description: '',
-        highlights: ['Responsive design', 'SEO optimized'],
-        url: 'https://janedoe.dev'
-      }
-    ]
-  };
+  // Use template's sample data if available, otherwise return empty default structure
+  // No hardcoded fallback data
+  if (template.templateData) {
+    return {
+      basics: template.templateData.sampleBasics || DEFAULT_UNIFIED_CV_DATA.basics,
+      work: template.templateData.sampleWork || [],
+      volunteer: template.templateData.sampleVolunteer || [],
+      education: template.templateData.sampleEducation || [],
+      awards: template.templateData.sampleAwards || [],
+      certificates: template.templateData.sampleCertificates || [],
+      publications: template.templateData.samplePublications || [],
+      skills: template.templateData.sampleSkills || [],
+      languages: template.templateData.sampleLanguages || [],
+      interests: template.templateData.sampleInterests || [],
+      references: template.templateData.sampleReferences || [],
+      projects: template.templateData.sampleProjects || []
+    };
+  }
+  
+  // Return empty default structure - no hardcoded data
+  return { ...DEFAULT_UNIFIED_CV_DATA };
 }
 
 export default TemplateRenderer;

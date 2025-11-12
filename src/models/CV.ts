@@ -72,31 +72,9 @@ const cvSchema = new Schema<ICV>({
   },
   cvData: {
     type: Schema.Types.Mixed,
-    required: true,
-    default: {
-      basics: {
-        name: '',
-        label: '',
-        image: '',
-        email: '',
-        phone: '',
-        url: '',
-        summary: '',
-        location: { address: '', postalCode: '', city: '', countryCode: '', region: '' },
-        profiles: []
-      },
-      work: [],
-      volunteer: [],
-      education: [],
-      awards: [],
-      certificates: [],
-      publications: [],
-      skills: [],
-      languages: [],
-      interests: [],
-      references: [],
-      projects: []
-    }
+    required: true
+    // REMOVED DEFAULT: Default values for Mixed types can interfere with Mongoose save()
+    // and cause data loss. Always explicitly set cvData when creating CVs.
   },
   metadata: {
     isMaster: { type: Boolean, default: false },

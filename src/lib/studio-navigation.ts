@@ -31,10 +31,14 @@ export function navigateToStudioFromJourney(
   documentType: DocumentType,
   userId?: string
 ): string {
+  // Map documentType to URL format (cl for cover-letter)
+  const urlDocumentType = documentType === 'cover-letter' ? 'cl' : 'cv';
+  const mode = documentType === 'cover-letter' ? 'cledit' : 'cvedit';
+  
   const params = new URLSearchParams({
     journeyId,
-    type: documentType === 'cover-letter' ? 'cover_letter' : 'cv',
-    mode: 'journey'
+    documentType: urlDocumentType,
+    mode
   });
 
   if (userId) {
@@ -247,11 +251,24 @@ export function validateStudioEntry(params: StudioNavigationParams): {
 export function generateStudioUrl(params: StudioNavigationParams): string {
   const urlParams = new URLSearchParams();
   
-  if (params.journeyId) urlParams.set('journeyId', params.journeyId);
-  if (params.documentId) urlParams.set('documentId', params.documentId);
-  
-  urlParams.set('documentType', params.documentType);
-  urlParams.set('mode', params.journeyId ? 'journey' : 'standalone');
+  if (params.journeyId) {
+    urlParams.set('journeyId', params.journeyId);
+    // Map documentType to URL format and set appropriate mode
+    const urlDocumentType = params.documentType === 'cover-letter' ? 'cl' : 'cv';
+    const mode = params.documentType === 'cover-letter' ? 'cledit' : 'cvedit';
+    urlParams.set('documentType', urlDocumentType);
+    urlParams.set('mode', mode);
+  } else {
+    // Standalone mode
+    if (params.documentId) {
+      if (params.documentType === 'cover-letter') {
+        urlParams.set('coverLetterId', params.documentId);
+      } else {
+        urlParams.set('cvId', params.documentId);
+      }
+    }
+    urlParams.set('documentType', params.documentType);
+  }
   
   if (params.userId) urlParams.set('userId', params.userId);
   if (params.returnUrl) urlParams.set('returnUrl', params.returnUrl);

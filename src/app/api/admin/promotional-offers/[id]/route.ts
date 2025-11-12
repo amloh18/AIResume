@@ -2,17 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import PromotionalOffer from '@/models/PromotionalOffer';
 
-interface RouteParams {
-  params: {
-    id: string;
-  };
-}
-
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     await getConnection();
 
-    const offer = await PromotionalOffer.findById(params.id)
+    const offer = await PromotionalOffer.findById(id)
       .populate('applicablePlans', 'name key')
       .populate('promotionalPricing.planId', 'name key')
       .lean();
@@ -35,14 +30,15 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-export async function PUT(request: NextRequest, { params }: RouteParams) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     await getConnection();
 
     const updateData = await request.json();
 
     const offer = await PromotionalOffer.findByIdAndUpdate(
-      params.id,
+      id,
       updateData,
       { new: true, runValidators: true }
     )
@@ -67,11 +63,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     await getConnection();
 
-    const result = await PromotionalOffer.findByIdAndDelete(params.id);
+    const result = await PromotionalOffer.findByIdAndDelete(id);
 
     if (!result) {
       return NextResponse.json(

@@ -15,6 +15,7 @@ import {
   DEFAULT_UNIFIED_CV_DATA
 } from '@/types/unified-cv-schema';
 import { validateCVData } from '@/lib/data-adapters/cv-data-adapter';
+import { authenticatedFetch } from '@/lib/utils/apiUtils';
 
 export class UnifiedCVService {
   /**
@@ -28,11 +29,10 @@ export class UnifiedCVService {
       params.append('userId', userId);
     }
     
-    const response = await fetch(`${url}?${params.toString()}`, {
+    const response = await authenticatedFetch(`${url}?${params.toString()}`, {
       headers: {
         'Content-Type': 'application/json',
       },
-      credentials: 'include', // Include cookies for authentication
     });
     
     if (!response.ok) {
@@ -95,11 +95,10 @@ export class UnifiedCVService {
       params.append('projection', filters.projection);
     }
     
-    const response = await fetch(`/api/cvs?${params.toString()}`, {
+    const response = await authenticatedFetch(`/api/cvs?${params.toString()}`, {
       headers: {
         'Content-Type': 'application/json',
       },
-      credentials: 'include', // Include cookies for authentication
     });
     
     if (!response.ok) {
@@ -140,7 +139,7 @@ export class UnifiedCVService {
    * Accepts unified format - no transformation
    */
   static async createCV(cvData: UnifiedCVRequest, userId: string): Promise<UnifiedCVDocument> {
-    const response = await fetch('/api/cvs', {
+    const response = await authenticatedFetch('/api/cvs', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -180,7 +179,7 @@ export class UnifiedCVService {
       params.append('userId', userId);
     }
     
-    const response = await fetch(`/api/cvs/${cvId}?${params.toString()}`, {
+    const response = await authenticatedFetch(`/api/cvs/${cvId}?${params.toString()}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -216,7 +215,7 @@ export class UnifiedCVService {
       params.append('userId', userId);
     }
     
-    const response = await fetch(`/api/cvs/${cvId}?${params.toString()}`, {
+    const response = await authenticatedFetch(`/api/cvs/${cvId}?${params.toString()}`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
@@ -234,7 +233,7 @@ export class UnifiedCVService {
    * Returns data in unified format - no transformation
    */
   static async getMasterCV(userId: string): Promise<UnifiedCVDocument | null> {
-    const response = await fetch(`/api/cvs/master?userId=${userId}`, {
+    const response = await authenticatedFetch(`/api/cvs/master?userId=${userId}`, {
       headers: {
         'Content-Type': 'application/json',
       },
@@ -263,7 +262,7 @@ export class UnifiedCVService {
    * Set a CV as master CV
    */
   static async setMasterCV(cvId: string, userId: string): Promise<UnifiedCVDocument> {
-    const response = await fetch('/api/cvs/set-master', {
+    const response = await authenticatedFetch('/api/cvs/set-master', {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -298,7 +297,7 @@ export class UnifiedCVService {
    * Returns new CV in unified format - no transformation
    */
   static async duplicateCV(cvId: string, newTitle: string, userId: string): Promise<UnifiedCVDocument> {
-    const response = await fetch('/api/cvs/duplicate', {
+    const response = await authenticatedFetch('/api/cvs/duplicate', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

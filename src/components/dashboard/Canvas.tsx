@@ -79,6 +79,7 @@ interface CV {
   template?: any;
   templateId?: string;
   templateName?: string;
+  templateData?: any; // Saved template data from API
   isMaster?: boolean; // Legacy support - new format uses metadata.isMaster
   metadata?: {
     isMaster?: boolean;
@@ -634,7 +635,12 @@ const Canvas: React.FC = () => {
             templateData: cv.templateData, // Include saved template data
             journeyId: cv.journeyId,
             completionPercentage: calculateCompletionPercentage(cv),
-            isMaster: cv.metadata?.isMaster || cv.isMaster || false, // Include master flag - handle both formats
+            // Include master flag - Master CV: isMaster: true OR createdVia: 'ai-career-report'
+            // Regular CV: isMaster: false (and if createdVia: 'journey', it's definitely a regular CV)
+            isMaster: cv.metadata?.isMaster === true || 
+                     cv.metadata?.isMaster === 'true' || 
+                     cv.isMaster === true || 
+                     cv.metadata?.createdVia === 'ai-career-report',
             atsScore: cv.metadata?.atsScore, // Include ATS score
             metadata: cv.metadata // Include full metadata
           } as CV;
@@ -1028,16 +1034,11 @@ const Canvas: React.FC = () => {
   // Master CV handlers (moved after load functions)
   const handleEditMasterCV = async (masterCV: any) => {
     try {
-      // Store master CV data in sessionStorage for studio to access
-      sessionStorage.setItem('editingMasterCV', JSON.stringify(masterCV));
-      sessionStorage.setItem('editingCVId', masterCV.id);
-      sessionStorage.setItem('editingCVTitle', masterCV.title);
-      sessionStorage.setItem('editingCVData', JSON.stringify(masterCV.cvData));
-      
-      // Navigate to studio with master CV
-      router.push(`/studio?cvId=${masterCV.id}&master=true`);
+      // Master CVs can only be edited in ai-career-report, not in studio
+      // Route directly to ai-career-report with editMaster flag
+      router.push(`/ai-career-report?editMaster=true&masterCVId=${masterCV.id}`);
     } catch (error) {
-      // Removed notification:'error', 'Failed to open master CV');
+      console.error('Failed to route to ai-career-report for master CV editing:', error);
     }
   };
 
@@ -1060,8 +1061,8 @@ const Canvas: React.FC = () => {
       if (duplicateResult.success && duplicateResult.data?.cvId) {
         const duplicatedCVId = duplicateResult.data.cvId;
         
-        // Navigate to studio with duplicated CV (freestanding, ready for job linking)
-        router.push(`/studio?cvId=${duplicatedCVId}&mode=document-first`);
+        // Navigate to studio with duplicated CV (standalone mode, ready for job linking)
+        router.push(`/studio?cvId=${duplicatedCVId}`);
         
         // Removed notification:'success', 'Master CV duplicated successfully! You can now link it to a job.');
       } else {
@@ -1172,42 +1173,21 @@ const Canvas: React.FC = () => {
   };
 
   const handleCVClick = async (cv: CV) => {
-    
     try {
       // Find the journey associated with this CV
       const associatedJourney = journeys.find(journey => journey.cvId === cv.id);
       
       if (associatedJourney) {
-        // Fetch the job details for the journey
-        const jobResponse = await fetch(`/api/jobs/${associatedJourney.jobId}`);
-        if (jobResponse.ok) {
-          const jobResult = await jobResponse.json();
-          if (jobResult.success) {
-            setSelectedJobForJourney(jobResult.data);
-            
-            // Fetch journeys for this job
-            const journeysResponse = await fetch(`/api/application-journey?jobId=${associatedJourney.jobId}`);
-            if (journeysResponse.ok) {
-              const journeysResult = await journeysResponse.json();
-              if (journeysResult.success) {
-                setJourneysForSelectedJob(journeysResult.data.journeys || []);
-              }
-            }
-            
-            setShowJourneyModal(true);
-          } else {
-            // Removed notification:'error', 'Failed to load job details');
-          }
-        } else {
-          // Removed notification:'error', 'Failed to load job details');
-        }
+        // Navigate directly to studio in journey mode (new architecture)
+        router.push(`/studio?journeyId=${associatedJourney.id}&documentType=cv&mode=cvedit`);
       } else {
-        // If no journey found, show a message or create a new journey
-        // Removed notification:'info', 'This CV is not linked to any application journey. Please create a journey first.');
+        // If no journey found, navigate directly to studio in standalone mode (new architecture)
+        router.push(`/studio?cvId=${cv.id}`);
       }
     } catch (error) {
-      console.error('Error opening journey details:', error);
-      // Removed notification:'error', 'Failed to open journey details');
+      console.error('Error navigating to studio:', error);
+      // Fallback: navigate to standalone mode
+      router.push(`/studio?cvId=${cv.id}`);
     }
   };
 
@@ -2029,14 +2009,17 @@ const Canvas: React.FC = () => {
               status: masterCVs[0].status,
               isMaster: true,
               cvData: masterCVs[0].cvData,
-              template: masterCVs[0].template && typeof masterCVs[0].template === 'object' 
+              // Use templateData if available (from API summary projection), otherwise use template object
+              template: masterCVs[0].templateData || (masterCVs[0].template && typeof masterCVs[0].template === 'object' 
                 ? masterCVs[0].template 
                 : (masterCVs[0].templateId ? { 
                     _id: masterCVs[0].templateId, 
                     name: masterCVs[0].templateName || 'Default Template',
                     globalStyles: {},
                     availableSections: []
-                  } : null),
+                  } : null)),
+              templateId: masterCVs[0].templateId,
+              templateName: masterCVs[0].templateName,
               isStarred: masterCVs[0].isStarred,
               thumbnail: masterCVs[0].thumbnail || '',
               metadata: masterCVs[0].metadata
@@ -2247,7 +2230,7 @@ const Canvas: React.FC = () => {
                         thumbnail: coverLetter.thumbnail || '',
                         metadata: coverLetter.metadata
                       }}
-                      onEdit={(cl) => { router.push(`/studio?type=cover_letter&coverLetterId=${cl.id}`); }}
+                      onEdit={(cl) => { router.push(`/studio?coverLetterId=${cl.id}`); }}
                       onDownload={handleDownloadCoverLetter}
                       onDelete={handleDeleteCoverLetter}
                       onToggleStar={toggleCoverLetterStar}

@@ -158,6 +158,7 @@ export async function createJourneyDocuments(
             metadata: {
               ...masterCV.metadata,
               isMaster: false,
+              createdVia: 'journey', // CVs created from master CV in journey should have createdVia: 'journey'
               lastModified: new Date(),
               createdFrom: masterCV._id,
               viewCount: 0,
