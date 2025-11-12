@@ -72,7 +72,8 @@ function LandingPageContent() {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "CVCircle",
-    "description": "AI-powered CV builder with ATS optimization, professional templates, and free career analysis tools",
+    "alternateName": ["CV Circle", "cv circle", "CV Circle.io", "cv circle io"],
+    "description": "CVCircle (also known as CV Circle) - AI-powered CV builder with ATS optimization, professional templates, and free career analysis tools",
     "url": "https://cvcircle.io",
     "applicationCategory": "BusinessApplication",
     "operatingSystem": "Web",
@@ -98,8 +99,10 @@ function LandingPageContent() {
     "provider": {
       "@type": "Organization",
       "name": "CVCircle",
+      "alternateName": ["CV Circle", "cv circle", "CV Circle.io"],
       "url": "https://cvcircle.io"
-    }
+    },
+    "keywords": "CV Circle, cv circle, CV Circle.io, cv circle io, CVCircle, cvcircle, CV builder, resume builder, ATS optimization"
   }
 
   return (
@@ -108,6 +111,10 @@ function LandingPageContent() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
+      {/* Hidden SEO text for brand name variations */}
+      <div className="sr-only">
+        <p>CVCircle, also known as CV Circle, cv circle, CV Circle.io, or cv circle io, is the leading AI-powered CV builder platform.</p>
+      </div>
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900">
         {/* Launch Offer Banner */}
         <LaunchBanner />

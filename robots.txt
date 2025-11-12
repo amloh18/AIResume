@@ -1,5 +1,13 @@
 # robots.txt for CVCircle.io
 # AI-Powered CV Builder and Job Application Management Platform
+#
+# NOTE: This file is a copy for project root visibility.
+# The actual file served by Next.js is in: public/robots.txt
+# Next.js serves files from public/ directory at the root URL
+#
+# In Next.js, files in public/ are automatically served from root:
+# - public/robots.txt → accessible at /robots.txt
+# - public/llm.txt → accessible at /llm.txt
 
 # Allow all search engines
 User-agent: *
@@ -78,3 +86,4 @@ Disallow: /
 
 # Sitemap location
 Sitemap: https://cvcircle.io/sitemap.xml
+

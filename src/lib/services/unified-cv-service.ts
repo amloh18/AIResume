@@ -14,7 +14,7 @@ import {
   UnifiedCVRequest,
   DEFAULT_UNIFIED_CV_DATA
 } from '@/types/unified-cv-schema';
-import { validateCVData } from '@/lib/data-adapters/cv-data-adapter';
+import { validateCVData, cleanupSummaryFields } from '@/lib/data-adapters/cv-data-adapter';
 import { authenticatedFetch } from '@/lib/utils/apiUtils';
 
 export class UnifiedCVService {
@@ -63,6 +63,11 @@ export class UnifiedCVService {
     
     if (!result.success || !result.data?.cv) {
       throw new Error('CV not found or access denied');
+    }
+    
+    // Clean up summary fields to remove highlights that were incorrectly appended
+    if (result.data.cv.cvData) {
+      result.data.cv.cvData = cleanupSummaryFields(result.data.cv.cvData);
     }
     
     return result.data.cv;
@@ -131,7 +136,15 @@ export class UnifiedCVService {
       throw new Error('Failed to fetch CVs');
     }
     
-    return result.data.cvs;
+    // Clean up summary fields for CVs that have full cvData (not summary projection)
+    const cleanedCVs = result.data.cvs.map(cv => {
+      if (cv.cvData) {
+        cv.cvData = cleanupSummaryFields(cv.cvData);
+      }
+      return cv;
+    });
+    
+    return cleanedCVs;
   }
 
   /**
@@ -160,13 +173,21 @@ export class UnifiedCVService {
       throw new Error('Invalid response format from server');
     }
     
-    const result: UnifiedCVAPIResponse = await response.json();
+    const result: any = await response.json();
     
-    if (!result.success || !result.data?.cv) {
-      throw new Error('Failed to create CV');
+    // Handle both response formats:
+    // 1. { success: true, data: { cv: {...} } } - Unified format
+    // 2. { success: true, cv: {...} } - Direct format (from POST /api/cvs)
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to create CV');
     }
     
-    return result.data.cv;
+    const cv = result.data?.cv || result.cv;
+    if (!cv) {
+      throw new Error('Failed to create CV: No CV data in response');
+    }
+    
+    return cv;
   }
 
   /**

@@ -350,14 +350,12 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
                   <div key={index} className="work-item">
                     <h4 className="job-title">{job.position}</h4>
                     <p className="company-info">{job.name} | {job.startDate} – {job.endDate}</p>
-                    <ul className="bullet-list">
-                      {job.highlights?.map((hl, idx) => (
-                        <li 
-                          key={idx}
-                          dangerouslySetInnerHTML={{ __html: renderFormattedText(hl) }}
-                        />
-                      ))}
-                    </ul>
+                    {job.summary && (
+                      <div 
+                        className="job-description"
+                        dangerouslySetInnerHTML={{ __html: renderFormattedText(job.summary) }}
+                      />
+                    )}
                   </div>
                 ))}
                 {(!work || work.length === 0) && (

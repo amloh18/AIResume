@@ -45,15 +45,23 @@ const WorkExperience: React.FC<WorkExperienceProps> = ({
   };
 
   return (
-    <section className="work-experience-section">
-      <h2 className="section-header">
+    <section 
+      className="work-experience-section section-content" 
+      data-section-id="work_experience"
+      data-section-type="work"
+    >
+      <h2 className="section-header cv-section-header">
         {sectionConfig.displayName || 'Work Experience'}
       </h2>
       
       <div className="experience-list">
         {work.map((job, index) => (
-          <div key={index} className="experience-item">
-            <div className="item-header">
+          <div 
+            key={index} 
+            className="experience-item work-experience-item cv-entry-item"
+            data-entry-index={index}
+          >
+            <div className="item-header entry-header">
               <div className="item-title-group">
                 <h3 className="item-title">
                   {job.position || 'Position Title'}, {job.name || 'Company Name'}
@@ -69,17 +77,9 @@ const WorkExperience: React.FC<WorkExperienceProps> = ({
 
             {job.summary && (
               <div 
-                className="item-summary"
+                className="item-summary entry-content item-content"
                 dangerouslySetInnerHTML={{ __html: renderFormattedText(job.summary) }}
               />
-            )}
-
-            {job.highlights && job.highlights.length > 0 && (
-              <ul className="highlight-list">
-                {job.highlights.map((highlight, highlightIndex) => (
-                  <li key={highlightIndex} dangerouslySetInnerHTML={{ __html: renderFormattedText(highlight) }} />
-                ))}
-              </ul>
             )}
           </div>
         ))}
@@ -165,21 +165,6 @@ const WorkExperience: React.FC<WorkExperienceProps> = ({
         .item-summary p {
           margin: 0;
           text-align: left;
-        }
-        
-        .highlight-list {
-          margin: 4px 0 0 20px;
-          padding: 0;
-          list-style-type: disc;
-          list-style-position: outside;
-        }
-        
-        .highlight-list li {
-          margin-bottom: 3px;
-          line-height: ${template.globalStyles.lineHeight};
-          color: ${template.globalStyles.primaryColor};
-          font-size: ${template.globalStyles.fontSize};
-          padding-left: 0;
         }
         
         @media print {

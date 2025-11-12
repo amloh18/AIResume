@@ -13,11 +13,14 @@ export async function POST(
 ) {
   try {
     // Use getAuthenticatedUser to support both session and JWT tokens
+    // request parameter is optional - getServerSession reads from cookies automatically
     const authResult = await getAuthenticatedUser(request);
     if (!authResult) {
       console.log('❌ Thumbnail API - Authentication failed');
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
+    
+    console.log('✅ Thumbnail API - Authentication successful:', { userId: authResult.userId, email: authResult.userEmail });
 
     const { id: cvId } = await params;
     const userId = authResult.userId;
@@ -64,37 +67,73 @@ export async function POST(
     
     // Check hardcoded templates first
     const templateIdStr = cv.templateId?.toString() || '';
-    const hardcodedTemplate = HARDCODED_TEMPLATES.find(t => 
-      t.id === templateIdStr || t._id === templateIdStr
-    );
     
-    if (hardcodedTemplate) {
-      template = hardcodedTemplate;
-      console.log('🔍 Thumbnail API - Using hardcoded template:', {
-        id: template.id || template._id,
-        name: template.name,
-        hasGlobalStyles: !!template.globalStyles
-      });
-    } else {
-      // Try database template (only if templateId looks like an ObjectId)
-      try {
-        template = await Template.findById(cv.templateId);
-        if (template) {
-          console.log('🔍 Thumbnail API - Using database template:', {
-            id: template._id,
-            name: template.name,
-            hasGlobalStyles: !!template.globalStyles
-          });
+    if (templateIdStr) {
+      const hardcodedTemplate = HARDCODED_TEMPLATES.find(t => 
+        t.id === templateIdStr || t._id === templateIdStr
+      );
+      
+      if (hardcodedTemplate) {
+        template = hardcodedTemplate;
+        console.log('🔍 Thumbnail API - Using hardcoded template:', {
+          id: template.id || template._id,
+          name: template.name,
+          hasGlobalStyles: !!template.globalStyles
+        });
+      } else {
+        // Try database template (only if templateId looks like an ObjectId)
+        try {
+          if (mongoose.Types.ObjectId.isValid(templateIdStr)) {
+            template = await Template.findById(cv.templateId);
+            if (template) {
+              console.log('🔍 Thumbnail API - Using database template:', {
+                id: template._id,
+                name: template.name,
+                hasGlobalStyles: !!template.globalStyles
+              });
+            }
+          }
+        } catch (error) {
+          // If templateId is not a valid ObjectId, this will fail - that's OK, we'll use default
+          console.log('🔍 Thumbnail API - Template ID is not a valid ObjectId, using default template...');
         }
-      } catch (error) {
-        // If templateId is not a valid ObjectId, this will fail - that's OK, we'll check hardcoded templates
-        console.log('🔍 Thumbnail API - Template ID is not a valid ObjectId, checking hardcoded templates...');
+      }
+    }
+    
+    // If no template found, use default template
+    if (!template) {
+      console.log('⚠️ Thumbnail API - No templateId found, using default template');
+      
+      // Try to find Executive Professional as default (same as CV POST API)
+      const executiveProfessional = HARDCODED_TEMPLATES.find(
+        t => t.id === 'executive-professional-layout-template' || t.name === 'Executive Professional'
+      );
+      
+      if (executiveProfessional) {
+        template = executiveProfessional;
+        console.log('✅ Thumbnail API - Using Executive Professional as default template');
+      } else {
+        // Fallback to any default template
+        const hardcodedDefault = HARDCODED_TEMPLATES.find(
+          t => t.isDefault === true && t.category === 'cv'
+        );
+        
+        if (hardcodedDefault) {
+          template = hardcodedDefault;
+          console.log('✅ Thumbnail API - Using hardcoded default template:', hardcodedDefault.name);
+        } else {
+          // Fallback to first available template
+          if (HARDCODED_TEMPLATES.length > 0) {
+            template = HARDCODED_TEMPLATES[0];
+            console.log('✅ Thumbnail API - Using first available template:', template.name);
+          }
+        }
       }
     }
     
     if (!template) {
-      console.log('❌ Thumbnail API - Template not found:', { templateId: cv.templateId });
-      return NextResponse.json({ success: false, error: 'Template not found' }, { status: 404 });
+      console.log('❌ Thumbnail API - No template available at all');
+      return NextResponse.json({ success: false, error: 'No template available' }, { status: 500 });
     }
 
     // Generate new thumbnail
@@ -165,37 +204,234 @@ async function generateCVThumbnail(cv: any, template: any): Promise<string> {
 }
 
 function generateCVThumbnailSVG(cv: any, template: any): string {
-  const cvData = cv.cvData;
-  const templateStyles = template.globalStyles || {};
+  const cvData = cv.cvData || {};
+  const templateStyles = template?.globalStyles || {};
   
   const width = 300;
-  const height = 400;
   const padding = 15;
+  const lineSpacing = 4;
+  const sectionSpacing = 12;
   
-  // Get CV data
-  const name = cvData.basics?.name || 'Your Name';
-  const title = cvData.basics?.label || 'Professional Title';
-  const email = cvData.basics?.email || 'email@example.com';
-  const phone = cvData.basics?.phone || 'Phone';
+  // Get CV data with better extraction
+  const name = cvData.basics?.name || '';
+  const title = cvData.basics?.label || cvData.basics?.title || '';
+  const email = cvData.basics?.email || '';
+  const phone = cvData.basics?.phone || '';
+  const summary = cvData.basics?.summary || '';
   
   // Get work experience (first 2 items)
-  const workItems = cvData.work?.slice(0, 2) || [];
+  const workItems = (cvData.work || []).slice(0, 2);
   
   // Get education (first 2 items)
-  const educationItems = cvData.education?.slice(0, 2) || [];
+  const educationItems = (cvData.education || []).slice(0, 2);
   
-  // Get skills (first 8 items)
-  const skills = cvData.skills?.slice(0, 8).map((skill: any) => skill.name || skill).join(', ') || '';
+  // Get skills (first 10 items, better extraction)
+  const skills = (cvData.skills || []).slice(0, 10).map((skill: any) => {
+    if (typeof skill === 'string') return skill;
+    return skill.name || skill.skill || '';
+  }).filter(Boolean).join(', ') || '';
+  
+  // Get projects (first 1 item)
+  const projects = (cvData.projects || []).slice(0, 1);
   
   // Template colors and styles
-  const primaryColor = templateStyles.primaryColor || '#333';
-  const backgroundColor = templateStyles.backgroundColor || '#fff';
+  const primaryColor = templateStyles.primaryColor || '#1e293b';
+  const backgroundColor = templateStyles.backgroundColor || '#ffffff';
   const fontFamily = templateStyles.fontFamily || 'Arial, sans-serif';
-  const fontSize = templateStyles.fontSize || '14px';
-  const lineHeight = templateStyles.lineHeight || '1.4';
-  
-  // Extract template accent color if available
   const accentColor = templateStyles.accentColor || primaryColor;
+  
+  // Calculate dynamic height based on content
+  let currentY = padding + 20; // Start after top padding
+  
+  // Header section (name, title, contact)
+  if (name) currentY += 18;
+  if (title) currentY += 14;
+  if (email || phone) currentY += 12;
+  currentY += sectionSpacing;
+  
+  // Summary section
+  if (summary) {
+    const summaryLines = summary.length > 100 ? summary.substring(0, 100) + '...' : summary;
+    const summaryLineCount = Math.ceil(summaryLines.length / 50);
+    currentY += 16 + (summaryLineCount * 10) + sectionSpacing; // Section title + content
+  }
+  
+  // Work Experience section
+  if (workItems.length > 0) {
+    currentY += 16 + lineSpacing; // Section title + line
+    workItems.forEach(() => {
+      currentY += 24; // Each work item takes ~24px
+    });
+    currentY += sectionSpacing;
+  }
+  
+  // Education section
+  if (educationItems.length > 0) {
+    currentY += 16 + lineSpacing; // Section title + line
+    educationItems.forEach(() => {
+      currentY += 20; // Each education item takes ~20px
+    });
+    currentY += sectionSpacing;
+  }
+  
+  // Projects section
+  if (projects.length > 0) {
+    currentY += 16 + lineSpacing; // Section title + line
+    projects.forEach(() => {
+      currentY += 20; // Each project takes ~20px
+    });
+    currentY += sectionSpacing;
+  }
+  
+  // Skills section
+  if (skills) {
+    const skillLines = Math.ceil(skills.length / 45);
+    currentY += 16 + (skillLines * 10); // Section title + content lines
+  }
+  
+  // Add bottom padding
+  const height = Math.max(350, currentY + padding); // Minimum 350px, but expand if needed
+  
+  // Build SVG content dynamically
+  let yPos = padding + 20;
+  const sections: string[] = [];
+  
+  // Header
+  if (name) {
+    sections.push(`<text x="${padding}" y="${yPos}" class="cv-text cv-title">${escapeXml(name)}</text>`);
+    yPos += 18;
+  }
+  if (title) {
+    sections.push(`<text x="${padding}" y="${yPos}" class="cv-text cv-subtitle">${escapeXml(title)}</text>`);
+    yPos += 14;
+  }
+  if (email || phone) {
+    const contact = [email, phone].filter(Boolean).join(' | ');
+    sections.push(`<text x="${padding}" y="${yPos}" class="cv-text cv-small">${escapeXml(contact)}</text>`);
+    yPos += 12;
+  }
+  yPos += sectionSpacing;
+  
+  // Summary
+  if (summary) {
+    const summaryText = summary.length > 100 ? summary.substring(0, 100) + '...' : summary;
+    sections.push(`<text x="${padding}" y="${yPos}" class="cv-text cv-section">Summary</text>`);
+    yPos += 16;
+    sections.push(`<line x1="${padding}" y1="${yPos - 2}" x2="${width - padding}" y2="${yPos - 2}" stroke="${accentColor}" stroke-width="1"/>`);
+    yPos += lineSpacing + 2;
+    // Wrap summary text
+    const words = summaryText.split(' ');
+    let line = '';
+    let lineY = yPos;
+    words.forEach((word: string) => {
+      if ((line + word).length > 50) {
+        if (line) {
+          sections.push(`<text x="${padding}" y="${lineY}" class="cv-text cv-body">${escapeXml(line.trim())}</text>`);
+          lineY += 10;
+        }
+        line = word + ' ';
+      } else {
+        line += word + ' ';
+      }
+    });
+    if (line) {
+      sections.push(`<text x="${padding}" y="${lineY}" class="cv-text cv-body">${escapeXml(line.trim())}</text>`);
+      lineY += 10;
+    }
+    yPos = lineY + sectionSpacing;
+  }
+  
+  // Work Experience
+  if (workItems.length > 0) {
+    sections.push(`<text x="${padding}" y="${yPos}" class="cv-text cv-section">Work Experience</text>`);
+    yPos += 16;
+    sections.push(`<line x1="${padding}" y1="${yPos - 2}" x2="${width - padding}" y2="${yPos - 2}" stroke="${accentColor}" stroke-width="1"/>`);
+    yPos += lineSpacing + 2;
+    workItems.forEach((job: any) => {
+      const position = job.position || job.title || '';
+      const company = job.name || job.company || '';
+      const dates = [job.startDate, job.endDate || 'Present'].filter(Boolean).join(' - ');
+      if (position) {
+        sections.push(`<text x="${padding}" y="${yPos}" class="cv-text cv-body">${escapeXml(position)}</text>`);
+        yPos += 12;
+      }
+      if (company || dates) {
+        sections.push(`<text x="${padding}" y="${yPos}" class="cv-text cv-small">${escapeXml(company)}${company && dates ? ' | ' : ''}${escapeXml(dates)}</text>`);
+        yPos += 12;
+      }
+    });
+    yPos += sectionSpacing;
+  }
+  
+  // Education
+  if (educationItems.length > 0) {
+    sections.push(`<text x="${padding}" y="${yPos}" class="cv-text cv-section">Education</text>`);
+    yPos += 16;
+    sections.push(`<line x1="${padding}" y1="${yPos - 2}" x2="${width - padding}" y2="${yPos - 2}" stroke="${accentColor}" stroke-width="1"/>`);
+    yPos += lineSpacing + 2;
+    educationItems.forEach((edu: any) => {
+      const institution = edu.institution || edu.school || '';
+      const area = edu.area || edu.fieldOfStudy || edu.degree || '';
+      const dates = [edu.startDate, edu.endDate || 'Present'].filter(Boolean).join(' - ');
+      if (institution) {
+        sections.push(`<text x="${padding}" y="${yPos}" class="cv-text cv-body">${escapeXml(institution)}</text>`);
+        yPos += 12;
+      }
+      if (area || dates) {
+        sections.push(`<text x="${padding}" y="${yPos}" class="cv-text cv-small">${escapeXml(area)}${area && dates ? ' | ' : ''}${escapeXml(dates)}</text>`);
+        yPos += 12;
+      }
+    });
+    yPos += sectionSpacing;
+  }
+  
+  // Projects
+  if (projects.length > 0) {
+    sections.push(`<text x="${padding}" y="${yPos}" class="cv-text cv-section">Projects</text>`);
+    yPos += 16;
+    sections.push(`<line x1="${padding}" y1="${yPos - 2}" x2="${width - padding}" y2="${yPos - 2}" stroke="${accentColor}" stroke-width="1"/>`);
+    yPos += lineSpacing + 2;
+    projects.forEach((project: any) => {
+      const projectName = project.name || '';
+      const projectDesc = project.description || '';
+      if (projectName) {
+        sections.push(`<text x="${padding}" y="${yPos}" class="cv-text cv-body">${escapeXml(projectName)}</text>`);
+        yPos += 12;
+      }
+      if (projectDesc) {
+        const desc = projectDesc.length > 60 ? projectDesc.substring(0, 60) + '...' : projectDesc;
+        sections.push(`<text x="${padding}" y="${yPos}" class="cv-text cv-small">${escapeXml(desc)}</text>`);
+        yPos += 12;
+      }
+    });
+    yPos += sectionSpacing;
+  }
+  
+  // Skills
+  if (skills) {
+    sections.push(`<text x="${padding}" y="${yPos}" class="cv-text cv-section">Skills</text>`);
+    yPos += 16;
+    sections.push(`<line x1="${padding}" y1="${yPos - 2}" x2="${width - padding}" y2="${yPos - 2}" stroke="${accentColor}" stroke-width="1"/>`);
+    yPos += lineSpacing + 2;
+    // Wrap skills text
+    const words = skills.split(', ');
+    let line = '';
+    let lineY = yPos;
+    words.forEach((word: string) => {
+      if ((line + word).length > 45) {
+        if (line) {
+          sections.push(`<text x="${padding}" y="${lineY}" class="cv-text cv-small">${escapeXml(line.trim())}</text>`);
+          lineY += 10;
+        }
+        line = word + ', ';
+      } else {
+        line += word + ', ';
+      }
+    });
+    if (line) {
+      sections.push(`<text x="${padding}" y="${lineY}" class="cv-text cv-small">${escapeXml(line.trim().replace(/,\s*$/, ''))}</text>`);
+    }
+  }
   
   return `
     <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
@@ -213,36 +449,7 @@ function generateCVThumbnailSVG(cv: any, template: any): string {
       <!-- Background -->
       <rect width="${width}" height="${height}" fill="${backgroundColor}" stroke="#e5e7eb" stroke-width="1"/>
       
-      <!-- Header -->
-      <text x="${padding}" y="25" class="cv-text cv-title">${escapeXml(name)}</text>
-      <text x="${padding}" y="40" class="cv-text cv-subtitle">${escapeXml(title)}</text>
-      <text x="${padding}" y="55" class="cv-text cv-small">${escapeXml(email)} | ${escapeXml(phone)}</text>
-      
-      <!-- Work Experience -->
-      ${workItems.length > 0 ? `
-        <text x="${padding}" y="80" class="cv-text cv-section">Work Experience</text>
-        <line x1="${padding}" y1="85" x2="${width - padding}" y2="85" stroke="${accentColor}" stroke-width="1"/>
-        ${workItems.map((job: any, index: number) => `
-          <text x="${padding}" y="${100 + index * 35}" class="cv-text cv-body">${escapeXml(job.position || 'Position')}</text>
-          <text x="${padding}" y="${112 + index * 35}" class="cv-text cv-small">${escapeXml(job.name || job.company || 'Company')} | ${escapeXml(job.startDate || 'Start')} - ${escapeXml(job.endDate || 'End')}</text>
-        `).join('')}
-      ` : ''}
-      
-      <!-- Education -->
-      ${educationItems.length > 0 ? `
-        <text x="${padding}" y="${workItems.length > 0 ? 170 + workItems.length * 35 : 80}" class="cv-text cv-section">Education</text>
-        <line x1="${padding}" y1="${workItems.length > 0 ? 175 + workItems.length * 35 : 85}" x2="${width - padding}" y2="${workItems.length > 0 ? 175 + workItems.length * 35 : 85}" stroke="${accentColor}" stroke-width="1"/>
-        ${educationItems.map((edu: any, index: number) => `
-          <text x="${padding}" y="${(workItems.length > 0 ? 190 : 100) + workItems.length * 35 + index * 25}" class="cv-text cv-body">${escapeXml(edu.institution || 'Institution')}</text>
-          <text x="${padding}" y="${(workItems.length > 0 ? 202 : 112) + workItems.length * 35 + index * 25}" class="cv-text cv-small">${escapeXml(edu.area || 'Field of Study')} | ${escapeXml(edu.startDate || 'Start')} - ${escapeXml(edu.endDate || 'End')}</text>
-        `).join('')}
-      ` : ''}
-      
-      <!-- Skills -->
-      ${skills ? `
-        <text x="${padding}" y="${height - 30}" class="cv-text cv-section">Skills</text>
-        <text x="${padding}" y="${height - 15}" class="cv-text cv-small">${escapeXml(skills)}</text>
-      ` : ''}
+      ${sections.join('\n      ')}
     </svg>
   `;
 }

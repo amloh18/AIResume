@@ -143,14 +143,30 @@ const TemplateRendererComponent: React.FC<TemplateRendererProps> = ({
 
   // Check if this is a custom template with a hardcoded renderer
   const customRenderer = template.customRenderer;
+  console.log('🔍 TemplateRenderer - Checking custom renderer:', {
+    customRenderer,
+    hasHardcodedTemplates: !!HardcodedTemplates,
+    availableKeys: Object.keys(HardcodedTemplates || {}),
+    templateName: template.name
+  });
+  
   if (customRenderer && HardcodedTemplates[customRenderer as keyof typeof HardcodedTemplates]) {
     const CustomTemplateComponent = HardcodedTemplates[customRenderer as keyof typeof HardcodedTemplates] as React.ComponentType<{
       cvData: UnifiedCVDataStructure;
       className?: string;
+      enabledSections?: string[];
     }>;
     
-    // Ensure we're passing actual cvData, not sample data
+    console.log('✅ TemplateRenderer - Using custom renderer:', customRenderer);
+    
+    // For custom renderers, pass full cvData and let CSS handle natural page breaks
+    // Don't filter by enabledSections - let content flow naturally across pages
     return <CustomTemplateComponent cvData={cvData} className={className} />;
+  } else if (customRenderer) {
+    console.error('❌ TemplateRenderer - Custom renderer not found:', {
+      customRenderer,
+      availableRenderers: Object.keys(HardcodedTemplates || {})
+    });
   }
 
   // Determine section order - use structure if available, otherwise use legacy props
@@ -173,9 +189,50 @@ const TemplateRendererComponent: React.FC<TemplateRendererProps> = ({
   
   // Determine which sections to render
   // Ensure availableSections is an array before passing
-  const availableSectionsArray = Array.isArray(template?.availableSections) 
+  let availableSectionsArray = Array.isArray(template?.availableSections) 
     ? template.availableSections 
     : [];
+  
+  // FALLBACK: If availableSections is empty but columnLayout has sections, use those
+  if (availableSectionsArray.length === 0 && template?.columnLayout?.main?.sections) {
+    console.log('⚠️ TemplateRenderer - availableSections is empty, using columnLayout.main.sections as fallback');
+    const columnSections = template.columnLayout.main.sections;
+    availableSectionsArray = columnSections.map((sectionKey: string) => {
+      // Map section keys to component names based on COMPONENT_REGISTRY
+      const sectionKeyToComponentName: Record<string, string> = {
+        'personal_header': 'PersonalHeader',
+        'header': 'PersonalHeader',
+        'summary': 'Profile',
+        'profile': 'Profile',
+        'work_experience': 'WorkExperience',
+        'experience': 'WorkExperience',
+        'education': 'Education',
+        'skills': 'Skills',
+        'projects': 'Projects',
+        'certificates': 'Certificates',
+        'languages': 'Languages',
+        'volunteer': 'Volunteer',
+        'awards': 'Awards',
+        'publications': 'Publications'
+      };
+      
+      const componentName = sectionKeyToComponentName[sectionKey] || sectionKey;
+      const hasComponent = !!COMPONENT_REGISTRY[componentName];
+      
+      return {
+        key: sectionKey,
+        displayName: sectionKey.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+        componentName: componentName,
+        isList: ['work_experience', 'education', 'skills', 'projects', 'certificates', 'languages', 'volunteer', 'awards', 'publications'].includes(sectionKey),
+        defaultItemContent: {}
+      };
+    }).filter((section: any) => {
+      // Only include sections that have a component in the registry
+      return !!COMPONENT_REGISTRY[section.componentName];
+    });
+    
+    console.log('✅ TemplateRenderer - Generated availableSections from columnLayout:', availableSectionsArray);
+  }
   
   let sectionsToRender = getSectionsToRender(
     availableSectionsArray,
@@ -184,13 +241,24 @@ const TemplateRendererComponent: React.FC<TemplateRendererProps> = ({
     enabledSections
   );
   
-  
-  // CRITICAL: Ensure personal_header is ALWAYS first, regardless of any other logic
-  sectionsToRender = sectionsToRender.sort((a, b) => {
-    if (a.key === 'personal_header') return -1;
-    if (b.key === 'personal_header') return 1;
-    return 0;
+  console.log('📋 TemplateRenderer - Sections to render:', {
+    availableSectionsCount: availableSectionsArray.length,
+    sectionsToRenderCount: sectionsToRender.length,
+    sectionsToRender: sectionsToRender.map(s => s.key),
+    enabledSections: enabledSections || 'ALL SECTIONS',
+    filteredByEnabled: enabledSections && enabledSections.length > 0 ? 'YES' : 'NO'
   });
+  
+  
+  // CRITICAL: Ensure personal_header is ALWAYS first, but only if it's in the filtered list
+  // Only sort if personal_header is actually in the sectionsToRender
+  if (sectionsToRender.some(s => s.key === 'personal_header')) {
+    sectionsToRender = sectionsToRender.sort((a, b) => {
+      if (a.key === 'personal_header') return -1;
+      if (b.key === 'personal_header') return 1;
+      return 0;
+    });
+  }
 
 
   // Check if section has data - supports both structure/content map and legacy format
@@ -338,9 +406,22 @@ function getSectionsToRender(
 
   // Filter by enabled sections if provided - THIS IS THE KEY FILTER FOR PAGE SPLITTING
   if (enabledSections && enabledSections.length > 0) {
+    const beforeFilter = sectionsToRender.length;
     sectionsToRender = sectionsToRender.filter(section => 
       enabledSections.includes(section.key)
     );
+    const afterFilter = sectionsToRender.length;
+    
+    // Debug logging for duplicate detection
+    if (beforeFilter !== afterFilter) {
+      console.log('🔍 getSectionsToRender - Filtered sections:', {
+        before: beforeFilter,
+        after: afterFilter,
+        enabledSections,
+        filteredSections: sectionsToRender.map(s => s.key),
+        removedSections: sections.filter(s => !enabledSections.includes(s.key)).map(s => s.key)
+      });
+    }
   }
 
   // Filter by visibility settings

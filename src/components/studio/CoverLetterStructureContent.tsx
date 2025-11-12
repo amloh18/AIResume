@@ -1,9 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Sparkles, Bold, Italic, List, AlignLeft } from 'lucide-react';
-import toast from 'react-hot-toast';
+import WYSIWYGEditor, { WYSIWYGToolbar } from '@/components/ui/WYSIWYGEditor';
+import { AISuggestionsPanel } from './AISuggestionsPanel';
 
 interface CoverLetterStructureContentProps {
   coverLetterData: any;
@@ -20,8 +19,6 @@ const CoverLetterStructureContent: React.FC<CoverLetterStructureContentProps> = 
   jobData,
   userId
 }) => {
-  const [isGenerating, setIsGenerating] = useState(false);
-
   // Initialize header and body from content if not already present
   const getHeaderContent = () => {
     if (coverLetterData?.header) return coverLetterData.header;
@@ -43,6 +40,11 @@ const CoverLetterStructureContent: React.FC<CoverLetterStructureContentProps> = 
 
   const [headerContent, setHeaderContent] = useState(getHeaderContent());
   const [bodyContent, setBodyContent] = useState(getBodyContent());
+  
+  // AI suggestions state for body
+  const [showBodySuggestions, setShowBodySuggestions] = useState(false);
+  const [bodySuggestions, setBodySuggestions] = useState<Array<{ method: string; content: string; size?: string }>>([]);
+  const [loadingBodySuggestions, setLoadingBodySuggestions] = useState(false);
 
   // Update parent when content changes
   const handleHeaderChange = (value: string) => {
@@ -67,201 +69,84 @@ const CoverLetterStructureContent: React.FC<CoverLetterStructureContentProps> = 
     });
   };
 
-  const applyFormatting = (type: 'bold' | 'italic' | 'bullet' | 'paragraph', targetArea: 'header' | 'body') => {
-    const textarea = document.querySelector(
-      `textarea[data-cover-letter-${targetArea}]`
-    ) as HTMLTextAreaElement;
+
+  const generateAISuggestions = async () => {
+    if (!userId || !cvData || !jobData) {
+      console.error('❌ CoverLetterStructureContent - Missing required data for AI suggestions');
+      return;
+    }
     
-    if (!textarea) return;
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const selectedText = textarea.value.substring(start, end);
-    let newText = '';
-
-    switch (type) {
-      case 'bold':
-        newText = textarea.value.substring(0, start) + `**${selectedText}**` + textarea.value.substring(end);
-        break;
-      case 'italic':
-        newText = textarea.value.substring(0, start) + `*${selectedText}*` + textarea.value.substring(end);
-        break;
-      case 'bullet':
-        newText = textarea.value.substring(0, start) + `\n• ${selectedText}` + textarea.value.substring(end);
-        break;
-      case 'paragraph':
-        newText = textarea.value.substring(0, start) + `\n\n${selectedText}\n\n` + textarea.value.substring(end);
-        break;
-    }
-
-    if (targetArea === 'header') {
-      handleHeaderChange(newText);
-    } else {
-      handleBodyChange(newText);
-    }
-
-    setTimeout(() => {
-      textarea.focus();
-      const offset = type === 'bold' ? 2 : type === 'italic' ? 1 : type === 'bullet' ? 3 : 2;
-      textarea.setSelectionRange(start + offset, end + offset);
-    }, 0);
-  };
-
-  const handleAIGenerate = async () => {
-    setIsGenerating(true);
+    // Show panel immediately and set loading state
+    setShowBodySuggestions(true);
+    setLoadingBodySuggestions(true);
     
     try {
-      // Validate we have required data
-      if (!cvData || !jobData) {
-        toast.error('Please ensure CV and job data are loaded before generating cover letter');
-        return;
-      }
-
-      console.log('🔍 Generating cover letter with AI...', {
-        hasCvData: !!cvData,
-        hasJobData: !!jobData
-      });
-
-      // Try the main API endpoint first
-      let response = await fetch('/api/ai/cover-letter-generate', {
+      const response = await fetch('/api/ai/generate-suggestions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          cvData: cvData,
-          jobData: jobData,
-          recipientName: 'Hiring Manager',
-          companyName: jobData.company
+          userId,
+          jobData,
+          sectionData: { content: bodyContent },
+          sectionType: 'cover_letter_body',
+          currentText: bodyContent || '',
+          // Pass cvData with metadata if available
+          cvData: {
+            ...cvData,
+            // Include metadata if it exists in the CV document
+            metadata: (cvData as any)?.metadata || {}
+          }
         }),
       });
 
-      // If main endpoint fails, try the fallback
       if (!response.ok) {
-        console.log('Main API failed, trying fallback...');
-        response = await fetch('/api/ai/generate-cover-letter', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            cvInfo: {
-              name: cvData?.basics?.name || '',
-              email: cvData?.basics?.email || '',
-              phone: cvData?.basics?.phone || '',
-              location: cvData?.basics?.location || '',
-              summary: cvData?.basics?.summary || '',
-              experience: cvData?.work || [],
-              skills: cvData?.skills || []
-            },
-            jobInfo: {
-              title: jobData?.title || '',
-              company: jobData?.company || '',
-              description: jobData?.jobDescription || '',
-              requirements: jobData?.requirements || []
-            }
-          }),
-        });
-      }
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`API Error: ${response.status} - ${errorData.error || 'Unknown error'}`);
+        const errorText = await response.text();
+        throw new Error(`Failed to generate suggestions: ${response.status} ${errorText}`);
       }
 
       const result = await response.json();
+      console.log('✅ CoverLetterStructureContent - AI suggestions received:', result);
       
-      if (result.success && result.content) {
-        // Split content into header and body
-        const lines = result.content.split('\n');
-        const header = lines.slice(0, 3).join('\n');
-        const body = lines.slice(3).join('\n');
-        
-        setHeaderContent(header);
-        setBodyContent(body);
-        
-        onUpdate({
-          ...coverLetterData,
-          header,
-          body,
-          content: result.content
-        });
-        
-        toast.success('Cover letter generated successfully!');
+      // Ensure we have suggestions array
+      if (result.suggestions && Array.isArray(result.suggestions) && result.suggestions.length > 0) {
+        setBodySuggestions(result.suggestions);
       } else {
-        throw new Error('No content generated');
+        console.error('❌ CoverLetterStructureContent - Invalid suggestions format:', result);
+        setShowBodySuggestions(false);
       }
     } catch (error) {
-      console.error('Error generating cover letter:', error);
-      toast.error('Failed to generate cover letter. Please try again.');
+      console.error('❌ CoverLetterStructureContent - Error generating AI suggestions:', error);
+      setShowBodySuggestions(false);
     } finally {
-      setIsGenerating(false);
+      setLoadingBodySuggestions(false);
     }
+  };
+
+  const handleSelectSuggestion = (content: string) => {
+    handleBodyChange(content);
+    setShowBodySuggestions(false);
   };
 
   return (
     <div className="space-y-6">
-      {/* AI Generator Section */}
-      <div className="bg-white dark:bg-[#1a230f] rounded-lg border border-gray-200 dark:border-white/10 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">AI Assistant</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Generate a personalized cover letter based on your CV and job position
-            </p>
-          </div>
-          <button
-            onClick={handleAIGenerate}
-            disabled={isGenerating || !cvData || !jobData}
-            className="px-4 py-2 bg-lime-600 text-white rounded-lg hover:bg-lime-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            <Sparkles className="w-4 h-4" />
-            {isGenerating ? 'Generating...' : 'Generate with AI'}
-          </button>
-        </div>
-        
-        {(!cvData || !jobData) && (
-          <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg">
-            <p className="text-sm text-amber-800 dark:text-amber-200">
-              {!cvData && !jobData ? 'CV and job data required for AI generation' :
-               !cvData ? 'CV data required for AI generation' :
-               'Job data required for AI generation'}
-            </p>
-          </div>
-        )}
-      </div>
-
       {/* Header Section */}
-      <div className="bg-white dark:bg-[#1a230f] rounded-lg border border-gray-200 dark:border-white/10 p-6">
+      <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-8 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Header</h3>
           
           {/* Formatting Toolbar for Header */}
-          <div className="flex gap-2">
-            <button
-              onClick={() => applyFormatting('bold', 'header')}
-              className="p-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-              title="Bold"
-            >
-              <Bold className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => applyFormatting('italic', 'header')}
-              className="p-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-              title="Italic"
-            >
-              <Italic className="w-4 h-4" />
-            </button>
-          </div>
+          <WYSIWYGToolbar
+            showAIButton={false}
+          />
         </div>
         
-        <textarea
-          data-cover-letter-header
-          className="w-full h-24 p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none font-mono text-sm"
-          placeholder="Your Name&#10;Your Email | Your Phone&#10;Your Address"
+        <WYSIWYGEditor
           value={headerContent}
-          onChange={(e) => handleHeaderChange(e.target.value)}
-          style={{ whiteSpace: 'pre-wrap' }}
+          onChange={handleHeaderChange}
+          rows={3}
+          placeholder="Your Name&#10;Your Email | Your Phone&#10;Your Address"
         />
         <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
           Include your contact information here (name, email, phone, address)
@@ -269,54 +154,37 @@ const CoverLetterStructureContent: React.FC<CoverLetterStructureContentProps> = 
       </div>
 
       {/* Body Section */}
-      <div className="bg-white dark:bg-[#1a230f] rounded-lg border border-gray-200 dark:border-white/10 p-6">
+      <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-8 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Body</h3>
           
-          {/* Formatting Toolbar for Body */}
-          <div className="flex gap-2">
-            <button
-              onClick={() => applyFormatting('bold', 'body')}
-              className="p-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-              title="Bold"
-            >
-              <Bold className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => applyFormatting('italic', 'body')}
-              className="p-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-              title="Italic"
-            >
-              <Italic className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => applyFormatting('paragraph', 'body')}
-              className="p-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-              title="New Paragraph"
-            >
-              <AlignLeft className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => applyFormatting('bullet', 'body')}
-              className="p-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-              title="Bullet Point"
-            >
-              <List className="w-4 h-4" />
-            </button>
-          </div>
+          {/* Formatting Toolbar for Body with AI button */}
+          <WYSIWYGToolbar
+            showAIButton={true}
+            fieldType="other"
+            onAISuggestions={generateAISuggestions}
+            isGenerating={loadingBodySuggestions}
+          />
         </div>
         
-        <textarea
-          data-cover-letter-body
-          className="w-full h-96 p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none font-mono text-sm"
-          placeholder="Dear Hiring Manager,&#10;&#10;I am writing to express my interest in the [Position] role at [Company]...&#10;&#10;[Your compelling content here]&#10;&#10;Sincerely,&#10;[Your Name]"
+        {/* AI Suggestions Panel */}
+        <AISuggestionsPanel
+          isVisible={showBodySuggestions}
+          suggestions={bodySuggestions}
+          isLoading={loadingBodySuggestions}
+          onSelect={handleSelectSuggestion}
+          onClose={() => setShowBodySuggestions(false)}
+        />
+        
+        <WYSIWYGEditor
           value={bodyContent}
-          onChange={(e) => handleBodyChange(e.target.value)}
-          style={{ whiteSpace: 'pre-wrap' }}
+          onChange={handleBodyChange}
+          rows={12}
+          placeholder="Dear Hiring Manager,&#10;&#10;I am writing to express my interest in the [Position] role at [Company]...&#10;&#10;[Your compelling content here]&#10;&#10;Sincerely,&#10;[Your Name]"
         />
         <div className="mt-2 flex items-center justify-between">
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            Use **bold** for emphasis, *italic* for style, and double line breaks for paragraphs
+            Use formatting tools above to style your text
           </p>
           <span className="text-xs text-gray-500 dark:text-gray-400">
             {(headerContent + bodyContent).length} characters

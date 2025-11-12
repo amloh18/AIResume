@@ -185,61 +185,6 @@ const HowItWorks = () => {
           </motion.h3>
         </motion.div>
 
-        {/* Horizontal Steps Flow */}
-        <motion.div
-          className="flex flex-nowrap justify-center gap-4 sm:gap-8 mb-16 overflow-x-auto pb-4 scrollbar-hide"
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-          viewport={{ once: true }}
-          style={{
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none'
-          }}
-        >
-          {steps.map((step, index) => {
-            const isActive = activeStep === index;
-            
-            return (
-              <motion.div
-                key={index}
-                className="flex flex-col items-center cursor-pointer group flex-shrink-0"
-                onClick={() => handleStepClick(index)}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                transition={{ duration: 0.2 }}
-              >
-                {/* Step Circle */}
-                <motion.div
-                  className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-white font-bold text-lg sm:text-xl mb-2 sm:mb-3 transition-all duration-300 ${
-                    isActive 
-                      ? 'bg-gradient-to-r from-lime-400 to-lime-500 shadow-lg shadow-lime-400/50' 
-                      : 'bg-gray-800 border-2 border-white/20'
-                  }`}
-                  animate={{
-                    scale: isActive ? 1.1 : 1,
-                    boxShadow: isActive 
-                      ? "0 0 30px rgba(132, 204, 22, 0.5)" 
-                      : "0 4px 20px -4px rgba(0, 0, 0, 0.1)"
-                  }}
-                  transition={{ duration: 0.3 }}
-                >
-                  {step.number}
-                </motion.div>
-                
-                {/* Step Title */}
-                <motion.h4 
-                  className={`text-xs sm:text-sm font-medium text-center transition-colors duration-300 max-w-[80px] sm:max-w-none ${
-                    isActive ? 'text-lime-400' : 'text-white'
-                  }`}
-                >
-                  {step.title}
-                </motion.h4>
-              </motion.div>
-            );
-          })}
-        </motion.div>
-
         {/* Large Content Container */}
         <motion.div
           className="bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-xl border border-white/10 rounded-3xl p-12 mx-auto max-w-6xl"
@@ -374,6 +319,52 @@ const HowItWorks = () => {
               </motion.div>
             </motion.div>
           </div>
+
+          {/* Steps Navigator - Bottom Row */}
+          <motion.div
+            className="flex flex-nowrap justify-center gap-4 sm:gap-8 mt-12 pt-8 border-t border-white/10 overflow-x-auto pb-2 scrollbar-hide"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: "easeOut", delay: 0.5 }}
+            viewport={{ once: true }}
+            style={{
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none'
+            }}
+          >
+            {steps.map((step, index) => {
+              const isActive = activeStep === index;
+              
+              return (
+                <motion.div
+                  key={index}
+                  className="flex flex-col items-center cursor-pointer group flex-shrink-0"
+                  onClick={() => handleStepClick(index)}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {/* Step Circle */}
+                  <motion.div
+                    className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-white font-bold text-lg sm:text-xl transition-all duration-300 ${
+                      isActive 
+                        ? 'bg-gradient-to-r from-lime-400 to-lime-500 shadow-lg shadow-lime-400/50' 
+                        : 'bg-gray-800 border-2 border-white/20'
+                    }`}
+                    animate={{
+                      scale: isActive ? 1.1 : 1,
+                      boxShadow: isActive 
+                        ? "0 0 30px rgba(132, 204, 22, 0.5)" 
+                        : "0 4px 20px -4px rgba(0, 0, 0, 0.1)"
+                    }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    {step.number}
+                  </motion.div>
+                </motion.div>
+              );
+            })}
+          </motion.div>
         </motion.div>
       </div>
     </section>

@@ -199,22 +199,113 @@ export async function createJourneyDocuments(
     }
     
     if (!coverLetterId) {
-      // Check if user has any existing cover letters (to use as template)
-      const existingCoverLetter = await CoverLetter.findOne({
-        userId: new mongoose.Types.ObjectId(userId)
-      }).sort({ createdAt: -1 });
-      
-      let sourceContent: string;
-      let sourceMetadata: any = {};
-      
-      if (existingCoverLetter) {
-        // Use existing cover letter as template
-        sourceContent = existingCoverLetter.content || '';
-        sourceMetadata = existingCoverLetter.metadata || {};
-        console.log('✅ Journey Document Service - Using existing cover letter as template:', existingCoverLetter._id);
+      // CRITICAL: Ensure CV exists and has data before generating cover letter
+      if (!cvId) {
+        console.error('❌ Journey Document Service - Cannot create cover letter: CV must be created first');
+        throw new Error('CV must be created before cover letter');
+      }
+
+      // Fetch CV to get cvData and ensure it has content
+      const cvDocument = await CV.findById(cvId);
+      if (!cvDocument || !cvDocument.cvData) {
+        console.error('❌ Journey Document Service - CV not found or has no data:', cvId);
+        throw new Error('CV not found or has no data');
+      }
+
+      // Ensure CV has AI analysis - generate if missing
+      let cvDataWithAnalysis = cvDocument.cvData;
+      if (!cvDocument.metadata?.aiAnalysis) {
+        console.log('⚠️ Journey Document Service - CV missing AI analysis, generating...');
+        try {
+          // Call career analysis API directly using internal server-side approach
+          // Use the analysis functions directly if possible, otherwise use fetch with proper URL
+          const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+          const analysisResponse = await fetch(`${baseUrl}/api/ai/career-analysis`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              cvData: cvDocument.cvData,
+              jobData: job,
+              userId: userId
+            })
+          });
+
+          if (analysisResponse.ok) {
+            const analysisResult = await analysisResponse.json();
+            if (analysisResult.success && analysisResult.analysis) {
+              // Update CV with AI analysis
+              cvDocument.metadata = cvDocument.metadata || {};
+              cvDocument.metadata.aiAnalysis = analysisResult.analysis;
+              await cvDocument.save();
+              cvDataWithAnalysis = {
+                ...cvDocument.cvData,
+                metadata: {
+                  ...cvDocument.metadata,
+                  aiAnalysis: analysisResult.analysis
+                }
+              };
+              console.log('✅ Journey Document Service - AI analysis generated and saved to CV');
+            }
+          }
+        } catch (analysisError) {
+          console.error('⚠️ Journey Document Service - Failed to generate AI analysis, continuing without it:', analysisError);
+          // Continue without AI analysis - cover letter will still be generated
+        }
       } else {
-        // Create default template content
-        sourceContent = `Dear Hiring Manager,
+        // Include metadata in cvData for cover letter generation
+        cvDataWithAnalysis = {
+          ...cvDocument.cvData,
+          metadata: cvDocument.metadata
+        };
+      }
+
+      // Generate cover letter content using AI with the new 3-paragraph, experience-level-based logic
+      let generatedContent = '';
+      try {
+        console.log('🚀 Journey Document Service - Generating cover letter content with AI (3-paragraph, experience-level-based)...');
+        
+        // Call cover letter generation API with cvData including metadata
+        const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+        const generateResponse = await fetch(`${baseUrl}/api/ai/cover-letter-generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            cvData: cvDataWithAnalysis,
+            jobData: {
+              title: currentJourney.jobTitle,
+              company: currentJourney.company,
+              jobDescription: job.jobDescription || job.description || '',
+              ...job.toObject()
+            },
+            recipientName: 'Hiring Manager',
+            companyName: currentJourney.company
+          })
+        });
+
+        if (generateResponse.ok) {
+          const generateResult = await generateResponse.json();
+          if (generateResult.success && generateResult.content) {
+            generatedContent = generateResult.content;
+            console.log('✅ Journey Document Service - Cover letter content generated successfully with new logic');
+          }
+        }
+      } catch (generateError) {
+        console.error('⚠️ Journey Document Service - Failed to generate cover letter content, using template:', generateError);
+      }
+
+      // Fallback to template if AI generation failed
+      if (!generatedContent) {
+        // Check if user has any existing cover letters (to use as template)
+        const existingCoverLetter = await CoverLetter.findOne({
+          userId: new mongoose.Types.ObjectId(userId)
+        }).sort({ createdAt: -1 });
+        
+        if (existingCoverLetter) {
+          generatedContent = existingCoverLetter.content || '';
+          console.log('✅ Journey Document Service - Using existing cover letter as template:', existingCoverLetter._id);
+        } else {
+          // Create default template content
+          generatedContent = `Dear Hiring Manager,
 
 I am writing to express my strong interest in the ${currentJourney.jobTitle} position at ${currentJourney.company}. With my background and experience, I am excited about the opportunity to contribute to your team.
 
@@ -224,7 +315,8 @@ I would welcome the opportunity to discuss how my qualifications align with your
 
 Sincerely,
 [Your Name]`;
-        console.log('✅ Journey Document Service - Using default cover letter template');
+          console.log('✅ Journey Document Service - Using default cover letter template');
+        }
       }
       
       const coverLetterTitle = `${currentJourney.company}_${currentJourney.jobTitle} | Cover_Letter`;
@@ -241,17 +333,16 @@ Sincerely,
       } else {
         const duplicatedCoverLetter = new CoverLetter({
           title: coverLetterTitle,
-          content: sourceContent || '',
+          content: generatedContent || '',
           status: 'draft',
           userId: new mongoose.Types.ObjectId(userId),
           jobId: currentJourney.jobId,
           journeyId: currentJourney._id.toString(),
           metadata: {
-            ...sourceMetadata,
             lastModified: new Date(),
-            createdFrom: existingCoverLetter?._id || null,
             viewCount: 0,
-            downloadCount: 0
+            downloadCount: 0,
+            generatedWithAI: !!generatedContent && generatedContent !== ''
           }
         });
         

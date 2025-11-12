@@ -117,20 +117,18 @@ const DesignContent: React.FC<DesignContentProps> = ({
         </div>
       </div>
 
-      {/* Cards in 2-column grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Cards in single column layout */}
+      <div className="flex flex-col gap-6">
       {/* Typography Section */}
-      <div className="bg-white/5 rounded-xl border border-white/10 transition-all duration-300">
-        <div className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-3">
+      <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-8 shadow-sm">
+        <div className="flex items-center gap-3 mb-6">
             <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
               <Type className="w-4 h-4 text-white" />
             </div>
             <h3 className="text-base font-semibold text-white">Typography</h3>
-          </div>
         </div>
         
-        <div className="px-4 pb-4">
+        <div>
           <div className="pt-2 space-y-4">
             {/* Font Family */}
             <div>
@@ -193,17 +191,15 @@ const DesignContent: React.FC<DesignContentProps> = ({
       </div>
 
       {/* Layout Section */}
-      <div className="bg-white/5 rounded-xl border border-white/10 transition-all duration-300">
-        <div className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-3">
+      <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-8 shadow-sm">
+        <div className="flex items-center gap-3 mb-6">
             <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
               <Layout className="w-4 h-4 text-white" />
             </div>
             <h3 className="text-base font-semibold text-white">Layout</h3>
-          </div>
         </div>
         
-        <div className="px-4 pb-4">
+        <div>
           <div className="pt-2 space-y-4">
             {/* Alignment */}
             <div>
@@ -245,17 +241,15 @@ const DesignContent: React.FC<DesignContentProps> = ({
       </div>
 
       {/* Skills Display Type Section */}
-      <div className="bg-white/5 rounded-xl border border-white/10 transition-all duration-300">
-        <div className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-3">
+      <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-8 shadow-sm">
+        <div className="flex items-center gap-3 mb-6">
             <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
               <Code className="w-4 h-4 text-white" />
             </div>
             <h3 className="text-base font-semibold text-white">Skills Display</h3>
-          </div>
         </div>
         
-        <div className="px-4 pb-4">
+        <div>
           <div className="pt-2">
             <div className="grid grid-cols-1 gap-3">
               {[
@@ -299,17 +293,15 @@ const DesignContent: React.FC<DesignContentProps> = ({
       </div>
 
       {/* Color Scheme Section */}
-      <div className="bg-white/5 rounded-xl border border-white/10 transition-all duration-300">
-        <div className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-3">
+      <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-8 shadow-sm">
+        <div className="flex items-center gap-3 mb-6">
             <div className="w-8 h-8 bg-gradient-to-r from-pink-500 to-pink-600 rounded-lg flex items-center justify-center flex-shrink-0">
               <Palette className="w-4 h-4 text-white" />
             </div>
             <h3 className="text-base font-semibold text-white">Colors</h3>
-          </div>
         </div>
         
-        <div className="px-4 pb-4">
+        <div>
           <div className="pt-2 space-y-4">
             {/* Color Presets */}
             <div>
@@ -383,17 +375,15 @@ const DesignContent: React.FC<DesignContentProps> = ({
       </div>
 
       {/* Spacing Section */}
-      <div className="bg-white/5 rounded-xl border border-white/10 transition-all duration-300">
-        <div className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-3">
+      <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-8 shadow-sm">
+        <div className="flex items-center gap-3 mb-6">
             <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg flex items-center justify-center flex-shrink-0">
               <Ruler className="w-4 h-4 text-white" />
             </div>
             <h3 className="text-base font-semibold text-white">Spacing</h3>
-          </div>
         </div>
         
-        <div className="px-4 pb-4">
+        <div>
           <div className="pt-2 space-y-4">
             <div>
               <label className="block text-white/80 text-sm font-medium mb-2">Section Spacing</label>
@@ -427,17 +417,15 @@ const DesignContent: React.FC<DesignContentProps> = ({
       </div>
 
       {/* Section Style */}
-      <div className="bg-white/5 rounded-xl border border-white/10 transition-all duration-300">
-        <div className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-3">
+      <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-8 shadow-sm">
+        <div className="flex items-center gap-3 mb-6">
             <div className="w-8 h-8 bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
               <Layout className="w-4 h-4 text-white" />
             </div>
             <h3 className="text-base font-semibold text-white">Section Headings</h3>
-          </div>
         </div>
         
-        <div className="px-4 pb-4">
+        <div>
           <div className="pt-2">
             <div className="grid grid-cols-2 gap-3">
               {[
@@ -467,17 +455,15 @@ const DesignContent: React.FC<DesignContentProps> = ({
       </div>
 
       {/* Date Format */}
-      <div className="bg-white/5 rounded-xl border border-white/10 transition-all duration-300">
-        <div className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-3">
+      <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-8 shadow-sm">
+        <div className="flex items-center gap-3 mb-6">
             <div className="w-8 h-8 bg-gradient-to-r from-teal-500 to-teal-600 rounded-lg flex items-center justify-center flex-shrink-0">
               <Type className="w-4 h-4 text-white" />
             </div>
             <h3 className="text-base font-semibold text-white">Date Format</h3>
-          </div>
         </div>
         
-        <div className="px-4 pb-4">
+        <div>
           <div className="pt-2">
             <div className="grid grid-cols-2 gap-3">
               {[

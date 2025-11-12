@@ -18,14 +18,24 @@ export interface PageBreakConfig {
 export const defaultPageBreakConfig: PageBreakConfig = {
   minBottomSpace: 100, // Leave at least 100px at bottom
   avoidBreakInside: [
-    '.cv-section-item',      // Individual work/education entries
-    '.cv-section-header',    // Section headers with their first item
-    '.skill-category-group', // Skill categories
-    '.certificate-item',     // Certificate entries
-    '.project-item'          // Project entries
+    '.cv-section-item',           // Individual work/education entries
+    '.cv-entry-item',             // Generic entry items
+    '.work-experience-item',      // Work experience entries
+    '.experience-item',           // Experience entries (alias)
+    '.education-item',            // Education entries
+    '.project-item',              // Project entries
+    '.certificate-item',          // Certificate entries
+    '.volunteer-item',           // Volunteer entries
+    '.award-item',               // Award entries
+    '.cv-section-header',        // Section headers with their first item
+    '.section-header',            // Section headers
+    '.skill-category-group',     // Skill categories
+    '.entry-header',             // Entry headers (title/company/date block)
+    '.item-header'               // Item headers (alias)
   ],
   breakBefore: [
-    '.cv-section'            // Start new sections on new page if needed
+    '.cv-section',              // Start new sections on new page if needed
+    '.section-content'           // Section content blocks
   ]
 };
 
@@ -83,15 +93,73 @@ export function generatePageBreakCSS(config: PageBreakConfig = defaultPageBreakC
     position: relative;
   }
   
-  /* Section headers stay with content */
-  .cv-section-header {
+  /* Section headers stay with content - Never orphan headers */
+  .cv-section-header,
+  .section-header {
+    page-break-after: avoid;
+    break-after: avoid;
+    orphans: 2;
+    widows: 2;
+  }
+  
+  /* Keep section header with first entry */
+  .cv-section-header + .cv-section-content,
+  .section-header + .experience-list,
+  .section-header + .education-list,
+  .section-header + .project-list {
+    page-break-before: avoid;
+    break-before: avoid;
+  }
+  
+  /* Entry headers stay with content */
+  .entry-header,
+  .item-header {
     page-break-after: avoid;
     break-after: avoid;
   }
   
-  .cv-section-header + .cv-section-content {
+  /* Keep entry header with at least 2 lines of content */
+  .entry-header + .entry-content,
+  .item-header + .item-summary,
+  .item-header + .item-content {
     page-break-before: avoid;
     break-before: avoid;
+    orphans: 2;
+    widows: 2;
+  }
+  
+  /* Prevent orphaned lines - minimum 2 lines together */
+  .entry-content,
+  .item-summary,
+  .item-content,
+  .education-description {
+    orphans: 2;
+    widows: 2;
+  }
+  
+  /* Work Experience specific rules */
+  .work-experience-item,
+  .experience-item {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  
+  /* Education specific rules */
+  .education-item {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  
+  /* Project specific rules */
+  .project-item {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  
+  /* Skills section - keep categories together */
+  .skill-category-group {
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
   `;
 }

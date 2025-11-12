@@ -560,16 +560,19 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
   }, [journey.cvId, journey.id, journey.status, mongoDBUserId, onRefresh, onUpdateJourney, updateCVId]);
 
   // Auto-create Cover Letter when step 4 is empty (no coverLetterId) and CV exists
+  // CRITICAL: Only create cover letter after CV is fully created and ready
   React.useEffect(() => {
     // Only auto-create if:
-    // 1. CV exists
-    // 2. No Cover Letter exists
-    // 3. Journey is active (not completed)
-    // 4. Haven't attempted auto-create yet
-    // 5. Not currently processing documents
-    // 6. Not in failed state
+    // 1. CV exists and is not being created
+    // 2. CV creation is not in progress (to avoid race condition)
+    // 3. No Cover Letter exists
+    // 4. Journey is active (not completed)
+    // 5. Haven't attempted auto-create yet
+    // 6. Not currently processing documents
+    // 7. Not in failed state
     if (
       journey.cvId &&
+      !isAutoCreatingCV && // Ensure CV creation is complete
       !journey.coverLetterId &&
       journey.status !== 'completed' &&
       journey.status !== 'processing_documents' &&
@@ -579,49 +582,55 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
       mongoDBUserId &&
       !cvNotFound
     ) {
-      hasAttemptedAutoCreateCoverLetter.current = true;
-      setIsAutoCreatingCoverLetter(true);
-      
-      // Auto-create Cover Letter via journey documents API
-      const createCoverLetter = async () => {
-        try {
-          const response = await fetch('/api/journey-documents/create', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ journeyId: journey.id })
-          });
-          
-          const result = await response.json();
-          
-          if (response.ok && result.success) {
-            // Refresh journey data
-            if (onRefresh) {
-              setTimeout(() => {
-                onRefresh();
-              }, 1000);
-            }
+      // Add a small delay to ensure CV is fully saved and ready
+      const delayTimeout = setTimeout(() => {
+        hasAttemptedAutoCreateCoverLetter.current = true;
+        setIsAutoCreatingCoverLetter(true);
+        
+        // Auto-create Cover Letter via journey documents API
+        // This will generate cover letter with AI using cvData and jobData
+        const createCoverLetter = async () => {
+          try {
+            const response = await fetch('/api/journey-documents/create', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ journeyId: journey.id })
+            });
             
-            // Update local state if cover letter ID is returned
-            if (result.data?.coverLetterId) {
-              updateCoverLetterId(result.data.coverLetterId);
-              if (onUpdateJourney) {
-                onUpdateJourney(journey.id, {
-                  coverLetterId: result.data.coverLetterId,
-                  status: 'in-progress'
-                });
+            const result = await response.json();
+            
+            if (response.ok && result.success) {
+              // Refresh journey data
+              if (onRefresh) {
+                setTimeout(() => {
+                  onRefresh();
+                }, 1000);
+              }
+              
+              // Update local state if cover letter ID is returned
+              if (result.data?.coverLetterId) {
+                updateCoverLetterId(result.data.coverLetterId);
+                if (onUpdateJourney) {
+                  onUpdateJourney(journey.id, {
+                    coverLetterId: result.data.coverLetterId,
+                    status: 'in-progress'
+                  });
+                }
               }
             }
+          } catch (error) {
+            console.error('❌ JourneyTimelineCard - Error auto-creating cover letter:', error);
+          } finally {
+            setIsAutoCreatingCoverLetter(false);
           }
-        } catch (error) {
-          console.error('❌ JourneyTimelineCard - Error auto-creating cover letter:', error);
-        } finally {
-          setIsAutoCreatingCoverLetter(false);
-        }
-      };
+        };
+        
+        createCoverLetter();
+      }, 500); // Small delay to ensure CV is ready
       
-      createCoverLetter();
+      return () => clearTimeout(delayTimeout);
     }
-  }, [journey.cvId, journey.coverLetterId, journey.id, journey.status, mongoDBUserId, cvNotFound, onRefresh, onUpdateJourney, updateCoverLetterId]);
+  }, [journey.cvId, journey.coverLetterId, journey.id, journey.status, mongoDBUserId, cvNotFound, isAutoCreatingCV, onRefresh, onUpdateJourney, updateCoverLetterId]);
 
   // Initialize ATS score from journey data or auto-fetch if needed
   React.useEffect(() => {
